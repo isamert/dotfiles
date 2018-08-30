@@ -1,0 +1,47 @@
+#!/bin/bash
+
+base="http://ceng.anadolu.edu.tr/Ders.aspx?dersId="
+courses=("120" "95" "105" "103" "24")
+
+cache_folder="$HOME/.cache/ceng"
+if [ ! -d "$cache_folder" ]
+then
+    echo "First time usage."
+    echo "Downloading..."
+
+    mkdir "$cache_folder"
+    cd "$cache_folder"
+
+    for cid in "${courses[@]}"
+    do
+        url="$base$cid"
+        filename="$cid.html"
+        curl -sS -o "$filename" "$url"
+
+        # Remove bullshit
+        sed -i '/input type="hidden"/,+1 d' "$filename"
+    done
+
+    echo "Done."
+else
+    cd "$cache_folder"
+
+    for cid in "${courses[@]}"
+    do
+        url="$base$cid"
+        filename="$cid.html"
+
+        html=`curl -sS "$url" | sed '/input type="hidden"/,+1 d'`
+        diff=`echo "$html" | diff "$filename" -`
+        if [ $? -eq 0 ]; then
+            echo "$cid: nothing new."
+        else
+            echo "$html" > "$filename"
+            echo "============================================================="
+            echo "$cid:"
+            echo "$diff"
+            echo "============================================================="
+
+        fi
+    done
+fi

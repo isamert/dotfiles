@@ -1,0 +1,15 @@
+#!/bin/sh -
+
+# This scripts toggles between sinks,
+# assuming you only have two sinks 0 or 1.
+
+current_sink=`pactl list sinks short | grep -E "RUNNING|IDLE" | head -c 1`
+current_input=`pactl list sink-inputs short | cut -f 1` # default delim of cut is \t, so no need to specify
+new_sink=0
+
+[[ $current_sink = 0 ]] && new_sink="1" || new_sink="0"
+
+pacmd move-sink-input $current_input $new_sink
+pactl set-default-sink $new_sink
+
+

@@ -1,0 +1,2 @@
+#!/bin/sh
+wmctrl -a $(wmctrl -l | cut -f4- -d" " | sed 's/isa-desktop //g' | dmenu_modified)

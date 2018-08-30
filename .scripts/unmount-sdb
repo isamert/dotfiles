@@ -1,0 +1,4 @@
+#!/bin/bash
+
+udisksctl unmount -b /dev/sdb
+udisksctl power-off -b /dev/sdb

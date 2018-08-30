@@ -1,0 +1,11 @@
+#!/bin/sh
+udisksctl unmount -b /dev/mmcblk0p3
+sudo mount --bind /dev /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/dev
+sudo mount --bind /proc /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/proc
+sudo mount --bind /dev/pts /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/dev/pts
+sudo mount --bind /sys /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/sys
+sudo mount --bind /etc/resolv.conf /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/etc/resolv.conf
+
+sudo chroot /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f /bin/bash
+
+sudo umount /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/{dev/pts,dev,sys,proc,}

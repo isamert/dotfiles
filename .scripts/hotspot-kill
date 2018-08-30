@@ -1,0 +1,3 @@
+#!/bin/sh -
+gsudo killall create_ap
+gsudo rfkill block 0

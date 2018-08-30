@@ -1,0 +1,4 @@
+#!/bin/sh
+wid=$(xdotool getwindowfocus)
+[[ ! "$(xdotool getwindowname $wid)" = "i3" ]] && w="-w $wid" # If the focused window name is "i3" then no window is focused. Display normally.
+dmenu -i -l 20 $w "$@"

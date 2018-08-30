@@ -1,0 +1,116 @@
+# Tips:
+# To reload configs: `xbindkeys -p`
+# To find the keycodes for a particular key: `xbindkeys -k`
+# If a command works on commandline but not on xbindkeys, try adding `Release` to the hotkey.
+
+
+# ##################
+# MOUSE CONFIG
+# ##################
+
+# Left click
+"xdotool click 1"
+    Control+Alt + e
+
+# 50 up
+"xdotool mousemove_relative --sync -- 0 -50"
+    Control+Alt + w
+
+# 50 down
+"xdotool mousemove_relative --sync -- 0 50"
+    Control+Alt + s
+
+# 50 left
+"xdotool mousemove_relative --sync -- -50 0"
+    Control+Alt + a
+
+# 50 right
+"xdotool mousemove_relative --sync -- 50 0"
+    Control+Alt + d
+
+
+# 10 up
+"xdotool mousemove_relative --sync -- 0 -10"
+    Control+Alt+Shift + w
+
+# 10 down
+"xdotool mousemove_relative --sync -- 0 10"
+    Control+Alt+Shift + s
+
+# 10 left
+"xdotool mousemove_relative --sync -- -10 0"
+    Control+Alt+Shift + a
+
+# 10 right
+"xdotool mousemove_relative --sync -- 10 0"
+    Control+Alt+Shift + d
+
+# ##################
+# VOLUME CONFIG
+# ##################
+
+# Set volume up
+"amixer set Master 5%+"
+    Mod3 + 0
+
+# Set volume down
+"amixer set Master 5%-"
+    Mod3 + 9
+
+# Toggle between sound outputs
+"bash ~/.scripts/switch-audio-channel"
+    Control+Alt + o
+
+
+# ##################
+# VARIOUS BINDINGS
+# ##################
+
+# Switch betweend defined keyboard layouts
+# Examine the script for setting your layouts
+"bash ~/.scripts/switch-keyboard-layout"
+    Control+Alt + k
+
+# Focus to Firefox/Browser
+"wmctrl -a Firefox"
+    Mod3 + b # b for browser
+
+"mpc toggle"
+    Mod3 + p # p for play/pause
+
+# ##################
+# GLOBAL PROGRAMS
+# ##################
+
+"~/.scripts/menu-windows"
+    Mod3 + w # w for windows
+
+"~/.scripts/menu"
+    Mod3 + a # a for apps
+
+"~/.scripts/menu-files"
+    Mod3 + f # f for files
+
+"~/.scripts/menu-mpd -l"
+    Mod3 + m # m for music/mpd
+
+"~/.scripts/menu-mpd -p"
+    Mod3+Shift + p # P for playlist
+
+# Take a screenshot and save it to ~/Pictures
+"cd $HOME/Pictures/screenshots; scrot"
+    Print
+
+# Take a screenshot of drawn area or selected window.
+# Simply click selects window, click and drag selects an area
+"cd $HOME/Pictures/screenshots; scrot -s"
+    Shift + Print + Release
+
+# Take a screenshot and save it to ~/Pictures
+"cd $HOME/Pictures/screenshots; scrot -d 5"
+    Control + Print
+
+# Wait 5 seconds and take a screenshot of drawn area or selected window.
+"cd $HOME/Pictures/screenshots; scrot -s -d 5"
+    Control+Shift + Print + Release
+

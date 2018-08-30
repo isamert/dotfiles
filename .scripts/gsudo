@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# This script basically emulates `gksudo` without its dependencies.
+# Usage is same: `gsudo some_command [args]`
+
+sudo -n true &> /dev/null
+if [ $? -eq 0 ]
+then
+  sudo "$@"
+else
+  upass=$(zenity --password --title "Enter your password" 2> /dev/null)
+  [[ ! -z "$upass" ]] && echo $upass | sudo -S -p "" "$@"
+fi

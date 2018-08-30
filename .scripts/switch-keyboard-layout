@@ -1,0 +1,30 @@
+#!/bin/sh -
+
+# This script switches between layouts that are defined in ~/.profile.
+# The variable is $KEYBOARD_LAYOUTS and you need to set a comma separated list
+# that contains 2-char country codes. (Or anything that setxkbmap would accept.)
+# To change your default keyboard layout, use localectl. See this:
+# https://wiki.archlinux.org/index.php/Keyboard_configuration_in_Xorg#Using_X_configuration_files
+# Afterwards you need to update `KEYBOARD_LAYOUTS`, first item must be your default layout.
+# Rest are just the ones that you want to switch.
+
+current_layout=$(setxkbmap -query | grep layout | cut -f2 -d ":" | xargs)
+
+# Switch to next layout
+layouts=(${KEYBOARD_LAYOUTS//,/ })
+for i in "${!layouts[@]}"
+do
+    if [ "$current_layout" == "${layouts[i]}" ] || [ "'$current_layout'" == "${layouts[i]}" ]
+    then
+        if [ ! "${layouts[i+1]}" ]
+        then
+            setxkbmap ${layouts[0]}
+        else
+            setxkbmap ${layouts[i+1]}
+        fi
+    fi
+done
+
+
+# Reload .Xmodmap
+[[ -f ~/.Xmodmap ]] && xmodmap ~/.Xmodmap

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mpc pause
+betterlockscreen --lock blur
