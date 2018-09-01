@@ -14,7 +14,7 @@ current_layout=$(setxkbmap -query | grep layout | cut -f2 -d ":" | xargs)
 layouts=(${KEYBOARD_LAYOUTS//,/ })
 for i in "${!layouts[@]}"
 do
-    if [ "$current_layout" == "${layouts[i]}" ] || [ "'$current_layout'" == "${layouts[i]}" ]
+    if [ "$current_layout" == "${layouts[i]}" ]
     then
         if [ ! "${layouts[i+1]}" ]
         then
