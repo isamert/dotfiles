@@ -11,7 +11,7 @@ set $alt Mod1
 set $shell fish
 
 # Terminal settings
-set $term st
+set $term xst
 set $term_multiplexer tmux
 set $dropdown_session ~/.sessions/dropdown
 

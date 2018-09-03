@@ -3,20 +3,22 @@ x-scheme-handler/http=firefox.desktop
 x-scheme-handler/https=firefox.desktop
 x-scheme-handler/ftp=firefox.desktop
 x-scheme-handler/chrome=firefox.desktop
-text/html=firefox.desktop
 application/x-extension-htm=firefox.desktop
 application/x-extension-html=firefox.desktop
 application/x-extension-shtml=firefox.desktop
 application/xhtml+xml=firefox.desktop
 application/x-extension-xhtml=firefox.desktop
 application/x-extension-xht=firefox.desktop
-
-image/png=feh.desktop
-image/jpg=feh.desktop
-image/gif=feh.desktop
+text/html=firefox.desktop
 
 inode/directory=ranger.desktop
 
 application/pdf=org.pwmt.zathura-pdf-mupdf.desktop
 
 text/plain=nvim.desktop
+text/csv=nvim.desktop
+
+image/png=feh.desktop
+image/jpg=feh.desktop
+image/gif=feh.desktop
+image/jpeg=feh.desktop
