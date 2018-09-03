@@ -1,0 +1,8 @@
+#!/bin/sh -
+SONG=$(mpc listall | rofi -fuzzy -dmenu -i)
+if [ ! -z "$SONG" ]
+then
+    mpc clear
+    mpc add "$SONG"
+    mpc play
+fi

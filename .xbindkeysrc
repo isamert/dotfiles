@@ -94,8 +94,14 @@
 "~/.scripts/menu-mpd -l"
     Mod3 + m # m for music/mpd
 
+"~/.scripts/menu-mpd-all"
+    Mod3+Shift + M # M for music (List all tracks in library)
+
 "~/.scripts/menu-mpd -p"
-    Mod3+Shift + p # P for playlist
+    Mod3+Shift + P # P for playlist
+
+"~/.scripts/menu-passwords"
+    Mod3+ k # k for keepass
 
 # Take a screenshot and save it to ~/Pictures
 "cd $HOME/Pictures/screenshots; scrot"

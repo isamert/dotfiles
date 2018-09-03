@@ -1,5 +1,6 @@
+# Defined in /tmp/fish.Ohu0vA/c.fish @ line 2
 function c
-switch $argv
+	switch $argv
 
     # ###########################################
     # CONFIG JUMPS
@@ -48,7 +49,7 @@ switch $argv
     case rofi
         cd ~/.config/rofi
     case rofirc
-        eval $EDITOR ~/.config/rofi/config.rasi
+        eval $EDITOR ~/.config/rofi/config
 
 
     case bashrc
