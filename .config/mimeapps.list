@@ -10,14 +10,10 @@ application/xhtml+xml=firefox.desktop
 application/x-extension-xhtml=firefox.desktop
 application/x-extension-xht=firefox.desktop
 text/html=firefox.desktop
-
 inode/directory=ranger.desktop
-
 application/pdf=org.pwmt.zathura-pdf-mupdf.desktop
-
 text/plain=nvim.desktop
-text/csv=nvim.desktop
-
+text/csv=sc-im.desktop
 image/png=feh.desktop
 image/jpg=feh.desktop
 image/gif=feh.desktop

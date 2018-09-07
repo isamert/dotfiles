@@ -18,7 +18,7 @@ st.blinktimeout:      0
 ! Enable bold fonts
 st.bold_font:         1
 
-st.xfps:              120
+st.xfps:              75
 st.actionfps:         30
 
 ! Kerning / character bounding-box height multiplier

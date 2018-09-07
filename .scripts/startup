@@ -4,11 +4,8 @@
 xinput --disable $(xinput list | grep Touchpad | cut -f2 | cut -f2 -d "=")
 
 # Disable intel wifi
-sudo ifconfig wlp4s0 down 
+sudo ifconfig wlp4s0 down
 
 # Disable hdd power save
-sudo hdparm -B 255 /dev/sda 
-
-# Syncthing
-syncthing -no-browser
+sudo hdparm -B 255 /dev/sda
 

@@ -237,7 +237,7 @@ mode "move" {
 # EXECS/AUTOSTART
 ###############################
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
-exec --no-startup-id  compton
+exec --no-startup-id compton
 exec --no-startup-id feh --bg-scale $HOME/.config/wall.png
 exec --no-startup-id $term -n scratchpad_term -e $dropdown_session
 exec --no-startup-id xbindkeys

@@ -1,3 +1,4 @@
+# Defined in /tmp/fish.LxBfYJ/fishtricks.fish @ line 2
 function fishtricks
 	echo "Bang bang: !!  -> replaces with last command"
     echo "           !\$ -> replaces with last commands arguments"
@@ -26,6 +27,7 @@ function fishtricks
     echo "      mkcd          -> mkdir and cd into it"
     echo "      utf8          -> convert encoding of a turkish file to utf8"
     echo "      ack           -> grep like tool for programming"
+    echo "      glances       -> htop alternative"
     echo ""
     echo ""
     echo "Developer Tools:"
@@ -48,4 +50,8 @@ function fishtricks
     echo "Routines:"
     echo "      owncloudsync         -> sync owncloud from commandline"
     echo "      plasmashell-restart  -> does that"
+    echo ""
+    echo ""
+    echo "Fun stuff:"
+    echo "      cava         -> Music visualizer"
 end
