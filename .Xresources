@@ -31,7 +31,7 @@ st.bellvolume:        100
 st.prompt_char:       $
 
 ! opacity==255 means what terminal will be not transparent, 0 - fully transparent
-st.opacity:      255
+st.opacity:      200
 
 ! GRUVBOX THEME
 ! hard contrast: *background: #1d2021

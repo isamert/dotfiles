@@ -7,48 +7,48 @@
 " ##################################################
 call plug#begin('~/.local/share/nvim/plugged')
 
-	" Theme
-	Plug 'rakr/vim-one'
-	Plug 'colepeters/spacemacs-theme.vim'
-	Plug 'liuchengxu/space-vim-dark'
-	Plug 'morhetz/gruvbox'
+    " Theme
+    Plug 'rakr/vim-one'
+    Plug 'colepeters/spacemacs-theme.vim'
+    Plug 'liuchengxu/space-vim-dark'
+    Plug 'morhetz/gruvbox'
 
-	"Startup screen
-	Plug 'mhinz/vim-startify'
+    "Startup screen
+    Plug 'mhinz/vim-startify'
 
-	" Powerline-like bars
-	Plug 'vim-airline/vim-airline'
+    " Powerline-like bars
+    Plug 'vim-airline/vim-airline'
 
-	" Insert mode=number, Normal mode=relativenumber
-	Plug 'jeffkreeftmeijer/vim-numbertoggle'
+    " Insert mode=number, Normal mode=relativenumber
+    Plug 'jeffkreeftmeijer/vim-numbertoggle'
 
-	" cs<old-surrounding><new-surrounding> to change the surroundings
-	" cs'<a> 'tpope/vim-surround' -> <a>tpope/vim-surround</a>
-	" ds' to delete surroundings.
-	Plug 'tpope/vim-surround'
+    " cs<old-surrounding><new-surrounding> to change the surroundings
+    " cs'<a> 'tpope/vim-surround' -> <a>tpope/vim-surround</a>
+    " ds' to delete surroundings.
+    Plug 'tpope/vim-surround'
 
-	" Replace default filemanager with ranger
-	Plug 'airodactyl/neovim-ranger'
+    " Replace default filemanager with ranger
+    Plug 'airodactyl/neovim-ranger'
 
-	" Language server client
-	Plug 'autozimu/LanguageClient-neovim', {
-	    \ 'branch': 'next',
-	    \ 'do': 'bash install.sh',
-	    \ }
+    " Language server client
+    Plug 'autozimu/LanguageClient-neovim', {
+        \ 'branch': 'next',
+        \ 'do': 'bash install.sh',
+        \ }
 
-	" Completion manager
-	Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+    " Completion manager
+    Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
 
-	" fzf documentation
-	Plug 'junegunn/fzf.vim'
+    " fzf documentation
+    Plug 'junegunn/fzf.vim'
 
-	" \l -> Toggle list
-	" \q -> Toggle quicfix
-	" <C-w>p -> switch between windows
-	Plug 'milkypostman/vim-togglelist'
+    " \l -> Toggle list
+    " \q -> Toggle quicfix
+    " <C-w>p -> switch between windows
+    Plug 'milkypostman/vim-togglelist'
 
-	" \w -> go to word using hints
-	Plug 'easymotion/vim-easymotion'
+    " \w -> go to word using hints
+    Plug 'easymotion/vim-easymotion'
 
     " org-mode
     Plug 'jceb/vim-orgmode'
@@ -99,11 +99,11 @@ autocmd BufWritePre * :%s/\s\+$//e
 let g:startify_session_dir = '~/.config/nvim/sessions'
 let g:startify_bookmarks = ['~/Workspace/projects', '~/Documents/notes']
 let g:startify_lists = [
-	\ { 'type': 'files',     'header': [   'MRU']            },
-	\ { 'type': 'sessions',  'header': [   'Sessions']       },
-	\ { 'type': 'bookmarks', 'header': [   'Bookmarks']      },
-	\ { 'type': 'commands',  'header': [   'Commands']       },
-	\ ]
+    \ { 'type': 'files',     'header': [   'MRU']            },
+    \ { 'type': 'sessions',  'header': [   'Sessions']       },
+    \ { 'type': 'bookmarks', 'header': [   'Bookmarks']      },
+    \ { 'type': 'commands',  'header': [   'Commands']       },
+    \ ]
 " #############################################################################
 
 
@@ -120,7 +120,7 @@ let g:gruvbox_italic=1 " Italic comments for gruvbox
 hi Comment cterm=italic " Italic comments for space-vim-dark theme
 
 " Transparent background
-" hi Normal guibg=NONE ctermbg=NONE
+hi Normal guibg=NONE ctermbg=NONE
 
 " #### AIRLINE SETTINGS ###
 let g:airline_powerline_fonts = 1
