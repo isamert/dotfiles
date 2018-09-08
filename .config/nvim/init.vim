@@ -136,6 +136,7 @@ let g:LanguageClient_serverCommands         = {}
 let g:LanguageClient_serverCommands["rust"] = ['rustup', 'run', 'nightly', 'rls']
 let g:LanguageClient_serverCommands["cpp"] = ['clangd']
 let g:LanguageClient_serverCommands["c"] = ['clangd']
+let g:LanguageClient_serverCommands["python"] = ['pyls']
 " When gr(go references) is pressed, it will display a list that uses fzf with references
 let g:LanguageClient_selectionUI = 'fzf'
 
