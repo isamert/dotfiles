@@ -2,7 +2,13 @@
 
 import os
 import sys
-import zipfile
+
+# Usage:
+# sub-extract sub_title_archive.zip (or rar)
+# This script simply scans your ~/Videos directory, finds every video file
+# and extracts the subtitle archive near to closest video file match with
+# the same filename of video file. (Just run it and you will see, it will ask
+# for confirmation. Add --noconfirm if you don't want confirmation)
 
 # 1080p, 720p etc makes matching harder because sometimes the downloaded
 # subtitle has different resolution spec
@@ -22,12 +28,15 @@ def matches(text):
 
 
 movie_exts = [".mkv", ".mp4", ".avi"]
-sub_name = normalize(sys.argv[1]).split()
+sub_archive = sys.argv[1]
+sub_name = normalize(sub_archive).split()
 movies = []
 for root, _, fs in os.walk(os.path.expanduser("~/Videos")):
     for f in fs:
         name, ext = os.path.splitext(os.path.basename(f))
-        if ext in movie_exts:
+        # Skip non-movie files and sample files
+        # (and hope the movie name does not contain "sample")
+        if ext in movie_exts and not "sample" in name.lower():
             movies.append(os.path.join(root, f))
 
 movies_normalized = list(enumerate(map(normalize, movies)))
@@ -36,16 +45,28 @@ movie_index, _ = max(movies_normalized, key=lambda tup: matches(tup[1]))
 movie_full_path = movies[movie_index]
 srt_full_path = os.path.splitext(movie_full_path)[0] + ".srt"
 
-print("Given sub file: " + sys.argv[1])
+print("Given sub file: " + sub_archive)
 print("Movie: " + movie_full_path)
 print("Sub  : " + srt_full_path)
 
 yn = 'y' if (len(sys.argv) > 2 and sys.argv[2] == "--noconfirm") else input("y/n? ")
 if yn == 'y':
-    with zipfile.ZipFile(sys.argv[1]) as z:
-        # Just take the first srt file
-        srt_file = list(filter(lambda f: ".srt" in f, [file_info.filename for file_info in z.filelist]))[0]
-        with open(srt_full_path, 'wb') as f:
-            f.write(z.read(srt_file))
+    srt_archive_ext = os.path.splitext(sub_archive)[1]
+    if srt_archive_ext == ".zip":
+        import zipfile
+        with zipfile.ZipFile(sub_archive) as z:
+            # Just take the first srt file
+            srt_file = list(filter(lambda f: ".srt" in f, [file_info.filename for file_info in z.filelist]))[0]
+            with open(srt_full_path, 'wb') as f:
+                f.write(z.read(srt_file))
+    elif srt_archive_ext == ".rar":
+        import rarfile
+        with rarfile.RarFile(sub_archive) as z:
+            # Just take the first srt file
+            srt_file = list(filter(lambda f: ".srt" in f, z.namelist()))[0]
+            with open(srt_full_path, 'wb') as f:
+                f.write(z.read(srt_file))
+    else:
+        print("wut? (for now)")
 
     print("Done.")
