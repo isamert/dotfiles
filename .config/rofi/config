@@ -8,15 +8,12 @@ rofi.color-normal: argb:00282828, #458588, argb:00252936, argb:009575cd, #ff9575
 rofi.color-active: argb:00282828, #b16286, argb:00252936, argb:009575cd, #ffc000
 rofi.color-urgent: argb:00252936, #cc241d, argb:00252936, argb:00252936, #ff0000
 
+rofi.lines: 13
+rofi.columns: 1
 rofi.width: 2565
 rofi.padding: 500
 rofi.font: Inconsolata Bold 20
-!rofi.line-margin: 15
-rofi.lines: 13
 rofi.separator-style: none
-rofi.columns: 1
-!rofi.bw: 0
-!rofi.eh: 2
 rofi.hide-scrollbar: true
 rofi.auto-select: false
-!rofi.display-drun:⚌
+rofi.drun-show-actions: true

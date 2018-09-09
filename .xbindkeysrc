@@ -103,20 +103,15 @@
 "~/.scripts/menu-passwords"
     Mod3+ k # k for keepass
 
-# Take a screenshot and save it to ~/Pictures
-"cd $HOME/Pictures/screenshots; scrot"
+"take-ss --full"
     Print
 
-# Take a screenshot of drawn area or selected window.
-# Simply click selects window, click and drag selects an area
-"cd $HOME/Pictures/screenshots; scrot -s"
+"take-ss --area"
     Shift + Print + Release
 
-# Take a screenshot and save it to ~/Pictures
-"cd $HOME/Pictures/screenshots; scrot -d 5"
+"take-ss --wait-full"
     Control + Print
 
-# Wait 5 seconds and take a screenshot of drawn area or selected window.
-"cd $HOME/Pictures/screenshots; scrot -s -d 5"
+"take-ss --wait-area"
     Control+Shift + Print + Release
 

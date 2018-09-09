@@ -1,0 +1,35 @@
+[Desktop Entry]
+Type=Application
+Name=Take screenshot
+Icon=utilities-terminal
+Terminal=false
+Exec=take-ss --full
+Actions=full;area;wait-full;wait-area;clip-full;clip-area;shadow-window;
+
+[Desktop Action full]
+Name=Full
+Exec=take-ss --full
+
+[Desktop Action area]
+Name=Area
+Exec=take-ss --area
+
+[Desktop Action wait-full]
+Name=Wait 5, full
+Exec=take-ss --wait-full
+
+[Desktop Action wait-area]
+Name=Wait 5, area
+Exec=take-ss --wait-area
+
+[Desktop Action clip-full]
+Name=Clipboard full
+Exec=take-ss --clip-full
+
+[Desktop Action clip-area]
+Name=Clipboard area
+Exec=take-ss --clip-area
+
+[Desktop Action shadow-window]
+Name=Shadow window
+Exec=take-ss --shadow-window
