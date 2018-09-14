@@ -1,4 +1,4 @@
-# Defined in /tmp/fish.LxBfYJ/fishtricks.fish @ line 2
+# Defined in /tmp/fish.x3APgt/fishtricks.fish @ line 2
 function fishtricks
 	echo "Bang bang: !!  -> replaces with last command"
     echo "           !\$ -> replaces with last commands arguments"
@@ -21,6 +21,7 @@ function fishtricks
     echo "      xcopy         -> some_command | copy, copies output"
     echo "      xpaste        -> paste clipboard content"
     echo "      ccat          -> cat with syntax highlighting and line numbers"
+    echo "      bat           -> better cat"
     echo "      catmd         -> display markdown preview"
     echo "      fuckall       -> killall with SIGKILL"
     echo "      extract       -> extract archives automatically"
@@ -28,6 +29,7 @@ function fishtricks
     echo "      utf8          -> convert encoding of a turkish file to utf8"
     echo "      ack           -> grep like tool for programming"
     echo "      glances       -> htop alternative"
+    echo "      ncdu          -> ncurses du (shows disk space usage)"
     echo ""
     echo ""
     echo "Developer Tools:"

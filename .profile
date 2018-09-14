@@ -1,9 +1,7 @@
+export BROWSER=firefox
 export EDITOR=nvim
 export VISUAL=nvim
 export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin
-
-# i3bars needs this
-export SCRIPT_DIR=$HOME/.config/i3/scripts
 
 # To be able to deploy android apps from commandline.
 export ANDROID_HOME=/opt/android-sdk

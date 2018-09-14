@@ -1,4 +1,9 @@
 #!/bin/sh
-wid=$(xdotool getwindowfocus)
-[[ ! "$(xdotool getwindowname $wid)" = "i3" ]] && w="-w $wid" # If the focused window name is "i3" then no window is focused. Display normally.
-dmenu -i -l 20 $w "$@"
+
+# This version open menu attached to currently focused window
+# But I don't use it because it doens't work with transparent windows
+#wid=$(xdotool getwindowfocus)
+#[[ ! "$(xdotool getwindowname $wid)" = "i3" ]] && w="-w $wid" # If the focused window name is "i3" then no window is focused. Display normally.
+#dmenu -i -l 20 $w "$@"
+
+rofi -dmenu -fuzzy -i -columns 3

@@ -1,7 +1,7 @@
 st.termname:     st-256color
 st.shell:        /bin/fish
 
-st.font: Liberation Mono:pixelsize=14:antialias=true:autohint=true
+st.font: IBM Plex Mono:pixelsize=14:antialias=true:autohint=true
 st.borderpx: 1
 
 ! Available cursor values: 2 4 6 7 = █ _ | ☃ ( 1 3 5 are blinking versions)
@@ -9,7 +9,7 @@ st.cursorshape:       2
 ! thickness of underline and bar cursors
 st.cursorthickness:   2
 ! 0: normal blinking, 1: leave cursor border and blink with cursors background
-st.cursorblinkstyle:  1
+st.cursorblinkstyle:  2
 ! 0: cursor blinks with a constant interval; 1: blinking cycle resets on key input
 st.cursorblinkontype: 0
 ! blinking timeout for terminal and cursor blinking (0 disables)
@@ -31,7 +31,7 @@ st.bellvolume:        100
 st.prompt_char:       $
 
 ! opacity==255 means what terminal will be not transparent, 0 - fully transparent
-st.opacity:      200
+st.alpha:      200
 
 ! GRUVBOX THEME
 ! hard contrast: *background: #1d2021

@@ -11,7 +11,7 @@ set $alt Mod1
 set $shell fish
 
 # Terminal settings
-set $term xst
+set $term st
 set $term_multiplexer tmux
 set $dropdown_session ~/.sessions/dropdown
 
@@ -209,6 +209,11 @@ mode "resize" {
         bindsym k resize shrink height 10 px or 10 ppt
         bindsym l resize grow width 10 px or 10 ppt
 
+        bindsym Shift+h resize shrink width 100 px or 100 ppt
+        bindsym Shift+j resize grow height 100 px or 100 ppt
+        bindsym Shift+k resize shrink height 100 px or 100 ppt
+        bindsym Shift+l resize grow width 100 px or 100 ppt
+
         # same bindings, but for the arrow keys
         bindsym Left resize shrink width 10 px or 10 ppt
         bindsym Down resize grow height 10 px or 10 ppt
@@ -234,6 +239,11 @@ mode "move" {
     bindsym j     move down
     bindsym k     move up
     bindsym l     move right
+
+    bindsym Shift+h     move left 100 px
+    bindsym Shift+j     move down 100 px
+    bindsym Shift+k     move up 100 px
+    bindsym Shift+l     move right 100 px
 
     # back to normal: Enter or Escape or $mod+m
     bindsym Return mode "default"

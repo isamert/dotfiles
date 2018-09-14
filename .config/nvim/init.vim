@@ -65,6 +65,9 @@ call plug#begin('~/.local/share/nvim/plugged')
     " Show git changes
     Plug 'airblade/vim-gitgutter'
 
+    " Distract free writing
+    Plug 'junegunn/goyo.vim'
+
 call plug#end()
 
 " #############################################################################
@@ -72,6 +75,7 @@ call plug#end()
 " Helps Tab-completion in command mode for user commands (User commands must
 " start with uppercase)
 set ignorecase
+set mouse=a " It helps for resizing splits and stuff
 
 " 4 spaced tabs
 set tabstop=4
@@ -225,5 +229,6 @@ inoremap <S-Tab> <C-d>
 " ### MY COMMANDS ###
 command! ConfigReload so $MYVIMRC
 command! ConfigEdit e $MYVIMRC
-" # TODO: add urlview
+command! W w
+" # TODO: add urlview (), no need xst has alt+u binding
 " #############################################################################

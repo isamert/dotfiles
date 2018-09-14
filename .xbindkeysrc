@@ -46,21 +46,52 @@
     Control+Alt+Shift + d
 
 # ##################
-# VOLUME CONFIG
+# VOLUME/MUSIC
 # ##################
 
 # Set volume up
 "amixer set Master 5%+"
     Mod3 + 0
 
+# Set volume up
+"amixer set Master 5%+"
+    XF86AudioRaiseVolume
+
 # Set volume down
 "amixer set Master 5%-"
     Mod3 + 9
+
+# Set volume up
+"amixer set Master 5%-"
+    XF86AudioLowerVolume
 
 # Toggle between sound outputs
 "bash ~/.scripts/switch-audio-channel"
     Control+Alt + o
 
+"mpc toggle"
+    Mod3 + p # p for play/pause
+
+"mpc toggle"
+    XF86AudioPlay
+
+"mpc seek +7%"
+    Mod3 + bracketright # p for play/pause
+
+"mpc seek -7%"
+    Mod3 + bracketleft # p for play/pause
+
+"mpc prev"
+    XF86AudioPrev
+
+"mpc next"
+    XF86AudioNext
+
+"~/.scripts/menu-mpd -l"
+    Mod3 + m # m for music/mpd
+
+"~/.scripts/menu-mpd-all"
+    Mod3+Shift + M # M for music (List all tracks in library)
 
 # ##################
 # VARIOUS BINDINGS
@@ -75,27 +106,15 @@
 "wmctrl -a Firefox"
     Mod3 + b # b for browser
 
-"mpc toggle"
-    Mod3 + p # p for play/pause
-
 # ##################
 # GLOBAL PROGRAMS
 # ##################
-
-"~/.scripts/menu-windows"
-    Mod3 + w # w for windows
 
 "~/.scripts/menu"
     Mod3 + a # a for apps
 
 "~/.scripts/menu-files"
     Mod3 + f # f for files
-
-"~/.scripts/menu-mpd -l"
-    Mod3 + m # m for music/mpd
-
-"~/.scripts/menu-mpd-all"
-    Mod3+Shift + M # M for music (List all tracks in library)
 
 "~/.scripts/menu-mpd -p"
     Mod3+Shift + P # P for playlist
