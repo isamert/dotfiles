@@ -2,5 +2,5 @@
 # Search $HOME folder files recursively using `locate` and rofi
 
 
-xdg-open $(locate -r '^'$HOME'/.*' | grep -Pv '.*(\.stack-work|Workspace/temp|\.cargo|\.git|\.thumbnails|\.ghc|\.rustup|/target/|/build/|\.gradle|\.idea|/elpa/|/Trash/|\.Idea|\.stack|\.vscode|\.cache|/Cache/|CachedData|Local Storage|CacheStorage|IndexedDB|/storage/|/appcache/|/cache/|\.mozilla|CARC).*' | rofi -dmenu -i)
+xdg-open $(locate -r '^'$HOME'/.*' | grep -Pv '.*(\.stack-work|Workspace/temp|\.cargo|\.git|\.thumbnails|\.ghc|\.rustup|/target/|/build/|\.gradle|\.idea|/elpa/|/Trash/|\.Idea|\.cabal|\.local|\.stack|\.vscode|\.cache|/Cache/|CachedData|Local Storage|CacheStorage|IndexedDB|/storage/|/appcache/|/cache/|\.mozilla|CARC).*' | rofi -dmenu -i)
 

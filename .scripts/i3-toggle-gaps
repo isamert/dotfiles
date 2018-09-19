@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# This script toggles i3 gaps and handles the bar radius and border
+# accordingly. Default gap, radius and border sizes are read from
+# ~/.Xresources:
+# bar.radius
+# bar.border
+# i3.gaps.inner
+
+PBORDER=$(xrdb-get-value "bar.border")
+if [ "$PBORDER" -gt 0 ]; then
+    xrdb-set-value "bar.radius" 0
+    xrdb-set-value "bar.border" 0
+    i3-msg "gaps inner all set 0"
+else
+    xrdb-set-value "bar.radius" $(xres-read-value "bar.radius")
+    xrdb-set-value "bar.border" $(xres-read-value "bar.border")
+    i3-msg "gaps inner all set $(xres-read-value "wm.gaps.inner")"
+fi
+
+# reload bar
+bar-launch

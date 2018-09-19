@@ -47,7 +47,7 @@ call plug#begin('~/.local/share/nvim/plugged')
     " <C-w>p -> switch between windows
     Plug 'milkypostman/vim-togglelist'
 
-    " \w -> go to word using hints
+    " Search `easymotion` for keybindings
     Plug 'easymotion/vim-easymotion'
 
     " org-mode
@@ -65,8 +65,13 @@ call plug#begin('~/.local/share/nvim/plugged')
     " Show git changes
     Plug 'airblade/vim-gitgutter'
 
-    " Distract free writing
+    " Distraction free writing
     Plug 'junegunn/goyo.vim'
+
+    " Align stuff
+    Plug 'godlygeek/tabular'
+
+    Plug 'plasticboy/vim-markdown'
 
 call plug#end()
 
@@ -83,6 +88,9 @@ set shiftwidth=4
 set softtabstop=4
 set expandtab
 filetype plugin indent on
+
+" Terminal inherits title
+set title
 
 " Use system clipboard
 set clipboard=unnamedplus
@@ -136,23 +144,36 @@ let g:airline#extensions#tabline#fnamemod = ':t' " Show only filename for buffer
 
 " #############################################################################
 " ### LANGUAGE CLIENT SETTINGS ###
-let g:LanguageClient_serverCommands         = {}
-let g:LanguageClient_serverCommands["rust"] = ['rustup', 'run', 'nightly', 'rls']
-let g:LanguageClient_serverCommands["cpp"] = ['clangd']
-let g:LanguageClient_serverCommands["c"] = ['clangd']
-let g:LanguageClient_serverCommands["python"] = ['pyls']
+let g:LanguageClient_serverCommands            = {}
+let g:LanguageClient_serverCommands["rust"]    = ['rustup', 'run', 'nightly', 'rls']
+let g:LanguageClient_serverCommands["cpp"]     = ['clangd']
+let g:LanguageClient_serverCommands["c"]       = ['clangd']
+let g:LanguageClient_serverCommands["python"]  = ['pyls']
+let g:LanguageClient_serverCommands["haskell"] = ['hie-wrapper']
 " When gr(go references) is pressed, it will display a list that uses fzf with references
 let g:LanguageClient_selectionUI = 'fzf'
 
+map <leader>ll :call LanguageClient_contextMenu()<CR>
+map <Leader>lh :call LanguageClient#textDocument_hover()<CR>
+map <Leader>ld :call LanguageClient#textDocument_definition()<CR>
+map <Leader>lr :call LanguageClient#textDocument_rename()<CR>
+map <Leader>lf :call LanguageClient#textDocument_formatting()<CR>
+map <Leader>lb :call LanguageClient#textDocument_references()<CR>
+map <Leader>la :call LanguageClient#textDocument_codeAction()<CR>
+map <Leader>ls :call LanguageClient#textDocument_documentSymbol()<CR>
 
 " #### COMPLETION MANAGER ###
 let g:deoplete#enable_at_startup = 1
+let g:deoplete#auto_complete_delay = 150
+let g:deoplete#max_list = 100
+let g:deoplete#refresh_always = v:false
 let g:deoplete#sources = {}
 let g:deoplete#sources.c = ['LanguageClient']
 let g:deoplete#sources.cpp = ['LanguageClient']
 let g:deoplete#sources.python = ['LanguageClient']
 let g:deoplete#sources.python3 = ['LanguageClient']
 let g:deoplete#sources.rust = ['LanguageClient']
+let g:deoplete#sources.haskell = ['LanguageClient']
 let g:deoplete#sources.vim = ['nvim']
 " #############################################################################
 
@@ -181,9 +202,30 @@ inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 
 
+" #############################################################################
 " ### MY KEYBINDINGS ###
+" Map leader key to space
+nmap <space> <leader>
+
 " jj in edit mode emulates ESC (has timeout)
 inoremap jj <ESC>
+inoremap jk <ESC>
+
+" easymotion | Jump to word
+map  <leader>w <Plug>(easymotion-bd-w)
+nmap <leader>w <Plug>(easymotion-overwin-w)prefix)
+nmap s <Plug>(easymotion-overwin-f)
+
+" easymotion | Line motions, J downwards, L upwards
+map <Leader>j <Plug>(easymotion-j)
+map <Leader>k <Plug>(easymotion-k)
+
+" easymotion | Search using easymotion
+let g:EasyMotion_smartcase = 1
+map  / <Plug>(easymotion-sn)
+omap / <Plug>(easymotion-tn)
+map  n <Plug>(easymotion-next)
+map  N <Plug>(easymotion-prev)
 
 " Move visual lines
 onoremap <silent> j gj
@@ -193,31 +235,32 @@ nnoremap <silent> k gk
 vnoremap <silent> j gj
 vnoremap <silent> k gk
 
-" Map leader key to space
-nmap <space> <leader>
-
 " FZF
 nnoremap <leader><space> :Commands<CR>
 nnoremap <leader>g :GFiles<CR>
 nnoremap <leader>b :Buffers<CR>
 
 
-" ### TERMINAL ###
+" #############################################################################
+" ### TERMINAL MODE ###
 " jj in terminal mode emulates ESC (has timeout)
 tnoremap jj <C-\><C-n>
+tnoremap jk <C-\><C-n>
+
 " Exit terminal mode with ESC
 tnoremap <Esc> <C-\><C-n>
 
 " Alt-. -> next tab
 nnoremap <silent> <A-.> :tabnext<CR>
 tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>
+
 " Alt-, -> prev tab
 nnoremap <silent> <A-,> :tabprevious<CR>
 tnoremap <silent> <A-,> <C-\><C-n>:tabprevious<CR>
-" <TAB> -> cycle trough open windows
-nnoremap <silent> <TAB> <C-w><C-w>
+
 " F9 -> new tab, open file dialog
 nnoremap <F9> :tabe %:p:h<CR>
+
 " Make Tab and S-Tab work visual mode
 vnoremap <Tab> >gv
 vnoremap <S-Tab> <gv
@@ -230,5 +273,4 @@ inoremap <S-Tab> <C-d>
 command! ConfigReload so $MYVIMRC
 command! ConfigEdit e $MYVIMRC
 command! W w
-" # TODO: add urlview (), no need xst has alt+u binding
 " #############################################################################

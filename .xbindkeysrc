@@ -134,3 +134,8 @@
 "take-ss --wait-area"
     Control+Shift + Print + Release
 
+"lockscreen"
+    Control+Alt + l
+
+"calendar-popup"
+    Mod3 + c

@@ -186,8 +186,10 @@ Set a nicer theme.
 
 #+BEGIN_SRC emacs-lisp
 (get-package 'doom-themes)
-(require 'doom-themes)
-(load-theme 'doom-dracula t)
+(get-package 'gruvbox-theme)
+;(require 'doom-themes)
+;(load-theme 'doom-dracula t)
+(load-theme 'gruvbox t)
 #+END_SRC
 
 Also look here for other themes that comes bundled with ~doom-themes~ package: https://github.com/hlissner/emacs-doom-themes#features

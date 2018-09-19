@@ -1,64 +1,73 @@
-st.termname:     st-256color
-st.shell:        /bin/fish
+#define BACKGROUND #282828
+#define FOREGROUND #ebdbb2
+#define COLOR0  #282828
+#define COLOR8  #928374
+#define COLOR1  #cc241d
+#define COLOR9  #fb4934
+#define COLOR2  #98971a
+#define COLOR10 #b8bb26
+#define COLOR3  #d79921
+#define COLOR11 #fabd2f
+#define COLOR4  #458588
+#define COLOR12 #83a598
+#define COLOR5  #b16286
+#define COLOR13 #d3869b
+#define COLOR6  #689d6a
+#define COLOR14 #8ec07c
+#define COLOR7  #a89984
+#define COLOR15 #ebdbb2
 
+st.termname: st-256color
+st.shell: /bin/fish
 st.font: IBM Plex Mono:pixelsize=14:antialias=true:autohint=true
+st.alpha: 200
 st.borderpx: 1
+st.xfps: 300
+st.actionfps: 30
 
-! Available cursor values: 2 4 6 7 = █ _ | ☃ ( 1 3 5 are blinking versions)
-st.cursorshape:       2
-! thickness of underline and bar cursors
-st.cursorthickness:   2
-! 0: normal blinking, 1: leave cursor border and blink with cursors background
-st.cursorblinkstyle:  2
-! 0: cursor blinks with a constant interval; 1: blinking cycle resets on key input
-st.cursorblinkontype: 0
-! blinking timeout for terminal and cursor blinking (0 disables)
-st.blinktimeout:      0
+wm.gaps.inner: 6
+wm.border: 4
 
-! Enable bold fonts
-st.bold_font:         1
+bar.font0: Ubuntu Nerd Font:fontformat=truetype:size=11:antialias=false;0
+bar.font1: Font Awesome 5 Free:fontformat=truetype:size=11:antialias=false;0
+bar.font2: siji:pixelsize=10;1
+bar.border:	4
+bar.radius: 4
+bar.height: 30
+bar.width: 100%
 
-st.xfps:              75
-st.actionfps:         30
+rofi.color-enabled: true
+! Window:           'background',  'border', 'separator'
+rofi.color-window: argb:cc282828,  #9575cd, argb:ffffffff
+!   State:              'bg',       'fg',      'altbg',        'hlbg',         hlfg
+rofi.color-normal: argb:00282828, FOREGROUND, argb:00252936, argb:009575cd, #ff9575cd
+rofi.color-active: argb:00282828, #b16286,    argb:00252936, argb:009575cd, #ffc000
+rofi.color-urgent: argb:00252936, #cc241d,    argb:00252936, argb:00252936, #ff0000
+rofi.lines: 13
+rofi.columns: 1
+rofi.width: 2565
+rofi.padding: 500
+rofi.font: Inconsolata Bold 20
+rofi.separator-style: none
+rofi.hide-scrollbar: true
+rofi.auto-select: false
+rofi.drun-show-actions: true
 
-! Kerning / character bounding-box height multiplier
-st.chscale:           1.0
-! Kerning / character bounding-box width multiplier
-st.cwscale:           1.0
-! bell volume. Value between -100 and 100. (0 disables)
-st.bellvolume:        100
-! this is a char that is exposed like so: `printf '\033[z'`
-st.prompt_char:       $
-
-! opacity==255 means what terminal will be not transparent, 0 - fully transparent
-st.alpha:      200
-
-! GRUVBOX THEME
-! hard contrast: *background: #1d2021
-*background: #282828
-! soft contrast: *background: #32302f
-*foreground: #ebdbb2
-! Black + DarkGrey
-*color0:  #282828
-*color8:  #928374
-! DarkRed + Red
-*color1:  #cc241d
-*color9:  #fb4934
-! DarkGreen + Green
-*color2:  #98971a
-*color10: #b8bb26
-! DarkYellow + Yellow
-*color3:  #d79921
-*color11: #fabd2f
-! DarkBlue + Blue
-*color4:  #458588
-*color12: #83a598
-! DarkMagenta + Magenta
-*color5:  #b16286
-*color13: #d3869b
-! DarkCyan + Cyan
-*color6:  #689d6a
-*color14: #8ec07c
-! LightGrey + White
-*color7:  #a89984
-*color15: #ebdbb2
+*background: BACKGROUND
+*foreground: FOREGROUND
+*color0:  COLOR0
+*color8:  COLOR8
+*color1:  COLOR1
+*color9:  COLOR9
+*color2:  COLOR2
+*color10: COLOR10
+*color3:  COLOR3
+*color11: COLOR11
+*color4:  COLOR4
+*color12: COLOR12
+*color5:  COLOR5
+*color13: COLOR13
+*color6:  COLOR6
+*color14: COLOR14
+*color7:  COLOR7
+*color15: COLOR15

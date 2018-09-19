@@ -1,1 +1,2 @@
 xrandr -r 75
+xbindkeys &
