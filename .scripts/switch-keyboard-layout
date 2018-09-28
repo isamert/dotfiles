@@ -8,9 +8,12 @@
 # Afterwards you need to update `KEYBOARD_LAYOUTS`, first item must be your default layout.
 # Rest are just the ones that you want to switch.
 
-current_layout=$(setxkbmap -query | grep layout | cut -f2 -d ":" | xargs)
+function get_current_layout {
+    setxkbmap -query | grep layout | cut -f2 -d ":" | xargs
+}
 
 # Switch to next layout
+current_layout=$(get_current_layout)
 layouts=(${KEYBOARD_LAYOUTS//,/ })
 for i in "${!layouts[@]}"
 do
@@ -28,3 +31,4 @@ done
 
 # Reload .Xmodmap
 [[ -f ~/.Xmodmap ]] && xmodmap ~/.Xmodmap
+[[ $(get_current_layout) = *us* ]] && xmodmap ~/.Xmodmap.us

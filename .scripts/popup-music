@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# This script opens $MUSIC app in right-upper corner in the screen without
+# violating the area of top bar. If the $MUSIC is already open, it just
+# closes it.
+
+# Change $MUSIC in ~/.profile if you want. Also it's assumed that the $MUSIC is
+# a cli app.
+
+MUSIC=ncmpcpp
+
+SCREEN_WIDTH=$(xrandr -q | grep "Screen 0" | cut -d,  -f2 | cut -d " " -f3)
+
+BAR_BORDER=$(xrdb-get-value "bar.border")
+BAR_HEIGHT=$(xrdb-get-value "bar.height")
+Y=$((BAR_HEIGHT+BAR_BORDER*2))
+GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
+WINDOW_TITLE="music-popup-window"
+
+if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
+    $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $MUSIC 2> /dev/null &
+    sleep 0.07
+    WIDTH=$(xwininfo -name $WINDOW_TITLE | grep Width | cut -d: -f2 | xargs)
+    X=$(((SCREEN_WIDTH - WIDTH) / 2))
+    xdotool getactivewindow windowmove $X $Y
+else
+    wmctrl -c $WINDOW_TITLE
+fi

@@ -23,7 +23,7 @@ st.font: IBM Plex Mono:pixelsize=14:antialias=true:autohint=true
 st.alpha: 200
 st.borderpx: 1
 st.xfps: 300
-st.actionfps: 30
+st.actionfps: 75
 
 wm.gaps.inner: 6
 wm.border: 4

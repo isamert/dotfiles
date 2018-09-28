@@ -18,24 +18,3 @@ keycode 248 = Super_L
 
 ! AltGr + l -> λ
 keycode  46 = l L l L U03BB Oslash oslash
-
-! AltGr + [ -> (
-! AltGr + ] -> )
-! Rest is as is
-keycode  34 = bracketleft braceleft bracketleft braceleft parenleft leftdoublequotemark guillemotleft leftdoublequotemark bracketleft braceleft guillemotleft leftdoublequotemark
-keycode  35 = bracketright braceright bracketright braceright parenright rightdoublequotemark guillemotright rightdoublequotemark bracketright braceright guillemotright rightdoublequotemark
-
-! When using us(intl) keyboard ' key becomes dead_acute which is a kind of combination key
-! like dead_acute + a -> á. But I don't want that. So I remapped them to ' and "
-! Same thing also happens for ` and ~, so I remmaped them too.
-! Also: AltGr + ' -> ←
-keycode  48 = apostrophe quotedbl dead_acute dead_diaeresis U2190 quotedbl apostrophe quotedbl dead_acute dead_diaeresis apostrophe quotedbl dead_acute dead_diaeresis apostrophe quotedbl
-keycode  49 = grave asciitilde dead_grave dead_tilde grave asciitilde grave asciitilde dead_grave dead_tilde grave asciitilde dead_grave dead_tilde grave asciitilde
-
-! AltGr + ; -> →
-! AltGr + Shift + ; -> ⇒
-keycode  47 = semicolon colon semicolon colon U2192 U21D2 paragraph degree semicolon colon paragraph degree semicolon colon paragraph degree
-
-! Other useful unicode chars by default:
-! AltGr + \ -> ¬ (not)
-! AltGr + m -> µ

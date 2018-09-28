@@ -14,7 +14,3 @@ dateformat = %d/%m/%Y
 longdateformat = %d/%m/%Y
 datetimeformat = %d/%m/%Y %H:%M
 longdatetimeformat = %d/%m/%Y %H:%M
-
-[keybindings]
-save = s
-external_edit = a

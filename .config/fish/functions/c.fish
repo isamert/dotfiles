@@ -1,4 +1,4 @@
-# Defined in /tmp/fish.Ohu0vA/c.fish @ line 2
+# Defined in /tmp/fish.508A4S/c.fish @ line 2
 function c
 	switch $argv
 
@@ -113,7 +113,19 @@ function c
     case systemd
         cd ~/.config/systemd/user/
 
+    case qute
+        cd ~/.config/qutebrowser
+    case quterc
+        eval $EDITOR ~/.config/qutebrowser/config.py
+    case qutelocal
+        cd ~/.local/share/qutebrowser
 
+    case mpv
+        cd ~/.config/mpd
+    case mpvrc
+        eval $EDITOR ~/.config/mpv/mpv.conf
+    case mpvinputrc
+        eval $EDITOR ~/.config/mpv/input.conf
     # ###########################################
     # PERSONAL JUMPS
     # ###########################################

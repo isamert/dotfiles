@@ -17,8 +17,8 @@ font pango:monospace 8
 floating_modifier $mod
 
 # start a terminal
-bindsym $mod+Return exec $term -e $shell
-bindsym $hyper+Return exec $term -e $shell
+bindsym $mod+Return exec --no-startup-id $term -e $shell
+bindsym $hyper+Return exec --no-startup-id $term -e $shell
 
 # kill focused window
 bindsym $mod+w kill
@@ -56,12 +56,12 @@ bindsym $mod+$alt+Right resize grow width 10 px or 10 ppt
 # split in horizontal orientation
 bindsym $mod+bar split h
 # horizontal terminal
-bindsym $hyper+bar split h; exec $term -e $shell
+bindsym $hyper+bar split h; exec --no-startup-id $term -e $shell
 
 # split in vertical orientation
 bindsym $mod+minus split v
 # vertical terminal
-bindsym $hyper+minus split v; exec $term -e $shell
+bindsym $hyper+minus split v; exec --no-startup-id $term -e $shell
 
 # enter fullscreen mode for the focused container
 bindsym $mod+f fullscreen toggle
@@ -137,7 +137,7 @@ gaps inner $gaps_inner
 gaps outer 0
 
 # Toggle gaps
-bindsym $mod+g exec i3-toggle-gaps
+bindsym $mod+g exec --no-startup-id i3-toggle-gaps
 
 ###############################
 # WINDOW BORDERS
@@ -178,6 +178,7 @@ client.urgent           $darkred  $darkred  $foreground $darkred     $darkred
 # SCRATCHPAD WINDOWS
 ###############################
 for_window [class="float"] floating enable
+for_window [class="mpv" instance="youtube"] floating enable
 
 # TODO: fix this:
 # Look for EXECS/AUTOSTART section, where the scratchpad_term gets started.
@@ -262,5 +263,5 @@ mode "move" {
 ###############################
 exec_always --no-startup-id bar-launch
 exec --no-startup-id compton
-exec --no-startup-id feh --bg-scale $HOME/.config/wall.png
+#exec --no-startup-id feh --bg-scale $HOME/.config/wall.png
 exec --no-startup-id udiskie --smart-tray --notify

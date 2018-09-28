@@ -76,10 +76,16 @@
     XF86AudioPlay
 
 "mpc seek +7%"
-    Mod3 + bracketright # p for play/pause
+    Mod3+ bracketright
 
 "mpc seek -7%"
-    Mod3 + bracketleft # p for play/pause
+    Mod3 + bracketleft
+
+"mpc prev"
+    Mod3+Shift + bracketleft
+
+"mpc next"
+    Mod3+Shift + bracketright
 
 "mpc prev"
     XF86AudioPrev
@@ -103,7 +109,7 @@
     Control+Alt + k
 
 # Focus to Firefox/Browser
-"wmctrl -a Firefox"
+"wmctrl -a qutebrowser"
     Mod3 + b # b for browser
 
 # ##################
@@ -137,5 +143,14 @@
 "lockscreen"
     Control+Alt + l
 
-"calendar-popup"
+"popup-calendar"
     Mod3 + c
+
+"popup-music"
+    Mod3 + n
+
+"popup-htop"
+    Mod3 + h
+
+"$TERMINAL -e ranger"
+    Mod3 + r

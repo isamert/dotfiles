@@ -1,2 +1,4 @@
 xrandr -r 75
+xmodmap $HOME/.Xmodmap
+xmodmap $HOME/.Xmodmap.us
 xbindkeys &
