@@ -154,3 +154,6 @@
 
 "$TERMINAL -e ranger"
     Mod3 + r
+
+"feh --bg-scale $(find ~/Pictures/wallpaper | shuf -n 1)"
+    Mod3 + apostrophe
