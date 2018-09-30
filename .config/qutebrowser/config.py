@@ -55,13 +55,17 @@ c.downloads.open_dispatcher = "xdg-open {}"
 # #############################################################################
 # Custom commands
 # #############################################################################
-c.aliases = {'w'          : 'session-save',
-             'q'          : 'quit',
-             'wq'         : 'quit --save',
-             'sync'       : 'open localhost:8384',
-             'subextract' : 'download-open sub-extract {} --noconfirm',
-             'mpv'        : 'spawn mpv --x11-name=youtube --geometry=853x480-20-20 {url}',
-             'mpv-hint'   : 'hint links spawn mpv --x11-name=youtube --geometry=853x480-20-20 {hint-url}'}
+c.aliases = {'w'            : 'session-save',
+             'q'            : 'quit',
+             'wq'           : 'quit --save',
+             'sync'         : 'open localhost:8384',
+             'subextract'   : 'download-open sub-extract {} --noconfirm',
+             'mpv'          : 'spawn mpv --x11-name=youtube --geometry=853x480-20-20 {url}',
+             'mpv-hint'     : 'hint links spawn mpv --x11-name=youtube --geometry=853x480-20-20 {hint-url}',
+             'mpd'          : 'spawn mpd-yt play {url}',
+             'mpd-hint'     : 'hint links spawn mpd-yt play {hint-url}',
+             'mpd-add'      : 'spawn mpd-yt add {url}',
+             'mpd-add-hint' : 'hint links spawn mpd-yt add {hint-url}'}
 
 # #############################################################################
 # Custom bindings
@@ -70,8 +74,15 @@ c.aliases = {'w'          : 'session-save',
 config.bind('yf', 'hint links yank-primary')
 config.unbind('m')
 config.bind('mb', 'quickmark-save')
+
 config.bind('mf', 'mpv-hint')
-config.bind('mm', 'mpv-hint')
+config.bind('mm', 'mpv')
+
+config.bind('mp', 'mpd')
+config.bind('ma', 'mpd-add')
+
+config.bind('<Alt-.>', 'tab-next')
+config.bind('<Alt-,>', 'tab-prev')
 
 # #############################################################################
 # Privacy related

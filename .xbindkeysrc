@@ -75,10 +75,10 @@
 "mpc toggle"
     XF86AudioPlay
 
-"mpc seek +7%"
+"mpc seek +3%"
     Mod3+ bracketright
 
-"mpc seek -7%"
+"mpc seek -3%"
     Mod3 + bracketleft
 
 "mpc prev"
