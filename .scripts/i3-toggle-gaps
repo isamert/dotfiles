@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+source $UTILS_FILE
 
 # This script toggles i3 gaps and handles the bar radius and border
 # accordingly. Default gap, radius and border sizes are read from

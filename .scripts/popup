@@ -1,0 +1,64 @@
+#!/bin/bash
+source $UTILS_FILE
+
+# BAR_BORDER is the border size of top bar (in my case polybar.)
+# BAR_HEIGHT is the height of top bar.
+# WINDOW_BORDER is the border size of windows.
+BAR_BORDER=$(xrdb-get-value "bar.border")
+BAR_HEIGHT=$(xrdb-get-value "bar.height")
+WINDOW_BORDER=$(xrdb-get-value "wm.border")
+
+function calendar {
+    # Runs $CALENDAR in right top corner of the screen.
+
+    GEOMETRY="80x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
+    WINDOW_TITLE="calendar-popup-window"
+
+    if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
+        $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $CALENDAR
+    else
+        wmctrl -c $WINDOW_TITLE
+    fi
+}
+
+function music {
+    # Runs $MUSIC in top middle of the screen.
+
+    MUSIC=ncmpcpp
+
+    SCREEN_WIDTH=$(xrandr -q | grep "Screen 0" | cut -d,  -f2 | cut -d " " -f3)
+
+    Y=$((BAR_HEIGHT+BAR_BORDER*2))
+    GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
+    WINDOW_TITLE="music-popup-window"
+
+    if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
+        $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $MUSIC 2> /dev/null &
+        sleep 0.07
+        WIDTH=$(xwininfo -name $WINDOW_TITLE | grep Width | cut -d: -f2 | xargs)
+        X=$(((SCREEN_WIDTH - WIDTH) / 2))
+        xdotool getactivewindow windowmove $X $Y
+    else
+        wmctrl -c $WINDOW_TITLE
+    fi
+}
+
+function htop {
+    # Runs htop in right top corner of the screen.
+
+    local GEOMETRY="80x9-$((2*WINDOW_BORDER))+$((BAR_HEIGHT+BAR_BORDER*2))"
+    local WINDOW_TITLE="popup-htop"
+
+    if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
+        $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e htop
+    else
+        wmctrl -c $WINDOW_TITLE
+    fi
+}
+
+
+case "$1" in
+    "calendar") calendar;;
+    "music")    music;;
+    "htop")     htop;;
+esac

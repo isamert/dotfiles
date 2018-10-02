@@ -1,7 +1,6 @@
 set $mod Mod4
 set $hyper Mod3
 set $alt Mod1
-set $shell fish
 
 # Terminal settings
 set $term st
@@ -17,8 +16,8 @@ font pango:monospace 8
 floating_modifier $mod
 
 # start a terminal
-bindsym $mod+Return exec --no-startup-id $term -e $shell
-bindsym $hyper+Return exec --no-startup-id $term -e $shell
+bindsym $mod+Return exec --no-startup-id $term
+bindsym $hyper+Return exec --no-startup-id $term
 
 # kill focused window
 bindsym $mod+w kill

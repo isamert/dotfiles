@@ -118,7 +118,7 @@ label-urgent-padding = ${module/bspwm.label-urgent-padding}
 [module/mpd]
 type = internal/mpd
 
-format-online = %{A1:popup-music &:} <icon-prev> <icon-stop>   <label-song>   <toggle> <icon-next> %{A}
+format-online = %{A1:popup music &:} <icon-prev> <icon-stop>   <label-song>   <toggle> <icon-next> %{A}
 
 icon-prev = 
 icon-stop = 
@@ -143,7 +143,7 @@ interval = 2
 format-prefix = " "
 format-prefix-foreground = ${colors.foreground-alt}
 format-underline = #4bffdc
-label = %{A1:popup-htop &:} %percentage_used%% %{A}
+label = %{A1:popup htop &:} %percentage_used%% %{A}
 
 [module/wlan]
 type = internal/network
@@ -192,7 +192,7 @@ date = " %d-%m"
 time = %H:%M
 
 format-underline = #0a6cf5
-label = %{A1:popup-calendar&:}  %date%   %time% %{A}
+label = %{A1:popup calendar&:}  %date%   %time% %{A}
 
 [module/volume]
 type = internal/volume

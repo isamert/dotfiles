@@ -1,6 +1,0 @@
-#!/bin/sh -
-SONG=$(mpc listall | rofi -fuzzy -dmenu -i)
-if [ ! -z "$SONG" ]; then
-    mpc add "$SONG"
-    mpc play $(mpc playlist | wc -l) # Play the last (just added) song
-fi

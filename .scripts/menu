@@ -1,3 +1,138 @@
-#!/bin/sh -
-#j4-dmenu-desktop --dmenu="/bin/sh -c \"(cat ; (stest -flx $(echo $PATH | tr : ' ') | sort -u)) | dmenu_modified\"" --display-binary --no-generic
-rofi -combi-modi window,drun,run -show combi
+#!/bin/bash
+
+all_name='[ALL]'
+
+function dmenu {
+    rofi -dmenu -fuzzy -i $@;
+}
+
+function _mpd-artists {
+    mpc list artist | sort -f | dmenu -columns 3 -p artist
+}
+
+function _mpd-albums {
+    local artist="$1"
+    local albums
+
+    mapfile -t albums < <(mpc list album artist "$artist")
+    if (( ${#albums[@]} > 1 )) ; then
+        {
+            printf '%s\n' "$all_name"
+            printf '%s\n' "${albums[@]}" | sort -f
+        } | dmenu -p album
+    else
+        # We only have one album, so just use that.
+        printf '%s\n' "${albums[0]}"
+    fi
+}
+
+function mpd-playlist {
+    local format="%position% - %title% - %album% - %artist%"
+    local track
+
+    track=$(mpc playlist -f "$format" | dmenu -i -p track)
+    track=$(printf '%s' "${track%% *}")
+
+    [[ -z $track ]] || mpc play $track
+}
+
+function mpd-artists {
+    local artist=$(_mpd-artists)
+    [[ $artist ]] || exit 1
+
+    local album=$(_mpd-albums "$artist")
+    #[[ $album ]] || exit 2
+
+    if [[ $album == "$all_name" ]]; then
+        mpc clear
+        mpc find artist "$artist" | sort | mpc add
+        mpc play
+    else
+        local songs=$(mpc find artist "$artist" album "$album")
+        if [[ -z $songs ]]; then
+            menu youtube "$artist $album"
+        else
+            mpc clear
+            echo "$songs" | sort | mpc add
+            mpc play
+        fi
+    fi
+}
+
+function mpd-all {
+    # Show all music files and play selected one. (If it'ts not found search
+    # in youtube.)
+
+    local SONG=$(mpc listall | dmenu)
+    if [ ! -z "$SONG" ]; then
+        mpc add "$SONG"
+        if [[ $? != 0 ]]; then
+            menu youtube "$SONG"
+        else
+            mpc play $(mpc playlist | wc -l) # Play the last (just added) song
+        fi
+    fi
+}
+
+
+function youtube {
+    # Search given string in youtube and show results. Play selected one in mpd.
+
+    local DOWNLOAD_URLS=$(mktemp)
+    local SEARCH_STRING=$@
+    [[ -z "$1" ]] && SEARCH_STRING=$(rofi -dmenu -p "search yt")
+    [[ -z "$SEARCH_STRING" ]] && exit
+
+    local RESULT=$(youtube-viewer --no-use-colors --no-interactive $SEARCH_STRING | rofi -dmenu -i -async-pre-read 0)
+    RESULT=$(echo $RESULT | cut -d"." -f1 | xargs)
+
+    local URL=$(youtube-viewer --no-use-colors --no-interactive --extract="*URL*" --std-input=$RESULT $SEARCH_STRING 2> /dev/null | grep "youtube.com/watch?v=")
+    mpd-yt play $URL
+}
+
+
+function files {
+    # Search $HOME folder files recursively using `locate` and rofi
+    xdg-open $(locate -r '^'$HOME'/.*' | grep -Pv '.*(\.stack-work|Workspace/temp|\.cargo|\.git|\.thumbnails|\.ghc|\.rustup|/target/|/build/|\.gradle|\.idea|/elpa/|/Trash/|\.Idea|\.cabal|\.local|\.stack|\.vscode|\.cache|/Cache/|CachedData|Local Storage|CacheStorage|IndexedDB|/storage/|/appcache/|/cache/|\.mozilla|CARC).*' | dmenu)
+}
+
+
+function passwords {
+    local KEYRING_ID=keepass
+    local KDBX_FILE="$HOME/Documents/sync/passwords.kdbx"
+    local ENTRIES=$()
+    local ENTRY=$(secret-tool lookup name $KEYRING_ID | keepassxc-cli locate $KDBX_FILE / | tail -n +2 | dmenu)
+    if [ ! -z "$ENTRY" ]
+    then
+        getpassword "$ENTRY" | xclip -selection clipboard
+    fi
+
+    # Clear clipboard after 20 secs
+    local secs=$((20))
+    while [ $secs -gt 0 ]; do
+       echo -ne "$secs\033[0K\r"
+       sleep 1
+       : $((secs--))
+    done
+
+    echo "" | xclip -selection clipboard
+}
+
+
+function windows {
+    # List windows and focus selected one
+    wmctrl -a $(wmctrl -l | cut -f4- -d" " | sed 's/isa-desktop //g' | dmenu)
+}
+
+
+cmd="$1"
+shift
+case $cmd in
+    "mpd-artists") mpd-artists $@;;
+    "mpd-all") mpd-all $@;;
+    "mpd-playlist") mpd-playlist $@;;
+    "youtube") youtube $@;;
+    "files") files $@;;
+    "passwords") passwords $@;;
+    *) rofi -combi-modi window,drun,run -show combi $@
+esac

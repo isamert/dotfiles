@@ -18,7 +18,7 @@
 #define COLOR15 #ebdbb2
 
 st.termname: st-256color
-st.shell: /bin/fish
+st.shell: /bin/bash
 st.font: IBM Plex Mono:pixelsize=14:antialias=true:autohint=true
 st.alpha: 200
 st.borderpx: 1

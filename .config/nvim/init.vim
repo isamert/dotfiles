@@ -11,7 +11,7 @@ call plug#begin('~/.local/share/nvim/plugged')
     Plug 'rakr/vim-one'
     Plug 'colepeters/spacemacs-theme.vim'
     Plug 'liuchengxu/space-vim-dark'
-    Plug 'morhetz/gruvbox'
+    Plug 'dkasak/gruvbox'
 
     "Startup screen
     Plug 'mhinz/vim-startify'
@@ -73,13 +73,14 @@ call plug#begin('~/.local/share/nvim/plugged')
 
     Plug 'plasticboy/vim-markdown'
 
+    Plug 'neovimhaskell/haskell-vim'
 call plug#end()
 
 " #############################################################################
 "  ### GENERAL SETTINGS ###
 " Helps Tab-completion in command mode for user commands (User commands must
 " start with uppercase)
-set ignorecase
+set smartcase
 set mouse=a " It helps for resizing splits and stuff
 
 " 4 spaced tabs
@@ -88,6 +89,8 @@ set shiftwidth=4
 set softtabstop=4
 set expandtab
 filetype plugin indent on
+
+syntax on
 
 " Terminal inherits title
 set title
@@ -207,6 +210,28 @@ inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 " Map leader key to space
 nmap <space> <leader>
 
+" Switch buffers with Alt+b and Alt+B
+nnoremap <silent> <A-b> :bn<CR>
+nnoremap <silent> <A-B> :bp<CR>
+
+" Alt-. -> next tab
+nnoremap <silent> <A-.> :tabnext<CR>
+tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>
+
+" Alt-, -> prev tab
+nnoremap <silent> <A-,> :tabprevious<CR>
+tnoremap <silent> <A-,> <C-\><C-n>:tabprevious<CR>
+
+" Alt-NUMBER goes to nth tab
+nnoremap <silent> <A-1> :1 tabn<CR>
+nnoremap <silent> <A-2> :2 tabn<CR>
+nnoremap <silent> <A-3> :3 tabn<CR>
+nnoremap <silent> <A-4> :4 tabn<CR>
+nnoremap <silent> <A-5> :5 tabn<CR>
+
+" Old habbits
+nnoremap <silent> <C-t> :tabnew<CR>
+
 " jj in edit mode emulates ESC (has timeout)
 inoremap jj <ESC>
 inoremap jk <ESC>
@@ -249,14 +274,6 @@ tnoremap jk <C-\><C-n>
 
 " Exit terminal mode with ESC
 tnoremap <Esc> <C-\><C-n>
-
-" Alt-. -> next tab
-nnoremap <silent> <A-.> :tabnext<CR>
-tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>
-
-" Alt-, -> prev tab
-nnoremap <silent> <A-,> :tabprevious<CR>
-tnoremap <silent> <A-,> <C-\><C-n>:tabprevious<CR>
 
 " F9 -> new tab, open file dialog
 nnoremap <F9> :tabe %:p:h<CR>

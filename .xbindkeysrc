@@ -93,10 +93,10 @@
 "mpc next"
     XF86AudioNext
 
-"~/.scripts/menu-mpd -l"
+"~/.scripts/menu mpd-artists"
     Mod3 + m # m for music/mpd
 
-"~/.scripts/menu-mpd-all"
+"~/.scripts/menu mpd-all"
     Mod3+Shift + M # M for music (List all tracks in library)
 
 # ##################
@@ -119,13 +119,13 @@
 "~/.scripts/menu"
     Mod3 + a # a for apps
 
-"~/.scripts/menu-files"
+"~/.scripts/menu files"
     Mod3 + f # f for files
 
-"~/.scripts/menu-mpd -p"
+"~/.scripts/menu mpd-playlist"
     Mod3+Shift + P # P for playlist
 
-"~/.scripts/menu-passwords"
+"~/.scripts/menu passwords"
     Mod3+ k # k for keepass
 
 "take-ss --full"
@@ -143,13 +143,13 @@
 "lockscreen"
     Control+Alt + l
 
-"popup-calendar"
+"popup calendar"
     Mod3 + c
 
-"popup-music"
+"popup music"
     Mod3 + n
 
-"popup-htop"
+"popup htop"
     Mod3 + h
 
 "$TERMINAL -e ranger"
