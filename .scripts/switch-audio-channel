@@ -1,15 +1,23 @@
-#!/bin/sh -
+#!/bin/bash
 
-# This scripts toggles between sinks,
-# assuming you only have two sinks 0 or 1.
+# Changes default sink to next one and moves all inputs to new default sink.
 
-current_sink=`pactl list sinks short | grep -E "RUNNING|IDLE" | head -c 1`
-current_input=`pactl list sink-inputs short | cut -f 1` # default delim of cut is \t, so no need to specify
-new_sink=0
+readarray -t sinks <<< "$(pactl list sinks short | cut -f1)"
+readarray -t inputs <<< "$(pactl list sink-inputs short | cut -f1)"
+current_sink=$(pactl list sinks short | grep "RUNNING" | head -c 1)
 
-[[ $current_sink = 0 ]] && new_sink="1" || new_sink="0"
+new_sink=${sinks[0]}
+for sink in "${sinks[@]}"; do
+    if (( sink > current_sink )); then
+        new_sink="$sink"
+        break
+    fi
+done
 
-pacmd move-sink-input $current_input $new_sink
+# Move every input to new sink
+for input in "${inputs[@]}"; do
+    pacmd move-sink-input "$input" "$new_sink"
+done
+
+# Make new sink the default
 pactl set-default-sink $new_sink
-
-

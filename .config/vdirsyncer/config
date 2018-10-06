@@ -1,3 +1,6 @@
+# After adding a new calendar/contacts group, run this to discover them:
+# vdirsyncer discover calendar
+
 [general]
 status_path = "~/.dav/cache/vdir-status/"
 
@@ -14,7 +17,7 @@ path = "~/.dav/contacts"
 [storage contacts_remote]
 type = "carddav"
 auth= "digest"
-url = "https://www.isamert.net/baikal/html/dav.php/"
+url = "http://galileo/baikal/html/dav.php/"
 username = "isamert"
 password.fetch = ["command", "getpassword", "/Cloud/Baikal"]
 
@@ -33,6 +36,6 @@ path = "~/.dav/calendars/"
 [storage calendar_remote]
 type = "caldav"
 auth= "digest"
-url = "https://www.isamert.net/baikal/html/cal.php/calendars/isamert/"
+url = "http://galileo/baikal/html/cal.php/calendars/isamert/"
 username = "isamert"
 password.fetch = ["command", "getpassword", "/Cloud/Baikal"]

@@ -88,9 +88,9 @@ set tabstop=4
 set shiftwidth=4
 set softtabstop=4
 set expandtab
+syntax on
 filetype plugin indent on
 
-syntax on
 
 " Terminal inherits title
 set title
@@ -142,6 +142,12 @@ let g:airline_powerline_fonts = 1
 let g:airline_theme='one'
 let g:airline#extensions#tabline#enabled = 2 " Show buffers as tabs
 let g:airline#extensions#tabline#fnamemod = ':t' " Show only filename for buffer tabs
+" #############################################################################
+
+" #############################################################################
+" ### ORG MODE ###
+let g:org_heading_shade_leading_stars = 0
+let g:org_indent = 1
 " #############################################################################
 
 

@@ -1,0 +1,59 @@
+$include /etc/inputrc
+
+# Fixes del key
+set enable-keypad on
+
+# Obvious
+set completion-ignore-case on
+
+# Treat - and _ as same while completing
+set completion-map-case on
+
+# TAB once
+set show-all-if-ambiguous on
+set show-all-if-unmodified on
+
+# COLORS
+# Color files by types
+set colored-stats on
+# Append char to indicate type
+set visible-stats on
+# Mark symlinked directories
+set mark-symlinked-directories on
+# Color the common prefix
+set colored-completion-prefix on
+# Color the common prefix in menu-complete
+set menu-complete-display-prefix on
+
+#
+# Vi mode settings
+#
+set editing-mode vi
+set show-mode-in-prompt on
+# use | cursor in insert mode, block cursor in normal mode
+set vi-ins-mode-string \1\e[6 q\2
+set vi-cmd-mode-string \1\e[2 q\2
+# Search history using what is currently on screen (before cursor)
+$if mode=vi
+    set keymap vi-command
+    # these are for vi-command mode
+    j: history-search-forward
+    k: history-search-backward
+    l: forward-char
+    h: backward-char
+    set keymap vi-insert
+    # these are for vi-insert mode
+    "\C-[OA": history-search-backward
+    "\C-[OB": history-search-forward
+    "\C-[OC": forward-char
+    "\C-[OD": backward-char
+$endif
+
+# Cycle
+TAB: menu-complete
+TAB: menu-complete-backward
+
+# C-j and C-k to cycle trough history
+Control-k: history-search-backward
+Control-j: history-search-forward
+

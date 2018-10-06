@@ -1,4 +1,19 @@
-xrandr -r 75
-xmodmap $HOME/.Xmodmap
+# There are extra settings for us keyboard, source them
+# ~/.Xmodmap gets sourced automatically
 xmodmap $HOME/.Xmodmap.us
-xbindkeys &
+
+# Set refresh rate
+xrandr -r 75
+
+# I should probably use systemd but this seems more in-place and manageable.
+# Startup programs
+xbindkeys &                        # Key binding manager
+unclutter &                        # Hide inactive mouse
+mpd &                              # Music player daemon
+udiskie --smart-tray --notify &    # Automatic mounting etc.
+syncthing -no-browser &            # Sync manager
+/usr/lib/geoclue-2.0/demos/agent & # Geo-location provider service (for redshift)
+redshift &                         # For my eyes
+
+# I just use the background of LightDM, no need for this for now
+# feh --bg-scale $HOME/.config/wall.png

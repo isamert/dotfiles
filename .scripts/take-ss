@@ -1,17 +1,11 @@
 #!/bin/sh
 
-if [ $1 == "--full" ]; then
-    maim $HOME/Pictures/screenshots/full-$(date +%F::%R:%S).png
-elif [ $1 == "--area" ]; then
-    maim -s $HOME/Pictures/screenshots/area-$(date +%F::%R:%S).png
-elif [ $1 == "--wait-full" ]; then
-    maim -d 5 $HOME/Pictures/screenshots/full-$(date +%F::%R:%S).png
-elif [ $1 == "--wait-area" ]; then
-    maim -s -d 5 $HOME/Pictures/screenshots/area-$(date +%F::%R:%S).png
-elif [ $1 == "--clip-full" ]; then
-    maim | xclip -selection clipboard -t image/png
-elif [ $1 == "--clip-area" ]; then
-    maim -s | xclip -selection clipboard -t image/png
-elif [ $1 == "--shadow-window" ]; then
-    maim -st 9999999 | convert - \( +clone -background black -shadow 80x3+5+5 \) +swap -background none -layers merge +repage $HOME/Pictures/screenshots/window-shadowed-$(date +%F::%R:%S).png
-fi
+case "$1" in
+    "--full") maim $HOME/Pictures/screenshots/full-$(date +%F::%R:%S).png ;;
+    "--area") maim -s $HOME/Pictures/screenshots/area-$(date +%F::%R:%S).png ;;
+    "--wait-full") maim -d 5 $HOME/Pictures/screenshots/full-$(date +%F::%R:%S).png ;;
+    "--wait-area") maim -s -d 5 $HOME/Pictures/screenshots/area-$(date +%F::%R:%S).png ;;
+    "--clip-full") maim | xclip -selection clipboard -t image/png ;;
+    "--clip-area") maim -s | xclip -selection clipboard -t image/png ;;
+    "--shadow-window") maim -st 9999999 | convert - \( +clone -background black -shadow 80x3+5+5 \) +swap -background none -layers merge +repage $HOME/Pictures/screenshots/window-shadowed-$(date +%F::%R:%S).png ;;
+esac

@@ -18,6 +18,8 @@ function calendar {
         $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $CALENDAR
     else
         wmctrl -c $WINDOW_TITLE
+        wait 1
+        vdirsyncer sync
     fi
 }
 

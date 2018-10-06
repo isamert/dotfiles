@@ -4,9 +4,9 @@
 # If a command works on commandline but not on xbindkeys, try adding `Release` to the hotkey.
 
 
-# ##################
+# #############################################################################
 # MOUSE CONFIG
-# ##################
+# #############################################################################
 
 # Left click
 "xdotool click 1"
@@ -45,9 +45,9 @@
 "xdotool mousemove_relative --sync -- 10 0"
     Control+Alt+Shift + d
 
-# ##################
+# #############################################################################
 # VOLUME/MUSIC
-# ##################
+# #############################################################################
 
 # Set volume up
 "amixer set Master 5%+"
@@ -99,22 +99,12 @@
 "~/.scripts/menu mpd-all"
     Mod3+Shift + M # M for music (List all tracks in library)
 
-# ##################
-# VARIOUS BINDINGS
-# ##################
-
-# Switch betweend defined keyboard layouts
-# Examine the script for setting your layouts
-"bash ~/.scripts/switch-keyboard-layout"
-    Control+Alt + k
-
-# Focus to Firefox/Browser
-"wmctrl -a qutebrowser"
-    Mod3 + b # b for browser
-
-# ##################
+# #############################################################################
 # GLOBAL PROGRAMS
-# ##################
+# #############################################################################
+
+"$TERMINAL"
+    Mod4 + Return
 
 "~/.scripts/menu"
     Mod3 + a # a for apps
@@ -155,5 +145,20 @@
 "$TERMINAL -e ranger"
     Mod3 + r
 
-"feh --bg-scale $(find ~/Pictures/wallpaper | shuf -n 1)"
+"wal -i ~/Pictures/wallpaper"
     Mod3 + apostrophe
+#"feh --bg-scale $(find ~/Pictures/wallpaper | shuf -n 1)"
+#    Mod3 + apostrophe
+
+# #############################################################################
+# VARIOUS BINDINGS
+# #############################################################################
+
+# Switch betweend defined keyboard layouts
+# Examine the script for setting your layouts
+"bash ~/.scripts/switch-keyboard-layout"
+    Control+Alt + k
+
+# Focus to Firefox/Browser
+"wmctrl -a qutebrowser"
+    Mod3 + b # b for browser

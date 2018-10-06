@@ -261,9 +261,7 @@ mode "move" {
 
 
 ###############################
-# EXECS/AUTOSTART
+# EXECS/AUTOSTART (look ~/.xprofile for other autostart apps)
 ###############################
 exec_always --no-startup-id bar-launch
 exec --no-startup-id compton
-#exec --no-startup-id feh --bg-scale $HOME/.config/wall.png
-exec --no-startup-id udiskie --smart-tray --notify

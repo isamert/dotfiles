@@ -7,7 +7,7 @@ function dmenu {
 }
 
 function _mpd-artists {
-    mpc list artist | sort -f | dmenu -columns 3 -p artist
+    mpc list artist | sort -f | dmenu -columns 4 -p artist
 }
 
 function _mpd-albums {
@@ -49,8 +49,8 @@ function mpd-artists {
         mpc play
     else
         local songs=$(mpc find artist "$artist" album "$album")
-        if [[ -z $songs ]]; then
-            menu youtube "$artist $album"
+        if [[ -z "$songs" ]]; then
+            [[ ! -z "$artist" ]] && menu youtube "$artist $album"
         else
             mpc clear
             echo "$songs" | sort | mpc add
@@ -66,7 +66,7 @@ function mpd-all {
     local SONG=$(mpc listall | dmenu)
     if [ ! -z "$SONG" ]; then
         mpc add "$SONG"
-        if [[ $? != 0 ]]; then
+        if [[ $? != 0 && ! -z "$SONG" ]]; then
             menu youtube "$SONG"
         else
             mpc play $(mpc playlist | wc -l) # Play the last (just added) song
