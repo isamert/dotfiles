@@ -160,7 +160,7 @@ function __id-line-no {
 }
 
 function __id-property {
-    id=$1
+    local id=$1
     local line_no=$(grep -n "$(__prop-escaped id $id)" $TF | cut -d: -f1)
     echo $((line_no))
 }
@@ -268,11 +268,17 @@ function __get-decorator-id {
 
 function __decorator-children {
     local decor_id="$1"
-    local line_start=$(__id-line-no $decor_id)
-    local line_end_relative=$(tail -n +$((line_start+1)) $TF | grep -Enm 1 '(^$|^#)'| cut -d: -f1)
+    local decor_name="$2"
+    local line_start
+    if [[ -n "$decor_name" ]]; then
+        line_start=$(grep -n "# $decor_name" "$TF" | cut -d":" -f1)
+    else
+        line_start=$(__id-line-no $decor_id)
+    fi
+    local line_end_relative=$(tail -n +$((line_start+1)) "$TF" | grep -Enm 1 '(^$|^#)'| cut -d: -f1)
     local line_end=$((line_start+line_end_relative-1)) # -1 because do not include blank|# line
     [[ -z $line_end_relative ]] && line_end=$(cat $TF | wc -l)
-    sed -n "$line_start,$line_end""p;$((line_end+1))q" $TF | tail -n +2
+    sed -n "$line_start,$line_end""p;$((line_end+1))q" "$TF" | tail -n +2
 }
 
 function __maintain-today {
@@ -301,19 +307,11 @@ function __maintain-today {
 function __modify-decor-summary {
     # FIXME: change today,yestarday etc to local ones (if there are any)
 
-    # If needed, call __process
     local decor=$1
     local summary="$2"
-    notify-send $decor
     case $decor in
         "@today")
             summary="$(__process "$summary $(__prop-build due today)")"
-            ;;
-        "@daily")
-            # TODO: maybe check if there is a -due prop and if so, fail
-            ;;
-        "@weekly")
-            # TODO: check if there is a -due:day- prop
             ;;
     esac
 
@@ -330,18 +328,18 @@ function __filter {
     term="$(__escape "$day_prop")"
 
     # Print daily
-    __echon "$(__prettify "$(__decorator-children $(__get-decorator-id @daily))")"
+    #__echon "$(__decorator-children $(__get-decorator-id @daily) | __prettify)"
 
     # Print weekly (of $date's)
-    local day_name="$(date -d$date "+%A" | __lowercase)"
-    __echon "$(__prettify "$(__decorator-children $(__get-decorator-id @weekly) | grep "\-due:$day_name\-")")"
+    #local day_name="$(date -d$date "+%A" | __lowercase)"
+    #__echon "$(__decorator-children $(__get-decorator-id @weekly) | grep "\-due:$day_name\-" | __prettify)"
 
     # Run search
-    __echon "$(__prettify "$(grep "$term"  "$TF" | sed "s/^[ \t]*//")")"
+    __echon "$(grep "$term"  "$TF" | sed "s/^[ \t]*//" | __prettify)"
 }
 
 function __prettify {
-    local str="$@"
+    local str=${@:-$(</dev/stdin)}
     local id_colored="$(echo "$str" | sed -r "s/^(.*)($(__escape "$STR_UNDONE")|$(__escape "$STR_DONE"))(.*)\-id:([^\s\-]+)\-(.*)/\1\2${BOLD}${F_DBLUE}\4${R} \3\5/")"
     local id_hidden="$(echo "$id_colored" | sed "s/\-id:.*\-//" | sed -r "s/\-([a-z]+):([^\s\-]+)\-/${F_DYELLOW}\1${R}:\2/g")"
     local bold_headers="$(echo "$id_hidden" | sed -r "s/^# (.*)/# ${BOLD}\1${R}/" )"
@@ -362,7 +360,7 @@ function add {
         if __starts-with $parent_id "@"; then
             summary="$(__modify-decor-summary "$parent_id" "$summary")"
             parent_id=$(__get-decorator-id $parent_id)
-            parent_last_child="$(__decorator-children $parent_id all | tail -n -1)"
+            parent_last_child="$(__decorator-children $parent_id | tail -n -1)"
         else
             summary="$(__process "$summary")"
             parent_last_child="$(__id-children $parent_id all | tail -n -1)"
@@ -392,7 +390,7 @@ function add {
 
     # TODO: really need this? (maybe an extra function: clean, maintanence)
     # Remove trailing and leading blank lines
-    sed -i -e :a -e '/./,$!d;/^\n*$/{$d;N;};/\n$/ba' $TF
+    #sed -i -e :a -e '/./,$!d;/^\n*$/{$d;N;};/\n$/ba' $TF
 }
 
 function mark-done {
@@ -420,9 +418,7 @@ function remove {
 }
 
 function list {
-    # TODO: make prop's colorful and stuff
-    #sed 's/\-id:.//' $TF
-    echo "$(__prettify "$(cat $TF)")"
+    cat $TF | __prettify
 }
 
 function filter {
@@ -433,10 +429,18 @@ function filter {
     case "$param" in
         "yesterday"|"today"|"tomorrow") __filter $param ;;
         "week")  __filter "week" ;;
+        "@yest"*)
+            local temp="$TF"
+            TF="$TPF"
+            local result="$(__decorator-children "" "$(date -dyesterday "$DATE_FORMAT")")"
+            echo "# $(__capitalize-word ${param:1})" | __prettify
+            __echon "$result" | __prettify
+            TF="$temp"
+            ;;
         "@"*)
             local result="$(__decorator-children $(__get-decorator-id $param))"
-            echo "# $(__capitalize-word ${param:1})"
-            __echon "$result"
+            echo "# $(__capitalize-word ${param:1})" | __prettify
+            __echon "$result" | __prettify
             ;;
         *)
             # TODO: check for exact dates

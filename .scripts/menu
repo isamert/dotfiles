@@ -93,7 +93,7 @@ function youtube {
 
 function files {
     # Search $HOME folder files recursively using `locate` and rofi
-    xdg-open $(locate -r '^'$HOME'/.*' | grep -Pv '.*(\.stack-work|Workspace/temp|\.cargo|\.git|\.thumbnails|\.ghc|\.rustup|/target/|/build/|\.gradle|\.idea|/elpa/|/Trash/|\.Idea|\.cabal|\.local|\.stack|\.vscode|\.cache|/Cache/|CachedData|Local Storage|CacheStorage|IndexedDB|/storage/|/appcache/|/cache/|\.mozilla|CARC).*' | dmenu)
+    xdg-open $(locate -r '^'$HOME'/.*' | rg -Pv '.*(\.stack-work|Workspace/temp|\.cargo|config/opera|\.kodi|\.dav|\.m2|\.git|\.thumbnails|\.ghc|\.rustup|/target/|/build/|\.gradle|\.idea|/elpa/|/Trash/|\.Idea|\.cabal|\.local|\.stack|\.vscode|\.cache|/Cache/|CachedData|Local Storage|CacheStorage|IndexedDB|/storage/|/appcache/|/cache/|\.mozilla|CARC).*' | dmenu)
 }
 
 

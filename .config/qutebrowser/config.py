@@ -37,7 +37,7 @@ c.url.default_page = 'https://start.duckduckgo.com/'
 ## `{line0}`: Same as `{line}`, but starting from index 0. * `{column0}`:
 ## Same as `{column}`, but starting from index 0.
 ## Type: ShellCommand
-c.editor.command = ['st', '-e', 'nvim', '-f', '{file}', '-c', 'normal {line}G{column0}l']
+c.editor.command = ['st', '-g', '110x25', '-c', '"float"', '-e', 'nvim', '-f', '{file}', '-c', 'normal {line}G{column0}l']
 
 ## Where to show the downloaded files.
 ## Type: VerticalPosition

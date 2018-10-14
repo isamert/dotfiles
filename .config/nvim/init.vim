@@ -91,6 +91,8 @@ set expandtab
 syntax on
 filetype plugin indent on
 
+" Spell
+set spelllang=en_us,tr_tr
 
 " Terminal inherits title
 set title
@@ -104,6 +106,7 @@ set inccommand=nosplit
 " Show trailing spaces and tabs
 set listchars=tab:▸\ ,trail:·
 set list
+
 " Remove trailing spaces on save
 autocmd BufWritePre * :%s/\s\+$//e
 " #############################################################################
@@ -148,6 +151,9 @@ let g:airline#extensions#tabline#fnamemod = ':t' " Show only filename for buffer
 " ### ORG MODE ###
 let g:org_heading_shade_leading_stars = 0
 let g:org_indent = 1
+
+" ### MARKDOWN ###
+let g:vim_markdown_toc_autofit = 1 " Shrink :Toc where possible
 " #############################################################################
 
 
@@ -293,7 +299,15 @@ inoremap <S-Tab> <C-d>
 
 " #############################################################################
 " ### MY COMMANDS ###
+command! W w
+command! Wq wq
+command! Q q
+
 command! ConfigReload so $MYVIMRC
 command! ConfigEdit e $MYVIMRC
-command! W w
+
+command! SpellCheckEn setlocal spell! spelllang=en_us
+" TODO: turkish spell check? Default vim spellcheck does not work even with
+" generated wordlist. Check vimchant
+" command! SpellCheckTr setlocal spell! spelllang=tr_tr
 " #############################################################################

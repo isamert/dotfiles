@@ -1,13 +1,11 @@
 # Tips:
-# To reload configs: `xbindkeys -p`
+# To reload configs: `rxkb' (alias in .bashrc)
 # To find the keycodes for a particular key: `xbindkeys -k`
 # If a command works on commandline but not on xbindkeys, try adding `Release` to the hotkey.
-
 
 # #############################################################################
 # MOUSE CONFIG
 # #############################################################################
-
 # Left click
 "xdotool click 1"
     Control+Alt + e
@@ -28,7 +26,6 @@
 "xdotool mousemove_relative --sync -- 50 0"
     Control+Alt + d
 
-
 # 10 up
 "xdotool mousemove_relative --sync -- 0 -10"
     Control+Alt+Shift + w
@@ -48,6 +45,9 @@
 # #############################################################################
 # VOLUME/MUSIC
 # #############################################################################
+# Toggle between sound outputs
+"bash ~/.scripts/switch-audio-channel"
+    Control+Alt + o
 
 # Set volume up
 "amixer set Master 5%+"
@@ -64,10 +64,6 @@
 # Set volume up
 "amixer set Master 5%-"
     XF86AudioLowerVolume
-
-# Toggle between sound outputs
-"bash ~/.scripts/switch-audio-channel"
-    Control+Alt + o
 
 "mpc toggle"
     Mod3 + p # p for play/pause
@@ -100,9 +96,8 @@
     Mod3+Shift + M # M for music (List all tracks in library)
 
 # #############################################################################
-# GLOBAL PROGRAMS
+# Launching apps/popups
 # #############################################################################
-
 "$TERMINAL"
     Mod4 + Return
 
@@ -118,18 +113,6 @@
 "~/.scripts/menu passwords"
     Mod3+ k # k for keepass
 
-"take-ss --full"
-    Print
-
-"take-ss --area"
-    Shift + Print + Release
-
-"take-ss --wait-full"
-    Control + Print
-
-"take-ss --wait-area"
-    Control+Shift + Print + Release
-
 "lockscreen"
     Control+Alt + l
 
@@ -138,6 +121,9 @@
 
 "popup music"
     Mod3 + n
+
+"popup visualizer"
+    Mod3+Shift + n
 
 "popup htop"
     Mod3 + h
@@ -151,14 +137,34 @@
 #    Mod3 + apostrophe
 
 # #############################################################################
+# Screenshot stuff
+# --clip ones puts ss to clipboard, others save to file auto
+# look for ~/.scripts/take-ss
+# #############################################################################
+"take-ss --full"
+    Print
+
+# Take ss of area and put it to clipboard
+"take-ss --clip-area"
+    Mod3 + s
+
+"take-ss --area"
+    Shift + Print + Release
+
+"take-ss --wait-full"
+    Control + Print
+
+"take-ss --wait-area"
+    Control+Shift + Print + Release
+
+# #############################################################################
 # VARIOUS BINDINGS
 # #############################################################################
-
 # Switch betweend defined keyboard layouts
 # Examine the script for setting your layouts
 "bash ~/.scripts/switch-keyboard-layout"
     Control+Alt + k
 
 # Focus to Firefox/Browser
-"wmctrl -a qutebrowser"
+"wmctrl -a firefox; wmctrl -a qutebrowser"
     Mod3 + b # b for browser

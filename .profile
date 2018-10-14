@@ -7,8 +7,8 @@ export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin
 # Used in calendar-popup script (I may forget to update this information)
 export CALENDAR=ikhal
 
-# For aurin, aursearch... functions in fish.
-export AUR_HELPER=yaourt
+# For aurin, aursearch... aliases.
+export AUR_HELPER=trizen
 
 # This script contains some utility functions, with exporting it like that
 # I can easily use it in my scripts by adding: "source $UTILS_FILE"

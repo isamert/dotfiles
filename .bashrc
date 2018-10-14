@@ -27,37 +27,15 @@ shopt -s globstar
 shopt -s cmdhist
 
 # #############################################################################
-# Color definitions
-# #############################################################################
-# FG colors, D prefix means DARK variation
-F_RED="$(tput setaf 9)" ;    F_GREEN="$(tput setaf 10)"
-F_YELLOW="$(tput setaf 11)"; F_BLUE="$(tput setaf 12)"
-F_MAGENTA="$(tput setab 13)"; F_CYAN="$(tput setab 14)"
-F_DRED="$(tput setaf 1)" ;    F_DGREEN="$(tput setaf 2)"
-F_DYELLOW="$(tput setaf 3)"; F_DBLUE="$(tput setaf 4)"
-B_DMAGENTA="$(tput setab 5)"; B_DCYAN="$(tput setab 6)"
-
-# BG colors
-B_RED="$(tput setab 9)";     B_GREEN="$(tput setab 10)"
-B_YELLOW="$(tput setab 11)"; B_BLUE="$(tput setab 12)"
-B_MAGENTA="$(tput setab 13)"; B_CYAN="$(tput setab 14)"
-B_DRED="$(tput setab 1)"; B_DGREEN="$(tput setab 2)"
-B_DYELLOW="$(tput setab 3)"; B_DBLUE="$(tput setab 4)"
-B_DMAGENTA="$(tput setab 5)"; B_DCYAN="$(tput setab 6)"
-B_DGREY="$(tput setab 8)"; B_BLACK="$(tput setab 0)"
-
-BOLD=$(tput bold)
-R="$(tput sgr0)" # Reset
-
-
-# #############################################################################
 # Aliases
 # #############################################################################
 
 # Package management
+alias aur="$AUR_HELPER"
 alias aurin="$AUR_HELPER -S"
 alias aurs="$AUR_HELPER -Ss"
 alias aurupg="$AUR_HELPER -Syu"
+alias pac="sudo pacman"
 alias pacin="sudo pacman -S"
 alias pacs="pacman -Ss"
 alias pacin="sudo pacman -S"
@@ -101,13 +79,14 @@ alias rxbk="killall xbindkeys; xbindkeys"
 alias ipaddr="curl https://api.ipify.org; echo ''"
 alias ipinfo="curl https://ipinfo.io; echo ''"
 alias weather="curl wttr.in | less -R"
-# Download a website completely
+# Download a website completely:
 alias download-website="wget --recursive --page-requisites --html-extension --convert-links --no-parent --limit-rate=500K"
+# Use grep instead of rg if you don't have it
 alias git-todo="rg 'FIXME|TODO'"
 alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd+ | bc"
 
 # #############################################################################
-# Utility functions
+# Utility functions (functions I only use interactively, others go $UTIL_FILE)
 # #############################################################################
 # Make and cd to the dir
 function mkcd { mkdir -p $1; cd $1; }
@@ -119,6 +98,7 @@ function mvcd { mv $1 $2 && cd $2; }
 function cheat { curl http://cheat.sh/$1; }
 function shortenurl { curl -F"shorten=$1" "https://0x0.st"; }
 function uploadfile { curl -F"file=@$1" "https://0x0.st"; }
+source ~/.scripts/j
 
 # #############################################################################
 # PS/Prompt
@@ -150,10 +130,9 @@ function git-prompt {
 }
 
 # plcs :: print last command status, prints {!} in red&bold if $? is not 0
-alias plcs='[[  $? != 0 ]]  && echo "${BOLD}${F_RED}{!} ${R}"'
+alias plcs='[[  $? != 0 ]]  && echo "$BOLD$F_RED{!} $R"'
 # pswd :: print short working dir (~/Documents/foo/bar -> ~/D/f/${BOLD}bar${R})
-alias pswd='pwd | sed -e "s@$HOME@~@" | sed -r "s@([^/]+$)@${BOLD}\1${R}@" | sed -re "s@([^/])[^/]+/@\1/@g"'
-export PS1='${BOLD}${R}$(plcs)$(pswd)$(git-prompt) ${BOLD}~>${R} '
+alias pswd='pwd | sed -e "s@$HOME@~@" | sed -r "s@([^/]+$)@$BOLD\1$R@" | sed -re "s@([^/])[^/]+/@\1/@g"'
+export PS1='$(plcs)$(pswd)$(git-prompt) \[$BOLD\]~>\[$R\] '
 
 #PS1='\[\e[41m\]\[\e[1;37m\] \u \[\e[47m\]\[\e[1;30m\] \W \[\e[0m\]\[\e[1;37m\]\[\e[42m\] # \[\033[0m\] '
-

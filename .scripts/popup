@@ -8,38 +8,43 @@ BAR_BORDER=$(xrdb-get-value "bar.border")
 BAR_HEIGHT=$(xrdb-get-value "bar.height")
 WINDOW_BORDER=$(xrdb-get-value "wm.border")
 
+function center_window {
+    local WINDOW_TITLE="$@"
+    local WIDTH=$(xwininfo -name $WINDOW_TITLE | grep Width | cut -d: -f2 | xargs)
+    local X=$(((SCREEN_WIDTH - WIDTH) / 2))
+    xdotool getactivewindow windowmove $X $Y
+}
+
+function screen_width {
+    xrandr -q | grep "Screen 0" | cut -d,  -f2 | cut -d " " -f3
+}
+
 function calendar {
     # Runs $CALENDAR in right top corner of the screen.
 
-    GEOMETRY="80x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
-    WINDOW_TITLE="calendar-popup-window"
+    local GEOMETRY="80x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
+    local WINDOW_TITLE="calendar-popup-window"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $CALENDAR
     else
-        wmctrl -c $WINDOW_TITLE
-        wait 1
-        vdirsyncer sync
+        wmctrl -c $WINDOW_TITLE && vdirsyncer sync calendar
     fi
 }
 
 function music {
     # Runs $MUSIC in top middle of the screen.
-
     MUSIC=ncmpcpp
 
-    SCREEN_WIDTH=$(xrandr -q | grep "Screen 0" | cut -d,  -f2 | cut -d " " -f3)
-
-    Y=$((BAR_HEIGHT+BAR_BORDER*2))
-    GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
-    WINDOW_TITLE="music-popup-window"
+    local SCREEN_WIDTH=$(screen_width)
+    local Y=$((BAR_HEIGHT+BAR_BORDER*2))
+    local GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
+    local WINDOW_TITLE="music-popup-window"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $MUSIC 2> /dev/null &
         sleep 0.07
-        WIDTH=$(xwininfo -name $WINDOW_TITLE | grep Width | cut -d: -f2 | xargs)
-        X=$(((SCREEN_WIDTH - WIDTH) / 2))
-        xdotool getactivewindow windowmove $X $Y
+        center_window $WINDOW_TITLE
     else
         wmctrl -c $WINDOW_TITLE
     fi
@@ -58,9 +63,25 @@ function htop {
     fi
 }
 
+function visualizer {
+    local SCREEN_WIDTH=$(screen_width)
+    local Y=$((BAR_HEIGHT+BAR_BORDER*2))
+    local GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
+    local WINDOW_TITLE="popup-visualizer"
+
+    if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
+        $TERMINAL -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e cava 2> /dev/null &
+        sleep 0.07
+        center_window $WINDOW_TITLE
+    else
+        wmctrl -c $WINDOW_TITLE
+    fi
+}
+
 
 case "$1" in
-    "calendar") calendar;;
-    "music")    music;;
-    "htop")     htop;;
+    "calendar")   calendar;;
+    "music")      music;;
+    "visualizer") visualizer;;
+    "htop")       htop;;
 esac
