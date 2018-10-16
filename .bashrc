@@ -31,10 +31,10 @@ shopt -s cmdhist
 # #############################################################################
 
 # Package management
-alias aur="$AUR_HELPER"
-alias aurin="$AUR_HELPER -S"
-alias aurs="$AUR_HELPER -Ss"
-alias aurupg="$AUR_HELPER -Syu"
+alias aur="\$AUR_HELPER"
+alias aurin="\$AUR_HELPER -S"
+alias aurs="\$AUR_HELPER -Ss"
+alias aurupg="\$AUR_HELPER -Syu"
 alias pac="sudo pacman"
 alias pacin="sudo pacman -S"
 alias pacs="pacman -Ss"
@@ -71,7 +71,7 @@ alias v="nvim"
 alias g="git"
 alias gs="git status"
 alias ga="git add"
-alias gc="git commit"
+alias gc="git commit -m"
 alias gpm="git push origin master"
 alias rxbk="killall xbindkeys; xbindkeys"
 
@@ -89,13 +89,13 @@ alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd
 # Utility functions (functions I only use interactively, others go $UTIL_FILE)
 # #############################################################################
 # Make and cd to the dir
-function mkcd { mkdir -p $1; cd $1; }
+function mkcd { mkdir -p "$1"; cd "$1"; }
 # Copy and go to the directory
-function cpcd { cp $1 $2 && cd $2; }
+function cpcd { cp "$1" "$2" && cd "$2"; }
 # Move and cd to the dir
-function mvcd { mv $1 $2 && cd $2; }
+function mvcd { mv "$1" "$2" && cd "$2"; }
 
-function cheat { curl http://cheat.sh/$1; }
+function cheat { curl http://cheat.sh/"$1"; }
 function shortenurl { curl -F"shorten=$1" "https://0x0.st"; }
 function uploadfile { curl -F"file=@$1" "https://0x0.st"; }
 source ~/.scripts/j
@@ -133,6 +133,5 @@ function git-prompt {
 alias plcs='[[  $? != 0 ]]  && echo "$BOLD$F_RED{!} $R"'
 # pswd :: print short working dir (~/Documents/foo/bar -> ~/D/f/${BOLD}bar${R})
 alias pswd='pwd | sed -e "s@$HOME@~@" | sed -r "s@([^/]+$)@$BOLD\1$R@" | sed -re "s@([^/])[^/]+/@\1/@g"'
+# FIXME: fix non-visible character problem
 export PS1='$(plcs)$(pswd)$(git-prompt) \[$BOLD\]~>\[$R\] '
-
-#PS1='\[\e[41m\]\[\e[1;37m\] \u \[\e[47m\]\[\e[1;30m\] \W \[\e[0m\]\[\e[1;37m\]\[\e[42m\] # \[\033[0m\] '

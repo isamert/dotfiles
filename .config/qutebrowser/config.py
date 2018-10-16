@@ -19,6 +19,7 @@ c.auto_save.session = True
 c.url.searchengines = {'DEFAULT': 'https://duckduckgo.com/?q={}',
                        'aw': 'https://wiki.archlinux.org/?search={}',
                        'hg': 'https://hoogle.haskell.org/?hoogle={}',
+                       'gh': 'https://github.com/{}',
                        'yt': 'https://youtube.com/results?search_query={}'}
 
 ## Page(s) to open at the start.
@@ -51,6 +52,45 @@ c.downloads.position = 'bottom'
 ## filename, else the filename will be appended.
 ## Type: String
 c.downloads.open_dispatcher = "xdg-open {}"
+
+## Height (in pixels or as percentage of the window) of the completion.
+## Type: PercOrInt
+c.completion.height = '40%'
+
+## Languages to use for spell checking. You can check for available
+## languages and install dictionaries using scripts/dictcli.py. Run the
+## script with -h/--help for instructions:
+## $ cd /usr/share/qutebrowser
+## $ ./dictcli.py install en-US tr-TR
+## Type: List of String
+## Valid values:
+##   - en-US: English (United States)
+##   - tr-TR: Turkish (Turkey)
+##   - ...
+## vim (:editor) already does this but useful for short texts
+c.spellcheck.languages = ['tr-TR', 'en-US']
+
+## Default monospace fonts. Whenever "monospace" is used in a font
+## setting, it's replaced with the fonts listed here.
+## Type: Font
+c.fonts.monospace = '"IBM Plex Mono",  Terminus, Monospace, "Liberation Mono", monospace'
+
+## Padding (in pixels) around text for tabs.
+## Type: Padding
+c.tabs.padding = {'top': 3, 'bottom': 3, 'left': 5, 'right': 5}
+
+## Scaling factor for favicons in the tab bar. The tab size is unchanged,
+## so big favicons also require extra `tabs.padding`.
+## Type: Float
+c.tabs.favicons.scale = 1.35
+
+## Load a restored tab as soon as it takes focus.
+## Type: Bool
+c.session.lazy_restore = True
+
+## Open new tabs (middleclick/ctrl+click) in the background.
+## Type: Bool
+c.tabs.background = True
 
 # #############################################################################
 # Custom commands
@@ -89,7 +129,7 @@ config.bind('<Alt-,>', 'tab-prev')
 # #############################################################################
 ## Enable WebGL.
 ## Type: Bool
-#c.content.webgl = False
+c.content.webgl = False
 
 ## Allow websites to read canvas elements. Note this is needed for some
 ## websites to work properly.
@@ -124,7 +164,6 @@ config.bind('<Alt-,>', 'tab-prev')
 ## Type: Int
 # c.auto_save.interval = 15000
 
-
 ## This setting can be used to map keys to other keys. When the key used
 ## as dictionary-key is pressed, the binding for the key used as
 ## dictionary-value is invoked instead. This is useful for global
@@ -143,10 +182,6 @@ config.bind('<Alt-,>', 'tab-prev')
 ## character.
 ## Type: Int
 # c.completion.delay = 0
-
-## Height (in pixels or as percentage of the window) of the completion.
-## Type: PercOrInt
-# c.completion.height = '50%'
 
 ## Minimum amount of characters needed to update completions.
 ## Type: Int
@@ -493,15 +528,6 @@ config.bind('<Alt-,>', 'tab-prev')
 ## Type: Int
 # c.downloads.remove_finished = -1
 
-## Editor (and arguments) to use for the `open-editor` command. The
-## following placeholders are defined: * `{file}`: Filename of the file
-## to be edited. * `{line}`: Line in which the caret is found in the
-## text. * `{column}`: Column in which the caret is found in the text. *
-## `{line0}`: Same as `{line}`, but starting from index 0. * `{column0}`:
-## Same as `{column}`, but starting from index 0.
-## Type: ShellCommand
-# c.editor.command = ['gvim', '-f', '{file}', '-c', 'normal {line}G{column0}l']
-
 ## Encoding to use for the editor.
 ## Type: Encoding
 # c.editor.encoding = 'utf-8'
@@ -541,11 +567,6 @@ config.bind('<Alt-,>', 'tab-prev')
 ## Font used for warning messages.
 ## Type: Font
 # c.fonts.messages.warning = '10pt monospace'
-
-## Default monospace fonts. Whenever "monospace" is used in a font
-## setting, it's replaced with the fonts listed here.
-## Type: Font
-# c.fonts.monospace = '"xos4 Terminus", Terminus, Monospace, "DejaVu Sans Mono", Monaco, "Bitstream Vera Sans Mono", "Andale Mono", "Courier New", Courier, "Liberation Mono", monospace, Fixed, Consolas, Terminal'
 
 ## Font used for prompts.
 ## Type: Font
@@ -835,60 +856,6 @@ config.bind('<Alt-,>', 'tab-prev')
 ## Type: SessionName
 # c.session.default_name = None
 
-## Load a restored tab as soon as it takes focus.
-## Type: Bool
-# c.session.lazy_restore = False
-
-## Languages to use for spell checking. You can check for available
-## languages and install dictionaries using scripts/dictcli.py. Run the
-## script with -h/--help for instructions.
-## Type: List of String
-## Valid values:
-##   - af-ZA: Afrikaans (South Africa)
-##   - bg-BG: Bulgarian (Bulgaria)
-##   - ca-ES: Catalan (Spain)
-##   - cs-CZ: Czech (Czech Republic)
-##   - da-DK: Danish (Denmark)
-##   - de-DE: German (Germany)
-##   - el-GR: Greek (Greece)
-##   - en-AU: English (Australia)
-##   - en-CA: English (Canada)
-##   - en-GB: English (United Kingdom)
-##   - en-US: English (United States)
-##   - es-ES: Spanish (Spain)
-##   - et-EE: Estonian (Estonia)
-##   - fa-IR: Farsi (Iran)
-##   - fo-FO: Faroese (Faroe Islands)
-##   - fr-FR: French (France)
-##   - he-IL: Hebrew (Israel)
-##   - hi-IN: Hindi (India)
-##   - hr-HR: Croatian (Croatia)
-##   - hu-HU: Hungarian (Hungary)
-##   - id-ID: Indonesian (Indonesia)
-##   - it-IT: Italian (Italy)
-##   - ko: Korean
-##   - lt-LT: Lithuanian (Lithuania)
-##   - lv-LV: Latvian (Latvia)
-##   - nb-NO: Norwegian (Norway)
-##   - nl-NL: Dutch (Netherlands)
-##   - pl-PL: Polish (Poland)
-##   - pt-BR: Portuguese (Brazil)
-##   - pt-PT: Portuguese (Portugal)
-##   - ro-RO: Romanian (Romania)
-##   - ru-RU: Russian (Russia)
-##   - sh: Serbo-Croatian
-##   - sk-SK: Slovak (Slovakia)
-##   - sl-SI: Slovenian (Slovenia)
-##   - sq: Albanian
-##   - sr: Serbian
-##   - sv-SE: Swedish (Sweden)
-##   - ta-IN: Tamil (India)
-##   - tg-TG: Tajik (Tajikistan)
-##   - tr-TR: Turkish (Turkey)
-##   - uk-UA: Ukrainian (Ukraine)
-##   - vi-VN: Vietnamese (Viet Nam)
-# c.spellcheck.languages = []
-
 ## Hide the statusbar unless a message is shown.
 ## Type: Bool
 # c.statusbar.hide = False
@@ -916,10 +883,6 @@ config.bind('<Alt-,>', 'tab-prev')
 ##   - progress: Progress bar for the current page loading.
 # c.statusbar.widgets = ['keypress', 'url', 'scroll', 'history', 'tabs', 'progress']
 
-## Open new tabs (middleclick/ctrl+click) in the background.
-## Type: Bool
-# c.tabs.background = False
-
 ## Mouse button with which to close tabs.
 ## Type: String
 ## Valid values:
@@ -936,11 +899,6 @@ config.bind('<Alt-,>', 'tab-prev')
 ##   - close-last: Close the last tab.
 ##   - ignore: Don't do anything.
 # c.tabs.close_mouse_button_on_bar = 'new-tab'
-
-## Scaling factor for favicons in the tab bar. The tab size is unchanged,
-## so big favicons also require extra `tabs.padding`.
-## Type: Float
-# c.tabs.favicons.scale = 1.0
 
 ## When to show favicons in the tab bar.
 ## Type: String
@@ -1007,10 +965,6 @@ config.bind('<Alt-,>', 'tab-prev')
 ##   - first: At the beginning.
 ##   - last: At the end.
 # c.tabs.new_position.unrelated = 'last'
-
-## Padding (in pixels) around text for tabs.
-## Type: Padding
-# c.tabs.padding = {'top': 0, 'bottom': 0, 'left': 5, 'right': 5}
 
 ## Shrink pinned tabs down to their contents.
 ## Type: Bool
@@ -1094,11 +1048,6 @@ config.bind('<Alt-,>', 'tab-prev')
 ##   - dns: Use DNS requests (might be slow!).
 ##   - never: Never search automatically.
 # c.url.auto_search = 'naive'
-
-## Page to open if :open -t/-b/-w is used without URL. Use `about:blank`
-## for a blank page.
-## Type: FuzzyUrl
-# c.url.default_page = 'https://start.duckduckgo.com/'
 
 ## URL segments where `:navigate increment/decrement` will search for a
 ## number.

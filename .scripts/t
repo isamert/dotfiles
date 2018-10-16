@@ -20,14 +20,14 @@ R="$(tput sgr0)" # Reset
 # #############################################################################
 # Utility functions
 # #############################################################################
-function __is-number {
+function __is_number {
     case $1 in
         ''|*[!0-9]*) false ;;
         *) true ;;
     esac
 }
 
-function __starts-with {
+function __starts_with {
     case $1 in
         "$2"*) true ;;
         *) false ;;
@@ -49,15 +49,16 @@ function __lowercase {
   tr 'A-Z' 'a-z'
 }
 
-function __capitalize-word {
-    echo "$(echo ${1:0:1} | __uppercase)${1:1}"
+function __capitalize_word {
+    local str=${@:-$(</dev/stdin)}
+    echo "$(echo ${str:0:1} | __uppercase)${str:1}"
 }
 
 function __echon {
-    if [ -n "$1" ] ; then echo "$@"; fi
+    if [[ -n "$1" ]] ; then echo "$@"; fi
 }
 
-function __split-at {
+function __split_at {
     delim="$1"; shift
     str="$@"
     if __contains "$str" "$delim"; then return; fi
@@ -65,7 +66,8 @@ function __split-at {
 }
 
 function __escape {
-    sed 's/[][`~!@#$%^&*()-_=+{}\|;:",<.>/?'"'"']/\\&/g' <<< "$1"
+    local str=${@:-$(</dev/stdin)}
+    sed 's/[][`~!@#$%^&*()-_=+{}\|;:",<.>/?'"'"']/\\&/g' <<< "$str"
 }
 
 function __spaces {
@@ -86,96 +88,120 @@ function __prompt {
     false
 }
 
+function __trim {
+    local var=${@:-$(</dev/stdin)}
+    var="${var#"${var%%[![:space:]]*}"}"
+    var="${var%"${var##*[![:space:]]}"}"
+    echo -n "$var"
+}
+
 # #############################################################################
 # Private functions
 # #############################################################################
 function __prop {
     local prop="$1"; shift
-    local str="$@"
-    echo "$(__split-at "-$prop:" "$str" | cut -d"-" -f1)"
+    local str="$*"
+    __split_at "-$prop:" "$str" | cut -d"-" -f1
 }
 
-function __prop-build {
+function __prop_build {
     local prop="$1"
     local value="$2"
     echo "-$prop:$value-"
 }
 
-function __prop-escaped {
-    echo $(__escape "$(__prop-build "$1" "$2")")
+function __prop_escaped {
+    echo $(__escape "$(__prop_build "$1" "$2")")
 }
 
-function __is-done {
+function __is_done {
     case "$@" in
         *"$STR_DONE"*) true ;;
         *) false ;;
     esac
 }
 
-function __fresh-id {
-    # TODO: give lowest aviable
+function __fresh_id {
     local lines
     readarray -t lines < $TF
     for i in "${!lines[@]}"; do
         local line="${lines[$i]}"
         lines[$i]=$(__prop id "$line")
     done
-    local IFS=$'\n'
-    local result=$(echo "${lines[*]}" | sort -nr | head -n1)
-    echo $((result+1))
+
+    local IFS=$'\n'; local numbers=($(echo "${lines[*]}" | sort -n))
+    local number
+    for  (( i = 0; i < $((${#numbers[@]}-1)); i++ )); do
+        if [[ $((${numbers[$i]}+1)) != ${numbers[$(($i + 1))]} ]] ;then
+            number="$((${numbers[$i]}+1))"
+            break
+        fi
+    done
+
+    [[ -z $number ]] && let number=${numbers[-1]}+1
+    echo $number
 }
 
-function __id-line {
+function __id_line {
     local id="$1"
-    echo "$(grep "$(__prop-escaped id $id)" $TF)"
+    echo "$(grep "$(__prop_escaped id $id)" $TF)"
 }
 
-function __id-exists {
-    if [[ -z $(__id-line $1) ]]; then false; else true; fi
+function __id_exists {
+    if [[ -z $(__id_line $1) ]]; then false; else true; fi
 }
 
-function __id-is-done {
-    return $(__is-done "$(__id-line $1)")
+function __id_is_done {
+    return $(__is_done "$(__id_line $1)")
 }
 
-function __leading-spaces {
+function __leading_spaces {
     local line="$@"
-    if __starts-with "$line" "#"; then echo -1; return; fi # TODO: to make it nested under # Stuff, change -1 to 0
+    if __starts_with "$line" "#"; then echo -1; return; fi # TODO: to make it nested under # Stuff, change -1 to 0
     local spaces=$(echo "$line" | cut -d- -f1 | wc -c)
     echo $spaces
 }
 
-function __id-indent-level {
+function __id_indent_level {
     id=$1
-    local spaces=$(__leading-spaces "$(__id-line $id)")
+    local spaces=$(__leading_spaces "$(__id_line $id)")
     if [ $spaces -eq -1 ]; then echo -1; return; fi
     local result=$((spaces/INDENT))
     echo $result
 }
 
-function __id-line-no {
+function __id_line_no {
     id=$1
-    local line_no=$(grep -n "$(__prop-escaped id $id)" $TF | cut -d: -f1)
+    local line_no=$(grep -n "$(__prop_escaped id $id)" $TF | cut -d: -f1)
     echo $line_no
 }
 
-function __id-property {
+function __id_property {
     local id=$1
-    local line_no=$(grep -n "$(__prop-escaped id $id)" $TF | cut -d: -f1)
+    local line_no=$(grep -n "$(__prop_escaped id $id)" $TF | cut -d: -f1)
     echo $((line_no))
 }
 
-function __id-children {
+function __id_is_decorator {
+    __starts_with "$(__id_line $1)" "#"
+}
+
+function __id_children {
     local id=$1
+    if __id_is_decorator $id; then
+        __decorator_children $id
+        return
+    fi
+
     local opt=$2 # first or all
-    local line_no=$(__id-line-no $id)
-    local indent_level=$(__id-indent-level $id)
+    local line_no=$(__id_line_no $id)
+    local indent_level=$(__id_indent_level $id)
     local rest="$(tail -n +$((line_no+1)) $TF)"
 
     local children=()
     local IFS=$'\n'
     while read -r child; do
-        local spaces="$(__leading-spaces "$child")"
+        local spaces="$(__leading_spaces "$child")"
         local child_indent_level=$((spaces/INDENT))
         if [[ $opt = "first" ]]; then
             if [ $child_indent_level -eq $((indent_level+1)) ]; then
@@ -185,7 +211,7 @@ function __id-children {
             if [ $child_indent_level -gt $indent_level ]; then children+=("$child")
             else break; fi
         else
-            echo "Wrong arg, __id-children"
+            echo "Wrong arg, __id_children"
         fi
     done <<< "$rest"
 
@@ -196,18 +222,18 @@ function __id-children {
     fi
 }
 
-function __id-percent {
+function __id_percent {
     local id=$1
-    local children="$(__id-children $id first)"
+    local children="$(__id_children $id first)"
     local total_child=$(__count "$children")
     local done_total="0"
 
     if [ $total_child -eq 0 ]; then
-        if __id-is-done $id; then echo 100; else echo 0; fi
+        if __id_is_done $id; then echo 100; else echo 0; fi
         return
     else
         while read -r child; do
-            local current_percent=$(__id-percent $(__prop id "$child"))
+            local current_percent=$(__id_percent $(__prop id "$child"))
             done_total=$((done_total+current_percent))
         done <<< "$children"
     fi
@@ -215,10 +241,10 @@ function __id-percent {
     echo $((done_total/total_child))
 }
 
-function __id-remove {
+function __id_remove {
     local id="$1"
-    local line_no=$(__id-line-no $id)
-    local children="$(__id-children $id all)"
+    local line_no=$(__id_line_no $id)
+    local children="$(__id_children $id all)"
     local child_count=$(__count "$children")
     if [ $child_count -gt 0 ]; then
         if __prompt "This entry has children. Proceed?"; then
@@ -232,12 +258,12 @@ function __id-remove {
     fi
 }
 
-function __id-replace {
+function __id_replace {
     local IDS=""
     local IFS=','
     read -ra IDS <<< "$1"
     for id in "${IDS[@]}"; do
-        line=$(__id-line-no $id)
+        line=$(__id_line_no $id)
         [[ -z $line ]] && return 1
         sed -i "$line""s/$(__escape "$2")/$(__escape "$3")/" $TF
     done
@@ -246,15 +272,15 @@ function __id-replace {
 function __process {
     local str="$@"
     local date_str="$(__prop due "$str")"
-    if [[ -n $date_str ]]; then
+    if [[ -n $date_str ]] && [[ $date_str =~ ^[a-zA-Z\ ]*$ ]]; then
         date_fixed="$(date -d"$date_str" $DATE_FORMAT)"
-        str=$(sed "s/$(__prop-escaped due "$date_str")/$(__prop-escaped due "$date_fixed")/" <<< $str)
+        str=$(sed "s/$(__prop_escaped due "$date_str")/$(__prop_escaped due "$date_fixed")/" <<< $str)
     fi
 
     echo $str
 }
 
-function __get-decorator-id {
+function __get_decorator_id {
     case $1 in
         "@"*)
             local decor="$(echo $1 | sed "s/@/# /")"
@@ -266,14 +292,14 @@ function __get-decorator-id {
     esac
 }
 
-function __decorator-children {
+function __decorator_children {
     local decor_id="$1"
     local decor_name="$2"
     local line_start
     if [[ -n "$decor_name" ]]; then
         line_start=$(grep -n "# $decor_name" "$TF" | cut -d":" -f1)
     else
-        line_start=$(__id-line-no $decor_id)
+        line_start=$(__id_line_no $decor_id)
     fi
     local line_end_relative=$(tail -n +$((line_start+1)) "$TF" | grep -Enm 1 '(^$|^#)'| cut -d: -f1)
     local line_end=$((line_start+line_end_relative-1)) # -1 because do not include blank|# line
@@ -281,18 +307,18 @@ function __decorator-children {
     sed -n "$line_start,$line_end""p;$((line_end+1))q" "$TF" | tail -n +2
 }
 
-function __maintain-today {
-    local today_id=$(__get-decorator-id @today)
-    local today_line="$(__id-line $today_id)"
+function __maintain_today {
+    local today_id=$(__get_decorator_id @today)
+    local today_line="$(__id_line $today_id)"
     local today_day=$(echo "$today_line" | cut -d"(" -f2 | cut -d")" -f1)
     [[ "$today_day" = "$(date -dtoday $DATE_FORMAT)" ]] && return
 
     # Reset day
-    local line_start=$(__id-line-no $today_id)
+    local line_start=$(__id_line_no $today_id)
     sed -i "$line_start""s/$(__escape "($today_day)")/$(__escape "$(date -dtoday $DATE_FORMAT)")/" $TF
 
     # Backup
-    local children="$(__decorator-children $today_id)"
+    local children="$(__decorator_children $today_id)"
     [ -z "$children" ] && return
     echo "# $today_day" >> $TPF
     echo "$children" >> $TPF
@@ -304,41 +330,41 @@ function __maintain-today {
     done <<< "$children"
 }
 
-function __modify-decor-summary {
+function __modify_decor_summary {
     # FIXME: change today,yestarday etc to local ones (if there are any)
 
     local decor=$1
     local summary="$2"
     case $decor in
         "@today")
-            summary="$(__process "$summary $(__prop-build due today)")"
+            summary="$(__process "$summary $(__prop_build due today)")"
             ;;
     esac
 
     echo "$summary"
 }
 
-function __filter {
-    local date="$1"; shift
-    local param="$2"; shift
-    local rest="$@"
+function __filter_date {
+    # TODO: next week -> list next week's stuff
+    local date="$@"
 
-    # TODO: add daily, check and add weekly
-    local day_prop="$(__process "$(__prop-build due $date)")"
+    local day_prop="$(__process "$(__prop_build due "$date")")"
     term="$(__escape "$day_prop")"
 
+    # TODO: include recurring tasks
     # Print daily
-    #__echon "$(__decorator-children $(__get-decorator-id @daily) | __prettify)"
+    #__echon "$(__decorator_children $(__get_decorator_id @daily) | __prettify)"
 
     # Print weekly (of $date's)
     #local day_name="$(date -d$date "+%A" | __lowercase)"
-    #__echon "$(__decorator-children $(__get-decorator-id @weekly) | grep "\-due:$day_name\-" | __prettify)"
+    #__echon "$(__decorator_children $(__get_decorator_id @weekly) | grep "\-due:$day_name\-" | __prettify)"
 
     # Run search
     __echon "$(grep "$term"  "$TF" | sed "s/^[ \t]*//" | __prettify)"
 }
 
 function __prettify {
+    # TODO: make STR_DONE green, make STR_UNDONE yellow, if due date is passed make it red
     local str=${@:-$(</dev/stdin)}
     local id_colored="$(echo "$str" | sed -r "s/^(.*)($(__escape "$STR_UNDONE")|$(__escape "$STR_DONE"))(.*)\-id:([^\s\-]+)\-(.*)/\1\2${BOLD}${F_DBLUE}\4${R} \3\5/")"
     local id_hidden="$(echo "$id_colored" | sed "s/\-id:.*\-//" | sed -r "s/\-([a-z]+):([^\s\-]+)\-/${F_DYELLOW}\1${R}:\2/g")"
@@ -350,43 +376,51 @@ function __prettify {
 # Functions
 # #############################################################################
 function add {
-    local id=$(__fresh-id)
-    if __is-number $1 || __starts-with $1 "@" ; then
+    local id=$(__fresh_id)
+    if __is_number $1 || __starts_with $1 "@" ; then
         local parent_id=$1
         shift
         local summary="$@"
 
         local parent_last_child=""
-        if __starts-with $parent_id "@"; then
-            summary="$(__modify-decor-summary "$parent_id" "$summary")"
-            parent_id=$(__get-decorator-id $parent_id)
-            parent_last_child="$(__decorator-children $parent_id | tail -n -1)"
+        if __starts_with $parent_id "@"; then
+            summary="$(__modify_decor_summary "$parent_id" "$summary")"
+            name="$parent_id"
+            parent_id=$(__get_decorator_id $parent_id)
+            if [[ -z $parent_id ]]; then
+                if [[ -n $(tail -n 1 $TF) ]]; then echo "" >> $TF; fi
+                echo "# $(__capitalize_word "${name:1}") $(__prop_build id $id)" >> "$TF"
+                return
+            fi
+            parent_last_child="$(__decorator_children $parent_id | tail -n -1)"
         else
             summary="$(__process "$summary")"
-            parent_last_child="$(__id-children $parent_id all | tail -n -1)"
+            parent_last_child="$(__id_children $parent_id all | tail -n -1)"
         fi
 
-        if ! __id-exists $parent_id; then return 1; fi
+        if ! __id_exists $parent_id; then return 1; fi
 
-        local parent_line=$(__id-line-no $parent_id)
-        local parent_indent_level=$(__id-indent-level $parent_id)
+        local parent_line=$(__id_line_no $parent_id)
+        local parent_indent_level=$(__id_indent_level $parent_id)
         local spaces=$(__spaces $(((parent_indent_level+1)*INDENT)))
-        local result="$(__escape  "$spaces$STR_UNDONE$summary $(__prop-build id $id)")"
+        local result="$(__escape  "$spaces$STR_UNDONE$summary $(__prop_build id $id)")"
 
         local line_to_insert
         if [[ -z $parent_last_child ]]; then
             line_to_insert=$((parent_line+1))
         else
-            line_to_insert=$(($(__id-line-no $(__prop id "$parent_last_child"))+1))
+            line_to_insert=$(($(__id_line_no $(__prop id "$parent_last_child"))+1))
         fi
 
-        [ $line_to_insert -gt "$(echo $TF | wc -l)" ] && echo "" >> $TF
+        (( line_to_insert > "$(cat $TF | wc -l)" )) && echo "" >> $TF
         sed -i "$line_to_insert""i\\$(echo "$result")" $TF
     else
-        local result="$STR_UNDONE$(__process "$@ $(__prop-build id $id)")"
+        local result="$STR_UNDONE$(__process "$@ $(__prop_build id $id)")"
         local line_to_insert=$(grep -Enm 1 '(^$|^#)' $TF | cut -d: -f1)
         sed -i "$line_to_insert""i$(__escape "$result")" $TF
     fi
+
+    echo "${BOLD}$id${R}"
 
     # TODO: really need this? (maybe an extra function: clean, maintanence)
     # Remove trailing and leading blank lines
@@ -394,21 +428,25 @@ function add {
 }
 
 function mark-done {
-    __id-replace $1 "$STR_UNDONE" "$STR_DONE"
+    __id_replace $1 "$STR_UNDONE" "$STR_DONE"
 }
 
 function mark-undone {
-    __id-replace $1 "$STR_DONE" "$STR_UNDONE"
+    __id_replace $1 "$STR_DONE" "$STR_UNDONE"
 }
 
 function remove {
-    if __is-number ${1:0:1}; then
+    if __is_number ${1:0:1} || __starts_with "$1" "@"; then
         # Remove based on ids
+        local id
         local IDS
         local IFS=','
         read -ra IDS <<< "$1"
         for id in "${IDS[@]}"; do
-            if __id-exists $id; then __id-remove $id; fi
+            if __starts_with "$1" "@"; then
+                id=$(__get_decorator_id $1)
+            fi
+            if __id_exists $id; then __id_remove $id; fi
         done
     else
         # TODO: Remove based on predicate
@@ -427,19 +465,19 @@ function filter {
 
     local term
     case "$param" in
-        "yesterday"|"today"|"tomorrow") __filter $param ;;
-        "week")  __filter "week" ;;
+        "week"|"yesterday"|"today"|"tomorrow"|"next")
+            __filter_date "$param $rest" ;;
         "@yest"*)
             local temp="$TF"
             TF="$TPF"
-            local result="$(__decorator-children "" "$(date -dyesterday "$DATE_FORMAT")")"
-            echo "# $(__capitalize-word ${param:1})" | __prettify
+            local result="$(__decorator_children "" "$(date -dyesterday "$DATE_FORMAT")")"
+            echo "# $(__capitalize_word ${param:1})" | __prettify
             __echon "$result" | __prettify
             TF="$temp"
             ;;
         "@"*)
-            local result="$(__decorator-children $(__get-decorator-id $param))"
-            echo "# $(__capitalize-word ${param:1})" | __prettify
+            local result="$(__decorator_children $(__get_decorator_id $param))"
+            echo "# $(__capitalize_word ${param:1})" | __prettify
             __echon "$result" | __prettify
             ;;
         *)
@@ -449,15 +487,50 @@ function filter {
     esac
 }
 
-function modify {
-    echo "xd"
+function __props {
+    str="$@"
+    echo "$str" | grep -oe "-[^ :]*:[^-]*-" | sed "s/^-//;s/-$//"
 }
 
-# FIXME: more efficent way to do this? instead of checking everytime
-# or just make the checking more efficent.
-__maintain-today
+function __prop_replace {
+    local prop="$1";
+    local prop_new_value="$2";
+    shift 2
+    local str="$@"
+    echo "$str" | sed -r "s/-$prop:[^-]*-/-$prop:$prop_new_value-/g"
+}
+
+function __clear_props {
+    str="$@"
+    echo "$str" | sed -r "s/ ?-[^:]*:[^-]*-//g"
+}
+
+function modify {
+    local id=$1; shift
+    local str="$@"
+    local line_no=$(__id_line_no $id)
+    local line=$(__id_line $id)
+
+    # Replace props with new ones
+    while read -r prop_pair; do
+        local prop_name="$(echo "$prop_pair" | cut -d":" -f1)"
+        local prop_value="$(echo "$prop_pair" | cut -d":" -f2)"
+        line="$(__prop_replace "$prop_name" "$prop_value"  "$line")"
+    done <<< "$(__props "$str")"
+
+    local summary="$(__clear_props "$str" | __trim)"
+    if [[ -n "$summary" ]]; then
+        line="$summary $(__props "$line" | sed -r "s/(.*)/-\1-/" | paste -sd" ")"
+    fi
+
+    line="$(__process "$line" | __escape)"
+    sed -i -r "${line_no}s/( *)($(__escape "$STR_DONE")|$(__escape "$STR_UNDONE")|\# ).*/\1\2$line/" "$TF"
+}
+
+__maintain_today
 
 param="$1"; shift
+
 case "$param" in
     ""|"ls"|"list") list ;;
     "add") add "$@" ;;
