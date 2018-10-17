@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+
+# This file is sourced at ~/.bashrc
+# so that cd command works in current shell
+# also this file needs `source $UTILS_FILE`
+# but it's already sourced at .bashrc.
+
+WEBSITE="$HOME/Workspace/projects/isamert.net"
+PROJECTS="$HOME/Workspace/projects"
+
+function __dir_contains {
+    for entry in "$(pwd)"/*; do
+        if [[ ${entry##*/} == "$1" ]]; then
+            echo $entry
+            return
+        fi
+    done
+
+    false
+}
+
+function __print_header {
+    local color="$1"
+    local header="$2"
+    local cmd="$3"
+    echo "${BOLD}${color}$header...${R} ($cmd)"
+    echo "${BOLD}=========================${R}"
+}
+
+
+function j {
+    case "$1" in
+        # config jumps
+        "c"|"conf"|"config") cd ~/.config ;;
+        "prof"|"profile"*) $EDITOR ~/.profile ;;
+        "bash"*) $EDITOR ~/.bashrc ;;
+        "tmux"*) $EDITOR ~/.tmux.conf ;;
+        "ranger") cd ~/.config/ranger ;;
+        "rangerrif"*) $EDITOR ~/.config/ranger/rifle.conf ;;
+        "ranger"*) $EDITOR ~/.config/ranger/rc.conf ;;
+        "rofi"*) $EDITOR ~/.Xresources ;;
+        "xbind"*) $EDITOR ~/.xbindkeysrc ;;
+        "hosts") sudo $EDITOR /etc/hosts ;;
+        "mpd"*) cd ~/.config/mpd/mpd.conf ;;
+        "nvim"*|"vim"*) $EDITOR ~/.config/nvim/init.vim ;;
+        "i3"*) $EDITOR ~/.config/i3/config ;;
+        "compt"*) $EDITOR ~/.config/compton ;;
+        "poly"*) $EDITOR ~/.config/polybar/config ;;
+        "system"*) cd ~/.config/systemd/user ;;
+        "quteg"*|"grease"*) cd ~/.local/share/qutebrowser/greasemonkey ;;
+        "qute"*) $EDITOR ~/.config/qutebrowser/config.py ;;
+        "mpvrc") cd ~/.config/mpv/mpv.conf ;;
+        "mpvin"*) cd ~/.config/mpv/input.conf ;;
+        "mpv"*) cd ~/.config/mpv ;;
+        "loc"*) cd ~/.local ;;
+        "sha"*) cd ~/.local/share ;;
+
+        # personal jumps
+        "scre"*) cd ~/Pictures/screenshots ;;
+        "s"|"scr"*) cd ~/.scripts ;;
+        "note"*) cd ~/Documents/notes ;;
+        "work"*) cd ~/Workspace ;;
+        "temp"*) cd ~/Workspace/temp ;;
+        "wal"*) cd ~/Pictures/wallpaper ;;
+        "web"*|"site"*) cd $WEBSITE ;;
+
+        # cd projects with p prefix
+        # j pt[echne] --> $PROJECTS/techne
+        "p"*)
+            cd "$PROJECTS"
+            local projname="${1:1}"
+            local proj="$(__dir_contains $projname*)"
+            if [[ -n $projname && -d "$proj" ]]; then
+                cd "$proj"
+            else
+                ls
+            fi
+        ;;
+
+        # context-dependent commands
+        "run")
+            # start my local website
+            if [[ $(pwd) -ef $WEBSITE ]]; then
+                bundle exec jekyll serve
+            # build and run a rust project
+            elif __dir_contains "Cargo.toml"; then
+                __print_header "${F_DYELLOW}" "BUILDING & RUNNUNG" "cargo run"
+                cargo run
+            # build and run a haskell/stack project
+            elif __dir_contains "stack.yaml"; then
+                __print_header "${F_DYELLOW}" "BUILDING" "stack build"
+                stack build
+                __print_header "${F_DGREEN}" "RUNNING" "stack run ${PWD##*/}"
+                stack exec "${PWD##*/}-exe"
+            fi
+            ;;
+
+        "help") head -n -5 ~/.scripts/j | sed -nr "s/\"(.*)(\"|\*)\)(.*);;/${BOLD}${F_DBLUE}\1${R} λ\3/p" | \
+            sed "s/\$EDITOR/v /; s/\"//g" | sed -r "s/(.*)λ v(.*)/\1λ ${F_DYELLOW}v\2${R}/; s/(.*)λ sudo(.*)/\1λ ${F_DRED}sudo\2${R}/; s/(.*)λ cd(.*)/\1λ ${F_DGREEN}cd \2${R}/" | column -s"λ" -t -o "->" ;;
+        *) echo "what?"
+    esac
+}
