@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env -S sudo bash
 
 # Disable touchpad
 xinput --disable $(xinput list | grep Touchpad | cut -f2 | cut -f2 -d "=")

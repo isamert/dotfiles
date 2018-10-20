@@ -95,6 +95,12 @@ function __trim {
     echo -n "$var"
 }
 
+function __trim_leading {
+    local var=${@:-$(</dev/stdin)}
+    var="${var%"${var##*[![:space:]]}"}"
+    echo -n "$var"
+}
+
 # #############################################################################
 # Private functions
 # #############################################################################
@@ -162,12 +168,15 @@ function __leading_spaces {
     echo $spaces
 }
 
-function __id_indent_level {
-    id=$1
-    local spaces=$(__leading_spaces "$(__id_line $id)")
+function __indent_level {
+    local spaces=$(__leading_spaces "$1")
     if [ $spaces -eq -1 ]; then echo -1; return; fi
     local result=$((spaces/INDENT))
     echo $result
+}
+
+function __id_indent_level {
+    __indent_level "$(__id_line $1)"
 }
 
 function __id_line_no {
@@ -183,7 +192,9 @@ function __id_property {
 }
 
 function __id_is_decorator {
-    __starts_with "$(__id_line $1)" "#"
+    if __starts_with $1 "@"; then true;
+    elif __starts_with "$(__id_line $1)" "#"; then true;
+    else false; fi
 }
 
 function __id_children {
@@ -363,6 +374,24 @@ function __filter_date {
     __echon "$(grep "$term"  "$TF" | sed "s/^[ \t]*//" | __prettify)"
 }
 
+function __props {
+    str="$@"
+    echo "$str" | grep -oe "-[^ :]*:[^-]*-" | sed "s/^-//;s/-$//"
+}
+
+function __prop_replace {
+    local prop="$1";
+    local prop_new_value="$2";
+    shift 2
+    local str="$@"
+    echo "$str" | sed -r "s/-$prop:[^-]*-/-$prop:$prop_new_value-/g"
+}
+
+function __clear_props {
+    str="$@"
+    echo "$str" | sed -r "s/ ?-[^:]*:[^-]*-//g"
+}
+
 function __prettify {
     # TODO: make STR_DONE green, make STR_UNDONE yellow, if due date is passed make it red
     local str=${@:-$(</dev/stdin)}
@@ -372,15 +401,40 @@ function __prettify {
     echo "$bold_headers"
 }
 
+function __line_to_insert {
+    local parent_id=$1
+    local parent_last_child=""
+    if __starts_with $parent_id "@"; then
+        parent_id=$(__get_decorator_id $parent_id)
+        parent_last_child="$(__decorator_children $parent_id | tail -n -1)"
+    else
+        parent_last_child="$(__id_children $parent_id all | tail -n -1)"
+    fi
+
+    local parent_line=$(__id_line_no $parent_id)
+    local line_to_insert
+    if [[ -z $parent_last_child ]]; then
+        line_to_insert=$((parent_line+1))
+    else
+        line_to_insert=$(($(__id_line_no $(__prop id "$parent_last_child"))+1))
+    fi
+
+    echo $line_to_insert
+}
+
 # #############################################################################
 # Functions
 # #############################################################################
 function add {
     local id=$(__fresh_id)
+    local result
+    local line_to_insert
+
     if __is_number $1 || __starts_with $1 "@" ; then
         local parent_id=$1
         shift
-        local summary="$@"
+        local summary="$*"
+        local line_to_insert=$(__line_to_insert "$parent_id")
 
         local parent_last_child=""
         if __starts_with $parent_id "@"; then
@@ -388,43 +442,30 @@ function add {
             name="$parent_id"
             parent_id=$(__get_decorator_id $parent_id)
             if [[ -z $parent_id ]]; then
-                if [[ -n $(tail -n 1 $TF) ]]; then echo "" >> $TF; fi
+                if [[ -n $(tail -n 1 "$TF") ]]; then echo "" >> "$TF"; fi
                 echo "# $(__capitalize_word "${name:1}") $(__prop_build id $id)" >> "$TF"
                 return
             fi
-            parent_last_child="$(__decorator_children $parent_id | tail -n -1)"
         else
             summary="$(__process "$summary")"
-            parent_last_child="$(__id_children $parent_id all | tail -n -1)"
         fi
 
         if ! __id_exists $parent_id; then return 1; fi
 
-        local parent_line=$(__id_line_no $parent_id)
+
         local parent_indent_level=$(__id_indent_level $parent_id)
-        local spaces=$(__spaces $(((parent_indent_level+1)*INDENT)))
-        local result="$(__escape  "$spaces$STR_UNDONE$summary $(__prop_build id $id)")"
+        local spaces="$(__spaces $(((parent_indent_level+1)*INDENT)))"
+        result="$spaces$STR_UNDONE$summary $(__prop_build id $id)"
 
-        local line_to_insert
-        if [[ -z $parent_last_child ]]; then
-            line_to_insert=$((parent_line+1))
-        else
-            line_to_insert=$(($(__id_line_no $(__prop id "$parent_last_child"))+1))
-        fi
-
-        (( line_to_insert > "$(cat $TF | wc -l)" )) && echo "" >> $TF
-        sed -i "$line_to_insert""i\\$(echo "$result")" $TF
+        (( line_to_insert > "$(cat "$TF" | wc -l)" )) && echo "" >> "$TF"
     else
-        local result="$STR_UNDONE$(__process "$@ $(__prop_build id $id)")"
-        local line_to_insert=$(grep -Enm 1 '(^$|^#)' $TF | cut -d: -f1)
-        sed -i "$line_to_insert""i$(__escape "$result")" $TF
+        result="$STR_UNDONE$(__process "$@ $(__prop_build id $id)")"
+        local line_to_insert=$(grep -Enm 1 '(^$|^#)' "$TF" | cut -d: -f1)
     fi
 
-    echo "${BOLD}$id${R}"
+    sed -i "${line_to_insert}i\\$(__escape "$result")" "$TF"
 
-    # TODO: really need this? (maybe an extra function: clean, maintanence)
-    # Remove trailing and leading blank lines
-    #sed -i -e :a -e '/./,$!d;/^\n*$/{$d;N;};/\n$/ba' $TF
+    echo "${BOLD}$id${R}"
 }
 
 function mark-done {
@@ -487,27 +528,9 @@ function filter {
     esac
 }
 
-function __props {
-    str="$@"
-    echo "$str" | grep -oe "-[^ :]*:[^-]*-" | sed "s/^-//;s/-$//"
-}
-
-function __prop_replace {
-    local prop="$1";
-    local prop_new_value="$2";
-    shift 2
-    local str="$@"
-    echo "$str" | sed -r "s/-$prop:[^-]*-/-$prop:$prop_new_value-/g"
-}
-
-function __clear_props {
-    str="$@"
-    echo "$str" | sed -r "s/ ?-[^:]*:[^-]*-//g"
-}
-
 function modify {
     local id=$1; shift
-    local str="$@"
+    local str="$*"
     local line_no=$(__id_line_no $id)
     local line=$(__id_line $id)
 
@@ -527,6 +550,33 @@ function modify {
     sed -i -r "${line_no}s/( *)($(__escape "$STR_DONE")|$(__escape "$STR_UNDONE")|\# ).*/\1\2$line/" "$TF"
 }
 
+function move {
+    local source=$1
+    [[ $2 == "to" ]] && shift
+    local dest=$2
+
+    local line_to_insert=$(($(__line_to_insert $dest)))
+    local dest_id=$dest
+
+    if __starts_with $dest "@"; then dest_id=$(__get_decorator_id $dest); fi
+    if ! __id_exists $dest_id; then return 1; fi
+
+    local source_line="$(__id_line $source)"
+    local sour_indent_level=$(__indent_level "$source_line")
+    local dest_indent_level=$(__id_indent_level $dest_id)
+    local required_indent_level=$(((dest_indent_level - sour_indent_level + 1) * INDENT))
+    local spaces="$(__spaces $required_indent_level)" # FIXME for # Stuff
+    local source_children
+    [[ -n "$spaces" ]] && source_children=$(__id_children $dest_id all | sed "s/^/\\$spaces/")
+    local source_line="$spaces$source_line"
+
+    #remove $source
+
+    sed "${line_to_insert}i\\$(__escape "$source_line")" "$TF"
+    echo "$source_children"
+    [[ -n $source_children ]] && sed "$((line_to_insert+1))i\\$(__escape "$source_children")" "$TF"
+}
+
 __maintain_today
 
 param="$1"; shift
@@ -535,11 +585,12 @@ case "$param" in
     ""|"ls"|"list") list ;;
     "add") add "$@" ;;
     "remove"|"rm") remove "$@" ;;
+    "move"|"mv") move "$@" ;;
     "done"|"d") mark-done "$@" ;;
     "undone"|"u") mark-undone "$@" ;;
     "filter"|"f") filter "$@" ;;
     "modify"|"m") modify "$@" ;;
-    *) filter "$param" $@ ;;
+    *) filter "$param" "$@" ;;
 esac
 
 # TODO: add notes to TODOs
