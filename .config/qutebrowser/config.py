@@ -60,7 +60,7 @@ c.completion.height = '40%'
 ## Languages to use for spell checking. You can check for available
 ## languages and install dictionaries using scripts/dictcli.py. Run the
 ## script with -h/--help for instructions:
-## $ cd /usr/share/qutebrowser
+## $ cd /usr/share/qutebrowser/scripts
 ## $ ./dictcli.py install en-US tr-TR
 ## Type: List of String
 ## Valid values:
