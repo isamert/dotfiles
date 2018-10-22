@@ -44,7 +44,7 @@ function j {
         "mpd"*) cd ~/.config/mpd/mpd.conf ;;
         "nvim"*|"vim"*) $EDITOR ~/.config/nvim/init.vim ;;
         "i3"*) $EDITOR ~/.config/i3/config ;;
-        "compt"*) $EDITOR ~/.config/compton ;;
+        "compt"*) $EDITOR ~/.config/compton.conf ;;
         "poly"*) $EDITOR ~/.config/polybar/config ;;
         "system"*) cd ~/.config/systemd/user ;;
         "quteg"*|"grease"*) cd ~/.local/share/qutebrowser/greasemonkey ;;
@@ -60,9 +60,10 @@ function j {
         "s"|"scr"*) cd ~/.scripts ;;
         "note"*) cd ~/Documents/notes ;;
         "work"*) cd ~/Workspace ;;
-        "temp"*) cd ~/Workspace/temp ;;
+        "temp"|"tmp"*) cd ~/Workspace/temp ;;
         "wal"*) cd ~/Pictures/wallpaper ;;
         "web"*|"site"*) cd $WEBSITE ;;
+        "todo") cd ~/Documents/todo; t ;;
 
         # cd projects with p prefix
         # j pt[echne] --> $PROJECTS/techne

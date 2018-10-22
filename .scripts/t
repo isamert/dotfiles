@@ -1,7 +1,8 @@
 #!/bin/bash
 
-TF="$HOME/.tasks"
-TPF="$HOME/.tasks_past"
+TF="$HOME/Documents/todo/todo.md"
+TPF="$HOME/Documents/todo/todo-past.md"
+NF="$HOME/Documents/todo/todo-notes.md"
 INDENT=4
 STR_UNDONE="- [ ] "
 STR_DONE="- [X] "
@@ -422,6 +423,58 @@ function __line_to_insert {
     echo $line_to_insert
 }
 
+function __id_note {
+    local id=$1
+
+    local tmp_tf="$TF"; TF="$NF"
+    local line_start=$(__id_line_no $id)
+    TF="$tmp_tf"
+
+    local line_end_relative=$(tail -n +$((line_start+1)) "$NF" | grep -Enm 1 '(^$|^# )'| cut -d: -f1)
+    local line_end=$((line_start+line_end_relative-1)) # -1 because do not include blank|# line
+    [[ -z $line_end_relative ]] && line_end=$(cat "$NF" | wc -l)
+    sed -n "$line_start,$line_end""p;$((line_end+1))q" "$NF" | tail -n +2
+}
+
+function __id_note_rm {
+    local id=$1
+
+    local tmp_tf="$TF"; TF="$NF"
+    local line_start=$(__id_line_no $id)
+    TF="$tmp_tf"
+
+    local line_end_relative=$(tail -n +$((line_start+1)) "$NF" | grep -Enm 1 '(^$|^# )'| cut -d: -f1)
+    local line_end=$((line_start+line_end_relative-1)) # -1 because do not include blank|# line
+    [[ -z $line_end_relative ]] && line_end=$(cat "$NF" | wc -l)
+    sed -i "$((line_start)),${line_end}d" "$NF"
+}
+
+function __id_note_save {
+    local id=$1
+    local file="$2"
+
+    local tmp_tf="$TF"; TF="$NF"
+    local line_start=$(__id_line_no $id)
+    TF="$tmp_tf"
+
+    if [[ -z $line_start ]]; then
+        local line="$(__id_line $id)"
+        line="${line#*"$STR_DONE"}"
+        line="${line#"$STR_DONE"}"
+        line="${line#*"$STR_UNDONE"}"
+        line="${line#"$STR_UNDONE"}"
+        echo "# $line" >> "$NF"
+        line_start=$(wc -l < "$NF")
+    else
+        local line_end_relative=$(tail -n +$((line_start+1)) "$NF" | grep -Enm 1 '(^$|^# )'| cut -d: -f1)
+        local line_end=$((line_start+line_end_relative-1)) # -1 because do not include blank|# line
+        [[ -z $line_end_relative ]] && line_end=$(cat "$NF" | wc -l)
+        sed -i "$((line_start+1)),${line_end}d" "$NF"
+    fi
+
+    sed -i "${line_start}r $file" "$NF"
+}
+
 # #############################################################################
 # Functions
 # #############################################################################
@@ -487,7 +540,11 @@ function remove {
             if __starts_with "$1" "@"; then
                 id=$(__get_decorator_id $1)
             fi
-            if __id_exists $id; then __id_remove $id; fi
+            if __id_exists $id; then
+                echo "$(__id_line $id | __prettify)"
+                echo "$(__id_children $id all | __prettify)"
+                __id_remove $id
+            fi
         done
     else
         # TODO: Remove based on predicate
@@ -550,47 +607,92 @@ function modify {
     sed -i -r "${line_no}s/( *)($(__escape "$STR_DONE")|$(__escape "$STR_UNDONE")|\# ).*/\1\2$line/" "$TF"
 }
 
+function edit_note {
+    local id=$1;
+    local tmp_file="$(mktemp --suffix=.md)"
+    __id_note $id > "$tmp_file"
+    $EDITOR "$tmp_file"
+    __id_note_save $id "$tmp_file"
+}
+
+function view_note {
+    local id=$1;
+    __id_note $id | bat --language md
+}
+
+function remove_note {
+    local IFS=','; read -ra IDS <<< "$1"
+    for id in "${IDS[@]}"; do
+        __starts_with "$1" "@" && id=$(__get_decorator_id $1)
+        __id_note_rm $id
+    done
+}
+
 function move {
     local source=$1
     [[ $2 == "to" ]] && shift
     local dest=$2
 
-    local line_to_insert=$(($(__line_to_insert $dest)))
+    local line_to_insert=$(__line_to_insert $dest)
     local dest_id=$dest
 
     if __starts_with $dest "@"; then dest_id=$(__get_decorator_id $dest); fi
     if ! __id_exists $dest_id; then return 1; fi
 
     local source_line="$(__id_line $source)"
+    local source_children=$(__id_children $source all)
+
     local sour_indent_level=$(__indent_level "$source_line")
     local dest_indent_level=$(__id_indent_level $dest_id)
     local required_indent_level=$(((dest_indent_level - sour_indent_level + 1) * INDENT))
-    local spaces="$(__spaces $required_indent_level)" # FIXME for # Stuff
-    local source_children
-    [[ -n "$spaces" ]] && source_children=$(__id_children $dest_id all | sed "s/^/\\$spaces/")
-    local source_line="$spaces$source_line"
+    local spaces="$(__spaces ${required_indent_level#-})" # FIXME for # Stuff
 
-    #remove $source
+    if ((required_indent_level > 0)); then
+        # Add required spaces
+        source_line="$spaces$source_line"
+        source_children="$(echo "$source_children" | sed "s/^/\\$spaces/")"
+    else
+        # Remove spaces
+        source_line="${source_line#$spaces}"
+        source_children="$(echo "$source_children" | sed "s/^\\$spaces//")"
+    fi
 
-    sed "${line_to_insert}i\\$(__escape "$source_line")" "$TF"
-    echo "$source_children"
-    [[ -n $source_children ]] && sed "$((line_to_insert+1))i\\$(__escape "$source_children")" "$TF"
+    local source_line_no=$(__id_line_no $source)
+    remove $source <<< "y"
+    local dest_line_no=$(__id_line_no $dest_id)
+    if ((source_line_no < dest_line_no)); then
+        local lines_skipped=1
+        [[ -n "$source_children" ]] && lines_skipped=$((lines_skipped + $(echo "$source_children" | wc -l)))
+        line_to_insert=$((line_to_insert - lines_skipped))
+    fi
+
+    sed -i "${line_to_insert}i\\$(__escape "$source_line")" "$TF"
+    [[ -n "$source_children" ]] && sed -i "$((line_to_insert))r /dev/stdin" "$TF" <<< "${source_children%$'\n'}"
 }
 
 __maintain_today
 
-param="$1"; shift
+param="$1"
+if __is_number $1 || __starts_with "$1" "@" &&  (("$#" > 1)); then
+    param="$2"
+    first="$1"
+    shift
+fi
+shift
 
 case "$param" in
     ""|"ls"|"list") list ;;
-    "add") add "$@" ;;
-    "remove"|"rm") remove "$@" ;;
-    "move"|"mv") move "$@" ;;
-    "done"|"d") mark-done "$@" ;;
-    "undone"|"u") mark-undone "$@" ;;
-    "filter"|"f") filter "$@" ;;
-    "modify"|"m") modify "$@" ;;
-    *) filter "$param" "$@" ;;
+    "add") add $first "$@" ;;
+    "remove"|"rm") remove $first "$@" ;;
+    "move"|"mv") move $first "$@" ;;
+    "done"|"d") mark-done $first "$@" ;;
+    "undone"|"u") mark-undone $first "$@" ;;
+    "filter"|"f") filter $first "$@" ;;
+    "modify"|"m") modify $first "$@" ;;
+    "edit-note"|"ed-note") edit_note $first "$@" ;;
+    "view-note") view_note $first "$@" ;;
+    "remove-note"|"rm-note") remove_note $first "$@" ;;
+    *) filter $first "$param" "$@" ;;
 esac
 
 # TODO: add notes to TODOs
