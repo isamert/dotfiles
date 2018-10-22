@@ -49,21 +49,20 @@
 "bash ~/.scripts/switch-audio-channel"
     Control+Alt + o
 
-# Set volume up
 "amixer set Master 5%+"
     Mod3 + 0
 
-# Set volume up
 "amixer set Master 5%+"
     XF86AudioRaiseVolume
 
-# Set volume down
 "amixer set Master 5%-"
     Mod3 + 9
 
-# Set volume up
 "amixer set Master 5%-"
     XF86AudioLowerVolume
+
+"amixer set Master 5%-"
+    XF86AudioMute
 
 "mpc toggle"
     Mod3 + p # p for play/pause

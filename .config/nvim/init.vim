@@ -126,17 +126,18 @@ nmap <silent> <C-j> <Plug>(ale_next_wrap)| "next error
 
 " ale
 " let g:ale_lint_on_text_changed = 'never' " only lints when file is saved
-let g:airline#extensions#ale#enabled = 1 " ...
-let g:ale_completion_enabled = 1         " ...
-let g:ale_sign_error = '◉'
-let g:ale_sign_warning = '◉'
+let g:airline#extensions#ale#enabled = 1       " ...
+let g:ale_sign_error = '◉'                     " ...
+let g:ale_sign_warning = '◉'                   " ...
+let g:ale_completion_enabled = 1               " ...
+let g:ale_haskell_hie_executable='hie-wrapper' " usage of this is encouraged instead of hie
 
 " ale linter config
 let g:ale_linters            = {}
 let g:ale_linters['python']  = ['pyls', 'flake8', 'mypy', 'pylint']
 let g:ale_linters['rust']    = ['rls']
 let g:ale_linters['c']       = ['clangd', 'cquery']
-let g:ale_linters['haskell'] = ['hie']
+let g:ale_linters['haskell'] = ['hie', 'stack-build']
 
 " leader
 nmap <space> <leader>
