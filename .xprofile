@@ -1,8 +1,4 @@
-# There are extra settings for us keyboard, source them
-# ~/.Xmodmap gets sourced automatically
-xmodmap $HOME/.Xmodmap.us
-
-# Set refresh rate
+# Set refresh rate (if available)
 xrandr -r 75
 
 # I should probably use systemd but this seems more in-place and manageable.
@@ -16,4 +12,6 @@ syncthing -no-browser &            # Sync manager
 redshift &                         # For my eyes
 
 # I just use the background of LightDM, no need for this for now
+# Keep that in mind that if screen res changes, or a new video input is connects
+# background will be corrupted, so you need to use feh then.
 # feh --bg-scale $HOME/.config/wall.png

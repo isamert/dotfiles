@@ -1,7 +1,6 @@
-! Some sources:
-! https://unix.stackexchange.com/questions/103814/capslock-as-modifier-key-for-application-keymaps/151046#151046
-! https://askubuntu.com/a/4023
-
+! !!!!!!!!!!!!!!!!!!!!!!!!!
+! Map CapsLock to Hyper key
+! !!!!!!!!!!!!!!!!!!!!!!!!!
 ! Unmap capslock
 clear Lock
 keycode 66 = Hyper_L
@@ -12,9 +11,32 @@ remove mod4 = Hyper_L
 ! Set mod3 to capslock
 add mod3 = Hyper_L
 
+! !!!!!!!!!!!!!!!!!!!!!!!!!
 ! Fix my bluetooth keyboard
+! !!!!!!!!!!!!!!!!!!!!!!!!!
+! (Unfortunately XF86Backwards? key gets overridden by ESC in my thinkpad)
+keycode 166 = Escape NoSymbol Escape NoSymbol Escape Escape
 keycode 166 = Escape
 keycode 248 = Super_L
 
+! !!!!!!!!!!!!!!!!!!!
+! Some comfy bindings
+! !!!!!!!!!!!!!!!!!!!
+! Map RightCtrl to ESC
+keycode 105 = Escape
+
 ! AltGr + l -> λ
-keycode  46 = l L l L U03BB Oslash oslash
+keysym l = l L l L U03BB
+
+! AltGr+[ -> (, AltGr+] -> )
+keysym bracketleft = bracketleft braceleft bracketleft braceleft parenleft
+keysym bracketright = bracketright braceright bracketright braceright parenright
+
+! !!!!!!!!!!!!
+! Fix us(intl)
+! !!!!!!!!!!!!
+! I'm using us(intl) to be able to use ISO_Shift_Level3 as AltGr, other
+! keyboards does not permit usage of it AFAIK. But I don't want to use dead_*
+! keys. So I map them to their original bindings.
+keysym dead_grave = grave asciitilde
+keysym dead_acute = apostrophe quotedbl

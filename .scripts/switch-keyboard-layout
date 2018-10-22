@@ -28,7 +28,5 @@ do
     fi
 done
 
-
 # Reload .Xmodmap
 [[ -f ~/.Xmodmap ]] && xmodmap ~/.Xmodmap
-[[ $(get_current_layout) = *us* ]] && xmodmap ~/.Xmodmap.us
