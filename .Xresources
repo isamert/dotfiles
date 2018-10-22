@@ -1,3 +1,6 @@
+! !!!!!!!!!!!!!!
+! GRUVBOX colors
+! !!!!!!!!!!!!!!
 #define BACKGROUND #282828
 #define FOREGROUND #ebdbb2
 #define COLOR0  #282828
@@ -16,7 +19,11 @@
 #define COLOR14 #8ec07c
 #define COLOR7  #a89984
 #define COLOR15 #ebdbb2
+#define TBG argb:cc282828
 
+! !!!!!!!!!!!!!
+! st (terminal)
+! !!!!!!!!!!!!!
 st.termname: st-256color
 st.shell: /bin/bash
 st.font: IBM Plex Mono:pixelsize=14:antialias=true:autohint=true
@@ -25,9 +32,15 @@ st.borderpx: 1
 st.xfps: 300
 st.actionfps: 75
 
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! i3 settings (wm for window manager)
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 wm.gaps.inner: 6
 wm.border: 4
 
+! !!!!!!!!!!!!!!!!!
+! polybar (top bar)
+! !!!!!!!!!!!!!!!!!
 bar.font0: Ubuntu Nerd Font:fontformat=truetype:size=11:antialias=false;0
 bar.font1: Font Awesome 5 Free:fontformat=truetype:size=11:antialias=false;0
 bar.font2: siji:pixelsize=10;1
@@ -36,23 +49,30 @@ bar.radius: 4
 bar.height: 30
 bar.width: 100%
 
+! !!!!!!!!!!!!!!!!!!!
+! rofi (app launcher)
+! !!!!!!!!!!!!!!!!!!!
+rofi.lines: 20
+rofi.columns: 1
+rofi.padding: 100
+rofi.fullscreen: true
+rofi.auto-select: false
 rofi.color-enabled: true
+rofi.hide-scrollbar: true
+rofi.separator-style: none
+rofi.font: IBM Plex Sans 12
+rofi.drun-show-actions: true
+
 ! Window:           'background',  'border', 'separator'
-rofi.color-window: argb:cc282828,  #9575cd, argb:ffffffff
+rofi.color-window: TBG,              TBG,    argb:ffffffff
 !   State:              'bg',       'fg',      'altbg',        'hlbg',         hlfg
 rofi.color-normal: argb:00282828, FOREGROUND, argb:00252936, argb:009575cd, #ff9575cd
 rofi.color-active: argb:00282828, #b16286,    argb:00252936, argb:009575cd, #ffc000
 rofi.color-urgent: argb:00252936, #cc241d,    argb:00252936, argb:00252936, #ff0000
-rofi.lines: 13
-rofi.columns: 1
-rofi.width: 2565
-rofi.padding: 500
-rofi.font: Inconsolata Bold 20
-rofi.separator-style: none
-rofi.hide-scrollbar: true
-rofi.auto-select: false
-rofi.drun-show-actions: true
 
+! !!!!!!!!!!!!!!!!!!!!!!
+! Generic color settings
+! !!!!!!!!!!!!!!!!!!!!!!
 *background: BACKGROUND
 *foreground: FOREGROUND
 *color0:  COLOR0

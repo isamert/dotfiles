@@ -27,6 +27,8 @@ function __print_header {
     echo "${BOLD}=========================${R}"
 }
 
+# TODO: mv to folder
+# TODO: cp to folder
 
 function j {
     case "$1" in
@@ -56,6 +58,7 @@ function j {
         "sha"*) cd ~/.local/share ;;
 
         # personal jumps
+        "doc"*) cd ~/Documents ;;
         "scre"*) cd ~/Pictures/screenshots ;;
         "s"|"scr"*) cd ~/.scripts ;;
         "note"*) cd ~/Documents/notes ;;
