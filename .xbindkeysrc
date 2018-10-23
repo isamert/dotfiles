@@ -61,7 +61,7 @@
 "amixer set Master 5%-"
     XF86AudioLowerVolume
 
-"amixer set Master 5%-"
+"amixer set Master 0%"
     XF86AudioMute
 
 "mpc toggle"

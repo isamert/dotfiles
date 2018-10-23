@@ -60,7 +60,7 @@ rofi.auto-select: false
 rofi.color-enabled: true
 rofi.hide-scrollbar: true
 rofi.separator-style: none
-rofi.font: IBM Plex Sans 12
+rofi.font: Inconsolata Bold 14
 rofi.drun-show-actions: true
 
 ! Window:           'background',  'border', 'separator'

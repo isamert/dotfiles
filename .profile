@@ -16,6 +16,7 @@ export UTILS_FILE="$HOME/.scripts/utils"
 
 # Changing this is not gonna change your keyboard layout. For more info, read ~/.scripts/switch-keyboard-layout
 # See `localectl list-x11-keymap-layouts` for your options. (It's generally 2-char country code.)
+# Set your default layout with `localectl set-keymap` and localectl set-x11-keymap
 export KEYBOARD_LAYOUTS='us(intl)',tr
 
 # To be able to deploy android apps from commandline.
