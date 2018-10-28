@@ -59,6 +59,8 @@ function j {
 
         # personal jumps
         "doc"*) cd ~/Documents ;;
+        "docp"*|"dp"*) cd ~/Documents/projects ;;
+        "docn"*|"dn"*) cd ~/Documents/notes ;;
         "scre"*) cd ~/Pictures/screenshots ;;
         "s"|"scr"*) cd ~/.scripts ;;
         "note"*) cd ~/Documents/notes ;;
@@ -94,8 +96,9 @@ function j {
             elif __dir_contains "stack.yaml"; then
                 __print_header "${F_DYELLOW}" "BUILDING" "stack build"
                 stack build
-                __print_header "${F_DGREEN}" "RUNNING" "stack run ${PWD##*/}"
-                stack exec "${PWD##*/}-exe"
+                shift
+                __print_header "${F_DGREEN}" "RUNNING" "stack run ${PWD##*/}-exe -- $*"
+                stack exec "${PWD##*/}-exe" -- "$@"
             fi
             ;;
 

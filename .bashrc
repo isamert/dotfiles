@@ -78,7 +78,7 @@ alias rxbk="killall xbindkeys; xbindkeys"
 # Stuff
 alias ipaddr="curl https://api.ipify.org; echo ''"
 alias ipinfo="curl https://ipinfo.io; echo ''"
-alias weather="curl wttr.in | less -R"
+function weather { curl -s "wttr.in/$*" | less -R;}
 # Download a website completely:
 alias download-website="wget --recursive --page-requisites --html-extension --convert-links --no-parent --limit-rate=500K"
 # Use grep instead of rg if you don't have it

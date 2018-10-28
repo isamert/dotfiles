@@ -21,3 +21,6 @@ export KEYBOARD_LAYOUTS='us(intl)',tr
 
 # To be able to deploy android apps from commandline.
 export ANDROID_HOME=/opt/android-sdk
+
+# Apply GTK themes to QT apps
+export QT_QPA_PLATFORMTHEME=gtk2

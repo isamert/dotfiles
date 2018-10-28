@@ -121,8 +121,9 @@ inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
 autocmd! CompleteDone * if pumvisible() == 0 | pclose | endif " Close preview menu when completion is done
 
-nmap <silent> <C-k> <Plug>(ale_previous_wrap)| "prev error
-nmap <silent> <C-j> <Plug>(ale_next_wrap)| "next error
+nnoremap <silent> <C-k> <Plug>(ale_previous_wrap)| " prev error
+nnoremap <silent> <C-j> <Plug>(ale_next_wrap)|     " next error
+nnoremap <silent> K :ALEDetail<CR>
 
 " ale
 " let g:ale_lint_on_text_changed = 'never' " only lints when file is saved
@@ -193,14 +194,16 @@ nnoremap <leader><space> :Commands<CR>| " \<space> -> lists all commands
 nnoremap <leader>g :GFiles<CR>|         " \g       -> list all git files
 nnoremap <leader>b :Buffers<CR>|        " \b       -> list buffers
 
-" bad typing fixes
-command! W w
+" Master Wq bindings
 command! Wq wq
+command! W w
 command! Q q
+nnoremap <silent> <CR> :nohlsearch<CR><CR>
 
 " meta
 command! ConfigReload so $MYVIMRC " reload vim config
 command! ConfigEdit e $MYVIMRC    " edit vim config
+command! RestartLSP ALEDisable|ALEStopAllLSPs|ALEEnable
 
 " utility
 command! SpellCheckEn setlocal spell! spelllang=en_us

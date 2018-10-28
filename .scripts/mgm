@@ -1,0 +1,5 @@
+#!/bin/bash
+# Fetch weather data from mgm.gov.tr
+
+# slimerjs needs Firefox 59
+SLIMERJSLAUNCHER=~/Workspace/temp/firefox/firefox-bin slimerjs --load-images=false --headless ~/.scripts/data/weather.js

@@ -86,7 +86,7 @@ c.tabs.favicons.scale = 1.35
 
 ## Load a restored tab as soon as it takes focus.
 ## Type: Bool
-c.session.lazy_restore = True
+#c.session.lazy_restore = True
 
 ## Open new tabs (middleclick/ctrl+click) in the background.
 ## Type: Bool
