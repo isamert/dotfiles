@@ -61,8 +61,11 @@
 "amixer set Master 5%-"
     XF86AudioLowerVolume
 
-"amixer set Master 0%"
+"amixer set Master toggle"
     XF86AudioMute
+
+"amixer set Capture toggle"
+    XF86AudioMicMute
 
 "mpc toggle"
     Mod3 + p # p for play/pause
@@ -167,3 +170,7 @@
 # Focus to Firefox/Browser
 "wmctrl -a firefox; wmctrl -a qutebrowser"
     Mod3 + b # b for browser
+
+# Focus to Firefox/Browser
+"menu"
+    XF86Launch1

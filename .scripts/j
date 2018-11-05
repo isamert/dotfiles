@@ -102,6 +102,7 @@ function j {
             fi
             ;;
 
+        "bl") xbacklight -set "${2}%" ;;
         "help") head -n -5 ~/.scripts/j | sed -nr "s/\"(.*)(\"|\*)\)(.*);;/${BOLD}${F_DBLUE}\1${R} λ\3/p" | \
             sed "s/\$EDITOR/v /; s/\"//g" | sed -r "s/(.*)λ v(.*)/\1λ ${F_DYELLOW}v\2${R}/; s/(.*)λ sudo(.*)/\1λ ${F_DRED}sudo\2${R}/; s/(.*)λ cd(.*)/\1λ ${F_DGREEN}cd \2${R}/" | column -s"λ" -t -o "->" ;;
         *) echo "what?"

@@ -34,6 +34,7 @@ Plug 'milkypostman/vim-togglelist' " \q -> Toggle quicfix, \l -> Toggle list
 " lint, code comp. and stuff
 Plug 'w0rp/ale'                    " lint, code completion, other lsp features
 Plug 'neovimhaskell/haskell-vim'   " for better highlighting
+Plug 'dag/vim-fish'                " syntaxh highlighting and stuff for fish
 
 " markup
 Plug 'jceb/vim-orgmode'
@@ -138,7 +139,7 @@ let g:ale_linters            = {}
 let g:ale_linters['python']  = ['pyls', 'flake8', 'mypy', 'pylint']
 let g:ale_linters['rust']    = ['rls']
 let g:ale_linters['c']       = ['clangd', 'cquery']
-let g:ale_linters['haskell'] = ['hie', 'stack-build']
+let g:ale_linters['haskell'] = ['hie', 'stack-build', 'hlint']
 
 " leader
 nmap <space> <leader>
