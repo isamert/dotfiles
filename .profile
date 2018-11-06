@@ -1,7 +1,8 @@
-export BROWSER=firefox
+export BROWSER=qutebrowser
 export EDITOR=nvim
 export VISUAL=nvim
 export TERMINAL=st
+export SHELL=/bin/fish
 export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin
 
 # Used in calendar-popup script (I may forget to update this information)

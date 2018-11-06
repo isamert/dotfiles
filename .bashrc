@@ -98,7 +98,6 @@ function mvcd { mv "$1" "$2" && cd "$2"; }
 function cheat { curl http://cheat.sh/"$1"; }
 function shortenurl { curl -F"shorten=$1" "https://0x0.st"; }
 function uploadfile { curl -F"file=@$1" "https://0x0.st"; }
-source ~/.scripts/j
 
 # #############################################################################
 # PS/Prompt
