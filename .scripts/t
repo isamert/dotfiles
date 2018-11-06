@@ -327,18 +327,18 @@ function __maintain_today {
 
     # Reset day
     local line_start=$(__id_line_no $today_id)
-    sed -i "$line_start""s/$(__escape "($today_day)")/$(__escape "$(date -dtoday $DATE_FORMAT)")/" $TF
+    sed -i "$line_start""s/$(__escape "($today_day)")/$(__escape "$(date -dtoday $DATE_FORMAT)")/" "$TF"
 
     # Backup
     local children="$(__decorator_children $today_id)"
     [ -z "$children" ] && return
-    echo "# $today_day" >> $TPF
-    echo "$children" >> $TPF
-    echo "" >> $TPF
+    echo "# $today_day" >> "$TPF"
+    echo "$children" >> "$TPF"
+    echo "" >> "$TPF"
 
     # Remove
     while read -r child; do
-        sed -i "/$(__escape "$child")/d" $TF
+        __id_remove $(__prop id "$child")
     done <<< "$children"
 }
 
