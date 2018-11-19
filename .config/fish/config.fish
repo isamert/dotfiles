@@ -12,8 +12,13 @@ end
 # #############################################################################
 function fish_modified_vi_key_bindings
     fish_vi_key_bindings
+    bind -M insert \e\r accept-autosuggestion execute # alt-enter
+    bind -M insert \el accept-autosuggestion          # alt-l
+    bind -M insert \ek history-search-backward        # alt-k
+    bind -M insert \ej history-search-forward         # alt-j
     bind -M insert -m default jk backward-char force-repaint
 end
+
 set fish_key_bindings fish_modified_vi_key_bindings
 
 # #############################################################################
@@ -23,13 +28,13 @@ set theme_color_scheme gruvbox       # FIXME: can I make it play nicely with .Xr
 set -U theme_date_format "+%H:%M:%S"
 
 # #############################################################################
-# Aliases (I really don't want to create seperate file for each of these functions)
+# Aliases (I really don't want to create seperate file for each of these)
 # #############################################################################
 # package management
-alias aur="\$AUR_HELPER"
-alias aurin="\$AUR_HELPER -S"
-alias aurs="\$AUR_HELPER -Ss"
-alias aurupg="\$AUR_HELPER -Syu"
+alias aur="eval $AUR_HELPER"
+alias aurin="eval $AUR_HELPER -S"
+alias aurs="eval $AUR_HELPER -Ss"
+alias aurupg="eval $AUR_HELPER -Syu"
 alias pac="sudo pacman"
 alias pacin="sudo pacman -S"
 alias pacs="pacman -Ss"

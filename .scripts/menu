@@ -97,6 +97,7 @@ function files {
 }
 
 
+# Use menu passwords -dump to print password info into stdout.
 function passwords {
     local KEYRING_ID=keepass
     local KDBX_FILE="$HOME/Documents/sync/passwords.kdbx"
@@ -104,18 +105,25 @@ function passwords {
     local ENTRY=$(secret-tool lookup name $KEYRING_ID | keepassxc-cli locate $KDBX_FILE / | tail -n +2 | dmenu)
     if [ ! -z "$ENTRY" ]
     then
-        getpassword "$ENTRY" | xclip -selection clipboard
+        if [[ "$1" == "-dump" ]]; then
+            getpassword "$ENTRY" -dump
+        else
+            getpassword "$ENTRY" | xclip -selection clipboard
+        fi
     fi
 
     # Clear clipboard after 20 secs
-    local secs=$((20))
-    while [ $secs -gt 0 ]; do
-       echo -ne "$secs\033[0K\r"
-       sleep 1
-       : $((secs--))
-    done
 
-    echo "" | xclip -selection clipboard
+    if [[ ! "$1" == "-dump" ]]; then
+        local secs=$((20))
+        while [ $secs -gt 0 ]; do
+           echo -ne "$secs\033[0K\r"
+           sleep 1
+           : $((secs--))
+        done
+
+        echo "" | xclip -selection clipboard
+    fi
 }
 
 

@@ -8,39 +8,39 @@
 # #############################################################################
 # Left click
 "xdotool click 1"
-    Control+Alt + e
+    Mod3+Alt + e
 
 # 50 up
 "xdotool mousemove_relative --sync -- 0 -50"
-    Control+Alt + w
+    Mod3+Alt + w
 
 # 50 down
 "xdotool mousemove_relative --sync -- 0 50"
-    Control+Alt + s
+    Mod3+Alt + s
 
 # 50 left
 "xdotool mousemove_relative --sync -- -50 0"
-    Control+Alt + a
+    Mod3+Alt + a
 
 # 50 right
 "xdotool mousemove_relative --sync -- 50 0"
-    Control+Alt + d
+    Mod3+Alt + d
 
 # 10 up
 "xdotool mousemove_relative --sync -- 0 -10"
-    Control+Alt+Shift + w
+    Mod3+Alt+Shift + w
 
 # 10 down
 "xdotool mousemove_relative --sync -- 0 10"
-    Control+Alt+Shift + s
+    Mod3+Alt+Shift + s
 
 # 10 left
 "xdotool mousemove_relative --sync -- -10 0"
-    Control+Alt+Shift + a
+    Mod3+Alt+Shift + a
 
 # 10 right
 "xdotool mousemove_relative --sync -- 10 0"
-    Control+Alt+Shift + d
+    Mod3+Alt+Shift + d
 
 # #############################################################################
 # VOLUME/MUSIC
@@ -171,6 +171,10 @@
 "wmctrl -a firefox; wmctrl -a qutebrowser"
     Mod3 + b # b for browser
 
-# Focus to Firefox/Browser
+# Couldn't think something better
 "menu"
     XF86Launch1
+
+#
+"st -c float -g 150x20 -e python"
+    XF86Calculator

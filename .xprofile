@@ -6,6 +6,7 @@ xrandr -r 75
 xbindkeys &                        # Key binding manager
 unclutter &                        # Hide inactive mouse
 mpd &                              # Music player daemon
+mpdscribble &                      # Scrobbler for MPD
 udiskie --smart-tray --notify &    # Automatic mounting etc.
 syncthing -no-browser &            # Sync manager
 /usr/lib/geoclue-2.0/demos/agent & # Geo-location provider service (for redshift)

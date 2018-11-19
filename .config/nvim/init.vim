@@ -139,14 +139,14 @@ let g:ale_linters            = {}
 let g:ale_linters['python']  = ['pyls', 'flake8', 'mypy', 'pylint']
 let g:ale_linters['rust']    = ['rls']
 let g:ale_linters['c']       = ['clangd', 'cquery']
-let g:ale_linters['haskell'] = ['hie', 'stack-build', 'hlint']
+let g:ale_linters['haskell'] = ['hie']
 
 " leader
 nmap <space> <leader>
 
 " tabs and buffers
-nnoremap <silent> <A-b> :bn<CR>|                    " alt-b  -> next buffer
-nnoremap <silent> <A-B> :bp<CR>|                    " alt-B  -> prev buffer
+nnoremap <silent> <A-l> :bn<CR>|                    " alt-l  -> next buffer
+nnoremap <silent> <A-h> :bp<CR>|                    " alt-h  -> prev buffer
 nnoremap <silent> <A-.> :tabnext<CR>|               " alt-.  -> next tab
 tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>|     " alt-.  -> next tab (terminal mode)
 nnoremap <silent> <A-,> :tabprevious<CR>|           " alt-,  -> prev tab
@@ -199,7 +199,7 @@ nnoremap <leader>b :Buffers<CR>|        " \b       -> list buffers
 command! Wq wq
 command! W w
 command! Q q
-nnoremap <silent> <CR> :nohlsearch<CR><CR>
+nnoremap <silent> <CR> :nohlsearch<CR><CR>| " Clear search highlighting
 
 " meta
 command! ConfigReload so $MYVIMRC " reload vim config
