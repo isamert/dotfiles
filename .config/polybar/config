@@ -34,7 +34,7 @@ module-margin-right = 2
 
 modules-left = i3 xwindow
 modules-center = mpd
-modules-right = volume xkeyboard memory cpu wlan eth battery temperature date powermenu
+modules-right = volume xkeyboard memory cpu battery temperature date powermenu
 
 tray-position = right
 tray-padding = 2
