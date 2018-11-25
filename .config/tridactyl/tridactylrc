@@ -1,0 +1,28 @@
+" NB: If you want "vim-like" behaviour where removing a line from
+" here makes the setting disappear, uncomment the line below.
+sanitise tridactyllocal tridactylsync
+
+colors dark
+set searchengine duckduckgo
+set editorcmd st nvim
+
+
+
+" Key bindings
+bind <A-.> tabnext
+bind <A-,> tabprev
+bind + zoom 0.1 true
+bind - zoom -0.1 true
+bind mf hint -W ! mpv                               " Open hinted link in mpv
+bind ;c hint -c [class*="expand"],[class="togg"]A   " Comment toggle Reddit and HN
+
+" Some useful default keybindings:
+" >> and << => move tab
+" C-i (in imode) => open editor
+
+set hintfiltermode vimperator-reflow
+
+" Allow Ctrl-a to select all in the commandline
+unbind --mode=ex <C-a>
+
+" vim: set filetype=vim:
