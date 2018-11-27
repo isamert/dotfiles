@@ -78,10 +78,30 @@ function visualizer {
     fi
 }
 
+function translate {
+    local GEOMETRY="80x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
+    local WINDOW_TITLE="calendar-translate-window"
+
+    local COMMAND
+    if [[ $1 == "long" ]]; then
+        # interactive mode accepts en:tr, tr:en kinda inputs, so en:tr in this
+        # command is just a default
+        COMMAND="trans en:tr -interactive -v -pager bat" # FIXME: pager does not work properly in interactive mode
+    else
+        COMMAND="trans en:tr -interactive -brief"
+    fi
+
+    if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
+        $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $COMMAND
+    else
+        wmctrl -c $WINDOW_TITLE
+    fi
+}
 
 case "$1" in
     "calendar")   calendar;;
     "music")      music;;
     "visualizer") visualizer;;
     "htop")       htop;;
+    "translate")  shift; translate "$@";;
 esac

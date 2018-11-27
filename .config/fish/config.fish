@@ -49,6 +49,7 @@ alias pacrem="sudo pacman -Rns"  # Leave dependencies and configurations
 # process management
 alias nameof="ps -o comm= -p" # Get the name of give PID
 alias fuckall="killall -s 9"
+alias fkill="fuzzy kill"
 
 # utility
 alias mktar='tar -cvf'
@@ -67,7 +68,8 @@ alias xpaste="xclip -o"                  # paste cb content
 alias v="nvim"
 alias g="git"
 alias gs="git status"
-alias ga="git add"
+alias ga="fuzzy git add"
+alias gl="fuzzy git log"
 alias gc="git commit -m"
 alias gpm="git push origin master"
 alias rxbk="killall xbindkeys; xbindkeys"

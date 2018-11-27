@@ -1,0 +1,50 @@
+#!/bin/bash
+# https://bluz71.github.io/2018/11/26/fuzzy-finding-in-bash-with-fzf.html
+
+BINDINGS="\
+ctrl-f:page-down,ctrl-b:page-up,\
+alt-j:down,alt-k:up,\
+f1:execute(bat {2}),\
+alt-y:execute-silent(echo {} | xcopy)"
+
+export FZF_DEFAULT_OPTS="
+--bind \"$BINDINGS\"
+"
+
+function fzf_git_add {
+    local files=$(git ls-files --modified | fzf --multi --ansi --preview="git diff --color=always {1}")
+    if [ -n "$files" ]; then
+        git add --verbose $files
+    fi
+}
+
+function fzf_git_log {
+    local commits=$(
+      git log \
+        --graph \
+        --format=format:"%C(yellow)%h%C(red)%d%C(reset) - %C(bold green)(%ar)%C(reset) %s %C(blue)<%an>%C(reset)" \
+        --color=always "$@" |
+        fzf --ansi --no-sort \
+            --preview "git show --color=always {2}"
+      )
+    if [ -n "$commits" ]; then
+        local hashes=$(printf "$commits" | cut -d' ' -f2 | tr '\n' ' ')
+        git show $hashes
+    fi
+}
+
+function fzf_kill {
+    local pids=$(
+      ps -f -u $USER | sed 1d | fzf --multi | tr -s [:blank:] | cut -d' ' -f3
+      )
+    if [ -n "$pids" ]; then
+        echo "$pids" | xargs kill -9 "$@"
+    fi
+}
+
+case "$*" in
+    ga|"git add") fzf_git_add;;
+    gl|"git log") fzf_git_log;;
+    kill|fuck) fzf_kill;;
+    fzf) fzf;;
+esac

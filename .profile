@@ -25,3 +25,6 @@ export ANDROID_HOME=/opt/android-sdk
 
 # Apply GTK themes to QT apps
 export QT_QPA_PLATFORMTHEME=gtk2
+
+# Ctrl-Shift-P to search menu items in GTK apps
+export GTK3_MODULES=/usr/lib/libplotinus.so

@@ -199,7 +199,13 @@ nnoremap <leader>b :Buffers<CR>|        " \b       -> list buffers
 command! Wq wq
 command! W w
 command! Q q
-nnoremap <silent> <CR> :nohlsearch<CR><CR>| " Clear search highlighting
+nnoremap <silent> <CR> :nohlsearch<CR><CR>| " enter -> clear search highlighting
+nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
+nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
+inoremap <A-l> <right>                      " alt-l -> move right in insert mode
+inoremap <A-h> <left>                       " ...
+inoremap <A-j> <down>                       " ...
+inoremap <A-k> <up>                         " ...
 
 " meta
 command! ConfigReload so $MYVIMRC " reload vim config
