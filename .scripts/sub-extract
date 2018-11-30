@@ -15,11 +15,12 @@ def extract_auto():
 def extract_interactive():
     import subprocess
     selected_movie = subprocess \
-         .run(['/bin/sh', '-c', 'echo -n "' + '\n'.join(get_movies()) + '" | fzf'], stdout=subprocess.PIPE) \
+            .run(['/bin/sh', '-c', 'echo -n "' + '\n'.join(get_movies()) + '" | fzf --header="Subtitle name: '+ SUB_ARCHIVE +'" --preview=""'], stdout=subprocess.PIPE) \
         .stdout.decode('utf-8') \
         .strip()
 
-    extract(selected_movie)
+    if selected_movie != "":
+        extract(selected_movie)
 
 def extract(movie_full_path):
     """ Extract sub file from SUB_ARCHIVE """
