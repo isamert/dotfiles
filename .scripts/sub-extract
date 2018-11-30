@@ -3,16 +3,79 @@
 import os
 import sys
 
-# Usage:
-# sub-extract sub_title_archive.zip (or rar)
-# This script simply scans your ~/Videos directory, finds every video file
-# and extracts the subtitle archive near to closest video file match with
-# the same filename of video file. (Just run it and you will see, it will ask
-# for confirmation. Add --noconfirm if you don't want confirmation)
+def extract_auto():
+    """ Automatically find the movie and extract SUB_ARCHIVE with proper name """
+    movies = get_movies()
+    movies_normalized = list(enumerate(map(normalize, movies)))
+    movie_index, _ = max(movies_normalized, key=lambda tup: matches(tup[1]))
+    movie_full_path = movies[movie_index]
 
-# 1080p, 720p etc makes matching harder because sometimes the downloaded
-# subtitle has different resolution spec
+    extract(movie_full_path)
+
+def extract_interactive():
+    import subprocess
+    selected_movie = subprocess \
+         .run(['/bin/sh', '-c', 'echo -n "' + '\n'.join(get_movies()) + '" | fzf'], stdout=subprocess.PIPE) \
+        .stdout.decode('utf-8') \
+        .strip()
+
+    extract(selected_movie)
+
+def extract(movie_full_path):
+    """ Extract sub file from SUB_ARCHIVE """
+    srt_full_path = mk_srt_path(movie_full_path)
+    srt_archive_ext = os.path.splitext(SUB_ARCHIVE)[1]
+
+    print("Given sub file: " + SUB_ARCHIVE)
+    print("Movie: " + movie_full_path)
+    print("Sub  : " + srt_full_path)
+
+    yn = 'y' if NOCONFIRM else input("y/n? ")
+    if yn != 'y':
+        exit(1)
+
+    if srt_archive_ext == ".zip":
+        import zipfile
+        with zipfile.ZipFile(SUB_ARCHIVE) as z:
+            # Just take the first srt file
+            srt_file = list(filter(lambda f: ".srt" in f, [file_info.filename for file_info in z.filelist]))[0]
+            with open(srt_full_path, 'wb') as f:
+                f.write(z.read(srt_file))
+    elif srt_archive_ext == ".rar":
+        import rarfile
+        with rarfile.RarFile(SUB_ARCHIVE) as z:
+            # Just take the first srt file
+            srt_file = list(filter(lambda f: ".srt" in f, z.namelist()))[0]
+            with open(srt_full_path, 'wb') as f:
+                f.write(z.read(srt_file))
+    else:
+        print("wut? (for now)")
+
+    print("Done.")
+
+# #############################################################################
+# Utility functions
+# #############################################################################
+def get_movies():
+    movie_exts = [".mkv", ".mp4", ".avi"]
+    movies = []
+    for movie_dir in MOVIE_DIRS:
+        for root, _, fs in os.walk(movie_dir):
+            for f in fs:
+                name, ext = os.path.splitext(os.path.basename(f))
+                # Skip non-movie files and sample files
+                # (and hope the movie name does not contain "sample")
+                if ext in movie_exts and not "sample" in name.lower():
+                    movies.append(os.path.join(root, f))
+    return movies
+
+def mk_srt_path(movie_full_path):
+    """ Replace movie extension with .srt """
+    return os.path.splitext(movie_full_path)[0] + ".srt"
+
 def normalize(s):
+    # 1080p, 720p etc makes matching harder because sometimes the downloaded
+    # subtitle has different resolution spec
     return s.lower() \
             .replace("-", " ") \
             .replace(".", " ") \
@@ -24,49 +87,43 @@ def normalize(s):
             .replace("x264", "")
 
 def matches(text):
-    return sum(word in text for word in sub_name)
+    return sum(word in text for word in SUB_NAME)
 
+# #############################################################################
+# Here we go
+# #############################################################################
 
-movie_exts = [".mkv", ".mp4", ".avi"]
-sub_archive = sys.argv[1]
-sub_name = normalize(sub_archive).split()
-movies = []
-for root, _, fs in os.walk(os.path.expanduser("~/Videos")):
-    for f in fs:
-        name, ext = os.path.splitext(os.path.basename(f))
-        # Skip non-movie files and sample files
-        # (and hope the movie name does not contain "sample")
-        if ext in movie_exts and not "sample" in name.lower():
-            movies.append(os.path.join(root, f))
+SUB_ARCHIVE = sys.argv[-1]
+SUB_NAME = normalize(SUB_ARCHIVE).split()
+MOVIE_DIRS = [os.path.expanduser("~/Videos")]
+NOCONFIRM = "--no-confirm" in sys.argv
 
-movies_normalized = list(enumerate(map(normalize, movies)))
-movie_index, _ = max(movies_normalized, key=lambda tup: matches(tup[1]))
+if "--movie_dirs" in sys.argv:
+    arg_index = sys.argv.index("--movie_dirs")
+    MOVIE_DIRS = sys.argv[arg_index + 1].split(",")
+    MOVIE_DIRS = [os.path.expanduser(x.strip()) for x in MOVIE_DIRS]
+    for mdir in MOVIE_DIRS:
+        if not os.path.exists(mdir):
+            print("Movie directory does not exist: " + mdir)
+            exit(1)
 
-movie_full_path = movies[movie_index]
-srt_full_path = os.path.splitext(movie_full_path)[0] + ".srt"
-
-print("Given sub file: " + sub_archive)
-print("Movie: " + movie_full_path)
-print("Sub  : " + srt_full_path)
-
-yn = 'y' if (len(sys.argv) > 2 and sys.argv[2] == "--noconfirm") else input("y/n? ")
-if yn == 'y':
-    srt_archive_ext = os.path.splitext(sub_archive)[1]
-    if srt_archive_ext == ".zip":
-        import zipfile
-        with zipfile.ZipFile(sub_archive) as z:
-            # Just take the first srt file
-            srt_file = list(filter(lambda f: ".srt" in f, [file_info.filename for file_info in z.filelist]))[0]
-            with open(srt_full_path, 'wb') as f:
-                f.write(z.read(srt_file))
-    elif srt_archive_ext == ".rar":
-        import rarfile
-        with rarfile.RarFile(sub_archive) as z:
-            # Just take the first srt file
-            srt_file = list(filter(lambda f: ".srt" in f, z.namelist()))[0]
-            with open(srt_full_path, 'wb') as f:
-                f.write(z.read(srt_file))
-    else:
-        print("wut? (for now)")
-
-    print("Done.")
+if "--help" in sys.argv:
+    print("sub-extract [--(interactive|auto)] [--noconfirm] [--help] archive-file")
+    print("")
+    print("\t--auto")
+    print("\t\tAutomatically matches the sub file with the movie using some heuristics. (Default)")
+    print("\t--interactive")
+    print("\t\tOpen fzf to find matching movie file.")
+    print("\t--no-confirm")
+    print("\t\tDo not ask for user consent and automatically copy the sub file.")
+    print("\t--movie-dirs")
+    print("\t\tA comma separated list of movie directories that you want to be searched. (Default: ~/Videos)")
+    print("\t\tExample: sub-extract --movie-dirs ~/Movies,~/Shows")
+elif os.path.exists(SUB_ARCHIVE):
+    if "--auto" in sys.argv and "--interactive" not in sys.argv:
+        extract_auto("--noconfirm" in sys.argv)
+    elif "--interactive" in sys.argv and "--auto" not in sys.argv:
+        extract_interactive()
+else:
+    print("File not found: " + SUB_ARCHIVE)
+    print("Archive path should be the last argument.")
