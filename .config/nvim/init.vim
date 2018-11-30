@@ -20,10 +20,11 @@ Plug 'vim-airline/vim-airline'     " powerline stuff
 Plug 'junegunn/goyo.vim'           " distraction free writing
 
 " utility
-Plug 'junegunn/fzf.vim'                  " Fuzzy finder (s. FZF)
-Plug 'airblade/vim-gitgutter'            " Show git changes
-Plug 'rhysd/devdocs.vim'                 " :DevDocs -> open stuff in DevDocs
-Plug 'jeffkreeftmeijer/vim-numbertoggle' " Toggle between relative and normal lines when needed
+Plug 'junegunn/fzf.vim'                      " Fuzzy finder (s. FZF)
+Plug 'airblade/vim-gitgutter'                " Show git changes
+Plug 'rhysd/devdocs.vim'                     " :DevDocs -> open stuff in DevDocs
+Plug 'jeffkreeftmeijer/vim-numbertoggle'     " Toggle between relative and normal lines when needed
+Plug 'https://gitlab.com/Lenovsky/nuake.git' " Quake-style termunal (F4, ctrl-n)
 
 " editing
 Plug 'easymotion/vim-easymotion'   " (s. easymotion)
@@ -39,14 +40,23 @@ Plug 'dag/vim-fish'                " syntaxh highlighting and stuff for fish
 " markup
 Plug 'jceb/vim-orgmode'
 Plug 'plasticboy/vim-markdown'
+
 call plug#end()
 
 " theme
 colorscheme gruvbox                  " ...
 let g:one_allow_italics = 1          " Italic comments for one theme
 let g:gruvbox_italic=1               " Italic comments for gruvbox
-let g:gruvbox_contrast_dark = 'hard' " ...
+" let g:gruvbox_contrast_dark = 'hard' " ...
 syntax on                            " enable syntax highlighting
+
+" visuals
+set background=dark                " rearranges colors for dark background
+set colorcolumn=80                 " 80-col line
+set termguicolors                  " true color support
+set number relativenumber          " line numbers relative to current line ()
+set cursorline                     " highlight current line
+" hi Normal guibg=none ctermbg=none| " transparent background
 
 " tabs and spaces
 set mouse=a               " enable mouse (helps precise resizing etc)
@@ -56,14 +66,6 @@ set softtabstop=4         " column count inserted by the tab key
 set expandtab             " tabs -> spaces
 set smartindent           " do it smart
 filetype plugin indent on " determine indent by plugins
-
-" visuals
-set background=dark                " rearranges colors for dark background
-set colorcolumn=80                 " 80-col line
-set termguicolors                  " true color support
-set number relativenumber          " line numbers relative to current line ()
-set cursorline                     " highlight current line
-hi Normal guibg=none ctermbg=none| " transparent background
 
 " search/completion
 set ignorecase " ignore case while searching
@@ -206,6 +208,13 @@ inoremap <A-l> <right>                      " alt-l -> move right in insert mode
 inoremap <A-h> <left>                       " ...
 inoremap <A-j> <down>                       " ...
 inoremap <A-k> <up>                         " ...
+
+" nuake
+nnoremap <F4> :Nuake<CR>
+inoremap <F4> <C-\><C-n>:Nuake<CR>
+tnoremap <F4> <C-\><C-n>:Nuake<CR>
+nnoremap <C-n> :Nuake<CR>
+tnoremap <C-n> <C-\><C-n>:Nuake<CR>
 
 " meta
 command! ConfigReload so $MYVIMRC " reload vim config

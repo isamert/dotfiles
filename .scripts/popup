@@ -1,5 +1,5 @@
 #!/bin/bash
-source $UTILS_FILE
+source "$UTILS_FILE"
 
 # BAR_BORDER is the border size of top bar (in my case polybar.)
 # BAR_HEIGHT is the height of top bar.
@@ -9,8 +9,8 @@ BAR_HEIGHT=$(xrdb-get-value "bar.height")
 WINDOW_BORDER=$(xrdb-get-value "wm.border")
 
 function center_window {
-    local WINDOW_TITLE="$@"
-    local WIDTH=$(xwininfo -name $WINDOW_TITLE | grep Width | cut -d: -f2 | xargs)
+    local WINDOW_TITLE="$*"
+    local WIDTH=$(xwininfo -name "$WINDOW_TITLE" | grep Width | cut -d: -f2 | xargs)
     local X=$(((SCREEN_WIDTH - WIDTH) / 2))
     xdotool getactivewindow windowmove $X $Y
 }
@@ -39,14 +39,14 @@ function music {
     local SCREEN_WIDTH=$(screen_width)
     local Y=$((BAR_HEIGHT+BAR_BORDER*2))
     local GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
-    local WINDOW_TITLE="music-popup-window"
+    local WINDOW_TITLE="Music (ncmpcpp)"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $MUSIC 2> /dev/null &
+        $TERMINAL -A 255 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e $MUSIC 2> /dev/null &
         sleep 0.07
-        center_window $WINDOW_TITLE
+        center_window "$WINDOW_TITLE"
     else
-        wmctrl -c $WINDOW_TITLE
+        wmctrl -c "$WINDOW_TITLE"
     fi
 }
 
@@ -54,12 +54,12 @@ function htop {
     # Runs htop in right top corner of the screen.
 
     local GEOMETRY="80x9-$((2*WINDOW_BORDER))+$((BAR_HEIGHT+BAR_BORDER*2))"
-    local WINDOW_TITLE="popup-htop"
+    local WINDOW_TITLE="Task manager"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e htop
+        $TERMINAL -A 255 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e htop
     else
-        wmctrl -c $WINDOW_TITLE
+        wmctrl -c "$WINDOW_TITLE"
     fi
 }
 
@@ -67,34 +67,27 @@ function visualizer {
     local SCREEN_WIDTH=$(screen_width)
     local Y=$((BAR_HEIGHT+BAR_BORDER*2))
     local GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
-    local WINDOW_TITLE="popup-visualizer"
+    local WINDOW_TITLE="Visualizer"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e cava 2> /dev/null &
+        $TERMINAL -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e cava 2> /dev/null &
         sleep 0.07
-        center_window $WINDOW_TITLE
+        center_window "$WINDOW_TITLE"
     else
-        wmctrl -c $WINDOW_TITLE
+        wmctrl -c "$WINDOW_TITLE"
     fi
 }
 
 function translate {
-    local GEOMETRY="80x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
-    local WINDOW_TITLE="calendar-translate-window"
+    local GEOMETRY="100x15-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
+    local WINDOW_TITLE="Translator (:set verbose 0/1)"
 
-    local COMMAND
-    if [[ $1 == "long" ]]; then
-        # interactive mode accepts en:tr, tr:en kinda inputs, so en:tr in this
-        # command is just a default
-        COMMAND="trans en:tr -interactive -v -pager bat" # FIXME: pager does not work properly in interactive mode
-    else
-        COMMAND="trans en:tr -interactive -brief"
-    fi
+    local COMMAND="trans en:tr -interactive -brief"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -A 255 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $COMMAND
+        $TERMINAL -A 255 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e $COMMAND
     else
-        wmctrl -c $WINDOW_TITLE
+        wmctrl -c "$WINDOW_TITLE"
     fi
 }
 

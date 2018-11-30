@@ -8,7 +8,7 @@ export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin
 # Used in calendar-popup script (I may forget to update this information)
 export CALENDAR=ikhal
 
-# For aurin, aursearch... aliases.
+# For aurin, aursearch... aliases. (Also used in some other scripts)
 export AUR_HELPER=trizen
 
 # This script contains some utility functions, with exporting it like that
@@ -27,4 +27,20 @@ export ANDROID_HOME=/opt/android-sdk
 export QT_QPA_PLATFORMTHEME=gtk2
 
 # Ctrl-Shift-P to search menu items in GTK apps
-export GTK3_MODULES=/usr/lib/libplotinus.so
+# export GTK3_MODULES=/usr/lib/libplotinus.so
+
+# Some fzf stuff
+FZF_BINDINGS="\
+ctrl-d:page-down,ctrl-u:page-up,\
+alt-j:preview-down,alt-k:preview-up,\
+alt-d:preview-page-down,alt-u:preview-page-up,\
+alt-e:execute($EDITOR {}),\
+alt-y:execute-silent(echo {} | xcopy),\
+ctrl-p:toggle-preview"
+
+export FZF_DEFAULT_OPTS="
+--bind \"$FZF_BINDINGS\"
+--preview 'bat --color=always --italic-text=always --number --line-range :200 {}'
+--header='(c-p: toggle-preview | c-d/u: page up/down | a-j/k: preview up/down | a-y: copy | a-e: edit)'
+--reverse
+"

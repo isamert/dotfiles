@@ -130,12 +130,8 @@
 "popup htop"
     Mod3 + h
 
-"popup translate brief"
+"popup translate"
     Mod3 + t
-
-"popup translate long"
-    Mod3+Shift + t
-
 
 "$TERMINAL -e ranger"
     Mod3 + r

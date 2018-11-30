@@ -1,20 +1,25 @@
 #!/bin/bash
+# Some sources that I used:
 # https://bluz71.github.io/2018/11/26/fuzzy-finding-in-bash-with-fzf.html
+# https://github.com/DanielFGray/fzf-scripts
 
-BINDINGS="\
-ctrl-f:page-down,ctrl-b:page-up,\
-alt-j:down,alt-k:up,\
-f1:execute(bat {2}),\
-alt-y:execute-silent(echo {} | xcopy)"
+# These are generally console-spesific stuff. For other interactive fuzzy
+# finding stuff check out ~/.scripts/menu (it uses rofi and there are stuff
+# for music, apps, passwords etc.).
 
-export FZF_DEFAULT_OPTS="
---bind \"$BINDINGS\"
-"
+source "$UTILS_FILE"
 
 function fzf_git_add {
     local files=$(git ls-files --modified | fzf --multi --ansi --preview="git diff --color=always {1}")
     if [ -n "$files" ]; then
         git add --verbose $files
+    fi
+}
+
+function fzf_git_files {
+    local files=$(git ls-files | fzf --multi --ansi)
+    if [ -n "$files" ]; then
+        $EDITOR $files
     fi
 }
 
@@ -24,8 +29,8 @@ function fzf_git_log {
         --graph \
         --format=format:"%C(yellow)%h%C(red)%d%C(reset) - %C(bold green)(%ar)%C(reset) %s %C(blue)<%an>%C(reset)" \
         --color=always "$@" |
-        fzf --ansi --no-sort \
-            --preview "git show --color=always {2}"
+      fzf --height 100% --ansi --no-sort \
+        --preview "git show --color=always {2}"
       )
     if [ -n "$commits" ]; then
         local hashes=$(printf "$commits" | cut -d' ' -f2 | tr '\n' ' ')
@@ -35,16 +40,36 @@ function fzf_git_log {
 
 function fzf_kill {
     local pids=$(
-      ps -f -u $USER | sed 1d | fzf --multi | tr -s [:blank:] | cut -d' ' -f3
+      ps -f -u $USER | sed 1d | fzf --multi --preview '' | tr -s [:blank:] | cut -d' ' -f3
       )
     if [ -n "$pids" ]; then
         echo "$pids" | xargs kill -9 "$@"
     fi
 }
 
+function fzf_packages_arch {
+    local packages=$(fzf --height 100% \
+                         --ansi \
+                         --multi \
+                         --preview="$AUR_HELPER -Si {2}" \
+    < <( $AUR_HELPER -Ss "$1" |
+      gawk '{
+        getline descr;
+        sub(/ */,"", descr);
+        repo = blue "[" gensub(/\/.*/, "", 1) "]" reset;
+        name = green gensub(/.*\//, "", 1, $1) reset;
+        info = gensub(/[^ ]* /, "", 1);
+        print repo, name, info, descr;
+      }' blue="$F_BLUE" green="$F_GREEN" reset="$R"
+    ) | cut -d' ' -f2)
+    [[ -n "$packages" ]] && $AUR_HELPER -S ${packages}
+}
+
 case "$*" in
     ga|"git add") fzf_git_add;;
+    gf|"git files") fzf_git_files;;
     gl|"git log") fzf_git_log;;
     kill|fuck) fzf_kill;;
-    fzf) fzf;;
+    p|packages) fzf_packages_arch;;
+    "") fzf;;
 esac
