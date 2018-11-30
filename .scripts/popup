@@ -82,7 +82,9 @@ function translate {
     local GEOMETRY="100x15-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
     local WINDOW_TITLE="Translator (:set verbose 0/1)"
 
-    local COMMAND="trans en:tr -interactive -brief"
+    # Until the develop branch gets merged, I need to use my own build because
+    # -interactive and -v does not play well together in the stable version
+    local COMMAND="$HOME/Workspace/temp/translate-shell/translate -sl en -hl tr -interactive -v -pager bat"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -A 255 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e $COMMAND
