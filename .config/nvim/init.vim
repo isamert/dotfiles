@@ -25,6 +25,8 @@ Plug 'airblade/vim-gitgutter'                " Show git changes
 Plug 'rhysd/devdocs.vim'                     " :DevDocs -> open stuff in DevDocs
 Plug 'jeffkreeftmeijer/vim-numbertoggle'     " Toggle between relative and normal lines when needed
 Plug 'https://gitlab.com/Lenovsky/nuake.git' " Quake-style termunal (F4, ctrl-n)
+Plug 'jpalardy/vim-slime'                    " send text to repl
+Plug 'majutsushi/tagbar'                     " list top-level stuff in a window
 
 " editing
 Plug 'easymotion/vim-easymotion'   " (s. easymotion)
@@ -70,6 +72,10 @@ filetype plugin indent on " determine indent by plugins
 " search/completion
 set ignorecase " ignore case while searching
 set smartcase  " abc -> Abc and abc, Abc -> only Abc (works in combination with ^^)
+
+" better defaults
+set splitbelow
+set splitright
 
 " utility
 set showmatch             " visually indicate matching parens
@@ -118,12 +124,16 @@ let g:org_heading_shade_leading_stars = 0 " don't shade the stars in headers
 " markdown
 let g:vim_markdown_toc_autofit = 1 " shrink :Toc to min possible
 
+" vim-slime
+let g:slime_target = "neovim"
+
 " autocomplete key mappings (tab, stab to select next, prev completion from list)
 inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
 autocmd! CompleteDone * if pumvisible() == 0 | pclose | endif " Close preview menu when completion is done
 
+" ale mappings
 nnoremap <silent> <C-k> <Plug>(ale_previous_wrap)| " prev error
 nnoremap <silent> <C-j> <Plug>(ale_next_wrap)|     " next error
 nnoremap <silent> K :ALEDetail<CR>
@@ -146,9 +156,21 @@ let g:ale_linters['haskell'] = ['hie']
 " leader
 nmap <space> <leader>
 
-" tabs and buffers
-nnoremap <silent> <A-l> :bn<CR>|                    " alt-l  -> next buffer
-nnoremap <silent> <A-h> :bp<CR>|                    " alt-h  -> prev buffer
+" move between buffers with alt+hjkl
+nnoremap <A-h> <C-w>h
+nnoremap <A-j> <C-w>j
+nnoremap <A-k> <C-w>k
+nnoremap <A-l> <C-w>l
+tnoremap <A-h> <C-\><C-n><C-w>h
+tnoremap <A-j> <C-\><C-n><C-w>j
+tnoremap <A-k> <C-\><C-n><C-w>k
+tnoremap <A-l> <C-\><C-n><C-w>l
+
+" change buffers
+nnoremap <silent> <C-l> :bn<CR>
+nnoremap <silent> <C-h> :bp<CR>
+
+" tabs
 nnoremap <silent> <A-.> :tabnext<CR>|               " alt-.  -> next tab
 tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>|     " alt-.  -> next tab (terminal mode)
 nnoremap <silent> <A-,> :tabprevious<CR>|           " alt-,  -> prev tab
@@ -195,7 +217,9 @@ vnoremap <silent> k gk
 " fzf bindings
 nnoremap <leader><space> :Commands<CR>| " \<space> -> lists all commands
 nnoremap <leader>g :GFiles<CR>|         " \g       -> list all git files
+nnoremap <leader>h :History<CR>|        " \h       -> list history
 nnoremap <leader>b :Buffers<CR>|        " \b       -> list buffers
+nnoremap <leader>f :Rg<CR>|             " \b       -> search in all lines of the project
 
 " Master Wq bindings
 command! Wq wq
@@ -204,10 +228,12 @@ command! Q q
 nnoremap <silent> <CR> :nohlsearch<CR><CR>| " enter -> clear search highlighting
 nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
 nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
-inoremap <A-l> <right>                      " alt-l -> move right in insert mode
-inoremap <A-h> <left>                       " ...
-inoremap <A-j> <down>                       " ...
-inoremap <A-k> <up>                         " ...
+
+" move in insert mode
+inoremap <C-l> <right>| " ctrl-l -> move right in insert mode
+inoremap <C-h> <left>|  " ...
+inoremap <C-j> <down>|  " ...
+inoremap <C-k> <up>|    " ...
 
 " nuake
 nnoremap <F4> :Nuake<CR>
@@ -216,12 +242,18 @@ tnoremap <F4> <C-\><C-n>:Nuake<CR>
 nnoremap <C-n> :Nuake<CR>
 tnoremap <C-n> <C-\><C-n>:Nuake<CR>
 
+" other
+vnoremap t :Tabularize/
+nnoremap <leader>t :TagbarToggle<CR>
+
 " meta
 command! ConfigReload so $MYVIMRC " reload vim config
 command! ConfigEdit e $MYVIMRC    " edit vim config
 command! RestartLSP ALEDisable|ALEStopAllLSPs|ALEEnable
 
 " utility
+command! Vterm vsplit|term
+command! Term split|term
 command! SpellCheckEn setlocal spell! spelllang=en_us
 " TODO: turkish spell check? Default vim spellcheck does not work even with
 " generated wordlist. Check vimchant
