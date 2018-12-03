@@ -1,28 +1,28 @@
-" NB: If you want "vim-like" behaviour where removing a line from
-" here makes the setting disappear, uncomment the line below.
 sanitise tridactyllocal tridactylsync
 
 colors dark
 set searchengine duckduckgo
 set editorcmd st nvim
+set hintfiltermode vimperator-reflow
 
-
-
-" Key bindings
+" key-bindings
 bind <A-.> tabnext
 bind <A-,> tabprev
 bind + zoom 0.1 true
 bind - zoom -0.1 true
-bind mf hint -W ! mpv                               " Open hinted link in mpv
-bind ;c hint -c [class*="expand"],[class="togg"]A   " Comment toggle Reddit and HN
+
+" commands
+command withUrl composite get_current_url |
+command sync open localhost:8384
+command mpv withUrl ! mpv --x11-name=youtube --geometry=853x480-20-20
+command mpvHint hint -W ! mpv
+command mpd withUrl ! mpd-yt play
+command mpdHint hint -W ! mpd-yt play
+command mpdAdd withUrl ! mpd-yt add
+command mpdAddHint hint -W ! mpd-yt play
 
 " Some useful default keybindings:
 " >> and << => move tab
 " C-i (in imode) => open editor
-
-set hintfiltermode vimperator-reflow
-
-" Allow Ctrl-a to select all in the commandline
-unbind --mode=ex <C-a>
 
 " vim: set filetype=vim:
