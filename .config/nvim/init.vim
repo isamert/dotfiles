@@ -161,10 +161,16 @@ nnoremap <A-h> <C-w>h
 nnoremap <A-j> <C-w>j
 nnoremap <A-k> <C-w>k
 nnoremap <A-l> <C-w>l
-tnoremap <A-h> <C-\><C-n><C-w>h
-tnoremap <A-j> <C-\><C-n><C-w>j
-tnoremap <A-k> <C-\><C-n><C-w>k
-tnoremap <A-l> <C-\><C-n><C-w>l
+
+" faster resize for buffers (they look like my i3 config)
+nnoremap <A-J> <C-w>+
+nnoremap <A-K> <C-w>-
+nnoremap <A-L> <C-w>>
+nnoremap <A-H> <C-w><
+tnoremap <A-J> <C-\><C-n><C-w>+
+tnoremap <A-K> <C-\><C-n><C-w>-
+tnoremap <A-L> <C-\><C-n><C-w>>
+tnoremap <A-H> <C-\><C-n><C-w><
 
 " change buffers
 nnoremap <silent> <C-l> :bn<CR>
@@ -228,6 +234,7 @@ command! Q q
 nnoremap <silent> <CR> :nohlsearch<CR><CR>| " enter -> clear search highlighting
 nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
 nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
+tnoremap <silent> <C-q> <C-\><C-n>:q<CR>|   " ctrl-q -> quit (term)
 
 " move in insert mode
 inoremap <C-l> <right>| " ctrl-l -> move right in insert mode
