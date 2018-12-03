@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=KeePassXC
+GenericName=no password
+Comment=KeePassXC but no password required
+Exec=/bin/sh -c "getpassword --keepass | keepassxc --pw-stdin /home/isa/Documents/sync/passwords.kdbx"
+Icon=keepassxc
+StartupWMClass=keepassxc
+Terminal=false
+Type=Application
+Version=1.0
+Categories=Utility;Security;Qt;
+MimeType=application/x-keepass2;
