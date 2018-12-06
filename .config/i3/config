@@ -146,7 +146,7 @@ bindsym $mod+g exec --no-startup-id i3-toggle-gaps
 ###############################
 set_from_resource $border wm.border
 default_border pixel $border
-
+hide_edge_borders both
 
 ###############################
 # COLORS

@@ -22,9 +22,11 @@ end
 set fish_key_bindings fish_modified_vi_key_bindings
 
 # #############################################################################
-# theme stuff
+# theme stuff (bobthefish settings)
+# https://github.com/oh-my-fish/oh-my-fish/blob/master/docs/Themes.md#bobthefish
 # #############################################################################
-set theme_color_scheme gruvbox       # FIXME: can I make it play nicely with .Xresources colors?
+set theme_color_scheme gruvbox
+set theme_title_display_process yes
 set -U theme_date_format "+%H:%M:%S"
 
 # #############################################################################
@@ -44,10 +46,11 @@ alias pacupd="sudo pacman -Sy"
 alias pacupg="sudo pacman -Syu"
 alias pacfile="pacman -Fs"       # Find package that contains given file
 alias pacre="sudo pacman -R"     # Leave dependencies and configurations
-alias pacrem="sudo pacman -Rns"  # Leave dependencies and configurations
+alias pacrem="sudo pacman -Rns"
+alias pacpac="fuzzy packages"    # A fuzzy, interactive package finder
 
 # process management
-alias nameof="ps -o comm= -p" # Get the name of give PID
+alias nameof="ps -o comm= -p" # Get the name of given PID
 alias fuckall="killall -s 9"
 alias fkill="fuzzy kill"
 

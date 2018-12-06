@@ -20,13 +20,18 @@ Plug 'vim-airline/vim-airline'     " powerline stuff
 Plug 'junegunn/goyo.vim'           " distraction free writing
 
 " utility
+Plug 'terryma/vim-multiple-cursors'
 Plug 'junegunn/fzf.vim'                      " Fuzzy finder (s. FZF)
 Plug 'airblade/vim-gitgutter'                " Show git changes
 Plug 'rhysd/devdocs.vim'                     " :DevDocs -> open stuff in DevDocs
 Plug 'jeffkreeftmeijer/vim-numbertoggle'     " Toggle between relative and normal lines when needed
 Plug 'https://gitlab.com/Lenovsky/nuake.git' " Quake-style termunal (F4, ctrl-n)
-Plug 'jpalardy/vim-slime'                    " send text to repl
 Plug 'majutsushi/tagbar'                     " list top-level stuff in a window
+Plug 'autozimu/LanguageClient-neovim', {
+    \ 'branch': 'next',
+    \ 'do': 'bash install.sh',
+    \ }
+Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
 
 " editing
 Plug 'easymotion/vim-easymotion'   " (s. easymotion)
@@ -44,12 +49,12 @@ Plug 'jceb/vim-orgmode'
 Plug 'plasticboy/vim-markdown'
 
 call plug#end()
-
+let g:fzf_commits_log_options = '--reverse'
 " theme
 colorscheme gruvbox                  " ...
 let g:one_allow_italics = 1          " Italic comments for one theme
 let g:gruvbox_italic=1               " Italic comments for gruvbox
-" let g:gruvbox_contrast_dark = 'hard' " ...
+let g:gruvbox_contrast_dark = 'hard' " ...
 syntax on                            " enable syntax highlighting
 
 " visuals
@@ -58,7 +63,7 @@ set colorcolumn=80                 " 80-col line
 set termguicolors                  " true color support
 set number relativenumber          " line numbers relative to current line ()
 set cursorline                     " highlight current line
-" hi Normal guibg=none ctermbg=none| " transparent background
+hi Normal guibg=none ctermbg=none| " transparent background
 
 " tabs and spaces
 set mouse=a               " enable mouse (helps precise resizing etc)
@@ -124,19 +129,11 @@ let g:org_heading_shade_leading_stars = 0 " don't shade the stars in headers
 " markdown
 let g:vim_markdown_toc_autofit = 1 " shrink :Toc to min possible
 
-" vim-slime
-let g:slime_target = "neovim"
-
 " autocomplete key mappings (tab, stab to select next, prev completion from list)
 inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
 autocmd! CompleteDone * if pumvisible() == 0 | pclose | endif " Close preview menu when completion is done
-
-" ale mappings
-nnoremap <silent> <C-k> <Plug>(ale_previous_wrap)| " prev error
-nnoremap <silent> <C-j> <Plug>(ale_next_wrap)|     " next error
-nnoremap <silent> K :ALEDetail<CR>
 
 " ale
 " let g:ale_lint_on_text_changed = 'never' " only lints when file is saved
@@ -144,14 +141,33 @@ let g:airline#extensions#ale#enabled = 1       " ...
 let g:ale_sign_error = '◉'                     " ...
 let g:ale_sign_warning = '◉'                   " ...
 let g:ale_completion_enabled = 1               " ...
-let g:ale_haskell_hie_executable='hie-wrapper' " usage of this is encouraged instead of hie
+let g:ale_linters_explicit = 1                 " only run linters named in ale_linters settings.
 
-" ale linter config
-let g:ale_linters            = {}
-let g:ale_linters['python']  = ['pyls', 'flake8', 'mypy', 'pylint']
-let g:ale_linters['rust']    = ['rls']
-let g:ale_linters['c']       = ['clangd', 'cquery']
-let g:ale_linters['haskell'] = ['hie']
+" ale linter config (only use with linters, see below for lang servers)
+let g:ale_linters             = {}
+let g:ale_linters['sh']       = ['shellcheck']
+let g:ale_linters['fish']     = ['fish']
+let g:ale_linters['awk']      = ['gawk']
+let g:ale_linters['r']        = ['lintr']
+let g:ale_linters['vim']      = ['vint']
+let g:ale_linters['json']     = ['jq']
+let g:ale_linters['markdown'] = ['vale']
+
+" languageclient (for language servers)
+let g:deoplete#enable_at_startup = 1
+let g:LanguageClient_serverCommands            = {}
+let g:LanguageClient_serverCommands['haskell'] = ['hie-wrapper']
+let g:LanguageClient_serverCommands['python']  = ['pyls']
+let g:LanguageClient_serverCommands['rust']    = ['rustup', 'run', 'nightly', 'rls']
+let g:LanguageClient_serverCommands['cpp']     = ['clangd']
+
+" languageclient mappings
+nnoremap <F5> :call LanguageClient_contextMenu()<CR>
+nnoremap <silent> <F2> :call LanguageClient#textDocument_rename()<CR>
+nnoremap <silent> K :call PreviewToggler('ViewDetails')<CR>
+nnoremap <silent> E :call PreviewToggler('LanguageClient#explainErrorAtPoint')<CR>
+nnoremap <silent> gd :call LanguageClient#textDocument_definition()<CR>
+nnoremap <silent> <leader>s :call LanguageClient#textDocument_documentSymbol()<CR>
 
 " leader
 nmap <space> <leader>
@@ -246,8 +262,6 @@ inoremap <C-k> <up>|    " ...
 nnoremap <F4> :Nuake<CR>
 inoremap <F4> <C-\><C-n>:Nuake<CR>
 tnoremap <F4> <C-\><C-n>:Nuake<CR>
-nnoremap <C-n> :Nuake<CR>
-tnoremap <C-n> <C-\><C-n>:Nuake<CR>
 
 " other
 vnoremap t :Tabularize/
@@ -256,11 +270,32 @@ nnoremap <leader>t :TagbarToggle<CR>
 " meta
 command! ConfigReload so $MYVIMRC " reload vim config
 command! ConfigEdit e $MYVIMRC    " edit vim config
-command! RestartLSP ALEDisable|ALEStopAllLSPs|ALEEnable
 
 " utility
 command! Vterm vsplit|term
 command! Term split|term
 command! SpellCheckEn setlocal spell! spelllang=en_us
-" TODO: turkish spell check? Default vim spellcheck does not work even with
-" generated wordlist. Check vimchant
+command! RestartLSP call LanguageClient#exit() | call LanguageClient#startServer()
+command! -range TabularizeHaskellData <line1>,<line2>GTabularize/[{},]\|::
+
+function! PreviewToggler(fn, ...)
+    " Takes a function that opens previewwindow, if the pwindow is open then
+    " closes it, if the pwindow is not open simply calls the function.
+    for nr in range(1, winnr('$'))
+        if getwinvar(nr, '&pvw') == 1
+            pclose
+            return 0
+        endif
+    endfor
+
+    let params = get(a:, 1, [])
+    :call call (function(a:fn), params)
+endfunction
+
+function! ViewDetails()
+    if exists('b:LanguageClient_projectRoot')
+        :call PreviewToggler('LanguageClient#textDocument_hover')
+    else
+        :ALEDetail
+    endif
+endfunction
