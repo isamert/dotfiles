@@ -172,13 +172,15 @@ nnoremap <silent> <leader>s :call LanguageClient#textDocument_documentSymbol()<C
 " leader
 nmap <space> <leader>
 
+" next sections looks pretty much like my i3 config except Win key is replaced
+" with the Alt key
 " move between buffers with alt+hjkl
 nnoremap <A-h> <C-w>h
 nnoremap <A-j> <C-w>j
 nnoremap <A-k> <C-w>k
 nnoremap <A-l> <C-w>l
 
-" faster resize for buffers (they look like my i3 config)
+" faster resize for buffers
 nnoremap <A-J> <C-w>+
 nnoremap <A-K> <C-w>-
 nnoremap <A-L> <C-w>>
@@ -187,6 +189,11 @@ tnoremap <A-J> <C-\><C-n><C-w>+
 tnoremap <A-K> <C-\><C-n><C-w>-
 tnoremap <A-L> <C-\><C-n><C-w>>
 tnoremap <A-H> <C-\><C-n><C-w><
+
+" faster split creation/deletion
+nnoremap <silent> <A--> :split<CR>
+nnoremap <silent> <A-\> :vsplit<CR>
+nnoremap <silent> <A-w> :bd<CR>
 
 " change buffers
 nnoremap <silent> <C-l> :bn<CR>
