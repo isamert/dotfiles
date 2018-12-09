@@ -12,10 +12,12 @@ end
 # #############################################################################
 function fish_modified_vi_key_bindings
     fish_vi_key_bindings
-    bind -M insert \e\r accept-autosuggestion execute # alt-enter
-    bind -M insert \el accept-autosuggestion          # alt-l
-    bind -M insert \ek history-search-backward        # alt-k
-    bind -M insert \ej history-search-forward         # alt-j
+    bind -M insert \e\r accept-autosuggestion execute  # alt-enter
+    bind -M insert \el  accept-autosuggestion          # alt-l
+    bind -M insert \ek  history-search-backward        # alt-k
+    bind -M insert \ej  history-search-forward         # alt-j
+    bind -M insert \f   forward-char
+    bind -M insert \b   backward-char
     bind -M insert -m default jk backward-char force-repaint
 end
 
