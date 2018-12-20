@@ -177,7 +177,7 @@ client.unfocused        $darkgray $darkgray $darkyellow $darkmagenta $darkgray
 client.urgent           $darkred  $darkred  $foreground $darkred     $darkred
 
 ###############################
-# SCRATCHPAD WINDOWS
+# SCRATCHPAD/FLOATING WINDOWS
 ###############################
 for_window [class="float"] floating enable
 for_window [class="mpv" instance="youtube"] floating enable

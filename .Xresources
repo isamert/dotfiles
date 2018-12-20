@@ -21,6 +21,15 @@
 #define COLOR15 #ebdbb2
 #define TBG argb:cc282828
 
+! 0. Black           8.  Dark grey
+! 1. Dark red        9.  Red
+! 2. Dark green      10. Green
+! 3. Dark yellow     11. Yellow
+! 4. Dark blue       12. Blue
+! 5. Dark magenta    13. Magenta
+! 6. Dark cyan       14. Cyan
+! 7. Light grey      15. White
+
 ! !!!!!!!!!!!!!
 ! st (terminal)
 ! !!!!!!!!!!!!!

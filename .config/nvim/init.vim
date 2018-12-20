@@ -10,8 +10,6 @@
 " aurin shellcheck-static -> bash linter
 
 call plug#begin('~/.local/share/nvim/plugged')
-" (s. something) means search something in this file to see relevant settings/keybindings
-
 " aesthetics
 Plug 'rakr/vim-one'                " i'm using this as airline theme
 Plug 'dkasak/gruvbox'              " general theme
@@ -22,6 +20,7 @@ Plug 'junegunn/goyo.vim'           " distraction free writing
 " utility
 Plug 'terryma/vim-multiple-cursors'
 Plug 'junegunn/fzf.vim'                      " Fuzzy finder (s. FZF)
+Plug 'dominickng/fzf-session.vim'
 Plug 'airblade/vim-gitgutter'                " Show git changes
 Plug 'rhysd/devdocs.vim'                     " :DevDocs -> open stuff in DevDocs
 Plug 'jeffkreeftmeijer/vim-numbertoggle'     " Toggle between relative and normal lines when needed
@@ -47,9 +46,8 @@ Plug 'dag/vim-fish'                " syntaxh highlighting and stuff for fish
 " markup
 Plug 'jceb/vim-orgmode'
 Plug 'plasticboy/vim-markdown'
-
 call plug#end()
-let g:fzf_commits_log_options = '--reverse'
+
 " theme
 colorscheme gruvbox                  " ...
 let g:one_allow_italics = 1          " Italic comments for one theme
@@ -92,6 +90,9 @@ set spelllang=en_us       " default spelllang
 set signcolumn=yes        " removes flickering caused by lang server
 set undofile              " saves undo history to file (nvim's undodir default is OK)
 set completeopt=menu,menuone,preview,noselect,noinsert
+
+" sessions
+let g:fzf_session_path = $HOME . '/.local/share/nvim/sessions'
 
 " netrw (file browser)
 " :help netrw-quickmap
@@ -284,6 +285,10 @@ command! Term split|term
 command! SpellCheckEn setlocal spell! spelllang=en_us
 command! RestartLSP call LanguageClient#exit() | call LanguageClient#startServer()
 command! -range TabularizeHaskellData <line1>,<line2>GTabularize/[{},]\|::
+
+" autos
+autocmd BufWritePost ~/.Xresources,~/.Xdefaults !xrdb %
+
 
 function! PreviewToggler(fn, ...)
     " Takes a function that opens previewwindow, if the pwindow is open then

@@ -1,3 +1,6 @@
+# opam configuration
+source "$HOME/.opam/opam-init/init.fish" > /dev/null 2> /dev/null; or true
+
 # #############################################################################
 # install fisherman and plugins in fishfile if fisherman is not found
 # #############################################################################
@@ -71,6 +74,8 @@ alias xpaste="xclip -o"                  # paste cb content
 
 # abbrv
 alias v="nvim"
+
+# git
 alias g="git"
 alias gs="git status"
 alias ga="fuzzy git add"
@@ -78,7 +83,10 @@ alias gl="fuzzy git log"
 alias gf="fuzzy git files"
 alias gc="git commit -m"
 alias gpm="git push origin master"
+
+# useful
 alias rxbk="killall xbindkeys; xbindkeys"
+alias clearvimswap="rm $HOME/.local/share/nvim/swap/*"
 
 # stuff
 alias ipaddr="curl https://api.ipify.org; echo ''"

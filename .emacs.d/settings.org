@@ -187,9 +187,9 @@ Set a nicer theme.
 #+BEGIN_SRC emacs-lisp
 (get-package 'doom-themes)
 (get-package 'gruvbox-theme)
-;(require 'doom-themes)
-;(load-theme 'doom-dracula t)
-(load-theme 'gruvbox t)
+(require 'doom-themes)
+(load-theme 'doom-dracula t)
+;(load-theme 'gruvbox t)
 #+END_SRC
 
 Also look here for other themes that comes bundled with ~doom-themes~ package: https://github.com/hlissner/emacs-doom-themes#features
@@ -320,15 +320,15 @@ Enable evil-mode.
 (require 'evil)
 (evil-mode 1)
 #+END_SRC
-** Map jj to ESC
-Type ~jj~ quickly in INSERT mode and return to NORMAL mode.
+** Map jk to ESC
+Type ~jk~ quickly in INSERT mode and return to NORMAL mode.
 
 #+BEGIN_SRC emacs-lisp
 (get-package 'key-chord)
 (require 'key-chord)
 (key-chord-mode 1)
 
-(key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
+(key-chord-define evil-insert-state-map "jk" 'evil-normal-state)
 #+END_SRC
 ** Leader key
 Enable leader key and do some keybindings.
