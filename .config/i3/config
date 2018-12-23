@@ -1,11 +1,7 @@
 set $mod Mod4
 set $hyper Mod3
 set $alt Mod1
-
-# Terminal settings
 set $term st
-set $term_multiplexer tmux
-set $dropdown_session ~/.sessions/dropdown
 
 # Font for window titles. Will also be used by the bar unless a different font
 # is used in the bar {} block below.
@@ -182,13 +178,10 @@ client.urgent           $darkred  $darkred  $foreground $darkred     $darkred
 for_window [class="float"] floating enable
 for_window [class="mpv" instance="youtube"] floating enable
 
-# TODO: fix this:
-# Look for EXECS/AUTOSTART section, where the scratchpad_term gets started.
-for_window [instance="scratchpad_term"] floating enable
-# I'm also setting this value in session file because st cant resize windows properly
-for_window [instance="scratchpad_term"] resize set 1200 610
-for_window [instance="scratchpad_term"] move scratchpad
-bindsym F12 [instance="scratchpad_term"] scratchpad show; [instance="scratchpad_term"] move position center
+for_window [class="scratchpad_term"] floating enable
+for_window [class="scratchpad_term"] move scratchpad
+bindsym F12 [class="scratchpad_term"] scratchpad show
+bindsym $hyper+d [class="scratchpad_term"] scratchpad show
 
 ###############################
 # MODES
@@ -265,3 +258,4 @@ mode "move" {
 ###############################
 exec_always --no-startup-id bar-launch
 exec --no-startup-id compton
+exec --no-startup-id st -c scratchpad_term -g 140x25+15-20 -A 255 -e /bin/bash -c "tmux attach || tmux new"

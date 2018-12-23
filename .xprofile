@@ -1,8 +1,5 @@
-# Set refresh rate (if available)
-xrandr -r 75
-
-# I should probably use systemd but this seems more in-place and manageable.
 # Startup programs
+xrandr -r 75 &                     # Set refresh rate (if available)
 xbindkeys &                        # Key binding manager
 unclutter &                        # Hide inactive mouse
 mpd &                              # Music player daemon
@@ -10,7 +7,7 @@ mpdscribble &                      # Scrobbler for MPD
 udiskie --smart-tray --notify &    # Automatic mounting etc.
 syncthing -no-browser &            # Sync manager
 /usr/lib/geoclue-2.0/demos/agent & # Geo-location provider service (for redshift)
-redshift &                         # For my eyes
+(sleep 5 && redshift) &            # For my eyes
 
 # I just use the background of LightDM, no need for this for now
 # Keep that in mind that if screen res changes, or a new video input is connects
