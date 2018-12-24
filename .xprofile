@@ -6,6 +6,7 @@ mpd &                              # Music player daemon
 mpdscribble &                      # Scrobbler for MPD
 udiskie --smart-tray --notify &    # Automatic mounting etc.
 syncthing -no-browser &            # Sync manager
+aria2c &                           # Download manager
 /usr/lib/geoclue-2.0/demos/agent & # Geo-location provider service (for redshift)
 (sleep 5 && redshift) &            # For my eyes
 
