@@ -8,7 +8,6 @@ image/jpg=feh.desktop
 image/gif=feh.desktop
 image/jpeg=feh.desktop
 video/x-matroska=mpv.desktop
-
 x-scheme-handler/http=firefox.desktop
 x-scheme-handler/https=firefox.desktop
 x-scheme-handler/ftp=firefox.desktop

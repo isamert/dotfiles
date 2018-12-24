@@ -258,4 +258,4 @@ mode "move" {
 ###############################
 exec_always --no-startup-id bar-launch
 exec --no-startup-id compton
-exec --no-startup-id st -c scratchpad_term -g 140x25+15-20 -A 255 -e /bin/bash -c "tmux attach || tmux new"
+exec --no-startup-id st -c scratchpad_term -g 140x25+15-20 -e /bin/bash -c "tmux attach || tmux new"
