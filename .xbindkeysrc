@@ -181,3 +181,7 @@
 #
 "st -c float -g 150x20 -e python"
     XF86Calculator
+
+# Clipboard history
+"CM_LAUNCHER=rofi clipmenu"
+    Mod3 + q
