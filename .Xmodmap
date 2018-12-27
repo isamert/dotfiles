@@ -27,6 +27,7 @@ keycode 105 = Escape
 
 ! AltGr + l -> λ
 keysym l = l L l L U03BB
+keysym a = a A a A U2192
 
 ! AltGr+[ -> (, AltGr+] -> )
 keysym bracketleft = bracketleft braceleft bracketleft braceleft parenleft
