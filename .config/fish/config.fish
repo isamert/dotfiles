@@ -101,5 +101,11 @@ function mkcd; mkdir -p "$argv"; cd "$argv"; end          # Make and cd to the d
 function cpcd; cp $argv[1] $argv[2]; and cd $argv[2]; end # Copy and go to the directory
 function mvcd; mv $argv[1] $argv[2]; and cd $argv[2]; end # Move and cd to the dir
 function cheat; curl http://cheat.sh/"$argv"; end
-function shortenurl; curl -F"shorten=$argv" "https://0x0.st"; end
-function uploadfile; curl -F"file=@$argv" "https://0x0.st"; end
+function url; curl -F"shorten=$argv" "https://0x0.st"; end
+function upload; curl -F"file=@$argv" "https://0x0.st"; end
+function p # commandline pastebin
+    set var "$argv"
+    [ -n "$var" ]; or read var
+    set url (echo "$var" | curl -F 'f:1=<-' ix.io)
+    echo "$url"; echo "$url" | xcopy
+end
