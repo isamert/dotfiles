@@ -25,9 +25,23 @@ keycode 248 = Super_L
 ! Map RightCtrl to ESC
 keycode 105 = Escape
 
-! AltGr + l -> λ
+! altgr + l → λ  |  altgr + a → →
+! altgr + x → ×  |  altgr + f → ∀
+! altgr + n → ¬  |  altgr + d → ⇒
+! altgr + , → ≤  |  altgr + . → ≥
+! altgr + = → ≠  |  altgr + shift + = → ≔
+! altgr + / → ÷  |  altgr + ; → ∷
 keysym l = l L l L U03BB
 keysym a = a A a A U2192
+keysym x = x X x X multiply
+keysym f = f F f F U2200
+keysym n = n N n N U00AC
+keysym d = d D d D U21D2
+keysym comma = comma less comma less U2264
+keysym period = period greater period greater U2265
+keysym equal = equal plus equal plus U2260 U2254
+keysym question = slash question slash question division
+keysym semicolon = semicolon colon semicolon colon U2237
 
 ! AltGr+[ -> (, AltGr+] -> )
 keysym bracketleft = bracketleft braceleft bracketleft braceleft parenleft
