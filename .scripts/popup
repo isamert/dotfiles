@@ -8,17 +8,6 @@ BAR_BORDER=$(xrdb-get-value "bar.border")
 BAR_HEIGHT=$(xrdb-get-value "bar.height")
 WINDOW_BORDER=$(xrdb-get-value "wm.border")
 
-function center_window {
-    local WINDOW_TITLE="$*"
-    local WIDTH=$(xwininfo -name "$WINDOW_TITLE" | grep Width | cut -d: -f2 | xargs)
-    local X=$(((SCREEN_WIDTH - WIDTH) / 2))
-    xdotool getactivewindow windowmove $X $Y
-}
-
-function screen_width {
-    xrandr -q | grep "Screen 0" | cut -d,  -f2 | cut -d " " -f3
-}
-
 function calendar {
     # Runs $CALENDAR in right top corner of the screen.
 
@@ -38,13 +27,12 @@ function music {
 
     local SCREEN_WIDTH=$(screen_width)
     local Y=$((BAR_HEIGHT+BAR_BORDER*2))
-    local GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
-    local WINDOW_TITLE="Music (ncmpcpp)"
+    local GEOMETRY="110x20-$(((SCREEN_WIDTH - 822) / 2))+$Y"
+    local WINDOW_TITLE="Music Popup"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -A 255 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e $MUSIC 2> /dev/null &
-        sleep 0.07
-        center_window "$WINDOW_TITLE"
+        center_window --name="$WINDOW_TITLE"
     else
         wmctrl -c "$WINDOW_TITLE"
     fi
@@ -71,8 +59,7 @@ function visualizer {
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e cava 2> /dev/null &
-        sleep 0.07
-        center_window "$WINDOW_TITLE"
+        center_window --name="$WINDOW_TITLE"
     else
         wmctrl -c "$WINDOW_TITLE"
     fi

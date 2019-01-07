@@ -55,19 +55,42 @@ function xres-read-value {
 
 # Reads stdin into a variable, accounting for trailing newlines. Avoids needing a subshell or
 # command substitution.
-read-input() {
-  # Use unusual variable names to avoid colliding with a variable name
-  # the user might pass in (notably "contents")
-  : "${1:?Must provide a variable to read into}"
-  if [[ "$1" == '_line' || "$1" == '_contents' ]]; then
-    echo "Cannot store contents to $1, use a different name." >&2
-    return 1
-  fi
+function read-input {
+    # Use unusual variable names to avoid colliding with a variable name
+    # the user might pass in (notably "contents")
+    : "${1:?Must provide a variable to read into}"
+    if [[ "$1" == '_line' || "$1" == '_contents' ]]; then
+      echo "Cannot store contents to $1, use a different name." >&2
+      return 1
+    fi
 
-  local _line _contents
-   while read -r _line; do
-     _contents="${_contents}${_line}"$'\n'
-   done
-   _contents="${_contents}${_line}" # capture any content after the last newline
-   printf -v "$1" '%s' "$_contents"
+    local _line _contents
+     while read -r _line; do
+       _contents="${_contents}${_line}"$'\n'
+     done
+     _contents="${_contents}${_line}" # capture any content after the last newline
+     printf -v "$1" '%s' "$_contents"
+}
+
+function screen_width {
+    xrandr -q | grep "Screen 0" | cut -d,  -f2 | cut -d" " -f3
+}
+
+function center_window {
+    local wid
+
+    # wait until the window shows up and set $wid
+    if [[ -n "$1" ]]; then
+        IFS='=' read -ra ARGS <<< "$1"
+        wid=$(xdotool search --sync "${ARGS[0]}" "${ARGS[1]}")
+    else
+        sleep 0.2
+        wid=$(xdotool getactivewindow)
+    fi
+
+    local SCREEN_WIDTH=$(screen_width)
+    local WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
+    local X=$(((SCREEN_WIDTH - WIDTH) / 2))
+
+    xdotool windowmove $wid $X y
 }

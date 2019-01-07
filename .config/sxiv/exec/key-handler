@@ -1,0 +1,34 @@
+#!/bin/bash
+mapfile -t list
+
+SIZE=0
+
+function get_size {
+    local old_size=$(exiv2 "$1" 2> /dev/null | grep "Image size" | cut -d":" -f2 | tr -d ' ')
+    SIZE=$(zenity --forms --title="Resize Image(s)"\
+        --text="Resize Image(s) - ($old_size)"\
+        --add-entry="Width"\
+        --add-entry="Height"\
+        --separator="x")
+}
+
+for file in "${list[@]}"; do
+    case "$1" in
+        "d") trash "$file" ;;
+        "D") rm "$file" ;;
+        "w") feh --bg-scale "$file" ;;
+        "W") wall="$HOME/.config/wall.png"
+             rm "$wall"
+             cp "$file" "$wall"
+             feh --bg-scale "$wall" ;;
+        "y") echo -n "$file" | xclip -selection clipboard ;;
+        "Y") echo -n "$(pwd)/$file" | xclip -selection clipboard ;;
+
+        "greater") convert -rotate 90 "$file" "$file" ;;
+        "less") convert -rotate -90 "$file" "$file" ;;
+        "bar") convert -flop "$file" "$file" ;;
+        "underscore") convert -flip "$file" "$file" ;;
+        "r") [[ $SIZE == 0 ]] && get_size "$file";
+             convert "$file" -resize "$SIZE" "$file"
+    esac
+done

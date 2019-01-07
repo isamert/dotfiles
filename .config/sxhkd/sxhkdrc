@@ -1,0 +1,136 @@
+# #############################################################################
+# bspwm
+# #############################################################################
+
+# focus/swap with left/down/up/right window
+super + {_,shift + } {h,j,k,l}
+    bspwmc {focus,move} {west,south,north,east}
+
+# split
+super + {_,shift + } {backslash,minus}
+    bspc node -p {east,west,south,north}
+
+# set the window state
+super + {t,shift + t,s,f}
+    bspc node --state ~{tiled,pseudo_tiled,floating,fullscreen}
+
+super + shift + s
+    bspwmc focus_toggle_floating
+
+# close window
+super + w
+    bspc node --close
+
+# next/prev window
+alt + {_, shift +} Tab
+    bspc node -f {next,prev}.local
+
+# next/prev desktop
+super + {comma,period}
+    bspc desktop --focus {prev,next}.local
+
+# focus/move to the given desktop
+super + {_,shift + }{1,2,3,4,5,6,7,8,9,0}
+    bspc {desktop --focus, node --to-desktop} '^{1,2,3,4,5,6,7,8,9,10}'
+
+# focus the last node/desktop
+super + {Tab,grave}
+    bspc {node,desktop} --focus last
+
+# change gap size
+super {_, shift +} g
+    bspc config window_gap (math (bspc config window_gap) {-,+} 3)
+
+# resize windows
+super + alt + {j,l,k,h}
+    bspwmc resize {h, w} {+20, -20}
+
+# logout
+super + shift + e
+    for node in (bspc query -N); bspc node $node --close; end; bspc quit
+
+# #############################################################################
+# apps
+# #############################################################################
+
+# open a terminal (with shift it floats)
+{super, hyper} + {_, shift +} Return
+    eval $TERMINAL {_,_} {_,-c "float" -g 100x20}
+
+# open a terminal at
+hyper + {_,shift + } {backslash,minus}
+    bspc node -p {east,west,south,north}; \
+    eval $TERMINAL
+
+{hyper + d, F12}
+    bspwmc scratchpad_top
+
+F11
+    bspwmc scratchpad_bot
+
+hyper + q
+    clipmenu
+
+hyper + x
+    /bin/sh -c "st -c float -g 150x20 -e fuzzy kill"
+
+# menus
+hyper + {a, f, m, M, P, k}
+    menu {menu,files --open,mpd-artists,mpd-all,mpd-playlist,passwords}
+
+# popups
+hyper + {c,n,h,t}
+    popup {calendar,music,htop,translate}
+
+# random wallpaper
+hyper + apostrophe
+    /bin/sh -c "feh --bg-scale \$(find ~/Pictures/wallpaper | shuf -n 1)"
+
+# screenshot
+{Print, hyper + s, shift + Print, control + Print, control + shift + Print}
+    take-ss --{full,clip-area,area,wait-full,wait-area}
+
+# #############################################################################
+# sound/music
+# #############################################################################
+
+# volume down/up
+hyper + {9,0}
+    amixer set Master 5%{-,+}
+
+# volume down/up
+XF86Audio{Lower,Raise}Volume
+    amixer set Master 5%{-,+}
+
+# audio/mic toggle
+XF86Audio{_,Mic}Mute
+    amuxer set {Master,Capture} toggle
+
+# toggle music
+{hyper + p, XF86AudioPlay}
+    mpc toggle
+
+# seek song
+hyper + {bracketleft, bracketright}
+    mpc seek {-,+}3%
+
+# next/prev song
+hyper + shift + {bracketleft, bracketright}
+    mpc {prev,next}
+
+# next/prev song
+XF86Audio{Prev,Next}
+    mpc {prev,next}
+
+# #############################################################################
+# various
+# #############################################################################
+
+control + alt + k
+    switch-keyboard-layout
+
+control + alt + o
+    switch-audio-channel
+
+control + alt + l
+    lockscreen

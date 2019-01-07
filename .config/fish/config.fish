@@ -53,6 +53,7 @@ alias pacfile="pacman -Fs"       # Find package that contains given file
 alias pacre="sudo pacman -R"     # Leave dependencies and configurations
 alias pacrem="sudo pacman -Rns"
 alias pacpac="fuzzy packages"    # A fuzzy, interactive package finder
+alias fpac="fuzzy packages"
 
 # process management
 alias nameof="ps -o comm= -p" # Get the name of given PID

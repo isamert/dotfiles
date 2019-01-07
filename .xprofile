@@ -1,6 +1,5 @@
 # Startup programs
 xrandr -r 75 &                     # Set refresh rate (if available)
-xbindkeys &                        # Key binding manager
 unclutter &                        # Hide inactive mouse
 mpd &                              # Music player daemon
 mpdscribble &                      # Scrobbler for MPD

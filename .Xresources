@@ -53,8 +53,8 @@ wm.border: 4
 bar.font0: Ubuntu Nerd Font:fontformat=truetype:size=11:antialias=false;0
 bar.font1: Font Awesome 5 Free:fontformat=truetype:size=11:antialias=false;0
 bar.font2: siji:pixelsize=10;1
-bar.border:	4
-bar.radius: 4
+bar.border:	0
+bar.radius: 0
 bar.height: 30
 bar.width: 100%
 
@@ -69,8 +69,10 @@ rofi.auto-select: false
 rofi.color-enabled: true
 rofi.hide-scrollbar: false
 rofi.separator-style: "-"
-rofi.font: Inconsolata Bold 14
+rofi.font: Inconsolata Bold 12
 rofi.drun-show-actions: true
+rofi.case-sensitive: false
+rofi.matching: normal
 
 ! Window:           'background',  'border', 'separator'
 rofi.color-window: TBG,              COLOR8,    argb:ffffffff

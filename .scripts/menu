@@ -79,36 +79,68 @@ function youtube {
     # Search given string in youtube and show results. Play selected one in mpd.
 
     local DOWNLOAD_URLS=$(mktemp)
-    local SEARCH_STRING=$@
+    local SEARCH_STRING="$@"
     [[ -z "$1" ]] && SEARCH_STRING=$(rofi -dmenu -p "search yt")
     [[ -z "$SEARCH_STRING" ]] && exit
 
     local RESULT=$(youtube-viewer --no-use-colors --no-interactive $SEARCH_STRING | rofi -dmenu -i -async-pre-read 0)
     RESULT=$(echo $RESULT | cut -d"." -f1 | xargs)
 
-    local URL=$(youtube-viewer --no-use-colors --no-interactive --extract="*URL*" --std-input=$RESULT $SEARCH_STRING 2> /dev/null | grep "youtube.com/watch?v=")
-    mpd-yt play $URL
+    local URL=$(youtube-viewer --no-use-colors --no-interactive --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
+    mpd-yt play "$URL"
 }
 
 
 function files {
-    # Search $HOME folder files recursively using `locate` and rofi
-    xdg-open $(locate -r '^'$HOME'/.*' | rg -Pv '.*(\.stack-work|Workspace/temp|\.cargo|config/opera|\.kodi|\.dav|\.m2|\.git|\.thumbnails|\.ghc|\.rustup|/target/|/build/|\.gradle|\.idea|/elpa/|/Trash/|\.Idea|\.cabal|\.local|\.stack|\.vscode|\.cache|/Cache/|CachedData|Local Storage|CacheStorage|IndexedDB|/storage/|/appcache/|/cache/|\.mozilla|\.quicklisp|\.racket|\.texlive|projects/[^/]+/[^/]+/|CARC|\.weechat|\.slime|\.java|\.electron|\.nvm|\.node).*' | dmenu)
+    f=$(fd . $HOME --no-ignore-vcs --color=never --max-depth=6 | dmenu)
+
+    if [[ "$1" == "--open" ]]; then
+        case "$f" in
+            "$HOME/Downloads/"*) dmanager $f ;;
+            *) xdg-open "$f"
+        esac
+    else
+        echo "$f"
+    fi
 }
 
 
+function folders {
+    f=$(fd . $HOME --no-ignore-vcs --color=never --type=d --max-depth=6 | dmenu)
+
+    if [[ "$1" == "--open" ]]; then
+        xdg-open "$f"
+    else
+        echo "$f"
+    fi
+}
+
+# TODO: xdotool paste
 # Use menu passwords -dump to print password info into stdout.
 function passwords {
     local KEYRING_ID=keepass
     local KDBX_FILE="$HOME/Documents/sync/passwords.kdbx"
-    local ENTRIES=$()
     local ENTRY=$(secret-tool lookup name $KEYRING_ID | keepassxc-cli locate $KDBX_FILE / | tail -n +2 | dmenu)
     if [ ! -z "$ENTRY" ]
     then
         if [[ "$1" == "-dump" ]]; then
             getpassword "$ENTRY" -dump
         else
-            getpassword "$ENTRY" | xclip -selection clipboard
+            local what=$(echo -e "Fill fields\nCopy password\nCopy username" | dmenu)
+
+            local password=$(getpassword "$ENTRY")
+            local username=$(getpassword "$ENTRY" -username)
+            case "$what" in
+                "Fill fields")
+                    local win=$(xdotool search --onlyvisible --classname Navigator) # find firefox
+                    [[ -z "$win" ]] && win=$(xdotool selectwindow)
+                    sleep 0.5
+                    xdotool type --window "$win" "$username"
+                    xdotool key  --window "$win" "Tab"
+                    xdotool type --window "$win" "$password" ;;
+                "Copy password") echo "$password" | xclip -selection clipboard ;;
+                "Copy username") echo "$username" | xclip -selection clipboard ;;
+            esac
         fi
     fi
 
@@ -127,20 +159,15 @@ function passwords {
 }
 
 
-function windows {
-    # List windows and focus selected one
-    wmctrl -a $(wmctrl -l | cut -f4- -d" " | sed 's/isa-desktop //g' | dmenu)
-}
-
-
 cmd="$1"
 shift
 case $cmd in
-    "mpd-artists") mpd-artists $@;;
-    "mpd-all") mpd-all $@;;
-    "mpd-playlist") mpd-playlist $@;;
-    "youtube") youtube $@;;
-    "files") files $@;;
-    "passwords") passwords $@;;
-    *) rofi -combi-modi window,drun,run -show combi $@
+    "mpd-artists") mpd-artists "$@";;
+    "mpd-all") mpd-all "$@";;
+    "mpd-playlist") mpd-playlist "$@";;
+    "youtube") youtube "$@";;
+    "files") files "$@";;
+    "folders") folders "$@";;
+    "passwords") passwords "$@";;
+    *) rofi -combi-modi window,drun,run -show combi "$@"
 esac

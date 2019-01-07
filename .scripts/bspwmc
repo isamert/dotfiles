@@ -1,0 +1,108 @@
+#!/bin/bash
+source "$UTILS_FILE"
+
+size=30
+
+function is_floating {
+    bspc query -T -n | grep -q '"state":"floating"'
+}
+
+# if current node is floating, focus the newest non-floating node
+# otherwise focus the newest floating node
+function focus_toggle_floating {
+    if is_floating; then
+        bspc node newest.!floating --focus
+    else
+        bspc node newest.floating --focus
+    fi
+}
+
+# if current node is floating, focus $dir{west,south,north,east} floating node
+# otherwise focus $dir{west,south,north,east} non-floating node
+function focus {
+    local dir="$1"
+    if is_floating; then
+        bspc node --focus "$dir.local.floating"
+    else
+        bspc node --focus "$dir.local.!floating"
+    fi
+}
+
+# if current node is floating, move the node $dir{west,south,north,east} by $size px
+# otherwise swap current node with $dir{west,south,north,east} non-floating node
+function move {
+    local dir="$1"
+    local switch sign
+    if is_floating; then
+        case "$dir" in
+            west)  switch="-x"; sign="-" ;;
+            east)  switch="-x"; sign="+" ;;
+            north) switch="-y"; sign="-" ;;
+            *)     switch="-y"; sign="+" ;;
+        esac
+        xdo move ${switch} ${sign}${size}
+    else
+        bspc node --swap  $dir.local.!floating
+    fi
+}
+
+function resize {
+    local dir="$1"
+    local size="$2"
+    if is_floating; then
+        xdo resize -$dir $size
+    else
+        case $dir in
+            w) bspc node -z right $size 0; bspc node -z left $size 0 ;;
+            h) bspc node -z bottom 0 $size; bspc node -z top 0 $size ;;
+        esac
+    fi
+}
+
+# a scratchpad terminal that is shared across desktops
+function scratchpad_top {
+    class="scratchpad_top"
+    id=$(xdotool search --class "$class")
+    if [[ -z "$id" ]]; then
+        bspc rule --add "$class" state=floating sticky=on
+        st -A 255 \
+           -g 300x25+1+1 \
+           -c scratchpad_top \
+           -e /bin/bash -c "tmux attach || tmux new" &
+
+        center_window --class="$class"
+    else
+        bspc node $id --flag hidden
+        bspc node -f $id
+    fi
+}
+
+# a scratchpad terminal that is unique to current desktop
+function scratchpad_bot {
+    desktop_id=$(xdotool get_desktop)
+    [[ -z "$desktop_id" ]] && notify-send "what"
+    class="scratchpad_bot$desktop_id"
+    id=$(xdotool search --class "$class")
+    if [[ -z "$id" ]]; then
+        bspc rule --add "$class" state=floating
+        st -A 255 \
+           -g 300x25+1-1 \
+           -c "$class" &
+
+        center_window --class="$class"
+    else
+        bspc node "$id" --flag hidden
+        bspc node -f "$id"
+    fi
+}
+
+
+cmd="$1"; shift
+case $cmd in
+    focus)   focus "$@" ;;
+    move)    move  "$@";;
+    resize)  resize "$@";;
+    focus_toggle_floating) focus_toggle_floating "$@";;
+    scratchpad_top) scratchpad_top "$@";;
+    scratchpad_bot) scratchpad_bot "$@";;
+esac
