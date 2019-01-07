@@ -66,7 +66,7 @@ function scratchpad_top {
     if [[ -z "$id" ]]; then
         bspc rule --add "$class" state=floating sticky=on
         st -A 255 \
-           -g 300x25+1+1 \
+           -g 150x20+1+1 \
            -c scratchpad_top \
            -e /bin/bash -c "tmux attach || tmux new" &
 
@@ -86,7 +86,7 @@ function scratchpad_bot {
     if [[ -z "$id" ]]; then
         bspc rule --add "$class" state=floating
         st -A 255 \
-           -g 300x25+1-1 \
+           -g 150x20+1-1 \
            -c "$class" &
 
         center_window --class="$class"
