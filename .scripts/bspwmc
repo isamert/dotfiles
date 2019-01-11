@@ -61,14 +61,14 @@ function resize {
 
 # a scratchpad terminal that is shared across desktops
 function scratchpad_top {
-    class="scratchpad_top"
+    class="padtop"
     id=$(xdotool search --class "$class")
     if [[ -z "$id" ]]; then
         bspc rule --add "$class" state=floating sticky=on
         st -A 255 \
            -g 150x20+1+1 \
-           -c scratchpad_top \
-           -e /bin/bash -c "tmux attach || tmux new" &
+           -c "$class" \
+           -e /bin/bash -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
         center_window --class="$class"
     else
@@ -81,13 +81,14 @@ function scratchpad_top {
 function scratchpad_bot {
     desktop_id=$(xdotool get_desktop)
     [[ -z "$desktop_id" ]] && notify-send "what"
-    class="scratchpad_bot$desktop_id"
+    class="padbot$((desktop_id + 1))"
     id=$(xdotool search --class "$class")
     if [[ -z "$id" ]]; then
         bspc rule --add "$class" state=floating
         st -A 255 \
            -g 150x20+1-1 \
-           -c "$class" &
+           -c "$class" \
+           -e /bin/bash -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
         center_window --class="$class"
     else
