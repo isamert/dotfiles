@@ -118,9 +118,9 @@ function folders {
 # TODO: xdotool paste
 # Use menu passwords -dump to print password info into stdout.
 function passwords {
-    local KEYRING_ID=keepass
     local KDBX_FILE="$HOME/Documents/sync/passwords.kdbx"
-    local ENTRY=$(secret-tool lookup name $KEYRING_ID | keepassxc-cli locate $KDBX_FILE / | tail -n +2 | dmenu)
+    local PASSWD=$(getpassword --keepass)
+    local ENTRY=$(echo "$PASSWD" | keepassxc-cli locate "$KDBX_FILE" / | tail -n +2 | dmenu)
     if [ ! -z "$ENTRY" ]
     then
         if [[ "$1" == "-dump" ]]; then
