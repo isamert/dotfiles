@@ -21,8 +21,8 @@ for file in "${list[@]}"; do
              rm "$wall"
              cp "$file" "$wall"
              feh --bg-scale "$wall" ;;
-        "y") echo -n "$file" | xclip -selection clipboard ;;
-        "Y") echo -n "$(pwd)/$file" | xclip -selection clipboard ;;
+        "y") echo -n "$(pwd)/$file" | xclip -selection clipboard ;;
+        "Y") xclip -selection clipboard -t "$(file -b --mime-type "$file")" -i "$file" ;;
 
         "greater") convert -rotate 90 "$file" "$file" ;;
         "less") convert -rotate -90 "$file" "$file" ;;

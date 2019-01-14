@@ -1,32 +1,8 @@
-# Note that rtv returns a list of urls for imgur albums, so we don't put quotes
-# around the `%s`
-image/x-imgur-album; feh -g 1280x720 %s; test=test -n "$DISPLAY"
-image/gif; mpv '%s' --autofit 1280x720 --loop=inf; test=test -n "$DISPLAY"
-image/*; feh -g 640x480 '%s'; test=test -n "$DISPLAY"
+text/html; firefox '%s'; copiousoutput
+image/x-imgur-album; feh -g 1280x720 '%s'
+image/gif; mpv '%s' --autofit 1280x720 --loop=inf
+image/*; feh '%s'
+video/x-youtube; mpv --ytdl-format=bestvideo+bestaudio/best '%s' --autofit 1280x720
+video/*; mpv '%s' --autofit 1280x720 --loop=inf
 
-# Youtube videos are assigned a custom mime-type, which can be streamed with
-video/x-youtube; mpv --ytdl-format=bestvideo+bestaudio/best '%s' --autofit 1280x720; test=test -n "$DISPLAY"
-
-# Mpv is a simple and effective video streamer
-video/*; mpv '%s' --autofit 1280x720 --loop=inf; test=test -n "$DISPLAY"
-
-###############################################################################
-# Commands below this point will attempt to display media directly in the
-# terminal when a desktop is not available (e.g. inside of an SSH session)
-###############################################################################
-
-# View true images in the terminal, supported by rxvt-unicode, xterm and st
-# Requires the w3m-img package
-image/*; w3m -o 'ext_image_viewer=off' '%s'; needsterminal
-
-# 256 color images using half-width unicode characters
-# Much higher quality that img2txt, but must be built from source
-# https://github.com/rossy/img2xterm
-image/*; curl -s '%s' | convert -resize 80x80 - jpg:/tmp/rtv.jpg && img2xterm /tmp/rtv.jpg; needsterminal; copiousoutput
-
-# Display images in classic ascii using img2txt and lib-caca
-image/*; curl -s '%s' | convert - jpg:/tmp/rtv.jpg && img2txt -f utf8 /tmp/rtv.jpg; needsterminal; copiousoutput
-
-# Full motion videos - requires a framebuffer to view
-video/x-youtube; mpv -vo drm -quiet '%s'; needsterminal
-video/*; mpv -vo drm -quiet '%s'; needsterminal
+*/*; xdg-open '%s'

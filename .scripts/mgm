@@ -1,5 +1,20 @@
 #!/bin/bash
 # Fetch weather data from mgm.gov.tr
 
+if [[ $1 == "--help" || $1 == "help" ]]; then
+    echo "Usage: mgm IL ILCE"
+    exit
+fi
+
+# TODO: maybe use geoclue?
+IL=${1:-Ankara}
+ILCE=${2:-Yenimahalle}
+
+echo "$IL, $ILCE"
+echo ""
+
+temp=$(mktemp /tmp/XXXX.js)
+sed "s/%IL%/$IL/;s/%ILCE%/$ILCE/" ~/.scripts/data/weather.js > "$temp"
+
 # slimerjs needs Firefox 59
-SLIMERJSLAUNCHER=~/Workspace/temp/firefox/firefox-bin slimerjs --load-images=false --headless ~/.scripts/data/weather.js
+SLIMERJSLAUNCHER=~/Workspace/temp/firefox/firefox-bin slimerjs --load-images=false --headless "$temp"

@@ -1,0 +1,18 @@
+set realname  = "İsa Mert Gürbüz"
+set imap_user = "isamertgurbuz@gmail.com"
+set imap_pass = `getpassword "/e-Mail/GMail (isamertgurbuz)"`
+set smtp_pass = `getpassword "/e-Mail/GMail (isamertgurbuz)"`
+set smtp_url  = "smtp://isamertgurbuz@gmail.com@smtp.gmail.com:587/"
+
+set folder    = "imaps://imap.gmail.com:993/"
+set spoolfile = "+INBOX"
+set record    = "+[Gmail]/Sent Mail"
+set postponed = "+[Gmail]/Drafts"
+set trash     = "+[Gmail]/Trash"
+mailboxes "+INBOX" "+[Gmail]/Sent Mail" "+[Gmail]/All Mail" "+[Gmail]/Drafts"
+
+set header_cache     = ~/.cache/mutt/gmail/headers
+set message_cachedir = ~/.cache/mutt/gmail/bodies
+set certificate_file = ~/.cache/mutt/gmail/certificates
+
+# vim: filetype=muttrc

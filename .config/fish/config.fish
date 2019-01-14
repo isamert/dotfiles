@@ -98,6 +98,7 @@ alias download-website="wget --recursive --page-requisites --html-extension
 alias git-todo="rg 'FIXME|TODO'" # Use grep instead of rg if you don't have it
 alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd+ | bc"
 
+function f; fff "$argv"; cd (cat ~/.cache/fff/fff.d); end
 function mkcd; mkdir -p "$argv"; cd "$argv"; end          # Make and cd to the dir
 function cpcd; cp $argv[1] $argv[2]; and cd $argv[2]; end # Copy and go to the directory
 function mvcd; mv $argv[1] $argv[2]; and cd $argv[2]; end # Move and cd to the dir

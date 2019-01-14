@@ -26,8 +26,19 @@ export ANDROID_HOME=/opt/android-sdk
 # Apply GTK themes to QT apps
 export QT_QPA_PLATFORMTHEME=gtk2
 
+# fff
+export FFF_CD_FILE=~/.cache/fff/fff.d
+export FFF_FAV1=/run/media/isa/
+export FFF_FAV2=~/Workspace/projects/
+export FFF_FAV3=~/Documents/
+export FFF_FAV4=~/Videos/Shows/
+export FFF_FAV5=~/Videos/Movies/
+
+# Discard asserts and docstrings
+export PYTHONOPTIMIZE=2
+
 # Ctrl-Shift-P to search menu items in GTK apps
-# export GTK3_MODULES=/usr/lib/libplotinus.so
+export GTK3_MODULES=/usr/lib/libplotinus.so
 
 # Some fzf stuff
 FZF_BINDINGS="\
