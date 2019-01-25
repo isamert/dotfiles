@@ -86,8 +86,8 @@ alias gc="git commit -m"
 alias gpm="git push origin master"
 
 # useful
-alias rxbk="killall xbindkeys; xbindkeys"
 alias clearvimswap="rm $HOME/.local/share/nvim/swap/*"
+alias config="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
 
 # stuff
 alias ipaddr="curl https://api.ipify.org; echo ''"
