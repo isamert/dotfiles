@@ -53,9 +53,9 @@ super + shift + e
 # apps
 # #############################################################################
 
-# open a terminal (with shift it floats)
-{super, hyper} + {_, shift +} Return
-    eval $TERMINAL {_,_} {_,-c "float" -g 100x20}
+# open a terminal (with shift it floats, with ctrl its opaque, with ctrl + shift its floating opaque)
+{super, hyper} + {_, shift + ctrl +, shift +, ctrl +} Return
+    eval $TERMINAL {_,_} {_,-c "float" -g 100x20 -A 255,-c "float" -g 100x20,-A 255}
 
 # open a terminal at
 hyper + {_,shift + } {backslash,minus}
