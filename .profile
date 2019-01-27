@@ -1,4 +1,5 @@
 export BROWSER=firefox
+export CBROWSER=w3m
 export EDITOR=nvim
 export VISUAL=nvim
 export TERMINAL=st

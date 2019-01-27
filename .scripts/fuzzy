@@ -10,14 +10,14 @@
 source "$UTILS_FILE"
 
 function fzf_git_add {
-    local files=$(git ls-files --modified | fzf --multi --ansi --preview="git diff --color=always {1}")
+    local files=$(git "$@" ls-files --modified --others --exclude-standard | fzf --multi --ansi --preview="git $* diff --color=always {1}")
     if [ -n "$files" ]; then
-        git add --verbose $files
+        git "$@" add --verbose $files
     fi
 }
 
 function fzf_git_files {
-    local files=$(git ls-files | fzf --multi --ansi)
+    local files=$(git "$@" ls-files | fzf --multi --ansi)
     if [ -n "$files" ]; then
         $EDITOR $files
     fi
@@ -25,16 +25,16 @@ function fzf_git_files {
 
 function fzf_git_log {
     local commits=$(
-      git log \
+      git "$@" log \
         --graph \
         --format=format:"%C(yellow)%h%C(red)%d%C(reset) - %C(bold green)(%ar)%C(reset) %s %C(blue)<%an>%C(reset)" \
         --color=always "$@" |
       fzf --height 100% --ansi --no-sort \
-        --preview "git show --color=always {2}"
+        --preview "git $* show --color=always {3}"
       )
     if [ -n "$commits" ]; then
         local hashes=$(printf "$commits" | cut -d' ' -f2 | tr '\n' ' ')
-        git show $hashes
+        git "$@" show $hashes
     fi
 }
 
@@ -66,10 +66,10 @@ function fzf_packages_arch {
 }
 
 case "$*" in
-    ga|"git add") fzf_git_add;;
-    gf|"git files") fzf_git_files;;
-    gl|"git log") fzf_git_log;;
+    "git add"*) shift 2; fzf_git_add "$@" ;;
+    "git files"*) fzf_git_files;;
+    "git log"*) fzf_git_log;;
     kill|fuck) fzf_kill;;
-    p|packages) fzf_packages_arch;;
+    packages) fzf_packages_arch;;
     "") fzf;;
 esac

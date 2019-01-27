@@ -1,2 +1,0 @@
-#!/bin/bash
-SUDO_ASKPASS='askpass' sudo "$@"

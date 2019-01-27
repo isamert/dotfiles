@@ -85,9 +85,13 @@ alias gf="fuzzy git files"
 alias gc="git commit -m"
 alias gpm="git push origin master"
 
+alias cfg="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
+alias ca="fuzzy git add --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
+alias cl="fuzzy git log --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
+alias cf="fuzzy git files --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
+
 # useful
 alias clearvimswap="rm $HOME/.local/share/nvim/swap/*"
-alias config="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
 
 # stuff
 alias ipaddr="curl https://api.ipify.org; echo ''"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Play youtube link using mpd.
-# Usage: mpd-yt play [youtube_url|direct_music_link] [OPTIONAL: track_name] [OPTIONAL: album_name] [OPTIONAL: artist_name]
+# Usage: mpd-yt [play|add] [youtube_url|direct_music_link] [OPTIONAL: track_name] [OPTIONAL: album_name] [OPTIONAL: artist_name]
 
 cmd="$1"
 url="$2"
@@ -37,6 +37,6 @@ while read answer; do
     send_mpd_command addtagid $id "artist \"$artist\""
     send_mpd_command addtagid $id "album \"$album\""
 
-    [[ $cmd="play" ]] && send_mpd_command playid $id
+    [[ $cmd = "play" ]] && send_mpd_command playid $id
     exit
 done < <(echo -e "addid $url\nclose" | nc localhost $port)
