@@ -15,7 +15,6 @@ Add ~melpa~ package archive.
 (package-initialize)
 (unless package-archive-contents (package-refresh-contents))
 #+END_SRC
-
 ** Install a package if it's not installed
 A function to install packages if they are not installed. Using this makes emacs configuration more portable. You don't need to install packages interactively within emacs.
 
@@ -27,13 +26,11 @@ A function to install packages if they are not installed. Using this makes emacs
                 (package-installed-p package) (package-install package)))
           packages))
 #+END_SRC
-
 ** Auto-update package lists
 #+BEGIN_SRC emacs-lisp
 (when (not package-archive-contents)
     (package-refresh-contents))
 #+END_SRC
-
 ** Install some packages
 I generally call ~get-package~ when I start customizing things but these packages either does not have configuration or they are needed immediately.
 #+BEGIN_SRC emacs-lisp
@@ -52,7 +49,6 @@ I generally call ~get-package~ when I start customizing things but these package
 (evil-mode 1)
 (key-chord-mode 1)
 #+END_SRC
-
 * Basics
 ** Sane defaults
 Some configuration that makes everything more sane.
@@ -75,7 +71,6 @@ Enable ~which-key~ minor mode.
 #+BEGIN_SRC emacs-lisp
 (which-key-mode)
 #+END_SRC
-
 ** Variables
 Some basic variable definitions that will be used in configuration.
 
@@ -88,7 +83,17 @@ Define the load path. (It's for auto-loading .el files)
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'load-path "~/.emacs.d/load")
 #+END_SRC
+** Place all backup files in same directory
+Instead of having a file that ends with ~ or '# files in same directory, save all backup files in ~/.emacs.d/backups.
 
+#+BEGIN_SRC emacs-lisp
+;; store all backup and autosave files in the tmp dir
+(setq backup-directory-alist
+      `((".*" . ,(concat string-home "/.emacs.d/backups/"))))
+(setq auto-save-file-name-transforms
+      `((".*" ,(concat string-home "/.emacs.d/backups/") t)))
+
+#+END_SRC
 ** Keybindings
 Some general keybindings.
 
@@ -101,7 +106,6 @@ Some general keybindings.
 |-------+---------------------|
 | <ESC> | quit current action |
 | C-s   | save buffer         |
-
 *** Better split management
 - A-- splits below, A-\ splits right.
 - A-h,j,k,l to switch between splits.
@@ -137,13 +141,11 @@ Type ~jk~ quickly in INSERT mode and return to NORMAL mode.
 (global-set-key [C-mouse-4] 'text-scale-increase)
 (global-set-key [C-mouse-5] 'text-scale-decrease)
 #+END_SRC
-
 ** Remove trailing space after save
 #+BEGIN_SRC emacs-lisp
 (add-hook 'before-save-hook
           'delete-trailing-whitespace)
 #+END_SRC
-
 * Visuals
 ** General
 Hide menubar and toolbar and replace blinking cursor with nice static box cursor.
@@ -177,7 +179,8 @@ I don't like using scrollbars, they look pretty ugly and takes away the terminal
 *** Enable relative line numbering
 Enable line numbering and make line numbers relative to current line. It's pretty useful in evil mode. You can press ~5k~ to go 5 lines upwards and relative line numbering helps you at that point.
 
-#+BEGIN_SRC emacs-lisp
+**** TODO FIND A FASTER LINE NUMBERING STUFF
+#+BEGIN_SRC
 (get-package 'linum-relative)
 
 (require 'linum)
@@ -207,10 +210,9 @@ This code highlights the portion of line that exceeds 80 columns and trailing sp
 #+BEGIN_SRC emacs-lisp
 (setq whitespace-line-column 80)
 (setq whitespace-style '(face empty tabs lines-tail trailing))
+(setq whitespace-global-modes '(not org-mode)) ;; Disable in org-mode
 (global-whitespace-mode t)
 #+END_SRC
-*** FIXME Disable in org mode
-
 ** Theme
 Set a nicer theme.
 
@@ -468,10 +470,11 @@ Set default scheme implementation as ~guile~.
 (get-package
  'helm
  'helm-ag
+ 'helm-projectile
  'helm-swoop)
 (require 'helm)
 (require 'helm-config)
-
+(require 'helm-projectile)
 
 (helm-mode 1)
 (helm-projectile-on)
@@ -601,37 +604,8 @@ If eshell fails to complete, fall back to fish shell completion:
 (add-hook 'haskell-mode-hook #'lsp)
 #+END_SRC
 ** Rust
-Configure rust code completion using racer. ~racer~ and rust source code needs to be installed.
-To install racer:    ~cargo install racer~
-To install rust src: ~rustup component add rust-src~
-
-#+BEGIN_SRC emacs-lisp
-(get-package
- 'rust-mode
- 'cargo)
-(require 'racer)
-(require 'eldoc)
-(setq racer-cmd (concat string-home "/.cargo/bin/racer"))
-(setq racer-rust-src-path (concat string-home "/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src"))
-(add-hook 'rust-mode-hook #'racer-mode)
-(add-hook 'racer-mode-hook #'company-mode)
-(add-hook 'racer-mode-hook #'eldoc-mode) ; Documentation support.
-#+END_SRC
-
-Enable rust linter/syntax checker.
-
-#+BEGIN_SRC emacs-lisp
-(require 'flycheck-rust)
-(with-eval-after-load 'rust-mode
-  (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
-#+END_SRC
-
-Enable ~cargo-minor-mode~ which gives you simple cargo commands like ~run, build, check~ within emacs.
-
-#+BEGIN_SRC emacs-lisp
-(add-hook 'rust-mode-hook 'cargo-minor-mode)
-#+END_SRC
-
+*** TODO lsp
+*** TODO cargo minor mode
 ** Python
 Just install ~python-pylint~ from distro package manager (or using pip) and ~flycheck~ will automatically handle Python linting.
 
