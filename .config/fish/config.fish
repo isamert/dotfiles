@@ -75,6 +75,7 @@ alias xpaste="xclip -o"                  # paste cb content
 
 # abbrv
 alias v="nvim"
+alias how="howdoi --color --all"
 
 # git
 alias g="git"

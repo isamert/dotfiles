@@ -24,7 +24,6 @@ Plug 'dominickng/fzf-session.vim'
 Plug 'airblade/vim-gitgutter'                " Show git changes
 Plug 'rhysd/devdocs.vim'                     " :DevDocs -> open stuff in DevDocs
 Plug 'jeffkreeftmeijer/vim-numbertoggle'     " Toggle between relative and normal lines when needed
-Plug 'https://gitlab.com/Lenovsky/nuake.git' " Quake-style termunal (F4, ctrl-n)
 Plug 'majutsushi/tagbar'                     " list top-level stuff in a window
 Plug 'autozimu/LanguageClient-neovim', {
     \ 'branch': 'next',
@@ -265,11 +264,6 @@ inoremap <C-l> <right>| " ctrl-l -> move right in insert mode
 inoremap <C-h> <left>|  " ...
 inoremap <C-j> <down>|  " ...
 inoremap <C-k> <up>|    " ...
-
-" nuake
-nnoremap <F4> :Nuake<CR>
-inoremap <F4> <C-\><C-n>:Nuake<CR>
-tnoremap <F4> <C-\><C-n>:Nuake<CR>
 
 " other
 vnoremap t :Tabularize/

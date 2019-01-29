@@ -5,12 +5,6 @@
 
 * Introduction
 This is my emacs configuration.
-
-** Some unpopular shortcuts
-| Shortcut    | Purpose                                                                                                     |
-|-------------+-------------------------------------------------------------------------------------------------------------|
-| C-w h,j,k,l | After doing ~C-w~, hit one of the h,j,k,l keys to switch splits. Doing ~C-w C-w~ simply goes to next split. |
-
 * Packages
 ** Package repos & auto-installing packages
 Add ~melpa~ package archive.
@@ -40,12 +34,23 @@ A function to install packages if they are not installed. Using this makes emacs
     (package-refresh-contents))
 #+END_SRC
 
-** Install some packages that has not any configuration
+** Install some packages
+I generally call ~get-package~ when I start customizing things but these packages either does not have configuration or they are needed immediately.
 #+BEGIN_SRC emacs-lisp
 (get-package
  'ag
  'which-key
- 'ranger)
+ 'evil
+ 'key-chord)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(require 'evil)
+(require 'org)
+(require 'key-chord)
+
+(evil-mode 1)
+(key-chord-mode 1)
 #+END_SRC
 
 * Basics
@@ -89,12 +94,37 @@ Some general keybindings.
 
 #+BEGIN_SRC emacs-lisp
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(global-set-key (kbd "C-s") 'save-buffer)
 #+END_SRC
 
 | Key   | Action              |
 |-------+---------------------|
 | <ESC> | quit current action |
+| C-s   | save buffer         |
 
+*** Better split management
+- A-- splits below, A-\ splits right.
+- A-h,j,k,l to switch between splits.
+- A-H,J,K,L shrink, enlarge split.
+
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "M-\\") 'split-window-right)
+(global-set-key (kbd "M--") 'split-window-below)
+(global-set-key (kbd "M-j") 'evil-window-down)
+(global-set-key (kbd "M-k") 'evil-window-up)
+(global-set-key (kbd "M-l") 'evil-window-right)
+(define-key evil-normal-state-map (kbd "M-h") 'evil-window-left)
+(global-set-key (kbd "M-J") 'enlarge-window)
+(global-set-key (kbd "M-K") 'shrink-window)
+(global-set-key (kbd "M-L") 'enlarge-window-horizontally)
+(global-set-key (kbd "M-H") 'shrink-window-horizontally)
+#+END_SRC
+*** Map jk to ESC
+Type ~jk~ quickly in INSERT mode and return to NORMAL mode.
+
+#+BEGIN_SRC emacs-lisp
+(key-chord-define evil-insert-state-map "jk" 'evil-normal-state)
+#+END_SRC
 ** Scrolling
 *** Better settings for mouse scroll.
 #+BEGIN_SRC emacs-lisp
@@ -312,24 +342,6 @@ Displays indentation guidelines in specified colors.
 #+END_SRC
 
 * evil-mode
-** Enable evil-mode
-Enable evil-mode.
-
-#+BEGIN_SRC emacs-lisp
-(get-package 'evil)
-(require 'evil)
-(evil-mode 1)
-#+END_SRC
-** Map jk to ESC
-Type ~jk~ quickly in INSERT mode and return to NORMAL mode.
-
-#+BEGIN_SRC emacs-lisp
-(get-package 'key-chord)
-(require 'key-chord)
-(key-chord-mode 1)
-
-(key-chord-define evil-insert-state-map "jk" 'evil-normal-state)
-#+END_SRC
 ** Leader key
 Enable leader key and do some keybindings.
 
@@ -344,6 +356,7 @@ Enable leader key and do some keybindings.
   "r" 'helm-recentf
   "t" 'helm-elscreen
   "b" 'helm-buffers-list
+  "g" 'helm-ls-git-ls
   "RET" 'helm-mini)
 
 (global-evil-leader-mode)
@@ -375,7 +388,7 @@ To move between visual lines instead of real lines:
 #+END_SRC
 ** evil-tabs
 - Cycle tabs with ~gT~.
-- Create tabs with ~:tabnew~
+- Create tabs with ~:tabnew~ or ~ctrl+t~
 - Open helm-elscreen ~SPC-t~
 
 #+BEGIN_SRC emacs-lisp
@@ -385,6 +398,12 @@ To move between visual lines instead of real lines:
 
 (global-evil-tabs-mode t)
 (setq elscreen-display-tab nil) ;; Don't display that ugly tabbar
+#+END_SRC
+
+Keybindings:
+
+#+BEGIN_SRC emacs-lisp
+(define-key evil-normal-state-map (kbd "C-t") 'elscreen-create)
 #+END_SRC
 ** Change cursor color according to mode
 #+BEGIN_SRC emacs-lisp
@@ -397,9 +416,6 @@ To move between visual lines instead of real lines:
 #+END_SRC
 * org-mode
 ** Enable & sane defaults
-#+BEGIN_SRC emacs-lisp
-(require 'org)
-#+END_SRC
 
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
 
@@ -474,6 +490,17 @@ Set ~<tab>~ for selecting next result and ~<backtab>~ for selecting previous res
 #+BEGIN_SRC emacs-lisp
   (define-key helm-map (kbd "<tab>") 'helm-next-line)
   (define-key helm-map (kbd "<backtab>") 'helm-previous-line)
+#+END_SRC
+** List git files
+- ~SPC-g~ to list git files.
+
+#+BEGIN_SRC emacs-lisp
+(get-package 'helm-ls-git)
+(require 'helm-ls-git)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "") 'helm-ls-git-ls)
 #+END_SRC
 * Other packages
 ** Flycheck
@@ -556,6 +583,23 @@ If eshell fails to complete, fall back to fish shell completion:
   (global-fish-completion-mode))
 #+END_SRC
 * Languages
+** LSP
+#+BEGIN_SRC emacs-lisp
+(get-package
+ 'lsp-mode
+ 'lsp-ui
+ 'company-lsp)
+
+(require 'lsp)
+#+END_SRC
+** Haskell
+#+BEGIN_SRC emacs-lisp
+(get-package 'lsp-haskell)
+
+(require 'lsp-haskell)
+(setq lsp-haskell-process-path-hie "hie-wrapper")
+(add-hook 'haskell-mode-hook #'lsp)
+#+END_SRC
 ** Rust
 Configure rust code completion using racer. ~racer~ and rust source code needs to be installed.
 To install racer:    ~cargo install racer~
@@ -564,9 +608,7 @@ To install rust src: ~rustup component add rust-src~
 #+BEGIN_SRC emacs-lisp
 (get-package
  'rust-mode
- 'racer
- 'cargo
- 'flycheck-rust)
+ 'cargo)
 (require 'racer)
 (require 'eldoc)
 (setq racer-cmd (concat string-home "/.cargo/bin/racer"))
@@ -592,26 +634,7 @@ Enable ~cargo-minor-mode~ which gives you simple cargo commands like ~run, build
 
 ** Python
 Just install ~python-pylint~ from distro package manager (or using pip) and ~flycheck~ will automatically handle Python linting.
-** Haskell
-#+BEGIN_SRC emacs-lisp
-(get-package 'haskell-mode)
-#+END_SRC
 
-*** Configure flycheck
-#+BEGIN_SRC emacs-lisp
-(get-package 'flycheck-haskell)
-(add-hook 'haskell-mode-hook #'flycheck-haskell-setup)
-#+END_SRC
-
-*** Configure company
-#+BEGIN_SRC emacs-lisp
-(get-package 'intero)
-(add-hook 'haskell-mode-hook 'company-mode)
-(add-hook 'haskell-mode-hook 'intero-mode)
-#+END_SRC
-
-*** Info
-- ~haskell-mode~ offers ~haskell-hoogle~
 ** Common Lisp
 First, you need to install ~slime~ using ~quicklisp~ package manager:
 #+BEGIN_SRC bash
