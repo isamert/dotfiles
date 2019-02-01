@@ -47,9 +47,11 @@ Add ~melpa~ package archive.
 * Basics
 ** Sane defaults
 #+BEGIN_SRC emacs-lisp
-(setq make-backup-files nil)  ;; Disable backup files
-(global-visual-line-mode t)   ;; Wrap long lines
-(fset 'yes-or-no-p 'y-or-n-p) ;; Ask y/n instead of yes/no
+(setq make-backup-files nil)      ;; Disable backup files
+(global-visual-line-mode t)       ;; Wrap long lines
+(fset 'yes-or-no-p 'y-or-n-p)     ;; Ask y/n instead of yes/no
+;;(setq visible-bell 1)             ;; dude
+(setq ring-bell-function 'ignore) ;; this completely disables alarms
 #+END_SRC
 
 Save recent files.
@@ -256,6 +258,7 @@ These are the languages that can be run in codeblocks.
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options.
 #+BEGIN_SRC emacs-lisp
 (use-package which-key
+  :diminish which-key-mode
   :config
   (which-key-mode))
 #+END_SRC
@@ -263,6 +266,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 *** Install and configure
 #+BEGIN_SRC emacs-lisp
 (use-package key-chord
+  :diminish key-chord-mode
   :init
   (setq key-chord-one-key-delay 0.3    ;; 0.3 secons delay for hitting same key (eg. aa)
         key-chord-two-keys-delay 0.25) ;; delay hitting two different keys (eg. jk)
@@ -328,6 +332,23 @@ Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ fo
 (define-key helm-map (kbd "<backtab>") 'helm-previous-line)
 (define-key helm-map (kbd "M-j") 'helm-next-line)
 (define-key helm-map (kbd "M-k") 'helm-previous-line)
+#+END_SRC
+** eyebrowse/tabs
+#+BEGIN_SRC emacs-lisp
+(use-package eyebrowse
+  :diminish eyebrowse-mode
+  :init
+  (setq eyebrowse-new-workspace t)
+  :config
+  (progn
+    (define-key eyebrowse-mode-map (kbd "M-1") 'eyebrowse-switch-to-window-config-1)
+    (define-key eyebrowse-mode-map (kbd "M-2") 'eyebrowse-switch-to-window-config-2)
+    (define-key eyebrowse-mode-map (kbd "M-3") 'eyebrowse-switch-to-window-config-3)
+    (define-key eyebrowse-mode-map (kbd "M-4") 'eyebrowse-switch-to-window-config-4)
+    (define-key eyebrowse-mode-map (kbd "M-5") 'eyebrowse-switch-to-window-config-5)
+    (define-key evil-normal-state-map (kbd "M-.") 'eyebrowse-next-window-config)
+    (define-key evil-normal-state-map (kbd "M-,") 'eyebrowse-prev-window-config)
+    (eyebrowse-mode t)))
 #+END_SRC
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
