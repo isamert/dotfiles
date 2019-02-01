@@ -1,7 +1,7 @@
 #!/bin/bash
 # Fetch weather data from mgm.gov.tr
 
-if [[ $1 == "--help" || $1 == "help" ]]; then
+if [[ $1 == "--help" || $1 == "help" || $1 == "-h" ]]; then
     echo "Usage: mgm IL ILCE"
     exit
 fi

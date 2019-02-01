@@ -5,54 +5,47 @@
 
 * Introduction
 This is my emacs configuration.
-* Packages
-** Package repos & auto-installing packages
+* Preperation
+** Load path
+Define the load path. (It's for auto-loading .el files)
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'load-path "~/.emacs.d/load")
+#+END_SRC
+** Variables and functions
+Some basic variable and function definitions that will be used in configuration.
+*** mkdir-if-not
+#+BEGIN_SRC emacs-lisp
+(defun mkdir-if-not (dir)
+"create the DIR if it does not exist"
+    (unless (file-exists-p dir)
+            (make-directory dir)))
+#+END_SRC
+*** shackle-window
+Here is the [[https://www.reddit.com/r/emacs/comments/345vtl/make_helm_window_at_the_bottom_without_using_any/][source]].
+#+BEGIN_SRC emacs-lisp
+(defun shackle-window (name size)
+"Make the buffer NAME appear at bottom of the window, filling SIZE percent of the window"
+  (add-to-list 'display-buffer-alist
+               `(,name
+                  (display-buffer-in-side-window)
+                  (inhibit-same-window . t)
+                  (window-height . ,size))))
+#+END_SRC
+** Package repos
 Add ~melpa~ package archive.
-
 #+BEGIN_SRC emacs-lisp
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
 (package-initialize)
-(unless package-archive-contents (package-refresh-contents))
+(unless package-archive-contents (package-refresh-contents)) ;; Update archives
 #+END_SRC
-** Install a package if it's not installed
-A function to install packages if they are not installed. Using this makes emacs configuration more portable. You don't need to install packages interactively within emacs.
-
+** use-package
 #+BEGIN_SRC emacs-lisp
-(defun get-package (&rest packages)
-  "Install given PACKAGES if the are not installed."
-  (mapcar (lambda (package)
-            (unless
-                (package-installed-p package) (package-install package)))
-          packages))
-#+END_SRC
-** Auto-update package lists
-#+BEGIN_SRC emacs-lisp
-(when (not package-archive-contents)
-    (package-refresh-contents))
-#+END_SRC
-** Install some packages
-I generally call ~get-package~ when I start customizing things but these packages either does not have configuration or they are needed immediately.
-#+BEGIN_SRC emacs-lisp
-(get-package
- 'ag
- 'which-key
- 'evil
- 'key-chord)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(require 'evil)
-(require 'org)
-(require 'key-chord)
-
-(evil-mode 1)
-(key-chord-mode 1)
+(setq use-package-always-ensure t) ;; Make ~:ensure t~ default
+(unless (package-installed-p 'use-package) (package-install 'use-package))
 #+END_SRC
 * Basics
 ** Sane defaults
-Some configuration that makes everything more sane.
-
 #+BEGIN_SRC emacs-lisp
 (setq make-backup-files nil)  ;; Disable backup files
 (global-visual-line-mode t)   ;; Wrap long lines
@@ -60,76 +53,11 @@ Some configuration that makes everything more sane.
 #+END_SRC
 
 Save recent files.
-
 #+BEGIN_SRC emacs-lisp
 (require 'recentf)
 (recentf-mode 1)
 #+END_SRC
-
-Enable ~which-key~ minor mode.
-
-#+BEGIN_SRC emacs-lisp
-(which-key-mode)
-#+END_SRC
-** Variables
-Some basic variable definitions that will be used in configuration.
-
-#+BEGIN_SRC emacs-lisp
-(defconst string-home (getenv "HOME"))
-#+END_SRC
-
-Define the load path. (It's for auto-loading .el files)
-
-#+BEGIN_SRC emacs-lisp
-(add-to-list 'load-path "~/.emacs.d/load")
-#+END_SRC
-** Place all backup files in same directory
-Instead of having a file that ends with ~ or '# files in same directory, save all backup files in ~/.emacs.d/backups.
-
-#+BEGIN_SRC emacs-lisp
-;; store all backup and autosave files in the tmp dir
-(setq backup-directory-alist
-      `((".*" . ,(concat string-home "/.emacs.d/backups/"))))
-(setq auto-save-file-name-transforms
-      `((".*" ,(concat string-home "/.emacs.d/backups/") t)))
-
-#+END_SRC
-** Keybindings
-Some general keybindings.
-
-#+BEGIN_SRC emacs-lisp
-(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-(global-set-key (kbd "C-s") 'save-buffer)
-#+END_SRC
-
-| Key   | Action              |
-|-------+---------------------|
-| <ESC> | quit current action |
-| C-s   | save buffer         |
-*** Better split management
-- A-- splits below, A-\ splits right.
-- A-h,j,k,l to switch between splits.
-- A-H,J,K,L shrink, enlarge split.
-
-#+BEGIN_SRC emacs-lisp
-(global-set-key (kbd "M-\\") 'split-window-right)
-(global-set-key (kbd "M--") 'split-window-below)
-(global-set-key (kbd "M-j") 'evil-window-down)
-(global-set-key (kbd "M-k") 'evil-window-up)
-(global-set-key (kbd "M-l") 'evil-window-right)
-(define-key evil-normal-state-map (kbd "M-h") 'evil-window-left)
-(global-set-key (kbd "M-J") 'enlarge-window)
-(global-set-key (kbd "M-K") 'shrink-window)
-(global-set-key (kbd "M-L") 'enlarge-window-horizontally)
-(global-set-key (kbd "M-H") 'shrink-window-horizontally)
-#+END_SRC
-*** Map jk to ESC
-Type ~jk~ quickly in INSERT mode and return to NORMAL mode.
-
-#+BEGIN_SRC emacs-lisp
-(key-chord-define evil-insert-state-map "jk" 'evil-normal-state)
-#+END_SRC
-** Scrolling
+** Better scrolling
 *** Better settings for mouse scroll.
 #+BEGIN_SRC emacs-lisp
 (setq mouse-wheel-scroll-amount '(1 ((shift) . 1))) ;; one line at a time
@@ -141,7 +69,35 @@ Type ~jk~ quickly in INSERT mode and return to NORMAL mode.
 (global-set-key [C-mouse-4] 'text-scale-increase)
 (global-set-key [C-mouse-5] 'text-scale-decrease)
 #+END_SRC
-** Remove trailing space after save
+*** Conservative scrolling
+If the cursor is at the end of the file, when you scroll emacs does a strange jump. This fixes it.
+#+BEGIN_SRC emacs-lisp
+(setq scroll-conservatively 100) ;; When cursor reaches end, just scroll line-by-line
+#+END_SRC
+** Place all backup files in same directory
+Instead of having a file that ends with ~ or '# files in same directory, save all backup files in ~/.emacs.d/backups.
+#+BEGIN_SRC emacs-lisp
+(defconst backup-dir "~/.emacs.d/backups/")
+(mkdir-if-not backup-dir)
+
+(setq backup-directory-alist `((".*" . ,backup-dir)))
+(setq auto-save-file-name-transforms `((".*" ,backup-dir t)))
+#+END_SRC
+** Undo tree (Persistent undo and stuff)
+- ~undo-tree~ gives a persistent undo even if you close the file.
+- Also it keeps undo history as a tree instead of a linear history. ~undo-tree-visualize~ may help.
+#+BEGIN_SRC emacs-lisp
+(defconst undo-dir "~/.emacs.d/undo/")
+(mkdir-if-not undo-dir)
+
+(use-package undo-tree
+  :init
+    (setq undo-tree-auto-save-history t
+          undo-tree-history-directory-alist `((".*" . ,undo-dir)))
+  :config
+  (global-undo-tree-mode))
+#+END_SRC
+** Remove trailing space before save
 #+BEGIN_SRC emacs-lisp
 (add-hook 'before-save-hook
           'delete-trailing-whitespace)
@@ -149,263 +105,101 @@ Type ~jk~ quickly in INSERT mode and return to NORMAL mode.
 * Visuals
 ** General
 Hide menubar and toolbar and replace blinking cursor with nice static box cursor.
-
 #+BEGIN_SRC emacs-lisp
-(menu-bar-mode 0)
-(tool-bar-mode 0)
-(blink-cursor-mode 0)
+(menu-bar-mode 0)                ;; Disable menubar
+(tool-bar-mode 0)                ;; Disable toolbar
+(blink-cursor-mode 0)            ;; Disable blinking cursor
+(scroll-bar-mode -1)             ;; Disable scrollbars
+(setq inhibit-startup-message t) ;; Close startup screen
+(global-hl-line-mode t)          ;; Highlight current line
 #+END_SRC
-
 ** Fonts
 #+BEGIN_SRC emacs-lisp
-;; Set font size to 10.5pt
-(set-face-attribute 'default nil :height 105)
+(set-face-attribute 'default nil
+                    :font "IBM Plex Mono"
+                    :weight 'normal
+                    :width 'normal
+                    :height 105)
 #+END_SRC
-
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
-
 #+BEGIN_SRC emacs-lisp
 (setq frame-title-format "%b - emacs")
 #+END_SRC
-
-I don't like using scrollbars, they look pretty ugly and takes away the terminal feel.
-
+** Theme
+Set a nicer theme.
 #+BEGIN_SRC emacs-lisp
-(scroll-bar-mode -1)
+(use-package spacemacs-theme
+  :defer t
+  :init
+  (load-theme 'spacemacs-dark t))
 #+END_SRC
-
-** Line numbers
-*** Enable relative line numbering
-Enable line numbering and make line numbers relative to current line. It's pretty useful in evil mode. You can press ~5k~ to go 5 lines upwards and relative line numbering helps you at that point.
-
-**** TODO FIND A FASTER LINE NUMBERING STUFF
-#+BEGIN_SRC
-(get-package 'linum-relative)
-
-(require 'linum)
-(require 'linum-off) ;; This disables line numbering on certain buffers like temp buffers, org mode etc, look ~load/linum-off.el~
-(require 'linum-relative)
-
-(global-linum-mode t)
-(linum-relative-mode t)
-#+END_SRC
-
-*** Draw a seperator between editor and the line numbers.
+** Parentheses
+*** Matching
+Just enable parenthesis matching.
 #+BEGIN_SRC emacs-lisp
-(setq linum-relative-format "%4s \u2502")
-;; (setq linum-format "%4d \u2502") ;; Use this instead of above if you are not using relative line numbers
+(setq show-paren-style 'parenthesis)
+(show-paren-mode 1)
 #+END_SRC
-
-*** Show absolute line number for current line
-Like vim hybrid mode.
-
+*** Rainbow
+Colors parantheses depending on their dept.
 #+BEGIN_SRC emacs-lisp
-(setq linum-relative-current-symbol "")
+(use-package rainbow-delimiters
+  :config
+  (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
 #+END_SRC
-
 ** 80 column line limit and trailing spaces
 This code highlights the portion of line that exceeds 80 columns and trailing spaces.
-
 #+BEGIN_SRC emacs-lisp
 (setq whitespace-line-column 80)
 (setq whitespace-style '(face empty tabs lines-tail trailing))
 (setq whitespace-global-modes '(not org-mode)) ;; Disable in org-mode
 (global-whitespace-mode t)
 #+END_SRC
-** Theme
-Set a nicer theme.
-
+** Shackle windows
+Make some temproary windows appear at bottom.
 #+BEGIN_SRC emacs-lisp
-(get-package 'doom-themes)
-(get-package 'gruvbox-theme)
-(require 'doom-themes)
-(load-theme 'doom-dracula t)
-;(load-theme 'gruvbox t)
+(shackle-window "\\*Help\\*" 0.4)
 #+END_SRC
-
-Also look here for other themes that comes bundled with ~doom-themes~ package: https://github.com/hlissner/emacs-doom-themes#features
-
-** Parenthesis matching
-Just enable parenthesis matching.
-
-#+BEGIN_SRC emacs-lisp
-(require 'paren)
-(setq show-paren-style 'parenthesis)
-(show-paren-mode +1)
-#+END_SRC
-
-** popwin
-An extension for making temproary buffers shown as popup at the defined place, no more fucking-up your current layout!
-- ~Ctrl-g~ closes current popup.
-
-#+BEGIN_SRC emacs-lisp
-(require 'popwin)
-(popwin-mode 1)
-#+END_SRC
-
-The buffers that I want to display as popup. You can set ~:height~ (int: line count, float: percent), ~:position~ (right,left,top,bottom), ~:stick~ (t), ~:noselect~ (t).
-
-I hardcoded every window name instead of catching with regexp because I sometimes forget these windows, so this is like a list of useful windows.
-#+BEGIN_SRC emacs-lisp
-;; emacs
-(push "*Shell Command Output*" popwin:special-display-config)
-(push '("*Backtrace*" :height 0.45) popwin:special-display-config)
-
-;; helm
-(push "*helm M-x*" popwin:special-display-config)
-(push "*helm recentf*" popwin:special-display-config)
-(push "*helm-mode-completion-at-point*" popwin:special-display-config)
-(push "*helm-mode-switch-to-buffer*" popwin:special-display-config)
-(push "*helm-describe-variable*" popwin:special-display-config)
-(push "*helm-describe-function*" popwin:special-display-config)
-(push "*helm find files*" popwin:special-display-config)
-(push '("*helm-ag*" :height 0.4) popwin:special-display-config)
-(push '("*helm imenu*" :height 0.3) popwin:special-display-config)
-(push '("*helm org inbuffer*" :height 0.4) popwin:special-display-config)
-(push '("*helm mini*" :height 0.45) popwin:special-display-config)
-(push '("*helm buffers*" :height 0.3) popwin:special-display-config)
-(push '("*Helm Swoop*" :height 0.45) popwin:special-display-config)
-(push '("*Helm ElScreen*" :height 0.3) popwin:special-display-config)
-
-
-;; other
-(push '("*Cargo Run*" :height 0.3) popwin:special-display-config)
-(push '("*Flycheck errors*" :height 0.3) popwin:special-display-config)
-(push '("*Flycheck error messages*" :noselect t :height 0.4) popwin:special-display-config)
-#+END_SRC
-** zen-mode
-It's just a simple mode that centers the text. Thus you get distraction free editing. It's not in the ~melpa~, so download it from here: https://raw.githubusercontent.com/aki237/zen-mode/master/zen-mode.el and save it to ~load-path~. (~load-path~ is defined here: [[*Variables][Variables]])
-
-#+BEGIN_SRC emacs-lisp
-(require 'zen-mode)
-#+END_SRC
-
-To use it: SPC SPC zen-mode
-
-** telephone-line (modeline replacement)
-FIXME: change evil-mode colors to match with cursor colors.
-- I changed evil colors to match my cursor colors which I'll define later in here: [[*Change cursor color according to mode][Change cursor color according to mode]]
-
-#+BEGIN_SRC emacs-lisp
-(get-package 'telephone-line)
-;; Color settings
-;; I just extracted these 2 functions from the telephone-line source.
-;; and only switched their colors.
-(defface telephone-line-evil-insert
-  '((t (:background "red3" :inherit telephone-line-evil)))
-  "Face used in evil color-coded segments when in Insert state."
-  :group 'telephone-line-evil)
-
-(defface telephone-line-evil-normal
-  '((t (:background "forest green" :inherit telephone-line-evil)))
-  "Face used in evil color-coded segments when in Normal state."
-  :group 'telephone-line-evil)
-
-;; Separator settings
-(setq telephone-line-primary-left-separator 'telephone-line-cubed-left
-      telephone-line-secondary-left-separator 'telephone-line-cubed-hollow-left
-      telephone-line-primary-right-separator 'telephone-line-cubed-right
-      telephone-line-secondary-right-separator 'telephone-line-cubed-hollow-right)
-
-;; Define segments
-(setq telephone-line-lhs
-    '((evil   . (telephone-line-evil-tag-segment))
-      (accent . (telephone-line-vc-segment
-                 telephone-line-process-segment))
-      (nil    . (telephone-line-buffer-segment
-                 telephone-line-minor-mode-segment))))
-
-(setq telephone-line-center-rhs
-    '((nil    . (telephone-line-flycheck-segment))))
-
-(setq telephone-line-rhs
-    '((nil    . (telephone-line-misc-info-segment))
-      (accent . (telephone-line-major-mode-segment))
-      (evil   . (telephone-line-airline-position-segment))))
-
-
-;; Misc settings
-(setq telephone-line-height 24) ;; thicc
-
-(telephone-line-mode t)
-#+END_SRC
-
-** Highlight indentation lines
-Displays indentation guidelines in specified colors.
-*** FIXME: enable globally?
-#+BEGIN_SRC emacs-lisp
-(require 'highlight-indentation)
-(set-face-background 'highlight-indentation-face "#2b2e3b")
-(set-face-background 'highlight-indentation-current-column-face "#363949")
-
-(highlight-indentation-mode t)
-(highlight-indentation-current-column-mode t)
-#+END_SRC
-
 * evil-mode
-** Leader key
-Enable leader key and do some keybindings.
-
+** Install
 #+BEGIN_SRC emacs-lisp
-(get-package 'evil-leader)
-(require 'evil-leader)
-
-(evil-leader/set-leader "SPC")
-(evil-leader/set-key
-  "SPC" 'helm-M-x
-  "e" 'eval-last-sexp
-  "r" 'helm-recentf
-  "t" 'helm-elscreen
-  "b" 'helm-buffers-list
-  "g" 'helm-ls-git-ls
-  "RET" 'helm-mini)
-
-(global-evil-leader-mode)
+(use-package evil
+  :config
+  (evil-mode 1))
 #+END_SRC
-
-| Leader + ... | Action                             |
-|--------------+------------------------------------|
-| SPC          | List all commands using helm (M-x) |
-| e            | Eval current lisp expression.      |
-| r            | Show helm-recentf                  |
-| t            | Show helm-elscreen                 |
-| b            | Show helm-buffers-list             |
+** evil-leader
+Enable leader key and bind some keys.
+#+BEGIN_SRC emacs-lisp
+(use-package evil-leader
+  :init
+  (global-evil-leader-mode)
+  :config
+  (progn
+    (evil-leader/set-leader "SPC")
+    (evil-leader/set-key
+      "SPC" 'helm-M-x
+      "e" 'eval-last-sexp
+      "r" 'helm-recentf
+      "t" 'helm-elscreen
+      "b" 'helm-buffers-list
+      "g" 'projectile-find-file
+      "RET" 'helm-mini)))
+#+END_SRC
+** evil-surround
+#+BEGIN_SRC emacs-lisp
+(use-package evil-surround
+  :init
+  (global-evil-surround-mode 1))
+#+END_SRC
 ** Visual line movement
 To move between visual lines instead of real lines:
-
 #+BEGIN_SRC emacs-lisp
+(setq-default evil-cross-lines t) ;; Make horizontal movement cross lines
 (define-key evil-normal-state-map (kbd "<remap> <evil-next-line>") 'evil-next-visual-line)
 (define-key evil-normal-state-map (kbd "<remap> <evil-previous-line>") 'evil-previous-visual-line)
 (define-key evil-motion-state-map (kbd "<remap> <evil-next-line>") 'evil-next-visual-line)
 (define-key evil-motion-state-map (kbd "<remap> <evil-previous-line>") 'evil-previous-visual-line)
-
-;; Make horizontal movement cross lines
-(setq-default evil-cross-lines t)
-#+END_SRC
-** evil-surround
-#+BEGIN_SRC emacs-lisp
-(get-package 'evil-surround)
-(global-evil-surround-mode 1)
-#+END_SRC
-** evil-tabs
-- Cycle tabs with ~gT~.
-- Create tabs with ~:tabnew~ or ~ctrl+t~
-- Open helm-elscreen ~SPC-t~
-
-#+BEGIN_SRC emacs-lisp
-(get-package
-  'evil-tabs
-  'helm-elscreen)
-
-(global-evil-tabs-mode t)
-(setq elscreen-display-tab nil) ;; Don't display that ugly tabbar
-#+END_SRC
-
-Keybindings:
-
-#+BEGIN_SRC emacs-lisp
-(define-key evil-normal-state-map (kbd "C-t") 'elscreen-create)
 #+END_SRC
 ** Change cursor color according to mode
 #+BEGIN_SRC emacs-lisp
@@ -417,207 +211,177 @@ Keybindings:
 (setq evil-operator-state-cursor '("red" hollow))
 #+END_SRC
 * org-mode
-** Enable & sane defaults
-
+** Better defaults
+#+BEGIN_SRC emacs-lisp
+(setq org-src-fontify-natively t) ;; Enable code highlighting in ~SRC~ blocks.
+(setq org-ellipsis "..↯")         ;; Replace ... with ..↯ in collapsed sections
+#+END_SRC
+** Auto indent subsections
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
-
 #+BEGIN_SRC emacs-lisp
 (add-hook 'org-mode-hook (lambda () (org-indent-mode t)) t)
 #+END_SRC
-
-Enable code highlighting in ~SRC~ blocks.
-
-#+BEGIN_SRC emacs-lisp
-(setq org-src-fontify-natively t)
-#+END_SRC
 ** Nice bullets
 Make headings look better with nice bullets. It also adjusts the size of headings according to their level.
-
 #+BEGIN_SRC emacs-lisp
-(get-package 'org-bullets)
-(require 'org-bullets)
-(add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+(use-package org-bullets
+  :init
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 #+END_SRC
 ** Babel
+*** Load languages
 These are the languages that can be run in codeblocks.
-
 #+BEGIN_SRC emacs-lisp
 (org-babel-do-load-languages
  'org-babel-load-languages
  '((scheme . t)
    (python . t)))
 #+END_SRC
-
-Don't ask permissions for evaluating code blocks, just evaluate when requested.
-
+*** Don't ask permissions for evaluating code blocks
 #+BEGIN_SRC
 (setq org-confirm-babel-evaluate nil)
 #+END_SRC
-
-Set default scheme implementation as ~guile~.
-
+*** Set default scheme implementation as ~guile~
 #+BEGIN_SRC emacs-lisp
-(get-package 'geiser)
-(setq geiser-default-implementation 'guile)
+(use-package geiser
+  :init
+  (setq geiser-default-implementation 'guile))
 #+END_SRC
 ** Exports
 #+BEGIN_SRC emacs-lisp
-(get-package 'htmlize)
-#+END_SRC
-* helm
-** Enable
-#+BEGIN_SRC emacs-lisp
-(get-package
- 'helm
- 'helm-ag
- 'helm-projectile
- 'helm-swoop)
-(require 'helm)
-(require 'helm-config)
-(require 'helm-projectile)
-
-(helm-mode 1)
-(helm-projectile-on)
-(helm-adaptive-mode 1)
-#+END_SRC
-** Fuzzymatch
-Enable it globally for helm.
-#+BEGIN_SRC emacs-lisp
-(setq helm-mode-fuzzy-match t)
-(setq helm-completion-in-region-fuzzy-match t)
-(setq helm-candidate-number-limit 100) ;; For faster fuzzymatching
-#+END_SRC
-** Better selection
-Set ~<tab>~ for selecting next result and ~<backtab>~ for selecting previous result.
-
-#+BEGIN_SRC emacs-lisp
-  (define-key helm-map (kbd "<tab>") 'helm-next-line)
-  (define-key helm-map (kbd "<backtab>") 'helm-previous-line)
-#+END_SRC
-** List git files
-- ~SPC-g~ to list git files.
-
-#+BEGIN_SRC emacs-lisp
-(get-package 'helm-ls-git)
-(require 'helm-ls-git)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(global-set-key (kbd "") 'helm-ls-git-ls)
+(use-package htmlize)
 #+END_SRC
 * Other packages
-** Flycheck
-Interactive code completion tool.
-*** Enable
-Enable it.
+** which-key
+A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options.
 #+BEGIN_SRC emacs-lisp
-(get-package 'flycheck)
-(require 'flycheck)
-
-(add-hook 'after-init-hook #'global-flycheck-mode)
+(use-package which-key
+  :config
+  (which-key-mode))
 #+END_SRC
-*** Run flycheck on other buffers after save
-- http://blog.isamert.net/emacs-run-flycheck-on-all-buffers-after-save/
+** key-chord
+*** Install and configure
+#+BEGIN_SRC emacs-lisp
+(use-package key-chord
+  :init
+  (setq key-chord-one-key-delay 0.3    ;; 0.3 secons delay for hitting same key (eg. aa)
+        key-chord-two-keys-delay 0.25) ;; delay hitting two different keys (eg. jk)
+  :config
+  (key-chord-mode 1))
+#+END_SRC
+*** Bindings
+#+BEGIN_SRC emacs-lisp
+(key-chord-define evil-insert-state-map "jk" 'evil-normal-state) ;; jk returns to norman mode, from insert mode
+#+END_SRC
+** avy
+avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using a given char.
+#+BEGIN_SRC emacs-lisp
+(use-package avy
+  :init
+  (setq avy-keys '(?q ?w ?e ?r ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)))
+#+END_SRC
+*** Bindings
+#+BEGIN_SRC emacs-lisp
+(define-key evil-normal-state-map (kbd "s") 'avy-goto-char)   ;; Go to any char
+(define-key evil-normal-state-map (kbd "S") 'avy-goto-word-1) ;; Go to beginning of a word
+#+END_SRC
+** projectile
+A project management tool. I set a project path below and make sure projectile scans that directory for projects.
+#+BEGIN_SRC emacs-lisp
+(use-package projectile
+  :init
+  (setq projectile-completion-system 'helm
+        projectile-enable-caching t
+        projectile-project-search-path '("~/Workspace/projects")) ;; This may take more paths as argument
+  :config
+  (progn
+    (projectile-discover-projects-in-search-path)
+    (setq projectile-globally-ignored-files (append '("Cargo.lock"))
+          projectile-globally-ignored-directories (append '(".stack-work" "target"))
+          projectile-globally-ignored-file-suffixes (append '("~" ".rs.bk")))
+    (projectile-mode)))
+;; FIXME: ignored stuff still showing up in projectile-find-file
+#+END_SRC
+** helm
+*** Enable and set defaults
+#+BEGIN_SRC emacs-lisp
+(use-package helm
+  :init
+  (setq helm-mode-fuzzy-match t
+        helm-completion-in-region-fuzzy-match t
+        helm-candidate-number-limit 100
+        projectile-completion-system 'helm)
+  :config
+  (progn
+    (helm-mode 1)
+    (helm-adaptive-mode 1)
+    (shackle-window "\\*helm*" 0.35))) ;; make helm windows appear at bottom
+#+END_SRC
+*** Extension packages
+#+BEGIN_SRC emacs-lisp
+(use-package helm-swoop)
+#+END_SRC
+*** Better selection
+Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ for selecting previous result.
+#+BEGIN_SRC emacs-lisp
+(define-key helm-map (kbd "<tab>") 'helm-next-line)
+(define-key helm-map (kbd "<backtab>") 'helm-previous-line)
+(define-key helm-map (kbd "M-j") 'helm-next-line)
+(define-key helm-map (kbd "M-k") 'helm-previous-line)
+#+END_SRC
+* Keybindings
+- For leader key bindings, see: [[*evil-leader][evil-leader]]
+- For key-chord  bindings, see: [[*Bindings][key-chord/bindings]]
+- For avy        bindings, see: [[*Bindings][avy/bindings]]
+** Some general keybindings
+| Key   | Action              |
+|-------+---------------------|
+| <ESC> | quit current action |
+| C-s   | save buffer         |
 
 #+BEGIN_SRC emacs-lisp
-(defun flycheck-buffer* (buffer)
-  "Runs flycheck on given BUFFER."
-  (with-current-buffer buffer
-    (flycheck-buffer)))
-
-(defun other-file-buffer-list nil
-  "Returns the list of all file buffers(not temproary ones) except currently open one."
-  (delq (current-buffer)
-    (remove-if-not 'buffer-file-name (buffer-list))))
-
-(defun flycheck-all-file-buffers nil
-    (mapc 'flycheck-buffer* (other-file-buffer-list)))
-
-(defun enable-flycheck-all-file-buffers-on-save nil
-  (interactive)
-  (add-hook 'after-save-hook 'flycheck-all-file-buffers))
-
-(defun disable-flycheck-all-file-buffers-on-save nil
-  (interactive)
-  (remove-hook 'after-save-hook 'flycheck-all-file-buffers))
-
-;; Enable it
-(enable-flycheck-all-file-buffers-on-save)
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(global-set-key (kbd "C-s") 'save-buffer)
 #+END_SRC
-** Company
-Code completion tool.
-
+** Better split management
+- A-- splits below, A-\ splits right.
+- A-h,j,k,l to switch between splits.
+- A-H,J,K,L shrink, enlarge split.
 #+BEGIN_SRC emacs-lisp
-(get-package 'company)
-(require 'company)
-(add-hook 'after-init-hook 'global-company-mode)
-
-(setq company-dabbrev-downcase 0)
-(setq company-idle-delay 0.2)
-
-(global-set-key [backtab] 'tab-indent-or-complete)
-(define-key evil-insert-state-map (kbd "C-SPC") 'company-complete-common-or-cycle)
-
-(with-eval-after-load 'company
-    (define-key company-active-map (kbd "<tab>") #'company-select-next)
-    (define-key company-active-map (kbd "<backtab>") #'company-select-previous))
+(define-key evil-normal-state-map (kbd "M-\\") 'split-window-right)
+(define-key evil-normal-state-map (kbd "M--") 'split-window-below)
+(define-key evil-normal-state-map (kbd "M-j") 'evil-window-down)
+(define-key evil-normal-state-map (kbd "M-k") 'evil-window-up)
+(define-key evil-normal-state-map (kbd "M-l") 'evil-window-right)
+(define-key evil-normal-state-map (kbd "M-h") 'evil-window-left)
+(define-key evil-normal-state-map (kbd "M-J") 'enlarge-window)
+(define-key evil-normal-state-map (kbd "M-K") 'shrink-window)
+(define-key evil-normal-state-map (kbd "M-L") 'enlarge-window-horizontally)
+(define-key evil-normal-state-map (kbd "M-H") 'shrink-window-horizontally)
 #+END_SRC
-** Projectile
-A project management tool.
-
+** Move in insert mode
+- Use A-h,j,k,l to move in insert mode.
 #+BEGIN_SRC emacs-lisp
-(get-package
- 'projectile
- 'helm-projectile)
-
-(setq projectile-completion-system 'helm)
+(define-key evil-insert-state-map (kbd "M-l") 'forward-char)
+(define-key evil-insert-state-map (kbd "M-h") 'backward-char)
+(define-key evil-insert-state-map (kbd "M-j") 'next-line)
+(define-key evil-insert-state-map (kbd "M-k") 'previous-line)
 #+END_SRC
-** Devdocs
-Use ~M-x devdocs-search~ to search the current symbol under  cursor in devdocs.io.
+** evil bindings for org-mode
 #+BEGIN_SRC emacs-lisp
-(require 'devdocs)
-#+END_SRC
-** Fish completion
-If eshell fails to complete, fall back to fish shell completion:
-
-#+BEGIN_SRC emacs-lisp
-(when (and (executable-find "fish")
-           (require 'fish-completion nil t))
-  (global-fish-completion-mode))
-#+END_SRC
-* Languages
-** LSP
-#+BEGIN_SRC emacs-lisp
-(get-package
- 'lsp-mode
- 'lsp-ui
- 'company-lsp)
-
-(require 'lsp)
-#+END_SRC
-** Haskell
-#+BEGIN_SRC emacs-lisp
-(get-package 'lsp-haskell)
-
-(require 'lsp-haskell)
-(setq lsp-haskell-process-path-hie "hie-wrapper")
-(add-hook 'haskell-mode-hook #'lsp)
-#+END_SRC
-** Rust
-*** TODO lsp
-*** TODO cargo minor mode
-** Python
-Just install ~python-pylint~ from distro package manager (or using pip) and ~flycheck~ will automatically handle Python linting.
-
-** Common Lisp
-First, you need to install ~slime~ using ~quicklisp~ package manager:
-#+BEGIN_SRC bash
-sbcl --eval '(ql:quickload :quicklisp-slime-helper)' --quit
-#+END_SRC
-
-Load it:
-#+BEGIN_SRC emacs-lisp
-(load (expand-file-name "~/.quicklisp/slime-helper.el"))
-;; Replace "sbcl" with the path to your implementation
-(setq inferior-lisp-program "sbcl")
+(evil-define-key 'normal org-mode-map
+  "[" 'org-previous-visible-heading
+  "]" 'org-next-visible-heading
+  ">" 'org-shiftmetaright
+  "<" 'org-shiftmetaleft
+  "-" 'org-cycle-list-bullet
+  "H" 'org-shiftleft
+  "J" 'org-shiftdown
+  "K" 'org-shiftup
+  "L" 'org-shiftright
+  "t" 'org-todo
+  "T" 'org-set-tags
+  "E" 'org-ctrl-c-ctrl-c
+  "O" 'org-open-at-point
+  "Y" 'org-store-link)
 #+END_SRC

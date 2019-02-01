@@ -17,6 +17,7 @@ bspc rule --add mpv       state=floating
 bspc rule --add pad_top   state=floating
 bspc rule --add Sxiv      state=floating
 bspc rule --add Zenity    state=floating
+bspc rule --add feh       state=floating
 
 pgrep compton || compton &
 bar &

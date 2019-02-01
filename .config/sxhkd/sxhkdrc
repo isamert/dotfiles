@@ -4,7 +4,7 @@
 
 # focus/swap with left/down/up/right window
 super + {_,shift + } {h,j,k,l}
-    bspwmc {focus,move} {west,south,north,east}
+    {bspwmc focus, euclid_mover} {west,south,north,east}
 
 # split
 super + {_,shift + } {backslash,minus}

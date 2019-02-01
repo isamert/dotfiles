@@ -77,6 +77,9 @@ alias xpaste="xclip -o"                  # paste cb content
 alias v="nvim"
 alias how="howdoi --color --all"
 
+# master wq
+alias :q="exit"
+
 # git
 alias g="git"
 alias gs="git status"

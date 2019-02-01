@@ -5,12 +5,6 @@ set searchengine duckduckgo
 set editorcmd st nvim
 set hintfiltermode vimperator-reflow
 
-" key-bindings
-bind <A-.> tabnext
-bind <A-,> tabprev
-bind + zoom 0.1 true
-bind - zoom -0.1 true
-
 " commands
 command withUrl composite get_current_url |
 command sync open localhost:8384
@@ -20,9 +14,22 @@ command mpd withUrl ! mpd-yt play
 command mpdHint hint -W ! mpd-yt play
 command mpdAdd withUrl ! mpd-yt add
 command mpdAddHint hint -W ! mpd-yt play
+command mimeo withUrl ! mimeo
+command mimeoHint hint -W ! mimeo
+command copyImage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
+command copyImageUrl composite hint -pipe img src | yank
+command searchImage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
 
-" Some useful default keybindings:
-" >> and << => move tab
-" C-i (in imode) => open editor
+" key-bindings
+bind <A-.> tabnext
+bind <A-,> tabprev
+bind <A-e> editor
+bind --mode=insert <A-e> editor
+bind + zoom 0.1 true
+bind - zoom -0.1 true
+bind p pin
+bind m mimeo
+bind M mimeoHint
+bind ;i copyImage
 
 " vim: set filetype=vim:

@@ -1,8 +1,8 @@
 text/html; firefox '%s'; copiousoutput
-image/x-imgur-album; feh -g 1280x720 '%s'
+image/x-imgur-album; feh --geometry 1280x720 --scale-down '%s'
 image/gif; mpv '%s' --autofit 1280x720 --loop=inf
-image/*; feh '%s'
+image/*; feh --geometry 1280x720 --scale-down '%s'
 video/x-youtube; mpv --ytdl-format=bestvideo+bestaudio/best '%s' --autofit 1280x720
 video/*; mpv '%s' --autofit 1280x720 --loop=inf
 
-*/*; xdg-open '%s'
+*/*; mimeo '%s'

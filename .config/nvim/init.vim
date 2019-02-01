@@ -283,8 +283,6 @@ command! -range TabularizeHaskellData <line1>,<line2>GTabularize/[{},]\|::
 " autos
 autocmd BufWritePost ~/.Xresources,~/.Xdefaults !xrdb %
 autocmd BufWritePost ~/.config/sxhkd/sxhkdrc !pkill -USR1 -x sxhkd
-autocmd BufWritePost ~/.config/bspwm/bspwmrc !./%
-
 
 function! PreviewToggler(fn, ...)
     " Takes a function that opens previewwindow, if the pwindow is open then
