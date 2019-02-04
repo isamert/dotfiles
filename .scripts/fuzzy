@@ -67,8 +67,8 @@ function fzf_packages_arch {
 
 case "$*" in
     "git add"*) shift 2; fzf_git_add "$@" ;;
-    "git files"*) fzf_git_files;;
-    "git log"*) fzf_git_log;;
+    "git files"*) shift 2; fzf_git_files "$@" ;;
+    "git log"*) shift 2; fzf_git_log "$@" ;;
     kill|fuck) fzf_kill;;
     packages) fzf_packages_arch;;
     "") fzf;;
