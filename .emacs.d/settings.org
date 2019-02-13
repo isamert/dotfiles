@@ -31,6 +31,33 @@ Here is the [[https://www.reddit.com/r/emacs/comments/345vtl/make_helm_window_at
                   (inhibit-same-window . t)
                   (window-height . ,size))))
 #+END_SRC
+*** kill-all-buffers
+source: https://github.com/azzamsa/scripts.el#kill-all-buffers
+#+BEGIN_SRC emacs-lisp
+(defun kill-all-other-buffers nil
+  "Kill all buffers but current buffer and special buffers.
+(Buffer that start with '*' and white space ignored)"
+  (interactive)
+  (when (y-or-n-p "Really kill all other buffers ? ")
+    (let ((killed-bufs 0))
+      (dolist (buffer (delq (current-buffer) (buffer-list)))
+        (let ((name (buffer-name buffer)))
+          (when (and name (not (string-equal name ""))
+                     (/= (aref name 0) ?\s)
+                     (string-match "^[^\*]" name))
+            (cl-incf killed-bufs)
+            (funcall 'kill-buffer buffer))))
+      (message "Killed %d buffer(s)" killed-bufs))))
+#+END_SRC
+*** delq*
+Like =delq= but removes more than just one item.
+#+BEGIN_SRC emacs-lisp
+(defun delq* (list &rest elems)
+  "Remove ELEMS from LIST"
+  (let ((l list))
+    (mapc (lambda (item) (setq l (delq item l))) elems)
+    l))
+#+END_SRC
 ** Package repos
 Add ~melpa~ package archive.
 #+BEGIN_SRC emacs-lisp
@@ -92,7 +119,7 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
 (setq auto-save-file-name-transforms `((".*" ,backup-dir t)))
 #+END_SRC
 ** Undo tree (Persistent undo and stuff)
-- ~undo-tree~ gives a persistent undo even if you close the file.
+- ~undo-tree~ gives a persistent undo.
 - Also it keeps undo history as a tree instead of a linear history. ~undo-tree-visualize~ may help.
 #+BEGIN_SRC emacs-lisp
 (defconst undo-dir "~/.emacs.d/undo/")
@@ -103,7 +130,8 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
   :ensure t
   :init
     (setq undo-tree-auto-save-history t
-          undo-tree-history-directory-alist `((".*" . ,undo-dir)))
+          undo-tree-history-directory-alist `((".*" . ,undo-dir))
+          undo-tree-enable-undo-in-region nil) ;; this fixes something?
   :config
   (global-undo-tree-mode))
 #+END_SRC
@@ -129,7 +157,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
                     :font "IBM Plex Mono"
                     :weight 'normal
                     :width 'normal
-                    :height 105)
+                    :height 100)
 #+END_SRC
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
@@ -173,7 +201,7 @@ This code highlights the portion of line that exceeds 80 columns and trailing sp
 Make some temproary windows appear at bottom.
 #+BEGIN_SRC emacs-lisp
 (shackle-window "\\*Help\\*" 0.4)
-(shackle-window "\\*Warnings*\\*" 0.4)
+(shackle-window "\\*Warnings*\\*" 0.2)
 (shackle-window "\\*Backtrace*\\*" 0.4)
 (shackle-window "\\*Flycheck.*" 0.4)
 (shackle-window "\\*Org Src.*\\*" 0.4)
@@ -184,8 +212,18 @@ Make some temproary windows appear at bottom.
 #+BEGIN_SRC emacs-lisp
 (use-package evil
   :ensure t
+  :init
+  (setq evil-want-integration t
+        evil-want-keybinding nil)
   :config
   (evil-mode 1))
+#+END_SRC
+*** Install evil keybindings for other modes
+#+BEGIN_SRC emacs-lisp
+(use-package evil-collection
+  :ensure t
+  :init
+  (evil-collection-init))
 #+END_SRC
 ** evil-leader
 Enable leader key and bind some keys.
@@ -275,6 +313,29 @@ These are the languages that can be run in codeblocks.
 #+BEGIN_SRC emacs-lisp
 (use-package htmlize :ensure t)
 #+END_SRC
+** Helper functions
+*** org-X-today
+#+BEGIN_SRC emacs-lisp
+(defun current-date nil
+  (shell-command-to-string "sh -c 'echo -n $(date \"+%Y-%m-%d %a\")'"))
+
+(defun insert-current-date nil
+  (interactive)
+  (insert (current-date)))
+
+(defun org-x-today (x)
+  (end-of-line)
+  (newline)
+  (insert (concat (upcase x) ": <" (current-date) ">")))
+
+(defun org-deadline-today nil
+  (interactive)
+  (org-x-today "deadline"))
+
+(defun org-schedule-today nil
+  (interactive)
+  (org-x-today "scheduled"))
+#+END_SRC
 * Other packages
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options.
@@ -284,6 +345,11 @@ A package that shows key combinations. (for example press C-x and wait) It also 
   :diminish which-key-mode
   :config
   (which-key-mode))
+#+END_SRC
+** goto-chg
+#+BEGIN_SRC emacs-lisp
+(use-package goto-chg
+  :ensure t)
 #+END_SRC
 ** eyebrowse/tabs
 #+BEGIN_SRC emacs-lisp
@@ -318,6 +384,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 *** Bindings
 #+BEGIN_SRC emacs-lisp
 (key-chord-define evil-insert-state-map "jk" 'evil-normal-state) ;; jk returns to norman mode, from insert mode
+(key-chord-define evil-normal-state-map "ff" 'evil-toggle-fold) ;; ff toggles folding
 #+END_SRC
 ** avy
 avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using a given char.
@@ -415,16 +482,19 @@ Shows a nice tooltip while idling on a completion.
     (company-quickhelp-mode))
     (eval-after-load 'company '(define-key company-active-map (kbd "M-p") 'company-quickhelp-manual-begin))) ;; Alt-p shows the popup manually
 #+END_SRC
-** TODO lsp
-#+BEGIN_SRC
-(use-package lsp-mode
-  :ensure t
-  :commands lsp
-  :init
-  (setq ...))
+** eshell
+Get bash/fish aliases and update eshell aliases.
+#+BEGIN_SRC emacs-lisp
+(defun eshell-update-aliases-if-needed nil
+  (interactive)
+  (when (file-newer-than-file-p "~/.config/aliases" eshell-aliases-file)
+      (progn
+          (shell-command-to-string (concat "fish -c \"alias | sed 's/\\'//g; s/\\$/ \\$\\*/' > "
+                                           eshell-aliases-file
+                                           "\""))
+          (eshell-read-aliases-list))))
 
-(use-package lsp-ui :commands lsp-ui-mode)
-(use-package company-lsp :commands company-lsp)
+(add-hook 'eshell-mode-hook 'eshell-update-aliases-if-needed)
 #+END_SRC
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
@@ -445,41 +515,64 @@ Shows a nice tooltip while idling on a completion.
 - A-h,j,k,l to switch between splits.
 - A-H,J,K,L shrink, enlarge split.
 #+BEGIN_SRC emacs-lisp
-(define-key evil-normal-state-map (kbd "M-\\") 'split-window-right)
-(define-key evil-normal-state-map (kbd "M--") 'split-window-below)
-(define-key evil-normal-state-map (kbd "M-j") 'evil-window-down)
-(define-key evil-normal-state-map (kbd "M-k") 'evil-window-up)
-(define-key evil-normal-state-map (kbd "M-l") 'evil-window-right)
-(define-key evil-normal-state-map (kbd "M-h") 'evil-window-left)
-(define-key evil-normal-state-map (kbd "M-J") 'enlarge-window)
-(define-key evil-normal-state-map (kbd "M-K") 'shrink-window)
-(define-key evil-normal-state-map (kbd "M-L") 'enlarge-window-horizontally)
-(define-key evil-normal-state-map (kbd "M-H") 'shrink-window-horizontally)
+(evil-define-key 'normal 'global
+  (kbd "M-\\") 'split-window-right
+  (kbd "M--") 'split-window-below
+  (kbd "M-J") 'enlarge-window
+  (kbd "M-K") 'shrink-window
+  (kbd "M-L") 'enlarge-window-horizontally
+  (kbd "M-H") 'shrink-window-horizontally)
+
+(mapc (lambda (x)
+        (evil-define-key 'normal x
+            (kbd "M-j") 'evil-window-down
+            (kbd "M-k") 'evil-window-up
+            (kbd "M-h") 'evil-window-left
+            (kbd "M-l") 'evil-window-right))
+      (list 'global eshell-command-map org-mode-map geiser-repl-mode-map))
 #+END_SRC
 ** Move in insert mode
 - Use A-h,j,k,l to move in insert mode.
+- Some extra for ~eshell~:
+  - A-j selects next matching input
+  - A-k selects previous matching input
 #+BEGIN_SRC emacs-lisp
-(define-key evil-insert-state-map (kbd "M-l") 'forward-char)
-(define-key evil-insert-state-map (kbd "M-h") 'backward-char)
-(define-key evil-insert-state-map (kbd "M-j") 'next-line)
-(define-key evil-insert-state-map (kbd "M-k") 'previous-line)
+(evil-define-key 'insert 'global
+  (kbd "M-l") 'forward-char
+  (kbd "M-h") 'backward-char
+  (kbd "M-j") 'next-line
+  (kbd "M-k") 'previous-line)
+
+(evil-define-key 'insert eshell-mode-map
+  (kbd "M-j") 'eshell-next-matching-input-from-input
+  (kbd "M-k") 'eshell-previous-matching-input-from-input)
+
+(evil-define-key 'insert geiser-repl-mode-map
+  (kbd "M-j") 'comint-next-matching-input-from-input
+  (kbd "M-k") 'comint-previous-matching-input-from-input)
 #+END_SRC
 ** evil bindings for org-mode
 #+BEGIN_SRC emacs-lisp
 (evil-define-key 'normal org-mode-map
   "[" 'org-previous-visible-heading
   "]" 'org-next-visible-heading
-  ">" 'org-shiftmetaright
-  "<" 'org-shiftmetaleft
   "-" 'org-cycle-list-bullet
   "H" 'org-shiftleft
   "J" 'org-shiftdown
   "K" 'org-shiftup
   "L" 'org-shiftright
-  "M-H" 'org-shiftmetaleft
-  "M-J" 'org-shiftmetadown
-  "M-K" 'org-shiftmetaup
-  "M-L" 'org-shiftmetaright
+  (kbd "M-H") 'org-shiftmetaleft
+  (kbd "M-J") 'org-shiftmetadown
+  (kbd "M-K") 'org-shiftmetaup
+  (kbd "M-L") 'org-shiftmetaright
+
+;; FIXME: M-h,j,k,l conflicts with split swithcing shourtcuts
+;; so I just prefixed them with Hyper but this does not feel natural.
+  (kbd "M-H-h") 'org-metaleft
+  (kbd "M-H-j") 'org-metadown
+  (kbd "M-H-k") 'org-metaup
+  (kbd "M-H-l") 'org-metaright
+
   "t" 'org-todo
   "T" 'org-set-tags
   "E" 'org-ctrl-c-ctrl-c
@@ -487,14 +580,26 @@ Shows a nice tooltip while idling on a completion.
   "Y" 'org-store-link)
 #+END_SRC
 * Language spesific
-** Python
+** python
 #+BEGIN_SRC emacs-lisp
-  (use-package company-jedi
-    :ensure t
-    :config
-    (progn
-      (eval-after-load "company" '(add-to-list 'company-backends 'company-jedi)) ;; Add company jedi to company backends
-      (add-hook 'python-mode-hook 'jedi-mode))) ;; Call signature is automatically shown as toolitp when inside of function call.
+(use-package elpy
+  :ensure t
+  :init
+  :config
+  (progn
+    (elpy-enable)
+    (add-hook 'elpy-mode-hook (lambda nil (which-function-mode nil))) ;; This mode causes IPython to freeze
+    (setq elpy-modules (delq* elpy-modules 'elpy-module-flymake 'elpy-modules-django))))
 #+END_SRC
-
-- There is also ~jedi:goto-definition~ function.
+** haskell
+#+BEGIN_SRC emacs-lisp
+(use-package haskell-mode :ensure t)
+(use-package flycheck-haskell
+  :ensure t
+  :config
+  (add-hook 'haskell-mode-hook #'flycheck-haskell-setup))
+#+END_SRC
+** rust
+#+BEGIN_SRC emacs-lisp
+(use-package rust-mode :ensure t)
+#+END_SRC

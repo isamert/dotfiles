@@ -1,6 +1,6 @@
-! !!!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! GRUVBOX colors
-! !!!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #define BACKGROUND #282828
 #define FOREGROUND #ebdbb2
 #define COLOR0  #282828
@@ -30,9 +30,9 @@
 ! 6. Dark cyan       14. Cyan
 ! 7. Light grey      15. White
 
-! !!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! st (terminal)
-! !!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 st.termname: st-256color
 st.shell: /usr/bin/fish
 st.font: IBM Plex Mono:pixelsize=14:antialias=true:autohint=true
@@ -41,26 +41,34 @@ st.borderpx: 1
 st.xfps: 300
 st.actionfps: 75
 
-! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! i3 settings (wm for window manager)
-! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-wm.gaps.inner: 6
-wm.border: 4
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! scratchpad sizes
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+sp.top.width: 190
+sp.top.height: 30
+sp.bot.width: 150
+sp.bot.height: 30
 
-! !!!!!!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! bspwm settings (wm for window manager)
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+wm.gaps: 0
+wm.border: 2
+
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! polybar (top bar)
-! !!!!!!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 bar.font0: Ubuntu Nerd Font:fontformat=truetype:size=11:antialias=false;0
 bar.font1: Font Awesome 5 Free:fontformat=truetype:size=11:antialias=false;0
 bar.font2: siji:pixelsize=10;1
-bar.border:	0
+bar.border: 0
 bar.radius: 0
 bar.height: 30
 bar.width: 100%
 
-! !!!!!!!!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! rofi (app launcher)
-! !!!!!!!!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 rofi.lines: 15
 rofi.columns: 1
 rofi.padding: 30
@@ -81,9 +89,9 @@ rofi.color-normal: argb:00282828, FOREGROUND, argb:00252936, argb:009575cd, #ff9
 rofi.color-active: argb:00282828, #b16286,    argb:00252936, argb:009575cd, #ffc000
 rofi.color-urgent: argb:00252936, #cc241d,    argb:00252936, argb:00252936, #ff0000
 
-! !!!!!!!!!!!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Generic color settings
-! !!!!!!!!!!!!!!!!!!!!!!
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *background: BACKGROUND
 *foreground: FOREGROUND
 *color0:  COLOR0

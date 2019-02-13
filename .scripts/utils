@@ -1,86 +1,40 @@
-#!/bin/bash
+#!/bin/sh
 
-# #############################################################################
-# Color definitions
-# #############################################################################
-# FG colors, D prefix means DARK variation
-F_RED="$(tput setaf 9)" ;    F_GREEN="$(tput setaf 10)"
-F_YELLOW="$(tput setaf 11)"; F_BLUE="$(tput setaf 12)"
-F_MAGENTA="$(tput setab 13)"; F_CYAN="$(tput setab 14)"
-F_DRED="$(tput setaf 1)" ;    F_DGREEN="$(tput setaf 2)"
-F_DYELLOW="$(tput setaf 3)"; F_DBLUE="$(tput setaf 4)"
-B_DMAGENTA="$(tput setab 5)"; B_DCYAN="$(tput setab 6)"
-
-# BG colors
-B_RED="$(tput setab 9)";     B_GREEN="$(tput setab 10)"
-B_YELLOW="$(tput setab 11)"; B_BLUE="$(tput setab 12)"
-B_MAGENTA="$(tput setab 13)"; B_CYAN="$(tput setab 14)"
-B_DRED="$(tput setab 1)"; B_DGREEN="$(tput setab 2)"
-B_DYELLOW="$(tput setab 3)"; B_DBLUE="$(tput setab 4)"
-B_DMAGENTA="$(tput setab 5)"; B_DCYAN="$(tput setab 6)"
-B_DGREY="$(tput setab 8)"; B_BLACK="$(tput setab 0)"
-
-BOLD=$(tput bold)
-R="$(tput sgr0)" # Reset
-
-# #############################################################################
-# Utility functions
-# #############################################################################
-# Attention: Using - in function names is not a valid in sh, so I use bash.
-
-function xrdb-set-value {
+xrdb_set_value() {
     # Usage:
-    # xrdb-set-value "st.alpha" 200
+    # xrdb_set_value "st.alpha" 200
 
     # This will not override ~/.Xresources, it will just update xrdb for this
     # session.
     echo "$1: $2" | xrdb -merge
 }
 
-function xrdb-get-value {
+xrdb_get_value() {
     # Usage:
-    # xrdb-get-value "entry.example"
+    # xrdb_get_value "entry.example"
 
-    xrdb -query | grep $1 | cut -d ":" -f 2 | xargs
+    xrdb -query | grep "$1" | cut -d ":" -f 2 | xargs
 }
 
-function xres-read-value {
+xres_read_value() {
     # Usage:
-    # xres-read-value "st.alpha"
+    # xres_read_value "st.alpha"
     # This will return the default value defined in ~/.Xresources, not the value
-    # from `xrdb -query` which could be changed by xrdb-set-value dynamically.
+    # from `xrdb -query` which could be changed by xrdb_set_value dynamically.
 
-    cat $HOME/.Xresources | grep -v "!" | grep $1 | cut -d ":" -f 2 | xargs
+    grep -v "!"  "$HOME/.Xresources" | grep "$1" | cut -d ":" -f 2 | xargs
 }
 
-# Reads stdin into a variable, accounting for trailing newlines. Avoids needing a subshell or
-# command substitution.
-function read-input {
-    # Use unusual variable names to avoid colliding with a variable name
-    # the user might pass in (notably "contents")
-    : "${1:?Must provide a variable to read into}"
-    if [[ "$1" == '_line' || "$1" == '_contents' ]]; then
-      echo "Cannot store contents to $1, use a different name." >&2
-      return 1
-    fi
-
-    local _line _contents
-     while read -r _line; do
-       _contents="${_contents}${_line}"$'\n'
-     done
-     _contents="${_contents}${_line}" # capture any content after the last newline
-     printf -v "$1" '%s' "$_contents"
-}
-
-function screen_width {
+screen_width() {
     xrandr -q | grep "Screen 0" | cut -d,  -f2 | cut -d" " -f3
 }
 
-function center_window {
-    local wid
+# FIXME: make posix
+center_window() {
+    wid=''
 
     # wait until the window shows up and set $wid
-    if [[ -n "$1" ]]; then
+    if [ -n "$1" ]; then
         IFS='=' read -ra ARGS <<< "$1"
         wid=$(xdotool search --sync "${ARGS[0]}" "${ARGS[1]}")
     else
@@ -88,9 +42,9 @@ function center_window {
         wid=$(xdotool getactivewindow)
     fi
 
-    local SCREEN_WIDTH=$(screen_width)
-    local WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
-    local X=$(((SCREEN_WIDTH - WIDTH) / 2))
+    SCREEN_WIDTH=$(screen_width)
+    WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
+    X=$(((SCREEN_WIDTH - WIDTH) / 2))
 
     xdotool windowmove $wid $X y
 }

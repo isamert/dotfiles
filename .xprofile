@@ -9,6 +9,7 @@ aria2c &                           # Download manager
 /usr/lib/geoclue-2.0/demos/agent & # Geo-location provider service (for redshift)
 (sleep 5 && redshift) &            # For my eyes
 clipmenud &                        # Clipboard history with dmenu
+emacs --daemon &                   # yeah
 
 # I just use the background of LightDM, no need for this for now
 # Keep that in mind that if screen res changes, or a new video input is connects

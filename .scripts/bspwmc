@@ -64,11 +64,15 @@ function scratchpad_top {
     class="padtop"
     id=$(xdotool search --class "$class")
     if [[ -z "$id" ]]; then
+        local top_gap=$(($(xrdb_get_value bar.height) - $(xrdb_get_value wm.border)))
+        local w=$(xrdb_get_value sp.top.width)
+        local h=$(xrdb_get_value sp.top.height)
+
         bspc rule --add "$class" state=floating sticky=on
         st -A 255 \
-           -g 150x20+1+1 \
+           -g ${w}x${h}+0+${top_gap} \
            -c "$class" \
-           -e /bin/bash -c "tmux attach-session -t$class || tmux new-session -s$class" &
+           -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
         center_window --class="$class"
     else
@@ -84,11 +88,14 @@ function scratchpad_bot {
     class="padbot$((desktop_id + 1))"
     id=$(xdotool search --class "$class")
     if [[ -z "$id" ]]; then
+        local w=$(xrdb_get_value sp.top.width)
+        local h=$(xrdb_get_value sp.top.height)
+
         bspc rule --add "$class" state=floating
         st -A 255 \
-           -g 150x20+1-1 \
+           -g ${w}x${h}+1-1 \
            -c "$class" \
-           -e /bin/bash -c "tmux attach-session -t$class || tmux new-session -s$class" &
+           -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
         center_window --class="$class"
     else

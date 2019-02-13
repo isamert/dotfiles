@@ -1,24 +1,4 @@
 # #############################################################################
-# Keys:
-# d  → mark delete
-# ^d → mark delete thread
-# u  → undo delete
-# ^b → urlview
-#
-# t  → tag
-# ;  → apply to tagged
-# w  → set flag
-# W  → clear flag
-#
-# $  → sync
-# N  → toggle new
-#
-# B  → toggle sidebar
-#
-# http://sheet.shiar.nl/mutt
-# #############################################################################
-
-# #############################################################################
 # General settings
 # #############################################################################
 
@@ -28,20 +8,21 @@ set date_format  = "%d/%m %I:%M"
 set index_format = "%2C %Z %d %-15.15F %s (%-4.4c)"
 set mailcap_path = ~/.mailcap
 
-set imap_keepalive = 150
-set mail_check     = 300
-
+set mail_check    = 60
 set ssl_starttls  = yes
 set ssl_force_tls = yes
 set send_charset  = "utf-8"
 
 set beep_new
 set smart_wrap
+set imap_check_subscribed
 unset imap_passive
 
 #auto_view text/html
 #alternative_order text/plain text/enriched text/html
 set new_mail_command= "notify-send 'New Email' '%n new messages, %u unread.' &"
+
+macro attach W <save-entry><kill-line>~/Downloads/attachments/
 
 # #############################################################################
 # Mail shortcuts
@@ -57,34 +38,31 @@ macro index pa '<sync-mailbox><enter-command>source ~/.config/mutt/anadolurc<ent
 # #############################################################################
 
 bind editor <space> noop
+bind index l display-message
+bind index h exit
 bind index g noop
 bind index gg first-entry
 bind index G last-entry
-bind index r imap-fetch-mail
 bind index d delete-message
 bind index u undelete-message
 bind index / search
+bind index r imap-fetch-mail
+bind index s sync-mailbox
+bind index n search-next
+bind index N search-opposite
+bind index [ half-up
+bind index ] half-down
+bind index zm collapse-all
+bind index za collapse-thread
 
-# Scroll in message rather than through mails
-bind pager <up> previous-line
-bind pager <down> next-line
-bind pager k previous-line
 bind pager j next-line
+bind pager k previous-line
+bind pager h exit
+bind pager [ half-up
+bind pager ] half-down
 
-bind index,pager B sidebar-toggle-visible # B            → toggle sidebar visibility
-bind index,pager \CP sidebar-prev         # Ctrl-Shift-P → Previous Mailbox
-bind index,pager \CN sidebar-next         # Ctrl-Shift-N → Next Mailbox
-bind index,pager \CO sidebar-open         # Ctrl-Shift-O → Open Highlighted Mailbox
-
-# #############################################################################
-# Sidebar
-# #############################################################################
-
-set sidebar_visible=yes
-set sidebar_folder_indent=yes
-set sidebar_indent_string='+--'
-set sidebar_short_path
-set sidebar_format = "%B%?F? [%F]?%* %?N?%N/?%S"
+bind editor \ek history-up
+bind editor \ej history-down
 
 # #############################################################################
 # Visual

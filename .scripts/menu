@@ -126,7 +126,7 @@ function passwords {
         if [[ "$1" == "-dump" ]]; then
             getpassword "$ENTRY" -dump
         else
-            local what=$(echo -e "Fill fields\nCopy password\nCopy username" | dmenu)
+            local what=$(echo -e "Fill fields\nFill password\nCopy password\nCopy username" | dmenu)
 
             local password=$(getpassword "$ENTRY")
             local username=$(getpassword "$ENTRY" -username)
@@ -134,9 +134,12 @@ function passwords {
                 "Fill fields")
                     local win=$(xdotool search --onlyvisible --classname Navigator) # find firefox
                     [[ -z "$win" ]] && win=$(xdotool selectwindow)
-                    sleep 0.5
+                    sleep 0.3
                     xdotool type --window "$win" "$username"
                     xdotool key  --window "$win" "Tab"
+                    xdotool type --window "$win" "$password" ;;
+                "Fill password")
+                    sleep 0.3
                     xdotool type --window "$win" "$password" ;;
                 "Copy password") echo "$password" | xclip -selection clipboard ;;
                 "Copy username") echo "$username" | xclip -selection clipboard ;;

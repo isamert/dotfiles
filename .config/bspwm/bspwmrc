@@ -1,15 +1,18 @@
 #!/bin/sh
-sxhkd &
 
-bspc monitor --reset-desktops I II III IV V VI VII VIII IX X
+. "$UTILS_FILE"
 
-bspc config initial_polarity second_child
+bspc monitor --reset-desktops I II III IV V
+
 bspc config automatic_scheme longest_side
+bspc config initial_polarity second_child
 
 bspc config focus_follows_pointer true
 bspc config single_monocle        true
 bspc config gapless_monocle       true
 bspc config borderless_monocle    true
+bspc config window_gap            $(xrdb_get_value wm.gaps)
+bspc config border_width          $(xrdb_get_value wm.border)
 
 bspc rule --add Screenkey manage=off
 bspc rule --add float     state=floating
@@ -20,4 +23,5 @@ bspc rule --add Zenity    state=floating
 bspc rule --add feh       state=floating
 
 pgrep compton || compton &
+pgrep sxhkd || sxhkd &
 bar &

@@ -60,7 +60,7 @@ function fzf_packages_arch {
         name = green gensub(/.*\//, "", 1, $1) reset;
         info = gensub(/[^ ]* /, "", 1);
         print repo, name, info, descr;
-      }' blue="$F_BLUE" green="$F_GREEN" reset="$R"
+      }' blue="$(tput setaf 4)" green="$(tput setaf 10)" reset="$(tput sgr0)"
     ) | cut -d' ' -f2)
     [[ -n "$packages" ]] && $AUR_HELPER -S ${packages}
 }

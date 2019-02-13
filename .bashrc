@@ -26,64 +26,7 @@ shopt -s globstar
 # save multiline command in the same history entry
 shopt -s cmdhist
 
-# #############################################################################
-# Aliases
-# #############################################################################
-
-# Package management
-alias aur="\$AUR_HELPER"
-alias aurin="\$AUR_HELPER -S"
-alias aurs="\$AUR_HELPER -Ss"
-alias aurupg="\$AUR_HELPER -Syu"
-alias pac="sudo pacman"
-alias pacin="sudo pacman -S"
-alias pacs="pacman -Ss"
-alias pacin="sudo pacman -S"
-alias pacins="sudo pacman -U" # Install from file
-alias pacupd="sudo pacman -Sy"
-alias pacupg="sudo pacman -Syu"
-alias pacfile="pacman -Fs" # Find package that contains given file
-alias pacre="sudo pacman -R" # Leave dependencies and configurations
-alias pacrem="sudo pacman -Rns" # Leave dependencies and configurations
-
-# Process management
-alias nameof="ps -o comm= -p" # Get the name of give PID
-alias fuckall="killall -s 9"
-
-# Utility
-alias mktar='tar -cvf'
-alias mkbz2='tar -cvjf'
-alias mkgz='tar -cvzf'
-
-# .. works out of the box. (search for "shopt -s autocd")
-alias ...="cd ../.."
-alias ....="cd ../../.."
-alias df="df -H"
-alias du="ncdu"
-alias ls="ls -hN --color=auto --group-directories-first"
-alias lls="ls -ltrh"
-alias grep="grep --color=auto"
-alias xcopy="xclip -selection clipboard" # some_cmd | xcopy -> copies to cb
-alias xpaste="xclip -o" # paste cb content
-
-# Abbrv
-alias v="nvim"
-alias g="git"
-alias gs="git status"
-alias ga="git add"
-alias gc="git commit -m"
-alias gpm="git push origin master"
-alias rxbk="killall xbindkeys; xbindkeys"
-
-# Stuff
-alias ipaddr="curl https://api.ipify.org; echo ''"
-alias ipinfo="curl https://ipinfo.io; echo ''"
-function weather { curl -s "wttr.in/$*" | less -R;}
-# Download a website completely:
-alias download-website="wget --recursive --page-requisites --html-extension --convert-links --no-parent --limit-rate=500K"
-# Use grep instead of rg if you don't have it
-alias git-todo="rg 'FIXME|TODO'"
-alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd+ | bc"
+source ~/.config/aliases
 
 # #############################################################################
 # Utility functions (functions I only use interactively, others go $UTIL_FILE)
