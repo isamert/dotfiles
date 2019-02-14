@@ -97,7 +97,7 @@ function files {
     if [[ "$1" == "--open" ]]; then
         case "$f" in
             "$HOME/Downloads/"*) dmanager $f ;;
-            *) xdg-open "$f"
+            *) jaro "$f"
         esac
     else
         echo "$f"
@@ -109,7 +109,7 @@ function folders {
     f=$(fd . $HOME --no-ignore-vcs --color=never --type=d --max-depth=6 | dmenu)
 
     if [[ "$1" == "--open" ]]; then
-        xdg-open "$f"
+        jaro "$f"
     else
         echo "$f"
     fi

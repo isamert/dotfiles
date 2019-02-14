@@ -1,0 +1,80 @@
+(assoc
+  #:pattern "^https?://.*"
+  #:program "qutebrowser %f"
+  #:test "pgrep qutebrowser"
+  #:on-fail "firefox %f")
+
+(assoc
+  #:pattern "^image/.*$"
+  #:program "sxiv %u"
+  #:on-error "feh %u"
+  #:edit "pinta %u")
+
+(assoc
+  #:pattern '("(application|text)/(x-)?(pdf|postscript|ps)" "image/(x-)?eps")
+  #:program "zathura %u"
+  #:view "zathura %u")
+
+(assoc
+  #:pattern "\\.org$"
+  #:program "emacsclient -ac --tty %f"
+  #:term "emacsclient -ac %f"
+  #:standalone #t)
+
+(assoc
+  #:pattern "^text/"
+  #:program "vim %f"
+  #:view "bat %f"
+  #:edit "vim %f")
+
+(assoc
+  #:pattern "^video/"
+  #:program "mpv %f"
+  #:on-error "vlc %f")
+
+(assoc
+  #:pattern "^audio/"
+  #:program "mpc insert %f"
+  #:on-success "mpc next"
+  #:on-error "mpv %f")
+
+(assoc
+  #:pattern "inode/directory"
+  #:program "ranger %f"
+  #:term "st -e"
+  #:tmux "tmux split-window -h")
+
+(assoc
+  #:pattern "^https?://(www.)?youtube.com/watch\\?.*v="
+  #:program '("tsp" "mpv" "--geometry=-10-10" "--ytdl-format=bestvideo[height<=?1440]+bestaudio/best" "--autofit=880x495" "%f"))
+
+(assoc
+  #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
+  #:program "rtv %f"
+  #:term "st -e"
+  #:on-error "firefox %f")
+
+(assoc
+  #:pattern "^magnet:\\?"
+  #:program "diana add %f"
+  #:on-success "notify-send 'Success' 'Torrent added to download list'"
+  #:on-success "notify-send 'Fail' 'Can't add torrent")
+
+(assoc
+  #:pattern "\\.torrent$"
+  #:program "diana add %f"
+  #:on-success "notify-send 'Success' 'Torrent added to download list'; rm %f"
+  #:on-success "notify-send 'Fail' 'Can't add torrent")
+
+(assoc
+  #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
+  #:program "extract %f"
+  #:view "xarchiver %f")
+
+;; TODO: add magnet, torrent links
+;;       rm .torrent file afterwards
+;; TODO: audio, mailto
+;; TODO: org-mode file with emacsclient OR emacs
+;; todo: xlsx, docx falan desktop-editors
+;; TODO: zip, rar, tar.gz falan
+;; TODO: rm stuff ~/.local/share/applications

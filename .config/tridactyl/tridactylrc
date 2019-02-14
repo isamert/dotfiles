@@ -14,8 +14,8 @@ command mpd withUrl ! mpd-yt play
 command mpdHint hint -W ! mpd-yt play
 command mpdAdd withUrl ! mpd-yt add
 command mpdAddHint hint -W ! mpd-yt play
-command mimeo withUrl ! mimeo
-command mimeoHint hint -W ! mimeo
+command jaro withUrl ! jaro
+command jaroHint hint -W ! jaro
 command copyImage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
 command copyImageUrl composite hint -pipe img src | yank
 command searchImage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
@@ -28,8 +28,8 @@ bind --mode=insert <A-e> editor
 bind + zoom 0.1 true
 bind - zoom -0.1 true
 bind p pin
-bind m mimeo
-bind M mimeoHint
+bind m jaro
+bind M jaroHint
 bind ;i copyImage
 
 " vim: set filetype=vim:

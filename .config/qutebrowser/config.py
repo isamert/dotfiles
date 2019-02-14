@@ -52,7 +52,7 @@ c.downloads.position = 'bottom'
 ## handler is used. Any `{}` in the string will be expanded to the
 ## filename, else the filename will be appended.
 ## Type: String
-c.downloads.open_dispatcher = "xdg-open {}"
+c.downloads.open_dispatcher = "jaro {}"
 
 ## Height (in pixels or as percentage of the window) of the completion.
 ## Type: PercOrInt

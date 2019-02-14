@@ -21,7 +21,7 @@ bind-key G end
 
 bind-key a toggle-article-read
 
-browser "mimeo %u"
+browser "jaro %u"
 
 # Macro prefix key:
 # ,y → yank url

@@ -5,4 +5,4 @@ image/*; feh --geometry 1280x720 --scale-down '%s'
 video/x-youtube; mpv --ytdl-format=bestvideo+bestaudio/best '%s' --autofit 1280x720
 video/*; mpv '%s' --autofit 1280x720 --loop=inf
 
-*/*; mimeo '%s'
+*/*; jaro '%s'
