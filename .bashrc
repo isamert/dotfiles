@@ -5,8 +5,6 @@
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
 
-source $UTILS_FILE
-
 # #############################################################################
 # General settings
 # #############################################################################
@@ -29,7 +27,7 @@ shopt -s cmdhist
 source ~/.config/aliases
 
 # #############################################################################
-# Utility functions (functions I only use interactively, others go $UTIL_FILE)
+# Utility functions (functions I only use interactively)
 # #############################################################################
 # Make and cd to the dir
 function mkcd { mkdir -p "$1"; cd "$1"; }

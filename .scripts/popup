@@ -1,12 +1,11 @@
 #!/bin/bash
-source "$UTILS_FILE"
 
 # BAR_BORDER is the border size of top bar (in my case polybar.)
 # BAR_HEIGHT is the height of top bar.
 # WINDOW_BORDER is the border size of windows.
-BAR_BORDER=$(xrdb_get_value "bar.border")
-BAR_HEIGHT=$(xrdb_get_value "bar.height")
-WINDOW_BORDER=$(xrdb_get_value "wm.border")
+BAR_BORDER=$(xrdb-get-value "bar.border")
+BAR_HEIGHT=$(xrdb-get-value "bar.height")
+WINDOW_BORDER=$(xrdb-get-value "wm.border")
 
 function calendar {
     # Runs $CALENDAR in right top corner of the screen.
@@ -25,14 +24,14 @@ function music {
     # Runs $MUSIC in top middle of the screen.
     MUSIC=ncmpcpp
 
-    local SCREEN_WIDTH=$(screen_width)
+    local SCREEN_WIDTH=$(wm-screen-width)
     local Y=$((BAR_HEIGHT+BAR_BORDER*2))
     local GEOMETRY="110x20-$(((SCREEN_WIDTH - 822) / 2))+$Y"
     local WINDOW_TITLE="Music Popup"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -A 255 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e $MUSIC 2> /dev/null &
-        center_window --name="$WINDOW_TITLE"
+        wm-center-window --name="$WINDOW_TITLE"
     else
         wmctrl -c "$WINDOW_TITLE"
     fi
@@ -52,14 +51,14 @@ function htop {
 }
 
 function visualizer {
-    local SCREEN_WIDTH=$(screen_width)
+    local SCREEN_WIDTH=$(wm-screen-width)
     local Y=$((BAR_HEIGHT+BAR_BORDER*2))
     local GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
     local WINDOW_TITLE="Visualizer"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e cava 2> /dev/null &
-        center_window --name="$WINDOW_TITLE"
+        wm-center-window --name="$WINDOW_TITLE"
     else
         wmctrl -c "$WINDOW_TITLE"
     fi

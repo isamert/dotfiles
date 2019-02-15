@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Usage:
+# xrdb-set-value "st.alpha" 200
+
+# This will not override ~/.Xresources, it will just update xrdb for this
+# session.
+
+echo "$1: $2" | xrdb -merge

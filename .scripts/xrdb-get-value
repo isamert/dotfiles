@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Usage:
+# xrdb-get-value "entry.example"
+xrdb -query | grep "$1" | cut -d ":" -f 2 | xargs

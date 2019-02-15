@@ -1,0 +1,2 @@
+#!/bin/sh
+xrandr -q | grep "Screen 0" | cut -d,  -f2 | cut -d" " -f3

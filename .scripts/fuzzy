@@ -7,8 +7,6 @@
 # finding stuff check out ~/.scripts/menu (it uses rofi and there are stuff
 # for music, apps, passwords etc.).
 
-source "$UTILS_FILE"
-
 function fzf_git_add {
     local files=$(git "$@" ls-files --modified --others --exclude-standard | fzf --multi --ansi --preview="git $* diff --color=always {1}")
     if [ -n "$files" ]; then

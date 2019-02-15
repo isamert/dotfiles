@@ -95,10 +95,7 @@ function files {
     f=$(fd . $HOME --no-ignore-vcs --color=never --max-depth=6 | dmenu)
 
     if [[ "$1" == "--open" ]]; then
-        case "$f" in
-            "$HOME/Downloads/"*) dmanager $f ;;
-            *) jaro "$f"
-        esac
+        jaro "$f"
     else
         echo "$f"
     fi
@@ -134,13 +131,13 @@ function passwords {
                 "Fill fields")
                     local win=$(xdotool search --onlyvisible --classname Navigator) # find firefox
                     [[ -z "$win" ]] && win=$(xdotool selectwindow)
-                    sleep 0.3
-                    xdotool type --window "$win" "$username"
+                    sleep 0.2
+                    xdotool type --delay 6 --window "$win" "$username"
                     xdotool key  --window "$win" "Tab"
-                    xdotool type --window "$win" "$password" ;;
+                    xdotool type --delay 6 --window "$win" "$password" ;;
                 "Fill password")
-                    sleep 0.3
-                    xdotool type --window "$win" "$password" ;;
+                    sleep 0.2
+                    xdotool type --delay 6 --window "$win" "$password" ;;
                 "Copy password") echo "$password" | xclip -selection clipboard ;;
                 "Copy username") echo "$username" | xclip -selection clipboard ;;
             esac
