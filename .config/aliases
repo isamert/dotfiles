@@ -29,9 +29,9 @@ alias ...="cd ../.."                     # .. works out of the box.
 alias ....="cd ../../.."
 alias df="df -H"
 alias du="ncdu"
-alias lls="ls -ltrh"
-alias grep="grep --color=auto"
-alias xcopy="xclip -selection clipboard"     # some_cmd | xcopy -> copies to cb
+alias ls="ls -ShG --color --group-directories-first"
+alias lls="ls -lthG --color --group-directories-first"
+alias grep="grep --color=auto -i"
 alias xpaste="xclip -selection clipboard -o" # paste cb content
 
 # abbrv

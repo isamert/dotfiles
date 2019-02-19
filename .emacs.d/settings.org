@@ -153,25 +153,31 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
 #+END_SRC
 ** Fonts
 #+BEGIN_SRC emacs-lisp
-(set-face-attribute 'default nil
-                    :font "IBM Plex Mono"
-                    :weight 'normal
-                    :width 'normal
-                    :height 100)
+(add-hook 'after-make-frame-functions
+  (lambda (frame)
+    (with-selected-frame frame
+      (set-face-attribute 'default nil
+                          :font "IBM Plex Mono"
+                          :weight 'normal
+                          :width 'normal
+                          :height 120))))
+#+END_SRC
+** Theme
+Set a nicer theme.
+#+BEGIN_SRC emacs-lisp
+(add-hook 'after-make-frame-functions
+  (lambda (frame)
+    (with-selected-frame frame
+      (use-package spacemacs-theme
+        :ensure t
+        :defer t
+        :init
+        (load-theme 'spacemacs-dark t)))))
 #+END_SRC
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
 #+BEGIN_SRC emacs-lisp
 (setq frame-title-format "%b - emacs")
-#+END_SRC
-** Theme
-Set a nicer theme.
-#+BEGIN_SRC emacs-lisp
-(use-package spacemacs-theme
-  :ensure t
-  :defer t
-  :init
-  (load-theme 'spacemacs-dark t))
 #+END_SRC
 ** Parentheses
 *** Matching
@@ -206,6 +212,11 @@ Make some temproary windows appear at bottom.
 (shackle-window "\\*Flycheck.*" 0.4)
 (shackle-window "\\*Org Src.*\\*" 0.4)
 (shackle-window "\\*Helm Swoop\\*" 0.4)
+#+END_SRC
+** Spaces instead of tabs
+#+BEGIN_SRC emacs-lisp
+(setq-default tab-width 4)
+(setq-default indent-tabs-mode nil)
 #+END_SRC
 * evil-mode
 ** Install
@@ -278,7 +289,7 @@ To move between visual lines instead of real lines:
 ** Auto indent subsections
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
 #+BEGIN_SRC emacs-lisp
-(add-hook 'org-mode-hook (lambda () (org-indent-mode t)) t)
+(add-hook 'org-mode-hook (lambda () (org-indent-mode -1)) t) ;; FIXME: theme
 (diminish 'org-indent-mode)
 #+END_SRC
 ** Nice bullets
@@ -523,13 +534,23 @@ Get bash/fish aliases and update eshell aliases.
   (kbd "M-L") 'enlarge-window-horizontally
   (kbd "M-H") 'shrink-window-horizontally)
 
-(mapc (lambda (x)
-        (evil-define-key 'normal x
-            (kbd "M-j") 'evil-window-down
-            (kbd "M-k") 'evil-window-up
-            (kbd "M-h") 'evil-window-left
-            (kbd "M-l") 'evil-window-right))
-      (list 'global eshell-command-map org-mode-map geiser-repl-mode-map))
+;; This is needed to override other modes mappings
+(define-minor-mode movement-map-mode
+  "Overrides all major and minor mode keys" t)
+
+(defvar movement-map (make-sparse-keymap "movement-map")
+  "Override all major and minor mode keys")
+
+(add-to-list 'emulation-mode-map-alists
+  `((movement-map-mode . ,movement-map)))
+
+(evil-define-key 'normal movement-map
+  (kbd "M-j") 'evil-window-down
+  (kbd "M-k") 'evil-window-up
+  (kbd "M-h") 'evil-window-left
+  (kbd "M-l") 'evil-window-right)
+
+(evil-make-intercept-map movement-map)
 #+END_SRC
 ** Move in insert mode
 - Use A-h,j,k,l to move in insert mode.

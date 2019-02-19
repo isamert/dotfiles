@@ -1,0 +1,3 @@
+open-command=jaro %u
+enable-notifications=true
+save-history=true

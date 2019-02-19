@@ -16,5 +16,4 @@ echo ""
 temp=$(mktemp /tmp/XXXX.js)
 sed "s/%IL%/$IL/;s/%ILCE%/$ILCE/" ~/.scripts/data/weather.js > "$temp"
 
-# slimerjs needs Firefox 59
-SLIMERJSLAUNCHER=~/Workspace/temp/firefox/firefox-bin slimerjs --load-images=false --headless "$temp"
+slimerjs --load-images=false --headless "$temp"

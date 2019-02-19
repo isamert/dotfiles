@@ -21,19 +21,16 @@ function fzf_git_files {
     fi
 }
 
+# FIXME: execute
 function fzf_git_log {
-    local commits=$(
-      git "$@" log \
-        --graph \
-        --format=format:"%C(yellow)%h%C(red)%d%C(reset) - %C(bold green)(%ar)%C(reset) %s %C(blue)<%an>%C(reset)" \
-        --color=always "$@" |
-      fzf --height 100% --ansi --no-sort \
-        --preview "git $* show --color=always {3}"
-      )
-    if [ -n "$commits" ]; then
-        local hashes=$(printf "$commits" | cut -d' ' -f2 | tr '\n' ' ')
-        git "$@" show $hashes
-    fi
+    git "$@" log --graph --color=always \
+        --format="%C(auto)%h%d %s %C(black)%C(bold)%cr" "$@" |
+    fzf --ansi --preview "echo {} | grep -o '[a-f0-9]\{7\}' | head -1 | xargs -I % sh -c 'git show --color=always %'" \
+               --bind "enter:execute:
+                  (grep -o '[a-f0-9]\{7\}' | head -1 |
+                  xargs -I % sh -c 'git show --color=always % | bat') << 'FZF-EOF'
+                  {}
+                  FZF-EOF"
 }
 
 function fzf_kill {

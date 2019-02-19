@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# This script is called from mpv and it downloads subtitle using `subdl`, then
+# loads downloaded subtitle into mpv.
+
 MPV_SOCKET=/tmp/mpvsocket
 file_path=$1
 language=$2

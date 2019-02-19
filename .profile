@@ -1,7 +1,6 @@
-export BROWSER=firefox
-export CBROWSER=w3m
-export EDITOR=nvim
-export VISUAL=nvim
+export BROWSER=jaro
+export EDITOR=jaro
+export VISUAL=jaro
 export TERMINAL=st
 export SHELL=/bin/fish
 export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin
@@ -52,3 +51,6 @@ export FZF_DEFAULT_OPTS="
 --header='(c-p: toggle-preview | c-d/u: page up/down | a-j/k: preview up/down | a-y: copy | a-e: edit)'
 --reverse
 "
+
+# SLIMMERJS requires firefox 59
+export SLIMERJSLAUNCHER=~/Workspace/temp/firefox/firefox-bin

@@ -1,35 +1,51 @@
-(assoc
-  #:pattern "^https?://.*"
-  #:program "qutebrowser %f"
-  #:test "pgrep qutebrowser"
-  #:on-fail "firefox %f")
+;;(assoc
+;;  #:pattern ".*"
+;;  #:program "echo %f >> ~/debug-jaro")
 
 (assoc
-  #:pattern "^image/.*$"
-  #:program "sxiv %u"
-  #:on-error "feh %u"
-  #:edit "pinta %u")
+  #:pattern '("^https?://(www.)?youtube.com/watch\\?.*v="
+              "^https?://(www.)?v.redd.it/\\w+/DASH"
+              "^https?://([a-zA-Z-]+)?streamable.com"
+              "^https?://giant.gfycat.com/*+"
+              "^https?://.+/.+\\.(gifv?|mp4|webm)(\\?.+)$")
+  #:program '("tsp" "mpv" "--geometry=-10-10" "--ytdl-format=bestvideo[height<=?1440]+bestaudio/best" "--autofit=880x495" "%f")
+  #:on-error "firefox %f")
 
 (assoc
-  #:pattern '("(application|text)/(x-)?(pdf|postscript|ps)" "image/(x-)?eps")
-  #:program "zathura %u"
-  #:view "zathura %u")
+  #:pattern '("^image/.*$"
+              "^https?://.+/.+\\.(jpg|png)(\\?.+)?$")
+  #:program "TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG; sxiv $TMP_IMG"
+  #:on-error "feh %f"
+  #:continue-on-error #f
+  #:edit "pinta %f")
+
+(assoc
+  #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
+  #:program "zathura %f"
+  #:view "zathura %f")
 
 (assoc
   #:pattern "\\.org$"
-  #:program "emacsclient -ac --tty %f"
-  #:term "emacsclient -ac %f"
+  #:program "emacsclient -c --tty %f"
+  #:term "emacsclient -c %f"
+  #:on-error "notify-send 'error' 'emacs daemon is not working'"
   #:standalone #t)
+
+(assoc
+  #:pattern "^(text|application)/(x-)?csv$"
+  #:program "sc-im %f"
+  #:term "st -e")
 
 (assoc
   #:pattern "^text/"
   #:program "vim %f"
+  #:term "st -e"
   #:view "bat %f"
   #:edit "vim %f")
 
 (assoc
   #:pattern "^video/"
-  #:program "mpv %f"
+  #:program "tsp mpv --input-ipc-server=/tmp/mpvsocket %f"
   #:on-error "vlc %f")
 
 (assoc
@@ -45,36 +61,44 @@
   #:tmux "tmux split-window -h")
 
 (assoc
-  #:pattern "^https?://(www.)?youtube.com/watch\\?.*v="
-  #:program '("tsp" "mpv" "--geometry=-10-10" "--ytdl-format=bestvideo[height<=?1440]+bestaudio/best" "--autofit=880x495" "%f"))
-
-(assoc
   #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
   #:program "rtv %f"
   #:term "st -e"
   #:on-error "firefox %f")
 
 (assoc
+  #:pattern "^https?://(www.)?i.redd.it/\\w+.(png|jpg|gif)"
+  #:program "feh %f")
+
+(assoc
   #:pattern "^magnet:\\?"
   #:program "diana add %f"
   #:on-success "notify-send 'Success' 'Torrent added to download list'"
-  #:on-success "notify-send 'Fail' 'Can't add torrent")
+  #:on-error "notify-send 'Fail' 'Can't add torrent")
+
+(assoc
+  #:pattern "^https?://.*"
+  #:program "qutebrowser %f"
+  #:test "pgrep qutebrowser"
+  #:on-fail "firefox %f")
 
 (assoc
   #:pattern "\\.torrent$"
   #:program "diana add %f"
   #:on-success "notify-send 'Success' 'Torrent added to download list'; rm %f"
-  #:on-success "notify-send 'Fail' 'Can't add torrent")
+  #:on-error "notify-send 'Fail' 'Can't add torrent")
 
 (assoc
   #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
   #:program "extract %f"
   #:view "xarchiver %f")
 
-;; TODO: add magnet, torrent links
-;;       rm .torrent file afterwards
-;; TODO: audio, mailto
-;; TODO: org-mode file with emacsclient OR emacs
-;; todo: xlsx, docx falan desktop-editors
-;; TODO: zip, rar, tar.gz falan
-;; TODO: rm stuff ~/.local/share/applications
+(assoc
+  #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
+  #:program "desktopeditors %F")
+
+(assoc
+  #:pattern ".*"
+  #:program (select-alternative-with "fzf")
+  #:term (select-alternative-with "dmenu")
+  #:standalone #t)

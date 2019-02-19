@@ -79,12 +79,12 @@ function youtube {
     # Search given string in youtube and show results. Play selected one in mpd.
 
     local DOWNLOAD_URLS=$(mktemp)
-    local SEARCH_STRING="$@"
+    local SEARCH_STRING="$*"
     [[ -z "$1" ]] && SEARCH_STRING=$(rofi -dmenu -p "search yt")
     [[ -z "$SEARCH_STRING" ]] && exit
 
     local RESULT=$(youtube-viewer --no-use-colors --no-interactive $SEARCH_STRING | rofi -dmenu -i -async-pre-read 0)
-    RESULT=$(echo $RESULT | cut -d"." -f1 | xargs)
+    RESULT=$(echo "$RESULT" | cut -d"." -f1 | xargs)
 
     local URL=$(youtube-viewer --no-use-colors --no-interactive --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
     mpd-yt play "$URL"
@@ -92,7 +92,7 @@ function youtube {
 
 
 function files {
-    f=$(fd . $HOME --no-ignore-vcs --color=never --max-depth=6 | dmenu)
+    f=$( ( git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME ls-files ; fd . "$HOME" --no-ignore-vcs --color=never --max-depth=6 ) | dmenu)
 
     if [[ "$1" == "--open" ]]; then
         jaro "$f"
@@ -103,7 +103,7 @@ function files {
 
 
 function folders {
-    f=$(fd . $HOME --no-ignore-vcs --color=never --type=d --max-depth=6 | dmenu)
+    f=$(fd . "$HOME" --no-ignore-vcs --color=never --type=d --max-depth=6 | dmenu)
 
     if [[ "$1" == "--open" ]]; then
         jaro "$f"

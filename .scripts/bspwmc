@@ -73,7 +73,7 @@ function scratchpad_top {
            -c "$class" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
-        wm-center-window --class="$class"
+        center_floating --class "$class"
     else
         bspc node $id --flag hidden
         bspc node -f $id
@@ -96,20 +96,82 @@ function scratchpad_bot {
            -c "$class" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
-        wm-center-window --class="$class"
+        center_floating --class "$class"
     else
         bspc node "$id" --flag hidden
         bspc node -f "$id"
     fi
 }
 
+# center current floating window in x-axis. if $1 is true, also centers in
+# y-axis. rest of the arguments are passed
+function center_floating {
+    wid=''
+
+    center_y=0
+    if [ "$1" = "true" ]; then
+        center_y=1
+        shift
+    fi
+
+    # wait until the window shows up and set $wid
+    if [ -n "$1" ]; then
+        wid=$(xdotool search --sync "$@")
+    else
+        wid=$(xdotool getactivewindow)
+    fi
+
+    SCREEN_WIDTH=$(wm-screen-width)
+    SCREEN_HEIGHT=$(wm-screen-height)
+    WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
+    HEIGHT=$(xwininfo -id "$wid" | grep Height | cut -d: -f2 | xargs)
+    X=$(((SCREEN_WIDTH - WIDTH) / 2))
+    Y=$(((SCREEN_HEIGHT - HEIGHT) / 2))
+
+    if [ "$center_y" = 1 ]; then
+        xdotool windowmove "$wid" $X $Y
+    else
+        xdotool windowmove "$wid" $X y
+    fi
+}
+
+function move_floating {
+    wid=''
+    position=$1
+    shift
+
+    # wait until the window shows up and set $wid
+    if [ -n "$1" ]; then
+        wid=$(xdotool search --sync "$@")
+    else
+        wid=$(xdotool getactivewindow)
+    fi
+
+    SCREEN_WIDTH=$(wm-screen-width)
+    SCREEN_HEIGHT=$(wm-screen-height)
+    WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
+    HEIGHT=$(xwininfo -id "$wid" | grep Height | cut -d: -f2 | xargs)
+    X=$(((SCREEN_WIDTH - WIDTH) / 2))
+    Y=$(((SCREEN_HEIGHT - HEIGHT) / 2))
+
+    case $position in
+        Q) xdotool windowmove "$wid" 10 $((10 + $(xrdb-get-value bar.height))) ;;
+        W) xdotool windowmove "$wid" $((SCREEN_WIDTH - 10 - WIDTH)) $((10 + $(xrdb-get-value bar.height))) ;;
+        A) xdotool windowmove "$wid" 10 $((SCREEN_HEIGHT - 10 - HEIGHT)) ;;
+        S) xdotool windowmove "$wid" $((SCREEN_WIDTH - 10 - WIDTH)) $((SCREEN_HEIGHT - 10 - HEIGHT)) ;;
+    esac
+
+}
+
 
 cmd="$1"; shift
 case $cmd in
     focus)   focus "$@" ;;
-    move)    move  "$@";;
-    resize)  resize "$@";;
-    focus_toggle_floating) focus_toggle_floating "$@";;
-    scratchpad_top) scratchpad_top "$@";;
-    scratchpad_bot) scratchpad_bot "$@";;
+    move)    move  "$@" ;;
+    resize)  resize "$@" ;;
+    focus_toggle_floating) focus_toggle_floating "$@" ;;
+    scratchpad_top) scratchpad_top "$@" ;;
+    scratchpad_bot) scratchpad_bot "$@" ;;
+    center_floating) center_floating "$@" ;;
+    move_floating) move_floating "$@" ;;
 esac

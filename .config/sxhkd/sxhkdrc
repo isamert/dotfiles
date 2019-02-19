@@ -14,7 +14,7 @@ super + {_,shift + } {backslash,minus}
 super + {t,shift + t,s,f}
     bspc node --state ~{tiled,pseudo_tiled,floating,fullscreen}
 
-super + shift + s
+super + shift + f
     bspwmc focus_toggle_floating
 
 # close window
@@ -30,8 +30,8 @@ super + {comma,period}
     bspc desktop --focus {prev,next}.local
 
 # focus/move to the given desktop
-super + {_,shift + }{1,2,3,4,5,6,7,8,9,0}
-    bspc {desktop --focus, node --to-desktop} '^{1,2,3,4,5,6,7,8,9,10}'
+super + {_,shift + }{1,2,3,4,5}
+    bspc {desktop --focus, node --to-desktop} '^{1,2,3,4,5}'
 
 # focus the last node/desktop
 super + {Tab,grave}
@@ -43,7 +43,18 @@ super {_, shift +} g
 
 # resize windows
 super + alt + {j,l,k,h}
-    bspwmc resize {h, w} {+20, -20}
+    bspwmc resize {h, w} {+50, -50}
+
+# center focused floating window
+super + c
+    bspwmc center_floating true
+
+# move floating window to corners
+super + shift + {Q,W,A,S}
+    bspwmc move_floating {Q,W,A,S}
+
+super + {shift,_} + equal
+    xdo resize {-w +50 -h +50, -w -50 -h -50}
 
 # logout
 super + shift + e
@@ -65,7 +76,7 @@ hyper + {_,shift + } {backslash,minus}
 {hyper + d, F12}
     bspwmc scratchpad_top
 
-F11
+{hyper + shift + d, F11}
     bspwmc scratchpad_bot
 
 hyper + q

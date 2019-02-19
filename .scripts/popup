@@ -31,7 +31,7 @@ function music {
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -A 255 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e $MUSIC 2> /dev/null &
-        wm-center-window --name="$WINDOW_TITLE"
+        bspwmc center_floating --name "$WINDOW_TITLE"
     else
         wmctrl -c "$WINDOW_TITLE"
     fi
@@ -58,7 +58,7 @@ function visualizer {
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e cava 2> /dev/null &
-        wm-center-window --name="$WINDOW_TITLE"
+        bspwmc center_floating --name "$WINDOW_TITLE"
     else
         wmctrl -c "$WINDOW_TITLE"
     fi
