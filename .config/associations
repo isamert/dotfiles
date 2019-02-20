@@ -7,7 +7,7 @@
               "^https?://(www.)?v.redd.it/\\w+/DASH"
               "^https?://([a-zA-Z-]+)?streamable.com"
               "^https?://giant.gfycat.com/*+"
-              "^https?://.+/.+\\.(gifv?|mp4|webm)(\\?.+)$")
+              "^https?://.+/.+\\.(gifv?|mp4|webm)(\\?.+)?$")
   #:program '("tsp" "mpv" "--geometry=-10-10" "--ytdl-format=bestvideo[height<=?1440]+bestaudio/best" "--autofit=880x495" "%f")
   #:on-error "firefox %f")
 

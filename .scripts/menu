@@ -112,8 +112,18 @@ function folders {
     fi
 }
 
-# TODO: xdotool paste
-# Use menu passwords -dump to print password info into stdout.
+function file_contents {
+    f=$(st -A 255 -c float -g 175 -e /bin/sh -c "rg --line-number --color=always --colors match:fg:white . $HOME/Documents | fzf --ansi --preview '
+        set file (echo {} | cut -d: -f1);
+        set linum (echo {} | cut -d: -f2);
+        set range (expr \$linum - 10);
+        set range_cmd (if test \$range -gt -1; echo --line-range; end);
+        set range_cmd_arg (if test \$range -gt -1; echo \$range:; end);
+        bat --color=always --style=header,numbers \"\$file\" --highlight-line \$linum \$range_cmd \$range_cmd_arg
+        ' | cut -d: -f1 | jaro")
+}
+
+# Use `menu passwords -dump` to print password info into stdout.
 function passwords {
     local KDBX_FILE="$HOME/Documents/sync/passwords.kdbx"
     local PASSWD=$(getpassword --keepass)
@@ -168,6 +178,7 @@ case $cmd in
     "youtube") youtube "$@";;
     "files") files "$@";;
     "folders") folders "$@";;
+    "file_contents") file_contents "$@";;
     "passwords") passwords "$@";;
     *) rofi -combi-modi window,drun,run -show combi "$@"
 esac

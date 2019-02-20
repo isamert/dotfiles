@@ -46,7 +46,7 @@ super + alt + {j,l,k,h}
     bspwmc resize {h, w} {+50, -50}
 
 # center focused floating window
-super + c
+super + C
     bspwmc center_floating true
 
 # move floating window to corners
@@ -86,8 +86,8 @@ hyper + x
     /bin/sh -c "st -c float -g 150x20 -e fuzzy kill"
 
 # menus
-hyper + {a, f, m, M, P, k}
-    menu {menu,files --open,mpd-artists,mpd-all,mpd-playlist,passwords}
+hyper + {a, f, F, m, M, P, k}
+    menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords}
 
 # popups
 hyper + {c,n,h,t}
