@@ -3,23 +3,6 @@
 ;;  #:program "echo %f >> ~/debug-jaro")
 
 (assoc
-  #:pattern '("^https?://(www.)?youtube.com/watch\\?.*v="
-              "^https?://(www.)?v.redd.it/\\w+/DASH"
-              "^https?://([a-zA-Z-]+)?streamable.com"
-              "^https?://giant.gfycat.com/*+"
-              "^https?://.+/.+\\.(gifv?|mp4|webm)(\\?.+)?$")
-  #:program '("tsp" "mpv" "--geometry=-10-10" "--ytdl-format=bestvideo[height<=?1440]+bestaudio/best" "--autofit=880x495" "%f")
-  #:on-error "firefox %f")
-
-(assoc
-  #:pattern '("^image/.*$"
-              "^https?://.+/.+\\.(jpg|png)(\\?.+)?$")
-  #:program "TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG; sxiv $TMP_IMG"
-  #:on-error "feh %f"
-  #:continue-on-error #f
-  #:edit "pinta %f")
-
-(assoc
   #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
   #:program "zathura %f"
   #:view "zathura %f")
@@ -61,14 +44,27 @@
   #:tmux "tmux split-window -h")
 
 (assoc
+  #:pattern '("^https?://(www.)?youtube.com/watch\\?.*v="
+              "^https?://(www.)?v.redd.it/\\w+/DASH"
+              "^https?://([a-zA-Z-]+)?streamable.com"
+              "^https?://giant.gfycat.com/*+"
+              "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
+  #:program '("tsp" "mpv" "--geometry=-10-10" "--ytdl-format=bestvideo[height<=?1440]+bestaudio/best" "--autofit=880x495" "%f")
+  #:on-error "firefox %f")
+
+(assoc
+  #:pattern '("^image/.*$"
+              "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$")
+  #:program "TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG; sxiv $TMP_IMG"
+  #:on-error "feh %f"
+  #:continue-on-error #f
+  #:edit "pinta %f")
+
+(assoc
   #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
   #:program "rtv %f"
   #:term "st -e"
   #:on-error "firefox %f")
-
-(assoc
-  #:pattern "^https?://(www.)?i.redd.it/\\w+.(png|jpg|gif)"
-  #:program "feh %f")
 
 (assoc
   #:pattern "^magnet:\\?"

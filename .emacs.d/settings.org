@@ -5,7 +5,7 @@
 
 * Introduction
 This is my emacs configuration.
-* Preperation
+* Preparation
 ** Load path
 Define the load path. (It's for auto-loading .el files)
 #+BEGIN_SRC emacs-lisp
@@ -79,17 +79,16 @@ diminish.el provides a way to hide mode indicators from mode line. Either pass ~
 * Basics
 ** Sane defaults
 #+BEGIN_SRC emacs-lisp
-(setq make-backup-files nil)      ;; Disable backup files
-(global-visual-line-mode t)       ;; Wrap long lines
+(global-visual-line-mode t)      ;; Wrap long lines
 (diminish 'visual-line-mode)
-(fset 'yes-or-no-p 'y-or-n-p)     ;; Ask y/n instead of yes/no
-;;(setq visible-bell 1)             ;; dude
-(setq ring-bell-function 'ignore) ;; this completely disables alarms
+(fset 'yes-or-no-p 'y-or-n-p)    ;; Ask y/n instead of yes/no
+(setq ring-bell-function 'ignore ;; this completely disables alarms
+      column-number-mode t       ;; Show column number
+      make-backup-files nil)     ;; Disable backup files
 #+END_SRC
 
 Save recent files.
 #+BEGIN_SRC emacs-lisp
-(require 'recentf)
 (recentf-mode 1)
 #+END_SRC
 ** Better scrolling
@@ -160,7 +159,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
                           :font "IBM Plex Mono"
                           :weight 'normal
                           :width 'normal
-                          :height 120))))
+                          :height 105))))
 #+END_SRC
 ** Theme
 Set a nicer theme.
@@ -199,7 +198,7 @@ This code highlights the portion of line that exceeds 80 columns and trailing sp
 #+BEGIN_SRC emacs-lisp
 (setq whitespace-line-column 80)
 (setq whitespace-style '(face empty tabs lines-tail trailing))
-(setq whitespace-global-modes '(not org-mode)) ;; Disable in org-mode
+(setq whitespace-global-modes '(not org-mode markdown-mode)) ;; Disable in org-mode and markdown-mode
 (global-whitespace-mode t)
 (diminish 'global-whitespace-mode)
 #+END_SRC
@@ -212,6 +211,8 @@ Make some temproary windows appear at bottom.
 (shackle-window "\\*Flycheck.*" 0.4)
 (shackle-window "\\*Org Src.*\\*" 0.4)
 (shackle-window "\\*Helm Swoop\\*" 0.4)
+(shackle-window "\\*Agenda Commands\\*" 0.4)
+(shackle-window "\\*Org Agenda\\*" 0.4)
 #+END_SRC
 ** Spaces instead of tabs
 #+BEGIN_SRC emacs-lisp
@@ -310,7 +311,7 @@ These are the languages that can be run in codeblocks.
    (python . t)))
 #+END_SRC
 *** Don't ask permissions for evaluating code blocks
-#+BEGIN_SRC
+#+BEGIN_SRC emacs-lisp
 (setq org-confirm-babel-evaluate nil)
 #+END_SRC
 *** Set default scheme implementation as ~guile~
@@ -347,6 +348,14 @@ These are the languages that can be run in codeblocks.
   (interactive)
   (org-x-today "scheduled"))
 #+END_SRC
+** Agenda
+   #+BEGIN_SRC emacs-lisp
+(setq org-agenda-files '("~/Documents/notes/life.org"))
+
+(setq org-agenda-use-time-grid t)
+(setq org-agenda-time-grid '((weekly today require-timed remove-match)
+                             (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------"))
+   #+END_SRC
 * Other packages
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options.
@@ -507,6 +516,17 @@ Get bash/fish aliases and update eshell aliases.
 
 (add-hook 'eshell-mode-hook 'eshell-update-aliases-if-needed)
 #+END_SRC
+** ispell
+- Use =flyspell-mode= to start spell checking.
+#+BEGIN_SRC emacs-lisp
+(setq ispell-program-name "hunspell"
+      ispell-local-dictionary "en_US"
+      ispell-local-dictionary-alist
+      '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
+
+(add-hook 'org-mode-hook 'flyspell-mode)
+(add-hook 'markdown-mode-hook 'flyspell-mode)
+#+END_SRC
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For key-chord  bindings, see: [[*Bindings][key-chord/bindings]]
@@ -599,8 +619,32 @@ Get bash/fish aliases and update eshell aliases.
   "E" 'org-ctrl-c-ctrl-c
   "O" 'org-open-at-point
   "Y" 'org-store-link)
+
+(evil-define-key 'normal org-agenda-mode-map
+  "" )
 #+END_SRC
-* Language spesific
+** evil bindings for org-agenda
+#+BEGIN_SRC emacs-lisp
+(define-key org-agenda-mode-map "j" 'evil-next-line)
+(define-key org-agenda-mode-map "k" 'evil-previous-line)
+#+END_SRC
+* Language specific
+** markdown
+#+BEGIN_SRC emacs-lisp
+(use-package markdown-mode
+  :ensure t
+  :mode
+  (("README\\.md\\'" . gfm-mode)
+   ("\\.md\\'" . markdown-mode)
+   ("\\.markdown\\'" . markdown-mode))
+  :init
+  (setq markdown-command "multimarkdown")
+  :config
+  (evil-define-key 'normal markdown-mode-map
+    (kbd "<tab>") 'markdown-cycle
+    (kbd "]") 'markdown-outline-next
+    (kbd "[") 'markdown-outline-previous))
+#+END_SRC
 ** python
 #+BEGIN_SRC emacs-lisp
 (use-package elpy

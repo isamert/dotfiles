@@ -70,24 +70,23 @@ bar.width: 100%
 ! rofi (app launcher)
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 rofi.lines: 15
+rofi.width: 70
 rofi.columns: 1
-rofi.padding: 30
+rofi.padding: 10
 rofi.fullscreen: false
 rofi.auto-select: false
 rofi.color-enabled: true
-rofi.hide-scrollbar: false
-rofi.separator-style: "-"
-rofi.font: Inconsolata Bold 12
+rofi.hide-scrollbar: true
+rofi.separator-style: solid
+rofi.font: xos4 Terminus 12
 rofi.drun-show-actions: true
 rofi.case-sensitive: false
 rofi.matching: normal
 
-! Window:           'background',  'border', 'separator'
-rofi.color-window: TBG,              COLOR8,    argb:ffffffff
-!   State:              'bg',       'fg',      'altbg',        'hlbg',         hlfg
-rofi.color-normal: argb:00282828, FOREGROUND, argb:00252936, argb:009575cd, #ff9575cd
-rofi.color-active: argb:00282828, #b16286,    argb:00252936, argb:009575cd, #ffc000
-rofi.color-urgent: argb:00252936, #cc241d,    argb:00252936, argb:00252936, #ff0000
+rofi.color-window: #222222, #222222, #b1b4b3
+rofi.color-normal: #222222, #b1b4b3, #222222, #005577, #b1b4b3
+rofi.color-active: #222222, #b1b4b3, #222222, #007763, #b1b4b3
+rofi.color-urgent: #222222, #b1b4b3, #222222, #77003d, #b1b4b3
 
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Generic color settings

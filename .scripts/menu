@@ -3,7 +3,7 @@
 all_name='[ALL]'
 
 function dmenu {
-    rofi -dmenu -fuzzy -i $@;
+    rofi -dmenu -fuzzy -i "$@"
 }
 
 function _mpd-artists {
@@ -92,7 +92,7 @@ function youtube {
 
 
 function files {
-    f=$( ( git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME ls-files ; fd . "$HOME" --no-ignore-vcs --color=never --max-depth=6 ) | dmenu)
+    f=$( ( git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files ; fd . --no-ignore-vcs --color=never --max-depth=6 ) | dmenu)
 
     if [[ "$1" == "--open" ]]; then
         jaro "$f"
