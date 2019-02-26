@@ -3,6 +3,7 @@ export EDITOR=jaro
 export VISUAL=jaro
 export TERMINAL=st
 export SHELL=/bin/fish
+export TERM=xterm-24bit
 export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin
 
 # Used in calendar-popup script (I may forget to update this information)

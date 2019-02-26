@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=sc-im
-Comment=Launch sc-im csv editor
-Icon=utilities-terminal
-Terminal=false
-Exec=st -e sc-im
-Categories=ConsoleOnly;
-MimeType=text/csv;text/xls;application/vnd.ms-excel;

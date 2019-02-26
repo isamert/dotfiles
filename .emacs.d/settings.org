@@ -290,7 +290,7 @@ To move between visual lines instead of real lines:
 ** Auto indent subsections
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
 #+BEGIN_SRC emacs-lisp
-(add-hook 'org-mode-hook (lambda () (org-indent-mode -1)) t) ;; FIXME: theme
+(add-hook 'org-mode-hook (lambda () (org-indent-mode t)) t) ;; FIXME: theme
 (diminish 'org-indent-mode)
 #+END_SRC
 ** Nice bullets
@@ -299,7 +299,7 @@ Make headings look better with nice bullets. It also adjusts the size of heading
 (use-package org-bullets
   :ensure t
   :init
-  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode t))))
 #+END_SRC
 ** Babel
 *** Load languages
@@ -443,7 +443,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
 *** Better selection
 Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ for selecting previous result.
 #+BEGIN_SRC emacs-lisp
-(define-key helm-map (kbd "<tab>") 'helm-next-line)
+(define-key helm-map (kbd "TAB") 'helm-next-line)
 (define-key helm-map (kbd "<backtab>") 'helm-previous-line)
 (define-key helm-map (kbd "M-j") 'helm-next-line)
 (define-key helm-map (kbd "M-k") 'helm-previous-line)
@@ -619,14 +619,13 @@ Get bash/fish aliases and update eshell aliases.
   "E" 'org-ctrl-c-ctrl-c
   "O" 'org-open-at-point
   "Y" 'org-store-link)
-
-(evil-define-key 'normal org-agenda-mode-map
-  "" )
 #+END_SRC
 ** evil bindings for org-agenda
 #+BEGIN_SRC emacs-lisp
-(define-key org-agenda-mode-map "j" 'evil-next-line)
-(define-key org-agenda-mode-map "k" 'evil-previous-line)
+(add-hook 'org-agenda-mode-hook
+  (lambda ()
+    (define-key org-agenda-mode-map "j" 'evil-next-line)
+    (define-key org-agenda-mode-map "k" 'evil-previous-line)))
 #+END_SRC
 * Language specific
 ** markdown
@@ -641,7 +640,7 @@ Get bash/fish aliases and update eshell aliases.
   (setq markdown-command "multimarkdown")
   :config
   (evil-define-key 'normal markdown-mode-map
-    (kbd "<tab>") 'markdown-cycle
+    (kbd "TAB") 'markdown-cycle
     (kbd "]") 'markdown-outline-next
     (kbd "[") 'markdown-outline-previous))
 #+END_SRC

@@ -1,3 +1,8 @@
+#include ".config/model"
+! .model file contains a line that defines the model of current computer, like:
+! #define X220 1
+! So that I can set different values for different computers.
+
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! GRUVBOX colors
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -34,7 +39,7 @@
 ! st (terminal)
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 st.termname: xterm-24bit
-st.shell: /usr/bin/fish
+st.shell: /bin/fish
 st.font: IBM Plex Mono:pixelsize=14:antialias=true:autohint=true
 st.alpha: 200
 st.borderpx: 1
@@ -44,10 +49,19 @@ st.actionfps: 75
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! scratchpad sizes
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#ifdef N550JK
 sp.top.width: 190
 sp.top.height: 30
 sp.bot.width: 150
 sp.bot.height: 30
+#endif
+
+#ifdef X220
+sp.top.width: 100
+sp.top.height: 30
+sp.bot.width: 100
+sp.bot.height: 30
+#endif
 
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! bspwm settings (wm for window manager)

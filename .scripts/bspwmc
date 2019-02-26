@@ -87,8 +87,8 @@ function scratchpad_bot {
     class="padbot$((desktop_id + 1))"
     id=$(xdotool search --class "$class")
     if [[ -z "$id" ]]; then
-        local w=$(xrdb-get-value sp.top.width)
-        local h=$(xrdb-get-value sp.top.height)
+        local w=$(xrdb-get-value sp.bot.width)
+        local h=$(xrdb-get-value sp.bot.height)
 
         bspc rule --add "$class" state=floating
         st -A 255 \
