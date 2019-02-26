@@ -113,14 +113,16 @@ function folders {
 }
 
 function file_contents {
-    f=$(st -A 255 -c float -g 175 -e /bin/sh -c "rg --line-number --color=always --colors match:fg:white . $HOME/Documents | fzf --ansi --preview '
-        set file (echo {} | cut -d: -f1);
-        set linum (echo {} | cut -d: -f2);
-        set range (expr \$linum - (expr \$LINES / 2));
-        set range_cmd (if test \$range -gt -1; echo --line-range; end);
-        set range_cmd_arg (if test \$range -gt -1; echo \$range:; end);
-        bat --color=always --style=header,numbers \"\$file\" --highlight-line \$linum \$range_cmd \$range_cmd_arg
-        ' | cut -d: -f1 | jaro")
+    f=$(st -A 255 -c float -g $(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "
+        cd \"$HOME/Documents\"
+        result=\$(rg --no-text --line-number --color=always --colors match:fg:white . | fzf --ansi --preview '
+          set file (echo {} | cut -d: -f1);
+          set linum (echo {} | cut -d: -f2);
+          set range (expr \$linum - (expr \$LINES / 2));
+          set range_cmd (if test \$range -gt -1; echo --line-range; end);
+          set range_cmd_arg (if test \$range -gt -1; echo \$range:; end);
+          bat --color=always --style=header,numbers \"\$file\" --highlight-line \$linum \$range_cmd \$range_cmd_arg')
+        f=\$(echo \$result | cut -d: -f1); jaro \$f")
 }
 
 # Use `menu passwords -dump` to print password info into stdout.
@@ -142,12 +144,12 @@ function passwords {
                     local win=$(xdotool search --onlyvisible --classname Navigator) # find firefox
                     [[ -z "$win" ]] && win=$(xdotool selectwindow)
                     sleep 0.2
-                    xdotool type --delay 6 --window "$win" "$username"
+                    xdotool type --delay 5 --window "$win" "$username"
                     xdotool key  --window "$win" "Tab"
-                    xdotool type --delay 6 --window "$win" "$password" ;;
+                    xdotool type --delay 5 --window "$win" "$password" ;;
                 "Fill password")
                     sleep 0.2
-                    xdotool type --delay 6 --window "$win" "$password" ;;
+                    xdotool type --delay 5 --window "$win" "$password" ;;
                 "Copy password") echo "$password" | xclip -selection clipboard ;;
                 "Copy username") echo "$username" | xclip -selection clipboard ;;
             esac
