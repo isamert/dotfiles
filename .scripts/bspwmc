@@ -21,9 +21,9 @@ function focus_toggle_floating {
 function focus {
     local dir="$1"
     if is_floating; then
-        bspc node --focus "$dir.local.floating"
+        bspc node --focus "$dir.floating"
     else
-        bspc node --focus "$dir.local.!floating"
+        bspc node --focus "$dir.!floating"
     fi
 }
 
@@ -64,9 +64,6 @@ function scratchpad_top {
     id=$(xdotool search --class "$class")
     if [[ -z "$id" ]]; then
         local top_gap=$(($(xrdb-get-value bar.height) - $(xrdb-get-value wm.border)))
-        local w=$(xrdb-get-value sp.top.width)
-        local h=$(xrdb-get-value sp.top.height)
-
         bspc rule --add "$class" state=floating sticky=on
         st -A 1 \
            -g "$(xrdb-get-value sp.top.geometry)"+0+${top_gap} \
