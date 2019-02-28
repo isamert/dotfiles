@@ -113,7 +113,7 @@ function folders {
 }
 
 function file_contents {
-    f=$(st -A 255 -c float -g $(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "
+    f=$(st -A 1 -c float -g $(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "
         cd \"$HOME/Documents\"
         result=\$(rg --no-text --line-number --color=always --colors match:fg:white . | fzf --ansi --preview '
           set file (echo {} | cut -d: -f1);

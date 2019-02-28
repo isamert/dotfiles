@@ -66,7 +66,7 @@ super + shift + e
 
 # open a terminal (with shift it floats, with ctrl its opaque, with ctrl + shift its floating opaque)
 {super, hyper} + {_, shift + ctrl +, shift +, ctrl +} Return
-    eval $TERMINAL {_,_} {_,-c "float" -g 100x20 -A 255,-c "float" -g 100x20,-A 255}
+    eval $TERMINAL {_,_} {_,-c "float" -g 100x20 -A 1,-c "float" -g 100x20,-A 1}
 
 # open a terminal at
 hyper + {_,shift + } {backslash,minus}

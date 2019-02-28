@@ -23,7 +23,7 @@ Exec=/bin/sh -c "st -c float -g 150x20 -e fuzzy kill"
 
 [Desktop Action opaquest]
 Name=Opaque st terminal (meta + ctrl + enter)
-Exec=/bin/sh -c "st -A 255"
+Exec=/bin/sh -c "st -A 1"
 
 [Desktop Action floatingst]
 Name=Floating st terminal (meta + shift + enter)
@@ -31,4 +31,4 @@ Exec=/bin/sh -c "st -c float -g 150x30"
 
 [Desktop Action floatingstopaque]
 Name=Floating st terminal (opaque)  (meta + shift + ctrl + enter)
-Exec=/bin/sh -c "st -c float -g 150x30 -A 255"
+Exec=/bin/sh -c "st -c float -g 150x30 -A 1"

@@ -68,7 +68,7 @@ function scratchpad_top {
         local h=$(xrdb-get-value sp.top.height)
 
         bspc rule --add "$class" state=floating sticky=on
-        st -A 255 \
+        st -A 1 \
            -g "$(xrdb-get-value sp.top.geometry)"+0+${top_gap} \
            -c "$class" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
@@ -88,7 +88,7 @@ function scratchpad_bot {
     id=$(xdotool search --class "$class")
     if [[ -z "$id" ]]; then
         bspc rule --add "$class" state=floating
-        st -A 255 \
+        st -A 1 \
            -g "$(xrdb-get-value sp.bot.geometry)"+1-1 \
            -c "$class" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
