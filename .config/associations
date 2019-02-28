@@ -21,10 +21,10 @@
 
 (assoc
   #:pattern "^text/"
-  #:program "vim %f"
+  #:program "nvim %f"
   #:term "st -e"
   #:view "bat %f"
-  #:edit "vim %f")
+  #:edit "nvim %f")
 
 (assoc
   #:pattern "^video/"
