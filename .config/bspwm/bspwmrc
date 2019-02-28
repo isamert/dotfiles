@@ -1,6 +1,7 @@
 #!/bin/sh
 
-bspc monitor --reset-desktops I II III IV V
+# Set 5 desktops for each connected screen
+xrandr -q | grep " connected" | cut -d' ' -f1 | xargs -i bspc monitor {} --reset-desktops I II III IV V
 
 bspc config automatic_scheme longest_side
 bspc config initial_polarity second_child

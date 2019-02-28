@@ -14,6 +14,7 @@ super + {_,shift + } {backslash,minus}
 super + {t,shift + t,s,f}
     bspc node --state ~{tiled,pseudo_tiled,floating,fullscreen}
 
+# focus last floating window
 super + shift + f
     bspwmc focus_toggle_floating
 
@@ -29,9 +30,9 @@ alt + {_, shift +} Tab
 super + {comma,period}
     bspc desktop --focus {prev,next}.local
 
-# focus/move to the given desktop
-super + {_,shift + }{1,2,3,4,5}
-    bspc {desktop --focus, node --to-desktop} '^{1,2,3,4,5}'
+# focus/move to the given desktop on current monitor
+super + {_,shift + }{1-5}
+    bspc {desktop --focus, node --to-desktop} (bspc query -D -m | sed -n "{1-5}p")
 
 # focus the last node/desktop
 super + {Tab,grave}
@@ -39,7 +40,7 @@ super + {Tab,grave}
 
 # change gap size
 super {_, shift +} g
-    bspc config window_gap (math (bspc config window_gap) {-,+} 3)
+    bspc config window_gap (expr (bspc config window_gap) {-,+} 3)
 
 # resize windows
 super + alt + {j,l,k,h}
@@ -95,7 +96,7 @@ hyper + {c,n,h,t}
 
 # random wallpaper
 hyper + apostrophe
-    /bin/sh -c "feh --bg-scale \$(find ~/Pictures/wallpaper | shuf -n 1)"
+    feh --bg-scale (find ~/Pictures/wallpaper | shuf -n 1)
 
 # screenshot
 {Print, hyper + s, shift + Print, control + Print, control + shift + Print}
@@ -115,7 +116,7 @@ XF86Audio{Lower,Raise}Volume
 
 # audio/mic toggle
 XF86Audio{_,Mic}Mute
-    amuxer set {Master,Capture} toggle
+    amixer set {Master,Capture} toggle
 
 # toggle music
 {hyper + p, XF86AudioPlay}
