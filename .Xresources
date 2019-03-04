@@ -71,7 +71,7 @@ wm.border: 2
 ! polybar (top bar)
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 bar.font0: IBM Plex Sans:fontformat=truetype:size=11:antialias=false;0
-bar.font1: Ubuntu Nerd Font:fontformat=truetype:size=13:antialias=false;0
+bar.font1: Ubuntu Mono Nerd Font:fontformat=truetype:size=13:antialias=false;0
 bar.font2: Liberation Sans:fontformat=truetype:size=11:antialias=false;0
 !bar.font2: siji:pixelsize=10;1
 bar.border: 0

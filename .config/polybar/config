@@ -253,6 +253,8 @@ battery = BAT0
 adapter = AC0
 full-at = 95
 
+format-full =
+
 format-charging = <animation-charging> <label-charging>
 format-charging-underline = #ffb52a
 
