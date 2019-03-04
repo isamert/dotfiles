@@ -45,6 +45,7 @@
 
 (assoc
   #:pattern '("^https?://(www.)?youtube.com/watch\\?.*v="
+              "^https?://(www.)?youtu.be/"
               "^https?://(www.)?v.redd.it/\\w+/DASH"
               "^https?://([a-zA-Z-]+)?streamable.com"
               "^https?://giant.gfycat.com/*+"

@@ -34,7 +34,11 @@ set theme_color_scheme gruvbox
 set theme_title_display_process yes
 set -U theme_date_format "+%H:%M:%S"
 
-source ~/.config/aliases
+if not set -q abbrs_initialized
+    sed "s/alias/abbr/;s/=/ /" ~/.config/aliases | source
+    echo "- Abbreviations are initialized."
+    set -U abbrs_initialized
+end
 
 function weather; curl -s "wttr.in/$argv" | less -R; end
 function f; fff "$argv"; cd (cat ~/.cache/fff/fff.d); end

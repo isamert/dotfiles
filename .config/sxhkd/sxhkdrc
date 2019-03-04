@@ -22,10 +22,6 @@ super + shift + f
 super + w
     bspc node --close
 
-# next/prev window
-alt + {_, shift +} Tab
-    bspc node -f {next,prev}.local
-
 # next/prev desktop
 super + {comma,period}
     bspc desktop --focus {prev,next}.local
@@ -34,9 +30,26 @@ super + {comma,period}
 super + {_,shift + }{1-5}
     bspc {desktop --focus, node --to-desktop} (bspc query -D -m | sed -n "{1-5}p")
 
-# focus the last node/desktop
-super + {Tab,grave}
-    bspc {node,desktop} --focus last
+# focus the last node
+super + Tab
+    bspc node --focus last
+
+# focus next monitor
+super + grave
+    bspc monitor next --focus
+
+# move current window to next monitor
+super + shift + grave
+    bspc node --to-desktop (bspc query -D -m next -d .active | sed -n "1p")
+
+# move current window to Nth monitor
+# (no, I don't have 5 monitors but just in case. hehe)
+super + alt + {1-5}
+    bspc node --to-desktop (bspc query -D -m (bspc query -M | sed -n "{1-5}p") -d .active)
+
+# next/prev window
+alt + {_, shift +} Tab
+    bspc node -f {next,prev}.local
 
 # change gap size
 super {_, shift +} g

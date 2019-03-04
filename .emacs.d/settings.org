@@ -226,7 +226,8 @@ Make some temproary windows appear at bottom.
   :ensure t
   :init
   (setq evil-want-integration t
-        evil-want-keybinding nil)
+        evil-want-keybinding nil
+        evil-want-C-u-scroll t)
   :config
   (evil-mode 1))
 #+END_SRC
@@ -502,7 +503,7 @@ Shows a nice tooltip while idling on a completion.
     (company-quickhelp-mode))
     (eval-after-load 'company '(define-key company-active-map (kbd "M-p") 'company-quickhelp-manual-begin))) ;; Alt-p shows the popup manually
 #+END_SRC
-** eshell
+** TODO eshell
 Get bash/fish aliases and update eshell aliases.
 #+BEGIN_SRC emacs-lisp
 (defun eshell-update-aliases-if-needed nil

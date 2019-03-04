@@ -67,10 +67,7 @@ function visualizer {
 function translate {
     local GEOMETRY="100x15-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
     local WINDOW_TITLE="Translator (:set verbose 0/1)"
-
-    # Until the develop branch gets merged, I need to use my own build because
-    # -interactive and -v does not play well together in the stable version
-    local COMMAND="$HOME/Workspace/temp/translate-shell/translate -sl en -hl tr -interactive -v -pager bat"
+    local COMMAND="trans -sl en -hl tr -to tr -interactive -v -pager bat"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -A 1 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e $COMMAND
@@ -79,8 +76,20 @@ function translate {
     fi
 }
 
+function mail {
+    local GEOMETRY="100x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
+    local WINDOW_TITLE="neomutt-popup-window"
+
+    if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
+        $TERMINAL -A 1 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e neomutt
+    else
+        wmctrl -c $WINDOW_TITLE
+    fi
+}
+
 case "$1" in
     "calendar")   calendar;;
+    "mail")       mail;;
     "music")      music;;
     "visualizer") visualizer;;
     "htop")       htop;;

@@ -1,5 +1,32 @@
 #!/usr/bin/env bash
 
+# close all instances of polybar
 killall -q polybar
 while pgrep -u $UID -x polybar >/dev/null; do sleep 1; done
-polybar main
+
+# set github token for accessing notifications
+# export GITHUB_ACCESS_TOKEN=$(getpassword "/Programming/Github Access Notifications Token")
+
+# check if there are more than one monitors
+# if so, set MONITOR_MAIN and MONITOR_SECONDARY accordingly
+monitors="$(xrandr -q | grep -w "connected" | cut -d' ' -f1)"
+
+export MONITOR_MAIN=""
+export MONITOR_SECONDARY=""
+
+case "$monitors" in
+    *HDMI1*) export MONITOR_MAIN="HDMI1" ;;
+    *DP1*) export MONITOR_MAIN="DP1" ;;
+esac
+
+if [[ -z "$MONITOR_MAIN" ]]; then
+    export MONITOR_MAIN=$(echo "$monitors" | cut -d' ' -f1)
+fi
+
+polybar main &
+
+if [[ "$MONITOR_MAIN" != "LVDS1" ]]; then
+    export MONITOR_SECONDARY="LVDS1"
+    polybar secondary &
+fi
+

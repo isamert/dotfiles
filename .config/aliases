@@ -1,8 +1,8 @@
 # package management
-alias aur="eval $AUR_HELPER"
-alias aurin="eval $AUR_HELPER -S"
-alias aurs="eval $AUR_HELPER -Ss"
-alias aurupg="eval $AUR_HELPER -Syu"
+alias aur="$AUR_HELPER"
+alias aurin="$AUR_HELPER -S"
+alias aurs="$AUR_HELPER -Ss"
+alias aurupg="$AUR_HELPER -Syu"
 alias pac="sudo pacman"
 alias pacin="sudo pacman -S"
 alias pacs="pacman -Ss"
@@ -11,6 +11,7 @@ alias pacins="sudo pacman -U"    # Install from file
 alias pacupd="sudo pacman -Sy"
 alias pacupg="sudo pacman -Syu"
 alias pacfile="pacman -Fs"       # Find package that contains given file
+alias pacbin="pacman -Fs"        # Same as above
 alias pacre="sudo pacman -R"     # Leave dependencies and configurations
 alias pacrem="sudo pacman -Rns"
 alias pacpac="fuzzy packages"    # A fuzzy, interactive package finder
@@ -59,9 +60,10 @@ alias cf="fuzzy git files --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
 alias clearvimswap="rm $HOME/.local/share/nvim/swap/*"
 
 # stuff
-alias ipaddr="curl https://api.ipify.org; echo ''"
-alias ipinfo="curl https://ipinfo.io; echo ''"
+alias ipaddr="curl https://api.ipify.org"
+alias ipinfo="curl https://ipinfo.io"
 alias download-website="wget --recursive --page-requisites --html-extension
     --convert-links --no-parent --limit-rate=500K" # Download a website completely
 alias git-todo="rg 'FIXME|TODO'" # Use grep instead of rg if you don't have it
 alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd+ | bc"
+

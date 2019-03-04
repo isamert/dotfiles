@@ -102,8 +102,8 @@ c.aliases = \
      'wq'           : 'quit --save',
      'sync'         : 'open localhost:8384',
      'subextract'   : 'download-open sub-extract {} --noconfirm',
-     'mpv'          : 'spawn mpv --x11-name=youtube --geometry=853x480-20-20 {url}',
-     'mpv-hint'     : 'hint links spawn mpv --x11-name=youtube --geometry=853x480-20-20 {hint-url}',
+     'jaro'         : 'spawn jaro {url}',
+     'jaro-hint'    : 'hint links spawn jaro {hint-url}',
      'mpd'          : 'spawn mpd-yt play {url}',
      'mpd-hint'     : 'hint links spawn mpd-yt play {hint-url}',
      'mpd-add'      : 'spawn mpd-yt add {url}',
@@ -112,23 +112,18 @@ c.aliases = \
      'disable-js'   : 'set content.javascript.enabled false',
      'pass'         : 'spawn --userscript pass'}
 
-# config.bind('tSH', 'config-cycle -p -u *://*.{url:host}/* content.javascript.enabled ;; reload')
 # #############################################################################
 # Custom bindings
 # #############################################################################
 ## Yank selected link
-config.bind('yf', 'hint links yank-primary')
-config.unbind('m')
-config.bind('mb', 'quickmark-save')
-
-config.bind('mf', 'mpv-hint')
-config.bind('mm', 'mpv')
-
-config.bind('mp', 'mpd')
-config.bind('ma', 'mpd-add')
+config.bind('yf', 'hint links yank')
+config.bind('m', 'jaro')
+config.bind('M', 'jaro-hint')
 
 config.bind('<Alt-.>', 'tab-next')
 config.bind('<Alt-,>', 'tab-prev')
+
+config.bind('<Alt-e>', 'open-editor', mode='insert')
 
 # #############################################################################
 # Privacy related
