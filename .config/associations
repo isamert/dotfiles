@@ -74,7 +74,8 @@
   #:on-error "notify-send 'Fail' 'Can't add torrent")
 
 (assoc
-  #:pattern "^https?://.*"
+  #:pattern '("^https?://.*"
+              "^.*\\.html?(#[\\w_-]+)?")
   #:program "qutebrowser %f"
   #:test "pgrep qutebrowser"
   #:on-fail "firefox %f")
