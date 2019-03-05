@@ -36,8 +36,7 @@ set -U theme_date_format "+%H:%M:%S"
 
 if not set -q abbrs_initialized
     sed "s/alias/abbr/;s/=/ /" ~/.config/aliases | source
-    echo "- Abbreviations are initialized."
-    set -U abbrs_initialized
+    set --universal abbrs_initialized SET
 end
 
 function weather; curl -s "wttr.in/$argv" | less -R; end
