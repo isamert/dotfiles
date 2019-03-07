@@ -210,7 +210,6 @@ Make some temproary windows appear at bottom.
 (shackle-window "\\*Backtrace*\\*" 0.4)
 (shackle-window "\\*Flycheck.*" 0.4)
 (shackle-window "\\*Org Src.*\\*" 0.4)
-(shackle-window "\\*Helm Swoop\\*" 0.4)
 (shackle-window "\\*Agenda Commands\\*" 0.4)
 (shackle-window "\\*Org Agenda\\*" 0.4)
 #+END_SRC
@@ -251,10 +250,8 @@ Enable leader key and bind some keys.
     (evil-leader/set-key
       "SPC" 'helm-M-x
       "e" 'eval-last-sexp
-      "r" 'helm-recentf
-      "t" 'helm-elscreen
-      "b" 'helm-buffers-list
       "g" 'projectile-find-file
+      "o" 'helm-occur
       "RET" 'helm-mini)))
 #+END_SRC
 ** evil-surround
@@ -436,10 +433,6 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
     (helm-mode 1)
     (helm-adaptive-mode 1)
     (shackle-window "\\*helm*" 0.35))) ;; make helm windows appear at bottom
-#+END_SRC
-*** Extension packages
-#+BEGIN_SRC emacs-lisp
-(use-package helm-swoop :ensure t)
 #+END_SRC
 *** Better selection
 Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ for selecting previous result.

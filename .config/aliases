@@ -30,10 +30,17 @@ alias ...="cd ../.."                     # .. works out of the box.
 alias ....="cd ../../.."
 alias df="df -H"
 alias du="ncdu"
-alias ls="ls -ShG --color --group-directories-first"
-alias lls="ls -lthG --color --group-directories-first"
 alias grep="grep --color=auto -i"
 alias xpaste="xclip -selection clipboard -o" # paste cb content
+
+
+#alias ls="ls -ShG --color --group-directories-first"
+#alias lls="ls -lthG --color --group-directories-first"
+alias ls="lsd --group-dirs first --classify"
+alias ll="lsd --group-dirs first --classify --oneline"
+alias lls="lsd --group-dirs first --classify --long"
+alias lla="lsd --group-dirs first --classify --long --all"
+
 
 # abbrv
 alias v="nvim"
