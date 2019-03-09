@@ -34,8 +34,12 @@ set theme_color_scheme gruvbox
 set theme_title_display_process yes
 set -U theme_date_format "+%H:%M:%S"
 
-if not set -q abbrs_initialized
+function fish_update_abbrs
     sed "s/alias/abbr/;s/=/ /" ~/.config/aliases | source
+end
+
+if not set -q abbrs_initialized
+    fish_update_abbrs
     set --universal abbrs_initialized SET
 end
 

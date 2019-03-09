@@ -237,23 +237,6 @@ Make some temproary windows appear at bottom.
   :init
   (evil-collection-init))
 #+END_SRC
-** evil-leader
-Enable leader key and bind some keys.
-#+BEGIN_SRC emacs-lisp
-(use-package evil-leader
-  :ensure t
-  :init
-  (global-evil-leader-mode)
-  :config
-  (progn
-    (evil-leader/set-leader "SPC")
-    (evil-leader/set-key
-      "SPC" 'helm-M-x
-      "e" 'eval-last-sexp
-      "g" 'projectile-find-file
-      "o" 'helm-occur
-      "RET" 'helm-mini)))
-#+END_SRC
 ** evil-surround
 #+BEGIN_SRC emacs-lisp
 (use-package evil-surround
@@ -525,6 +508,22 @@ Get bash/fish aliases and update eshell aliases.
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For key-chord  bindings, see: [[*Bindings][key-chord/bindings]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
+** evil-leader
+Enable leader key and bind some keys.
+#+BEGIN_SRC emacs-lisp
+(use-package evil-leader
+  :ensure t
+  :init
+  (global-evil-leader-mode)
+  :config
+  (progn
+    (evil-leader/set-leader "SPC")
+    (evil-leader/set-key
+      "SPC" 'helm-M-x
+      "e" 'eval-last-sexp
+      "g" 'projectile-find-file
+      "RET" 'helm-mini)))
+#+END_SRC
 ** Some general keybindings
 | Key   | Action              |
 |-------+---------------------|
@@ -534,6 +533,16 @@ Get bash/fish aliases and update eshell aliases.
 #+BEGIN_SRC emacs-lisp
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 (global-set-key (kbd "C-s") 'save-buffer)
+
+;; Replace isearch with helm-occur and helm-semantic
+(evil-define-key 'normal 'global
+  (kbd "/") 'helm-occur
+  (kbd "?") 'helm-semantic-or-imenu
+  (kbd "N") 'helm-resume
+  (kbd "n") 'helm-resume
+  (kbd "C-f") 'evil-search-forward
+  (kbd "C-n") 'evil-search-next
+  (kbd "C-p") 'evil-search-previous)
 #+END_SRC
 ** Better split management
 - A-- splits below, A-\ splits right.
