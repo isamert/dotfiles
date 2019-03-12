@@ -14,6 +14,7 @@ monitors="$(xrandr -q | grep -w "connected" | cut -d' ' -f1)"
 export MONITOR_MAIN=""
 export MONITOR_SECONDARY=""
 
+# HDMI1 or DP1 should be the main monitor if they exists
 case "$monitors" in
     *HDMI1*) export MONITOR_MAIN="HDMI1" ;;
     *DP1*) export MONITOR_MAIN="DP1" ;;

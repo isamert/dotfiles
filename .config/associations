@@ -2,6 +2,9 @@
 ;;  #:pattern ".*"
 ;;  #:program "echo %f >> ~/debug-jaro")
 
+(define (screen-height)
+  (string-trim-both (read-sys-out "xrandr | grep \\\\* | awk '{print $1}' | cut -d'x' -f2")))
+
 (assoc
   #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
   #:program "zathura %f"
@@ -28,7 +31,7 @@
 
 (assoc
   #:pattern "^video/"
-  #:program "tsp mpv --input-ipc-server=/tmp/mpvsocket %f"
+  #:program "mpv --input-ipc-server=/tmp/mpvsocket %f"
   #:on-error "vlc %f")
 
 (assoc
@@ -50,7 +53,13 @@
               "^https?://([a-zA-Z-]+)?streamable.com"
               "^https?://giant.gfycat.com/*+"
               "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
-  #:program '("tsp" "mpv" "--geometry=-10-10" "--ytdl-format=bestvideo[height<=?1440]+bestaudio/best" "--autofit=880x495" "%f")
+  #:program `("tsp"
+              "mpv"
+              "--input-ipc-server=/tmp/mpvsocket"
+              "--geometry=-10-10"
+              ,(format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
+              "--autofit=880x495"
+              "%f")
   #:on-error "firefox %f")
 
 (assoc
@@ -65,10 +74,11 @@
   #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
   #:program "rtv %f"
   #:term "st -e"
+  #:tmux "tmux split-window -h"
   #:on-error "firefox %f")
 
 (assoc
-  #:pattern "^magnet:\\?"
+  #:pattern "^magnet:"
   #:program "diana add %f"
   #:on-success "notify-send 'Success' 'Torrent added to download list'"
   #:on-error "notify-send 'Fail' 'Can't add torrent")

@@ -1,5 +1,4 @@
 # Startup programs
-xrandr -r 75 &                                           # Set refresh rate (if available)
 pgrep unclutter    || unclutter &                        # Hide inactive mouse
 pgrep mpd          || mpd &                              # Music player daemon
 pgrep mpdscribble  || mpdscribble &                      # Scrobbler for MPD

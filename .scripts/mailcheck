@@ -43,16 +43,21 @@ for user, password, server in zip(cfg.user, cfg.password, cfg.server):
         return_code, ids = mail.search(None, 'UnSeen')
 
         if return_code == 'OK':
-            count = len(ids[0].split(b' '))
+            count = len([x for x in ids[0].split(b' ') if x])
             results.append(count)
         else:
             print(return_code)
             sys.exit(255)
+is_all_zero = all([x == 0 for x in results])
 
-if cfg.fail_on_zero and all([x == 0 for x in results]):
+if cfg.fail_on_zero and is_all_zero:
     sys.exit(1)
 
-output = cfg.separator.join(map(lambda x: str(x), results))
+if is_all_zero:
+    output = "0"
+else:
+    output = cfg.separator.join(map(lambda x: str(x), results))
+
 print(output)
 
 if cfg.dump:

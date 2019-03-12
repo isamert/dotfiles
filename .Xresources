@@ -38,7 +38,7 @@
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! st (terminal)
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-st.termname: xterm-24bit
+st.termname: st-24bit
 st.shell: /bin/fish
 st.font: IBM Plex Mono:pixelsize=14:antialias=true:autohint=true
 st.alpha: 0.85

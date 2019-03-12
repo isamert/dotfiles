@@ -3,11 +3,8 @@ export EDITOR=jaro
 export VISUAL=jaro
 export TERMINAL=st
 export SHELL=/bin/fish
-export TERM=xterm-24bit
+export TERM=st-24bit
 export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin
-
-# Used in calendar-popup script (I may forget to update this information)
-export CALENDAR=ikhal
 
 # For aurin, aursearch... aliases. (Also used in some other scripts)
 export AUR_HELPER=trizen
@@ -30,9 +27,6 @@ export FFF_FAV2=~/Workspace/projects/
 export FFF_FAV3=~/Documents/
 export FFF_FAV4=~/Videos/Shows/
 export FFF_FAV5=~/Videos/Movies/
-
-# Discard asserts and docstrings
-export PYTHONOPTIMIZE=2
 
 # Ctrl-Shift-P to search menu items in GTK apps
 export GTK3_MODULES=/usr/lib/libplotinus.so

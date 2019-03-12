@@ -14,6 +14,10 @@ super + {_,shift + } {backslash,minus}
 super + {t,shift + t,s,f}
     bspc node --state ~{tiled,pseudo_tiled,floating,fullscreen}
 
+# toggle between fullscreen(monacle) and tiled desktop layout
+super + e
+    bspc desktop --layout next
+
 # focus last floating window
 super + shift + f
     bspwmc focus_toggle_floating

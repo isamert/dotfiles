@@ -9,6 +9,12 @@ set completion-ignore-case on
 # Treat - and _ as same while completing
 set completion-map-case on
 
+# Make Alt key work
+set meta-flag on
+set input-meta on
+set convert-meta on
+set output-meta on
+
 # TAB once
 set show-all-if-ambiguous on
 set show-all-if-unmodified on
@@ -49,11 +55,16 @@ $if mode=vi
     "\C-[OD": backward-char
 $endif
 
-# Cycle
+# Cycle (tab and shift-tab)
 TAB: menu-complete
-TAB: menu-complete-backward
+"\e[Z": menu-complete-backward
 
-# C-j and C-k to cycle trough history
-Control-k: history-search-backward
-Control-j: history-search-forward
+# A-j and A-k to cycle trough history
+Meta-k: history-search-backward
+Meta-j: history-search-forward
 
+# Some more navigation keymaps
+Meta-l: forward-char
+Meta-h: backward-char
+Meta-e: forward-word
+Meta-b: backward-word

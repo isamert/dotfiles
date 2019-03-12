@@ -1,3 +1,4 @@
 open-command=jaro %u
 enable-notifications=true
 save-history=true
+use-formatting=true

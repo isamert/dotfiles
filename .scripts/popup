@@ -8,20 +8,17 @@ BAR_HEIGHT=$(xrdb-get-value "bar.height")
 WINDOW_BORDER=$(xrdb-get-value "wm.border")
 
 function calendar {
-    # Runs $CALENDAR in right top corner of the screen.
-
-    local GEOMETRY="80x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
+    local GEOMETRY="100x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
     local WINDOW_TITLE="calendar-popup-window"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -A 1 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e $CALENDAR
+        $TERMINAL -A 1 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e ikhal
     else
         wmctrl -c $WINDOW_TITLE && vdirsyncer sync calendar
     fi
 }
 
 function music {
-    # Runs $MUSIC in top middle of the screen.
     MUSIC=ncmpcpp
 
     local SCREEN_WIDTH=$(wm-screen-width)
@@ -38,27 +35,11 @@ function music {
 }
 
 function htop {
-    # Runs htop in right top corner of the screen.
-
     local GEOMETRY="80x9-$((2*WINDOW_BORDER))+$((BAR_HEIGHT+BAR_BORDER*2))"
     local WINDOW_TITLE="Task manager"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
         $TERMINAL -A 1 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e htop
-    else
-        wmctrl -c "$WINDOW_TITLE"
-    fi
-}
-
-function visualizer {
-    local SCREEN_WIDTH=$(wm-screen-width)
-    local Y=$((BAR_HEIGHT+BAR_BORDER*2))
-    local GEOMETRY="110x20-$(((SCREEN_WIDTH - 882) / 2))+$Y"
-    local WINDOW_TITLE="Visualizer"
-
-    if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e cava 2> /dev/null &
-        bspwmc center_floating --name "$WINDOW_TITLE"
     else
         wmctrl -c "$WINDOW_TITLE"
     fi
@@ -91,7 +72,6 @@ case "$1" in
     "calendar")   calendar;;
     "mail")       mail;;
     "music")      music;;
-    "visualizer") visualizer;;
     "htop")       htop;;
     "translate")  shift; translate "$@";;
 esac
