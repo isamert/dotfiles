@@ -2,13 +2,32 @@
 ;;  #:pattern ".*"
 ;;  #:program "echo %f >> ~/debug-jaro")
 
+;;
+;; Some utilities
+;;
+
 (define (screen-height)
-  (string-trim-both (read-sys-out "xrandr | grep \\\\* | awk '{print $1}' | cut -d'x' -f2")))
+  (string-trim-both (read-sys-out "xrandr | grep '*' | awk '{print $1}' | cut -d'x' -f2 | head -n 1")))
+
+(define (index-of a b)
+  (let ((tail (member a (reverse b))))
+    (and tail (length (cdr tail)))))
+
+(define (parent-path path)
+  (string-join (reverse (cdr (reverse (string-split path #\/)))) "/"))
+
+(define (index-of a b)
+  (let [(tail (member a (reverse b)))]
+    (and tail (length (cdr tail)))))
+
+;;
+;; Associations
+;;
 
 (assoc
   #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
   #:program "zathura %f"
-  #:view "zathura %f")
+  #:view #t)
 
 (assoc
   #:pattern "\\.org$"
@@ -27,12 +46,13 @@
   #:program "nvim %f"
   #:term "st -e"
   #:view "bat %f"
-  #:edit "nvim %f")
+  #:edit #t)
 
 (assoc
   #:pattern "^video/"
   #:program "mpv --input-ipc-server=/tmp/mpvsocket %f"
-  #:on-error "vlc %f")
+  #:on-error "vlc %f"
+  #:view #t)
 
 (assoc
   #:pattern "^audio/"
@@ -60,14 +80,20 @@
               ,(format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
               "--autofit=880x495"
               "%f")
-  #:on-error "firefox %f")
+  #:on-error (open-with 'browser))
 
+;; Open all images in a folder starting with given image in sxiv
 (assoc
   #:pattern '("^image/.*$"
               "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$")
-  #:program "TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG; sxiv $TMP_IMG"
-  #:on-error "feh %f"
-  #:continue-on-error #f
+  #:program (λ (file mime-type)
+              (if (string-prefix? "http" file)
+                  (run-fn-or-system "TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && sxiv $TMP_IMG" file)
+                  (let* ((parent-dir (parent-path file))
+                         (file-index (1+ (index-of (basename file) (scandir parent-dir (λ (f) (not (equal? (stat:type (stat (path-join parent-dir f))) 'directory))))))))
+                    (run-fn-or-system `("sxiv" "-n" ,(number->string file-index) "%f") parent-dir))))
+  #:on-error "feh --start-at %f"
+  #:view #t
   #:edit "pinta %f")
 
 (assoc
@@ -75,7 +101,7 @@
   #:program "rtv %f"
   #:term "st -e"
   #:tmux "tmux split-window -h"
-  #:on-error "firefox %f")
+  #:on-error (open-with 'browser))
 
 (assoc
   #:pattern "^magnet:"
@@ -84,6 +110,7 @@
   #:on-error "notify-send 'Fail' 'Can't add torrent")
 
 (assoc
+  #:name 'browser
   #:pattern '("^https?://.*"
               "^.*\\.html?(#[\\w_-]+)?")
   #:program "qutebrowser %f"
@@ -110,3 +137,6 @@
   #:program (select-alternative-with "fzf")
   #:term (select-alternative-with "dmenu")
   #:standalone #t)
+
+;; vi:syntax=scheme
+

@@ -49,16 +49,19 @@ st.actionfps: 75
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Machine dependent stuff
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+sp.top.width: 100%
+sp.bot.width: 100%
+
 #ifdef N550JK
-sp.top.geometry: 190x30
-sp.bot.geometry: 150x30
-menu.file_contents.width: 190
+sp.top.height: 36
+sp.bot.height: 36
+menu.file_contents.geometry: 300x30
 #endif
 
 #ifdef X220
-sp.top.geometry: 150x30
-sp.bot.geometry: 150x20
-menu.file_contents.geometry: 150
+sp.top.height: 30
+sp.bot.height: 30
+menu.file_contents.geometry: 150x30
 #endif
 
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -73,7 +76,6 @@ wm.border: 2
 bar.font0: IBM Plex Sans:fontformat=truetype:size=11:antialias=false;0
 bar.font1: Ubuntu Mono Nerd Font:fontformat=truetype:size=13:antialias=false;0
 bar.font2: Liberation Sans:fontformat=truetype:size=11:antialias=false;0
-!bar.font2: siji:pixelsize=10;1
 bar.border: 0
 bar.radius: 0
 bar.height: 30

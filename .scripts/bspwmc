@@ -60,17 +60,27 @@ function resize {
 
 # a scratchpad terminal that is shared across desktops
 function scratchpad_top {
+    for i in "$@"; do
+    case $i in
+        --full-width*) full_width=1; shift ;;
+    esac
+    done
+
     class="padtop"
     id=$(xdotool search --class "$class")
     if [[ -z "$id" ]]; then
-        local top_gap=$(($(xrdb-get-value bar.height) - $(xrdb-get-value wm.border)))
+        local top_gap=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
+        local width=$(xrdb-get-value sp.top.width)
+        local height=$(xrdb-get-value sp.top.height)
         bspc rule --add "$class" state=floating sticky=on
         st -A 1 \
-           -g "$(xrdb-get-value sp.top.geometry)"+0+${top_gap} \
+           -g "400x35"+0+${top_gap} \
            -c "$class" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
-        center_floating --class "$class"
+        wid=$(xdotool search --sync --class "$class")
+        xdotool windowsize --usehints "$wid" "$width" "$height"
+        xdo resize -w -"$((2 * $(xrdb-get-value wm.border)))" "$wid"
     else
         bspc node $id --flag hidden
         bspc node -f $id
@@ -84,13 +94,17 @@ function scratchpad_bot {
     class="padbot$((desktop_id + 1))"
     id=$(xdotool search --class "$class")
     if [[ -z "$id" ]]; then
+        local width=$(xrdb-get-value sp.bot.width)
+        local height=$(xrdb-get-value sp.bot.height)
         bspc rule --add "$class" state=floating
         st -A 1 \
-           -g "$(xrdb-get-value sp.bot.geometry)"+1-1 \
+           -g "400x$height+1-1" \
            -c "$class" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
-        center_floating --class "$class"
+        wid=$(xdotool search --sync --class "$class")
+        xdotool windowsize --usehints "$wid" "$width" "$height"
+        xdo resize -w -"$((2 * $(xrdb-get-value wm.border)))" "$wid"
     else
         bspc node "$id" --flag hidden
         bspc node -f "$id"
