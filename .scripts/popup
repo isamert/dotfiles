@@ -12,7 +12,7 @@ function calendar {
     local WINDOW_TITLE="calendar-popup-window"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -A 1 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e ikhal
+        term --float --opaque -T $WINDOW_TITLE -g $GEOMETRY -e ikhal
     else
         wmctrl -c $WINDOW_TITLE && vdirsyncer sync calendar
     fi
@@ -27,7 +27,7 @@ function music {
     local WINDOW_TITLE="Music Popup"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -A 1 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e $MUSIC 2> /dev/null &
+        term --float --opaque -T "$WINDOW_TITLE" -g $GEOMETRY -e $MUSIC 2> /dev/null &
         bspwmc center_floating --name "$WINDOW_TITLE"
     else
         wmctrl -c "$WINDOW_TITLE"
@@ -39,7 +39,7 @@ function htop {
     local WINDOW_TITLE="Task manager"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -A 1 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e htop
+        term --float --opaque -T "$WINDOW_TITLE" -g $GEOMETRY -e htop
     else
         wmctrl -c "$WINDOW_TITLE"
     fi
@@ -51,7 +51,7 @@ function translate {
     local COMMAND="trans -sl en -hl tr -to tr -interactive -v -pager bat"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -A 1 -c "float" -T "$WINDOW_TITLE" -g $GEOMETRY -e $COMMAND
+        term --float --opaque -T "$WINDOW_TITLE" -g $GEOMETRY -e $COMMAND
     else
         wmctrl -c "$WINDOW_TITLE"
     fi
@@ -62,7 +62,7 @@ function mail {
     local WINDOW_TITLE="neomutt-popup-window"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        $TERMINAL -A 1 -c "float" -T $WINDOW_TITLE -g $GEOMETRY -e neomutt
+        term --float --opaque -T $WINDOW_TITLE -g $GEOMETRY -e neomutt
     else
         wmctrl -c $WINDOW_TITLE
     fi

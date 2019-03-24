@@ -67,18 +67,18 @@ function scratchpad_top {
     done
 
     class="padtop"
-    id=$(xdotool search --class "$class")
+    id=$(xdotool search --classname --class "$class")
     if [[ -z "$id" ]]; then
         local top_gap=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
         local width=$(xrdb-get-value sp.top.width)
         local height=$(xrdb-get-value sp.top.height)
         bspc rule --add "$class" state=floating sticky=on
-        st -A 1 \
+        term --opaque \
+           --name="$class" \
            -g "400x35"+0+${top_gap} \
-           -c "$class" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
-        wid=$(xdotool search --sync --class "$class")
+        wid=$(xdotool search --sync --classname --class "$class")
         xdotool windowsize --usehints "$wid" "$width" "$height"
         xdo resize -w -"$((2 * $(xrdb-get-value wm.border)))" "$wid"
     else
@@ -92,17 +92,18 @@ function scratchpad_bot {
     desktop_id=$(xdotool get_desktop)
     [[ -z "$desktop_id" ]] && notify-send "what"
     class="padbot$((desktop_id + 1))"
-    id=$(xdotool search --class "$class")
+    id=$(xdotool search --classname --class "$class")
     if [[ -z "$id" ]]; then
         local width=$(xrdb-get-value sp.bot.width)
         local height=$(xrdb-get-value sp.bot.height)
         bspc rule --add "$class" state=floating
-        st -A 1 \
+        bspc rule --add "*:$class" state=floating
+        term --opaque \
+           --name="$class" \
            -g "400x$height+1-1" \
-           -c "$class" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
-        wid=$(xdotool search --sync --class "$class")
+        wid=$(xdotool search --sync --classname --class "$class")
         xdotool windowsize --usehints "$wid" "$width" "$height"
         xdo resize -w -"$((2 * $(xrdb-get-value wm.border)))" "$wid"
     else

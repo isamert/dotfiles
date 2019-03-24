@@ -2,8 +2,8 @@
 Type=Application
 Name=Shortcut to
 Terminal=false
-Exec=st
-Actions=walls;fkill;phonepics;screenshots;floatingstopaque;floatingst;opquest
+Exec=term
+Actions=walls;fkill;phonepics;screenshots;floatingtermopaque;floatingterm;opqueterm
 
 [Desktop Action walls]
 Name=Wallpapers
@@ -19,16 +19,16 @@ Exec=/bin/sh -c "sxiv -t ~/Pictures/screenshots"
 
 [Desktop Action fkill]
 Name=Fuzzy kill (fkill)
-Exec=/bin/sh -c "st -c float -g 150x20 -e fuzzy kill"
+Exec=/bin/sh -c "term --float -g 150x20 -e fuzzy kill"
 
-[Desktop Action opaquest]
-Name=Opaque st terminal (meta + ctrl + enter)
-Exec=/bin/sh -c "st -A 1"
+[Desktop Action opaqueterm]
+Name=Opaque term terminal (meta + ctrl + enter)
+Exec=/bin/sh -c "term --opaque"
 
-[Desktop Action floatingst]
-Name=Floating st terminal (meta + shift + enter)
-Exec=/bin/sh -c "st -c float -g 150x30"
+[Desktop Action floatingterm]
+Name=Floating term terminal (meta + shift + enter)
+Exec=/bin/sh -c "term --float -g 150x30"
 
-[Desktop Action floatingstopaque]
-Name=Floating st terminal (opaque)  (meta + shift + ctrl + enter)
-Exec=/bin/sh -c "st -c float -g 150x30 -A 1"
+[Desktop Action floatingtermopaque]
+Name=Floating term terminal (opaque)  (meta + shift + ctrl + enter)
+Exec=/bin/sh -c "term --float --opaque -g 150x30"

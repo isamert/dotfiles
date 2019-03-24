@@ -338,6 +338,18 @@ These are the languages that can be run in codeblocks.
 (setq org-agenda-time-grid '((weekly today require-timed remove-match)
                              (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------"))
    #+END_SRC
+** todo keywords
+#+BEGIN_SRC emacs-lisp
+;; Add this to org files if you need:
+;; #+TODO: TODO IN-PROGRESS WAITING DONE
+;; OR
+;; (setq org-todo-keywords
+;;   '((sequence "TODO" "IN-PROGRESS" "WAITING" "DONE")))
+
+(setq org-todo-keyword-faces
+      '(("WAITING" . (:foreground "yellow" :weight bold))
+        ("IN-PROGRESS" . (:foreground "magenta" :weight bold))))
+#+END_SRC
 * Other packages
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options.

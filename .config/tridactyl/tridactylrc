@@ -2,7 +2,7 @@ sanitise tridactyllocal tridactylsync
 
 colors dark
 set searchengine duckduckgo
-set editorcmd st nvim
+set editorcmd jaro
 set hintfiltermode vimperator-reflow
 
 " commands

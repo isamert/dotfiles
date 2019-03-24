@@ -1,9 +1,7 @@
 export BROWSER=jaro
 export EDITOR=jaro
 export VISUAL=jaro
-export TERMINAL=st
 export SHELL=/bin/fish
-export TERM=st-24bit
 export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin
 
 # For aurin, aursearch... aliases. (Also used in some other scripts)

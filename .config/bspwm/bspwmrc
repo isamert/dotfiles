@@ -13,13 +13,13 @@ bspc config borderless_monocle    true
 bspc config window_gap            $(xrdb-get-value wm.gaps)
 bspc config border_width          $(xrdb-get-value wm.border)
 
-bspc rule --add Screenkey manage=off
-bspc rule --add float     state=floating
-bspc rule --add mpv       state=floating
-bspc rule --add pad_top   state=floating
-bspc rule --add Sxiv      state=floating
-bspc rule --add Zenity    state=floating
-bspc rule --add feh       state=floating
+bspc rule --add Screenkey   manage=off
+bspc rule --add '*:float'   state=floating
+bspc rule --add '*:padtop'  state=floating
+bspc rule --add mpv         state=floating
+bspc rule --add Sxiv        state=floating
+bspc rule --add Zenity      state=floating
+bspc rule --add feh         state=floating
 
 pgrep compton || compton &
 pgrep sxhkd || sxhkd &

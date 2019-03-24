@@ -6,11 +6,9 @@ pgrep udiskie      || udiskie --smart-tray --notify &    # Automatic mounting et
 pgrep syncthing    || syncthing -no-browser &            # Sync manager
 pgrep aria2c       || aria2c &                           # Download manager
 pgrep -f clipmenud || clipmenud &                        # Clipboard history with dmenu
+pgrep urxvtd       || urxvtd &                           # Terminal emulator
 pgrep emacs        || emacs --daemon &                   # yeah
 pgrep agent        || /usr/lib/geoclue-2.0/demos/agent & # Geo-location provider service (for redshift)
 pgrep redshift     || (sleep 5 && redshift) &            # For my eyes
 
-# I just use the background of LightDM, no need for this for now
-# Keep that in mind that if screen res changes, or a new video input is connects
-# background will be corrupted, so you need to use feh then.
-# feh --bg-scale $HOME/.config/wall.png
+feh --bg-scale $HOME/.config/wall.png

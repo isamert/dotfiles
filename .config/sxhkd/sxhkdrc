@@ -84,12 +84,13 @@ super + shift + e
 
 # open a terminal (with shift it floats, with ctrl its opaque, with ctrl + shift its floating opaque)
 {super, hyper} + {_, shift + ctrl +, shift +, ctrl +} Return
-    eval $TERMINAL {_,_} {_,-c "float" -g 100x20 -A 1,-c "float" -g 100x20,-A 1}
+    term {_,_} {_, --float --opaque -g 100x20, --float -g 100x20, --opaque}
+    # st {_,_} {_,-c "float" -g 100x20 -A 1,-c "float" -g 100x20,-A 1}
 
 # open a terminal at
 hyper + {_,shift + } {backslash,minus}
     bspc node -p {east,west,south,north}; \
-    eval $TERMINAL
+    term
 
 {hyper + d, F12}
     bspwmc scratchpad_top
@@ -101,7 +102,7 @@ hyper + q
     clipmenu
 
 hyper + x
-    /bin/sh -c "st -c float -g 150x20 -e fuzzy kill"
+    /bin/sh -c "term --float -g 150x20 -e fuzzy kill"
 
 # menus
 hyper + {a, f, F, m, M, P, k}
