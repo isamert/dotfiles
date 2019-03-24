@@ -1,0 +1,36 @@
+Xft.dpi: 96
+Xft.antialias: true
+Xft.rgba: rgb
+Xft.hinting: true
+Xft.hintstyle: hintsmedium
+
+URxvt.iso14755 : false
+URxvt.internalBorder: 1
+URxvt.letterSpace: -1
+URxvt.xftAntialias: true
+URxvt.xftHinting: true
+URxvt.font: xft:IBM Plex Mono:size=11, xft:UbuntuMono Nerd Font Mono:size=12
+URxvt.scrollBar: false
+URxvt.depth: 32
+URxvt.background: [80]BACKGROUND
+
+URxvt.perl-ext-common: default,matcher,resize-font,keyboard-select,clipboard
+! FIXME: keyboard-select should copy to clipboard
+URxvt.keyboard-select.clipboard: true
+
+URxvt.url-launcher: jaro
+URxvt.matcher.button: 1
+
+URxvt.keysym.C-C: eval:selection_to_clipboard
+URxvt.keysym.C-V: perl:clipboard:paste
+
+URxvt.keysym.C-J:  resize-font:smaller
+URxvt.keysym.C-K:  resize-font:bigger
+
+URxvt.keysym.C-L: perl:matcher:last
+URxvt.keysym.C-U: perl:matcher:list
+
+URxvt.keysym.C-N: perl:keyboard-select:activate
+URxvt.keysym.C-S: perl:keyboard-select:search
+
+! vi:syntax=xdefaults
