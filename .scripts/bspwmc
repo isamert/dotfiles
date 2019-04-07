@@ -73,6 +73,7 @@ function scratchpad_top {
         local width=$(xrdb-get-value sp.top.width)
         local height=$(xrdb-get-value sp.top.height)
         bspc rule --add "$class" state=floating sticky=on
+        bspc rule --add "*:$class" state=floating sticky=on
         term --opaque \
            --name="$class" \
            -g "400x35"+0+${top_gap} \

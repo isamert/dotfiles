@@ -9,7 +9,7 @@ URxvt.internalBorder: 1
 URxvt.letterSpace: -1
 URxvt.xftAntialias: true
 URxvt.xftHinting: true
-URxvt.font: xft:IBM Plex Mono:size=11, xft:UbuntuMono Nerd Font Mono:size=12
+URxvt.font: xft:IBM Plex Mono:size=11, xft:UbuntuMono Nerd Font Mono:size=12, xft:DejaVu Sans:size=8:hinting=true
 URxvt.scrollBar: false
 URxvt.depth: 32
 URxvt.background: [80]BACKGROUND

@@ -16,6 +16,12 @@ for arg; do
     esac
 done
 
+if [[ $RUNNER == 'urxvtc' ]]; then
+    if ! pgrep urxvtd; then
+        urxvtd & disown
+        sleep 0.5
+    fi
+fi
 
 if [[ -n "$FLOAT" ]]; then
     case "$RUNNER" in
