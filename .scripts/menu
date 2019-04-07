@@ -113,7 +113,7 @@ function folders {
 }
 
 function file_contents {
-    f=$(st -A 1 -c float -g $(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "
+    f=$(term --opaque --float -g $(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "
         cd \"$HOME/Documents\"
         result=\$(rg --no-text --line-number --color=always --colors match:fg:white . | fzf --ansi --preview '
           set file (echo {} | cut -d: -f1);
@@ -122,7 +122,8 @@ function file_contents {
           set range_cmd (if test \$range -gt -1; echo --line-range; end);
           set range_cmd_arg (if test \$range -gt -1; echo \$range:; end);
           bat --color=always --style=header,numbers \"\$file\" --highlight-line \$linum \$range_cmd \$range_cmd_arg')
-        f=\$(echo \$result | cut -d: -f1); jaro \$f")
+        f=\$(echo \$result | cut -d: -f1)
+        jaro \$f")
 }
 
 # Use `menu passwords -dump` to print password info into stdout.
@@ -130,8 +131,7 @@ function passwords {
     local KDBX_FILE="$HOME/Documents/sync/passwords.kdbx"
     local PASSWD=$(getpassword --keepass)
     local ENTRY=$(echo "$PASSWD" | keepassxc-cli locate "$KDBX_FILE" / | tail -n +2 | dmenu)
-    if [ ! -z "$ENTRY" ]
-    then
+    if [ -n "$ENTRY" ]; then
         if [[ "$1" == "-dump" ]]; then
             getpassword "$ENTRY" -dump
         else

@@ -74,6 +74,9 @@ super + shift + {Q,W,A,S}
 super + {shift,_} + equal
     xdo resize {-w +50 -h +50, -w -50 -h -50}
 
+super + shift + m
+    optimus-manager --no-confirm --switch auto
+
 # logout
 super + shift + e
     for node in (bspc query -N); bspc node $node --close; end; bspc quit
