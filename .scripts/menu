@@ -123,7 +123,7 @@ function file_contents {
           set range_cmd_arg (if test \$range -gt -1; echo \$range:; end);
           bat --color=always --style=header,numbers \"\$file\" --highlight-line \$linum \$range_cmd \$range_cmd_arg')
         f=\$(echo \$result | cut -d: -f1)
-        jaro \$f")
+        jaro --no-stdin \$f")
 }
 
 # Use `menu passwords -dump` to print password info into stdout.

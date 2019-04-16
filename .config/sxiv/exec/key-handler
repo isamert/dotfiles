@@ -1,4 +1,8 @@
 #!/bin/bash
+
+set -e
+set -o pipefail
+
 mapfile -t list
 
 SIZE=0
@@ -13,6 +17,10 @@ function get_size {
 }
 
 for file in "${list[@]}"; do
+    if [[ ! "$file" = /* ]]; then
+        file=$(pwd)/$file
+    fi
+
     case "$1" in
         "d") trash "$file" ;;
         "D") rm "$file" ;;
@@ -21,9 +29,10 @@ for file in "${list[@]}"; do
              rm "$wall"
              cp "$file" "$wall"
              feh --bg-scale "$wall" ;;
-        "y") echo -n "$(pwd)/$file" | xclip -selection clipboard ;;
-        "Y") xclip -selection clipboard -t "$(file -b --mime-type "$file")" -i "$file" ;;
-
+        "y") echo -n "$file" | xclip -selection clipboard
+             notify-send "sxiv" "Path copied to clipboard: $file" ;;
+        "Y") xclip -selection clipboard -t "$(file -b --mime-type "$file")" -i "$file"
+             notify-send "sxiv" "Image copied to clipboard: $file" ;;
         "greater") convert -rotate 90 "$file" "$file" ;;
         "less") convert -rotate -90 "$file" "$file" ;;
         "bar") convert -flop "$file" "$file" ;;

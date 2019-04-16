@@ -499,19 +499,36 @@ Shows a nice tooltip while idling on a completion.
     (company-quickhelp-mode))
     (eval-after-load 'company '(define-key company-active-map (kbd "M-p") 'company-quickhelp-manual-begin))) ;; Alt-p shows the popup manually
 #+END_SRC
-** TODO eshell
-Get bash/fish aliases and update eshell aliases.
+** eshell
+*** aliases
+Get bash aliases and update eshell aliases. My aliases are in a file called =~/.config/aliases= in bash format. I convert them to abbreviations in fish shell and I convert them to eshell aliases in here.
 #+BEGIN_SRC emacs-lisp
 (defun eshell-update-aliases-if-needed nil
   (interactive)
   (when (file-newer-than-file-p "~/.config/aliases" eshell-aliases-file)
       (progn
-          (shell-command-to-string (concat "fish -c \"alias | sed 's/\\'//g; s/\\$/ \\$\\*/' > "
-                                           eshell-aliases-file
-                                           "\""))
+          (shell-command-to-string
+            (concat
+              "grep -vE '^(#|$)' ~/.config/aliases"
+              "|"
+              "sed -r 's/=/ /; s/(.*)\".*/\\1 $*/; s/\"//;' "
+              ">"
+              eshell-aliases-file
+              ))
           (eshell-read-aliases-list))))
 
 (add-hook 'eshell-mode-hook 'eshell-update-aliases-if-needed)
+#+END_SRC
+*** clear
+#+BEGIN_SRC emacs-lisp
+(defun eshell-clear-buffer ()
+  "Clear terminal"
+  (interactive)
+  (let ((inhibit-read-only t))
+    (erase-buffer)))
+
+(defun eshell/clear nil
+  (eshell-clear-buffer))
 #+END_SRC
 ** ispell
 - Use =flyspell-mode= to start spell checking.

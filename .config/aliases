@@ -1,3 +1,5 @@
+# NOTE:  Do not use alias xxx='...', use ". (For eshell converting script)
+
 # package management
 alias aur="$AUR_HELPER"
 alias aurin="$AUR_HELPER -S"
@@ -23,9 +25,9 @@ alias fuckall="killall -s 9"
 alias fkill="fuzzy kill"
 
 # utility
-alias mktar='tar -cvf'
-alias mkbz2='tar -cvjf'
-alias mkgz='tar -cvzf'
+alias mktar="tar -cvf"
+alias mkbz2="tar -cvjf"
+alias mkgz="tar -cvzf"
 alias ...="cd ../.."                     # .. works out of the box.
 alias ....="cd ../../.."
 alias df="df -H"
@@ -45,6 +47,7 @@ alias lla="lsd --group-dirs first --classify --long --all"
 # abbrv
 alias v="nvim"
 alias how="howdoi --color --all"
+alias mkx="chmod +x"
 
 # master wq
 alias :q="exit"
