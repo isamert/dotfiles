@@ -1,0 +1,67 @@
+# gmail {{{
+IMAPStore gmail-remote
+Host imap.gmail.com
+Port 993
+User isamertgurbuz@gmail.com
+PassCmd "getpassword '/e-Mail/GMail (isamertgurbuz)'"
+SSLType IMAPS
+CertificateFile /etc/ssl/certs/ca-certificates.crt
+
+MaildirStore gmail-local
+Path ~/.maildir/gmail/
+Inbox ~/.maildir/gmail/INBOX/
+Subfolders Verbatim
+
+Channel gmail
+Master :gmail-remote:
+Slave :gmail-local:
+Create Both
+Expunge Both
+Patterns *
+SyncState *
+# }}}
+
+# proton mail {{{
+IMAPStore pm-remote
+Host localhost
+Port 1143
+User isamert
+PassCmd "getpassword '/e-Mail/Proton Mail (Bridge)'"
+SSLType None
+
+MaildirStore pm-local
+Path ~/.maildir/pm/
+Inbox ~/.maildir/pm/INBOX/
+Subfolders Verbatim
+
+Channel pm
+Master :pm-remote:
+Slave :pm-local:
+Create Both
+Expunge Both
+Patterns *
+SyncState *
+# }}}
+
+# eskisehir mail {{{
+IMAPStore eskisehir-remote
+Host outlook.office365.com
+Port 993
+User isamertgurbuz@eskisehir.edu.tr
+PassCmd "getpassword '/e-Mail/Eskisehir.edu.tr'"
+SSLType IMAPS
+CertificateFile /etc/ssl/certs/ca-certificates.crt
+
+MaildirStore eskisehir-local
+Path ~/.maildir/eskisehir/
+Inbox ~/.maildir/eskisehir/INBOX/
+Subfolders Verbatim
+
+Channel eskisehir
+Master :eskisehir-remote:
+Slave :eskisehir-local:
+Create Both
+Expunge Both
+Patterns *
+SyncState *
+# }}}
