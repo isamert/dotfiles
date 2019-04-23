@@ -2,6 +2,8 @@
 # General settings
 # #############################################################################
 
+set realname     = "İsa Mert Gürbüz"
+
 set sort         = 'threads'
 set sort_aux     = 'reverse-last-date-received'
 set date_format  = "%d/%m %I:%M"
@@ -20,7 +22,7 @@ unset imap_passive
 
 #auto_view text/html
 #alternative_order text/plain text/enriched text/html
-set new_mail_command= "notify-send 'New Email' '%n new messages, %u unread.' &"
+#set new_mail_command= "notify-send 'New Email' '%n new messages, %u unread.' &"
 
 macro attach W <save-entry><kill-line>~/Downloads/attachments/
 

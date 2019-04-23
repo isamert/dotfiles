@@ -42,6 +42,13 @@
   #:term "st -e")
 
 (assoc
+  #:pattern "^text/htm"
+  #:program (open-with 'browser)
+  #:view #t
+  #:edit (open-with 'editor))
+
+(assoc
+  #:name 'editor
   #:pattern "^text/"
   #:program "nvim %f"
   #:term "st -e"
@@ -87,8 +94,10 @@
   #:pattern '("^image/.*$"
               "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$")
   #:program (λ (file mime-type)
+              (when (not (string-prefix? "/" file))
+                    (set! file (path-join (getcwd) file)))
               (if (string-prefix? "http" file)
-                  (run-fn-or-system "TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && sxiv $TMP_IMG" file)
+                  (run-fn-or-system "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && sxiv $TMP_IMG" file)
                   (let* ((parent-dir (parent-path file))
                          (file-index (1+ (index-of (basename file) (scandir parent-dir (λ (f) (not (equal? (stat:type (stat (path-join parent-dir f))) 'directory))))))))
                     (run-fn-or-system `("sxiv" "-n" ,(number->string file-index) "%f") parent-dir))))

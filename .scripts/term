@@ -1,7 +1,14 @@
 #!/bin/bash
 
+# When using st, it expects window class properties while urxvt expects
+# window name properties for enabling floating windows. So
+# Rule for urxvt:
+# bspc rule --add '*:float'   state=floating
+# Rule for st:
+# bspc rule --add 'float'     state=floating
+
 # st, urxvt, urxvtc
-RUNNER='urxvtc'
+RUNNER='st'
 FLOAT=''
 OPAQUE=''
 NAME=''
@@ -32,7 +39,7 @@ fi
 
 if [[ -n "$NAME" ]]; then
     case "$RUNNER" in
-        "st") OPTS+=(-n "$NAME") ;;
+        "st") OPTS+=(-c "$NAME") ;;
         "urxvt"*) OPTS+=(-name "$NAME") ;;
     esac
 fi

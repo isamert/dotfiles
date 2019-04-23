@@ -212,6 +212,8 @@ Make some temproary windows appear at bottom.
 (shackle-window "\\*Org Src.*\\*" 0.4)
 (shackle-window "\\*Agenda Commands\\*" 0.4)
 (shackle-window "\\*Org Agenda\\*" 0.4)
+(shackle-window "\\*Org Select\\*" 0.4)
+(shackle-window "CAPTURE-*" 0.4)
 (shackle-window "magit.*" 0.4)
 #+END_SRC
 ** Spaces instead of tabs
@@ -264,6 +266,9 @@ To move between visual lines instead of real lines:
 (setq evil-operator-state-cursor '("red" hollow))
 #+END_SRC
 * org-mode
+#+BEGIN_SRC emacs-lisp
+(setq life-org "~/Documents/notes/life.org")
+#+END_SRC
 ** Better defaults
 #+BEGIN_SRC emacs-lisp
 (setq org-src-fontify-natively t) ;; Enable code highlighting in ~SRC~ blocks.
@@ -340,7 +345,7 @@ These are the languages that can be run in codeblocks.
 #+END_SRC
 ** Agenda
 #+BEGIN_SRC emacs-lisp
-(setq org-agenda-files '("~/Documents/notes/life.org")
+(setq org-agenda-files `(,life-org)
       org-agenda-use-time-grid t
       org-agenda-time-grid '((weekly today require-timed remove-match)
                              (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------"))
@@ -356,6 +361,15 @@ These are the languages that can be run in codeblocks.
 (setq org-todo-keyword-faces
       '(("WAITING" . (:foreground "yellow" :weight bold))
         ("IN-PROGRESS" . (:foreground "magenta" :weight bold))))
+#+END_SRC
+** TODO org-capture
+- [ ] Add a shortcut.
+- [ ] Add more templates.
+- [ ] Maybe add a way to call it outside of emacs.
+#+BEGIN_SRC emacs-lisp
+(setq org-capture-templates
+      '(("t" "Todo" entry (file+headline life-org "Current")
+         "* TODO %?\n  %i\n  %a")))
 #+END_SRC
 * Other packages
 ** which-key
