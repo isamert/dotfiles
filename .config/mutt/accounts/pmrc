@@ -1,0 +1,21 @@
+set ssl_starttls  = no
+set ssl_force_tls = no
+
+set smtp_url  = "smtp://isamert@localhost:1025/"
+set smtp_pass = `getpassword "/e-Mail/Proton Mail (Bridge)"`
+
+set from      = "isamert@protonmail.com"
+set folder    = "~/.maildir/pm/"
+set spoolfile = "+INBOX"
+set record    = "+Sent"
+set postponed = "+Drafts"
+set trash     = "+Trash"
+set mbox_type = Maildir
+
+unmailboxes *
+mailboxes "+INBOX" "+Sent" "+All Mail" "+Drafts" "+Trash" "+Archive" "+Spam" "+Starred"
+
+set header_cache     = ~/.cache/mutt/pm/headers
+set message_cachedir = ~/.cache/mutt/pm/bodies
+
+# vim: filetype=muttrc

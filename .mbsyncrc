@@ -21,28 +21,6 @@ Patterns *
 SyncState *
 # }}}
 
-# proton mail {{{
-IMAPStore pm-remote
-Host localhost
-Port 1143
-User isamert
-PassCmd "getpassword '/e-Mail/Proton Mail (Bridge)'"
-SSLType None
-
-MaildirStore pm-local
-Path ~/.maildir/pm/
-Inbox ~/.maildir/pm/INBOX/
-Subfolders Verbatim
-
-Channel pm
-Master :pm-remote:
-Slave :pm-local:
-Create Both
-Expunge Both
-Patterns *
-SyncState *
-# }}}
-
 # eskisehir mail {{{
 IMAPStore eskisehir-remote
 Host outlook.office365.com
@@ -60,6 +38,28 @@ Subfolders Verbatim
 Channel eskisehir
 Master :eskisehir-remote:
 Slave :eskisehir-local:
+Create Both
+Expunge Both
+Patterns *
+SyncState *
+# }}}
+
+# proton mail {{{
+IMAPStore pm-remote
+Host localhost
+Port 1143
+User isamert
+PassCmd "getpassword '/e-Mail/Proton Mail (Bridge)'"
+SSLType None
+
+MaildirStore pm-local
+Path ~/.maildir/pm/
+Inbox ~/.maildir/pm/INBOX/
+Subfolders Verbatim
+
+Channel pm
+Master :pm-remote:
+Slave :pm-local:
 Create Both
 Expunge Both
 Patterns *

@@ -112,8 +112,8 @@ hyper + {a, f, F, m, M, P, k}
     menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords}
 
 # popups
-hyper + {c,n,h,t}
-    popup {calendar,music,htop,translate}
+hyper + {c,n,h,t,i}
+    popup {calendar,music,htop,translate,mail}
 
 # random wallpaper
 hyper + apostrophe

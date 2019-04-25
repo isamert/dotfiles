@@ -1,0 +1,17 @@
+set smtp_url  = "smtp://isamertgurbuz@eskisehir.edu.tr@smtp.office365.com:587/"
+set smtp_pass = `getpassword "/e-Mail/Eskisehir.edu.tr"`
+
+set from      = "isamertgurbuz@eskisehir.edu.tr"
+set folder    = "~/.maildir/eskisehir/"
+set spoolfile = "+INBOX"
+set record    = "+Sent Items"
+set postponed = "+Drafts"
+set trash     = "+Trash"
+
+unmailboxes *
+mailboxes "+INBOX" "+Sent" "+Sent Items" "+All Mail" "+Drafts" "+Trash" "+Archive" "+Spam" "+Starred"
+
+set header_cache     = ~/.cache/mutt/eskisehir/headers
+set message_cachedir = ~/.cache/mutt/eskisehir/bodies
+
+# vim: filetype=muttrc
