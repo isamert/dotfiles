@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# This whole script is based on the fact that I'm not that retard to
+# listen/watch more than one audio/video streams at the same time.
+# If I do, I'll get punished for that sin.
+
+MPV_SOCKET=/tmp/mpvsocket
+
+mpv_pause() {
+    echo '{ "command": ["set_property", "pause", true] }' | socat - "$MPV_SOCKET"
+}
+
+mpv_toggle() {
+    echo '{"command": ["cycle", "pause"]}' | socat - "$MPV_SOCKET"
+}
+
+mpv_seek() {
+    if [[ $1 == *% ]]; then # seek $1 percent
+        echo 'percent'
+        echo '{"command": ["seek", "'"${1%\%}"'",  "relative-percent"]}' | socat - "$MPV_SOCKET"
+    else # seek $1 seconds
+        echo '{"command": ["seek", "'"$1"'"]}' | socat - "$MPV_SOCKET"
+    fi
+}
+
+# TODO: somehow pause videos/audios playing in firefox/qutebrowser
+all_pause() {
+    mpv_pause
+    mpc pause
+}
+
+all_toggle() {
+    # Give priority to mpv
+    if pgrep mpv; then
+        mpv_toggle
+    else
+        mpc toggle
+    fi
+}
+
+all_seek() {
+    if pgrep mpv; then
+        mpv_seek "$@"
+    else
+        mpc seek "$@"
+    fi
+}
+
+opt=$1; shift
+case "$opt" in
+    mpv_toggle) mpv_toggle "$@" ;;
+    mpv_pause)  mpv_pause  "$@" ;;
+    mpv_seek)   mpv_seek   "$@" ;;
+    all_toggle) all_toggle "$@" ;;
+    all_pause)  all_pause  "$@" ;;
+    all_seek)   all_seek   "$@" ;;
+esac

@@ -1,4 +1,10 @@
 #!/bin/bash
 
-mpc pause
+mediastuff all_pause
+
+if [[ ! -d ~/.cache/i3lock/current/ ]] || [[ ~/.config/wall.png -nt ~/.cache/i3lock/current/wall.png ]]; then
+    notify-send "Locking" "Updating lockscreen stuff... This may take some time."
+    betterlockscreen -u ~/.config/wall.png
+fi
+
 betterlockscreen --lock blur

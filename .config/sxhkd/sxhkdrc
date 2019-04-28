@@ -141,11 +141,11 @@ XF86Audio{_,Mic}Mute
 
 # toggle music
 {hyper + p, XF86AudioPlay}
-    mpc toggle
+    mediastuff all_toggle
 
 # seek song
 hyper + {bracketleft, bracketright}
-    mpc seek {-,+}3%
+    mediastuff all_seek {-,+}3%
 
 # next/prev song
 hyper + shift + {bracketleft, bracketright}
