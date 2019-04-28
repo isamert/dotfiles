@@ -182,5 +182,5 @@ case $cmd in
     "folders") folders "$@";;
     "file_contents") file_contents "$@";;
     "passwords") passwords "$@";;
-    *) rofi -combi-modi window,drun,run -show combi "$@"
+    *) rofi -combi-modi window,drun,run,vms:rofi_vms -show combi "$@"
 esac
