@@ -9,10 +9,6 @@
 (define (screen-height)
   (string-trim-both (read-sys-out "xrandr | grep '*' | awk '{print $1}' | cut -d'x' -f2 | head -n 1")))
 
-(define (index-of a b)
-  (let ((tail (member a (reverse b))))
-    (and tail (length (cdr tail)))))
-
 (define (parent-path path)
   (string-join (reverse (cdr (reverse (string-split path #\/)))) "/"))
 
@@ -89,18 +85,22 @@
               "%f")
   #:on-error (open-with 'browser))
 
+(assoc
+  #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
+  #:program "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && sxiv $TMP_IMG"
+  #:on-error "feh --start-at %f"
+  #:view #t
+  #:edit "pinta %f")
+
 ;; Open all images in a folder starting with given image in sxiv
 (assoc
-  #:pattern '("^image/.*$"
-              "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$")
+  #:pattern "^image/.*$"
   #:program (λ (file mime-type)
               (when (not (string-prefix? "/" file))
                     (set! file (path-join (getcwd) file)))
-              (if (string-prefix? "http" file)
-                  (run-fn-or-system "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && sxiv $TMP_IMG" file)
-                  (let* ((parent-dir (parent-path file))
-                         (file-index (1+ (index-of (basename file) (scandir parent-dir (λ (f) (not (equal? (stat:type (stat (path-join parent-dir f))) 'directory))))))))
-                    (run-fn-or-system `("sxiv" "-n" ,(number->string file-index) "%f") parent-dir))))
+              (let* ((parent-dir (parent-path file))
+                     (file-index (1+ (index-of (basename file) (scandir parent-dir (λ (f) (not (equal? (stat:type (stat (path-join parent-dir f))) 'directory))))))))
+                (run-fn-or-system `("sxiv" "-n" ,(number->string file-index) "%f") parent-dir)))
   #:on-error "feh --start-at %f"
   #:view #t
   #:edit "pinta %f")

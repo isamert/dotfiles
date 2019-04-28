@@ -64,48 +64,55 @@ function mpd-all {
     # in youtube.)
 
     local SONG=$(mpc listall | dmenu)
-    if [ ! -z "$SONG" ]; then
-        mpc add "$SONG"
-        if [[ $? != 0 && ! -z "$SONG" ]]; then
+    if [ -n "$SONG" ]; then
+        if ! mpc add "$SONG" && [[ -n "$SONG" ]]; then
             menu youtube "$SONG"
         else
-            mpc play $(mpc playlist | wc -l) # Play the last (just added) song
+            mpc play "$(mpc playlist | wc -l)" # Play the last (just added) song
         fi
     fi
 }
 
-
 function youtube {
-    # Search given string in youtube and show results. Play selected one in mpd.
+    # Search given string in youtube and show results. Play selected one in mpd or mpv.
 
-    local DOWNLOAD_URLS=$(mktemp)
-    local SEARCH_STRING="$*"
-    [[ -z "$1" ]] && SEARCH_STRING=$(rofi -dmenu -p "search yt")
+    for arg; do
+        case "$arg" in
+            "--audio")    local AUDIO=1                               ;;
+            "--video")    local VIDEO=1                               ;;
+            *)            local SEARCH_STRING="${SEARCH_STRING} $arg" ;;
+        esac
+    done
+
+    [[ -z "$SEARCH_STRING" ]] && SEARCH_STRING=$(rofi -dmenu -p "search yt")
     [[ -z "$SEARCH_STRING" ]] && exit
 
     local RESULT=$(youtube-viewer --no-use-colors --no-interactive $SEARCH_STRING | rofi -dmenu -i -async-pre-read 0)
     RESULT=$(echo "$RESULT" | cut -d"." -f1 | xargs)
 
     local URL=$(youtube-viewer --no-use-colors --no-interactive --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
-    mpd-yt play "$URL"
+
+    if [[ $VIDEO = 1 ]]; then
+        mpv --input-ipc-server=/tmp/mpvsocket "$URL"
+    else
+        mpd-yt play "$URL"
+    fi
 }
 
-
 function files {
-    f=$( ( git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files ; fd . --no-ignore-vcs --color=never --max-depth=6 ) | dmenu)
+    f=$( ( git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files; fd . --no-ignore-vcs --color=never --max-depth=5 ) | dmenu)
 
-    if [[ "$1" == "--open" ]]; then
+    if [[ "$1" == "--open" ]] && [[ -n "$f" ]]; then
         jaro "$f"
     else
         echo "$f"
     fi
 }
 
-
 function folders {
-    f=$(fd . "$HOME" --no-ignore-vcs --color=never --type=d --max-depth=6 | dmenu)
+    f=$(fd . "$HOME" --no-ignore-vcs --color=never --type=d --max-depth=5 | dmenu)
 
-    if [[ "$1" == "--open" ]]; then
+    if [[ "$1" == "--open" ]] && [[ -n "$f" ]]; then
         jaro "$f"
     else
         echo "$f"
@@ -114,8 +121,9 @@ function folders {
 
 function file_contents {
     f=$(term --opaque --float -g $(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "
-        cd \"$HOME/Documents\"
-        result=\$(rg --no-text --line-number --color=always --colors match:fg:white . | fzf --ansi --preview '
+        result=\$( (
+        rg --no-text --line-number --color=always --colors match:fg:white . \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name);
+        rg --no-text --line-number --color=always --colors match:fg:white . Documents) | fzf --ansi --preview '
           set file (echo {} | cut -d: -f1);
           set linum (echo {} | cut -d: -f2);
           set range (expr \$linum - (expr \$LINES / 2));
@@ -182,5 +190,5 @@ case $cmd in
     "folders") folders "$@";;
     "file_contents") file_contents "$@";;
     "passwords") passwords "$@";;
-    *) rofi -combi-modi window,drun,run,vms:rofi_vms -show combi "$@"
+    *) rofi -async-pre-read 0 -modi combi,run,calc -combi-modi window,drun,run,vms:rofi_vms -show combi "$@"
 esac

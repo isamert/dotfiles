@@ -1,5 +1,9 @@
 #!/bin/bash
 
+FIREFOX_PPID=$(ps -o ppid= $(pidof firefox | awk '{print $1}'))
+QUTEBROWSER_PPID=$(ps -o ppid= $(pidof qutebrowser | awk '{print $1}'))
+
+kill -STOP $FIREFOX_PPID
 mediastuff all_pause
 
 if [[ ! -d ~/.cache/i3lock/current/ ]] || [[ ~/.config/wall.png -nt ~/.cache/i3lock/current/wall.png ]]; then
@@ -7,4 +11,7 @@ if [[ ! -d ~/.cache/i3lock/current/ ]] || [[ ~/.config/wall.png -nt ~/.cache/i3l
     betterlockscreen -u ~/.config/wall.png
 fi
 
-betterlockscreen --lock blur
+betterlockscreen --text "I'm a degenerate piece of shit" --lock blur
+
+kill -CONT $FIREFOX_PPID
+kill -CONT $QUTEBROWSER_PPID

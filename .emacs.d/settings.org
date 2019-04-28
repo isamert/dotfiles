@@ -362,6 +362,11 @@ These are the languages that can be run in codeblocks.
       '(("WAITING" . (:foreground "yellow" :weight bold))
         ("IN-PROGRESS" . (:foreground "magenta" :weight bold))))
 #+END_SRC
+** sticky headers
+#+BEGIN_SRC emacs-lisp
+(use-package org-sticky-header
+  :ensure t)
+#+END_SRC
 ** TODO org-capture
 - [ ] Add a shortcut.
 - [ ] Add more templates.
@@ -418,7 +423,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 #+END_SRC
 *** Bindings
 #+BEGIN_SRC emacs-lisp
-(key-chord-define evil-insert-state-map "jk" 'evil-normal-state) ;; jk returns to norman mode, from insert mode
+(key-chord-define evil-insert-state-map "jk" 'evil-normal-state) ;; jk returns to normal mode, from insert mode
 (key-chord-define evil-normal-state-map "ff" 'evil-toggle-fold) ;; ff toggles folding
 #+END_SRC
 ** avy
@@ -449,7 +454,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
   (progn
     (helm-mode 1)
     (helm-adaptive-mode 1)
-    (shackle-window "\\*helm*" 0.35))) ;; make helm windows appear at bottom
+    (shackle-window "\\*[hH]elm*" 0.35))) ;; make helm windows appear at bottom
 #+END_SRC
 *** Better selection
 Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ for selecting previous result.
@@ -458,6 +463,11 @@ Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ fo
 (define-key helm-map (kbd "<backtab>") 'helm-previous-line)
 (define-key helm-map (kbd "M-j") 'helm-next-line)
 (define-key helm-map (kbd "M-k") 'helm-previous-line)
+#+END_SRC
+*** helm-rg
+#+BEGIN_SRC emacs-lisp
+(use-package helm-rg
+  :ensure t)
 #+END_SRC
 ** projectile
 A project management tool. I set a project path below and make sure projectile scans that directory for projects.
@@ -570,12 +580,18 @@ Enable leader key and bind some keys.
   (progn
     (evil-leader/set-leader "SPC")
     (evil-leader/set-key
+      ;; generic
       "SPC" 'helm-M-x
-      "e" 'eval-last-sexp
-      "g" 'projectile-find-file
-      "G" 'projectile-browse-dirty-projects
-      "m" 'magit-status
-      "RET" 'helm-mini)))
+      "e"   'eval-last-sexp
+      "G"   'projectile-browse-dirty-projects
+      "m"   'magit-status
+      "RET" 'helm-mini
+
+      ;; projectile
+      "g"  'projectile-find-file
+      "pf" 'projectile-find-file
+      "pp" 'projectile-switch-project
+      )))
 #+END_SRC
 ** Some general keybindings
 | Key   | Action              |
