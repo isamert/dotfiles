@@ -1,0 +1,92 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+for arg; do
+    case "$arg" in
+        "--enable-nvidia") ENABLE_NVIDIA=1; shift ;;
+    esac
+done
+
+# install programs {{{
+sudo pacman -S --noconfirm aria2c
+sudo pacman -S --noconfirm bspwm sxhkd compton polybar
+sudo pacman -S --noconfirm fish neovim
+sudo pacman -S --noconfirm neomutt isync
+sudo pacman -S --noconfirm khal todoman vdirsyncer
+sudo pacman -S --noconfirm mpv mpd mpc ncmpcpp subdl
+sudo pacman -S --noconfirm firefox qutebrowser
+sudo pacman -S --noconfirm rtv
+sudo pacman -S --noconfirm sxiv feh
+sudo pacman -S --noconfirm ipython
+
+trizen -S --noconfirm rxvt-unicode-truecolor urxvt-perls urxvt-resize-font-git
+
+sudo pacman -S ranger
+trizen -S --noconfirm python-ueberzug-git
+
+
+if [[ -n "$ENABLE_NVIDIA" ]]; then
+    echo "→ NVidia is enabled."
+    trizen --noconfirm -S optimus-manager
+else
+    echo "× NVidia is *not* enabled."
+fi
+# }}}
+
+# proton mail {{{
+trizen -S --noconfirm hydroxide-git
+# TODO: auth etc
+#}}}
+
+# mutt & mbsync {{{
+# Create cache folders etc.
+mkdir -p ~/.cache/mutt
+for filename in ~/.config/mutt/accounts/*rc; do
+    mkdir -p ~/.maildir/"$(basename "$filename" rc)"
+    mkdir -p ~/.cache/mutt/"$(basename "$filename" rc)"
+    mkdir -p ~/.cache/mutt/"$(basename "$filename" rc)"/bodies
+done
+# }}}
+
+# install st {{{
+echo "===== Installing st ====="
+cd /tmp
+git clone https://github.com/isamert/st.git
+cd st
+sudo make install
+trizen --noonfirm -S ttf-symbola # To fix crashes on emojis
+echo "===== Finished ====="
+# }}}
+
+# aria2c {{{
+ARIA2_CACHE_FOLDER=$HOME/.cache/aria2
+mkdir -p "$ARIA2_CACHE_FOLDER"
+touch "$ARIA2_CACHE_FOLDER/session"
+# }}}
+
+# mpd {{{
+MPD_FOLDER=$HOME/.config/mpd
+mkdir -p "$MPD_FOLDER/playlists"
+touch "$MPD_FOLDER/mpd.db"
+touch "$MPD_FOLDER/mpd.log"
+touch "$MPD_FOLDER/mpdstate"
+# }}}
+
+# bspwm {{{
+curl https://raw.githubusercontent.com/Chrysostomus/bspwm-scripts/master/bin/euclid_mover > ~/.local/bin/euclid_mover
+# }}}
+
+# install tridactyl native messenger (:installnative) {{{
+curl -fsSl https://raw.githubusercontent.com/tridactyl/tridactyl/master/native/install.sh | bash
+# }}}
+
+# pacman configuration {{{
+sudo sed -i 's/^#Color$/Color/' /etc/pacman.conf
+sudo sed -i 's/^#VerbosePkgLists$/VerbosePkgLists/' /etc/pacman.conf
+# }}}
+
+# systemd configuration {{{
+sudo sed -i 's/^#DefaultTimeoutStopSec=\w*$/DefaultTimeoutStopSec=15s/' /etc/systemd/system.conf
+# }}}
