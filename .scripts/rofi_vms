@@ -3,5 +3,6 @@
 if [ -z "$*" ]; then
     VBoxManage list vms | awk '{ print $1 }' | sed 's/"//g'
 else
-    VBoxManage startvm "$*"
+    coproc VBoxManage startvm "$*"
+    exit
 fi
