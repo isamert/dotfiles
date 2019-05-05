@@ -1,7 +1,11 @@
 #!/bin/bash
 
-FIREFOX_PPID=$(ps -o ppid= $(pidof firefox | awk '{print $1}'))
-QUTEBROWSER_PPID=$(ps -o ppid= $(pidof qutebrowser | awk '{print $1}'))
+
+FIREFOX_PID=$(pidof firefox | awk '{print $1}')
+QUTEBROWSER_PID=$(pidof qutebrowser | awk '{print $1}')
+
+[[ -n $FIREFOX_PID ]] && FIREFOX_PPID=$(ps -o ppid= "$FIREFOX_PID")
+[[ -n $QUTEBROWSER_PID ]] && QUTEBROWSER_PPID=$(ps -o ppid= "$QUTEBROWSER_PID")
 
 kill -STOP $FIREFOX_PPID
 mediastuff all_pause
@@ -13,5 +17,5 @@ fi
 
 betterlockscreen --text "I'm a degenerate piece of shit" --lock blur
 
-kill -CONT $FIREFOX_PPID
-kill -CONT $QUTEBROWSER_PPID
+[[ -n $FIREFOX_PID ]] && kill -CONT "$FIREFOX_PPID"
+[[ -n $QUTEBROWSER_PID ]] && kill -CONT "$QUTEBROWSER_PPID"
