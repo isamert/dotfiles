@@ -93,7 +93,7 @@ function youtube {
     local URL=$(youtube-viewer --no-use-colors --no-interactive --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
 
     if [[ $VIDEO = 1 ]]; then
-        mpv --input-ipc-server=/tmp/mpvsocket "$URL"
+        mpv "$URL"
     else
         mpd-yt play "$URL"
     fi
@@ -149,18 +149,17 @@ function passwords {
             local username=$(getpassword "$ENTRY" -username)
             case "$what" in
                 "Fill fields")
-                    local win=$(xdotool search --onlyvisible --classname Navigator) # find firefox
-                    [[ -z "$win" ]] && win=$(xdotool selectwindow)
                     sleep 0.2
-                    xdotool type --delay 5 --window "$win" "$username"
-                    xdotool key  --window "$win" "Tab"
-                    xdotool type --delay 5 --window "$win" "$password" ;;
+                    xdotool type --delay 5 "$username"
+                    xdotool key "Tab"
+                    xdotool type --delay 5 "$password" ;;
                 "Fill password")
                     sleep 0.2
-                    xdotool type --delay 5 --window "$win" "$password" ;;
+                    xdotool type --delay 5 "$password" ;;
                 "Copy password") echo "$password" | xclip -selection clipboard ;;
                 "Copy username") echo "$username" | xclip -selection clipboard ;;
             esac
+            notify-send --expire-time=1000 'password-menu' 'Done.'
         fi
     fi
 

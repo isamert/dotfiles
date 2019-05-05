@@ -53,7 +53,7 @@
 
 (assoc
   #:pattern "^video/"
-  #:program "mpv --input-ipc-server=/tmp/mpvsocket %f"
+  #:program "mpv %f"
   #:on-error "vlc %f"
   #:view #t)
 
@@ -78,7 +78,6 @@
               "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
   #:program `("tsp"
               "mpv"
-              "--input-ipc-server=/tmp/mpvsocket"
               "--geometry=-10-10"
               ,(format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
               "--autofit=880x495"
