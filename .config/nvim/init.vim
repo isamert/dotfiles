@@ -21,7 +21,6 @@ Plug 'junegunn/goyo.vim'           " distraction free writing
 " utility
 Plug 'terryma/vim-multiple-cursors'
 Plug 'junegunn/fzf.vim'                      " Fuzzy finder (s. FZF)
-Plug 'dominickng/fzf-session.vim'
 Plug 'airblade/vim-gitgutter'                " Show git changes
 Plug 'rhysd/devdocs.vim'                     " :DevDocs -> open stuff in DevDocs
 Plug 'jeffkreeftmeijer/vim-numbertoggle'     " Toggle between relative and normal lines when needed
@@ -35,6 +34,7 @@ Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
 " editing
 Plug 'easymotion/vim-easymotion'   " (s. easymotion)
 Plug 'tpope/vim-surround'          " (y|c)(motion)(anything-to-surround)
+Plug 'tpope/vim-repeat'            " repat more stuff with .
 Plug 'godlygeek/tabular'           " :Tabularize /(thing to align)
 Plug 'milkypostman/vim-togglelist' " \q -> Toggle quicfix, \l -> Toggle list
 
@@ -44,17 +44,17 @@ Plug 'neovimhaskell/haskell-vim'   " for better highlighting
 Plug 'dag/vim-fish'                " syntaxh highlighting and stuff for fish
 
 " markup
-Plug 'jceb/vim-orgmode'
-Plug 'plasticboy/vim-markdown'
+Plug 'gabrielelana/vim-markdown'
 call plug#end()
 " }}}
 
-" theme
+" theme {{{
 colorscheme gruvbox                  " ...
 let g:one_allow_italics = 1          " Italic comments for one theme
 let g:gruvbox_italic=1               " Italic comments for gruvbox
 let g:gruvbox_contrast_dark = 'hard' " ...
 syntax on                            " enable syntax highlighting
+" }}}
 
 " visuals {{{
 set background=dark                " rearranges colors for dark background
@@ -75,14 +75,13 @@ set smartindent           " do it smart
 filetype plugin indent on " determine indent by plugins
 " }}}
 
+" better defaults {{{
 " search/completion
 set ignorecase " ignore case while searching
 set smartcase  " abc -> Abc and abc, Abc -> only Abc (works in combination with ^^)
-
-" better defaults {{{
 set splitbelow
 set splitright
-set foldmethod=marker
+set foldmethod=syntax " (indent, marker: fold between {{{ }}})
 " }}}
 
 " utility {{{
@@ -97,9 +96,6 @@ set undofile              " saves undo history to file (nvim's undodir default i
 set completeopt=menu,menuone,preview,noselect,noinsert
 " }}}
 
-" sessions
-let g:fzf_session_path = $HOME . '/.local/share/nvim/sessions'
-
 " netrw (file browser) {{{
 " :help netrw-quickmap
 let g:netrw_banner = 0       " remove banner
@@ -110,10 +106,11 @@ let g:netrw_usetab = 1       " use tab for expanding/shrinking folders
 let g:netrw_winsize = 10     " occupies 10% of window
 " }}}
 
-" trailing spaces
+" trailing spaces {{{
 set listchars=tab:▸\ ,trail:·       " Show trailing spaces and tabs
 set list                            " ^^ enable it
 autocmd BufWritePre * :%s/\s\+$//e  " remove trailing spaces on save
+" }}}
 
 " airline {{{
 let g:airline_powerline_fonts = 1                " use nice-looking fonts
@@ -132,12 +129,6 @@ let g:startify_lists = [
     \ { 'type': 'commands',  'header': ['Commands']       },
     \ ]
 " }}}
-
-" org-mode
-let g:org_heading_shade_leading_stars = 0 " don't shade the stars in headers
-
-" markdown
-let g:vim_markdown_toc_autofit = 1 " shrink :Toc to min possible
 
 " autocomplete key mappings (tab, stab to select next, prev completion from list) {{{
 inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
@@ -182,9 +173,14 @@ nnoremap <silent> gd :call LanguageClient#textDocument_definition()<CR>
 nnoremap <silent> <leader>s :call LanguageClient#textDocument_documentSymbol()<CR>
 " }}}
 
-" leader
+" stuff {{{
 nmap <space> <leader>
+inoremap jk <ESC>|         " jk escapes to normal mode
+tnoremap jk <C-\><C-n>|    " jk escapes to normal mode (in terminal mode)
+tnoremap <Esc> <C-\><C-n>| " esc escapes to normal mode
+" }}}
 
+" split mappings {{{
 " next sections looks pretty much like my i3 config except Win key is replaced
 " with the Alt key
 " move between buffers with alt+hjkl
@@ -193,7 +189,7 @@ nnoremap <A-j> <C-w>j
 nnoremap <A-k> <C-w>k
 nnoremap <A-l> <C-w>l
 
-" faster resize for buffers {{{
+" faster resize for buffers
 nnoremap <A-J> <C-w>+
 nnoremap <A-K> <C-w>-
 nnoremap <A-L> <C-w>>
@@ -202,17 +198,16 @@ tnoremap <A-J> <C-\><C-n><C-w>+
 tnoremap <A-K> <C-\><C-n><C-w>-
 tnoremap <A-L> <C-\><C-n><C-w>>
 tnoremap <A-H> <C-\><C-n><C-w><
-" }}}
 
-" faster split creation/deletion {{{
+" faster split creation/deletion
 nnoremap <silent> <A--> :split<CR>
 nnoremap <silent> <A-\> :vsplit<CR>
 nnoremap <silent> <A-w> :bd<CR>
-" }}}
 
 " change buffers
 nnoremap <silent> <C-l> :bn<CR>
 nnoremap <silent> <C-h> :bp<CR>
+" }}}
 
 " tabs {{{
 nnoremap <silent> <A-.> :tabnext<CR>|               " alt-.  -> next tab
@@ -227,12 +222,6 @@ nnoremap <silent> <A-5> :5 tabn<CR>|                " ^^
 nnoremap <silent> <C-t> :tabnew<CR>|                " ctrl-t -> new tab
 " }}}
 
-" fast esc {{{
-inoremap jk <ESC>|         " jk escapes to normal mode
-tnoremap jk <C-\><C-n>|    " jk escapes to normal mode (in terminal mode)
-tnoremap <Esc> <C-\><C-n>| " esc escapes to normal mode
-" }}}
-
 " indention mappings {{{
 vnoremap <Tab> >gv|     " tab indents in visual mode
 vnoremap <S-Tab> <gv|   " s-tab de-indents in visual mode
@@ -245,9 +234,8 @@ nmap <leader>w <Plug>(easymotion-overwin-w)prefix)| " ^^
 nmap s <Plug>(easymotion-overwin-f)|                " jump to character
 map <Leader>j <Plug>(easymotion-j)|                 " jump to line (downwards)
 map <Leader>k <Plug>(easymotion-k)|                 " jump to line (upwards)
-" }}}
 
-" search using easymotion {{{
+"search
 let g:EasyMotion_smartcase = 1
 map  / <Plug>(easymotion-sn)
 omap / <Plug>(easymotion-tn)
@@ -289,15 +277,14 @@ inoremap <C-j> <down>|  " ...
 inoremap <C-k> <up>|    " ...
 " }}}
 
-" other
+" other {{{
 vnoremap t :Tabularize/
 nnoremap <leader>t :TagbarToggle<CR>
-
-" meta
-command! ConfigReload so $MYVIMRC " reload vim config
-command! ConfigEdit e $MYVIMRC    " edit vim config
+" }}}
 
 " utility commands {{{
+command! ConfigReload so $MYVIMRC " reload vim config
+command! ConfigEdit e $MYVIMRC    " edit vim config
 command! Vterm vsplit|term
 command! Term split|term
 command! SpellCheckEn setlocal spell! spelllang=en_us
@@ -305,10 +292,11 @@ command! RestartLSP call LanguageClient#exit() | call LanguageClient#startServer
 command! -range TabularizeHaskellData <line1>,<line2>GTabularize/[{},]\|::
 " }}}
 
-" autos
+" autos {{{
 autocmd BufWritePost ~/.Xresources,~/.Xdefaults !xrdb %
 autocmd BufWritePost ~/.Xresources.d/* !xrdb ~/.Xresources
 autocmd BufWritePost ~/.config/sxhkd/sxhkdrc !pkill -USR1 -x sxhkd
+" }}}
 
 " functions {{{
 function! PreviewToggler(fn, ...)
@@ -333,3 +321,5 @@ function! ViewDetails()
     endif
 endfunction
 " }}}
+
+" vi: foldmethod=marker

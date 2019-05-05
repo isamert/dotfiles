@@ -39,7 +39,7 @@ c.url.default_page = 'https://start.duckduckgo.com/'
 ## `{line0}`: Same as `{line}`, but starting from index 0. * `{column0}`:
 ## Same as `{column}`, but starting from index 0.
 ## Type: ShellCommand
-c.editor.command = ['st', '-g', '110x25', '-c', '"float"', '-e', 'nvim', '-f', '{file}', '-c', 'normal {line}G{column0}l']
+c.editor.command = ['jaro', '{file}']
 
 ## Where to show the downloaded files.
 ## Type: VerticalPosition
@@ -83,7 +83,7 @@ c.tabs.padding = {'top': 3, 'bottom': 3, 'left': 5, 'right': 5}
 ## Scaling factor for favicons in the tab bar. The tab size is unchanged,
 ## so big favicons also require extra `tabs.padding`.
 ## Type: Float
-c.tabs.favicons.scale = 1.35
+c.tabs.favicons.scale = 1.50
 
 ## Load a restored tab as soon as it takes focus.
 ## Type: Bool
@@ -109,8 +109,7 @@ c.aliases = \
      'mpd-add'      : 'spawn mpd-yt add {url}',
      'mpd-add-hint' : 'hint links spawn mpd-yt add {hint-url}',
      'enable-js'    : 'set content.javascript.enabled true',
-     'disable-js'   : 'set content.javascript.enabled false',
-     'pass'         : 'spawn --userscript pass'}
+     'disable-js'   : 'set content.javascript.enabled false'}
 
 # #############################################################################
 # Custom bindings
@@ -142,10 +141,10 @@ c.content.canvas_reading = False
 ## Type: String
 # a dynamically updated list for most popular user agents:
 # https://techblog.willshouse.com/2012/01/03/most-common-user-agents/
-c.content.headers.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"
+c.content.headers.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36"
 
 ## Disable javascript
-c.content.javascript.enabled = False
+#c.content.javascript.enabled = False
 
 ## Store cookies. Note this option needs a restart with QtWebEngine on Qt
 ## < 5.9.
