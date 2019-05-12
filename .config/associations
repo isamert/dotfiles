@@ -35,10 +35,12 @@
 (assoc
   #:pattern "^(text|application)/(x-)?csv$"
   #:program "sc-im %f"
-  #:term "st -e")
+  #:term "st -e"
+  #:view #t
+  #:edit (open-with 'editor))
 
 (assoc
-  #:pattern "^text/htm"
+  #:pattern '("^text/html" "^application/x?htm")
   #:program (open-with 'browser)
   #:view #t
   #:edit (open-with 'editor))
@@ -123,7 +125,9 @@
               "^.*\\.html?(#[\\w_-]+)?")
   #:program "qutebrowser %f"
   #:test "pgrep qutebrowser"
-  #:on-fail "firefox %f")
+  #:on-fail "firefox %f"
+  #:view #t
+  #:edit (open-with 'editor))
 
 (assoc
   #:pattern "\\.torrent$"

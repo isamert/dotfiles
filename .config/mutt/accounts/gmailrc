@@ -1,5 +1,5 @@
 set smtp_url  = "smtp://isamertgurbuz@gmail.com@smtp.gmail.com:587/"
-set smtp_pass = `getpassword "/e-Mail/GMail (isamertgurbuz)"`
+set smtp_pass = `getpassword "/email/gmail"`
 
 set from      = "isamertgurbuz@gmail.com"
 set folder    = "~/.maildir/gmail/"

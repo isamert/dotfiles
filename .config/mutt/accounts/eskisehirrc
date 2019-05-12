@@ -1,5 +1,5 @@
 set smtp_url  = "smtp://isamertgurbuz@eskisehir.edu.tr@smtp.office365.com:587/"
-set smtp_pass = `getpassword "/e-Mail/Eskisehir.edu.tr"`
+set smtp_pass = `getpassword "/email/eskisehir"`
 
 set from      = "isamertgurbuz@eskisehir.edu.tr"
 set folder    = "~/.maildir/eskisehir/"

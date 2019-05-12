@@ -2,14 +2,14 @@ set ssl_starttls  = no
 set ssl_force_tls = no
 
 set smtp_url  = "smtp://isamert@localhost:1025/"
-set smtp_pass = `getpassword "/e-Mail/Proton Mail (Bridge)"`
+set smtp_pass = `getpassword "/email/protonmail-bridge"`
 
 set from      = "isamert@protonmail.com"
 set folder    = "~/.maildir/pm/"
 set spoolfile = "+INBOX"
-set record    = "+Sent"
 set postponed = "+Drafts"
-set trash     = "+Trash"
+set record    = ""
+set trash     = ""
 set mbox_type = Maildir
 
 unmailboxes *

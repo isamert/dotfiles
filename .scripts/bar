@@ -5,7 +5,7 @@ killall -q polybar
 while pgrep -u $UID -x polybar >/dev/null; do sleep 1; done
 
 # set github token for accessing notifications
-# export GITHUB_ACCESS_TOKEN=$(getpassword "/Programming/Github Access Notifications Token")
+# export GITHUB_ACCESS_TOKEN=$(getpassword "/programming-extra/github-notification-token")
 
 # check if there are more than one monitors
 # if so, set MONITOR_MAIN and MONITOR_SECONDARY accordingly

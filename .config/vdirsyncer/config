@@ -19,7 +19,7 @@ type = "carddav"
 auth= "digest"
 url = "http://galileo/baikal/html/dav.php/"
 username = "isamert"
-password.fetch = ["command", "getpassword", "/Cloud/Baikal"]
+password.fetch = ["command", "getpassword", "/cloud/baikal"]
 
 
 
@@ -38,4 +38,4 @@ type = "caldav"
 auth= "digest"
 url = "http://galileo/baikal/html/cal.php/calendars/isamert/"
 username = "isamert"
-password.fetch = ["command", "getpassword", "/Cloud/Baikal"]
+password.fetch = ["command", "getpassword", "/cloud/baikal"]

@@ -84,7 +84,7 @@ cursor-scroll = ns-resize
 
 [module/mail]
 type = custom/script
-exec = mailcheck --user 'isamertgurbuz@gmail.com' --password $(getpassword '/e-Mail/GMail (isamertgurbuz)') --server 'imap.gmail.com' --user 'isamertgurbuz@eskisehir.edu.tr' --password $(getpassword '/e-Mail/Eskisehir.edu.tr') --server 'outlook.office365.com' --user isamert --password $(getpassword '/e-Mail/Proton Mail') --server proton
+exec = PYTHONWARNINGS="ignore" mailcheck --user 'isamertgurbuz@gmail.com' --password $(getpassword '/email/gmail') --server 'imap.gmail.com' --user 'isamertgurbuz@eskisehir.edu.tr' --password $(getpassword '/email/eskisehir') --server 'outlook.office365.com' --user isamert --password $(getpassword '/email/protonmail') --server proton
 interval = 300
 
 click-left = popup mail

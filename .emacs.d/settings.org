@@ -464,7 +464,7 @@ Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ fo
 (define-key helm-map (kbd "M-j") 'helm-next-line)
 (define-key helm-map (kbd "M-k") 'helm-previous-line)
 #+END_SRC
-*** helm-rg
+*** helm-rg (ripgrep)
 #+BEGIN_SRC emacs-lisp
 (use-package helm-rg
   :ensure t)
@@ -569,6 +569,19 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For key-chord  bindings, see: [[*Bindings][key-chord/bindings]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
+** Some general keybindings
+| Key   | Action              |
+|-------+---------------------|
+| <ESC> | quit current action |
+| C-s   | save buffer         |
+
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(global-set-key (kbd "C-s") 'save-buffer)
+
+(evil-define-key 'normal 'global
+  (kbd "?") 'helm-semantic-or-imenu)
+#+END_SRC
 ** evil-leader
 Enable leader key and bind some keys.
 #+BEGIN_SRC emacs-lisp
@@ -586,32 +599,14 @@ Enable leader key and bind some keys.
       "G"   'projectile-browse-dirty-projects
       "m"   'magit-status
       "RET" 'helm-mini
+      "f" 'helm-occur
+      "r" 'helm-rg
 
       ;; projectile
       "g"  'projectile-find-file
       "pf" 'projectile-find-file
       "pp" 'projectile-switch-project
       )))
-#+END_SRC
-** Some general keybindings
-| Key   | Action              |
-|-------+---------------------|
-| <ESC> | quit current action |
-| C-s   | save buffer         |
-
-#+BEGIN_SRC emacs-lisp
-(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-(global-set-key (kbd "C-s") 'save-buffer)
-
-;; Replace isearch with helm-occur and helm-semantic
-(evil-define-key 'normal 'global
-  (kbd "/") 'helm-occur
-  (kbd "?") 'helm-semantic-or-imenu
-  (kbd "N") 'helm-resume
-  (kbd "n") 'helm-resume
-  (kbd "C-f") 'evil-search-forward
-  (kbd "C-n") 'evil-search-next
-  (kbd "C-p") 'evil-search-previous)
 #+END_SRC
 ** Better split management
 - A-- splits below, A-\ splits right.

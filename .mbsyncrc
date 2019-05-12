@@ -3,7 +3,7 @@ IMAPStore gmail-remote
 Host imap.gmail.com
 Port 993
 User isamertgurbuz@gmail.com
-PassCmd "getpassword '/e-Mail/GMail (isamertgurbuz)'"
+PassCmd "getpassword '/email/gmail'"
 SSLType IMAPS
 CertificateFile /etc/ssl/certs/ca-certificates.crt
 
@@ -26,7 +26,7 @@ IMAPStore eskisehir-remote
 Host outlook.office365.com
 Port 993
 User isamertgurbuz@eskisehir.edu.tr
-PassCmd "getpassword '/e-Mail/Eskisehir.edu.tr'"
+PassCmd "getpassword '/email/eskisehir'"
 SSLType IMAPS
 CertificateFile /etc/ssl/certs/ca-certificates.crt
 
@@ -49,7 +49,7 @@ IMAPStore pm-remote
 Host localhost
 Port 1143
 User isamert
-PassCmd "getpassword '/e-Mail/Proton Mail (Bridge)'"
+PassCmd "getpassword '/email/protonmail-bridge'"
 SSLType None
 
 MaildirStore pm-local
@@ -65,3 +65,5 @@ Expunge Both
 Patterns *
 SyncState *
 # }}}
+
+# vi: foldmethod=marker
