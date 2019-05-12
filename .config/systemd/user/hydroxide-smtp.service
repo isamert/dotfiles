@@ -1,0 +1,8 @@
+[Unit]
+Description=hydroxide: bridge for protonmail, the smtp server
+
+[Service]
+ExecStart=hydroxide smtp
+
+[Install]
+WantedBy=default.target

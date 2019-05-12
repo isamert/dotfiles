@@ -1,0 +1,10 @@
+[Unit]
+Description=mpdscribble: scribble mpd to libre.fm
+After=mpd.socket
+
+[Service]
+Type=forking
+ExecStart=mpdscribble
+
+[Install]
+WantedBy=default.target

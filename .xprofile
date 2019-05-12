@@ -1,13 +1,2 @@
-# Startup programs
-pgrep unclutter    || unclutter &                        # Hide inactive mouse
-pgrep mpd          || mpd &                              # Music player daemon
-pgrep mpdscribble  || mpdscribble &                      # Scrobbler for MPD
-pgrep udiskie      || udiskie --smart-tray --notify &    # Automatic mounting etc.
-pgrep syncthing    || syncthing -no-browser &            # Sync manager
-pgrep aria2c       || aria2c &                           # Download manager
-pgrep -f clipmenud || clipmenud &                        # Clipboard history with dmenu
-pgrep emacs        || emacs --daemon &                   # yeah
-pgrep agent        || /usr/lib/geoclue-2.0/demos/agent & # Geo-location provider service (for redshift)
-pgrep redshift     || (sleep 5 && redshift) &            # For my eyes
-
-feh --bg-scale $HOME/.config/wall.png
+systemctl --user import-environment
+systemctl --user start user-graphical-login.target

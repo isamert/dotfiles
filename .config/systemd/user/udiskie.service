@@ -1,0 +1,8 @@
+[Unit]
+Description=udiskie: a user level daemon for auto-mounting
+
+[Service]
+ExecStart=udiskie --smart-tray --notify
+
+[Install]
+WantedBy=user-graphical-login.target

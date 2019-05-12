@@ -1,0 +1,8 @@
+[Unit]
+Description=hydroxide: bridge for protonmail, the imap server
+
+[Service]
+ExecStart=hydroxide imap
+
+[Install]
+WantedBy=default.target

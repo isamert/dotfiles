@@ -25,6 +25,8 @@ bspc rule --add feh         state=floating
 
 bspc rule --add Screenkey   manage=off
 
+# Start WM related stuff
 pgrep compton || compton &
 pgrep sxhkd || sxhkd &
 bar &
+feh --bg-scale "$HOME/.config/wall.png"

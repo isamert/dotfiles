@@ -1,0 +1,8 @@
+[Unit]
+Description=Unclutter: Hides mouse when it's inactive for a while
+
+[Service]
+ExecStart=unclutter
+
+[Install]
+WantedBy=user-graphical-login.target
