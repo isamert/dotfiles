@@ -2,7 +2,6 @@ export BROWSER=jaro
 export EDITOR=jaro
 export VISUAL=jaro
 export SHELL=/bin/fish
-export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin
 
 # For aurin, aursearch... aliases. (Also used in some other scripts)
 export AUR_HELPER=trizen
@@ -51,5 +50,12 @@ export TS_ONFINISH=ts_onfinish
 
 # SLIMMERJS requires firefox 59
 export SLIMERJSLAUNCHER=$HOME/Workspace/temp/firefox/firefox-bin
+
+# npm stuff (make it work for non-root global installs)
+export NPM_PACKAGES="$HOME/.npm-packages"
+export NODE_PATH="$NPM_PACKAGES/lib/node_modules:$NODE_PATH"
+
+# the PATH
+export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin
 
 # vi: foldmethod=marker

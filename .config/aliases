@@ -37,10 +37,10 @@ alias xpaste="xclip -selection clipboard -o" # paste cb content
 
 #alias ls="ls -ShG --color --group-directories-first"
 #alias lls="ls -lthG --color --group-directories-first"
-alias ls="lsd --group-dirs first --classify"
-alias ll="lsd --group-dirs first --classify --oneline"
-alias lls="lsd --group-dirs first --classify --long"
-alias lla="lsd --group-dirs first --classify --long --all"
+alias ls="lsd --group-dirs first --classify --color=always --icon=always"
+alias ll="lsd --group-dirs first --classify --oneline --color=always --icon=always"
+alias lls="lsd --group-dirs first --classify --long --color=always --icon=always"
+alias lla="lsd --group-dirs first --classify --long --all --color=always --icon=always"
 
 # abbrv
 alias n="nvim"

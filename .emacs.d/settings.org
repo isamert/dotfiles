@@ -215,6 +215,7 @@ Make some temproary windows appear at bottom.
 (shackle-window "\\*Org Select\\*" 0.4)
 (shackle-window "CAPTURE-*" 0.4)
 (shackle-window "magit.*" 0.4)
+(shackle-window "\\*xref\\*" 0.4)
 #+END_SRC
 ** Spaces instead of tabs
 #+BEGIN_SRC emacs-lisp
@@ -232,13 +233,6 @@ Make some temproary windows appear at bottom.
         evil-want-C-u-scroll t)
   :config
   (evil-mode 1))
-#+END_SRC
-*** Install evil keybindings for other modes
-#+BEGIN_SRC emacs-lisp
-(use-package evil-collection
-  :ensure t
-  :init
-  (evil-collection-init))
 #+END_SRC
 ** evil-surround
 #+BEGIN_SRC emacs-lisp
@@ -289,13 +283,22 @@ Make headings look better with nice bullets. It also adjusts the size of heading
   (add-hook 'org-mode-hook (lambda () (org-bullets-mode t))))
 #+END_SRC
 ** Babel
+*** Install extra languages
+**** ob-http
+- Http request in org-mode babel.
+#+BEGIN_SRC emacs-lisp
+(use-package ob-http
+  :ensure t)
+#+END_SRC
 *** Load languages
 These are the languages that can be run in codeblocks.
 #+BEGIN_SRC emacs-lisp
 (org-babel-do-load-languages
  'org-babel-load-languages
- '((scheme . t)
-   (python . t)))
+ '((emacs-lisp . t)
+   (scheme . t)
+   (python . t)
+   (http . t)))
 #+END_SRC
 *** Don't ask permissions for evaluating code blocks
 #+BEGIN_SRC emacs-lisp
@@ -424,7 +427,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 *** Bindings
 #+BEGIN_SRC emacs-lisp
 (key-chord-define evil-insert-state-map "jk" 'evil-normal-state) ;; jk returns to normal mode, from insert mode
-(key-chord-define evil-normal-state-map "ff" 'evil-toggle-fold) ;; ff toggles folding
+(key-chord-define evil-normal-state-map "ff" 'evil-toggle-fold)  ;; ff toggles folding
 #+END_SRC
 ** avy
 avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using a given char.
@@ -523,6 +526,11 @@ Shows a nice tooltip while idling on a completion.
     (company-quickhelp-mode))
     (eval-after-load 'company '(define-key company-active-map (kbd "M-p") 'company-quickhelp-manual-begin))) ;; Alt-p shows the popup manually
 #+END_SRC
+** eglot (lsp client)
+#+BEGIN_SRC emacs-lisp
+(use-package eglot
+  :ensure t)
+#+END_SRC
 ** eshell
 *** aliases
 Get bash aliases and update eshell aliases. My aliases are in a file called =~/.config/aliases= in bash format. I convert them to abbreviations in fish shell and I convert them to eshell aliases in here.
@@ -565,22 +573,101 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 (add-hook 'org-mode-hook 'flyspell-mode)
 (add-hook 'markdown-mode-hook 'flyspell-mode)
 #+END_SRC
+** treemacs
+#+BEGIN_SRC emacs-lisp
+(use-package treemacs
+  :ensure t
+  :defer t)
+
+(use-package treemacs-evil
+  :after treemacs evil
+  :ensure t)
+
+(use-package treemacs-projectile
+  :after treemacs projectile
+  :ensure t)
+
+(use-package treemacs-icons-dired
+  :after treemacs dired
+  :ensure t
+  :config (treemacs-icons-dired-mode))
+
+(use-package treemacs-magit
+  :after treemacs magit
+  :ensure t)
+#+END_SRC
+** telephone-line
+#+BEGIN_SRC emacs-lisp
+;; Color settings
+;; I just extracted these 2 functions from the telephone-line source.
+;; and only switched their colors.
+(defface telephone-line-evil-insert
+  '((t (:background "tomato" :inherit telephone-line-evil)))
+  "Face used in evil color-coded segments when in Insert state."
+  :group 'telephone-line-evil)
+
+(defface telephone-line-evil-normal
+  '((t (:background "dark slate blue" :inherit telephone-line-evil)))
+  "Face used in evil color-coded segments when in Normal state."
+  :group 'telephone-line-evil)
+
+(use-package telephone-line
+  :ensure t
+  :config
+    (progn
+      ;; Separator settings
+      (setq telephone-line-primary-left-separator 'telephone-line-cubed-left
+            telephone-line-secondary-left-separator 'telephone-line-cubed-hollow-left
+            telephone-line-primary-right-separator 'telephone-line-cubed-right
+            telephone-line-secondary-right-separator 'telephone-line-cubed-hollow-right)
+
+      ;; Define segments
+      (setq telephone-line-lhs
+          '((evil   . (telephone-line-evil-tag-segment))
+            (accent . (telephone-line-vc-segment
+                       telephone-line-process-segment))
+            (nil    . (telephone-line-buffer-segment
+                       telephone-line-minor-mode-segment))))
+
+      (setq telephone-line-center-rhs
+          '((nil    . (telephone-line-flycheck-segment))))
+
+      (setq telephone-line-rhs
+          '((nil    . (telephone-line-misc-info-segment))
+            (accent . (telephone-line-major-mode-segment))
+            (evil   . (telephone-line-airline-position-segment))))
+
+      ;; Misc settings
+      (setq telephone-line-height 20)
+      (telephone-line-mode t)))
+#+END_SRC
+** multiple-cursors
+#+BEGIN_SRC emacs-lisp
+(use-package evil-mc
+  :ensure t
+  :config
+  (progn
+    (evil-define-key 'visual evil-mc-key-map
+      "A" #'evil-mc-make-cursor-in-visual-selection-end
+      "I" #'evil-mc-make-cursor-in-visual-selection-beg)
+    (global-evil-mc-mode 1)))
+#+END_SRC
+** TODO orgmode #+completion stuff
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For key-chord  bindings, see: [[*Bindings][key-chord/bindings]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
 ** Some general keybindings
-| Key   | Action              |
-|-------+---------------------|
-| <ESC> | quit current action |
-| C-s   | save buffer         |
-
 #+BEGIN_SRC emacs-lisp
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 (global-set-key (kbd "C-s") 'save-buffer)
 
 (evil-define-key 'normal 'global
-  (kbd "?") 'helm-semantic-or-imenu)
+  "gd" 'my/goto-definition
+  "gR" 'my/find-references
+  "?"   'helm-semantic-or-imenu
+  (kbd "M-f") 'treemacs
+  (kbd "C-f") 'helm-occur)
 #+END_SRC
 ** evil-leader
 Enable leader key and bind some keys.
@@ -595,17 +682,34 @@ Enable leader key and bind some keys.
     (evil-leader/set-key
       ;; generic
       "SPC" 'helm-M-x
-      "e"   'eval-last-sexp
-      "G"   'projectile-browse-dirty-projects
-      "m"   'magit-status
       "RET" 'helm-mini
-      "f" 'helm-occur
-      "r" 'helm-rg
+      ";"   'eval-last-sexp
+      "f"   'projectile-find-file
 
-      ;; projectile
-      "g"  'projectile-find-file
+      ;; helm
+      "hh" 'helm-resume
+      "hr" 'helm-rg
+
+      ;; bookmarks
+      "bb" 'helm-bookmarks
+      "bs" 'bookmarks-set
+
+      ;; projectile/project
+      "pp" 'projectile-browse-dirty-projects
       "pf" 'projectile-find-file
-      "pp" 'projectile-switch-project
+      "ps" 'projectile-switch-project
+      "pr" 'projectile-recentf
+
+      ;; eglot
+      "ee" 'eglot
+      "er" 'eglot-rename
+      "ef" 'eglot-format
+      "ea" 'eglot-code-actions
+      "eh" 'eglot-help-at-point
+
+      ;; refactor
+      "rr" 'my/rename-variable
+      "rf" 'my/format-code
       )))
 #+END_SRC
 ** Better split management
@@ -687,12 +791,20 @@ Enable leader key and bind some keys.
   "O" 'org-open-at-point
   "Y" 'org-store-link)
 #+END_SRC
-** evil bindings for org-agenda
+*** evil bindings for org-agenda
 #+BEGIN_SRC emacs-lisp
 (add-hook 'org-agenda-mode-hook
   (lambda ()
     (define-key org-agenda-mode-map "j" 'evil-next-line)
     (define-key org-agenda-mode-map "k" 'evil-previous-line)))
+#+END_SRC
+** TODO Install evil keybindings for other modes
+#+BEGIN_SRC
+(use-package evil-collection
+  :after evil
+  :ensure t
+  :config
+  (evil-collection-init))
 #+END_SRC
 * Language specific
 ** git
@@ -743,4 +855,57 @@ Enable leader key and bind some keys.
 ** rust
 #+BEGIN_SRC emacs-lisp
 (use-package rust-mode :ensure t)
+#+END_SRC
+** js
+*** flycheck: use eslint executable from project dir
+#+BEGIN_SRC emacs-lisp
+(defun use-eslint-from-node-modules ()
+  (let* ((root (locate-dominating-file
+                (or (buffer-file-name) default-directory)
+                "node_modules"))
+         (eslint (and root (expand-file-name "node_modules/.bin/eslint" root))))
+    (when (and eslint (file-executable-p eslint))
+      (setq-local flycheck-javascript-eslint-executable eslint))))
+
+(add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
+#+END_SRC
+*** tern: code completion and stuff
+#+BEGIN_SRC emacs-lisp
+(use-package company-tern
+  :ensure t
+  :config
+  (progn
+    (add-to-list 'company-backends 'company-tern)
+    (add-hook 'js-mode-hook (lambda () (tern-mode t)))))
+#+END_SRC
+*** TODO indium
+https://indium.readthedocs.io/en/latest/
+* my/
+#+BEGIN_SRC emacs-lisp
+(defun my/goto-definition nil
+  (interactive)
+  (cond
+    ((bound-and-true-p tern-mode) (call-interactively 'tern-find-definition))
+    (t (call-interactively 'xref-find-definition))))
+
+(defun my/find-references nil
+  (interactive)
+  (cond
+    ((bound-and-true-p tern-mode) (call-interactively 'tern-highlight-refs))
+    (t (call-interactively 'xref-find-references))))
+
+(defun my/rename-variable nil
+  (interactive)
+  (cond
+    ((bound-and-true-p tern-mode) (call-interactively 'tern-rename-variable))
+    ((bound-and-true-p eglot--managed-mode) (call-interactively 'eglot-rename))
+    (t (message "No renamer found for this mode!"))))
+
+(defun my/format-code nil
+  (interactive)
+  (cond
+    ((bound-and-true-p elpy-mode) (call-interactively 'elpy-format-code))
+    ((bound-and-true-p eglot--managed-mode) (call-interactively 'eglot-format))
+    ((bound-and-true-p rust-mode) (call-interactively 'rust-format-buffer))
+    (t (message "No formatter found for this mode!"))))
 #+END_SRC
