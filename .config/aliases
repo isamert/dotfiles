@@ -28,13 +28,12 @@ alias fkill="fuzzy kill"
 alias mktar="tar -cvf"
 alias mkbz2="tar -cvjf"
 alias mkgz="tar -cvzf"
-alias ...="cd ../.."                     # .. works out of the box.
+alias ...="cd ../.."
 alias ....="cd ../../.."
 alias df="df -H"
 alias du="ncdu"
 alias grep="grep --color=auto -i"
 alias xpaste="xclip -selection clipboard -o" # paste cb content
-
 
 #alias ls="ls -ShG --color --group-directories-first"
 #alias lls="ls -lthG --color --group-directories-first"
@@ -44,13 +43,16 @@ alias lls="lsd --group-dirs first --classify --long"
 alias lla="lsd --group-dirs first --classify --long --all"
 
 # abbrv
+alias n="nvim"
 alias v="jaro --method=view"
 alias e="jaro --method=edit"
+alias mt="jaro --mime-type"
 alias how="howdoi --color --all"
 alias mkx="chmod +x"
 alias sdu="systemctl --user"
+alıas yt="youtube-viewer"
 
-# master wq
+# master Wq
 alias :q="exit"
 
 # git
@@ -75,6 +77,6 @@ alias ipaddr="curl https://api.ipify.org"
 alias ipinfo="curl https://ipinfo.io"
 alias download-website="wget --recursive --page-requisites --html-extension
     --convert-links --no-parent --limit-rate=500K" # Download a website completely
-alias git-todo="rg 'FIXME|TODO'" # Use grep instead of rg if you don't have it
+alias git-todo="rg 'FIXME|TODO'"
 alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd+ | bc"
 

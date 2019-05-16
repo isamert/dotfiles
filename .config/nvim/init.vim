@@ -270,6 +270,27 @@ nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
 tnoremap <silent> <C-q> <C-\><C-n>:q<CR>|   " ctrl-q -> quit (term)
 " }}}
 
+" Turkish keyboard mappings {{{
+nnoremap Ş :
+nnoremap ı i
+nnoremap ğ [
+nnoremap ü ]
+nnoremap Ğ {
+nnoremap Ü }
+nnoremap ç .
+nnoremap Ö <
+nnoremap Ç >
+vnoremap Ş :
+vnoremap ı i
+vnoremap ğ [
+vnoremap ü ]
+vnoremap Ğ {
+vnoremap Ü }
+vnoremap ç .
+vnoremap Ö <
+vnoremap Ç >
+" }}}
+
 " move in insert mode {{{
 inoremap <C-l> <right>| " ctrl-l -> move right in insert mode
 inoremap <C-h> <left>|  " ...

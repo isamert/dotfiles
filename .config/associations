@@ -101,7 +101,7 @@
                     (set! file (path-join (getcwd) file)))
               (let* ((parent-dir (parent-path file))
                      (file-index (1+ (index-of (basename file) (scandir parent-dir (λ (f) (not (equal? (stat:type (stat (path-join parent-dir f))) 'directory))))))))
-                (run-fn-or-system `("sxiv" "-n" ,(number->string file-index) "%f") parent-dir)))
+                (system* "sxiv" "-n" (number->string file-index) parent-dir)))
   #:on-error "feh --start-at %f"
   #:view #t
   #:edit "pinta %f")
