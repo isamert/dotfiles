@@ -7,4 +7,4 @@ Type=forking
 ExecStart=mpdscribble
 
 [Install]
-WantedBy=default.target
+WantedBy=user-login.target

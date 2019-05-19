@@ -139,6 +139,11 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
 (add-hook 'before-save-hook
           'delete-trailing-whitespace)
 #+END_SRC
+** Set scratch buffer mode to org mode
+#+BEGIN_SRC emacs-lisp
+(setq initial-major-mode 'org-mode)
+(setq initial-scratch-message nil)
+#+END_SRC
 * Visuals
 ** General
 Hide menubar and toolbar and replace blinking cursor with nice static box cursor.

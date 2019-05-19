@@ -12,4 +12,4 @@ Restart=always
 TimeoutStartSec=0
 
 [Install]
-WantedBy=default.target
+WantedBy=user-login.target
