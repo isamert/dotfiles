@@ -1,0 +1,8 @@
+# This unit is started from ~/.profile
+# Other units that requires graphical env needs to have
+# WantedBy=user-login.target
+
+[Unit]
+Description=User Login
+Requires=default.target
+After=default.target
