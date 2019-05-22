@@ -221,6 +221,8 @@ Make some temproary windows appear at bottom.
 (shackle-window "CAPTURE-*" 0.4)
 (shackle-window "magit.*" 0.4)
 (shackle-window "\\*xref\\*" 0.4)
+(shackle-window "\\*Org-Babel Error Output\\*" 0.4)
+(shackle-window "\\*curl error\\*" 0.4)
 #+END_SRC
 ** Spaces instead of tabs
 #+BEGIN_SRC emacs-lisp
@@ -303,6 +305,8 @@ These are the languages that can be run in codeblocks.
  '((emacs-lisp . t)
    (scheme . t)
    (python . t)
+   (js . t)
+   (shell . t)
    (http . t)))
 #+END_SRC
 *** Don't ask permissions for evaluating code blocks
@@ -582,7 +586,14 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 #+BEGIN_SRC emacs-lisp
 (use-package treemacs
   :ensure t
-  :defer t)
+  :defer t
+  :config
+  (setq treemacs-show-hidden-files nil)
+  :bind
+  (:map global-map
+    ("M-f" . treemacs)
+    ("M-j" . evil-window-down)
+    ("M-l" . evil-window-right)))
 
 (use-package treemacs-evil
   :after treemacs evil
@@ -650,6 +661,7 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 #+BEGIN_SRC emacs-lisp
 (use-package evil-mc
   :ensure t
+  :diminish evil-mc-mode
   :config
   (progn
     (evil-define-key 'visual evil-mc-key-map
@@ -658,6 +670,18 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
     (global-evil-mc-mode 1)))
 #+END_SRC
 ** TODO orgmode #+completion stuff
+** yasnippets
+#+BEGIN_SRC emacs-lisp
+(use-package yasnippet
+  :ensure t
+  :config
+  (progn
+    (yas-reload-all)
+    (add-hook 'prog-mode-hook #'yas-minor-mode)
+    (setq yas-snippet-dirs
+      '("~/.emacs.d/snippets"                   ;; personal snippets
+        ))))
+#+END_SRC
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For key-chord  bindings, see: [[*Bindings][key-chord/bindings]]
@@ -677,6 +701,10 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 ** evil-leader
 Enable leader key and bind some keys.
 #+BEGIN_SRC emacs-lisp
+(defun execute-C-c-C-c ()
+  (interactive)
+  (execute-kbd-macro (kbd "C-c C-c")))
+
 (use-package evil-leader
   :ensure t
   :init
@@ -690,6 +718,8 @@ Enable leader key and bind some keys.
       "RET" 'helm-mini
       ";"   'eval-last-sexp
       "f"   'projectile-find-file
+      "s"   'yas-insert-snippet
+      "e"   'execute-C-c-C-c
 
       ;; helm
       "hh" 'helm-resume
@@ -705,17 +735,14 @@ Enable leader key and bind some keys.
       "ps" 'projectile-switch-project
       "pr" 'projectile-recentf
 
-      ;; eglot
-      "ee" 'eglot
-      "er" 'eglot-rename
-      "ef" 'eglot-format
-      "ea" 'eglot-code-actions
-      "eh" 'eglot-help-at-point
-
       ;; refactor
       "rr" 'my/rename-variable
-      "rf" 'my/format-code
-      )))
+      "rf" 'my/format-code)
+
+      (evil-leader/set-key-for-mode 'org-mode
+        "d" 'org-babel-remove-result)
+))
+
 #+END_SRC
 ** Better split management
 - A-- splits below, A-\ splits right.
@@ -737,16 +764,22 @@ Enable leader key and bind some keys.
 (defvar movement-map (make-sparse-keymap "movement-map")
   "Override all major and minor mode keys")
 
-(add-to-list 'emulation-mode-map-alists
-  `((movement-map-mode . ,movement-map)))
-
 (evil-define-key 'normal movement-map
   (kbd "M-j") 'evil-window-down
   (kbd "M-k") 'evil-window-up
   (kbd "M-h") 'evil-window-left
   (kbd "M-l") 'evil-window-right)
 
+(evil-define-key 'normal treemacs-mode-map
+  (kbd "M-j") 'evil-window-down
+  (kbd "M-k") 'evil-window-up
+  (kbd "M-h") 'evil-window-left
+  (kbd "M-l") 'evil-window-right)
+
 (evil-make-intercept-map movement-map)
+
+(add-to-list 'emulation-mode-map-alists
+  `((movement-map-mode . ,movement-map)))
 #+END_SRC
 ** Move in insert mode
 - Use A-h,j,k,l to move in insert mode.

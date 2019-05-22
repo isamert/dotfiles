@@ -1,7 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ -z "$*" ]; then
-    VBoxManage list vms | awk '{ print $1 }' | sed 's/"//g'
+    # VBoxManage seems pretty slow
+    #VBoxManage list vms | awk '{ print $1 }' | sed 's/"//g'
+    find ~/Workspace/vms/ -mindepth 1 -maxdepth 1 -type d -printf "%f\n"
 else
     coproc VBoxManage startvm "$*"
     exit

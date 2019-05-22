@@ -4,5 +4,5 @@
 
 [Unit]
 Description=User Graphical Login
-Requires=default.target
-After=default.target
+Requires=default.target user-login.target
+After=default.target user-login.target

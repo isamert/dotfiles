@@ -22,26 +22,26 @@ SyncState *
 # }}}
 
 # eskisehir mail {{{
-IMAPStore eskisehir-remote
-Host outlook.office365.com
-Port 993
-User isamertgurbuz@eskisehir.edu.tr
-PassCmd "getpassword '/email/eskisehir'"
-SSLType IMAPS
-CertificateFile /etc/ssl/certs/ca-certificates.crt
-
-MaildirStore eskisehir-local
-Path ~/.maildir/eskisehir/
-Inbox ~/.maildir/eskisehir/INBOX/
-Subfolders Verbatim
-
-Channel eskisehir
-Master :eskisehir-remote:
-Slave :eskisehir-local:
-Create Both
-Expunge Both
-Patterns *
-SyncState *
+#IMAPStore eskisehir-remote
+#Host outlook.office365.com
+#Port 993
+#User isamertgurbuz@eskisehir.edu.tr
+#PassCmd "getpassword '/email/eskisehir'"
+#SSLType IMAPS
+#CertificateFile /etc/ssl/certs/ca-certificates.crt
+#
+#MaildirStore eskisehir-local
+#Path ~/.maildir/eskisehir/
+#Inbox ~/.maildir/eskisehir/INBOX/
+#Subfolders Verbatim
+#
+#Channel eskisehir
+#Master :eskisehir-remote:
+#Slave :eskisehir-local:
+#Create Both
+#Expunge Both
+#Patterns *
+#SyncState *
 # }}}
 
 # proton mail {{{

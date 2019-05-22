@@ -5,4 +5,4 @@ Description=hydroxide: bridge for protonmail, the smtp server
 ExecStart=hydroxide smtp
 
 [Install]
-WantedBy=default.target
+WantedBy=user-login.target

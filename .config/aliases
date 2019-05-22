@@ -50,7 +50,7 @@ alias mt="jaro --mime-type"
 alias how="howdoi --color --all"
 alias mkx="chmod +x"
 alias sdu="systemctl --user"
-alias yt="youtube-viewer"
+alias yt="youtube-viewer --player=mpv"
 
 # master Wq
 alias :q="exit"

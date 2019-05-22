@@ -94,11 +94,8 @@ hyper + {_,shift + } {backslash,minus}
     bspc node -p {east,west,south,north}; \
     term
 
-{hyper + d, F12}
-    bspwmc scratchpad_top
-
-{hyper + shift + d, F11}
-    bspwmc scratchpad_bot
+hyper + {e, d}
+    bspwmc {scratchpad_top, scratchpad_bot}
 
 hyper + q
     clipmenu
