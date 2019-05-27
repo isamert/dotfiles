@@ -471,6 +471,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
 *** Better selection
 Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ for selecting previous result.
 #+BEGIN_SRC emacs-lisp
+(define-key helm-map (kbd "M-`") 'helm-select-action)
 (define-key helm-map (kbd "TAB") 'helm-next-line)
 (define-key helm-map (kbd "<backtab>") 'helm-previous-line)
 (define-key helm-map (kbd "M-j") 'helm-next-line)
@@ -669,6 +670,11 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
       "I" #'evil-mc-make-cursor-in-visual-selection-beg)
     (global-evil-mc-mode 1)))
 #+END_SRC
+** expand-region
+#+BEGIN_SRC emacs-lisp
+(use-package expand-region
+  :ensure t)
+#+END_SRC
 ** TODO orgmode #+completion stuff
 ** yasnippets
 #+BEGIN_SRC emacs-lisp
@@ -694,7 +700,8 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 (evil-define-key 'normal 'global
   "gd" 'my/goto-definition
   "gR" 'my/find-references
-  "?"   'helm-semantic-or-imenu
+  "?"  'helm-semantic-or-imenu
+  "+"  'er/expand-region
   (kbd "M-f") 'treemacs
   (kbd "C-f") 'helm-occur)
 #+END_SRC
@@ -719,7 +726,7 @@ Enable leader key and bind some keys.
       ";"   'eval-last-sexp
       "f"   'projectile-find-file
       "s"   'yas-insert-snippet
-      "e"   'execute-C-c-C-c
+      "c"   'execute-C-c-C-c
 
       ;; helm
       "hh" 'helm-resume
@@ -733,16 +740,25 @@ Enable leader key and bind some keys.
       "pp" 'projectile-browse-dirty-projects
       "pf" 'projectile-find-file
       "ps" 'projectile-switch-project
-      "pr" 'projectile-recentf
+      "pr" 'projectile-recentf)
 
-      ;; refactor
-      "rr" 'my/rename-variable
-      "rf" 'my/format-code)
-
+      ;; Mode specific deletions
       (evil-leader/set-key-for-mode 'org-mode
-        "d" 'org-babel-remove-result)
-))
+        "d" 'org-babel-remove-result
+        "D" 'my/org-babel-remove-all-results)
 
+      ;; Mode specific evals
+      (evil-leader/set-key-for-mode 'js-mode
+        "e" 'indium-eval-region)
+      (evil-leader/set-key-for-mode 'org-mode
+        "e" 'org-babel-execute-src-block)
+      (evil-leader/set-key-for-mode 'emacs-lisp-mode
+        "e" 'eval-last-sexp)
+
+      ;; Mode specific REPL jumps
+      (evil-leader/set-key-for-mode 'js-mode
+        "r" 'indium-switch-to-repl-buffer)
+))
 #+END_SRC
 ** Better split management
 - A-- splits below, A-\ splits right.
@@ -916,8 +932,13 @@ Enable leader key and bind some keys.
     (add-to-list 'company-backends 'company-tern)
     (add-hook 'js-mode-hook (lambda () (tern-mode t)))))
 #+END_SRC
-*** TODO indium
-https://indium.readthedocs.io/en/latest/
+*** indium
+#+BEGIN_SRC emacs-lisp
+(use-package indium
+  :ensure t)
+#+END_SRC
+
+https://indium.readthedocs.io/en/latest
 * my/
 #+BEGIN_SRC emacs-lisp
 (defun my/goto-definition nil
@@ -946,4 +967,13 @@ https://indium.readthedocs.io/en/latest/
     ((bound-and-true-p eglot--managed-mode) (call-interactively 'eglot-format))
     ((bound-and-true-p rust-mode) (call-interactively 'rust-format-buffer))
     (t (message "No formatter found for this mode!"))))
+
+(defun my/org-babel-remove-all-results nil
+  (interactive)
+  (goto-char 1)
+  (let ((total-removed 0))
+    (while (org-babel-next-src-block)
+      (when (org-babel-remove-result)
+        (setq total-removed (+ total-removed 1))))
+    (message (format "%d result blocks are removed." total-removed))))
 #+END_SRC
