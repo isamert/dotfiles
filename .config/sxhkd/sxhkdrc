@@ -107,8 +107,8 @@ hyper + equal
     rofi -show calc -modi calc -no-show-match -no-sort
 
 # run some apps directly
-hyper + r; {f, q, e, r}
-    {firefox, qutebrowser, emacsclient -c, jaro ~}
+hyper + r; {f, q, e, r, t}
+    {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask}
 
 # menus
 hyper + {a, f, F, m, M, P, k, y}

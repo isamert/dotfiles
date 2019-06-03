@@ -1,6 +1,6 @@
 st.termname: st-24bit
 st.shell: /bin/fish
-st.font: IBM Plex Mono:pixelsize=14:antialias=true:autohint=true
+st.font: Iosevka:pixelsize=14:antialias=true:autohint=true
 st.alpha: 0.85
 st.borderpx: 1
 st.xfps: 300

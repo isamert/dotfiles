@@ -1,5 +1,5 @@
 export BROWSER=jaro
-export EDITOR=jaro
+export EDITOR="jaro --method=edit"
 export VISUAL=jaro
 export SHELL=/bin/fish
 
@@ -59,6 +59,6 @@ export NODE_PATH="$NPM_PACKAGES/lib/node_modules:$NODE_PATH"
 export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin
 
 systemctl --user import-environment
-systemctl --user start user-login.target
+systemctl --user start user-login.target &
 
 # vi: foldmethod=marker

@@ -3,3 +3,4 @@ enable-notifications=true
 save-history=true
 use-formatting=true
 wrap-at=75
+contacts-autohide=true

@@ -161,7 +161,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
   (lambda (frame)
     (with-selected-frame frame
       (set-face-attribute 'default nil
-                          :font "IBM Plex Mono"
+                          :font "Iosevka"
                           :weight 'normal
                           :width 'normal
                           :height 105))))
@@ -195,8 +195,7 @@ Colors parantheses depending on their dept.
 #+BEGIN_SRC emacs-lisp
 (use-package rainbow-delimiters
   :ensure t
-  :config
-  (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
+  :hook (prog-mode . rainbow-delimiters-mode))
 #+END_SRC
 ** 80 column line limit and trailing spaces
 This code highlights the portion of line that exceeds 80 columns and trailing spaces.
@@ -248,6 +247,16 @@ Make some temproary windows appear at bottom.
   :init
   (global-evil-surround-mode 1))
 #+END_SRC
+** evil-escape
+#+BEGIN_SRC emacs-lisp
+(use-package evil-escape
+  :ensure t
+  :init
+  (setq evil-escape-key-sequence "jk"
+        evil-escape-delay 0.2)
+  :config
+  (evil-escape-mode 1))
+#+END_SRC
 ** Visual line movement
 To move between visual lines instead of real lines:
 #+BEGIN_SRC emacs-lisp
@@ -259,12 +268,12 @@ To move between visual lines instead of real lines:
 #+END_SRC
 ** Change cursor color according to mode
 #+BEGIN_SRC emacs-lisp
-(setq evil-normal-state-cursor '("green" box))
-(setq evil-visual-state-cursor '("orange" box))
-(setq evil-emacs-state-cursor '("red" box))
-(setq evil-insert-state-cursor '("red" bar))
-(setq evil-replace-state-cursor '("red" bar))
-(setq evil-operator-state-cursor '("red" hollow))
+(setq evil-normal-state-cursor '("green" box)
+      evil-visual-state-cursor '("orange" box)
+      evil-emacs-state-cursor '("red" box)
+      evil-insert-state-cursor '("red" bar)
+      evil-replace-state-cursor '("red" bar)
+      evil-operator-state-cursor '("red" hollow))
 #+END_SRC
 * org-mode
 #+BEGIN_SRC emacs-lisp
@@ -278,7 +287,7 @@ To move between visual lines instead of real lines:
 ** Auto indent subsections
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
 #+BEGIN_SRC emacs-lisp
-(add-hook 'org-mode-hook (lambda () (org-indent-mode t)) t) ;; FIXME: theme
+(add-hook 'org-mode-hook (lambda () (org-indent-mode t)) t)
 (diminish 'org-indent-mode)
 #+END_SRC
 ** Nice bullets
@@ -286,8 +295,21 @@ Make headings look better with nice bullets. It also adjusts the size of heading
 #+BEGIN_SRC emacs-lisp
 (use-package org-bullets
   :ensure t
-  :init
-  (add-hook 'org-mode-hook (lambda () (org-bullets-mode t))))
+  :hook (org-mode . org-bullets-mode))
+#+END_SRC
+** Nice checkboxes
+https://blog.jft.rocks/emacs/unicode-for-orgmode-checkboxes.html
+#+BEGIN_SRC emacs-lisp
+(add-hook 'org-mode-hook (lambda ()
+  "Beautify Org Checkbox Symbol"
+  (push '("[ ]" . "☐") prettify-symbols-alist)
+  (push '("[X]" . "☑" ) prettify-symbols-alist)
+  (push '("[-]" . "❍" ) prettify-symbols-alist)
+  (prettify-symbols-mode)))
+
+(defface org-checkbox-done-text
+  '((t (:foreground "#71696A" :strike-through t)))
+  "Face for the text part of a checked org-mode checkbox.")
 #+END_SRC
 ** Babel
 *** Install extra languages
@@ -375,9 +397,10 @@ These are the languages that can be run in codeblocks.
         ("IN-PROGRESS" . (:foreground "magenta" :weight bold))))
 #+END_SRC
 ** sticky headers
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC
 (use-package org-sticky-header
-  :ensure t)
+  :ensure t
+  :hook (org-mode . org-sticky-header-mode))
 #+END_SRC
 ** TODO org-capture
 - [ ] Add a shortcut.
@@ -399,6 +422,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
   (which-key-mode))
 #+END_SRC
 ** goto-chg
+=g;= goes to the last change. (repeatable)
 #+BEGIN_SRC emacs-lisp
 (use-package goto-chg
   :ensure t)
@@ -420,23 +444,6 @@ A package that shows key combinations. (for example press C-x and wait) It also 
     (define-key evil-normal-state-map (kbd "M-.") 'eyebrowse-next-window-config)
     (define-key evil-normal-state-map (kbd "M-,") 'eyebrowse-prev-window-config)
     (eyebrowse-mode t)))
-#+END_SRC
-** key-chord
-*** Install and configure
-#+BEGIN_SRC emacs-lisp
-(use-package key-chord
-  :ensure t
-  :diminish key-chord-mode
-  :init
-  (setq key-chord-one-key-delay 0.3    ;; 0.3 secons delay for hitting same key (eg. aa)
-        key-chord-two-keys-delay 0.25) ;; delay hitting two different keys (eg. jk)
-  :config
-  (key-chord-mode 1))
-#+END_SRC
-*** Bindings
-#+BEGIN_SRC emacs-lisp
-(key-chord-define evil-insert-state-map "jk" 'evil-normal-state) ;; jk returns to normal mode, from insert mode
-(key-chord-define evil-normal-state-map "ff" 'evil-toggle-fold)  ;; ff toggles folding
 #+END_SRC
 ** avy
 avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using a given char.
@@ -495,11 +502,10 @@ A project management tool. I set a project path below and make sure projectile s
   :config
   (progn
     (projectile-discover-projects-in-search-path)
-    (setq projectile-globally-ignored-files (append '("Cargo.lock"))
-          projectile-globally-ignored-directories (append '(".stack-work" "target"))
+    (setq projectile-globally-ignored-files (append '("Cargo.lock" ".tern-port"))
+          projectile-globally-ignored-directories (append '(".stack-work" "target" "node_modules"))
           projectile-globally-ignored-file-suffixes (append '("~" ".rs.bk")))
     (projectile-mode)))
-;; FIXME: ignored stuff still showing up in projectile-find-file
 #+END_SRC
 ** flycheck
 #+BEGIN_SRC emacs-lisp
@@ -510,8 +516,8 @@ A project management tool. I set a project path below and make sure projectile s
 ;; show errors in tooltip while hovering
 (use-package flycheck-pos-tip
   :ensure t
-  :config
-  (with-eval-after-load 'flycheck (flycheck-pos-tip-mode)))
+  :after flycheck
+  :hook (flycheck-mode . flycheck-pos-tip-mode))
 #+END_SRC
 ** company
 *** Install and configure
@@ -589,7 +595,9 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
   :ensure t
   :defer t
   :config
-  (setq treemacs-show-hidden-files nil)
+  (progn
+    (setq treemacs-show-hidden-files nil)
+    (add-to-list 'treemacs-ignored-file-predicates (lambda (filename abspath) (string-equal filename "node_modules"))))
   :bind
   (:map global-map
     ("M-f" . treemacs)
@@ -613,6 +621,9 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
   :after treemacs magit
   :ensure t)
 #+END_SRC
+
+#+RESULTS:
+
 ** telephone-line
 #+BEGIN_SRC emacs-lisp
 ;; Color settings
@@ -680,30 +691,33 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 #+BEGIN_SRC emacs-lisp
 (use-package yasnippet
   :ensure t
+  :hook (prog-mode . yas-minor-mode)
   :config
   (progn
     (yas-reload-all)
-    (add-hook 'prog-mode-hook #'yas-minor-mode)
     (setq yas-snippet-dirs
       '("~/.emacs.d/snippets"                   ;; personal snippets
         ))))
 #+END_SRC
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
-- For key-chord  bindings, see: [[*Bindings][key-chord/bindings]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
 ** Some general keybindings
 #+BEGIN_SRC emacs-lisp
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-(global-set-key (kbd "C-s") 'save-buffer)
 
 (evil-define-key 'normal 'global
-  "gd" 'my/goto-definition
-  "gR" 'my/find-references
   "?"  'helm-semantic-or-imenu
-  "+"  'er/expand-region
+  (kbd "M-e") 'er/expand-region
   (kbd "M-f") 'treemacs
-  (kbd "C-f") 'helm-occur)
+  (kbd "C-f") 'helm-occur
+  (kbd "C-s") 'save-buffer)
+
+(evil-define-key 'normal prog-mode-map
+  (kbd "M-;") 'comment-line
+  (kbd "M-:") 'comment-dwim
+  "gd" 'xref-find-definition
+  "gf" 'xref-find-references)
 #+END_SRC
 ** evil-leader
 Enable leader key and bind some keys.
@@ -864,12 +878,11 @@ Enable leader key and bind some keys.
 ** git
 #+BEGIN_SRC emacs-lisp
 (use-package magit
-  :ensure t)
-
-;; j,k as up-down
-(with-eval-after-load 'magit-status
-  (define-key magit-status-mode-map (kbd "j")  'next-line)
-  (define-key magit-status-mode-map (kbd "k")  'previous-line))
+  :ensure t
+  :bind
+  (:map magit-status-mode-map
+    ("j" . 'next-line)
+    ("k" . 'previous-line)))
 #+END_SRC
 ** markdown
 #+BEGIN_SRC emacs-lisp
@@ -903,8 +916,7 @@ Enable leader key and bind some keys.
 (use-package haskell-mode :ensure t)
 (use-package flycheck-haskell
   :ensure t
-  :config
-  (add-hook 'haskell-mode-hook #'flycheck-haskell-setup))
+  :hook (haskell-mode . flycheck-haskell-setup))
 #+END_SRC
 ** rust
 #+BEGIN_SRC emacs-lisp
@@ -927,47 +939,51 @@ Enable leader key and bind some keys.
 #+BEGIN_SRC emacs-lisp
 (use-package company-tern
   :ensure t
+  :after company
+  :hook ((js-mode web-mode) . tern-mode)
   :config
   (progn
     (add-to-list 'company-backends 'company-tern)
-    (add-hook 'js-mode-hook (lambda () (tern-mode t)))))
+
+    (evil-define-key 'normal tern-mode-keymap
+      "gd" 'tern-find-definition
+      "gf" 'tern-highlight-refs)))
 #+END_SRC
-*** indium
+** web-mode
 #+BEGIN_SRC emacs-lisp
-(use-package indium
-  :ensure t)
+(use-package web-mode
+  :ensure t
+  :mode ("\\.jsx\\'")
+  :init
+  (setq web-mode-enable-current-element-highlight t
+        web-mode-enable-current-column-highlight t
+        web-mode-enable-auto-pairing t
+        web-mode-enable-auto-closing t
+        web-mode-enable-auto-opening t)
+
+   ;; Use eslint with web-mode for jsx files
+  (flycheck-add-mode 'javascript-eslint 'web-mode)
+
+  :config
+  ;; Change some colors and stuff
+  (set-face-attribute 'web-mode-html-tag-face nil :weight 'bold)
+  (set-face-attribute 'web-mode-keyword-face nil :weight 'bold)
+  (set-face-attribute 'web-mode-function-call-face nil :weight 'normal :foreground "normal"))
+
 #+END_SRC
 
-https://indium.readthedocs.io/en/latest
+** emmet-mode
+#+BEGIN_SRC emacs-lisp
+(use-package emmet-mode
+  :ensure t
+  :hook (web-mode css-mode sgml-mode)
+  :init
+  (setq emmet-expand-jsx-className? t
+        emmet-self-closing-tag-style " /"))
+#+END_SRC
+
 * my/
 #+BEGIN_SRC emacs-lisp
-(defun my/goto-definition nil
-  (interactive)
-  (cond
-    ((bound-and-true-p tern-mode) (call-interactively 'tern-find-definition))
-    (t (call-interactively 'xref-find-definition))))
-
-(defun my/find-references nil
-  (interactive)
-  (cond
-    ((bound-and-true-p tern-mode) (call-interactively 'tern-highlight-refs))
-    (t (call-interactively 'xref-find-references))))
-
-(defun my/rename-variable nil
-  (interactive)
-  (cond
-    ((bound-and-true-p tern-mode) (call-interactively 'tern-rename-variable))
-    ((bound-and-true-p eglot--managed-mode) (call-interactively 'eglot-rename))
-    (t (message "No renamer found for this mode!"))))
-
-(defun my/format-code nil
-  (interactive)
-  (cond
-    ((bound-and-true-p elpy-mode) (call-interactively 'elpy-format-code))
-    ((bound-and-true-p eglot--managed-mode) (call-interactively 'eglot-format))
-    ((bound-and-true-p rust-mode) (call-interactively 'rust-format-buffer))
-    (t (message "No formatter found for this mode!"))))
-
 (defun my/org-babel-remove-all-results nil
   (interactive)
   (goto-char 1)
@@ -976,4 +992,9 @@ https://indium.readthedocs.io/en/latest
       (when (org-babel-remove-result)
         (setq total-removed (+ total-removed 1))))
     (message (format "%d result blocks are removed." total-removed))))
+
+;; see this: https://github.com/emacs-evil/evil/issues/301
+(defun evil-fix-map nil
+  (evil-insert)
+  (evil-normal))
 #+END_SRC

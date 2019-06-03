@@ -27,7 +27,7 @@ trizen -S --noconfirm python-ueberzug-git
 sudo pacman -S rofi
 trizen -S --noconfirm rofi-calc
 
-if [[ -n "$ENABLE_NVIDIA" ]]; then
+if [[ -n "$ENABLE_URXVT" ]]; then
     echo "→ urxvt is enabled."
     sudo pacman -S --noconfirm rtv
     trizen -S --noconfirm rxvt-unicode-truecolor urxvt-perls urxvt-resize-font-git
@@ -41,6 +41,13 @@ if [[ -n "$ENABLE_NVIDIA" ]]; then
 else
     echo "× NVidia is *not* enabled."
 fi
+# }}}
+
+# {{{ mpv
+# Install thumbnailer script
+mkdir -p ~/.config/mpv/scripts
+curl -fsSlL https://github.com/TheAMM/mpv_thumbnail_script/releases/download/0.4.2/mpv_thumbnail_script_client_osc.lua > ~/.config/mpv/scripts/mpv_thumbnail_script_client_osc.lua
+curl -fsSlL https://github.com/TheAMM/mpv_thumbnail_script/releases/download/0.4.2/mpv_thumbnail_script_server.lua > ~/.config/mpv/scripts/mpv_thumbnail_script_server.lua
 # }}}
 
 # proton mail {{{
@@ -90,6 +97,11 @@ curl https://raw.githubusercontent.com/Chrysostomus/bspwm-scripts/master/bin/euc
 curl -fsSl https://raw.githubusercontent.com/tridactyl/tridactyl/master/native/install.sh | bash
 # }}}
 
+# android development config {{{
+sudo pacman -S --noconfirm android-tools android-udev
+sudo usermod -aG adbusers "$LOGNAME" # In other distros its `plugdev` group
+# }}}
+
 # pacman configuration {{{
 sudo sed -i 's/^#Color$/Color/' /etc/pacman.conf
 sudo sed -i 's/^#VerbosePkgLists$/VerbosePkgLists/' /etc/pacman.conf
@@ -97,4 +109,17 @@ sudo sed -i 's/^#VerbosePkgLists$/VerbosePkgLists/' /etc/pacman.conf
 
 # systemd configuration {{{
 sudo sed -i 's/^#DefaultTimeoutStopSec=\w*$/DefaultTimeoutStopSec=15s/' /etc/systemd/system.conf
+
+systemctl --user enable aria2c.service
+systemctl --user enable clipmenud.service
+systemctl --user enable emacs.service
+systemctl --user enable mpd.socket
+systemctl --user enable mpdscribble.service
+systemctl --user enable geoclue-agent.service
+systemctl --user enable redshift.service
+systemctl --user enable syncthing.service
+systemctl --user enable udiskie.service
+systemctl --user enable unclutter.service
 # }}}
+
+# vi: foldmethod=marker
