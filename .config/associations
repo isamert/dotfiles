@@ -80,6 +80,7 @@
               "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
   #:program `("tsp"
               "mpv"
+              "--x11-name=youtube"
               "--geometry=-10-10"
               ,(format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
               "--autofit=880x495"
@@ -137,7 +138,7 @@
 
 (assoc
   #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
-  #:program "extract %f"
+  #:program "xarchiver %f"
   #:view "xarchiver %f")
 
 (assoc
@@ -147,7 +148,6 @@
 (assoc
   #:pattern ".*"
   #:program (select-alternative-with "fzf")
-  #:term (select-alternative-with "dmenu")
   #:standalone #t)
 
 ;; vi:syntax=scheme

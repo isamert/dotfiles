@@ -25,10 +25,6 @@ Plug 'airblade/vim-gitgutter'                " Show git changes
 Plug 'rhysd/devdocs.vim'                     " :DevDocs -> open stuff in DevDocs
 Plug 'jeffkreeftmeijer/vim-numbertoggle'     " Toggle between relative and normal lines when needed
 Plug 'majutsushi/tagbar'                     " list top-level stuff in a window
-Plug 'autozimu/LanguageClient-neovim', {
-    \ 'branch': 'next',
-    \ 'do': 'bash install.sh',
-    \ }
 Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
 
 " editing
@@ -154,23 +150,6 @@ let g:ale_linters['r']        = ['lintr']
 let g:ale_linters['vim']      = ['vint']
 let g:ale_linters['json']     = ['jq']
 let g:ale_linters['markdown'] = ['vale']
-" }}}
-
-" languageclient (for language servers) {{{
-let g:deoplete#enable_at_startup = 1
-let g:LanguageClient_serverCommands            = {}
-let g:LanguageClient_serverCommands['haskell'] = ['hie-wrapper']
-let g:LanguageClient_serverCommands['python']  = ['pyls']
-let g:LanguageClient_serverCommands['rust']    = ['rustup', 'run', 'nightly', 'rls']
-let g:LanguageClient_serverCommands['cpp']     = ['clangd']
-
-" languageclient mappings
-nnoremap <F5> :call LanguageClient_contextMenu()<CR>
-nnoremap <silent> <F2> :call LanguageClient#textDocument_rename()<CR>
-nnoremap <silent> K :call PreviewToggler('ViewDetails')<CR>
-nnoremap <silent> E :call PreviewToggler('LanguageClient#explainErrorAtPoint')<CR>
-nnoremap <silent> gd :call LanguageClient#textDocument_definition()<CR>
-nnoremap <silent> <leader>s :call LanguageClient#textDocument_documentSymbol()<CR>
 " }}}
 
 " stuff {{{
@@ -309,7 +288,6 @@ command! ConfigEdit e $MYVIMRC    " edit vim config
 command! Vterm vsplit|term
 command! Term split|term
 command! SpellCheckEn setlocal spell! spelllang=en_us
-command! RestartLSP call LanguageClient#exit() | call LanguageClient#startServer()
 command! -range TabularizeHaskellData <line1>,<line2>GTabularize/[{},]\|::
 " }}}
 
@@ -332,14 +310,6 @@ function! PreviewToggler(fn, ...)
 
     let params = get(a:, 1, [])
     :call call (function(a:fn), params)
-endfunction
-
-function! ViewDetails()
-    if exists('b:LanguageClient_projectRoot')
-        :call PreviewToggler('LanguageClient#textDocument_hover')
-    else
-        :ALEDetail
-    endif
 endfunction
 " }}}
 

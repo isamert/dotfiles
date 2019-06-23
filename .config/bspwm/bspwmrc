@@ -6,6 +6,7 @@ xrandr -q | grep " connected" | cut -d' ' -f1 | xargs -i bspc monitor {} --reset
 bspc config automatic_scheme longest_side
 bspc config initial_polarity second_child
 
+bspc config pointer_follows_focus false
 bspc config focus_follows_pointer true
 bspc config single_monocle        true
 bspc config gapless_monocle       true
@@ -13,15 +14,17 @@ bspc config borderless_monocle    true
 bspc config window_gap            $(xrdb-get-value wm.gaps)
 bspc config border_width          $(xrdb-get-value wm.border)
 
-bspc rule --add '*:float'   state=floating
-bspc rule --add '*:padtop'  state=floating
-bspc rule --add 'float'     state=floating
-bspc rule --add 'padtop'    state=floating
+bspc rule --add '*:float'     state=floating
+bspc rule --add '*:padtop'    state=floating
+bspc rule --add 'float'       state=floating
+bspc rule --add 'padtop'      state=floating
 
-bspc rule --add mpv         state=floating
-bspc rule --add Sxiv        state=floating
-bspc rule --add Zenity      state=floating
-bspc rule --add feh         state=floating
+bspc rule --add Sxiv          state=floating
+bspc rule --add Zenity        state=floating
+bspc rule --add feh           state=floating
+
+bspc rule --add mpv           state=floating
+bspc rule --add 'mpv:youtube' focus=off
 
 bspc rule --add Screenkey   manage=off
 
@@ -30,3 +33,4 @@ pgrep compton || compton &
 pgrep sxhkd || sxhkd &
 bar &
 feh --bg-scale "$HOME/.config/wall.png"
+

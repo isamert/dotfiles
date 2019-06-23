@@ -49,8 +49,8 @@ function mpd-artists {
         mpc play
     else
         local songs=$(mpc find artist "$artist" album "$album")
-        if [[ -z "$songs" ]]; then
-            [[ ! -z "$artist" ]] && menu youtube "$artist $album"
+        if [[ -z "$songs" ]] && [[ -n "$artist" ]]; then
+            [[ -n "$album" ]] && menu youtube "$artist $album"
         else
             mpc clear
             echo "$songs" | sort | mpc add
@@ -189,5 +189,6 @@ case $cmd in
     "folders") folders "$@";;
     "file_contents") file_contents "$@";;
     "passwords") passwords "$@";;
-    *) rofi -async-pre-read 0 -modi combi,run,calc -combi-modi window,drun,run,vms:rofi_vms -show combi "$@"
+    *) rofi -async-pre-read 0 -modi combi -combi-modi window,drun,run,vms:rofi_vms -show combi "$@"
 esac
+

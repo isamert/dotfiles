@@ -56,3 +56,4 @@ function pastebin # commandline pastebin
     set url (echo "$var" | curl -F 'f:1=<-' ix.io)
     echo "$url"; echo "$url" | xcopy
 end
+

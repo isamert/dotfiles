@@ -89,7 +89,7 @@ diminish.el provides a way to hide mode indicators from mode line. Either pass ~
 
 Save recent files.
 #+BEGIN_SRC emacs-lisp
-(recentf-mode 1)
+(recentf-mode t)
 #+END_SRC
 ** Better scrolling
 *** Better settings for mouse scroll.
@@ -250,6 +250,7 @@ Make some temproary windows appear at bottom.
 ** evil-escape
 #+BEGIN_SRC emacs-lisp
 (use-package evil-escape
+  :diminish
   :ensure t
   :init
   (setq evil-escape-key-sequence "jk"
@@ -281,8 +282,10 @@ To move between visual lines instead of real lines:
 #+END_SRC
 ** Better defaults
 #+BEGIN_SRC emacs-lisp
-(setq org-src-fontify-natively t) ;; Enable code highlighting in ~SRC~ blocks.
-(setq org-ellipsis "..↯")         ;; Replace ... with ..↯ in collapsed sections
+(setq org-src-fontify-natively t         ;; Enable code highlighting in ~SRC~ blocks.
+      org-ellipsis "..↯"                ;; Replace ... with ..↯ in collapsed sections
+      org-hierarchical-todo-statistics t ;; Show all children in todo statistics [1/5]
+)
 #+END_SRC
 ** Auto indent subsections
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
@@ -412,6 +415,27 @@ These are the languages that can be run in codeblocks.
          "* TODO %?\n  %i\n  %a")))
 #+END_SRC
 * Other packages
+** beacon
+When you switch buffers/frames, it simply highlights the current line with a quick animation.
+#+BEGIN_SRC emacs-lisp
+(use-package beacon
+  :ensure t
+  :diminish beacon-mode
+  :init
+  (setq beacon-blink-duration 2)
+  :config
+  (beacon-mode 1))
+#+END_SRC
+** winner-mode
+This mode allows you to do /undo/ /redo/ operations on window layout changes. My most frequent use case is that sometimes I just want to focus on one window for a while and then return back to my old layout setup. These keybindings allows me to do that.
+#+BEGIN_SRC emacs-lisp
+(setq winner-dont-bind-my-keys t)
+(winner-mode t)
+(evil-define-key 'normal 'global
+  (kbd "C-w 1") 'delete-other-windows
+  (kbd "C-w r") 'winner-redo
+  (kbd "C-w u") 'winner-undo)
+#+END_SRC
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options.
 #+BEGIN_SRC emacs-lisp
@@ -479,6 +503,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
 Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ for selecting previous result.
 #+BEGIN_SRC emacs-lisp
 (define-key helm-map (kbd "M-`") 'helm-select-action)
+(define-key helm-map (kbd "M-RET") 'helm-execute-persistent-action)
 (define-key helm-map (kbd "TAB") 'helm-next-line)
 (define-key helm-map (kbd "<backtab>") 'helm-previous-line)
 (define-key helm-map (kbd "M-j") 'helm-next-line)
@@ -510,6 +535,7 @@ A project management tool. I set a project path below and make sure projectile s
 ** flycheck
 #+BEGIN_SRC emacs-lisp
 (use-package flycheck
+  :diminish
   :ensure t
   :init (global-flycheck-mode))
 
@@ -542,10 +568,18 @@ Shows a nice tooltip while idling on a completion.
     (company-quickhelp-mode))
     (eval-after-load 'company '(define-key company-active-map (kbd "M-p") 'company-quickhelp-manual-begin))) ;; Alt-p shows the popup manually
 #+END_SRC
-** eglot (lsp client)
+** lsp-mode
 #+BEGIN_SRC emacs-lisp
-(use-package eglot
-  :ensure t)
+(use-package lsp-mode
+  :commands lsp
+  ;;:hook ((web-mode . lsp)
+  ;;       (js-mode . lsp))
+  :init
+  (setq lsp-prefer-flymake :none)) ;; FIXME: :none disables both flymake and flycheck. Set it to nil to use flycheck. Also set to :none for only web-mode and js-mode because I use eslint there.
+
+;;(use-package lsp-ui :commands lsp-ui-mode)
+(use-package company-lsp :commands company-lsp)
+(use-package helm-lsp :commands helm-lsp-workspace-symbol)
 #+END_SRC
 ** eshell
 *** aliases
@@ -699,6 +733,36 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
       '("~/.emacs.d/snippets"                   ;; personal snippets
         ))))
 #+END_SRC
+** dashboard
+#+BEGIN_SRC emacs-lisp
+;; Optional dependency of the dashboard
+;; You need to run this after installing the package: (all-the-icons-install-fonts)
+(insert (all-the-icons-icon-for-file "foo.js"))
+(use-package all-the-icons
+  :ensure t)
+
+(use-package dashboard
+  :ensure t
+  :init
+  (setq initial-buffer-choice (lambda () (get-buffer "*dashboard*")) ;; Dashboard setting for daemon mode
+        dashboard-banner-logo-title "Welcome to Emacs, boi"
+        dashboard-center-content t
+        dashboard-set-heading-icons t
+        dashboard-set-file-icons t
+        dashboard-set-init-info t)
+  :custom
+  (dashboard-items '((recents . 5)
+                     (bookmarks . 5)
+                     (projects . 10)
+                     (agenda . 10)))
+  :config
+  (progn
+    (add-to-list 'evil-insert-state-modes 'dashboard-mode)
+    (add-hook 'dashboard-mode-hook (lambda ()
+      (define-key dashboard-mode-map "j" 'next-line)
+      (define-key dashboard-mode-map "k" 'previous-line))) ;; Add evil keys
+    (dashboard-setup-startup-hook)))
+#+END_SRC
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
@@ -745,6 +809,7 @@ Enable leader key and bind some keys.
       ;; helm
       "hh" 'helm-resume
       "hr" 'helm-rg
+      "hp" 'helm-projectile-rg
 
       ;; bookmarks
       "bb" 'helm-bookmarks
@@ -935,20 +1000,6 @@ Enable leader key and bind some keys.
 
 (add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
 #+END_SRC
-*** tern: code completion and stuff
-#+BEGIN_SRC emacs-lisp
-(use-package company-tern
-  :ensure t
-  :after company
-  :hook ((js-mode web-mode) . tern-mode)
-  :config
-  (progn
-    (add-to-list 'company-backends 'company-tern)
-
-    (evil-define-key 'normal tern-mode-keymap
-      "gd" 'tern-find-definition
-      "gf" 'tern-highlight-refs)))
-#+END_SRC
 ** web-mode
 #+BEGIN_SRC emacs-lisp
 (use-package web-mode
@@ -961,7 +1012,7 @@ Enable leader key and bind some keys.
         web-mode-enable-auto-closing t
         web-mode-enable-auto-opening t)
 
-   ;; Use eslint with web-mode for jsx files
+  ;; Use eslint with web-mode for jsx files
   (flycheck-add-mode 'javascript-eslint 'web-mode)
 
   :config
@@ -997,4 +1048,10 @@ Enable leader key and bind some keys.
 (defun evil-fix-map nil
   (evil-insert)
   (evil-normal))
+
+(defun helm-projectile-rg nil
+  (interactive)
+  (setq-local helm-rg-default-directory (projectile-project-root))
+  (helm-rg nil)
+  (setq-local helm-rg-default-directory 'default))
 #+END_SRC
