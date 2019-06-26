@@ -1,0 +1,10 @@
+#!/bin/bash
+
+response=$(curl -G -s "http://sozluk.gov.tr/gts" --data-urlencode "ara=$*")
+
+if [ "$1" = "--raw" ] || [ "$1" = "-r" ]; then
+    echo "$response" | jq | less -R
+else
+    echo "$response" | jq -C '.[] | .anlamlarListe | map({tur: .ozelliklerListe[].tam_adi, anlam: .anlam, ornek: (try {cumle: .orneklerListe[].ornek, yazar: .orneklerListe[].yazar[].kisa_adi} catch "")})' | less --RAW-CONTROL-CHARS --quit-if-one-screen
+fi
+
