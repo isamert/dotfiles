@@ -54,7 +54,6 @@ SSLType None
 
 MaildirStore pm-local
 Path ~/.maildir/pm/
-Inbox ~/.maildir/pm/INBOX/
 Subfolders Verbatim
 
 Channel pm

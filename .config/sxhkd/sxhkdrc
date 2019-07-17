@@ -110,8 +110,8 @@ hyper + equal
     rofi -show calc -modi calc -no-show-match -no-sort
 
 # run some apps directly
-hyper + r; {f, q, e, r, t}
-    {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask}
+hyper + r; {f, q, e, r, t, v, k}
+    {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $HOME/Documents/sync/passwords.kdbx"}
 
 # menus
 hyper + {a, f, F, m, M, P, k, y}
@@ -131,6 +131,9 @@ hyper + apostrophe
 
 hyper + S
     cb-save --display
+
+hyper + alt + s
+    if cb-save ~/cb.png; notify-send "Saved."; else; notify-send "Not saved."; end
 
 # #############################################################################
 # sound/music

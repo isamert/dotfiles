@@ -115,8 +115,8 @@
   #:on-error (open-with 'browser))
 
 (assoc
-  #:pattern "^magnet:"
-  #:program "diana add %f"
+  #:pattern '("^magnet:" "\\.torrent$")
+  #:program "qbittorrent %f"
   #:on-success "notify-send 'Success' 'Torrent added to download list'"
   #:on-error "notify-send 'Fail' 'Can't add torrent")
 
@@ -129,12 +129,6 @@
   #:on-fail "firefox %f"
   #:view #t
   #:edit (open-with 'editor))
-
-(assoc
-  #:pattern "\\.torrent$"
-  #:program "diana add %f"
-  #:on-success "notify-send 'Success' 'Torrent added to download list'; rm %f"
-  #:on-error "notify-send 'Fail' 'Can't add torrent")
 
 (assoc
   #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"

@@ -79,6 +79,7 @@ diminish.el provides a way to hide mode indicators from mode line. Either pass ~
 * Basics
 ** Sane defaults
 #+BEGIN_SRC emacs-lisp
+(setq gc-cons-threshold 1600000)
 (global-visual-line-mode t)      ;; Wrap long lines
 (diminish 'visual-line-mode)
 (fset 'yes-or-no-p 'y-or-n-p)    ;; Ask y/n instead of yes/no
@@ -218,7 +219,7 @@ Make some temproary windows appear at bottom.
 (shackle-window "\\*Org Agenda\\*" 0.4)
 (shackle-window "\\*Org Select\\*" 0.4)
 (shackle-window "CAPTURE-*" 0.4)
-(shackle-window "magit.*" 0.4)
+(shackle-window "magit.*" 0.7)
 (shackle-window "\\*xref\\*" 0.4)
 (shackle-window "\\*Org-Babel Error Output\\*" 0.4)
 (shackle-window "\\*curl error\\*" 0.4)
@@ -240,7 +241,25 @@ Make some temproary windows appear at bottom.
   :config
   (evil-mode 1))
 #+END_SRC
+** evil-mc
+Multiple cursors for evil. =C-n= to create a cursor on next match. =A= and =I= creates cursors in visual selection mode as you may expect.
+#+BEGIN_SRC emacs-lisp
+(use-package evil-mc
+  :ensure t
+  :diminish evil-mc-mode
+  :config
+  (progn
+    (evil-define-key 'visual evil-mc-key-map
+      "A" #'evil-mc-make-cursor-in-visual-selection-end
+      "I" #'evil-mc-make-cursor-in-visual-selection-beg)
+    (global-evil-mc-mode 1)))
+#+END_SRC
 ** evil-surround
+Change surroundings. Do =cs"'= to turn ="Hello world!"= into ='Hello world!'=.
+- ='Hello world!'= ~cs'<q>~ =<q>Hello world!</q>=
+- =Hel|lo= ~ysiw"~ ="Hello"= (| is the cursor position.)
+- =Hello= ~ysw{~ ={ Hello }=  (~{[(~ adds spaces)
+- =Hello= ~ysw}~ ={Hello}=    (~}])~ does not add spaces)
 #+BEGIN_SRC emacs-lisp
 (use-package evil-surround
   :ensure t
@@ -248,6 +267,7 @@ Make some temproary windows appear at bottom.
   (global-evil-surround-mode 1))
 #+END_SRC
 ** evil-escape
+Return back to normal mode using ~jk~ from anywhere. It does not play well with multiple cursors, so use ~ESC~ to when using evil-mc related stuff.
 #+BEGIN_SRC emacs-lisp
 (use-package evil-escape
   :diminish
@@ -257,6 +277,15 @@ Make some temproary windows appear at bottom.
         evil-escape-delay 0.2)
   :config
   (evil-escape-mode 1))
+#+END_SRC
+** evil-matchit
+Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=, =da%= etc. works as expected.
+#+BEGIN_SRC emacs-lisp
+(use-package evil-matchit
+  :diminish
+  :ensure t
+  :config
+  (global-evil-matchit-mode 1))
 #+END_SRC
 ** Visual line movement
 To move between visual lines instead of real lines:
@@ -451,7 +480,8 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 (use-package goto-chg
   :ensure t)
 #+END_SRC
-** eyebrowse/tabs
+** eyebrowse
+Eyebrowse creates pre-defined workspaces. Don't use them like tabs, I generally use every workspace for different projects/different contexts.
 #+BEGIN_SRC emacs-lisp
 (use-package eyebrowse
   :ensure t
@@ -470,12 +500,12 @@ A package that shows key combinations. (for example press C-x and wait) It also 
     (eyebrowse-mode t)))
 #+END_SRC
 ** avy
-avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using a given char.
+avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using a given char. Hit ~s~ and the char you want to jump.
 #+BEGIN_SRC emacs-lisp
 (use-package avy
   :ensure t
   :init
-  (setq avy-keys '(?q ?w ?e ?r ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)))
+  (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p ?1 ?2 ?3 ?4 ?5))) ;; Only use these for jumping.
 #+END_SRC
 *** Bindings
 #+BEGIN_SRC emacs-lisp
@@ -537,26 +567,34 @@ A project management tool. I set a project path below and make sure projectile s
 (use-package flycheck
   :diminish
   :ensure t
-  :init (global-flycheck-mode))
+  :init (global-flycheck-mode)
+  :config
+  (setq flycheck-idle-change-delay 1
+        flycheck-check-syntax-automatically '(save new-line mode-enabled))) ;; (save idle-change new-line mode-enabled)
 
 ;; show errors in tooltip while hovering
 (use-package flycheck-pos-tip
   :ensure t
   :after flycheck
-  :hook (flycheck-mode . flycheck-pos-tip-mode))
+  :hook (flycheck-mode . flycheck-pos-tip-mode)
+  :init
+  (setq flycheck-pos-tip-timeout 15)) ;; Show tooltip for 15 seconds
 #+END_SRC
+
 ** company
 *** Install and configure
 #+BEGIN_SRC emacs-lisp
 (use-package company
   :ensure t
   :init
-  (setq company-selection-wrap-around t  ;; start completing after 1 char
-        company-minimum-prefix-length 1) ;; return to first completion after the last one (cycles)
+  (setq company-selection-wrap-around t  ;; return to first completion after the last one (cycles)
+        company-minimum-prefix-length 1) ;; start completing after 1 char
   :config
   (progn
     (add-hook 'after-init-hook 'global-company-mode)
-    (company-tng-configure-default)))    ;; cycle trough suggestions using tab
+    (company-tng-configure-default)   ;; cycle trough suggestions using tab
+    (evil-define-key 'insert 'global
+      (kbd "M-i") 'company-complete)))
 #+END_SRC
 *** quickhelp
 Shows a nice tooltip while idling on a completion.
@@ -568,6 +606,13 @@ Shows a nice tooltip while idling on a completion.
     (company-quickhelp-mode))
     (eval-after-load 'company '(define-key company-active-map (kbd "M-p") 'company-quickhelp-manual-begin))) ;; Alt-p shows the popup manually
 #+END_SRC
+** origami-mode
+This seems working better than =hs-minor-mode= and also it's supposedly works with =lsp-mode=.
+#+BEGIN_SRC emacs-lisp
+(use-package origami
+  :hook ((web-mode . origami-mode)
+          (js-mode . origami-mode)))
+#+END_SRC
 ** lsp-mode
 #+BEGIN_SRC emacs-lisp
 (use-package lsp-mode
@@ -575,12 +620,38 @@ Shows a nice tooltip while idling on a completion.
   ;;:hook ((web-mode . lsp)
   ;;       (js-mode . lsp))
   :init
-  (setq lsp-prefer-flymake :none)) ;; FIXME: :none disables both flymake and flycheck. Set it to nil to use flycheck. Also set to :none for only web-mode and js-mode because I use eslint there.
+  (setq lsp-prefer-flymake :none
+        lsp-use-native-json t
+        lsp-enable-xref t
+        lsp-enable-links t
+        lsp-enable-folding t
+        lsp-enable-symbol-highlighting t
+        lsp-enable-indentation nil
+        lsp-enable-on-type-formatting nil
+        lsp-before-save-edits nil
+        lsp-enable-indentation nil
+        lsp-enable-completion-at-point nil
+        lsp-enable-snippet nil))
+
+;; FIXME: lsp-prefer-flymake :none disables both flymake and flycheck. Set it to nil to use flycheck. Also set to :none for only web-mode and js-mode because I use eslint there.
 
 ;;(use-package lsp-ui :commands lsp-ui-mode)
-(use-package company-lsp :commands company-lsp)
-(use-package helm-lsp :commands helm-lsp-workspace-symbol)
+;; (use-package company-lsp
+;;   :ensure t
+;;   :commands company-lsp)
+
+;; FIXME: (wrong-type-argument overlayp nil)
+;; (use-package lsp-origami
+;;   :ensure t
+;;   :hook ((origami-mode . lsp-origami-mode)))
+
+(use-package helm-lsp
+  :ensure t
+  :commands helm-lsp-workspace-symbol)
 #+END_SRC
+
+#+RESULTS:
+
 ** eshell
 *** aliases
 Get bash aliases and update eshell aliases. My aliases are in a file called =~/.config/aliases= in bash format. I convert them to abbreviations in fish shell and I convert them to eshell aliases in here.
@@ -656,8 +727,6 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
   :ensure t)
 #+END_SRC
 
-#+RESULTS:
-
 ** telephone-line
 #+BEGIN_SRC emacs-lisp
 ;; Color settings
@@ -703,19 +772,8 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
       (setq telephone-line-height 20)
       (telephone-line-mode t)))
 #+END_SRC
-** multiple-cursors
-#+BEGIN_SRC emacs-lisp
-(use-package evil-mc
-  :ensure t
-  :diminish evil-mc-mode
-  :config
-  (progn
-    (evil-define-key 'visual evil-mc-key-map
-      "A" #'evil-mc-make-cursor-in-visual-selection-end
-      "I" #'evil-mc-make-cursor-in-visual-selection-beg)
-    (global-evil-mc-mode 1)))
-#+END_SRC
 ** expand-region
+Select the nearest meaningful region with a keybinding. When you repeat it, it selects the next bigger meaningful region. Look [[*Keybindings][Keybindings]] for the binding.
 #+BEGIN_SRC emacs-lisp
 (use-package expand-region
   :ensure t)
@@ -763,6 +821,13 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
       (define-key dashboard-mode-map "k" 'previous-line))) ;; Add evil keys
     (dashboard-setup-startup-hook)))
 #+END_SRC
+** sx
+StackExchange package.
+#+BEGIN_SRC emacs-lisp
+(use-package sx
+  :ensure t)
+#+END_SRC
+
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
@@ -780,8 +845,11 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 (evil-define-key 'normal prog-mode-map
   (kbd "M-;") 'comment-line
   (kbd "M-:") 'comment-dwim
-  "gd" 'xref-find-definition
+  "gd" 'xref-find-definitions
   "gf" 'xref-find-references)
+
+(evil-define-key 'insert prog-mode-map
+  (kbd "M-s") 'company-yasnippet)
 #+END_SRC
 ** evil-leader
 Enable leader key and bind some keys.
@@ -805,6 +873,10 @@ Enable leader key and bind some keys.
       "f"   'projectile-find-file
       "s"   'yas-insert-snippet
       "c"   'execute-C-c-C-c
+
+      ;; magit
+      "gg" 'magit-status
+      "gp" 'magit-push
 
       ;; helm
       "hh" 'helm-resume
@@ -1001,6 +1073,7 @@ Enable leader key and bind some keys.
 (add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
 #+END_SRC
 ** web-mode
+I use web-mode for JSX, it's simply better than emacs 27 JSX mode and js2-mode.
 #+BEGIN_SRC emacs-lisp
 (use-package web-mode
   :ensure t
@@ -1020,10 +1093,16 @@ Enable leader key and bind some keys.
   (set-face-attribute 'web-mode-html-tag-face nil :weight 'bold)
   (set-face-attribute 'web-mode-keyword-face nil :weight 'bold)
   (set-face-attribute 'web-mode-function-call-face nil :weight 'normal :foreground "normal"))
-
 #+END_SRC
-
 ** emmet-mode
+Hit <C-j> after these and get:
+- =a= ~<a href="|">|</a>~
+- =.x= ~<div class="x"></div>~
+- =br/= ~<br />~
+- =p.x.y.z= ~<p className="x y z"></p>~ (Works well with JSX)
+- ~input[type=text]~ ~<input type="text" name="" value=""/>~
+- =a>b>c= ~<a href=""><b><c></c></b></a>~
+- =b*3= ~<b></b><b></b><b></b>~
 #+BEGIN_SRC emacs-lisp
 (use-package emmet-mode
   :ensure t
