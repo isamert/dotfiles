@@ -76,5 +76,3 @@ export GROFF_NO_SGR=1                  # for konsole and gnome-terminal
 
 # vi: foldmethod=marker
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
