@@ -630,7 +630,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
         lsp-enable-on-type-formatting nil
         lsp-before-save-edits nil
         lsp-enable-indentation nil
-        lsp-enable-completion-at-point nil
+        ;;lsp-enable-completion-at-point nil
         lsp-enable-snippet nil))
 
 ;; FIXME: lsp-prefer-flymake :none disables both flymake and flycheck. Set it to nil to use flycheck. Also set to :none for only web-mode and js-mode because I use eslint there.
@@ -648,6 +648,12 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
 (use-package helm-lsp
   :ensure t
   :commands helm-lsp-workspace-symbol)
+
+(use-package dap-mode
+  :ensure t :after lsp-mode
+  :config
+  (dap-mode t)
+  (dap-ui-mode t))
 #+END_SRC
 
 #+RESULTS:
@@ -1071,6 +1077,13 @@ Enable leader key and bind some keys.
       (setq-local flycheck-javascript-eslint-executable eslint))))
 
 (add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
+#+END_SRC
+** java
+#+BEGIN_SRC emacs-lisp
+(use-package lsp-java :ensure t :after lsp
+  :config (add-hook 'java-mode-hook 'lsp))
+
+(use-package dap-java :after (lsp-java))
 #+END_SRC
 ** web-mode
 I use web-mode for JSX, it's simply better than emacs 27 JSX mode and js2-mode.
