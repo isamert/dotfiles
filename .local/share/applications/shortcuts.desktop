@@ -3,7 +3,7 @@ Type=Application
 Name=Shortcut to
 Terminal=false
 Exec=term
-Actions=walls;fkill;phonepics;screenshots;floatingtermopaque;floatingterm;opqueterm
+Actions=walls;fkill;phonepics;screenshots;memes;floatingtermopaque;floatingterm;opqueterm
 
 [Desktop Action walls]
 Name=Wallpapers
@@ -16,6 +16,10 @@ Exec=/bin/sh -c "sxiv -t ~/Pictures/phone/Camera"
 [Desktop Action screenshots]
 Name=Screenshots
 Exec=/bin/sh -c "sxiv -t ~/Pictures/screenshots"
+
+[Desktop Action memes]
+Name=Memes (ayylmao)
+Exec=/bin/sh -c "sxiv -t ~/Workspace/ayylmao"
 
 [Desktop Action fkill]
 Name=Fuzzy kill (fkill)

@@ -121,6 +121,14 @@
   #:on-error "notify-send 'Fail' 'Can't add torrent")
 
 (assoc
+  #:name 'browser-vivaldi
+  #:pattern '("^https?://.*"
+              "^.*\\.html?(#[\\w_-]+)?")
+  #:program "vivaldi-stable %f"
+  #:test "pgrep vivaldi"
+  #:continue-on-error #t)
+
+(assoc
   #:name 'browser
   #:pattern '("^https?://.*"
               "^.*\\.html?(#[\\w_-]+)?")
