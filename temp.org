@@ -1,0 +1,26 @@
+* Network basics
+** PS Network (Package switching)
+- Multiple users may use same connection at the same time.
+- Better security than CS.
+** CS Network (Circuit switching)
+- Need to establish a circuit before a transfer.
+- Another call cannot be started if there is an already ongoing one.
+- Even if there is no transfer, another person cannot use these two users' circuit.
+- Resource usage is inefficent.
+* Cellular
+** 1G
+- Voice support only.
+- All analog, instead of base stations human operators were changing jacks to establish connection.
+- MA (Multiple Access) :: Putting multiple users to same network.
+- FDMA (Frequency Division Multiple Access) :: MA technique that puts users in same time interval but on different frequencies. Each user has its own frequency interval. Between the intervals gaps are set. These gaps are called guard bands which prevents signal conflicts. Works like radio, each radio channel has its own frequency and in FDMA each user have their own frequency slots.
+** 2G
+- GSM :: Groupe Special Mobile
+- After the base stations, communication goes digital.
+- Hanset-Base station communication is analog because the interface between is air. Communication trough air is always analog.
+- Uses CS (Circuit switching), voice only.
+- TDMA (Time Division Multiple Access) :: Anothar MA technique. Every user in the network is at the same frequency but they share voice data one by one.
+     a: user1, b: user2, c: user3 :: abcabcabc (on same freq, trough time)
+- SIM (Subscriber Identification Module) :: Stores IMSI (International Mobile Subscriber Identitiy), PIN, PUK, ICCID (Integrated Circuit Card Identifier) numbers
+#+BEGIN_SRC
+<-- MCC (3 digits) --><-- MNC (2-3 digits) --><-- MSIN (10 digits max) -->
+#+END_SRC
