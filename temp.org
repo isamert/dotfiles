@@ -1,12 +1,24 @@
 * Network basics
-** PS Network (Package switching)
-- Multiple users may use same connection at the same time.
-- Better security than CS.
 ** CS Network (Circuit switching)
-- Need to establish a circuit before a transfer.
+- Need to establish a circuit (communication channel) before a transfer. That circuit guarantees full bandwidth of the channel and it functions as if the nodes were /physically/ connected as with an electrical circuit.
 - Another call cannot be started if there is an already ongoing one.
 - Even if there is no transfer, another person cannot use these two users' circuit.
 - Resource usage is inefficent.
+** PS Network (Package switching)
+- Multiple users may use same connection at the same time.
+- Better security than CS.
+- To be able to keep packages in right order packages also contains a header that carries order information, sender-receiver information.
+*** Virtual circuit
+- Transports data over a packet switched computer network in such a way that it appears as though there is a dedicated physical link between the source and destination end systems of this data.
+** General concepts
+- Uplink :: Cell phone to tower
+- Downlink :: Tower to cell phone
+
+- MO (Mobile Originated) :: Caller.
+- MT (Mobile Terminated) :: Call receiving end.
+- UE (User Equipment) ::
+
+- For digital devices, the bandwidth is usually expressed in bits per second(bps) or bytes per second. For analog devices, the bandwidth is expressed in cycles per second, or Hertz (Hz).
 * Cellular
 ** 1G
 - Voice support only.
@@ -16,11 +28,105 @@
 ** 2G
 - GSM :: Groupe Special Mobile
 - After the base stations, communication goes digital.
-- Hanset-Base station communication is analog because the interface between is air. Communication trough air is always analog.
-- Uses CS (Circuit switching), voice only.
-- TDMA (Time Division Multiple Access) :: Anothar MA technique. Every user in the network is at the same frequency but they share voice data one by one.
+- Handset-Base station communication is analog because the interface between is air. Communication trough air is always analog.
+- Supports roaming.
+- Uses *CS* (Circuit switching), voice only.
+- Uses *GMSK* (Gaussian Minimum Shift Keying) as the modulation technique. (*Modulation* refers to the process of adding information to given signal by altering some of it's characteristics like amplitude, frequency, phase etc.)
+- TDMA (Time Division Multiple Access) :: Another MA technique. Every user in the network is at the same frequency but they share voice data one by one.
      a: user1, b: user2, c: user3 :: abcabcabc (on same freq, trough time)
 - SIM (Subscriber Identification Module) :: Stores IMSI (International Mobile Subscriber Identitiy), PIN, PUK, ICCID (Integrated Circuit Card Identifier) numbers
 #+BEGIN_SRC
 <-- MCC (3 digits) --><-- MNC (2-3 digits) --><-- MSIN (10 digits max) -->
 #+END_SRC
+*** GSM architecture
+[[http://i1.wp.com/microcontrollerslab.com/wp-content/uploads/2015/07/2-GSM-architecture.jpg][IMG]]
+- BTS (Base Transreceiver Stations) :: They create cell structres. Connected to the BSCs.
+- BSC (Base Station Controller) :: Can control more than one BTS. Connected to MSCs.
+- MSC (Mobile Switching Centers) :: Responsible for location update, call routing, call forwarding, registration. Each location area has 1 MSC. MSCs are also connected to each other in a tree structre.
+- HLR (Home Location Registers) :: Stores all subscribers info and exact locations of the subscribers. Logically there is only one HLR of any given network but psychically there might be more.
+- VLR (Visitor Location Register) :: Stores subscribers info of the location area it's in so it reduces queries to HLR. Also it assigns *TMSI* (Temproary Mobile Subscriber Identity) for each MS in the location area. Connected to MSCs.
+- EIR (Equipment Identity Register) :: Stores mobile equipments information, like IMEIs. Also stores if the equipment is stolen, valid or awaiting.
+- AUC (Authentication Center) :: Does auth check.
+- GMSC (Gateway Mobile Switching Center) :: Special kind of MSC that is used to route calls outside the mobile network. In practice, GMSC is just a fuunction that can be part of a MSC.
+
+- BTS + BSC = BSS (Base Station Subsystem) :: Does frequency hopping, encodes, encrypts, modulates and feeds the RF signal to antenna.
+- Mobile Equipment (Phone etc.) + SIM = Mobile Station
+
+#+NAME: INTERFACES
+#+BEGIN_QUOTE
+MS  <-- UM (AIR) Interface --> BTS
+BTS <-- ABIS     Interface --> BSC
+BSC <-- A        Interface --> MSC
+BSC <-- Gb       Interface --> SGSN
+MSC <-- E        Interface --> MSC
+HLR <-- C        Interface --> GMSC
+#+END_QUOTE
+*** TODO GSM Call Flow
+- Paging :: Process of finding and then alerting the called user.
+
+A → Caller, B → Called
+**** Same operator, same MSC/VLR
+- A calls B's MSISDN.
+- BTS routes  the request to BSC which then routes it to MSC/VLR.
+- A might be authenticated directly or it needs to be checked before, for credits etc.
+- VLR sends auth request to HLR(AuC), asking for triplets(SRES, Kc, Rand).
+  - SRES (Signed RESponse) :: SRES=A3(Ki, RAND)
+  - Kc :: Key of encryption. Kc=A8(Ki, RAND)
+- HLR sends triplets to MSC/VLR, VLR sends /Rand/ with and auth request to the phone.
+- SIM calculates /SRES/ with given /Rand/ and sends it to VLR. Then VLR compares calculated SRES and the SRES from the HLR. Sends the result to the phone.
+- If auth is OK, VLR checks the called numbers location and it finds that in the same VLR and starts paging.
+**** Same operator, different MSC/VLR
+- ...
+- VLR asks to HLR for called parties location.
+- HLR checks called MSISDN location then sends MSRN request to B's MSC with IMSI.
+- B's  MSC reserves a MSRN number to that IMSI and returns MSRN to HLR, and then HLR forwards that MSRN to A's MSC.
+- A's MSC now knows the B's MSC and connects to it with MSNR. Then B's MSC checks given MSNR and finds its IMSI and starts broadcasting event for that IMSI/TMSI.
+**** TODO Same operator, A roaming
+**** TODO Different operator, A roaming
+** 2.5G
+- GPRS :: General Packet Radio Service, 2G + Packet Data
+- *PS* network is used in addition.
+- Same base stations are used but there are some upgrades. (GGSN, SGSN, PCU)
+- Always on technology because of the PS network. (CS networks requires a channel to be set up before a connection but PS does not need any.)
+- SGSN (Serving GPRS Node) :: Like MSC but for data packets.
+- GGSN (Gateway Serving GPRS Support Node) :: Like GMSC but for data.
+- PCU () :: Decides whether the flow should be on CS or PS network. Generally included in BSC's.
+** 2.75G
+- EDGE (Enhanced Data Rates for Global Evolution) :: It uses 8PSK rather than GMSK as its modulation technique, so it's faster.
+- Only EDGE compatible unit is added to base stations. Basically an addon to BSS.
+** 3G
+- BTSs are upgraded to NodeBs. As a result BSCs replaced with RNCs.
+- UMTS (Universal Mobile Telecommunications System) :: An upgrade from GSM via GPRS or EDGE
+- RNC (Radio Network Controller) :: Uses packet centric transmission (ATM). ~RNC<-- Lur interface -->RNC~. (There was no BSC-BSC interface in 2G.) Consolidates /Gb/ and /A interface/ into one, Lu interface. (Lu
+- UTRAN (UMTS Terrestrial Radio Access Network) :: Phone + NodeB + RNC. CDMA is used.
+- CDMA (Code-Division Multiple Access) :: MA method that employs /spread spectrum/ technique with a special coding scheme. Each user has a different code and the user's data is modulated with that code. The separation of the signals is made by /correlating/ the received signal with locally generated code of the user. If signal matches the desired user's code, then the correlation function can extract the signal, others are counted as noise and ignored(?)
+*** 3G architecture
+[[https://techdifferences.com/wp-content/uploads/2017/07/3G-Architecture1.jpg][3G Architecture]], [[https://qph.fs.quoracdn.net/main-qimg-88969dc9815c3a7278d1a614bcdd849e.webp][2G and 3G architecture]]
+- Like 2.5G, SSGN and GGSN exists.
+- SSGN + GGSN = Packet Switch Domain
+- /Packet Switch Domain/ is connected to IP network by *IMS (IP Multimedia System)*. IMS also connects to /Circuit switched network/.
+** 3.5G
+- Improves existing *WCDMA*.
+** 4G
+- [[https://www.rfwireless-world.com/Terminology/MME-vs-PGW-vs-SGW-in-LTE.html][MME PGW SGW]]
+- [[https://www.rfwireless-world.com/Terminology/MME-vs-PGW-vs-SGW-in-LTE.html][Architecture]]
+- Uses both PS and MS (Message Switching).
+- eNodeB :: (NodeB + RNC) are replaced with *eNodeB* (evolved NodeB). This simplifies the architecture and allows lower response times.
+- MS (Message Switching) :: Sends the entire message as one packet, instead of dividing it into packets. So only one /header/ is sent and lower overhead.
+- HSS () ::
+- MME (Mobility Management Entity) :: Keeps track of UEs which are registerd on LTE network. Authenticates and authorizes users. 1 user can only registered to and located by only one MME.
+- SGW (Serving Gateway) :: One SGW may serve group of eNBs for user plane data. Signle UE served by one SGW at any time.
+- PGW (Packet Data Network Gateway) :: Provides access to extarnal PDNs(Packet Data Networks).
+*** CS Fallback
+- [[http://www.3glteinfo.com/csfb-call-flow/][The Flow]]
+- LTE is an all-IP network, no voice or CS support. Voice call options on LTE are:
+  + Voice over LTE
+  + Voice Over WiFi
+  + CS Fallback
+**** CS Fallback Flow (MO)
+- UE is registered and idle on EUTRAN network.
+- UE starts the call, eNodeB sends /RRC Connection Release/ message which contains the IE /RedirectedCarrierInfo/ with details about the target WCDMA(UARFCN) or GSM(ARFCN).
+- UE receives the message and tunes into the target network. In the target network, UE reads *MIB (Master Information Block)* and other informations.
+**** CS Fallback Flow (MT)
+- UE is registered on LTE network.
+- It receives
