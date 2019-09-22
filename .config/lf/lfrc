@@ -1,3 +1,24 @@
-map D delete
-map a rename
-map . set hidden!
+set incsearch on
+
+cmd q                    quit
+cmd edit                 ${{ $EDITOR "$f" }}
+cmd view                 ${{ jaro --method=view "$f" }}
+cmd renamedir            ${{ vidir }}
+cmd dirrename            ${{ vidir }}
+cmd bulkrename           ${{ vidir $fx }}
+cmd extract              ${{ aunpack $fx }}
+cmd compress             ${{ apack $1 $fx }}
+
+# Useful defaults:
+#map y copy
+#map d cut
+#map p paste
+#map $ shell
+#map ! shell-wait
+
+map e     edit
+map v     view
+map D     delete
+map a     rename
+map .     set hidden!
+map <f-2> rename
