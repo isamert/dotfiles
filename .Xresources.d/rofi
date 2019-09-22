@@ -7,7 +7,7 @@ rofi.auto-select: false
 rofi.color-enabled: true
 rofi.hide-scrollbar: true
 rofi.separator-style: solid
-rofi.font: xos4 Terminus 12
+rofi.font: Iosevka 12
 rofi.drun-show-actions: true
 rofi.case-sensitive: false
 rofi.matching: normal
