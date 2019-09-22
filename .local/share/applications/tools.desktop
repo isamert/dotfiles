@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Tools
+Terminal=false
+Exec=term
+Actions=connectheadphones
+
+[Desktop Action connectheadphones]
+Name=Connect to Bluetooth Headphones
+Exec=connect-bt-headphones
