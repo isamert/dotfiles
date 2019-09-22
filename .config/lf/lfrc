@@ -1,0 +1,3 @@
+map D delete
+map a rename
+map . set hidden!

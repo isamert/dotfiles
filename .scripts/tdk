@@ -1,7 +1,7 @@
 #!/bin/bash
 
 get_response() {
-    curl -G -s "http://sozluk.gov.tr/gts" --data-urlencode "ara=$*"
+    curl --location --get --silent "http://sozluk.gov.tr/gts" --data-urlencode "ara=$*"
 }
 
 if [ "$1" = "--raw" ] || [ "$1" = "-r" ]; then
