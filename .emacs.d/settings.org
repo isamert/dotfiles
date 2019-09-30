@@ -140,11 +140,6 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
 (add-hook 'before-save-hook
           'delete-trailing-whitespace)
 #+END_SRC
-** Set scratch buffer mode to org mode
-#+BEGIN_SRC emacs-lisp
-(setq initial-major-mode 'org-mode)
-(setq initial-scratch-message nil)
-#+END_SRC
 * Visuals
 ** General
 Hide menubar and toolbar and replace blinking cursor with nice static box cursor.
@@ -796,36 +791,6 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
     (setq yas-snippet-dirs
       '("~/.emacs.d/snippets"                   ;; personal snippets
         ))))
-#+END_SRC
-** dashboard
-#+BEGIN_SRC emacs-lisp
-;; Optional dependency of the dashboard
-;; You need to run this after installing the package: (all-the-icons-install-fonts)
-(insert (all-the-icons-icon-for-file "foo.js"))
-(use-package all-the-icons
-  :ensure t)
-
-(use-package dashboard
-  :ensure t
-  :init
-  (setq initial-buffer-choice (lambda () (get-buffer "*dashboard*")) ;; Dashboard setting for daemon mode
-        dashboard-banner-logo-title "Welcome to Emacs, boi"
-        dashboard-center-content t
-        dashboard-set-heading-icons t
-        dashboard-set-file-icons t
-        dashboard-set-init-info t)
-  :custom
-  (dashboard-items '((recents . 5)
-                     (bookmarks . 5)
-                     (projects . 10)
-                     (agenda . 10)))
-  :config
-  (progn
-    (add-to-list 'evil-insert-state-modes 'dashboard-mode)
-    (add-hook 'dashboard-mode-hook (lambda ()
-      (define-key dashboard-mode-map "j" 'next-line)
-      (define-key dashboard-mode-map "k" 'previous-line))) ;; Add evil keys
-    (dashboard-setup-startup-hook)))
 #+END_SRC
 ** sx
 StackExchange package.
