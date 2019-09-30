@@ -30,6 +30,7 @@
   #:program "emacsclient -c --tty %f"
   #:term "emacsclient -c %f"
   #:on-error "notify-send 'error' 'emacs daemon is not working'"
+  #:view (open-with 'bat)
   #:standalone #t)
 
 (assoc
@@ -50,7 +51,7 @@
   #:pattern '("^text/" "^application/(x-)?shellscript")
   #:program "nvim %f"
   #:term "st -e"
-  #:view "bat %f"
+  #:view (open-with 'bat)
   #:edit #t)
 
 (assoc
@@ -67,7 +68,7 @@
 
 (assoc
   #:pattern "inode/directory"
-  #:program "ranger %f"
+  #:program "lf %f"
   #:term "st -e"
   #:tmux "tmux split-window -h")
 
@@ -118,15 +119,8 @@
   #:pattern '("^magnet:" "\\.torrent$")
   #:program "qbittorrent %f"
   #:on-success "notify-send 'Success' 'Torrent added to download list'"
-  #:on-error "notify-send 'Fail' 'Can't add torrent")
-
-(assoc
-  #:name 'browser-vivaldi
-  #:pattern '("^https?://.*"
-              "^.*\\.html?(#[\\w_-]+)?")
-  #:program "vivaldi-stable %f"
-  #:test "pgrep vivaldi"
-  #:continue-on-error #t)
+  #:on-error "notify-send 'Fail' 'Can't add torrent"
+  #:edit (open-with 'editor))
 
 (assoc
   #:name 'browser
@@ -134,7 +128,7 @@
               "^.*\\.html?(#[\\w_-]+)?")
   #:program "qutebrowser %f"
   #:test "pgrep qutebrowser"
-  #:on-fail "firefox %f"
+  #:on-fail "vivaldi-stable %f"
   #:view #t
   #:edit (open-with 'editor))
 
@@ -151,6 +145,15 @@
   #:pattern ".*"
   #:program (select-alternative-with "fzf")
   #:standalone #t)
+
+;;
+;; Rest are used only with references
+;;
+
+(assoc
+  #:name 'bat
+  #:pattern ".*"
+  #:program "bat --paging=always %f")
 
 ;; vi:syntax=scheme
 
