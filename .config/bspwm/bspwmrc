@@ -27,6 +27,7 @@ bspc rule --add mpv           state=floating
 bspc rule --add 'mpv:youtube' focus=off
 
 bspc rule --add Screenkey   manage=off
+bspc rule --add 'dota2'     border=off
 
 # Start WM related stuff
 pgrep compton || compton &
