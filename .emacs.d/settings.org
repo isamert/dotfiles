@@ -6,7 +6,7 @@
 * Introduction
 This is my emacs configuration.
 * Preparation
-** Load path
+** TODO Load path
 Define the load path. (It's for auto-loading .el files)
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'load-path "~/.emacs.d/load")
@@ -301,30 +301,34 @@ To move between visual lines instead of real lines:
       evil-operator-state-cursor '("red" hollow))
 #+END_SRC
 * org-mode
+** some vars
 #+BEGIN_SRC emacs-lisp
-(setq life-org "~/Documents/notes/life.org")
+(when (file-directory-p "~/Documents/notes")
+  (setq life-org "~/Documents/notes/life.org")
+  (setq org-directory "~/Documents/notes"))
 #+END_SRC
-** Better defaults
+** better defaults
 #+BEGIN_SRC emacs-lisp
 (setq org-src-fontify-natively t         ;; Enable code highlighting in ~SRC~ blocks.
-      org-ellipsis "..↯"                ;; Replace ... with ..↯ in collapsed sections
       org-hierarchical-todo-statistics t ;; Show all children in todo statistics [1/5]
+      org-imenu-depth 7                  ;; include up to 7-depth headers in imenu search
+      org-ellipsis "..↯"                ;; Replace ... with ..↯ in collapsed sections
 )
 #+END_SRC
-** Auto indent subsections
+** auto indent subsections
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
 #+BEGIN_SRC emacs-lisp
 (add-hook 'org-mode-hook (lambda () (org-indent-mode t)) t)
 (diminish 'org-indent-mode)
 #+END_SRC
-** Nice bullets
+** nice bullets
 Make headings look better with nice bullets. It also adjusts the size of headings according to their level.
 #+BEGIN_SRC emacs-lisp
 (use-package org-bullets
   :ensure t
   :hook (org-mode . org-bullets-mode))
 #+END_SRC
-** Nice checkboxes
+** nice checkboxes
 https://blog.jft.rocks/emacs/unicode-for-orgmode-checkboxes.html
 #+BEGIN_SRC emacs-lisp
 (add-hook 'org-mode-hook (lambda ()
@@ -338,7 +342,7 @@ https://blog.jft.rocks/emacs/unicode-for-orgmode-checkboxes.html
   '((t (:foreground "#71696A" :strike-through t)))
   "Face for the text part of a checked org-mode checkbox.")
 #+END_SRC
-** Babel
+** babel
 *** Install extra languages
 **** ob-http
 - Http request in org-mode babel.
@@ -355,6 +359,7 @@ These are the languages that can be run in codeblocks.
    (scheme . t)
    (python . t)
    (js . t)
+   (sql . t)
    (shell . t)
    (http . t)))
 #+END_SRC
@@ -369,7 +374,7 @@ These are the languages that can be run in codeblocks.
   :init
   (setq geiser-default-implementation 'guile))
 #+END_SRC
-** Exports
+** exports
 *** HTML
 #+BEGIN_SRC emacs-lisp
 (use-package htmlize :ensure t)
@@ -381,7 +386,7 @@ These are the languages that can be run in codeblocks.
       org-icalendar-use-scheduled '(todo-start event-if-todo)
       org-icalendar-use-deadline '(todo-due event-if-todo))
 #+END_SRC
-** Helper functions
+** helper functions
 *** org-X-today
 #+BEGIN_SRC emacs-lisp
 (defun current-date nil
@@ -404,7 +409,7 @@ These are the languages that can be run in codeblocks.
   (interactive)
   (org-x-today "scheduled"))
 #+END_SRC
-** Agenda
+** agenda
 #+BEGIN_SRC emacs-lisp
 (setq org-agenda-files `(,life-org)
       org-agenda-use-time-grid t
@@ -423,11 +428,15 @@ These are the languages that can be run in codeblocks.
       '(("WAITING" . (:foreground "yellow" :weight bold))
         ("IN-PROGRESS" . (:foreground "magenta" :weight bold))))
 #+END_SRC
-** sticky headers
-#+BEGIN_SRC
-(use-package org-sticky-header
-  :ensure t
-  :hook (org-mode . org-sticky-header-mode))
+** get back easy completions
+- Get back =<s<TAB>= completion.
+#+begin_src emacs-lisp
+(require 'org-tempo)
+#+end_src
+** presentation
+#+BEGIN_SRC emacs-lisp
+(use-package org-tree-slide
+  :ensure t)
 #+END_SRC
 ** TODO org-capture
 - [ ] Add a shortcut.
@@ -439,17 +448,6 @@ These are the languages that can be run in codeblocks.
          "* TODO %?\n  %i\n  %a")))
 #+END_SRC
 * Other packages
-** beacon
-When you switch buffers/frames, it simply highlights the current line with a quick animation.
-#+BEGIN_SRC emacs-lisp
-(use-package beacon
-  :ensure t
-  :diminish beacon-mode
-  :init
-  (setq beacon-blink-duration 2)
-  :config
-  (beacon-mode 1))
-#+END_SRC
 ** winner-mode
 This mode allows you to do /undo/ /redo/ operations on window layout changes. My most frequent use case is that sometimes I just want to focus on one window for a while and then return back to my old layout setup. These keybindings allows me to do that.
 #+BEGIN_SRC emacs-lisp
@@ -528,6 +526,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
 Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ for selecting previous result.
 #+BEGIN_SRC emacs-lisp
 (define-key helm-map (kbd "M-`") 'helm-select-action)
+(define-key helm-map (kbd "M-a") 'helm-select-action)
 (define-key helm-map (kbd "M-RET") 'helm-execute-persistent-action)
 (define-key helm-map (kbd "TAB") 'helm-next-line)
 (define-key helm-map (kbd "<backtab>") 'helm-previous-line)
@@ -537,6 +536,12 @@ Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ fo
 *** helm-rg (ripgrep)
 #+BEGIN_SRC emacs-lisp
 (use-package helm-rg
+  :ensure t)
+#+END_SRC
+*** helm-org-rifle
+Search in my org files, takes headers into account while searching. =helm-org-rifle-org-directory= is very useful(I set org-directory while configuring org).
+#+BEGIN_SRC emacs-lisp
+(use-package helm-org-rifle
   :ensure t)
 #+END_SRC
 ** projectile
@@ -612,10 +617,10 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
 #+BEGIN_SRC emacs-lisp
 (use-package lsp-mode
   :commands lsp
-  ;;:hook ((web-mode . lsp)
-  ;;       (js-mode . lsp))
+  :hook ((web-mode . lsp)
+         (js-mode . lsp))
   :init
-  (setq lsp-prefer-flymake :none
+  (setq lsp-prefer-flymake nil
         lsp-use-native-json t
         lsp-enable-xref t
         lsp-enable-links t
@@ -628,17 +633,13 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
         ;;lsp-enable-completion-at-point nil
         lsp-enable-snippet nil))
 
-;; FIXME: lsp-prefer-flymake :none disables both flymake and flycheck. Set it to nil to use flycheck. Also set to :none for only web-mode and js-mode because I use eslint there.
+(use-package lsp-ui
+  :ensure t
+  :commands lsp-ui-mode)
 
-;;(use-package lsp-ui :commands lsp-ui-mode)
-;; (use-package company-lsp
-;;   :ensure t
-;;   :commands company-lsp)
-
-;; FIXME: (wrong-type-argument overlayp nil)
-;; (use-package lsp-origami
-;;   :ensure t
-;;   :hook ((origami-mode . lsp-origami-mode)))
+(use-package company-lsp
+  :ensure t
+  :commands company-lsp)
 
 (use-package helm-lsp
   :ensure t
@@ -671,7 +672,8 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
               ))
           (eshell-read-aliases-list))))
 
-(add-hook 'eshell-mode-hook 'eshell-update-aliases-if-needed)
+(when (file-exists-p "~/.config/aliases")
+  (add-hook 'eshell-mode-hook 'eshell-update-aliases-if-needed))
 #+END_SRC
 *** clear
 #+BEGIN_SRC emacs-lisp
@@ -728,6 +730,18 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
   :ensure t)
 #+END_SRC
 
+** ace-window
+Quickly switch between windows/kill them or swap them with each other.
+#+begin_src emacs-lisp
+(use-package ace-window
+  :ensure t
+  :config
+  (setq aw-dispatch-always t)                   ;; show selection even if window count is < 3
+  (setq aw-keys '(?a ?d ?f ?g ?h ?j ?k ?l))     ;; window selection keys
+  (add-to-list 'aw-dispatch-alist '(?s aw-swap-window "Swap Windows")) ;; <ace-window>s => swap window with
+  (global-set-key (kbd "M-q") 'ace-window)
+)
+#+end_src
 ** telephone-line
 #+BEGIN_SRC emacs-lisp
 ;; Color settings
@@ -747,6 +761,7 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
   :ensure t
   :config
     (progn
+      ;; FIXME: if I set theese here, non-gui emacs fail to show modeline
       ;; Separator settings
       (setq telephone-line-primary-left-separator 'telephone-line-cubed-left
             telephone-line-secondary-left-separator 'telephone-line-cubed-hollow-left
@@ -779,7 +794,21 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
 (use-package expand-region
   :ensure t)
 #+END_SRC
-** TODO orgmode #+completion stuff
+** asx and sx (stack-exchange)
+- Run =asx= and search. It will display results in an org-mode buffer.
+- SX is feature complete stackexchange client. Look for functions starting with =sx-=
+#+BEGIN_SRC emacs-lisp
+(use-package asx
+  :config
+  (setq asx-prompt-post-p t)
+  ;; add sx as default action to helm-google-suggest
+  (with-eval-after-load "helm-net"
+    (push (cons "asx"  (lambda (candidate) (asx candidate))) helm-google-suggest-actions))
+  :ensure t)
+
+(use-package sx
+  :ensure t)
+#+END_SRC
 ** yasnippets
 #+BEGIN_SRC emacs-lisp
 (use-package yasnippet
@@ -792,19 +821,13 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
       '("~/.emacs.d/snippets"                   ;; personal snippets
         ))))
 #+END_SRC
-** sx
-StackExchange package.
-#+BEGIN_SRC emacs-lisp
-(use-package sx
-  :ensure t)
-#+END_SRC
-
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
 ** Some general keybindings
 #+BEGIN_SRC emacs-lisp
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(global-set-key (kbd "C-x k") 'kill-this-buffer)
 
 (evil-define-key 'normal 'global
   "?"  'helm-semantic-or-imenu
@@ -944,6 +967,8 @@ Enable leader key and bind some keys.
 (evil-define-key 'normal org-mode-map
   "[" 'org-previous-visible-heading
   "]" 'org-next-visible-heading
+  "(" 'org-backward-heading-same-level
+  ")" 'org-forward-heading-same-level
   "-" 'org-cycle-list-bullet
   "H" 'org-shiftleft
   "J" 'org-shiftdown
@@ -962,7 +987,7 @@ Enable leader key and bind some keys.
   (kbd "M-H-l") 'org-metaright
 
   "t" 'org-todo
-  "T" 'org-set-tags
+  "T" 'org-set-tags-command
   "E" 'org-ctrl-c-ctrl-c
   "O" 'org-open-at-point
   "Y" 'org-store-link)
@@ -1031,7 +1056,6 @@ Enable leader key and bind some keys.
 (use-package rust-mode :ensure t)
 #+END_SRC
 ** js
-*** flycheck: use eslint executable from project dir
 #+BEGIN_SRC emacs-lisp
 (defun use-eslint-from-node-modules ()
   (let* ((root (locate-dominating-file
@@ -1041,14 +1065,11 @@ Enable leader key and bind some keys.
     (when (and eslint (file-executable-p eslint))
       (setq-local flycheck-javascript-eslint-executable eslint))))
 
-(add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
-#+END_SRC
-** java
-#+BEGIN_SRC emacs-lisp
-(use-package lsp-java :ensure t :after lsp
-  :config (add-hook 'java-mode-hook 'lsp))
+;; Use eslint from node-modules
+(add-hook 'js-mode-hook #'use-eslint-from-node-modules)
 
-(use-package dap-java :after (lsp-java))
+;; Disable LSP-flycheck, because I'm using flycheck with eslint
+(add-hook 'js-mode-hook (lambda () (setq-local lsp-prefer-flymake :none)))
 #+END_SRC
 ** web-mode
 I use web-mode for JSX, it's simply better than emacs 27 JSX mode and js2-mode.
@@ -1066,11 +1087,22 @@ I use web-mode for JSX, it's simply better than emacs 27 JSX mode and js2-mode.
   ;; Use eslint with web-mode for jsx files
   (flycheck-add-mode 'javascript-eslint 'web-mode)
 
+  ;; Disable LSP-flycheck, because I'm using flycheck with eslint
+  (add-hook 'js-mode-hook (lambda () (setq-local lsp-prefer-flymake :none)))
+
   :config
   ;; Change some colors and stuff
   (set-face-attribute 'web-mode-html-tag-face nil :weight 'bold)
   (set-face-attribute 'web-mode-keyword-face nil :weight 'bold)
   (set-face-attribute 'web-mode-function-call-face nil :weight 'normal :foreground "normal"))
+#+END_SRC
+** java
+=lsp-java= automatically installs =eclipse.jdt.ls= to get lsp.
+#+BEGIN_SRC emacs-lisp
+(use-package lsp-java :ensure t :after lsp
+  :config (add-hook 'java-mode-hook 'lsp))
+
+(use-package dap-java :after (lsp-java))
 #+END_SRC
 ** emmet-mode
 Hit <C-j> after these and get:
