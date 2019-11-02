@@ -30,8 +30,8 @@ super + w
     bspc node --close
 
 # next/prev desktop
-super + {comma,period}
-    bspc desktop --focus {prev,next}.local
+super + {n,p}
+    bspc desktop --focus {next,prev}.local
 
 # focus/move to the given desktop on current monitor
 super + {_,shift + }{1-5}
@@ -41,13 +41,13 @@ super + {_,shift + }{1-5}
 super + Tab
     bspc node --focus last
 
-# focus next monitor
-super + grave
-    bspc monitor next --focus
+# focus next/prev monitor
+super + {comma, period}
+    bspc monitor {prev, next} --focus
 
-# move current window to next monitor
-super + shift + grave
-    bspc node --to-desktop (bspc query -D -m next -d .active | sed -n "1p")
+# move current window to next/prev monitor
+super + shift + {comma, period}
+    bspc node --to-desktop (bspc query -D -m {prev, next} -d .active | sed -n "1p")
 
 # move current window to Nth monitor
 # (no, I don't have 5 monitors but just in case. hehe)
@@ -114,12 +114,12 @@ hyper + r; {f, q, e, r, t, v, k}
     {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $HOME/Documents/sync/passwords.kdbx"}
 
 # menus
-hyper + {a, f, F, m, M, P, k, y}
+hyper + {a, f, F, m, M, P, o, y}
     menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords,youtube --video}
 
 # popups
-hyper + {c,n,h,t,i}
-    popup {calendar,music,htop,translate,mail}
+hyper + {c,n,t,i}
+    popup {calendar,music,translate,mail}
 
 # random wallpaper
 hyper + apostrophe
@@ -179,3 +179,19 @@ control + alt + o
 
 control + alt + l
     lockscreen
+
+# #############################################################################
+# key combinations
+# https://github.com/baskerville/sxhkd/issues/86#issuecomment-506562074
+# #############################################################################
+hyper + j
+    xdotool keyup j key --clearmodifiers Down
+
+hyper + k
+    xdotool keyup k key --clearmodifiers Up
+
+hyper + l
+    xdotool keyup l key --clearmodifiers Right
+
+hyper + h
+    xdotool keyup h key --clearmodifiers Left
