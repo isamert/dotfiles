@@ -315,6 +315,17 @@ To move between visual lines instead of real lines:
       org-ellipsis "..↯"                ;; Replace ... with ..↯ in collapsed sections
 )
 #+END_SRC
+** syntax highlighting for inline src blocks
+- Test: src_python[:var a=3]{return a}
+#+begin_src emacs-lisp
+(font-lock-add-keywords 'org-mode
+                        '(("\\(src_\\)\\([^[{]+\\)\\(\\[:.*\\]\\){\\([^}]*\\)}"
+                           (1 '(:foreground "black" :height 75 :weight thin)) ;; src_ part
+                           (2 '(:foreground "cyan" :weight 'bold :height 75)) ;; "lang" part.
+                           (3 '(:foreground "#555555" :height 70)) ; [:header arguments] part.
+                           (4 'org-code) ;; "code..." part.
+                           )))
+#+end_src
 ** auto indent subsections
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
 #+BEGIN_SRC emacs-lisp
@@ -1123,6 +1134,7 @@ Hit <C-j> after these and get:
 #+END_SRC
 
 * my/
+** org-babel extension functions
 #+BEGIN_SRC emacs-lisp
 (defun my/org-babel-remove-all-results nil
   (interactive)
@@ -1132,15 +1144,41 @@ Hit <C-j> after these and get:
       (when (org-babel-remove-result)
         (setq total-removed (+ total-removed 1))))
     (message (format "%d result blocks are removed." total-removed))))
+#+END_SRC
+** increment/decrement numbers
+#+begin_src emacs-lisp
+(defun increment-number-decimal (&optional arg)
+  "Increment the number forward from point by 'arg'."
+  (interactive "p*")
+  (save-excursion
+    (save-match-data
+      (let (inc-by field-width answer)
+        (setq inc-by (if arg arg 1))
+        (skip-chars-backward "0123456789")
+        (when (re-search-forward "[0-9]+" nil t)
+          (setq field-width (- (match-end 0) (match-beginning 0)))
+          (setq answer (+ (string-to-number (match-string 0) 10) inc-by))
+          (when (< answer 0)
+            (setq answer (+ (expt 10 field-width) answer)))
+          (replace-match (format (concat "%0" (int-to-string field-width) "d")
+                                 answer)))))))
 
-;; see this: https://github.com/emacs-evil/evil/issues/301
-(defun evil-fix-map nil
-  (evil-insert)
-  (evil-normal))
-
+(defun decrement-number-decimal (&optional arg)
+  (interactive "p*")
+  (increment-number-decimal (if arg (- arg) -1)))
+#+end_src
+** helm extensions
+#+begin_src emacs-lisp
 (defun helm-projectile-rg nil
   (interactive)
   (setq-local helm-rg-default-directory (projectile-project-root))
   (helm-rg nil)
   (setq-local helm-rg-default-directory 'default))
-#+END_SRC
+#+end_src
+** others
+#+begin_src emacs-lisp
+;; see this: https://github.com/emacs-evil/evil/issues/301
+(defun evil-fix-map nil
+  (evil-insert)
+  (evil-normal))
+#+end_src
