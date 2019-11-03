@@ -442,7 +442,7 @@ These are the languages that can be run in codeblocks.
 ** get back easy completions
 - Get back =<s<TAB>= completion.
 #+begin_src emacs-lisp
-(require 'org-tempo)
+(require 'org-tempo nil 'noerror)
 #+end_src
 ** presentation
 #+BEGIN_SRC emacs-lisp
