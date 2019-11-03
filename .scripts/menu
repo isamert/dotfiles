@@ -2,6 +2,13 @@
 
 all_name='[ALL]'
 
+function trim {
+    local var="${*:-$(</dev/stdin)}"
+    var="${var#"${var%%[![:space:]]*}"}"
+    var="${var%"${var##*[![:space:]]}"}"
+    echo -n "$var"
+}
+
 function dmenu {
     rofi -dmenu -fuzzy -i "$@"
 }
@@ -143,28 +150,37 @@ function passwords {
         if [[ "$1" == "-dump" ]]; then
             getpassword "$ENTRY" -dump
         else
-            local what=$(echo -e "Fill fields\nFill password\nCopy password\nCopy username" | dmenu)
+            local passinfo=$(getpassword "$ENTRY" --dump-all)
+            local otherinfo=$(echo "$passinfo" | awk -F: '/^\[.*]:/ {print $1}')
 
-            local password=$(getpassword "$ENTRY")
-            local username=$(getpassword "$ENTRY" -username)
+            local what=$(echo -e "Fill fields (with Tab)\nFill fields (with Enter)\nFill password\n${otherinfo}\nShow all" | dmenu)
+            local username=$(echo "$passinfo" | grep -i -m 1 "username" | cut -d: -f2- | trim)
+            local password=$(echo "$passinfo" | grep -i -m 1 "password" | cut -d: -f2- | trim)
             case "$what" in
-                "Fill fields")
+                "Fill fields (with Tab)")
                     sleep 0.2
                     xdotool type --delay 5 "$username"
                     xdotool key "Tab"
                     xdotool type --delay 5 "$password" ;;
+                "Fill fields (with Enter)")
+                    sleep 0.2
+                    xdotool type --delay 5 "$username"
+                    xdotool key "Return"
+                    sleep 0.2
+                    xdotool type --delay 5 "$password" ;;
                 "Fill password")
                     sleep 0.2
                     xdotool type --delay 5 "$password" ;;
-                "Copy password") echo "$password" | xclip -selection clipboard ;;
-                "Copy username") echo "$username" | xclip -selection clipboard ;;
+                "Show all")
+                    local allinfo=$(echo "$passinfo" | awk -F: '/^\[.*]:/ {printf("%-40s%-70s\n",$1,$2)}' | dmenu | cut -d']' -f2- | trim | xclip -selection clipboard) ;;
+                *)
+                    echo "$passinfo" | grep -iF -m 1 "$what" | cut -d: -f2- | trim | xclip -selection clipboard ;;
             esac
             notify-send --expire-time=1000 'password-menu' 'Done.'
         fi
     fi
 
     # Clear clipboard after 20 secs
-
     if [[ ! "$1" == "-dump" ]]; then
         local secs=$((20))
         while [ $secs -gt 0 ]; do
