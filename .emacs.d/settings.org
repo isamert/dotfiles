@@ -832,6 +832,13 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
       '("~/.emacs.d/snippets"                   ;; personal snippets
         ))))
 #+END_SRC
+** zotxt
+I use =Zotero= for clipping/saving webpages/pdfs etc. This gives me a way to access/reference those stuff in zothero from Emacs.
+#+begin_src emacs-lisp
+(use-package zotxt
+  :hook (org-mode . org-zotxt-mode)
+  :ensure t)
+#+end_src
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
