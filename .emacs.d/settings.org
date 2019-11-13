@@ -231,7 +231,8 @@ Make some temproary windows appear at bottom.
   :ensure t
   :init
   (setq evil-want-integration t
-        evil-want-keybinding nil
+        evil-want-keybinding nil ;; Do not load evil-keybindings for now
+        evil-want-C-i-jump nil   ;; Makes tab key work as expected in terminal
         evil-want-C-u-scroll t)
   :config
   (evil-mode 1))
@@ -372,6 +373,7 @@ These are the languages that can be run in codeblocks.
    (js . t)
    (sql . t)
    (shell . t)
+   (R . t)
    (http . t)))
 #+END_SRC
 *** Don't ask permissions for evaluating code blocks
@@ -1131,6 +1133,11 @@ Hit <C-j> after these and get:
   :init
   (setq emmet-expand-jsx-className? t
         emmet-self-closing-tag-style " /"))
+#+END_SRC
+
+** r
+#+BEGIN_SRC emacs-lisp
+(use-package ess :ensure t)
 #+END_SRC
 
 * my/

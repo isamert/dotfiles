@@ -56,6 +56,7 @@ export NPM_PACKAGES="$HOME/.npm-packages"
 export NODE_PATH="$NPM_PACKAGES/lib/node_modules:$NODE_PATH"
 
 export GOPATH="$HOME/.go"
+export R_LIBS_USER="$HOME/.rlibs"
 
 # the PATH
 export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin
