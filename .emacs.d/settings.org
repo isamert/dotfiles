@@ -839,6 +839,7 @@ I use =Zotero= for clipping/saving webpages/pdfs etc. This gives me a way to acc
 #+begin_src emacs-lisp
 (use-package zotxt
   :hook (org-mode . org-zotxt-mode)
+  :diminish
   :ensure t)
 #+end_src
 * Keybindings
