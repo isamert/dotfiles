@@ -172,7 +172,7 @@ function passwords {
                     sleep 0.2
                     xdotool type --delay 5 "$password" ;;
                 "Show all")
-                    local allinfo=$(echo "$passinfo" | awk -F: '/^\[.*]:/ {printf("%-40s%-70s\n",$1,$2)}' | dmenu | cut -d']' -f2- | trim | xclip -selection clipboard) ;;
+                    local allinfo=$(printf "[username]: $username\\n[password]: $password\\n$passinfo" | awk -F: '/^\[.*]:/ {printf("%-40s%-70s\n",$1,$2)}' | dmenu | cut -d']' -f2- | trim | xclip -selection clipboard) ;;
                 *)
                     echo "$passinfo" | grep -iF -m 1 "$what" | cut -d: -f2- | trim | xclip -selection clipboard ;;
             esac
@@ -207,4 +207,3 @@ case $cmd in
     "passwords") passwords "$@";;
     *) rofi -async-pre-read 0 -modi combi -combi-modi window,drun,run,vms:rofi_vms -show combi "$@"
 esac
-
