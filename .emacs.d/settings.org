@@ -963,26 +963,6 @@ Enable leader key and bind some keys.
 (add-to-list 'emulation-mode-map-alists
   `((movement-map-mode . ,movement-map)))
 #+END_SRC
-** Move in insert mode
-- Use A-h,j,k,l to move in insert mode.
-- Some extra for ~eshell~:
-  - A-j selects next matching input
-  - A-k selects previous matching input
-#+BEGIN_SRC emacs-lisp
-(evil-define-key 'insert 'global
-  (kbd "M-l") 'forward-char
-  (kbd "M-h") 'backward-char
-  (kbd "M-j") 'next-line
-  (kbd "M-k") 'previous-line)
-
-(evil-define-key 'insert eshell-mode-map
-  (kbd "M-j") 'eshell-next-matching-input-from-input
-  (kbd "M-k") 'eshell-previous-matching-input-from-input)
-
-(evil-define-key 'insert geiser-repl-mode-map
-  (kbd "M-j") 'comint-next-matching-input-from-input
-  (kbd "M-k") 'comint-previous-matching-input-from-input)
-#+END_SRC
 ** evil bindings for org-mode
 #+BEGIN_SRC emacs-lisp
 (evil-define-key 'normal org-mode-map

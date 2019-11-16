@@ -270,13 +270,6 @@ vnoremap Ö <
 vnoremap Ç >
 " }}}
 
-" move in insert mode {{{
-inoremap <A-l> <right>| " a-l -> move right in insert mode
-inoremap <A-h> <left>|  " ...
-inoremap <A-j> <down>|  " ...
-inoremap <A-k> <up>|    " ...
-" }}}
-
 " other {{{
 vnoremap t :Tabularize/
 nnoremap <leader>t :TagbarToggle<CR>
