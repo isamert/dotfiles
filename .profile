@@ -40,7 +40,7 @@ ctrl-p:toggle-preview"
 
 export FZF_DEFAULT_OPTS="
 --bind \"$FZF_BINDINGS\" \
---preview 'bat --color=always --italic-text=always --number --line-range :200 {}' \
+--preview 'bat --color=always --italic-text=always --number --line-range :200 {} 2> /dev/null' \
 --header='(c-p: toggle-preview | c-d/u: page up/down | a-j/k: preview up/down | a-y: copy | a-e: edit)' \
 --reverse"
 # }}}
