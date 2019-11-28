@@ -127,18 +127,7 @@ function folders {
 }
 
 function file_contents {
-    f=$(term --opaque --float -g $(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "
-        result=\$( (
-        rg --no-text --line-number --color=always --colors match:fg:white . \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name);
-        rg --no-text --line-number --color=always --colors match:fg:white . Documents) | fzf --ansi --preview '
-          set file (echo {} | cut -d: -f1);
-          set linum (echo {} | cut -d: -f2);
-          set range (expr \$linum - (expr \$LINES / 2));
-          set range_cmd (if test \$range -gt -1; echo --line-range; end);
-          set range_cmd_arg (if test \$range -gt -1; echo \$range:; end);
-          bat --color=always --style=header,numbers \"\$file\" --highlight-line \$linum \$range_cmd \$range_cmd_arg')
-        f=\$(echo \$result | cut -d: -f1)
-        jaro --no-stdin \$f")
+    term --opaque --float -g $(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
 }
 
 # Use `menu passwords -dump` to print password info into stdout.

@@ -57,11 +57,24 @@ function fzf_packages_arch {
     [[ -n "$packages" ]] && $AUR_HELPER -S ${packages}
 }
 
+function fzf_file_contents {
+    result=$(rg --no-text --line-number --color=always --colors match:fg:white . "$@" | fzf --ansi --preview '
+    set file (echo {} | cut -d: -f1);
+    set linum (echo {} | cut -d: -f2);
+    set range (expr $linum - (expr $LINES / 2));
+    set range_cmd (if test $range -gt -1; echo --line-range; end);
+    set range_cmd_arg (if test $range -gt -1; echo \$range:; end);
+    bat --color=always --style=header,numbers "$file" --highlight-line $linum $range_cmd $range_cmd_arg')
+    selected_files=$(echo "$result" | cut -d: -f1)
+    [[ -n $selected_files ]] && jaro --no-stdin "$selected_files"
+}
+
 case "$*" in
     "git add"*) shift 2; fzf_git_add "$@" ;;
     "git files"*) shift 2; fzf_git_files "$@" ;;
     "git log"*) shift 2; fzf_git_log "$@" ;;
-    kill|fuck) fzf_kill;;
-    packages) fzf_packages_arch;;
+    kill|fuck) shift; fzf_kill "$@" ;;
+    packages) shift; fzf_packages_arch "$@" ;;
+    file*|contents) shift; fzf_file_contents "$@" ;;
     "") fzf;;
 esac
