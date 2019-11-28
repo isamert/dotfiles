@@ -8,22 +8,15 @@ if not functions -q fisher
 end
 
 # #############################################################################
-# vi-mode
+# key-bindings
 # #############################################################################
-function fish_modified_vi_key_bindings
+function my_fish_key_bindings
     fish_vi_key_bindings
-    bind -M insert \el  accept-autosuggestion          # alt-l
-    bind -M insert \ek  history-search-backward        # alt-k
-    bind -M insert \ej  history-search-forward         # alt-j
-    bind -M insert \el  forward-char
-    bind -M insert \eh  backward-char
-    bind -M insert \eb  backward-word
-    bind -M insert \ee  forward-word
-    bind -M insert \eH  backward-kill-word
+    fzf_key_bindings
     bind -M insert -m default jk backward-char force-repaint
 end
 
-set fish_key_bindings fish_modified_vi_key_bindings
+set fish_key_bindings my_fish_key_bindings
 
 # #############################################################################
 # theme stuff (bobthefish settings)
@@ -43,7 +36,6 @@ if not set -q abbrs_initialized
 end
 
 function weather; curl -s "wttr.in/$argv" | less -R; end
-function f; fff "$argv"; cd (cat ~/.cache/fff/fff.d); end
 function mkcd; mkdir -p "$argv"; cd "$argv"; end          # Make and cd to the dir
 function cpcd; cp $argv[1] $argv[2]; and cd $argv[2]; end # Copy and go to the directory
 function mvcd; mv $argv[1] $argv[2]; and cd $argv[2]; end # Move and cd to the dir
