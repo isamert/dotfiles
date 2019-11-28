@@ -11,8 +11,15 @@ end
 # key-bindings
 # #############################################################################
 function my_fish_key_bindings
-    fish_vi_key_bindings
     fzf_key_bindings
+    fish_vi_key_bindings
+    bind -M insert \el  accept-autosuggestion          # alt-l
+    bind -M insert \ek  history-search-backward        # alt-k
+    bind -M insert \ej  history-search-forward         # alt-j
+    bind -M insert \el  forward-char
+    bind -M insert \eh  backward-char
+    bind -M insert \eb  backward-word
+    bind -M insert \ee  forward-word
     bind -M insert -m default jk backward-char force-repaint
 end
 
