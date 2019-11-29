@@ -183,15 +183,17 @@ control + alt + l
 # #############################################################################
 # key combinations
 # https://github.com/baskerville/sxhkd/issues/86#issuecomment-506562074
+# FIXME: they dont work in emacs
+# FIXME: Can't hold hyper + j and get the same effect as holding down "down" itself
 # #############################################################################
 hyper + j
-    xdotool keyup j key --clearmodifiers Down
+    xdotool keyup j key Down
 
 hyper + k
-    xdotool keyup k key --clearmodifiers Up
+    xdotool keyup k key Up
 
 hyper + l
-    xdotool keyup l key --clearmodifiers Right
+    xdotool keyup l key Right
 
 hyper + h
-    xdotool keyup h key --clearmodifiers Left
+    xdotool keyup h key Left
