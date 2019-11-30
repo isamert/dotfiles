@@ -10,7 +10,7 @@ set -o pipefail
 # ############################################################################
 
 function is-arch {
-    if [[ $(uname -r) = *ARCH ]]; then
+    if [[ $(uname -r) = *arch ]]; then
         true
     else
         false
@@ -27,6 +27,12 @@ function install-package {
 # ############################################################################
 # Specific installation recipes
 # ############################################################################
+
+function install-zsh {
+    [[ -n $DISABLE_ZSH ]] && return
+
+    curl -fLo ~/.local/bin/antigen.zsh --create-dirs https://git.io/antigen
+}
 
 function install-jaro {
     [[ -n $DISABLE_JARO ]] && return
