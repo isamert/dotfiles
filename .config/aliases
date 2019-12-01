@@ -6,9 +6,10 @@ alias aurin="$AUR_HELPER -S"
 alias aurs="$AUR_HELPER -Ss"
 alias aurupg="$AUR_HELPER -Syu"
 alias pac="sudo pacman"
-alias pacin="sudo pacman -S"
 alias pacs="pacman -Ss"
 alias pacin="sudo pacman -S"
+alias pacinf="fuzzy pacman"
+alias pacf="fuzzy pacman"
 alias pacins="sudo pacman -U"    # Install from file
 alias pacupd="sudo pacman -Sy"
 alias pacupg="sudo pacman -Syu"
@@ -17,7 +18,6 @@ alias pacbin="pacman -Fs"        # Same as above
 alias pacre="sudo pacman -R"     # Leave dependencies and configurations
 alias pacrem="sudo pacman -Rns"
 alias pacpac="fuzzy packages"    # A fuzzy, interactive package finder
-alias fpac="fuzzy packages"
 
 # process management
 alias nameof="ps -o comm= -p" # Get the name of given PID
@@ -30,17 +30,19 @@ alias mkbz2="tar -cvjf"
 alias mkgz="tar -cvzf"
 alias ...="cd ../.."
 alias ....="cd ../../.."
+alias .....="cd ../../../.."
 alias df="df -H"
 alias du="ncdu"
 alias grep="grep --color=auto -i"
 alias xpaste="xclip -selection clipboard -o" # paste cb content
 
-#alias ls="ls -ShG --color --group-directories-first"
+#alias ls="
 #alias lls="ls -lthG --color --group-directories-first"
-alias ls="lsd --group-dirs first --classify --color=always --icon=always"
-alias ll="lsd --group-dirs first --classify --oneline --color=always --icon=always"
-alias lls="lsd --group-dirs first --classify --long --color=always --icon=always"
-alias lla="lsd --group-dirs first --classify --long --all --color=always --icon=always"
+alias ls="lsd --group-dirs first --classify"
+alias ll="lsd --group-dirs first --classify --oneline"
+alias lls="lsd --group-dirs first --classify --long"
+alias lla="lsd --group-dirs first --classify --long --all"
+alias tree="lsd --tree"
 
 # abbrv
 alias n="nvim"
@@ -55,6 +57,7 @@ alias ytm="youtube-viewer --player=mpv --no-video"
 
 # master Wq
 alias :q="exit"
+alias :wq="exit"
 
 # git
 alias g="git"
@@ -72,6 +75,7 @@ alias cfgp="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME push origin master"
 alias cfga="fuzzy git add --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
 alias cfgl="fuzzy git log --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
 alias cfgf="fuzzy git files --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
+alias cfge='eval $EDITOR $(git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME ls-files --full-name | fzf --preview "bat --color=always --style=header,numbers {}")'
 
 # useful
 alias clearvimswap="rm $HOME/.local/share/nvim/swap/*"
