@@ -41,6 +41,9 @@ Plug 'dag/vim-fish'                " syntaxh highlighting and stuff for fish
 
 " markup
 Plug 'gabrielelana/vim-markdown'
+
+" extra
+Plug 'kovetskiy/sxhkd-vim'
 call plug#end()
 " }}}
 
