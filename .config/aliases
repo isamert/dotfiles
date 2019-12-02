@@ -51,9 +51,13 @@ alias e="jaro --method=edit"
 alias mt="jaro --mime-type"
 alias how="howdoi --color --all"
 alias mkx="chmod +x"
-alias sdu="systemctl --user"
 alias yt="youtube-viewer --player=mpv"
 alias ytm="youtube-viewer --player=mpv --no-video"
+
+alias ctl="systemctl "
+alias ctlu="systemctl --user "
+alias ctls="systemctl status "
+alias ctls="systemctl status "
 
 # master Wq
 alias :q="exit"
