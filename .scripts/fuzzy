@@ -61,7 +61,7 @@ function fzf_file_contents {
     result=$(rg --no-text --line-number --color=always --colors match:fg:white . "$@" | fzf --ansi --preview '
     file=$(echo {} | cut -d: -f1);
     linum=$(echo {} | cut -d: -f2);
-    range=$(expr $linum - (expr $LINES / 2));
+    range=$(expr $linum - $(expr $LINES / 2));
     range_cmd=$([[ $range -gt -1 ]] && echo "--line-range");
     range_cmd_arg=$([[ $range -gt -1 ]] && echo $range:);
     bat --color=always --style=header,numbers "$file" --highlight-line $linum $range_cmd $range_cmd_arg')
