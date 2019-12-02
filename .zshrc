@@ -8,7 +8,7 @@ antigen bundle zsh-users/zsh-syntax-highlighting
 antigen bundle zsh-users/zsh-history-substring-search
 antigen bundle isamert/zsh-abbrev-alias
 antigen bundle zsh-users/zsh-completions
-antigen theme robbyrussell
+antigen theme agnoster
 antigen apply
 # }}}
 
