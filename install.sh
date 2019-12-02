@@ -24,14 +24,42 @@ function install-package {
     return
 }
 
+function gh-latest-release {
+  curl --silent "https://api.github.com/repos/$1/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+}
+
 # ############################################################################
 # Specific installation recipes
 # ############################################################################
 
+function install-cmdutills {
+    install-package git jq
+}
+
 function install-zsh {
     [[ -n $DISABLE_ZSH ]] && return
 
+    echo "===== Installing zsh ====="
+
     curl -fLo ~/.local/bin/antigen.zsh --create-dirs https://git.io/antigen
+    chsh -s "$(command -v zsh)"
+}
+
+function install-elm {
+    [[ -n $DISABLE_ELM ]] && return
+
+    echo "===== Installing elm ====="
+
+    local last_path=$(pwd)
+    cd /tmp
+    local elmver=$(gh-latest-release "elm/compiler")
+    local binname=elm-${elmver}
+    curl -L -o "${binname}.gz" "https://github.com/elm/compiler/releases/download/${elmver}/binary-for-linux-64-bit.gz"
+    gunzip "${binname}.gz"
+    chmod +x "${binname}"
+    mkdir -p ~/.local/bin
+    mv "${binname}" ~/.local/bin/elm
+    cd "$last_path"
 }
 
 function install-jaro {
@@ -48,7 +76,9 @@ function install-nvim {
 
     echo "===== Installing nvim ====="
 
+    install-package neovim
     curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    echo "===>>> Run :PlugInstall after opening vim."
 }
 
 function install-bspwm {
@@ -70,8 +100,9 @@ function install-mpv {
     # Install thumbnailer script
     # TODO: Get latest release
     mkdir -p ~/.config/mpv/scripts
-    curl -fsSlL https://github.com/TheAMM/mpv_thumbnail_script/releases/download/0.4.2/mpv_thumbnail_script_client_osc.lua > ~/.config/mpv/scripts/mpv_thumbnail_script_client_osc.lua
-    curl -fsSlL https://github.com/TheAMM/mpv_thumbnail_script/releases/download/0.4.2/mpv_thumbnail_script_server.lua > ~/.config/mpv/scripts/mpv_thumbnail_script_server.lua
+    local thumbver=$(gh-latest-release "TheAMM/mpv_thumbnail_script")
+    curl -fsSlL "https://github.com/TheAMM/mpv_thumbnail_script/releases/download/${thumbver}/mpv_thumbnail_script_client_osc.lua" > ~/.config/mpv/scripts/mpv_thumbnail_script_client_osc.lua
+    curl -fsSlL "https://github.com/TheAMM/mpv_thumbnail_script/releases/download/${thumbver}/mpv_thumbnail_script_server.lua" > ~/.config/mpv/scripts/mpv_thumbnail_script_server.lua
 }
 
 function install-protonmail {
@@ -171,8 +202,11 @@ function install-mutt {
     done
 }
 
-function install-firefox {
+function install-nvidia {
     ([[ -n $DISABLE_GUI ]] || [[ -n $DISABLE_NVIDIA ]]) && return
+
+    echo "===== Installing NVIDIA ====="
+
     install-package optimus-manager
 }
 
@@ -220,6 +254,11 @@ function configure-systemduser {
     [[ -z $DISABLE_SYNCTHING ]] && systemctl --user enable syncthing.service
 }
 
+
+if [[ $1 =~ install* ]]; then
+    eval "${1}-${2}"
+    exit 0
+fi
 
 for arg; do
     case "$arg" in
