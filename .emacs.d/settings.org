@@ -424,10 +424,11 @@ These are the languages that can be run in codeblocks.
 #+END_SRC
 ** agenda
 #+BEGIN_SRC emacs-lisp
-(setq org-agenda-files `(,life-org)
-      org-agenda-use-time-grid t
-      org-agenda-time-grid '((weekly today require-timed remove-match)
-                             (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------"))
+(when (fboundp 'life-org)
+  (setq org-agenda-files `(,life-org)
+        org-agenda-use-time-grid t
+        org-agenda-time-grid '((weekly today require-timed remove-match)
+                               (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------")))
 #+END_SRC
 ** todo keywords
 #+BEGIN_SRC emacs-lisp
