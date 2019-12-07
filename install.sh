@@ -42,6 +42,7 @@ function install-zsh {
     echo "===== Installing zsh ====="
 
     curl -fLo ~/.local/bin/antigen.zsh --create-dirs https://git.io/antigen
+    echo "Changing default shell to zsh..."
     chsh -s "$(command -v zsh)"
 }
 
@@ -78,7 +79,7 @@ function install-nvim {
 
     install-package neovim
     curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-    echo "===>>> Run :PlugInstall after opening vim."
+    echo "===>>> Run :PlugInstall after opening vim. <<<==="
 }
 
 function install-bspwm {
