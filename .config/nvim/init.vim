@@ -25,6 +25,8 @@ Plug 'airblade/vim-gitgutter'                " Show git changes
 Plug 'rhysd/devdocs.vim'                     " :DevDocs -> open stuff in DevDocs
 Plug 'jeffkreeftmeijer/vim-numbertoggle'     " Toggle between relative and normal lines when needed
 Plug 'majutsushi/tagbar'                     " list top-level stuff in a window
+Plug 'scrooloose/nerdtree'                   " tree like file manager
+Plug 'Xuyuanp/nerdtree-git-plugin'           " git flags for nerdtree
 Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
 
 " editing
@@ -34,16 +36,13 @@ Plug 'tpope/vim-repeat'            " repat more stuff with .
 Plug 'godlygeek/tabular'           " :Tabularize /(thing to align)
 Plug 'milkypostman/vim-togglelist' " \q -> Toggle quicfix, \l -> Toggle list
 
-" lint, code comp. and stuff
+" lint, code comp. new languages etc.
 Plug 'w0rp/ale'                    " lint, code completion, other lsp features
 Plug 'neovimhaskell/haskell-vim'   " for better highlighting
 Plug 'dag/vim-fish'                " syntaxh highlighting and stuff for fish
-
-" markup
+Plug 'kovetskiy/sxhkd-vim'
 Plug 'gabrielelana/vim-markdown'
 
-" extra
-Plug 'kovetskiy/sxhkd-vim'
 call plug#end()
 " }}}
 
@@ -103,6 +102,15 @@ let g:netrw_browse_split = 4 " ...
 let g:netrw_altv = 1         " spawn it at left split
 let g:netrw_usetab = 1       " use tab for expanding/shrinking folders
 let g:netrw_winsize = 10     " occupies 10% of window
+" }}}
+
+" nerdtree {{{
+" close vim if the nerdtree is the only window remaining
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
+" Use <TAB> as enter in NerdTree
+" autocmd FileType nerdtree nmap <buffer> <CR> <TAB>
+
+map <A-f> :NERDTreeToggle<CR>
 " }}}
 
 " trailing spaces {{{
@@ -234,7 +242,59 @@ vnoremap <silent> j gj
 vnoremap <silent> k gk
 " }}}
 
-" fzf bindings {{{
+" fzf (https://github.com/junegunn/fzf/blob/master/README-VIM.md#fzf-inside-terminal-buffer) {{{
+let $FZF_DEFAULT_OPTS = '--layout=reverse --margin=1,4'
+let g:fzf_layout = { 'window': 'call OpenFloatingWin()' }
+
+function! OpenFloatingWin()
+    let height = &lines - 3
+    let width = float2nr(&columns - (&columns * 2 / 10))
+    let col = float2nr((&columns - width) / 2)
+
+    "Set the position, size, etc. of the floating window.
+    "The size configuration here may not be so flexible, and there's room for further improvement.
+    let opts = {
+                \ 'relative': 'editor',
+                \ 'row': height * 0.3,
+                \ 'col': col + 30,
+                \ 'width': width * 2 / 3,
+                \ 'height': height / 2
+                \ }
+
+    let buf = nvim_create_buf(v:false, v:true)
+    let win = nvim_open_win(buf, v:true, opts)
+
+    "Set Floating Window Highlighting
+    call setwinvar(win, '&winhl', 'Normal:Pmenu')
+
+    setlocal
+                \ buftype=nofile
+                \ nobuflisted
+                \ bufhidden=hide
+                \ nonumber
+                \ norelativenumber
+                \ signcolumn=no
+endfunction
+
+function! RipgrepFzf(query, fullscreen)
+    " Rg with bat preview focused on selected line
+    let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case %s || true'
+    let initial_command = printf(command_fmt, shellescape(a:query))
+    let spec = {'options': ['--layout=reverse', '--query', a:query, '--preview', 'line={}; file=${line%%:*}; linum=${${line#*:}%%:*}; range=$(($linum - $LINES / 2)); range_cmd=$([[ $range -gt -1 ]] && echo "--line-range"); range_cmd_arg=$([[ $range -gt -1 ]] && echo $range:); bat --color=always --style=header,numbers "$file" --highlight-line $linum $range_cmd $range_cmd_arg']}
+    call fzf#vim#grep(initial_command, 1, spec, a:fullscreen)
+endfunction
+
+let $FZF_DEFAULT_OPTS = '--layout=reverse --info=hidden'
+
+command! -bang -nargs=?  Files call fzf#vim#files(<q-args>, {'options': ['--info=inline', '--preview', 'bat --color=always --style=header,numbers {}'], 'window': ''}, <bang>0)
+command! -bang -nargs=?  GFiles call fzf#vim#files(<q-args>, {'options': ['--layout=reverse', '--info=inline', '--preview', 'bat --color=always --style=header,numbers {}']}, <bang>0)
+command! -nargs=* -bang Rg call RipgrepFzf(<q-args>, <bang>0)
+command! -bang -nargs=? GLog call fzf#vim#grep('git log --graph --color=always --format="%C(auto)%h%d %s %C(black)%C(bold)%cr"', 1, {'options': ['--ansi', '--preview', 'echo {} | grep -o "[a-f0-9]\{7\}" | head -1 | xargs -I % sh -c "git show --color=always %"']}, <bang>0)
+
+" [Commands] --expect expression for directly executing the command
+let g:fzf_commands_expect = 'alt-enter,ctrl-x'
+inoremap <expr> <c-x><c-k> fzf#vim#complete('cat /usr/share/dict/words')
+
 nnoremap <leader><space> :Commands<CR>| " \<space> -> lists all commands
 nnoremap <leader>g :GFiles<CR>|         " \g       -> list all git files
 nnoremap <leader>h :History<CR>|        " \h       -> list history
