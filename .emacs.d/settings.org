@@ -649,7 +649,15 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
 
 (use-package lsp-ui
   :ensure t
-  :commands lsp-ui-mode)
+  :commands lsp-ui-mode
+  :config
+  ;; FIXME: this does not work
+  (evil-define-key 'insert lsp-ui-peek-mode-map
+    "gf" 'lsp-ui-peek-find-references
+    (kbd "j") 'lsp-ui-peek--select-next
+    (kbd "k") 'lsp-ui-peek--select-prev
+    (kbd "l") 'lsp-ui-peek--select-next-file
+    (kbd "h") 'lsp-ui-peek--select-prev-file))
 
 (use-package company-lsp
   :ensure t
@@ -863,6 +871,9 @@ I use =Zotero= for clipping/saving webpages/pdfs etc. This gives me a way to acc
   (kbd "M-:") 'comment-dwim
   "gd" 'xref-find-definitions
   "gf" 'xref-find-references)
+
+(evil-define-key 'normal lsp-mode-map
+  "gf" 'lsp-ui-peek-find-references)
 
 (evil-define-key 'insert prog-mode-map
   (kbd "M-s") 'company-yasnippet)
