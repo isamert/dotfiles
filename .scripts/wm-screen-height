@@ -1,3 +1,0 @@
-#!/bin/sh
-focused_monitor_name=$(bspc query --monitors --monitor focused --names)
-xrandr -q | grep "$focused_monitor_name connected" | tr "+x" " " | sed "s/primary //" | cut -d" " -f4

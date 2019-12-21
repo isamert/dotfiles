@@ -21,7 +21,7 @@ function calendar {
 function music {
     MUSIC=ncmpcpp
 
-    local SCREEN_WIDTH=$(wm-screen-width)
+    local SCREEN_WIDTH=$(bspwmc focused_window_width)
     local Y=$((BAR_HEIGHT+BAR_BORDER*2))
     local GEOMETRY="110x20-$(((SCREEN_WIDTH - 822) / 2))+$Y"
     local WINDOW_TITLE="Music Popup"

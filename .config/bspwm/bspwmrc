@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# Set 5 desktops for each connected screen
-xrandr -q | grep " connected" | cut -d' ' -f1 | xargs -i bspc monitor {} --reset-desktops I II III IV V
-
 bspc config automatic_scheme longest_side
 bspc config initial_polarity second_child
 
@@ -26,12 +23,11 @@ bspc rule --add feh           state=floating
 bspc rule --add mpv           state=floating
 bspc rule --add 'mpv:youtube' focus=off
 
-bspc rule --add Screenkey   manage=off
-bspc rule --add 'dota2'     border=off
+bspc rule --add Screenkey     manage=off
+bspc rule --add 'dota2'       border=off
 
 # Start WM related stuff
 pgrep compton || compton &
 pgrep sxhkd || sxhkd &
-bar &
-feh --bg-scale "$HOME/.config/wall.png"
+init-desktops &
 

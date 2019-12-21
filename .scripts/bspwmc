@@ -2,6 +2,30 @@
 
 size=30
 
+function focused_monitor_name {
+    bspc query --monitors --monitor focused --names
+}
+
+function focused_monitor_info {
+    xrandr -q | grep "$(focused_monitor_name) connected" | tr "+x" " " | sed "s/primary //"
+}
+
+function focused_monitor_height {
+    focused_monitor_info | cut -d" " -f4
+}
+
+function focused_monitor_width {
+    focused_monitor_info | cut -d" " -f3
+}
+
+function focused_monitor_x_offset {
+    focused_monitor_info | cut -d" " -f5
+}
+
+function focused_monitor_y_offset {
+    focused_monitor_info | cut -d" " -f6
+}
+
 function is_floating {
     bspc query -T -n | grep -q '"state":"floating"'
 }
@@ -58,30 +82,28 @@ function resize {
     fi
 }
 
-# a scratchpad terminal that is shared across desktops
+# a scratchpad terminal that is shared across desktops (unique for each monitor)
 function scratchpad_top {
-    for i in "$@"; do
-    case $i in
-        --full-width*) full_width=1; shift ;;
-    esac
-    done
-
-    class="padtop"
+    monitor_name=$(focused_monitor_name)
+    class="padtop-${monitor_name,,}"
     id=$(xdotool search --classname --class "$class")
     if [[ -z "$id" ]]; then
         local top_gap=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
         local width=$(xrdb-get-value sp.top.width)
         local height=$(xrdb-get-value sp.top.height)
+        if [[ $width = *% ]]; then
+            local width=$(($(focused_monitor_width) * 100 / ${width%\%}))
+            echo $width
+        fi
         bspc rule --add "$class" state=floating sticky=on
         bspc rule --add "*:$class" state=floating sticky=on
         term --opaque \
            --name="$class" \
-           -g "400x35"+0+${top_gap} \
+           -g "150x$height+$(focused_monitor_x_offset)+${top_gap}" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
         wid=$(xdotool search --sync --classname --class "$class")
-        xdotool windowsize --usehints "$wid" "$width" "$height"
-        xdo resize -w -"$((2 * $(xrdb-get-value wm.border)))" "$wid"
+        xdo resize -w "$((width - 2 * $(xrdb-get-value wm.border)))" "$wid"
     else
         bspc node $id --flag hidden
         bspc node -f $id
@@ -90,23 +112,29 @@ function scratchpad_top {
 
 # a scratchpad terminal that is unique to current desktop
 function scratchpad_bot {
-    desktop_id=$(xdotool get_desktop)
+    desktop_id=$(($(xdotool get_desktop) + 1))
     [[ -z "$desktop_id" ]] && notify-send "what"
-    class="padbot$((desktop_id + 1))"
+    class="padbot${desktop_id}"
     id=$(xdotool search --classname --class "$class")
     if [[ -z "$id" ]]; then
         local width=$(xrdb-get-value sp.bot.width)
         local height=$(xrdb-get-value sp.bot.height)
+        if [[ $width = *% ]]; then
+            local width=$(($(focused_monitor_width) * 100 / ${width%\%}))
+            echo $width
+        fi
+
         bspc rule --add "$class" state=floating
         bspc rule --add "*:$class" state=floating
         term --opaque \
            --name="$class" \
-           -g "400x$height+1-1" \
+           -g "150x$height+$(focused_monitor_x_offset)-1" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
         wid=$(xdotool search --sync --classname --class "$class")
-        xdotool windowsize --usehints "$wid" "$width" "$height"
-        xdo resize -w -"$((2 * $(xrdb-get-value wm.border)))" "$wid"
+        xdo resize -w "$((width - 2 * $(xrdb-get-value wm.border)))" "$wid"
+        eval "$(xdotool getwindowgeometry --shell $wid)"
+        xdo move -y "$(($(focused_monitor_height) - HEIGHT - 2 * $(xrdb-get-value wm.border)))" "$wid"
     else
         bspc node "$id" --flag hidden
         bspc node -f "$id"
@@ -119,26 +147,26 @@ function center_floating {
     wid=''
 
     center_y=0
-    if [ "$1" = "true" ]; then
+    if [[ "$1" = "true" ]]; then
         center_y=1
         shift
     fi
 
     # wait until the window shows up and set $wid
-    if [ -n "$1" ]; then
+    if [[ -n "$1" ]]; then
         wid=$(xdotool search --sync "$@")
     else
         wid=$(xdotool getactivewindow)
     fi
 
-    SCREEN_WIDTH=$(wm-screen-width)
-    SCREEN_HEIGHT=$(wm-screen-height)
+    SCREEN_WIDTH=$(focused_monitor_width)
+    SCREEN_HEIGHT=$(focused_monitor_height)
     WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
     HEIGHT=$(xwininfo -id "$wid" | grep Height | cut -d: -f2 | xargs)
-    X=$(((SCREEN_WIDTH - WIDTH) / 2))
-    Y=$(((SCREEN_HEIGHT - HEIGHT) / 2))
+    X=$(((SCREEN_WIDTH - WIDTH) / 2 + $(focused_monitor_x_offset)))
+    Y=$(((SCREEN_HEIGHT - HEIGHT) / 2 + $(focused_monitor_y_offset)))
 
-    if [ "$center_y" = 1 ]; then
+    if [[ "$center_y" = 1 ]]; then
         xdotool windowmove "$wid" $X $Y
     else
         xdotool windowmove "$wid" $X y
@@ -151,37 +179,28 @@ function move_floating {
     shift
 
     # wait until the window shows up and set $wid
-    if [ -n "$1" ]; then
+    if [[ -n "$1" ]]; then
         wid=$(xdotool search --sync "$@")
     else
         wid=$(xdotool getactivewindow)
     fi
 
-    SCREEN_WIDTH=$(wm-screen-width)
-    SCREEN_HEIGHT=$(wm-screen-height)
+    SCREEN_WIDTH=$(focused_monitor_width)
+    SCREEN_HEIGHT=$(focused_monitor_height)
     WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
     HEIGHT=$(xwininfo -id "$wid" | grep Height | cut -d: -f2 | xargs)
-    X=$(((SCREEN_WIDTH - WIDTH) / 2))
-    Y=$(((SCREEN_HEIGHT - HEIGHT) / 2))
+    GAP=10
+    OFFSET_X=$(($(focused_monitor_x_offset) + GAP))
+    OFFSET_Y=$(($(focused_monitor_y_offset) + GAP))
 
     case $position in
-        Q) xdotool windowmove "$wid" 10 $((10 + $(xrdb-get-value bar.height))) ;;
-        W) xdotool windowmove "$wid" $((SCREEN_WIDTH - 10 - WIDTH)) $((10 + $(xrdb-get-value bar.height))) ;;
-        A) xdotool windowmove "$wid" 10 $((SCREEN_HEIGHT - 10 - HEIGHT)) ;;
-        S) xdotool windowmove "$wid" $((SCREEN_WIDTH - 10 - WIDTH)) $((SCREEN_HEIGHT - 10 - HEIGHT)) ;;
+        Q) xdotool windowmove "$wid" $OFFSET_X $((OFFSET_Y + $(xrdb-get-value bar.height))) ;;
+        W) xdotool windowmove "$wid" $((SCREEN_WIDTH + OFFSET_X - 2 * GAP - WIDTH)) $((OFFSET_Y + $(xrdb-get-value bar.height))) ;;
+        A) xdotool windowmove "$wid" $OFFSET_X $((SCREEN_HEIGHT + OFFSET_Y - 2 * GAP - HEIGHT)) ;;
+        S) xdotool windowmove "$wid" $((SCREEN_WIDTH + OFFSET_X - 2 * GAP - WIDTH)) $((SCREEN_HEIGHT + OFFSET_Y - 2* GAP - HEIGHT)) ;;
     esac
-
 }
 
 
 cmd="$1"; shift
-case $cmd in
-    focus)   focus "$@" ;;
-    move)    move  "$@" ;;
-    resize)  resize "$@" ;;
-    focus_toggle_floating) focus_toggle_floating "$@" ;;
-    scratchpad_top) scratchpad_top "$@" ;;
-    scratchpad_bot) scratchpad_bot "$@" ;;
-    center_floating) center_floating "$@" ;;
-    move_floating) move_floating "$@" ;;
-esac
+"$cmd" "$@"
