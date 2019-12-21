@@ -42,6 +42,8 @@ Plug 'neovimhaskell/haskell-vim'   " for better highlighting
 Plug 'dag/vim-fish'                " syntaxh highlighting and stuff for fish
 Plug 'kovetskiy/sxhkd-vim'
 Plug 'gabrielelana/vim-markdown'
+Plug 'leafgarland/typescript-vim'
+Plug 'ianks/vim-tsx'
 
 call plug#end()
 " }}}
