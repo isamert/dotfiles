@@ -48,7 +48,7 @@
 
 (assoc
   #:name 'editor
-  #:pattern '("^text/" "^application/(x-)?shellscript")
+  #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript)")
   #:program "nvim %f"
   #:term "st -e"
   #:view (open-with 'bat)
