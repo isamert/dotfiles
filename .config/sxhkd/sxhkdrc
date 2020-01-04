@@ -12,7 +12,7 @@ super + {_,shift + } {backslash,minus}
 
 # set the window state
 super + {t,shift + t,s,f}
-    bspc node --state {tiled,pseudo_tiled,floating,fullscreen}
+    bspc node --state "~{tiled,pseudo_tiled,floating,fullscreen}"
 
 super + m
     bspc desktop --layout next
