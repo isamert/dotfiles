@@ -46,12 +46,67 @@ all_seek() {
     fi
 }
 
+switch_audio_channel() {
+    if [[ $1 = "--help" ]]; then
+        echo "Changes default sink to next one and moves all inputs to new default sink."
+        echo "Try to use it when something is already playing."
+    fi
+
+    readarray -t sinks <<< "$(pactl list sinks short | cut -f1)"
+    readarray -t inputs <<< "$(pactl list sink-inputs short | cut -f1)"
+    current_sink=$(pactl list sinks short | grep "RUNNING" | head -c 1)
+
+    if [[ -z $current_sink ]]; then
+        notify-send "Error while switching audio channels" "Could not detect default sink. Playing something may help."
+        exit 1
+    fi
+
+    new_sink=${sinks[0]}
+    for sink in "${sinks[@]}"; do
+        if (( sink > current_sink )); then
+            new_sink="$sink"
+            break
+        fi
+    done
+
+    new_sink_name=$(pactl list sinks | grep device.description | cut -d'"' -f2 | sed -n "$((new_sink + 1))p")
+    notify-send "Switching audio channel" "New default channel is $new_sink_name, moving all inputs to that."
+
+    # Move every input to new sink
+    for input in "${inputs[@]}"; do
+        pacmd move-sink-input "$input" "$new_sink"
+    done
+
+    # Make new sink the default
+    pactl set-default-sink $new_sink
+}
+
+connect_bt_headphones() {
+    if ! rfkill | grep "bluetooth.*unblocked"; then
+        notify-send "Bluetooth Headphones" "Activating bluetooth... Please enter your password to unlock it."
+        SUDO_ASKPASS="$HOME/.scripts/askpass" sudo rfkill unblock 0
+        sleep 2
+    fi
+
+    TAB="$(printf '\t')"
+    bluetoothctl << EOF
+power on
+connect BC:${TAB}
+quit
+EOF
+
+    notify-send "Bluetooth Headphones" "Connection will be established in just a moment..."
+}
+
+
 opt=$1; shift
 case "$opt" in
-    mpv_toggle) mpv_toggle "$@" ;;
-    mpv_pause)  mpv_pause  "$@" ;;
-    mpv_seek)   mpv_seek   "$@" ;;
-    all_toggle) all_toggle "$@" ;;
-    all_pause)  all_pause  "$@" ;;
-    all_seek)   all_seek   "$@" ;;
+    mpv*toggle)              mpv_toggle              "$@" ;;
+    mpv*pause)               mpv_pause               "$@" ;;
+    mpv*seek)                mpv_seek                "$@" ;;
+    all*toggle)              all_toggle              "$@" ;;
+    all*pause)               all_pause               "$@" ;;
+    all*seek)                all_seek                "$@" ;;
+    switch*audio*channel)    switch_audio_channel    "$@" ;;
+    connect*bt*headphones)   connect_bt_headphones   "$@" ;;
 esac
