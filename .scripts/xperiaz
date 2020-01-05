@@ -1,6 +1,0 @@
-#!/bin/bash
-
-# First, try to connect over wifi. If it's connected to usb, `phone` script
-# will handle the connection.
-adb connect sony:5555
-SSH_PASSWORD="$(getpassword "/programming-extra/xperiaz-login")" phone "$@"

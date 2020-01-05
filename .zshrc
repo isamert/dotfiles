@@ -15,7 +15,7 @@ antigen apply
 # Settings {{{
 setopt autocd histignoredups appendhistory incappendhistory histreduceblanks
 
-HISTFILE=~/.bash_history
+HISTFILE=~/.zsh_history
 HISTSIZE=100000
 SAVEHIST=100000
 HISTORY_SUBSTRING_SEARCH_FUZZY=1

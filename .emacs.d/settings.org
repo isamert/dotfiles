@@ -912,7 +912,7 @@ Enable leader key and bind some keys.
 
       ;; bookmarks
       "bb" 'helm-bookmarks
-      "bs" 'bookmarks-set
+      "bs" 'bookmark-set
 
       ;; projectile/project
       "pp" 'projectile-browse-dirty-projects
