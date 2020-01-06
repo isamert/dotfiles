@@ -98,9 +98,28 @@ EOF
     notify-send "Bluetooth Headphones" "Connection will be established in just a moment..."
 }
 
+mpv_subdl() {
+    # This script is called from mpv and it downloads subtitle using `subdl`, then
+    # loads downloaded subtitle into mpv.
+
+    MPV_SOCKET=/tmp/mpvsocket
+    file_path=$1
+    language=$2
+
+    echo 'show-text "Downloading subtitle..."' | socat - $MPV_SOCKET
+    if subdl --lang="$language" "$file_path"; then
+        echo 'show-text "Subtitle downloaded."' | socat - $MPV_SOCKET
+        sub_file_path="${file_path%.*}.srt"
+        echo "sub-add \"$sub_file_path\"" | socat - $MPV_SOCKET
+    else
+        echo 'show-text "Error while downloading subtitle!"' | socat - $MPV_SOCKET
+    fi
+}
+
 
 opt=$1; shift
 case "$opt" in
+    *help) echo "mediastuff [mpv-(subdl|toggle|pause|seek)|all-(toggle|pause|seek)|switch-audio-channel|connect-bt-headphones]" ;;
     mpv*toggle)              mpv_toggle              "$@" ;;
     mpv*pause)               mpv_pause               "$@" ;;
     mpv*seek)                mpv_seek                "$@" ;;
@@ -109,4 +128,5 @@ case "$opt" in
     all*seek)                all_seek                "$@" ;;
     switch*audio*channel)    switch_audio_channel    "$@" ;;
     connect*bt*headphones)   connect_bt_headphones   "$@" ;;
+    mpv*subdl)               mpv_subdl               "$@" ;;
 esac
