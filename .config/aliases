@@ -33,7 +33,6 @@ alias ....="cd ../../.."
 alias .....="cd ../../../.."
 alias df="df -H"
 alias du="ncdu"
-alias grep="grep --color=auto -i"
 alias xpaste="xclip -selection clipboard -o" # paste cb content
 
 #alias ls="

@@ -71,6 +71,7 @@ function fzf_file_contents {
 }
 
 case "$*" in
+    *help) echo "fuzzy [git (add|files|log)|kill|pacman|file-contents]" ;;
     "git add"*) shift 2; fzf_git_add "$@" ;;
     "git files"*) shift 2; fzf_git_files "$@" ;;
     "git log"*) shift 2; fzf_git_log "$@" ;;

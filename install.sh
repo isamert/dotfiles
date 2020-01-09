@@ -256,11 +256,6 @@ function configure-systemduser {
 }
 
 
-if [[ $1 =~ install* ]]; then
-    eval "${1}-${2}"
-    exit 0
-fi
-
 for arg; do
     case "$arg" in
         --disable-*|--enable-*)
@@ -273,4 +268,9 @@ for arg; do
             ;;
     esac
 done
+
+if [[ $1 =~ install* ]]; then
+    eval "${1}-${2}"
+    exit 0
+fi
 

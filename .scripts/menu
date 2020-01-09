@@ -186,13 +186,14 @@ function passwords {
 cmd="$1"
 shift
 case $cmd in
-    "mpd-artists") mpd-artists "$@";;
-    "mpd-all") mpd-all "$@";;
-    "mpd-playlist") mpd-playlist "$@";;
-    "youtube") youtube "$@";;
-    "files") files "$@";;
-    "folders") folders "$@";;
-    "file_contents") file_contents "$@";;
-    "passwords") passwords "$@";;
+    *help) echo "menu [mpd-(artists|all|playlist)|youtube|files|folders|file-contents|passwords]";;
+    mpd-artists) mpd-artists "$@";;
+    mpd-all) mpd-all "$@";;
+    mpd-playlist) mpd-playlist "$@";;
+    youtube) youtube "$@";;
+    files) files "$@";;
+    folders) folders "$@";;
+    file*contents) file_contents "$@";;
+    passwords) passwords "$@";;
     *) rofi -async-pre-read 0 -modi combi -combi-modi window,drun,run,vms:rofi_vms -show combi "$@"
 esac
