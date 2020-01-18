@@ -100,7 +100,7 @@ function youtube {
     local URL=$(youtube-viewer --no-use-colors --no-interactive --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
 
     if [[ $VIDEO = 1 ]]; then
-        mpv "$URL"
+        tsp mpv "$URL"
     else
         mpd-yt play "$URL"
     fi
