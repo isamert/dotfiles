@@ -10,6 +10,7 @@ function trim {
 }
 
 function dmenu {
+    # TODO: use fzf inside terminal
     rofi -dmenu -fuzzy -i "$@"
 }
 
@@ -91,13 +92,14 @@ function youtube {
         esac
     done
 
-    [[ -z "$SEARCH_STRING" ]] && SEARCH_STRING=$(rofi -dmenu -p "search yt")
+    [[ -z "$SEARCH_STRING" ]] && SEARCH_STRING=$(dmenu -p "search yt")
     [[ -z "$SEARCH_STRING" ]] && exit
 
-    local RESULT=$(youtube-viewer --no-use-colors --no-interactive $SEARCH_STRING | rofi -dmenu -i -async-pre-read 0)
+    local RESULT=$(youtube-viewer --no-use-colors --no-interactive --results=30 "$SEARCH_STRING" | dmenu -async-pre-read 0)
     RESULT=$(echo "$RESULT" | cut -d"." -f1 | xargs)
 
-    local URL=$(youtube-viewer --no-use-colors --no-interactive --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
+    local URL=$(youtube-viewer --no-use-colors --no-interactive --results=30 --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
+    [[ -z $URL ]] && exit
 
     if [[ $VIDEO = 1 ]]; then
         tsp mpv "$URL"
