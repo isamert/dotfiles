@@ -160,7 +160,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
                           :font "Iosevka"
                           :weight 'normal
                           :width 'normal
-                          :height 105))))
+                          :height 120))))
 #+END_SRC
 ** Theme
 Set a nicer theme.
@@ -194,7 +194,7 @@ Colors parantheses depending on their dept.
   :hook (prog-mode . rainbow-delimiters-mode))
 #+END_SRC
 ** 120 column line limit and trailing spaces
-This code highlights the portion of line that exceeds 80 columns and trailing spaces.
+This code highlights the portion of line that exceeds 120 columns and trailing spaces.
 #+BEGIN_SRC emacs-lisp
 (setq whitespace-style '(face empty tabs lines-tail trailing))
 (setq whitespace-global-modes '(not org-mode markdown-mode)) ;; Disable in org-mode and markdown-mode
@@ -299,6 +299,15 @@ To move between visual lines instead of real lines:
       evil-insert-state-cursor '("red" bar)
       evil-replace-state-cursor '("red" bar)
       evil-operator-state-cursor '("red" hollow))
+#+END_SRC
+** evil-snipe
+#+BEGIN_SRC emacs-lisp
+(use-package evil-snipe
+  :ensure t
+  :init
+  (evil-snipe-override-mode 1)
+  (setq evil-snipe-scope 'visible)
+  (add-hook 'magit-mode-hook 'turn-off-evil-snipe-override-mode))
 #+END_SRC
 * org-mode
 ** some vars
@@ -521,7 +530,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
 (use-package avy
   :ensure t
   :init
-  (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p ?1 ?2 ?3 ?4 ?5))) ;; Only use these for jumping.
+  (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p))) ;; Only use these for jumping.
 #+END_SRC
 *** Bindings
 #+BEGIN_SRC emacs-lisp
@@ -842,6 +851,20 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
     (setq yas-snippet-dirs
       '("~/.emacs.d/snippets"                   ;; personal snippets
         ))))
+#+END_SRC
+** highlight-indent-guides
+#+BEGIN_SRC
+(use-package highlight-indent-guides
+  :ensure t
+  :hook (prog-mode . highlight-indent-guides-mode)
+  :hook (prog-mode)
+  :init
+  (setq highlight-indent-guides-method 'character)
+  (setq highlight-indent-guides-character ?\│)
+
+  (setq highlight-indent-guides-auto-odd-face-perc 15
+        highlight-indent-guides-auto-even-face-perc 15
+        highlight-indent-guides-auto-character-face-perc 20))
 #+END_SRC
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
