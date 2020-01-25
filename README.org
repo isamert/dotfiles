@@ -1,8 +1,6 @@
 #+TITLE: isamert's dotfiles
 
-Here in this repository you can find my configurations for various applications and some scripts for managing/automating these programs. I do not expect anybody to copy this repository as-is and start using it, considerable amount of these files consists specific solutions for my specific workflow. Albeit I do recommend you to take a tour of this repository and copy/change the part you're interested in. There is a lot of stuff going on, so I'll try to give a quick summary of what is what and how I use them and there will be a lot of rambling.
-
-Feel free to make recommendations!
+Here in this repository you can find my configurations for various applications and some scripts for managing/automating these programs. I do not expect anybody to copy this repository as-is and start using it, considerable amount of these files consists specific solutions for my specific workflow. Albeit I do recommend you to take a tour of this repository and copy/change the part you're interested in. There is a lot of stuff going on, so I'll try to give a quick summary of what is what and how I use them. Beware, there will be a lot of rambling!
 
 * General workflow and thoughts
 My configurations generally focuses on software development with a keyboard-driven workflow. I'm not a pragmatist, I simply try to create a workflow that I can enjoy. Sometimes this means a decrease in productivity but an overall increase in /my/ sanity. Here are some main, overly-talked-about topics that I want to share my views on:
@@ -16,12 +14,22 @@ I hate mouse. I do not use it unless it's absolutely necessary. It causes physic
 
 ** TODO emacs vs. vim (and some thoughts on /kakoune/)
 
-* TODO The operating system
-I use Arch Linux. Arch Linux, unironically, is, the most stable system I've ever used to this date. The big userbase and AUR makes everything pretty easy to install and tinker with. Although I would very much like to use [[https://nixos.org][NixOS]] or, better yet, [[https://guix.gnu.org][GNU Guix]], it practically seems like a very big undertaking at the moment. But eventually I would like to try both and replace Arch with one of them. My main interest in these systems is that being able to configuring whole system declaratively. The only theoretic drawback of this kind of configuration is that it makes you dependent on one specific system. One can argue that both Nix and Guix can be installed on other systems as package managers, but this is the only package management aspect of it and the stability of that kind of setups is questionable. On practical side, the small userbase frightens me. This is especially true for Guix as like I wasn't even able to boot a real computer with a GUIX USB stick and couldn't get any help.
+* The operating system
+I use Arch Linux. Arch Linux, unironically, is, the most stable system I've ever used to this date. The big userbase and AUR makes everything pretty easy to install and tinker with. Although I would very much like to use [[https://nixos.org][NixOS]] or, better yet, [[https://guix.gnu.org][GNU Guix]], but it practically seems like a very big undertaking at the moment. Eventually I would like to try both and replace Arch with one of them. My main interest in these systems is that being able to configure whole system declaratively. The only theoretic drawback of this kind of configuration is that it makes you dependent on one specific system. One can argue that both Nix and Guix can be installed on other systems as package managers, but this is the only package management aspect of it and the stability of that kind of setups is questionable. On practical side, the small userbase frightens me. This is especially true for Guix as like I wasn't even able to boot a real computer with a GUIX USB stick and couldn't get any real help.
+
+** Service/Task configuration
+I use =systemd= to orchestrate my services and system tasks. You can find all of my unit files under =~/.config/systemd/user=. The most important part of this unit files are the =user-login.target= and =user-graphical-login.target=. The first one is called by the =~/.profile= file using these lines:
+
+#+BEGIN_SRC bash
+systemctl --user import-environment
+systemctl --user start user-login.target &
+#+END_SRC
+
+=systemd --user= does not automatically import user environment variables, so the first line solves this problem. The second line starts =user-login.target= which then simply starts all the startup applications that does not need a graphical environment. The =user-graphical-login.target= is called by the =~/.xprofile= file. This file is sourced by the login manager on startup, then =user-graphical-login.target= starts the startup applications that requires a graphical environment. With this kind of configuration, I'm not bound to use a graphical environment all the time and the switch between non-gui and gui environments are simple.
 
 ** TODO NixOs vs GNU Guix
-* Display server and window management
-I do not use any desktop environment, like KDE and GNOME. I use a window manager called [[https://github.com/baskerville/bspwm][BSPWM]]. BSPWM is one of the most minimal and easy to configure window manager out there. The configuration method it uses is brilliant. It's configured trough a binary, called =bspc=. This kind of configuration does not make you dependent on a home-baked configuration language and it's quirkiness, instead you are free to use any language you want. As my BSPWM initialization, I use a bash script that consists this line:
+* Window management
+I do not use any desktop environment, like KDE and GNOME. I use a window manager called [[https://github.com/baskerville/bspwm][BSPWM]]. BSPWM is one of the most minimal and easy to configure tiling window manager out there. The configuration method it uses is brilliant. It's configured trough a binary, called =bspc=. This kind of configuration does not make you dependent on a home-baked configuration language and it's quirkiness, instead you are free to use any language you want. As my BSPWM initialization, I use a bash script that consists this line:
 
 #+BEGIN_SRC bash
 xrandr -q | grep -w "connected" | cut -d' ' -f1 | xargs -I {} bspc monitor "{}" --reset-desktops I II III IV V
@@ -29,11 +37,36 @@ xrandr -q | grep -w "connected" | cut -d' ' -f1 | xargs -I {} bspc monitor "{}" 
 
 With this command, I can create 5 virtual desktops for each monitor connected to my computer. See how easy it is to integrate?
 
-I also have a script called =bspwmc= which just contains extra functionally for BSPWM that I wrote. For example I created some functions for moving floating windows across the screen:
+I also have a script called =bspwmc= which just contains extra functionally for BSPWM that I wrote. For example I created some functions for moving/resizing floating windows:
 
 [[file:https://user-images.githubusercontent.com/8031017/73112108-17422100-3f1e-11ea-9069-b33861d42388.gif]]
 
-* TODO Keyboard and keybindings
+** Display manager
+I use =X.org=. While =Wayland= seems promising, it does not have the fraction of tooling that X.org has. There is also no analogues of BSPWM for Wayland. If you have a dual Nvidia+Intel GPU laptop, namely Optimus laptops, you don't really have any other sane choice but using X.org and [[https://github.com/Askannz/optimus-manager][optimus-manager]].
+
+* Keyboard configuration and shortcuts
+I modify the keyboard layout with =xmodmap= and create keyboard shortcuts with =sxhkd=. For example, with the help of =xmodmap= I remap =CapsLock= key as the =Hyper= key, which is just another modifier key like =Ctrl= key. Then I create shortcuts using =sxhkd=, for example =Hyper+a= opens up a menu that lists all the applications that are installed in my machine.
+
+I also use =xmodmap= for adding Unicode characters to my layout which enables me to use Unicode characters while coding without depending on any other extensions. Here is a list of characters that I have mapped in my =~/.Xmodmap= file:
+
+#+BEGIN_SRC
+AltGr + l → λ  | AltGr + a → →
+AltGr + x → ❌ | AltGr + f → ∀
+AltGr + n → ¬  | AltGr + d → ⇒
+AltGr + , → ≤  | AltGr + . → ≥
+AltGr + = → ≠  | AltGr + shift + = → ≔
+AltGr + / → ÷  | AltGr + ; → ∷
+AltGr + 8 → ×  | AltGr + t -> ✓
+#+END_SRC
+
+Here is an example keybinding from my =~/.config/sxhkd/sxhkdrc=:
+
+#+BEGIN_SRC
+hyper + {bracketleft, bracketright}
+    mediastuff all_seek {-,+}3%
+#+END_SRC
+
+When you press =Hyper + [= or =Hyper + ]=, sxhkd grabs this and calls the script named =mediastuff= with given parameters. In this particular case, this script seeks the song by 3 percent forward or backward based on given input. Observe how easy it is to bind multiple keys on same rule.
 
 * TODO Multimedia and entertainment
 
