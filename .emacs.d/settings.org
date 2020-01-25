@@ -7,7 +7,7 @@
 This is my emacs configuration.
 * Preparation
 ** TODO Load path
-Define the load path. (It's for auto-loading .el files)
+Define the load path. It's for auto-loading =.el= files. Any =.el= file that you put under this path will be loaded by emacs at startup.
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'load-path "~/.emacs.d/load")
 #+END_SRC
@@ -160,7 +160,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
                           :font "Iosevka"
                           :weight 'normal
                           :width 'normal
-                          :height 105))))
+                          :height 120))))
 #+END_SRC
 ** Theme
 Set a nicer theme.
@@ -193,10 +193,9 @@ Colors parantheses depending on their dept.
   :ensure t
   :hook (prog-mode . rainbow-delimiters-mode))
 #+END_SRC
-** 80 column line limit and trailing spaces
-This code highlights the portion of line that exceeds 80 columns and trailing spaces.
+** 120 column line limit and trailing spaces
+This code highlights the portion of line that exceeds 120 columns and trailing spaces.
 #+BEGIN_SRC emacs-lisp
-(setq whitespace-line-column 80)
 (setq whitespace-style '(face empty tabs lines-tail trailing))
 (setq whitespace-global-modes '(not org-mode markdown-mode)) ;; Disable in org-mode and markdown-mode
 (global-whitespace-mode t)
@@ -301,20 +300,35 @@ To move between visual lines instead of real lines:
       evil-replace-state-cursor '("red" bar)
       evil-operator-state-cursor '("red" hollow))
 #+END_SRC
+** evil-snipe
+#+BEGIN_SRC emacs-lisp
+(use-package evil-snipe
+  :ensure t
+  :init
+  (evil-snipe-override-mode 1)
+  (setq evil-snipe-scope 'visible)
+  (add-hook 'magit-mode-hook 'turn-off-evil-snipe-override-mode))
+#+END_SRC
 * org-mode
 ** some vars
 #+BEGIN_SRC emacs-lisp
 (when (file-directory-p "~/Documents/notes")
   (setq life-org "~/Documents/notes/life.org")
-  (setq org-directory "~/Documents/notes"))
+  (setq org-directory "~/Documents/notes")
+  (setq org-agenda-files `(,life-org)))
 #+END_SRC
 ** better defaults
 #+BEGIN_SRC emacs-lisp
 (setq org-src-fontify-natively t         ;; Enable code highlighting in ~SRC~ blocks.
       org-hierarchical-todo-statistics t ;; Show all children in todo statistics [1/5]
       org-imenu-depth 7                  ;; include up to 7-depth headers in imenu search
+      org-image-actual-width nil         ;; Disable showing inline images in full width. Now you can add `#+ATTR_*: :width 300` to resize inline images
       org-ellipsis "..↯"                ;; Replace ... with ..↯ in collapsed sections
 )
+#+END_SRC
+** sh
+#+BEGIN_SRC emacs-lisp
+
 #+END_SRC
 ** syntax highlighting for inline src blocks
 - Test: src_python[:var a=3]{return a}
@@ -452,6 +466,10 @@ These are the languages that can be run in codeblocks.
 (use-package org-tree-slide
   :ensure t)
 #+END_SRC
+** org-ql
+#+BEGIN_SRC emacs-lisp
+(use-package org-ql :ensure t)
+#+END_SRC
 ** TODO org-capture
 - [ ] Add a shortcut.
 - [ ] Add more templates.
@@ -512,7 +530,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
 (use-package avy
   :ensure t
   :init
-  (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p ?1 ?2 ?3 ?4 ?5))) ;; Only use these for jumping.
+  (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p))) ;; Only use these for jumping.
 #+END_SRC
 *** Bindings
 #+BEGIN_SRC emacs-lisp
@@ -533,8 +551,8 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
   :config
   (progn
     (helm-mode 1)
-    (helm-adaptive-mode 1)
-    (shackle-window "\\*[hH]elm*" 0.35))) ;; make helm windows appear at bottom
+    (shackle-window "\\*[hH]elm*" 0.35) ;; make helm windows appear at bottom
+    (helm-adaptive-mode 1)))
 #+END_SRC
 *** Better selection
 Set ~<tab>~ and ~Alt-j~ for selecting next result and ~<backtab>~ and ~Alt-k~ for selecting previous result.
@@ -585,14 +603,6 @@ A project management tool. I set a project path below and make sure projectile s
   :config
   (setq flycheck-idle-change-delay 1
         flycheck-check-syntax-automatically '(save new-line mode-enabled))) ;; (save idle-change new-line mode-enabled)
-
-;; show errors in tooltip while hovering
-(use-package flycheck-pos-tip
-  :ensure t
-  :after flycheck
-  :hook (flycheck-mode . flycheck-pos-tip-mode)
-  :init
-  (setq flycheck-pos-tip-timeout 15)) ;; Show tooltip for 15 seconds
 #+END_SRC
 
 ** company
@@ -632,7 +642,8 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
 (use-package lsp-mode
   :commands lsp
   :hook ((web-mode . lsp)
-         (js-mode . lsp))
+         (js-mode . lsp)
+         (java-mode . lsp))
   :init
   (setq lsp-prefer-flymake nil
         lsp-use-native-json t
@@ -651,13 +662,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
   :ensure t
   :commands lsp-ui-mode
   :config
-  ;; FIXME: this does not work
-  (evil-define-key 'insert lsp-ui-peek-mode-map
-    "gf" 'lsp-ui-peek-find-references
-    (kbd "j") 'lsp-ui-peek--select-next
-    (kbd "k") 'lsp-ui-peek--select-prev
-    (kbd "l") 'lsp-ui-peek--select-next-file
-    (kbd "h") 'lsp-ui-peek--select-prev-file))
+  (setq lsp-ui-sideline-show-code-actions nil))
 
 (use-package company-lsp
   :ensure t
@@ -667,14 +672,18 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
   :ensure t
   :commands helm-lsp-workspace-symbol)
 
+(use-package lsp-treemacs
+  :ensure t
+  :commands lsp-treemacs
+  :config
+  (lsp-treemacs-sync-mode 1))
+
 (use-package dap-mode
   :ensure t :after lsp-mode
   :config
   (dap-mode t)
   (dap-ui-mode t))
 #+END_SRC
-
-#+RESULTS:
 
 ** eshell
 *** aliases
@@ -843,14 +852,20 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
       '("~/.emacs.d/snippets"                   ;; personal snippets
         ))))
 #+END_SRC
-** zotxt
-I use =Zotero= for clipping/saving webpages/pdfs etc. This gives me a way to access/reference those stuff in zothero from Emacs.
-#+begin_src emacs-lisp
-(use-package zotxt
-  :hook (org-mode . org-zotxt-mode)
-  :diminish
-  :ensure t)
-#+end_src
+** highlight-indent-guides
+#+BEGIN_SRC
+(use-package highlight-indent-guides
+  :ensure t
+  :hook (prog-mode . highlight-indent-guides-mode)
+  :hook (prog-mode)
+  :init
+  (setq highlight-indent-guides-method 'character)
+  (setq highlight-indent-guides-character ?\│)
+
+  (setq highlight-indent-guides-auto-odd-face-perc 15
+        highlight-indent-guides-auto-even-face-perc 15
+        highlight-indent-guides-auto-character-face-perc 20))
+#+END_SRC
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
@@ -873,7 +888,10 @@ I use =Zotero= for clipping/saving webpages/pdfs etc. This gives me a way to acc
   "gf" 'xref-find-references)
 
 (evil-define-key 'normal lsp-mode-map
-  "gf" 'lsp-ui-peek-find-references)
+  "gf" 'lsp-ui-peek-find-references
+  "gd" 'lsp-ui-peek-find-definitions
+  "gi" 'lsp-ui-peek-find-implementation
+  "ga" 'lsp-execute-code-action)
 
 (evil-define-key 'insert prog-mode-map
   (kbd "M-s") 'company-yasnippet)
