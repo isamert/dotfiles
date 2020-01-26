@@ -13,7 +13,7 @@ I hate mouse. I do not use it unless it's absolutely necessary. It causes physic
 - I do my scripting generally in /bash/ instead of /sh/. Yes, bash does not work everywhere and it has it's own quirkiness but writing and maintaining a bash script is just so much easier than a UNIX-compliant /sh/ script. I do not seek for comprehensiveness because I think it's not an achievable goal. But I do try to generalize my solutions whenever it's easy to do.
 
 * The operating system
-I use Arch Linux. Arch Linux, unironically, is, the most stable system I've ever used to this date. The big userbase and AUR makes everything pretty easy to install and tinker with. Although I would very much like to use [[https://nixos.org][NixOS]] or, better yet, [[https://guix.gnu.org][GNU Guix]], but it practically seems like a very big undertaking at the moment. Eventually I would like to try both and replace Arch with one of them. My main interest in these systems is that being able to configure whole system declaratively. The only theoretic drawback of this kind of configuration is that it makes you dependent on one specific system. One can argue that both Nix and Guix can be installed on other systems as package managers, but this is the only package management aspect of it and the stability of that kind of setups is questionable. On practical side, the small userbase frightens me. This is especially true for Guix as like I wasn't even able to boot a real computer with a GUIX USB stick and couldn't get any real help.
+I use Arch Linux. Arch Linux, unironically, is, the most stable system I've ever used to this date. The large userbase and AUR makes everything pretty easy to install and tinker with. Although I would very much like to use [[https://nixos.org][NixOS]] or, better yet, [[https://guix.gnu.org][GNU Guix]], but it practically seems like a very big undertaking at the moment. Eventually I would like to try both and replace Arch with one of them. My main interest in these systems is that being able to configure whole system declaratively. The only theoretic drawback of this kind of configuration is that it makes you dependent on one specific system. One can argue that both Nix and Guix can be installed on other systems as package managers, but this is the only package management aspect of it and the stability of that kind of setups is questionable. On practical side, the small userbase frightens me. This is especially true for Guix as like I wasn't even able to boot a real computer with a GUIX USB stick and couldn't get any real help.
 
 ** Service/Task configuration
 I use =systemd= to orchestrate my services and system tasks. You can find all of my unit files under =~/.config/systemd/user=. The most important part of this unit files are the =user-login.target= and =user-graphical-login.target=. The first one is called by the =~/.profile= file using these lines:
@@ -103,12 +103,17 @@ I use =newsboat= to follow RSS feeds. RSS feeds consists of blogs, YouTube chann
 ** TODO emacs vs. vim (and some thoughts on /kakoune/)
 - use cases
 
+** TODO org-mode
+
 * TODO Other
+** TODO Shell
+- zsh customizations
 ** TODO Password management
 ** TODO Extra tools
 - jaro
 - ~/.scripts
 ** TODO Popups
 =~/.scripts/popup=
+** TODO On multi-monitor setups and multi-computer setups
 ** TODO Meta
 - how do i keep my dotfiles synced?
