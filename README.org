@@ -12,8 +12,6 @@ I hate mouse. I do not use it unless it's absolutely necessary. It causes physic
 - While I do appreciate the /[[https://github.com/isamert/st][st]]/ as a terminal emulator, I do not use it because it's the /fastest/ and/or it's the lightest terminal emulator out there; I use it because it works quite flawlessly with the programs I use.
 - I do my scripting generally in /bash/ instead of /sh/. Yes, bash does not work everywhere and it has it's own quirkiness but writing and maintaining a bash script is just so much easier than a UNIX-compliant /sh/ script. I do not seek for comprehensiveness because I think it's not an achievable goal. But I do try to generalize my solutions whenever it's easy to do.
 
-** TODO emacs vs. vim (and some thoughts on /kakoune/)
-
 * The operating system
 I use Arch Linux. Arch Linux, unironically, is, the most stable system I've ever used to this date. The big userbase and AUR makes everything pretty easy to install and tinker with. Although I would very much like to use [[https://nixos.org][NixOS]] or, better yet, [[https://guix.gnu.org][GNU Guix]], but it practically seems like a very big undertaking at the moment. Eventually I would like to try both and replace Arch with one of them. My main interest in these systems is that being able to configure whole system declaratively. The only theoretic drawback of this kind of configuration is that it makes you dependent on one specific system. One can argue that both Nix and Guix can be installed on other systems as package managers, but this is the only package management aspect of it and the stability of that kind of setups is questionable. On practical side, the small userbase frightens me. This is especially true for Guix as like I wasn't even able to boot a real computer with a GUIX USB stick and couldn't get any real help.
 
@@ -68,8 +66,49 @@ hyper + {bracketleft, bracketright}
 
 When you press =Hyper + [= or =Hyper + ]=, sxhkd grabs this and calls the script named =mediastuff= with given parameters. In this particular case, this script seeks the song by 3 percent forward or backward based on given input. Observe how easy it is to bind multiple keys on same rule.
 
-* TODO Multimedia and entertainment
+* Multimedia and entertainment
+I use =mpv= for videos, =mpd= for music. I also have some scripts that builds upon the functionalities of =mpv=, =mpd=, =youtube-viewer=, =youtube-dl= etc.
 
-* TODO Programming
+** Music management
+I have an =mpd= server running all the time. I control it with =ncmpcpp=. I also have some dmenu scripts that allows me to quickly access my music library.
 
-* TODO Custom scripts
+[[file:https://user-images.githubusercontent.com/8031017/73128764-4cfe0d00-3fe5-11ea-8f9c-81fac77e805a.png]]
+[[file:https://user-images.githubusercontent.com/8031017/73128763-4cfe0d00-3fe5-11ea-84f5-ea1744b72856.png]]
+
+The second menu also does a search on YouTube if the input is not found on my local library. (The youtube menu script, under the =~/.scripts/menu=, is kind of an abomination right now, but it does work.)
+
+** Video management
+I keep all of the movies and shows under =~/Videos/Movies= and =~/Videos/Shows= respectively. For quick access, I use the shortcut =Hyper+f= which simply lists all the files under my home directory using =dmenu= (The script tries to ignore unrelated files and folders, like hidden ones and temporary ones. So it's kind of fast.).
+
+[[file:https://user-images.githubusercontent.com/8031017/73128976-3908da00-3fea-11ea-83e7-19dbd53ecb96.png]]
+
+I have integrated =subdl=, a program that downloads subtitles for given video file from opensubtitles.org, with =mpv=. To get a subtitle, I simply hit =T= (or =Alt+T= for Turkish subtitles) and it downloads and loads the subtitle automatically for me. Observe these lines from =~/.config/mpv/input.conf=:
+
+#+BEGIN_SRC
+T run     "mediastuff" "mpv-subdl" "${path}" "eng" # english subtitle
+Alt+t run "mediastuff" "mpv-subdl" "${path}" "tur" # turkish subtitle
+#+END_SRC
+
+I also have a shortcut that does a direct search on youtube and plays the result in =mpv=. This search menu is toggled with =Hyper+y=.
+
+** RSS
+I use =newsboat= to follow RSS feeds. RSS feeds consists of blogs, YouTube channels, podcasts, subreddits etc. This helps me focus on what I really want to follow and discard the distractions (All kind of /recommendations/ feature on every website is a big distraction, I try to avoid them because my willpower is pretty weak). I also watch YouTube videos using mpv. I created a simple shortcut that opens up YouTube video comments in a terminal window. See how this workflow goes along with =newsboat=:
+
+[[file:https://user-images.githubusercontent.com/8031017/73128975-137bd080-3fea-11ea-862f-4e69ceb484b7.gif]]
+
+* TODO Programming workflow
+- tmux sessions for each virtual desktop
+- commandline tools, fuzzy script (git etc.)
+
+** TODO emacs vs. vim (and some thoughts on /kakoune/)
+- use cases
+
+* TODO Other
+** TODO Password management
+** TODO Extra tools
+- jaro
+- ~/.scripts
+** TODO Popups
+=~/.scripts/popup=
+** TODO Meta
+- how do i keep my dotfiles synced?
