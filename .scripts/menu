@@ -88,17 +88,25 @@ function youtube {
         case "$arg" in
             "--audio")    local AUDIO=1                               ;;
             "--video")    local VIDEO=1                               ;;
+            "--playlist="*) local PLAYLIST=${arg/*=/}                   ;;
             *)            local SEARCH_STRING="${SEARCH_STRING} $arg" ;;
         esac
     done
 
-    [[ -z "$SEARCH_STRING" ]] && SEARCH_STRING=$(dmenu -p "search yt")
-    [[ -z "$SEARCH_STRING" ]] && exit
+    [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]] && SEARCH_STRING=$(dmenu -p "search yt")
+    [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]] && exit
 
-    local RESULT=$(youtube-viewer --no-use-colors --no-interactive --results=30 "$SEARCH_STRING" | dmenu -async-pre-read 0)
-    RESULT=$(echo "$RESULT" | cut -d"." -f1 | xargs)
+    if [[ -n $PLAYLIST ]]; then
+        local RESULT=$(youtube-dl -j --flat-playlist "$PLAYLIST" | jq -r '.url + " | " + .title' | dmenu -async-pre-read 0)
+        RESULT=$(echo "$RESULT" | cut -d"|" -f1 | xargs)
+        local URL="https://youtube.com/watch?v=$RESULT"
+        echo $URL
+    else
+        local RESULT=$(youtube-viewer --no-use-colors --no-interactive --results=30 "$SEARCH_STRING" | dmenu -async-pre-read 0)
+        RESULT=$(echo "$RESULT" | cut -d"." -f1 | xargs)
+        local URL=$(youtube-viewer --no-use-colors --no-interactive --results=30 --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
+    fi
 
-    local URL=$(youtube-viewer --no-use-colors --no-interactive --results=30 --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
     [[ -z $URL ]] && exit
 
     if [[ $VIDEO = 1 ]]; then
