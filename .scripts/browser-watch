@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# TODO: watch a list of files
+
+CMD=$1
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --*)
+            TMP_ARG=${1#--}
+            TMP_ARG=${TMP_ARG%=*}
+            TMP_ARG=${TMP_ARG//-/_}
+            TMP_VAL=${1#*=}
+            declare "${TMP_ARG^^}"="$TMP_VAL"
+            ;;
+    esac
+    shift
+done
+
+
+if [[ "$CMD" = "--help" ]]; then
+    echo "Detect file changes and reload it in browser."
+    echo "$(basename "$0") [--browser=(firefox|chrome|vivaldi)] [--reload=(hard|normal)] --file=FILE_TO_WATCH"
+    exit 0
+elif [[ ${MODE} = "run" ]]; then
+    echo "RELOADING..."
+
+    current_window=$(xdotool getactivewindow)
+
+    if [[ $RELOAD = "hard" ]]; then
+        RELOAD_KEYS="CTRL+SHIFT+R"
+    else
+        RELOAD_KEYS="CTRL+R"
+    fi
+
+    xdotool search --name "${BROWSER:=chrome}" windowactivate --sync
+    xdotool search --name "${BROWSER}" key --clearmodifiers "${RELOAD_KEYS}"
+
+    xdotool windowfocus --sync "${current_window}"
+    xdotool windowactivate --sync "${current_window}"
+else
+    echo "$FILE" | entr "$0" "$@" --mode=run
+fi
