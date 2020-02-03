@@ -5,10 +5,10 @@ Here in this repository you can find my configurations for various applications 
 * General workflow and thoughts
 My configurations generally focuses on software development with a keyboard-driven workflow. I'm not a pragmatist, I simply try to create a workflow that I can enjoy. Sometimes this means a decrease in productivity but an overall increase in /my/ sanity. Here are some main, overly-talked-about topics that I want to share my views on:
 
-** TODO Keyboard vs. Mouse
+** Keyboard vs. Mouse
 I hate mouse. I do not use it unless it's absolutely necessary. It causes physical pain and doing a switch between keyboard and mouse while working simply destroys my focus. I get frustrated pretty easily. If a program is not usable without a mouse, I simply do not use it.
 
-** TODO Simplicity and comprehensiveness
+** Simplicity and comprehensiveness
 - While I do appreciate the /[[https://github.com/isamert/st][st]]/ as a terminal emulator, I do not use it because it's the /fastest/ and/or it's the lightest terminal emulator out there; I use it because it works quite flawlessly with the programs I use.
 - I do my scripting generally in /bash/ instead of /sh/. Yes, bash does not work everywhere and it has it's own quirkiness but writing and maintaining a bash script is just so much easier than a UNIX-compliant /sh/ script. I do not seek for comprehensiveness because I think it's not an achievable goal. But I do try to generalize my solutions whenever it's easy to do.
 
@@ -100,11 +100,22 @@ I use =newsboat= to follow RSS feeds. RSS feeds consists of blogs, YouTube chann
 - tmux sessions for each virtual desktop
 - commandline tools, fuzzy script (git etc.)
 
-** TODO emacs vs. vim (and some thoughts on /kakoune/)
-- use cases
+** emacs vs. vim (and some thoughts on /kakoune/)
+I use =emacs= for every kind of project that I have. I also use =neovim=, but I use it as a lightweight editor that I spawn for short periods of time for like quick fixes, previews etc. I try to make the editing experience as same as possible for these two editors. For example I use =evil-mode= to emulate vim keys in =emacs=.
+
+Some may argue that =neovim= is just obsolete in the presence of =emacs= or vice versa. I totally disagree with this. I was a vim-only user back then, until I discovered the =org-mode=. I made the switch to =emacs=. But =emacs= has a lot of problems. First and foremost, the load time is just borderline bad, especially on a 5400 RPM hard-disk. The server mode significantly improves the overall feel but it has it own quirkiness too. Also I really like to use =emacs= in a GUI mode but keeping everything compatible between GUI mode and terminal mode is just not really an option. Some extensions just flat-out does not work in terminal mode, some behave really weird. Emacs term mode is also quite bad and slow. I use a lot of terminal only programs and considering this, going emacs-only is just a hard job with little to none benefits.
+
+You can read my =emacs= configuration in detail from [[file:./.emacs.d/settings.org][here]], it's a self-documenting =.org= file. As for my =neovim= configuration, you can take a look at it from [[file:./.config/nvim/init.vim][here]] (it's not self documenting like the =emacs= one). Although my =neovim= configuration is focused on simplicity, I also maintain a minimal configuration for =vim=, that you can take a look at from [[file:./.config/nvim/minimal.vim][here]]. It's just the plugin-less version of my real configuration. The rationale here is that a lot of programs have some kind of vim emulation mode and I'm able to copy my configuration trough here without dealing with the plugins. It's also nice to copy this file into friends computers without bloating their system and I feel at home while using their computer.
+
+Another nicety of having =neovim=/=vim= under your usage is that it's wildy supported everywhere. For example, it's easy to find a plugin for editing =sxhkd= configuration file wheres there is none for =emacs=. (Well, for this particular case it may be really easy to implement such a mode for =emacs= but you also take the burden of maintaining of that piece of =elisp=.)
+
+Another thing I like about vim is that the plugin called =ALE=. As I said earlier, I use =neovim= for quick edits, like editing my configuration files and bash scripts. =ALE= is just a zero-config plugin that detects gazillions of different linters/syntax checkers/language servers on your system and makes use of them automatically. This significantly improves your /quick-edits/. At most, you only need to install a simple program and you got your =bash= scripts linted, =markdown= files prettified, =yaml= files validated etc. Wheres I use =lsp-mode= on =emacs= and I like to fine tune my setting for the language servers I will be dealing with because it's important to have things in your way when doing long sessions of coding.
+
+*** TODO kakoune
+...
 
 ** TODO org-mode
-
+...
 * TODO Other
 ** TODO Shell
 - zsh customizations
