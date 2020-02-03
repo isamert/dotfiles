@@ -1,8 +1,3 @@
-export BROWSER=jaro
-export EDITOR="jaro --method=edit"
-export VISUAL=jaro
-export SHELL=/usr/bin/zsh
-
 # For aurin, aursearch... aliases. (Also used in some other scripts)
 export AUR_HELPER=trizen
 
@@ -27,10 +22,12 @@ export FFF_FAV5=~/Videos/Movies/
 # }}}
 
 # Ctrl-Shift-P to search menu items in GTK apps
-export GTK3_MODULES=/usr/lib/libplotinus.so
+if [[ -f /usr/lib/libplotinus.so ]]; then
+    export GTK3_MODULES=/usr/lib/libplotinus.so
+fi
 
 # fzf stuff {{{
-FZF_BINDINGS="\
+export FZF_BINDINGS="\
 ctrl-d:page-down,ctrl-u:page-up,\
 alt-j:preview-down,alt-k:preview-up,\
 alt-d:preview-page-down,alt-u:preview-page-up,\
@@ -48,7 +45,9 @@ export FZF_DEFAULT_OPTS="
 export TS_ONFINISH=ts_onfinish
 
 # SLIMMERJS requires firefox 59
-export SLIMERJSLAUNCHER=$HOME/Workspace/temp/firefox/firefox-bin
+if [[ -f $HOME/Workspace/temp/firefox/firefox-bin ]]; then
+    export SLIMERJSLAUNCHER=$HOME/Workspace/temp/firefox/firefox-bin
+fi
 
 # npm stuff (make it work for non-root global installs)
 export NPM_PACKAGES="$HOME/.npm-packages"
@@ -60,8 +59,24 @@ export R_LIBS_USER="$HOME/.rlibs"
 # the PATH
 export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin
 
-systemctl --user import-environment
-systemctl --user start user-login.target &
+if command -v jaro; then
+    export BROWSER=jaro
+    export EDITOR="jaro --method=edit"
+    export VISUAL=jaro
+fi
+
+export SHELL=/usr/bin/zsh
+
+if [[ -f $HOME/.extrarc ]]; then
+    . $HOME/.extrarc
+fi
+
+if file /sbin/init | grep systemd; then
+    systemctl --user import-environment
+    systemctl --user start user-login.target &
+else
+    echo "TODO: run stuff?"
+fi
 
 # less colors (systemd can't import these) {{{
 export LESS_TERMCAP_mb=$'\E[1;31m'     # begin bold
