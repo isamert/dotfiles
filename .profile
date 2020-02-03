@@ -71,7 +71,7 @@ if [[ -f $HOME/.extrarc ]]; then
     . $HOME/.extrarc
 fi
 
-if file /sbin/init | grep systemd; then
+if ps 1 | grep sbin && file /sbin/init | grep systemd; then
     systemctl --user import-environment
     systemctl --user start user-login.target &
 else
