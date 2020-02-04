@@ -67,6 +67,11 @@ fi
 
 export SHELL=/usr/bin/zsh
 
+# Hyper + Y brings up a dmenu that lists the videos found in following playlist
+export YT_MAIN_PLAYLIST=PLXawKvexOu0psiAqHCV5IFxdnWxZN1OVc
+
+export PASSWORD_STORE=$HOME/Documents/sync/passwords.kdbx
+
 if [[ -f $HOME/.extrarc ]]; then
     . $HOME/.extrarc
 fi

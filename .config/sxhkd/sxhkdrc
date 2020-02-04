@@ -111,11 +111,11 @@ hyper + equal
 
 # run some apps directly
 hyper + r; {f, q, e, r, t, v, k}
-    {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $HOME/Documents/sync/passwords.kdbx"}
+    {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
 
 # menus
-hyper + {a, f, F, m, M, P, o, y}
-    menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords,youtube --video}
+hyper + {a, f, F, m, M, P, o, y, Y}
+    menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords,youtube --video,youtube --video --playlist=$YT_MAIN_PLAYLIST}
 
 # popups
 hyper + {c,n,t,i}
