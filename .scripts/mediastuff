@@ -46,6 +46,10 @@ all_seek() {
     fi
 }
 
+get_sink_name_from_sink_id() {
+    pactl list sinks | grep -E "(Sink #$1)|(device.description)" | grep -A1 "Sink #$1" | sed -n "2p" | cut -d'"' -f2
+}
+
 switch_audio_channel() {
     if [[ $1 = "--help" ]]; then
         echo "Changes default sink to next one and moves all inputs to new default sink."
@@ -69,8 +73,7 @@ switch_audio_channel() {
         fi
     done
 
-    new_sink_name=$(pactl list sinks | grep device.description | cut -d'"' -f2 | sed -n "$((new_sink + 1))p")
-    notify-send "Switching audio channel" "New default channel is $new_sink_name, moving all inputs to that."
+    notify-send "Switching audio channel" "New default channel is $(get_sink_name_from_sink_id $new_sink), moving all inputs to that."
 
     # Move every input to new sink
     for input in "${inputs[@]}"; do
@@ -78,7 +81,7 @@ switch_audio_channel() {
     done
 
     # Make new sink the default
-    pactl set-default-sink $new_sink
+    pactl set-default-sink "$new_sink"
 }
 
 connect_bt_headphones() {
