@@ -576,6 +576,24 @@ Search in my org files, takes headers into account while searching. =helm-org-ri
 (use-package helm-org-rifle
   :ensure t)
 #+END_SRC
+*** helm-my-files
+- A quick access menu for the files that I frequently open.
+#+BEGIN_SRC emacs-lisp
+(defun my-org-files ()
+  (mapcar
+    (lambda (file) (concat org-directory "/" file))
+    (directory-files org-directory nil "^\\w+.*.org$")))
+
+(defun helm-my-files ()
+  "List my files"
+  (interactive)
+  (let ((selected-file
+        (helm :buffer "*helm-my-files*"
+              :sources (helm-build-sync-source "my-files"
+                         :candidates (my-org-files)
+                         :fuzzy-match t))))
+    (find-file selected-file)))
+#+END_SRC
 ** projectile
 A project management tool. I set a project path below and make sure projectile scans that directory for projects.
 #+BEGIN_SRC emacs-lisp
@@ -927,6 +945,8 @@ Enable leader key and bind some keys.
       "hh" 'helm-resume
       "hr" 'helm-rg
       "hp" 'helm-projectile-rg
+      "hm" 'helm-my-files
+      "ho" 'helm-org-rifle-org-directory
 
       ;; bookmarks
       "bb" 'helm-bookmarks
