@@ -45,6 +45,8 @@ Plug 'gabrielelana/vim-markdown'
 Plug 'leafgarland/typescript-vim'
 Plug 'ianks/vim-tsx'
 
+Plug 'glacambre/firenvim', { 'do': { _ -> firenvim#install(0) } }
+
 call plug#end()
 " }}}
 
