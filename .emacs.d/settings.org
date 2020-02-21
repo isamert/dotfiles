@@ -942,6 +942,10 @@ Enable leader key and bind some keys.
       "s"   'yas-insert-snippet
       "c"   'execute-C-c-C-c
 
+      ;; org-mode
+      "oi" 'org-toggle-inline-images
+      "or" 'org-mode-restart
+
       ;; magit
       "gg" 'magit-status
       "gp" 'magit-push
