@@ -63,6 +63,8 @@ if command -v jaro; then
     export BROWSER=jaro
     export EDITOR="jaro --method=edit"
     export VISUAL=jaro
+else
+    export EDITOR=nvim
 fi
 
 export SHELL=/usr/bin/zsh
@@ -70,7 +72,11 @@ export SHELL=/usr/bin/zsh
 # Hyper + Y brings up a dmenu that lists the videos found in following playlist
 export YT_MAIN_PLAYLIST=PLXawKvexOu0psiAqHCV5IFxdnWxZN1OVc
 
+# Some constants
 export PASSWORD_STORE=$HOME/Documents/sync/passwords.kdbx
+export DIR_WALLPAPERS=$HOME/Pictures/wallpapers
+export DIR_SCREENSHOTS=$HOME/Pictures/screenshots
+export DIR_NOTES=$HOME/Documents/notes
 
 if [[ -f $HOME/.extrarc ]]; then
     . $HOME/.extrarc

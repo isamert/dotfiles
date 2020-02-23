@@ -3,11 +3,10 @@
 set -e
 set -o pipefail
 
-PREFIX="$HOME/Pictures/screenshots"
 CURRENT_DATE=$(date +%F::%R:%S)
 
 mkpath() {
-    SAVE_PATH="$PREFIX/$1-$CURRENT_DATE.png"
+    SAVE_PATH="$DIR_SCREENSHOTS/$1-$CURRENT_DATE.png"
     echo "$SAVE_PATH" | xclip -selection clipboard
     echo "$SAVE_PATH"
 }

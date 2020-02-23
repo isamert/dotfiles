@@ -7,7 +7,7 @@ Actions=walls;fkill;phonepics;screenshots;memes;floatingtermopaque;floatingterm;
 
 [Desktop Action walls]
 Name=Wallpapers
-Exec=/bin/sh -c "sxiv -t ~/Pictures/wallpaper"
+Exec=/bin/sh -c "sxiv -t $DIR_WALLPAPERS"
 
 [Desktop Action phonepics]
 Name=Phone pictures
@@ -15,7 +15,7 @@ Exec=/bin/sh -c "sxiv -t ~/Pictures/phone/Camera"
 
 [Desktop Action screenshots]
 Name=Screenshots
-Exec=/bin/sh -c "sxiv -t ~/Pictures/screenshots"
+Exec=/bin/sh -c "sxiv -t $DIR_SCREENSHOTS"
 
 [Desktop Action memes]
 Name=Memes (ayylmao)
