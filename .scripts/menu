@@ -204,5 +204,5 @@ case $cmd in
     folders) folders "$@";;
     file*contents) file_contents "$@";;
     passwords) passwords "$@";;
-    *) rofi -async-pre-read 0 -modi combi -combi-modi window,drun,run,vms:rofi_vms -show combi "$@"
+    *) rofi -async-pre-read 0 -modi combi,vms:rofi_vms,window -combi-modi window,drun,run -show combi "$@"
 esac
