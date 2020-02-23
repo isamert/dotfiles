@@ -82,6 +82,7 @@ alias cfge='eval $EDITOR $(git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME ls-f
 
 # useful
 alias clearvimswap="rm $HOME/.local/share/nvim/swap/*"
+function is-emacs { [[ "$INSIDE_EMACS" = "vterm" ]] && true || false }
 
 # stuff
 alias ipaddr="curl https://api.ipify.org"
@@ -90,4 +91,3 @@ alias download-website="wget --recursive --page-requisites --html-extension
     --convert-links --no-parent --limit-rate=500K" # Download a website completely
 alias git-todo="rg 'FIXME|TODO'"
 alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd+ | bc"
-
