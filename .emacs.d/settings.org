@@ -6,23 +6,22 @@
 * Introduction
 This is my emacs configuration.
 * Preparation
-** TODO Load path
+** Load path
 Define the load path. It's for auto-loading =.el= files. Any =.el= file that you put under this path will be loaded by emacs at startup.
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'load-path "~/.emacs.d/load")
 #+END_SRC
+
 ** Variables and functions
 Some basic variable and function definitions that will be used in configuration.
-*** mkdir-if-not
+
 #+BEGIN_SRC emacs-lisp
 (defun mkdir-if-not (dir)
 "create the DIR if it does not exist"
     (unless (file-exists-p dir)
             (make-directory dir)))
-#+END_SRC
-*** shackle-window
-Here is the [[https://www.reddit.com/r/emacs/comments/345vtl/make_helm_window_at_the_bottom_without_using_any/][source]].
-#+BEGIN_SRC emacs-lisp
+
+;; SOURCE: https://www.reddit.com/r/emacs/comments/345vtl/make_helm_window_at_the_bottom_without_using_any/
 (defun shackle-window (name size)
 "Make the buffer NAME appear at bottom of the window, filling SIZE percent of the window"
   (add-to-list 'display-buffer-alist
@@ -30,10 +29,8 @@ Here is the [[https://www.reddit.com/r/emacs/comments/345vtl/make_helm_window_at
                   (display-buffer-in-side-window)
                   (inhibit-same-window . t)
                   (window-height . ,size))))
-#+END_SRC
-*** kill-all-buffers
-source: https://github.com/azzamsa/scripts.el#kill-all-buffers
-#+BEGIN_SRC emacs-lisp
+
+;; SOURCE: https://github.com/azzamsa/scripts.el#kill-all-buffers
 (defun kill-all-other-buffers nil
   "Kill all buffers but current buffer and special buffers.
 (Buffer that start with '*' and white space ignored)"
@@ -48,16 +45,19 @@ source: https://github.com/azzamsa/scripts.el#kill-all-buffers
             (cl-incf killed-bufs)
             (funcall 'kill-buffer buffer))))
       (message "Killed %d buffer(s)" killed-bufs))))
-#+END_SRC
-*** delq*
-Like =delq= but removes more than just one item.
-#+BEGIN_SRC emacs-lisp
+
+;; Like =delq= but removes more than just one item.
 (defun delq* (list &rest elems)
   "Remove ELEMS from LIST"
   (let ((l list))
     (mapc (lambda (item) (setq l (delq item l))) elems)
     l))
+
+(defun font-exists-p (font)
+  "Check if FONT exists"
+  (if (null (x-list-fonts font)) nil t))
 #+END_SRC
+
 ** Package repos
 Add ~melpa~ package archive.
 #+BEGIN_SRC emacs-lisp
@@ -66,20 +66,44 @@ Add ~melpa~ package archive.
 (package-initialize)
 (unless package-archive-contents (package-refresh-contents)) ;; Update archives
 #+END_SRC
+
 ** use-package
 Install ~use-package~. From now on I will use ~use-package~ to install and configure packages.
 #+BEGIN_SRC emacs-lisp
 (unless (package-installed-p 'use-package) (package-install 'use-package))
 #+END_SRC
+
+*** quelpa
+Helps you to install packages from other sources, like github etc.
+#+BEGIN_SRC emacs-lisp
+(use-package quelpa-use-package
+  :ensure t
+  :init (setq quelpa-update-melpa-p nil)
+  :config (quelpa-use-package-activate-advice))
+#+END_SRC
+
+Here is an example that shows you how to install a package from github:
+#+BEGIN_SRC
+(use-package PACKAGE-NAME
+  :ensure t
+  :diminish
+  :quelpa (PACKAGE-NAME
+           :fetcher github
+           :branch "WIP" ;; Optional
+           :repo "yyoncho/company-box"))
+#+END_SRC
+
 *** diminish
 diminish.el provides a way to hide mode indicators from mode line. Either pass ~:diminish t~ to use-package while installing or just call ~diminish 'x-mode)~.
 #+BEGIN_SRC emacs-lisp
 (use-package diminish :ensure t)
 #+END_SRC
+
 * Basics
 ** Sane defaults
 #+BEGIN_SRC emacs-lisp
-(setq gc-cons-threshold 1600000)
+(setq gc-cons-threshold 100000000)           ;; Better than default
+(setq read-process-output-max (* 1024 1024)) ;; Better than default
 (global-visual-line-mode t)      ;; Wrap long lines
 (diminish 'visual-line-mode)
 (fset 'yes-or-no-p 'y-or-n-p)    ;; Ask y/n instead of yes/no
@@ -88,27 +112,37 @@ diminish.el provides a way to hide mode indicators from mode line. Either pass ~
       make-backup-files nil)     ;; Disable backup files
 #+END_SRC
 
-Save recent files.
+Some sources about the variables that I changed:
+- https://github.com/emacs-lsp/lsp-mode#performance
+
+** Recent files
+Save recent files. Also exclude package files that appears after installing a package or after an update from recent list.
 #+BEGIN_SRC emacs-lisp
 (recentf-mode t)
+(add-to-list 'recentf-exclude (format "%s/\\.emacs\\.d/elpa/.*" (getenv "HOME")))
 #+END_SRC
+
 ** Better scrolling
-*** Better settings for mouse scroll.
+*** Better settings for mouse scroll
 #+BEGIN_SRC emacs-lisp
 (setq mouse-wheel-scroll-amount '(1 ((shift) . 1))) ;; one line at a time
-(setq mouse-wheel-progressive-speed nil) ;; don't accelerate scrolling
-(setq mouse-wheel-follow-mouse 't) ;; scroll window under mouse
+(setq mouse-wheel-progressive-speed nil)            ;; don't accelerate scrolling
+(setq mouse-wheel-follow-mouse 't)                  ;; scroll window under mouse
 #+END_SRC
+
 *** Mouse shortcuts for zooming
+- Ctrl-Scroll to zoom in and out
 #+BEGIN_SRC emacs-lisp
 (global-set-key [C-mouse-4] 'text-scale-increase)
 (global-set-key [C-mouse-5] 'text-scale-decrease)
 #+END_SRC
+
 *** Conservative scrolling
 If the cursor is at the end of the file, when you scroll emacs does a strange jump. This fixes it.
 #+BEGIN_SRC emacs-lisp
 (setq scroll-conservatively 100) ;; When cursor reaches end, just scroll line-by-line
 #+END_SRC
+
 ** Place all backup files in same directory
 Instead of having a file that ends with ~ or '# files in same directory, save all backup files in ~/.emacs.d/backups.
 #+BEGIN_SRC emacs-lisp
@@ -118,6 +152,7 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
 (setq backup-directory-alist `((".*" . ,backup-dir)))
 (setq auto-save-file-name-transforms `((".*" ,backup-dir t)))
 #+END_SRC
+
 ** Undo tree (Persistent undo and stuff)
 - ~undo-tree~ gives a persistent undo.
 - Also it keeps undo history as a tree instead of a linear history. ~undo-tree-visualize~ may help.
@@ -130,16 +165,18 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
   :ensure t
   :init
     (setq undo-tree-auto-save-history t
-          undo-tree-history-directory-alist `((".*" . ,undo-dir))
+          undo-tree-history-directory-alist `(("." . ,undo-dir))
           undo-tree-enable-undo-in-region nil) ;; this fixes something?
   :config
   (global-undo-tree-mode))
 #+END_SRC
+
 ** Remove trailing space before save
 #+BEGIN_SRC emacs-lisp
 (add-hook 'before-save-hook
           'delete-trailing-whitespace)
 #+END_SRC
+
 * Visuals
 ** General
 Hide menubar and toolbar and replace blinking cursor with nice static box cursor.
@@ -150,18 +187,26 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
 (scroll-bar-mode -1)             ;; Disable scrollbars
 (setq inhibit-startup-message t) ;; Close startup screen
 (global-hl-line-mode t)          ;; Highlight current line
+
+;; Disable global-hl-line-mode in eshell, ansi-term, vterm
+(mapcar (lambda (mode) (add-hook mode (lambda () (setq-local global-hl-line-mode nil)))) '(eshell-mode-hook term-mode-hook vterm-mode-hook))
 #+END_SRC
+
 ** Fonts
 #+BEGIN_SRC emacs-lisp
+(defconst my-font "Iosevka")
+
 (add-hook 'after-make-frame-functions
-  (lambda (frame)
-    (with-selected-frame frame
-      (set-face-attribute 'default nil
-                          :font "Iosevka"
-                          :weight 'normal
-                          :width 'normal
-                          :height 120))))
+          (lambda (frame)
+            (with-selected-frame frame
+              (when (font-exists-p my-font)
+                (set-face-attribute 'default nil
+                                    :font my-font
+                                    :weight 'normal
+                                    :width 'normal
+                                    :height 120)))))
 #+END_SRC
+
 ** Theme
 Set a nicer theme.
 #+BEGIN_SRC emacs-lisp
@@ -174,11 +219,13 @@ Set a nicer theme.
         :init
         (load-theme 'spacemacs-dark t)))))
 #+END_SRC
+
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
 #+BEGIN_SRC emacs-lisp
 (setq frame-title-format "%b - emacs")
 #+END_SRC
+
 ** Parentheses
 *** Matching
 Just enable parenthesis matching.
@@ -186,6 +233,7 @@ Just enable parenthesis matching.
 (setq show-paren-style 'parenthesis)
 (show-paren-mode 1)
 #+END_SRC
+
 *** Rainbow
 Colors parantheses depending on their dept.
 #+BEGIN_SRC emacs-lisp
@@ -193,14 +241,16 @@ Colors parantheses depending on their dept.
   :ensure t
   :hook (prog-mode . rainbow-delimiters-mode))
 #+END_SRC
+
 ** 120 column line limit and trailing spaces
 This code highlights the portion of line that exceeds 120 columns and trailing spaces.
 #+BEGIN_SRC emacs-lisp
 (setq whitespace-style '(face empty tabs lines-tail trailing))
-(setq whitespace-global-modes '(not org-mode markdown-mode)) ;; Disable in org-mode and markdown-mode
+(setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode)) ;; Disable in org-mode and markdown-mode
 (global-whitespace-mode t)
 (diminish 'global-whitespace-mode)
 #+END_SRC
+
 ** Shackle windows
 Make some temproary windows appear at bottom.
 #+BEGIN_SRC emacs-lisp
@@ -218,11 +268,13 @@ Make some temproary windows appear at bottom.
 (shackle-window "\\*Org-Babel Error Output\\*" 0.4)
 (shackle-window "\\*curl error\\*" 0.4)
 #+END_SRC
+
 ** Spaces instead of tabs
 #+BEGIN_SRC emacs-lisp
 (setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)
 #+END_SRC
+
 * evil-mode
 ** Install
 #+BEGIN_SRC emacs-lisp
@@ -236,6 +288,7 @@ Make some temproary windows appear at bottom.
   :config
   (evil-mode 1))
 #+END_SRC
+
 ** evil-mc
 Multiple cursors for evil. =C-n= to create a cursor on next match. =A= and =I= creates cursors in visual selection mode as you may expect.
 #+BEGIN_SRC emacs-lisp
@@ -249,6 +302,7 @@ Multiple cursors for evil. =C-n= to create a cursor on next match. =A= and =I= c
       "I" #'evil-mc-make-cursor-in-visual-selection-beg)
     (global-evil-mc-mode 1)))
 #+END_SRC
+
 ** evil-surround
 Change surroundings. Do =cs"'= to turn ="Hello world!"= into ='Hello world!'=.
 - ='Hello world!'= ~cs'<q>~ =<q>Hello world!</q>=
@@ -261,6 +315,7 @@ Change surroundings. Do =cs"'= to turn ="Hello world!"= into ='Hello world!'=.
   :init
   (global-evil-surround-mode 1))
 #+END_SRC
+
 ** evil-escape
 Return back to normal mode using ~jk~ from anywhere. It does not play well with multiple cursors, so use ~ESC~ to when using evil-mc related stuff.
 #+BEGIN_SRC emacs-lisp
@@ -273,6 +328,7 @@ Return back to normal mode using ~jk~ from anywhere. It does not play well with 
   :config
   (evil-escape-mode 1))
 #+END_SRC
+
 ** evil-matchit
 Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=, =da%= etc. works as expected.
 #+BEGIN_SRC emacs-lisp
@@ -282,6 +338,7 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
   :config
   (global-evil-matchit-mode 1))
 #+END_SRC
+
 ** Visual line movement
 To move between visual lines instead of real lines:
 #+BEGIN_SRC emacs-lisp
@@ -291,6 +348,7 @@ To move between visual lines instead of real lines:
 (define-key evil-motion-state-map (kbd "<remap> <evil-next-line>") 'evil-next-visual-line)
 (define-key evil-motion-state-map (kbd "<remap> <evil-previous-line>") 'evil-previous-visual-line)
 #+END_SRC
+
 ** Change cursor color according to mode
 #+BEGIN_SRC emacs-lisp
 (setq evil-normal-state-cursor '("green" box)
@@ -300,6 +358,7 @@ To move between visual lines instead of real lines:
       evil-replace-state-cursor '("red" bar)
       evil-operator-state-cursor '("red" hollow))
 #+END_SRC
+
 ** evil-snipe
 #+BEGIN_SRC emacs-lisp
 (use-package evil-snipe
@@ -309,6 +368,7 @@ To move between visual lines instead of real lines:
   (setq evil-snipe-scope 'visible)
   (add-hook 'magit-mode-hook 'turn-off-evil-snipe-override-mode))
 #+END_SRC
+
 * org-mode
 ** some vars
 #+BEGIN_SRC emacs-lisp
@@ -317,6 +377,7 @@ To move between visual lines instead of real lines:
   (setq org-directory "~/Documents/notes")
   (setq org-agenda-files `(,life-org)))
 #+END_SRC
+
 ** better defaults
 #+BEGIN_SRC emacs-lisp
 (setq org-src-fontify-natively t         ;; Enable code highlighting in ~SRC~ blocks.
@@ -326,10 +387,7 @@ To move between visual lines instead of real lines:
       org-ellipsis "..↯"                ;; Replace ... with ..↯ in collapsed sections
 )
 #+END_SRC
-** sh
-#+BEGIN_SRC emacs-lisp
 
-#+END_SRC
 ** syntax highlighting for inline src blocks
 - Test: src_python[:var a=3]{return a}
 #+begin_src emacs-lisp
@@ -341,12 +399,14 @@ To move between visual lines instead of real lines:
                            (4 'org-code) ;; "code..." part.
                            )))
 #+end_src
+
 ** auto indent subsections
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
 #+BEGIN_SRC emacs-lisp
 (add-hook 'org-mode-hook (lambda () (org-indent-mode t)) t)
 (diminish 'org-indent-mode)
 #+END_SRC
+
 ** nice bullets
 Make headings look better with nice bullets. It also adjusts the size of headings according to their level.
 #+BEGIN_SRC emacs-lisp
@@ -354,6 +414,7 @@ Make headings look better with nice bullets. It also adjusts the size of heading
   :ensure t
   :hook (org-mode . org-bullets-mode))
 #+END_SRC
+
 ** nice checkboxes
 https://blog.jft.rocks/emacs/unicode-for-orgmode-checkboxes.html
 #+BEGIN_SRC emacs-lisp
@@ -368,6 +429,7 @@ https://blog.jft.rocks/emacs/unicode-for-orgmode-checkboxes.html
   '((t (:foreground "#71696A" :strike-through t)))
   "Face for the text part of a checked org-mode checkbox.")
 #+END_SRC
+
 ** babel
 *** Install extra languages
 **** ob-http
@@ -376,6 +438,7 @@ https://blog.jft.rocks/emacs/unicode-for-orgmode-checkboxes.html
 (use-package ob-http
   :ensure t)
 #+END_SRC
+
 *** Load languages
 These are the languages that can be run in codeblocks.
 #+BEGIN_SRC emacs-lisp
@@ -466,10 +529,12 @@ These are the languages that can be run in codeblocks.
 (use-package org-tree-slide
   :ensure t)
 #+END_SRC
+
 ** org-ql
 #+BEGIN_SRC emacs-lisp
 (use-package org-ql :ensure t)
 #+END_SRC
+
 ** TODO org-capture
 - [ ] Add a shortcut.
 - [ ] Add more templates.
@@ -479,6 +544,7 @@ These are the languages that can be run in codeblocks.
       '(("t" "Todo" entry (file+headline life-org "Current")
          "* TODO %?\n  %i\n  %a")))
 #+END_SRC
+
 * Other packages
 ** winner-mode
 This mode allows you to do /undo/ /redo/ operations on window layout changes. My most frequent use case is that sometimes I just want to focus on one window for a while and then return back to my old layout setup. These keybindings allows me to do that.
@@ -532,11 +598,13 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
   :init
   (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p))) ;; Only use these for jumping.
 #+END_SRC
+
 *** Bindings
 #+BEGIN_SRC emacs-lisp
-(define-key evil-normal-state-map (kbd "s") 'avy-goto-char)   ;; Go to any char
-(define-key evil-normal-state-map (kbd "S") 'avy-goto-word-1) ;; Go to beginning of a word
+(define-key evil-normal-state-map (kbd "M-s") 'avy-goto-char)   ;; Go to any char
+(define-key evil-normal-state-map (kbd "M-S") 'avy-goto-word-1) ;; Go to beginning of a word
 #+END_SRC
+
 ** helm
 *** Enable and set defaults
 #+BEGIN_SRC emacs-lisp
@@ -584,13 +652,16 @@ Search in my org files, takes headers into account while searching. =helm-org-ri
     (lambda (file) (concat org-directory "/" file))
     (directory-files org-directory nil "^\\w+.*.org$")))
 
+(defun my-files ()
+  (append '("~/.emacs.d/settings.org") (my-org-files)))
+
 (defun helm-my-files ()
   "List my files"
   (interactive)
   (let ((selected-file
         (helm :buffer "*helm-my-files*"
               :sources (helm-build-sync-source "my-files"
-                         :candidates (my-org-files)
+                         :candidates (my-files)
                          :fuzzy-match t))))
     (find-file selected-file)))
 #+END_SRC
@@ -630,6 +701,7 @@ A project management tool. I set a project path below and make sure projectile s
   :ensure t
   :init
   (setq company-selection-wrap-around t  ;; return to first completion after the last one (cycles)
+        company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode org-mode markdown-mode)
         company-minimum-prefix-length 1) ;; start completing after 1 char
   :config
   (progn
@@ -637,6 +709,16 @@ A project management tool. I set a project path below and make sure projectile s
     (company-tng-configure-default)   ;; cycle trough suggestions using tab
     (evil-define-key 'insert 'global
       (kbd "M-i") 'company-complete)))
+
+;; Nice icons for completions (works with company-lsp)
+;; (use-package company-box
+;;   :ensure t
+;;   :diminish
+;;   :quelpa (company-box
+;;            :fetcher github
+;;            :branch "WIP"
+;;            :repo "yyoncho/company-box")
+;;   :hook (company-mode . company-box-mode))
 #+END_SRC
 *** quickhelp
 Shows a nice tooltip while idling on a completion.
@@ -673,8 +755,9 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
         lsp-enable-on-type-formatting nil
         lsp-before-save-edits nil
         lsp-enable-indentation nil
+        lsp-eldoc-render-all nil
         ;;lsp-enable-completion-at-point nil
-        lsp-enable-snippet nil))
+        lsp-enable-snippet t))
 
 (use-package lsp-ui
   :ensure t
@@ -684,7 +767,11 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
 
 (use-package company-lsp
   :ensure t
-  :commands company-lsp)
+  :commands company-lsp
+  :config
+  (setq company-lsp-cache-candidates 'auto)
+  :init
+  (push 'company-lsp company-backends))
 
 (use-package helm-lsp
   :ensure t
@@ -734,6 +821,29 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 
 (defun eshell/clear nil
   (eshell-clear-buffer))
+#+END_SRC
+** ansi-term
+*** Make cursor movable in normal mode
+- https://github.com/syl20bnr/spacemacs/issues/10779#issuecomment-427712967
+#+BEGIN_SRC emacs-lisp
+(setq term-char-mode-point-at-process-mark nil)
+#+END_SRC
+(add-to-list 'comint-output-filter-functions 'ansi-color-process-output)
+
+*** TODO Fix background colors
+The spacemacs theme does not have term background colors, so we are setting them manually here:
+#+BEGIN_SRC
+(custom-set-faces
+   '(term-color-black ((t (:foreground "#3F3F3F" :background "#2B2B2B"))))
+   '(term-color-red ((t (:foreground "#AC7373" :background "#8C5353"))))
+   '(term-color-green ((t (:foreground "#7F9F7F" :background "#9FC59F"))))
+   '(term-color-yellow ((t (:foreground "#DFAF8F" :background "#9FC59F"))))
+   '(term-color-blue ((t (:foreground "#7CB8BB" :background "#4C7073"))))
+   '(term-color-magenta ((t (:foreground "#DC8CC3" :background "#CC9393"))))
+   '(term-color-cyan ((t (:foreground "#93E0E3" :background "#8CD0D3"))))
+   '(term-color-white ((t (:foreground "#DCDCCC" :background "#656555"))))
+   '(term-default-fg-color ((t (:inherit term-color-white))))
+   '(term-default-bg-color ((t (:inherit term-color-black)))))
 #+END_SRC
 ** ispell
 - Use =flyspell-mode= to start spell checking.
@@ -884,6 +994,11 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
         highlight-indent-guides-auto-even-face-perc 15
         highlight-indent-guides-auto-character-face-perc 20))
 #+END_SRC
+** vterm
+#+BEGIN_SRC emacs-lisp
+(use-package vterm :ensure t)
+#+END_SRC
+
 ** ranger.el
 #+BEGIN_SRC emacs-lisp
 (use-package ranger :ensure t)
@@ -1197,6 +1312,7 @@ Hit <C-j> after these and get:
 * my/
 ** org-babel extension functions
 #+BEGIN_SRC emacs-lisp
+
 (defun my/org-babel-remove-all-results nil
   (interactive)
   (goto-char 1)

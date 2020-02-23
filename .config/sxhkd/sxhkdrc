@@ -123,7 +123,7 @@ hyper + {c,n,t,i}
 
 # random wallpaper
 hyper + apostrophe
-    feh --bg-scale $(find ~/Pictures/wallpaper | shuf -n 1)
+    feh --bg-scale $(find "$DIR_WALLPAPERS" | shuf -n 1)
 
 # screenshot
 {Print, hyper + s, shift + Print, control + Print, control + shift + Print}

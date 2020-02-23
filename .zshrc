@@ -30,10 +30,16 @@ source <(sed 's/alias/abbrev-alias -g/' ~/.config/aliases)
 source /usr/share/fzf/key-bindings.zsh
 # }}}
 
+is-emacs && source ~/.config/zsh/emacs.sh
+
 # Override agnoster themes prompt_dir {{{
 # https://github.com/sorin-ionescu/prezto/blob/master/modules/prompt/functions/prompt-pwd
 function prompt_dir {
     setopt localoptions extendedglob
+
+    # If we are in emacs vterm, send the current directory to emacs vterm
+    # This establishes directory tracking
+    is-emacs && vterm_printf "51;A$(whoami)@$(hostname):$(pwd)";
 
     local current_pwd="${PWD/#$HOME/~}"
     local ret_directory
@@ -64,4 +70,3 @@ function uploadfile { curl -F"file=@$1" "https://0x0.st"; }
 # }}}
 
 # vi: foldmethod=marker
-
