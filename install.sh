@@ -211,6 +211,18 @@ function install-nvidia {
     install-package optimus-manager
 }
 
+function install-trizen {
+    [[ -n $DISABLE_TRIZEN ]] && return
+
+    echo "===== Installing trizen ====="
+
+    local last_path=$(pwd)
+    cd /tmp
+    git clone https://aur.archlinux.org/trizen.git
+    cd trizen
+    makepkg -si
+    cd "$last_path"
+}
 
 # ############################################################################
 # Specific configuration recipes
@@ -224,6 +236,9 @@ function configure-arch {
     # Configure pacman
     sudo sed -i 's/^#Color$/Color/' /etc/pacman.conf
     sudo sed -i 's/^#VerbosePkgLists$/VerbosePkgLists/' /etc/pacman.conf
+
+    # Install helpers
+    install-trizen
 }
 
 function configure-ubuntu {
@@ -269,8 +284,7 @@ for arg; do
     esac
 done
 
-if [[ $1 =~ install* ]]; then
+if [[ $1 =~ install* ]] || [[ $1 =~ configure* ]]; then
     eval "${1}-${2}"
     exit 0
 fi
-
