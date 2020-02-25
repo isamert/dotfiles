@@ -3,6 +3,7 @@
 #+BABEL: :cache yes
 #+PROPERTY: header-args :tangle yes
 
+
 * Introduction
 This is my emacs configuration.
 * Preparation
@@ -650,7 +651,9 @@ Search in my org files, takes headers into account while searching. =helm-org-ri
 (defun my-org-files ()
   (mapcar
     (lambda (file) (concat org-directory "/" file))
-    (directory-files org-directory nil "^\\w+.*.org$")))
+    (if (file-directory-p org-directory)
+        (directory-files org-directory nil "^\\w+.*.org$")
+         '())))
 
 (defun my-files ()
   (append '("~/.emacs.d/settings.org") (my-org-files)))
@@ -996,7 +999,13 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
 #+END_SRC
 ** vterm
 #+BEGIN_SRC emacs-lisp
-(use-package vterm :ensure t)
+(use-package vterm
+  :ensure t
+  :configure
+  (evil-define-key 'insert vterm-mode-map
+    (kbd "C-w") 'vterm-send-C-w
+    (kbd "C-t") 'vterm-send-C-t
+    (kbd "C-r") 'vterm-send-C-r))
 #+END_SRC
 
 ** ranger.el
@@ -1071,6 +1080,9 @@ Enable leader key and bind some keys.
       ;; bookmarks
       "bb" 'helm-bookmarks
       "bs" 'bookmark-set
+
+      ;; buffers
+      "D" 'evil-delete-buffer
 
       ;; projectile/project
       "pp" 'projectile-browse-dirty-projects
