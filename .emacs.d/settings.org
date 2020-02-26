@@ -1007,7 +1007,16 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
     (kbd "C-t") 'vterm-send-C-t
     (kbd "C-r") 'vterm-send-C-r))
 #+END_SRC
-
+** npm-mode
+#+BEGIN_SRC emacs-lisp
+(use-package npm-mode
+  :ensure t
+  :hook ((js-mode js2-mode js-jsx-mode js2-jsx-mode web-mode) . npm-mode)
+  :config
+  (evil-leader/set-key-for-mode 'npm-mode
+    "nr" 'npm-mode-npm-run
+    "nl" 'npm-mode-npm-list))
+#+END_SRC
 ** ranger.el
 #+BEGIN_SRC emacs-lisp
 (use-package ranger :ensure t)
@@ -1077,7 +1086,7 @@ Enable leader key and bind some keys.
       ;; helm
       "hh" 'helm-resume
       "hr" 'helm-rg
-      "hp" 'helm-projectile-rg
+      "hp" 'helm-projectile-rg-current-project
       "hm" 'helm-my-files
       "ho" 'helm-org-rifle-org-directory
 
@@ -1358,9 +1367,17 @@ Hit <C-j> after these and get:
 #+end_src
 ** helm extensions
 #+begin_src emacs-lisp
-(defun helm-projectile-rg nil
+(defun helm-projectile-rg-current-project nil
+  "Search in current project using ripgrep."
   (interactive)
   (setq-local helm-rg-default-directory (projectile-project-root))
+  (helm-rg nil)
+  (setq-local helm-rg-default-directory 'default))
+
+(defun helm-projectile-rg-all-projects nil
+  "Search in all projectile projects using ripgrep. If projectile-project-search-path contains multiple paths, only the first path is taken into account."
+  (interactive)
+  (setq-local helm-rg-default-directory (car projectile-project-search-path))
   (helm-rg nil)
   (setq-local helm-rg-default-directory 'default))
 #+end_src
