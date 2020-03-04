@@ -1140,9 +1140,11 @@ Enable leader key and bind some keys.
       "oi" 'org-toggle-inline-images
       "or" 'org-mode-restart
 
-      ;; magit
-      "gg" 'magit-status
-      "gp" 'magit-push
+      ;; magit/git
+      "gs" 'magit-status
+      "gg" 'my/helm-grep-git-grep-current-project
+      "gp" 'magit-pull
+      "gP" 'magit-push
 
       ;; helm
       "hh" 'helm-resume
