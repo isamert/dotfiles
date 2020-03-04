@@ -207,6 +207,12 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
                                     :height 120)))))
 #+END_SRC
 
+** all-the-icons
+- You should run =all-the-icons-install-fonts= command after this.
+#+BEGIN_SRC emacs-lisp
+(use-package all-the-icons :ensure t)
+#+END_SRC
+
 ** Theme
 Set a nicer theme.
 #+BEGIN_SRC emacs-lisp
@@ -218,6 +224,24 @@ Set a nicer theme.
         :defer t
         :init
         (load-theme 'spacemacs-dark t)))))
+
+;; (use-package doom-themes
+;;   :ensure t
+;;   :config
+;;   ;; Global settings (defaults)
+;;   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+;;         doom-themes-enable-italic t) ; if nil, italics is universally disabled
+;;   (load-theme 'doom-dark+ t)
+
+;;   ;; Enable flashing mode-line on errors
+;;   (doom-themes-visual-bell-config)
+
+;;   ;; or for treemacs users
+;;   (setq doom-themes-treemacs-theme "doom-colors") ; use the colorful treemacs theme
+;;   (doom-themes-treemacs-config)
+
+;;   ;; Corrects (and improves) org-mode's native fontification.
+;;   (doom-themes-org-config))
 #+END_SRC
 
 ** Frame title
@@ -339,6 +363,36 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
   (global-evil-matchit-mode 1))
 #+END_SRC
 
+**
+#+BEGIN_SRC emacs-lisp
+(use-package evil-goggles
+  :ensure t
+  :config
+  (evil-goggles-mode)
+(setq evil-goggles-duration                     0.15
+      evil-goggles-pulse                        nil
+      evil-goggles-enable-change                t
+      evil-goggles-enable-delete                t
+      evil-goggles-enable-indent                t
+      evil-goggles-enable-yank                  t
+      evil-goggles-enable-join                  t
+      evil-goggles-enable-fill-and-move         t
+      evil-goggles-enable-paste                 t
+      evil-goggles-enable-shift                 t
+      evil-goggles-enable-surround              t
+      evil-goggles-enable-commentary            t
+      evil-goggles-enable-nerd-commenter        t
+      evil-goggles-enable-replace-with-register t
+      evil-goggles-enable-set-marker            t
+      evil-goggles-enable-undo                  t
+      evil-goggles-enable-redo                  t)
+  ;; optionally use diff-mode's faces; as a result, deleted text
+  ;; will be highlighed with `diff-removed` face which is typically
+  ;; some red color (as defined by the color theme)
+  ;; other faces such as `diff-added` will be used for other actions
+  (evil-goggles-use-diff-faces))
+
+#+END_SRC
 ** Visual line movement
 To move between visual lines instead of real lines:
 #+BEGIN_SRC emacs-lisp
@@ -650,7 +704,9 @@ Search in my org files, takes headers into account while searching. =helm-org-ri
 (defun my-org-files ()
   (mapcar
     (lambda (file) (concat org-directory "/" file))
-    (directory-files org-directory nil "^\\w+.*.org$")))
+    (if (file-directory-p org-directory)
+        (directory-files org-directory nil "^\\w+.*.org$")
+         '())))
 
 (defun my-files ()
   (append '("~/.emacs.d/settings.org") (my-org-files)))
@@ -996,12 +1052,35 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
 #+END_SRC
 ** vterm
 #+BEGIN_SRC emacs-lisp
-(use-package vterm :ensure t)
+(use-package vterm
+  :ensure t
+  :config
+  (evil-define-key 'insert vterm-mode-map
+    (kbd "C-w") 'vterm-send-C-w
+    (kbd "C-t") 'vterm-send-C-t
+    (kbd "C-r") 'vterm-send-C-r))
 #+END_SRC
-
-** ranger.el
+** npm-mode
 #+BEGIN_SRC emacs-lisp
-(use-package ranger :ensure t)
+(use-package npm-mode
+  :ensure t
+  :hook ((js-mode js2-mode js-jsx-mode js2-jsx-mode web-mode) . npm-mode)
+  :config
+  (evil-leader/set-key-for-mode 'npm-mode
+    "nr" 'npm-mode-npm-run
+    "nl" 'npm-mode-npm-list))
+#+END_SRC
+** ranger.el
+- You can add/remove parent windows with using =z+= or =z-=.
+- Use =zP= to toggle between minimal (deer) and full ranged mode.
+#+BEGIN_SRC emacs-lisp
+(use-package ranger
+  :ensure t
+  :config
+  (setq ranger-max-preview-size 2 ;; MB
+        ranger-cleanup-on-disable t
+        ranger-width-preview 0.45
+        ranger-show-literal nil)) ;; Toggle between literal and non-literal previews with zi
 #+END_SRC
 
 * Keybindings
@@ -1068,13 +1147,16 @@ Enable leader key and bind some keys.
       ;; helm
       "hh" 'helm-resume
       "hr" 'helm-rg
-      "hp" 'helm-projectile-rg
+      "hp" 'helm-projectile-rg-current-project
       "hm" 'helm-my-files
       "ho" 'helm-org-rifle-org-directory
 
       ;; bookmarks
       "bb" 'helm-bookmarks
       "bs" 'bookmark-set
+
+      ;; buffers
+      "D" 'evil-delete-buffer
 
       ;; projectile/project
       "pp" 'projectile-browse-dirty-projects
@@ -1319,7 +1401,6 @@ Hit <C-j> after these and get:
 * my/
 ** org-babel extension functions
 #+BEGIN_SRC emacs-lisp
-
 (defun my/org-babel-remove-all-results nil
   (interactive)
   (goto-char 1)
@@ -1353,12 +1434,49 @@ Hit <C-j> after these and get:
 #+end_src
 ** helm extensions
 #+begin_src emacs-lisp
-(defun helm-projectile-rg nil
+(defun my/helm-projectile-rg-current-project nil
+  "Search in current project using ripgrep."
   (interactive)
   (setq-local helm-rg-default-directory (projectile-project-root))
   (helm-rg nil)
   (setq-local helm-rg-default-directory 'default))
+
+(defun my/helm-projectile-rg-all-projects nil
+  "Search in all projectile projects using ripgrep. If projectile-project-search-path contains multiple paths, only the first path is taken into account."
+  (interactive)
+  (setq-local helm-rg-default-directory (car projectile-project-search-path))
+  (helm-rg nil)
+  (setq-local helm-rg-default-directory 'default))
+
+(defun my/helm-grep-ag-current-project (arg)
+  "Search in current project using ag"
+  (interactive "P")
+  (helm-grep-ag (projectile-project-root) arg))
+
+(defun my/helm-grep-git-grep-current-project (arg)
+  "Search in current project using ag"
+  (interactive "P")
+  (helm-grep-git-1 (projectile-project-root) arg))
 #+end_src
+** functions for easy indentation switching
+- http://blog.binchen.org/posts/easy-indentation-setup-in-emacs-for-web-development.html
+#+BEGIN_SRC emacs-lisp
+(defun my/setup-indent (n)
+  (interactive "nHow many spaces do you want?")
+  (setq-local tab-width n)
+  ;; java/c/c++
+  (setq-local c-basic-offset n)
+  ;; web development
+  (setq-local coffee-tab-width n) ; coffeescript
+  (setq-local javascript-indent-level n) ; javascript-mode
+  (setq-local js-indent-level n) ; js-mode
+  (setq-local js2-basic-offset n) ; js2-mode, in latest js2-mode, it's alias of js-indent-level
+  (setq-local web-mode-markup-indent-offset n) ; web-mode, html tag in html file
+  (setq-local web-mode-css-indent-offset n) ; web-mode, css in html file
+  (setq-local web-mode-code-indent-offset n) ; web-mode, js code in html file
+  (setq-local css-indent-offset n) ; css-mode
+  (message "OK!"))
+#+END_SRC
 ** others
 #+begin_src emacs-lisp
 ;; see this: https://github.com/emacs-evil/evil/issues/301
