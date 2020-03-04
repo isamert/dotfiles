@@ -1309,6 +1309,13 @@ Hit <C-j> after these and get:
 #+BEGIN_SRC emacs-lisp
 (use-package kotlin-mode :ensure t)
 #+END_SRC
+** gradle/groovy
+#+BEGIN_SRC emacs-lisp
+(use-package groovy-mode
+  :ensure t
+  :config
+  (add-to-list 'auto-mode-alist '("\\.gradle\\'" . groovy-mode)))
+#+END_SRC
 * my/
 ** org-babel extension functions
 #+BEGIN_SRC emacs-lisp
