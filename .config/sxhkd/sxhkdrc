@@ -117,6 +117,9 @@ hyper + r; {f, q, e, r, t, v, k}
 hyper + {a, f, F, m, M, P, o, y, Y}
     menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords,youtube --video,youtube --video --playlist=$YT_MAIN_PLAYLIST}
 
+hyper + w
+    emacsclient -c --eval "(progn (setq helm-full-frame t) (helm-org-rifle-org-directory) (setq helm-full-frame nil))"
+
 # popups
 hyper + {c,n,t,i}
     popup {calendar,music,translate,mail}
