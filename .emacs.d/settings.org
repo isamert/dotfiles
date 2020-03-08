@@ -1152,9 +1152,11 @@ Enable leader key and bind some keys.
       "oi" 'org-toggle-inline-images
       "or" 'org-mode-restart
 
-      ;; magit
-      "gg" 'magit-status
-      "gp" 'magit-push
+      ;; magit/git
+      "gs" 'magit-status
+      "gg" 'my/helm-grep-git-grep-current-project
+      "gp" 'magit-pull
+      "gP" 'magit-push
 
       ;; helm
       "hh" 'helm-resume
@@ -1410,6 +1412,14 @@ Hit <C-j> after these and get:
 ** kotlin
 #+BEGIN_SRC emacs-lisp
 (use-package kotlin-mode :ensure t)
+#+END_SRC
+
+** gradle/groovy
+#+BEGIN_SRC emacs-lisp
+(use-package groovy-mode
+  :ensure t
+  :config
+  (add-to-list 'auto-mode-alist '("\\.gradle\\'" . groovy-mode)))
 #+END_SRC
 
 * my/
