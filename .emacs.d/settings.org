@@ -400,6 +400,7 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 #+BEGIN_SRC emacs-lisp
 (use-package evil-snipe
   :ensure t
+  :diminish evil-snipe-mode
   :init
   (evil-snipe-mode 1)
   (evil-snipe-override-mode 1)
@@ -1165,9 +1166,10 @@ Enable leader key and bind some keys.
       "hm" 'helm-my-files
       "ho" 'helm-org-rifle-org-directory
 
-      ;; bookmarks
-      "bb" 'helm-bookmarks
-      "bs" 'bookmark-set
+      ;; marks
+      "mm" 'helm-mark-ring
+      "mg" 'helm-global-mark-ring
+      "ma" 'helm-all-mark-rings
 
       ;; buffers
       "D" 'evil-delete-buffer
