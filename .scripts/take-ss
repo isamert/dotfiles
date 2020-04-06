@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 set -o pipefail
@@ -18,6 +18,7 @@ case "$1" in
     "--wait-area") maim -s -d 5 "$(mkpath area)" ;;
     "--clip-full") maim --hidecursor | xclip -selection clipboard -t image/png ;;
     "--clip-area") maim --hidecursor -s | xclip -selection clipboard -t image/png ;;
+    "--edit-area") maim --hidecursor -s > /tmp/sssss.png; pinta /tmp/sssss.png ;;
     "--shadow-window") maim -st 9999999 | convert - \( +clone -background black -shadow 80x3+5+5 \) +swap -background none -layers merge +repage "$(mkpath shadowed)" ;;
 esac
 
