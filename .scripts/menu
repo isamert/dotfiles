@@ -137,7 +137,7 @@ function folders {
 }
 
 function file_contents {
-    term --opaque --float -g $(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
+    term --opaque --float --geometry=$(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
 }
 
 # Use `menu passwords -dump` to print password info into stdout.
@@ -204,5 +204,6 @@ case $cmd in
     folders) folders "$@";;
     file*contents) file_contents "$@";;
     passwords) passwords "$@";;
-    *) rofi -async-pre-read 0 -modi combi,vms:rofi_vms,window -combi-modi window,drun,run -show combi "$@"
+    calc*) rofi -show calc -modi calc -no-show-match -no-sort ;;
+    *) rofi -async-pre-read 0 -modi combi,window,run,vms:rofi_vms,calc -combi-modi window,drun,run -show combi "$@" ;;
 esac

@@ -90,7 +90,7 @@ super + shift + e
 
 # open a terminal (with shift it floats, with ctrl its opaque, with ctrl + shift its floating opaque)
 {super, hyper} + {_, shift + ctrl +, shift +, ctrl +} Return
-    term {_,_} {_, --float --opaque -g 100x20, --float -g 100x20, --opaque}
+    term {_,_} {_, --float --opaque --geometry=100x20, --float --geometry=100x20, --opaque}
 
 # open a terminal at
 hyper + {_,shift + } {backslash,minus}
@@ -104,16 +104,19 @@ hyper + q
     clipmenu
 
 hyper + x
-    /bin/sh -c "term --float -g 150x20 -e fuzzy kill"
+    /bin/sh -c "term --float --geometry=150x20 -e fuzzy kill"
 
 hyper + equal
-    rofi -show calc -modi calc -no-show-match -no-sort
+    menu calc
 
 # run some apps directly
 hyper + r; {f, q, e, r, t, v, k}
     {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
 
-# menus
+# menus (an escape hatch if hyper key does not work for some reason)
+super + a
+    menu menu
+
 hyper + {a, f, F, m, M, P, o, y, Y}
     menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords,youtube --video,youtube --video --playlist=$YT_MAIN_PLAYLIST}
 
@@ -133,10 +136,14 @@ hyper + apostrophe
     take-ss --{full,clip-area,area,wait-full,wait-area}
 
 hyper + S
-    cb-save --display
+    take-ss --edit-area
 
 hyper + alt + s
     if cb-save ~/cb.png; then notify-send "Saved."; else; notify-send "Not saved."; fi
+
+# Toggle notification center
+hyper + N
+    kill -s USR1 $(pidof deadd-notification-center)
 
 # #############################################################################
 # sound/music

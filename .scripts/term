@@ -7,10 +7,11 @@
 # Rule for st:
 # bspc rule --add 'float'     state=floating
 
-# st, urxvt, urxvtc
-RUNNER='st'
+# st, urxvt, urxvtc, alacritty
+RUNNER='alacritty'
 FLOAT=''
 OPAQUE=''
+GEOMETRY=''
 NAME=''
 OPTS=()
 
@@ -18,6 +19,7 @@ for arg; do
     case "$arg" in
         "--term="*) RUNNER=${arg#*=}; shift ;;
         "--name="*) NAME=${arg#*=}; shift ;;
+        "--geometry="*) GEOMETRY=${arg#*=}; shift ;;
         "--float") FLOAT='1'; shift ;;
         "--opaque") OPAQUE='1'; shift ;;
     esac
@@ -34,6 +36,7 @@ if [[ -n "$FLOAT" ]]; then
     case "$RUNNER" in
         "st") OPTS+=(-c float) ;;
         "urxvt"*) OPTS+=(-name float) ;;
+        "alacritty") OPTS+=(--class float) ;;
     esac
 fi
 
@@ -41,6 +44,7 @@ if [[ -n "$NAME" ]]; then
     case "$RUNNER" in
         "st") OPTS+=(-c "$NAME") ;;
         "urxvt"*) OPTS+=(-name "$NAME") ;;
+        "alacritty") OPTS+=(--title "$NAME") ;;
     esac
 fi
 
@@ -48,6 +52,18 @@ if [[ -n "$OPAQUE" ]]; then
     case "$RUNNER" in
         "st") OPTS+=(-A 1) ;;
         "urxvt"*) OPTS+=(-bg "$(xrdb-get-value '*background')") ;;
+        "alacritty")
+            # FIXME: use this when available instead of this god-awful solution
+            # https://github.com/alacritty/alacritty/issues/1258
+            sed '/background_opacity/c\background_opacity: 1.0' ~/.config/alacritty.yml > /tmp/alacritty.yml;
+            OPTS+=(--config-file /tmp/alacritty.yml) ;;
+    esac
+fi
+
+if [[ -n "$GEOMETRY" ]]; then
+    case "$RUNNER" in
+        "st"|"urxvt"*) OPTS+=(-g "$GEOMETRY") ;;
+        "alacritty") OPTS+=(--dimensions "$(echo "$GEOMETRY" | cut -dx -f1)" "$(echo "$GEOMETRY" | cut -dx -f2)") ;;
     esac
 fi
 
