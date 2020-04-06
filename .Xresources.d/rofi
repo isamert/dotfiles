@@ -1,20 +1,23 @@
-rofi.lines: 15
-rofi.width: 70
-rofi.columns: 1
-rofi.padding: 10
-rofi.fullscreen: false
 rofi.auto-select: false
-rofi.color-enabled: true
-rofi.hide-scrollbar: true
-rofi.separator-style: solid
-rofi.font: Iosevka 12
 rofi.drun-show-actions: true
 rofi.case-sensitive: false
 rofi.matching: normal
 
-rofi.color-window: #222222, #222222, #b1b4b3
-rofi.color-normal: #222222, #b1b4b3, #222222, #005577, #b1b4b3
-rofi.color-active: #222222, #b1b4b3, #222222, #007763, #b1b4b3
-rofi.color-urgent: #222222, #b1b4b3, #222222, #77003d, #b1b4b3
+rofi.theme: andrea
+rofi.lines: 15
+rofi.width: 70
+rofi.columns: 1
+rofi.font: Iosevka Black 12
+rofi.show-icons: true
+rofi.sidebar-mode: true
+rofi.separator-style: solid
+rofi.hide-scrollbar: true
+rofi.color-enabled: true
+rofi.fullscreen: false
+
+! Keybindings
+rofi.kb-mode-next: alt+period
+rofi.kb-mode-previous: alt+comma
+
 
 ! vi:syntax=xdefaults
