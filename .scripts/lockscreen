@@ -15,7 +15,7 @@ if [[ ! -d ~/.cache/i3lock/current/ ]] || [[ ~/.config/wall.png -nt ~/.cache/i3l
     betterlockscreen -u ~/.config/wall.png
 fi
 
-betterlockscreen --text "ehehehehehehehehe" --lock blur
+betterlockscreen --text "I WANNA FUCKING KILL MYSELF" --lock blur
 
 [[ -n $FIREFOX_PID ]] && kill -CONT "$FIREFOX_PPID"
 [[ -n $QUTEBROWSER_PID ]] && kill -CONT "$QUTEBROWSER_PPID"
