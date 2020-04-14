@@ -17,6 +17,7 @@ Plug 'dkasak/gruvbox'              " general theme
 Plug 'mhinz/vim-startify'          " a nice startup screen
 Plug 'vim-airline/vim-airline'     " powerline stuff
 Plug 'junegunn/goyo.vim'           " distraction free writing
+Plug 'ryanoasis/vim-devicons'      " icons
 
 " utility
 Plug 'terryma/vim-multiple-cursors'

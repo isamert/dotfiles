@@ -211,6 +211,17 @@ function install-nvidia {
     install-package optimus-manager
 }
 
+function install-ranger {
+    [[ -n $DISABLE_RANGER ]] && return
+
+    echo "===== Installing Ranger ====="
+
+    install-package ranger python-pip
+    pip install --user ueberzug # for image viewing
+    mkdir -p ~/.config/ranger/plugins
+    git clone https://github.com/alexanderjeurissen/ranger_devicons ~/.config/ranger/plugins/ranger_devicons # for icons
+}
+
 function install-trizen {
     [[ -n $DISABLE_TRIZEN ]] && return
 

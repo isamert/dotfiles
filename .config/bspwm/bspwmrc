@@ -6,7 +6,7 @@ bspc config initial_polarity second_child
 bspc config pointer_follows_focus false
 bspc config focus_follows_pointer true
 bspc config single_monocle        true
-bspc config gapless_monocle       true
+bspc config gapless_monocle       false
 bspc config borderless_monocle    true
 bspc config window_gap            $(xrdb-get-value wm.gaps)
 bspc config border_width          $(xrdb-get-value wm.border)
@@ -31,4 +31,3 @@ bspc rule --add 'dota2'       border=off
 pgrep compton || compton &
 pgrep sxhkd || sxhkd &
 init-desktops &
-

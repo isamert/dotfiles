@@ -1,4 +1,4 @@
-st.termname: st-24bit
+st.termname: st
 st.shell: /usr/bin/zsh
 st.font: Iosevka:pixelsize=14:antialias=true:autohint=true
 st.alpha: 0.85

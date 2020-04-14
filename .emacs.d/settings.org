@@ -433,8 +433,9 @@ To move between visual lines instead of real lines:
 #+BEGIN_SRC emacs-lisp
 (when (file-directory-p "~/Documents/notes")
   (setq life-org "~/Documents/notes/life.org")
+  (setq bullet-org "~/Documents/notes/bullet.org")
   (setq org-directory "~/Documents/notes")
-  (setq org-agenda-files `(,life-org)))
+  (setq org-agenda-files `(,life-org ,bullet-org)))
 #+END_SRC
 
 ** better defaults
@@ -624,6 +625,14 @@ A package that shows key combinations. (for example press C-x and wait) It also 
   :config
   (which-key-mode))
 #+END_SRC
+** magit
+#+BEGIN_SRC emacs-lisp
+(use-package magit
+  :ensure t
+  :config
+  ;; Following snippet is needed to update modeline after a checkout happens
+  (advice-add 'magit-checkout :after (lambda (a) (vc-refresh-state))))
+#+END_SRC
 ** goto-chg
 =g;= goes to the last change. (repeatable)
 #+BEGIN_SRC emacs-lisp
@@ -748,8 +757,9 @@ A project management tool. I set a project path below and make sure projectile s
 ;;      └── .git
 ;; This function adds groupped_projects to projectile-project-search path.
 (defconst projects-root "~/Workspace/projects")
+(defconst remote-projects-root "/ssh:isa@carbon:/home/isa/Workspace/projects")
 (defun projectile-project-paths ()
-  (append `(,projects-root)
+  (append `(,projects-root ,remote-projects-root)
   (flatmapcar (lambda (dir) (if (file-directory-p (concat dir "/.git")) '() `(,dir)))
               (directory-files projects-root t directory-files-no-dot-files-regexp))))
 
@@ -764,7 +774,7 @@ A project management tool. I set a project path below and make sure projectile s
   (progn
     (projectile-discover-projects-in-search-path)
     (setq projectile-globally-ignored-files (append '("Cargo.lock" ".tern-port"))
-          projectile-globally-ignored-directories (append '(".stack-work" "target" "node_modules" "build"))
+          projectile-globally-ignored-directories (append '(".stack-work" "target" "node_modules" "build" "dist"))
           projectile-globally-ignored-file-suffixes (append '("~" ".rs.bk")))
     (projectile-mode)))
 #+END_SRC
@@ -1158,6 +1168,9 @@ Enable leader key and bind some keys.
       "gg" 'my/helm-grep-git-grep-current-project
       "gp" 'magit-pull
       "gP" 'magit-push
+      "gr" 'magit-reset
+      "gcc" 'magit-checkout
+      "gcf" 'magit-file-checkout
 
       ;; helm
       "hh" 'helm-resume

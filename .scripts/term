@@ -8,7 +8,7 @@
 # bspc rule --add 'float'     state=floating
 
 # st, urxvt, urxvtc, alacritty
-RUNNER='alacritty'
+RUNNER='st'
 FLOAT=''
 OPAQUE=''
 GEOMETRY=''
@@ -44,7 +44,7 @@ if [[ -n "$NAME" ]]; then
     case "$RUNNER" in
         "st") OPTS+=(-c "$NAME") ;;
         "urxvt"*) OPTS+=(-name "$NAME") ;;
-        "alacritty") OPTS+=(--title "$NAME") ;;
+        "alacritty") OPTS+=(--class "$NAME") ;;
     esac
 fi
 
@@ -60,6 +60,7 @@ if [[ -n "$OPAQUE" ]]; then
     esac
 fi
 
+# FIXME: alacritty only supports WxH for now, check --dimensions
 if [[ -n "$GEOMETRY" ]]; then
     case "$RUNNER" in
         "st"|"urxvt"*) OPTS+=(-g "$GEOMETRY") ;;

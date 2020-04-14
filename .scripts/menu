@@ -93,21 +93,21 @@ function youtube {
         esac
     done
 
-    [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]] && SEARCH_STRING=$(dmenu -p "search yt")
+    local SEARCH_HISTORY_FILE="$HOME/.cache/menu_youtube_history"
+    if [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]]; then
+        SEARCH_STRING=$(dmenu -p "search yt" < "$SEARCH_HISTORY_FILE")
+        echo "$SEARCH_STRING" >> "$SEARCH_HISTORY_FILE"
+        local HISTORY=$(sort -u "$SEARCH_HISTORY_FILE" | uniq "$SEARCH_HISTORY_FILE" | sed '/^\s*$/d')
+        echo "$HISTORY" > "$SEARCH_HISTORY_FILE"
+    fi
     [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]] && exit
 
-    if [[ -n $PLAYLIST ]]; then
-        local RESULT=$(youtube-dl -j --flat-playlist "$PLAYLIST" | jq -r '.url + " | " + .title' | dmenu -async-pre-read 0)
-        RESULT=$(echo "$RESULT" | cut -d"|" -f1 | xargs)
-        [[ -z $RESULT ]] && exit
-        local URL="https://youtube.com/watch?v=$RESULT"
-    else
-        local RESULT=$(youtube-viewer --no-use-colors --no-interactive --results=30 "$SEARCH_STRING" | dmenu -async-pre-read 0)
-        RESULT=$(echo "$RESULT" | cut -d"." -f1 | xargs)
-        local URL=$(youtube-viewer --no-use-colors --no-interactive --results=30 --extract="*URL*" --std-input="$RESULT" "$SEARCH_STRING" 2> /dev/null | grep "youtube.com/watch?v=")
-    fi
+    local RESULT=$(curl -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36" -L --data-urlencode "search_query=$SEARCH_STRING" "https://www.youtube.com/results" | pup --charset UTF-8 "h3.yt-lockup-title json{}" | jq ".[] | \"<span foreground='grey' size='small'>\" + .children[0].href + \"</span> | \" + .children[0].title + \"<span size='small' foreground='green'> (\" + .children[1].text + \") </span>\"" | sed -r 's/\/watch\?v=//;s/"//g;/list=/d;/\/user\//d' | dmenu -markup-rows -async-pre-read 0 | cut -d'>' -f2 | cut -d'<' -f1)
 
-    [[ -z $URL ]] && exit
+    [[ -z $RESULT ]] && exit
+
+    local URL="https://youtube.com/watch?v=$RESULT"
+
 
     if [[ $VIDEO = 1 ]]; then
         tsp mpv "$URL"

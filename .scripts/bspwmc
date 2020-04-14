@@ -99,7 +99,7 @@ function scratchpad_top {
         bspc rule --add "*:$class" state=floating sticky=on
         term --opaque \
            --name="$class" \
-           -g "150x$height+$(focused_monitor_x_offset)+${top_gap}" \
+           --geometry="150x$height+$(focused_monitor_x_offset)+${top_gap}" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
         wid=$(xdotool search --sync --classname --class "$class")
@@ -128,7 +128,7 @@ function scratchpad_bot {
         bspc rule --add "*:$class" state=floating
         term --opaque \
            --name="$class" \
-           -g "150x$height+$(focused_monitor_x_offset)-1" \
+           --geometry="150x$height+$(focused_monitor_x_offset)-1" \
            -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class" &
 
         wid=$(xdotool search --sync --classname --class "$class")

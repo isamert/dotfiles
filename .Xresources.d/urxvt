@@ -6,10 +6,10 @@ Xft.hintstyle: hintsmedium
 
 URxvt.iso14755 : false
 URxvt.internalBorder: 1
-URxvt.letterSpace: -1
+URxvt.letterSpace: 0
 URxvt.xftAntialias: true
 URxvt.xftHinting: true
-URxvt.font: xft:IBM Plex Mono:size=11, xft:UbuntuMono Nerd Font Mono:size=12, xft:DejaVu Sans:size=8:hinting=true
+URxvt.font: xft:Iosevka:size=12, xft:Iosevka:size=10
 URxvt.scrollBar: false
 URxvt.depth: 32
 URxvt.background: [80]BACKGROUND
@@ -24,13 +24,14 @@ URxvt.matcher.button: 1
 URxvt.keysym.C-C: eval:selection_to_clipboard
 URxvt.keysym.C-V: perl:clipboard:paste
 
-URxvt.keysym.C-J:  resize-font:smaller
-URxvt.keysym.C-K:  resize-font:bigger
+URxvt.keysym.C-equal: resize-font:bigger
+URxvt.keysym.C-minus: resize-font:smaller
+URxvt.keysym.C-0:     resize-font:reset
 
 URxvt.keysym.C-L: perl:matcher:last
 URxvt.keysym.C-U: perl:matcher:list
 
-URxvt.keysym.C-N: perl:keyboard-select:activate
+URxvt.keysym.C-K: perl:keyboard-select:activate
 URxvt.keysym.C-S: perl:keyboard-select:search
 
 ! vi:syntax=xdefaults
