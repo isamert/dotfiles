@@ -14,11 +14,8 @@ super + {_,shift + } {backslash,minus}
 super + {t,shift + t,s,f}
     bspc node --state "~{tiled,pseudo_tiled,floating,fullscreen}"
 
-super + m
-    bspc desktop --layout next
-
 # toggle between fullscreen(monacle) and tiled desktop layout
-super + e
+super + m
     bspc desktop --layout next
 
 # focus last floating window
@@ -101,7 +98,7 @@ hyper + {e, d}
     bspwmc {scratchpad_top, scratchpad_bot}
 
 hyper + q
-    clipmenu
+    copyq toggle
 
 hyper + x
     /bin/sh -c "term --float --geometry=150x20 -e fuzzy kill"
@@ -110,18 +107,19 @@ hyper + equal
     menu calc
 
 # run some apps directly
-hyper + r; {f, q, e, r, t, v, k}
-    {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
+hyper + r; {f, q, e, r, t, v, w, k}
+    {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, whatsapp-nativefier-dark, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
+
+
+hyper + r; p; {s, p, w}
+    sxiv {~/Pictures/screenshots/, ~/Pictures/phone/Camera, ~/Pictures/wallpapers/}
 
 # menus (an escape hatch if hyper key does not work for some reason)
 super + a
     menu menu
 
-hyper + {a, f, F, m, M, P, o, y, Y}
-    menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords,youtube --video,youtube --video --playlist=$YT_MAIN_PLAYLIST}
-
-hyper + w
-    emacsclient -c --eval "(progn (setq helm-full-frame t) (helm-org-rifle-org-directory) (setq helm-full-frame nil))"
+hyper + {a, f, F, m, M, P, o, y, Y, b}
+    menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords,youtube --video,youtube --video --playlist=$YT_MAIN_PLAYLIST, bookmarks}
 
 # popups
 hyper + {c,n,t,i}
@@ -185,25 +183,7 @@ control + alt + k
     switch-keyboard-layout
 
 control + alt + o
-    mediastuff switch-audio-channel
+    mediastuff switch-audio-channel --interactive
 
 control + alt + l
     lockscreen
-
-# #############################################################################
-# key combinations
-# https://github.com/baskerville/sxhkd/issues/86#issuecomment-506562074
-# FIXME: they dont work in emacs
-# FIXME: Can't hold hyper + j and get the same effect as holding down "down" itself
-# #############################################################################
-hyper + j
-    xdotool keyup j key Down
-
-hyper + k
-    xdotool keyup k key Up
-
-hyper + l
-    xdotool keyup l key Right
-
-hyper + h
-    xdotool keyup h key Left
