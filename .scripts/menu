@@ -102,7 +102,7 @@ function youtube {
     fi
     [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]] && exit
 
-    local RESULT=$(curl -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36" -L --data-urlencode "search_query=$SEARCH_STRING" "https://www.youtube.com/results" | pup --charset UTF-8 "h3.yt-lockup-title json{}" | jq ".[] | \"<span foreground='grey' size='small'>\" + .children[0].href + \"</span> | \" + .children[0].title + \"<span size='small' foreground='green'> (\" + .children[1].text + \") </span>\"" | sed -r 's/\/watch\?v=//;s/"//g;/list=/d;/\/user\//d' | dmenu -markup-rows -async-pre-read 0 | cut -d'>' -f2 | cut -d'<' -f1)
+    local RESULT=$(curl -N -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36" -L --data-urlencode "search_query=$SEARCH_STRING" "https://www.youtube.com/results" | pup --charset UTF-8 "h3.yt-lockup-title json{}" | jq ".[] | \"<span foreground='grey' size='small'>\" + .children[0].href + \"</span> | \" + .children[0].title + \"<span size='small' foreground='green'> (\" + .children[1].text + \") </span>\"" | sed -r 's/\/watch\?v=//;s/"//g;/list=/d;/\/user\//d' | dmenu -markup-rows -async-pre-read 0 | cut -d'>' -f2 | cut -d'<' -f1)
 
     [[ -z $RESULT ]] && exit
 
@@ -170,7 +170,7 @@ function passwords {
                     sleep 0.2
                     xdotool type --delay 5 "$password" ;;
                 "Show all")
-                    local allinfo=$(printf "[username]: $username\\n[password]: $password\\n$passinfo" | awk -F: '/^\[.*]:/ {printf("%-40s%-70s\n",$1,$2)}' | dmenu | cut -d']' -f2- | trim | xclip -selection clipboard) ;;
+                    local allinfo=$(printf "[username]: $username\\n[password]: $password\\n$passinfo" | awk -F: '/^\[.*]:/ {printf("%-40s%-70s\n",$1,$2)}' | dmenu -i | cut -d']' -f2- | trim | xclip -selection clipboard) ;;
                 *)
                     echo "$passinfo" | grep -iF -m 1 "$what" | cut -d: -f2- | trim | xclip -selection clipboard ;;
             esac
@@ -191,6 +191,10 @@ function passwords {
     fi
 }
 
+function bookmarks {
+    grep -E '^*' ~/Documents/notes/bookmarks.org | grep '\[\[' | sed -E 's/\[\[(.*)\]\[(.*)\]\]/\2  <span foreground="grey" size="small">\1<\/span>/; s/\**//' | dmenu -i -markup-rows | grep -Eo 'https?://[^ ]+' | sed 's/<\/span>//' | jaro
+}
+
 
 cmd="$1"
 shift
@@ -204,6 +208,7 @@ case $cmd in
     folders) folders "$@";;
     file*contents) file_contents "$@";;
     passwords) passwords "$@";;
+    bookmarks) bookmarks "$@";;
     calc*) rofi -show calc -modi calc -no-show-match -no-sort ;;
     *) rofi -async-pre-read 0 -modi combi,window,run,vms:rofi_vms,calc -combi-modi window,drun,run -show combi "$@" ;;
 esac
