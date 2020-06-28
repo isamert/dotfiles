@@ -47,7 +47,10 @@ all_seek() {
 }
 
 get_sink_name_from_sink_id() {
-    pactl list sinks | grep -E "(Sink #$1)|(device.description)" | grep -A1 "Sink #$1" | sed -n "2p" | cut -d'"' -f2
+    local ids="${1:-$(</dev/stdin)}"
+    echo "$ids" | while read -r id; do
+        echo "($id) $(pactl list sinks | grep -E "(Sink #$id)|(device.description)" | grep -A1 "Sink #$id" | sed -n "2p" | cut -d'"' -f2)"
+    done
 }
 
 switch_audio_channel() {
@@ -65,13 +68,19 @@ switch_audio_channel() {
         exit 1
     fi
 
-    new_sink=${sinks[0]}
-    for sink in "${sinks[@]}"; do
-        if (( sink > current_sink )); then
-            new_sink="$sink"
-            break
-        fi
-    done
+    if [[ $1 = --interactive ]]; then
+        new_sink=$(printf "%s\n" "${sinks[@]}" | get_sink_name_from_sink_id | dmenu -i | grep -Po "\(\K[0-9]*")
+    else
+        new_sink=${sinks[0]}
+        for sink in "${sinks[@]}"; do
+            if (( sink > current_sink )); then
+                new_sink="$sink"
+                break
+            fi
+        done
+    fi
+
+    [[ -z $new_sink ]] && exit;
 
     notify-send "Switching audio channel" "New default channel is $(get_sink_name_from_sink_id $new_sink), moving all inputs to that."
 
