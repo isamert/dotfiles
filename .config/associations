@@ -110,7 +110,7 @@
 
 (assoc
   #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
-  #:program "rtv %f"
+  #:program "tuir %f"
   #:term "st -e"
   #:tmux "tmux split-window -h"
   #:on-error (open-with 'browser))
@@ -147,7 +147,7 @@
   #:standalone #t)
 
 ;;
-;; Rest are used only with references
+;; Rest is used only with references
 ;;
 
 (assoc
