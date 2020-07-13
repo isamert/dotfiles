@@ -90,20 +90,15 @@
 
 (assoc
   #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
-  #:program "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && sxiv $TMP_IMG"
+  #:program "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && pqiv $TMP_IMG"
   #:on-error "feh --start-at %f"
   #:view #t
   #:edit "pinta %f")
 
-;; Open all images in a folder starting with given image in sxiv
+;; Open all images in a folder starting with given image in pqiv
 (assoc
   #:pattern "^image/.*$"
-  #:program (λ (file mime-type)
-              (when (not (string-prefix? "/" file))
-                    (set! file (path-join (getcwd) file)))
-              (let* ((parent-dir (parent-path file))
-                     (file-index (1+ (index-of (basename file) (scandir parent-dir (λ (f) (not (equal? (stat:type (stat (path-join parent-dir f))) 'directory))))))))
-                (system* "sxiv" "-n" (number->string file-index) parent-dir)))
+  #:program "pqiv --browse --lazy-load --max-depth=3 %f"
   #:on-error "feh --start-at %f"
   #:view #t
   #:edit "pinta %f")
@@ -157,4 +152,3 @@
   #:view #t)
 
 ;; vi:syntax=scheme
-

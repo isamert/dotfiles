@@ -51,7 +51,7 @@ super + shift + {comma, period}
 super + alt + {1-5}
     bspc node --to-desktop $(bspc query -D -m (bspc query -M | sed -n "{1-5}p") -d .active)
 
-# next/prev window
+# focus next/prev window
 alt + {_, shift +} Tab
     bspc node -f {next,prev}.local
 
@@ -71,15 +71,21 @@ super + C
 super + shift + {Q,W,A,S}
     bspwmc move_floating {Q,W,A,S}
 
+# resize a floating window from all sides
 super + {shift,_} + equal
     xdo resize {-w +50 -h +50, -w -50 -h -50}
 
+# switch to next card (nvidia/intel)
 super + shift + m
     optimus-manager --no-confirm --switch auto
 
 # logout
 super + shift + e
     for node in $(bspc query -N); do bspc node $node --close; done; bspc quit
+
+# rotate window tree
+super + {r, shift + r}
+    bspc node @/ -C {forward,backward}
 
 # #############################################################################
 # apps
@@ -108,11 +114,10 @@ hyper + equal
 
 # run some apps directly
 hyper + r; {f, q, e, r, t, v, w, k}
-    {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, whatsapp-nativefier-dark, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
-
+    focus-or-run {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, whatsapp-nativefier-dark, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
 
 hyper + r; p; {s, p, w}
-    sxiv {~/Pictures/screenshots/, ~/Pictures/phone/Camera, ~/Pictures/wallpapers/}
+    pqiv {~/Pictures/screenshots/, ~/Pictures/phone/Camera, ~/Pictures/wallpapers/}
 
 # menus (an escape hatch if hyper key does not work for some reason)
 super + a
@@ -139,7 +144,7 @@ hyper + S
 hyper + alt + s
     if cb-save ~/cb.png; then notify-send "Saved."; else; notify-send "Not saved."; fi
 
-# Toggle notification center
+# toggle notification center
 hyper + N
     kill -s USR1 $(pidof deadd-notification-center)
 
