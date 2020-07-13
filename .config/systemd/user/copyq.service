@@ -1,0 +1,9 @@
+[Unit]
+Description=copyq (clipboard manager)
+
+[Service]
+ExecStart=copyq
+Restart=always
+
+[Install]
+WantedBy=user-graphical-login.target

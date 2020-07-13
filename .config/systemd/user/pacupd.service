@@ -1,0 +1,19 @@
+#ROOT
+
+# This needs to be run as root, left here as reference.
+# Installation of these files are handled by my installer script.
+# Run: install.sh configure systemdroot
+
+[Unit]
+Description=Automaticly refresh/sync package repositories
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/pacman -Sy --noconfirm
+TimeoutStopSec=30
+KillMode=process
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

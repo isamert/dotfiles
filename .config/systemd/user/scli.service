@@ -1,0 +1,13 @@
+[Unit]
+Description=Run scli as daemon
+After=getty@tty2.service
+
+[Service]
+ExecStart=/home/isa/.local/bin/scli
+StandardInput=tty
+TTYPath=/dev/tty2
+TTYReset=yes
+TTYVHangup=yes
+
+[Install]
+WantedBy=multi-user.target

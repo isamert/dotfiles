@@ -1,0 +1,10 @@
+[Unit]
+Description=xcape
+
+[Service]
+Type=forking
+ExecStart=xcape -e 'Hyper_L=Escape'
+Restart=always
+
+[Install]
+WantedBy=user-graphical-login.target
