@@ -9,7 +9,7 @@ export KEYBOARD_LAYOUTS='us(intl)',tr
 # To be able to deploy android apps from commandline.
 export ANDROID_SDK_ROOT=/opt/android-sdk
 
-# Apply GTK themes to QT apps
+# Apply GTK themes to QT apps (qt5-styleplugins)
 export QT_QPA_PLATFORMTHEME=gtk2
 
 # fff {{{
@@ -57,7 +57,7 @@ export GOPATH="$HOME/.go"
 export R_LIBS_USER="$HOME/.rlibs"
 
 # the PATH
-export PATH=$PATH:$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin
+export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin:$PATH
 
 if command -v jaro; then
     export BROWSER=jaro
@@ -82,11 +82,13 @@ if [[ -f $HOME/.extrarc ]]; then
     . $HOME/.extrarc
 fi
 
+if [[ -f /etc/profile.d/nix-daemon.sh ]]; then
+    source /etc/profile.d/nix{,-daemon}.sh
+fi
+
 if ps 1 | grep sbin && file /sbin/init | grep systemd; then
     systemctl --user import-environment
     systemctl --user start user-login.target &
-else
-    echo "TODO: run stuff?"
 fi
 
 # less colors (systemd can't import these) {{{

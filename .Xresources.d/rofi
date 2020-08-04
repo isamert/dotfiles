@@ -16,6 +16,7 @@ rofi.color-enabled: true
 rofi.fullscreen: false
 
 ! Keybindings
+rofi.kb-ellipsize:
 rofi.kb-mode-next: alt+period
 rofi.kb-mode-previous: alt+comma
 

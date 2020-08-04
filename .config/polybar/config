@@ -13,6 +13,7 @@ width = ${xrdb:bar.width}
 height = ${xrdb:bar.height}
 radius = ${xrdb:bar.radius}
 fixed-center = true
+wm-restack = bspwm
 
 background = ${colors.background}
 foreground = ${colors.foreground}
@@ -36,7 +37,7 @@ module-margin-right = 1
 
 modules-left = bspwm xwindow
 modules-center = mpd
-modules-right = mail xkeyboard volume memory cpu temperature battery date powermenu
+modules-right = pacman optimus mail xkeyboard volume memory cpu temperature battery wlan date powermenu
 
 tray-position = right
 tray-padding = 2
@@ -53,6 +54,7 @@ width = ${xrdb:bar.width}
 height = ${xrdb:bar.height}
 radius = ${xrdb:bar.radius}
 fixed-center = true
+wm-restack = bspwm
 
 background = ${colors.background}
 foreground = ${colors.foreground}
@@ -84,12 +86,29 @@ cursor-scroll = ns-resize
 
 [module/mail]
 type = custom/script
-exec = PYTHONWARNINGS="ignore" mailcheck --user 'isamertgurbuz@gmail.com' --password $(getpassword '/email/gmail') --server 'imap.gmail.com' --user 'isamertgurbuz@eskisehir.edu.tr' --password $(getpassword '/email/eskisehir') --server 'outlook.office365.com' --user isamert --password $(getpassword '/email/protonmail') --server proton
+exec = PYTHONWARNINGS="ignore" mailcheck --user 'isamertgurbuz@gmail.com' --password $(getpassword '/email/gmail') --server 'imap.gmail.com' --user isamert --password $(getpassword '/email/protonmail') --server proton
 interval = 300
 
 click-left = popup mail
 
 format-prefix = " "
+format-underline = #f90000
+
+[module/optimus]
+type = custom/script
+exec-if = systemctl is-active --quiet optimus-manager
+exec = optimus-manager --print-mode | grep GPU | cut -d: -f2 | tr -d ' ' | sed 's/.*/\u&/'
+interval = 30000000
+
+format-prefix = " "
+format-underline = #f90000
+
+[module/pacman]
+type = custom/script
+exec = pacman -Sup | wc -l
+interval = 3600
+
+format-prefix = " "
 format-underline = #f90000
 
 [module/github]
@@ -188,25 +207,21 @@ label = %{A1:popup htop &:} %percentage_used%% %{A}
 
 [module/wlan]
 type = internal/network
-interface = wlp0s20u1
-; built-in: wlp4s0
-interval = 3.0
+interface = wlp4s0
+; built-in:
+interval = 5
 
-format-connected = <ramp-signal> <label-connected>
+format-connected = <ramp-signal>
 format-connected-underline = #9f78e1
-label-connected = %essid%
 
-format-disconnected =
-;format-disconnected = <label-disconnected>
-;format-disconnected-underline = ${self.format-connected-underline}
-;label-disconnected = %ifname% disconnected
-;label-disconnected-foreground = ${colors.foreground-alt}
+format-disconnected = 睊
+label-disconnected-foreground = ${colors.foreground-alt}
 
-ramp-signal-0 = 
-ramp-signal-1 = 
-ramp-signal-2 = 
-ramp-signal-3 = 
-ramp-signal-4 = 
+ramp-signal-0 = 睊
+ramp-signal-1 = 
+ramp-signal-2 = 
+ramp-signal-3 = 
+ramp-signal-4 = 
 ramp-signal-foreground = ${colors.foreground-alt}
 
 [module/eth]

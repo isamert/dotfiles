@@ -276,9 +276,31 @@ function configure-systemduser {
         [[ -z $DISABLE_REDSHIFT ]] && systemctl --user enable redshift.service
         [[ -z $DISABLE_UNCLUTTER ]] && systemctl --user enable unclutter.service
         [[ -z $DISABLE_UDISKIE ]] && systemctl --user enable udiskie.service
+        [[ -z $DISABLE_XCAPE ]] && systemctl --user enable xcape.service
     fi
 
     [[ -z $DISABLE_SYNCTHING ]] && systemctl --user enable syncthing.service
+}
+
+# Some unit files needs to be run as root, I marked every unit file with #ROOT
+# tag under ~/.config/systemd/user. This function copies them to root systemd
+# unit directory and enables them.
+function configure-systemdroot {
+    [[ -n $DISABLE_SYSTEMDROOT ]] && return
+
+    echo '===== Configuring systemd root ===='
+
+    for file in "$HOME/.config/systemd/user/"*; do
+        if [[ -f "$file" ]] && [[ $(head -n 1 "$file") =~ "#ROOT" ]]; then
+            echo "Installing $file"
+            sudo cp "$file" /usr/lib/systemd/system/
+            sudo cp "$file" /usr/lib/systemd/system/
+        fi
+    done
+
+    systemctl daemon-reload
+
+    systemctl enable --now pacupd.timer
 }
 
 

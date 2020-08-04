@@ -45,7 +45,7 @@ function htop {
     fi
 }
 
-function translate {
+function translate-term {
     local GEOMETRY="100x15-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
     local WINDOW_TITLE="Translator (:set verbose 0/1)"
     local COMMAND="trans -sl en -hl tr -to tr -interactive -v -pager bat"
@@ -54,6 +54,19 @@ function translate {
         term --float --opaque -T "$WINDOW_TITLE" -g $GEOMETRY -e $COMMAND
     else
         wmctrl -c "$WINDOW_TITLE"
+    fi
+}
+
+function translate-gui {
+    qdbus io.crow_translate.CrowTranslate /io/crow_translate/CrowTranslate/MainWindow open
+}
+
+function translate {
+    # Use crow-translate if its open
+    if pgrep crow; then
+        translate-gui
+    else
+        translate-term
     fi
 }
 

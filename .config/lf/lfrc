@@ -1,7 +1,8 @@
 set incsearch on
+set previewer ~/.config/lf/preview
 
 cmd q                    quit
-cmd edit                 ${{ $EDITOR "$f" }}
+cmd edit                 ${{ jaro --method=edit "$f" }}
 cmd view                 ${{ jaro --method=view "$f" }}
 cmd renamedir            ${{ vidir }}
 cmd dirrename            ${{ vidir }}
@@ -19,6 +20,6 @@ cmd compress             ${{ apack $1 $fx }}
 map e     edit
 map v     view
 map D     delete
-map a     rename
-map .     set hidden!
+map r     rename
 map <f-2> rename
+map .     set hidden!

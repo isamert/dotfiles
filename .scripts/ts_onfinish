@@ -8,7 +8,7 @@ err="$2"
 out_file="$3"
 cmd="$4"
 
-remaining_job_count=$(tsp | tail -n +2 | grep -cvE '^[0-9]+ +finished')
+remaining_job_count=$(($(tsp | tail -n +2 | grep -cvE '^[0-9]+ +finished') - 1))
 
 if [[ "$err" = 0 ]]; then
     icon=terminal

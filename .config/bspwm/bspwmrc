@@ -11,16 +11,18 @@ bspc config borderless_monocle    true
 bspc config window_gap            $(xrdb-get-value wm.gaps)
 bspc config border_width          $(xrdb-get-value wm.border)
 
+
 bspc rule --add '*:float'     state=floating
 bspc rule --add '*:padtop'    state=floating
 bspc rule --add 'float'       state=floating
 bspc rule --add 'padtop'      state=floating
 
-bspc rule --add Pinta         state=floating
-bspc rule --add Sxiv          state=floating
-bspc rule --add Zenity        state=floating
-bspc rule --add feh           state=floating
-bspc rule --add copyq         state=floating
+bspc rule --add Pinta            state=floating
+bspc rule --add Sxiv             state=floating
+bspc rule --add Zenity           state=floating
+bspc rule --add feh              state=floating
+bspc rule --add copyq            state=floating
+bspc rule --add 'Crow Translate' state=floating
 bspc rule --add 'whatsapp-nativefier-d52542' state=floating
 
 bspc rule --add mpv           state=floating
@@ -28,6 +30,11 @@ bspc rule --add 'mpv:youtube' focus=off
 
 bspc rule --add Screenkey     manage=off
 bspc rule --add 'dota2'       border=off
+
+
+bspc rule -a Vivaldi-stable desktop='^1' follow=on
+bspc rule -a firefox        desktop='^1' follow=on
+
 
 # Start WM related stuff
 pgrep picom || picom &
