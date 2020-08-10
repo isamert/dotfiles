@@ -35,9 +35,14 @@ export FZF_DEFAULT_OPTS="
 # Run ts_onfinish when a tsp job is finished
 export TS_ONFINISH=ts_onfinish
 
-# NPM make global installs in user directory
+# Make global NPM installs in user directory
 # nvm already uses user dir, so skip if nvm is found
-if ! command -v nvm;; then
+if ! command -v nvm; then
+    # Need to configure npmrc to use given prefix
+    if [[ ! -f $HOME/.npmrc ]]; then
+        echo 'prefix=${HOME}/.npm-packages' > $HOME/.npmrc
+    fi
+
     export NPM_PACKAGES="$HOME/.npm-packages"
     export NODE_PATH="$NPM_PACKAGES/lib/node_modules:$NODE_PATH"
 fi
@@ -67,10 +72,13 @@ export DIR_WALLPAPERS=$HOME/Pictures/wallpapers
 export DIR_SCREENSHOTS=$HOME/Pictures/screenshots
 export DIR_NOTES=$HOME/Documents/notes
 
-if [[ -f /etc/profile.d/nix-daemon.sh ]]; then
-    source /etc/profile.d/nix{,-daemon}.sh
-fi
+# Nix settings {{{
+# Global installation
+[[ -f /etc/profile.d/nix-daemon.sh ]] && source /etc/profile.d/nix{,-daemon}.sh
 
+# User dir installation
+[[ -f $HOME/.nix-profile/etc/profile.d/nix.sh ]] && source $HOME/.nix-profile/etc/profile.d/nix{,-daemon}.sh
+# }}}
 
 # Load profiles from /etc/profile.d
 if test -d /etc/profile.d/; then
@@ -99,6 +107,8 @@ export LESS_TERMCAP_us=$'\E[1;32m'     # begin underline
 export LESS_TERMCAP_ue=$'\E[0m'        # reset underline
 export GROFF_NO_SGR=1                  # for konsole and gnome-terminal
 # }}}
+
+export __PROFILE_SOURCED=1
 
 # vi: foldmethod=marker
 

@@ -1,3 +1,5 @@
+[[ -z $__PROFILE_SOURCED ]] &&  . $HOME/.profile
+
 # Plugins {{{
 source ~/.local/bin/antigen.zsh
 
