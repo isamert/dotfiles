@@ -87,8 +87,7 @@ function install-bspwm {
 
     echo "===== Installing BSPWM ====="
 
-    install-package bspwm sxhkd compton polybar
-    curl https://raw.githubusercontent.com/Chrysostomus/bspwm-scripts/master/bin/euclid_mover > ~/.local/bin/euclid_mover
+    install-package bspwm sxhkd compton polybar bspwm-scripts
 }
 
 function install-mpv {
@@ -99,7 +98,6 @@ function install-mpv {
     install-package mpv subdl
 
     # Install thumbnailer script
-    # TODO: Get latest release
     mkdir -p ~/.config/mpv/scripts
     local thumbver=$(gh-latest-release "TheAMM/mpv_thumbnail_script")
     curl -fsSlL "https://github.com/TheAMM/mpv_thumbnail_script/releases/download/${thumbver}/mpv_thumbnail_script_client_osc.lua" > ~/.config/mpv/scripts/mpv_thumbnail_script_client_osc.lua
@@ -217,7 +215,7 @@ function install-ranger {
     echo "===== Installing Ranger ====="
 
     install-package ranger python-pip
-    pip install --user ueberzug # for image viewing
+    #pip install --user ueberzug # for image viewing
     mkdir -p ~/.config/ranger/plugins
     git clone https://github.com/alexanderjeurissen/ranger_devicons ~/.config/ranger/plugins/ranger_devicons # for icons
 }
@@ -238,6 +236,20 @@ function install-trizen {
 # ############################################################################
 # Specific configuration recipes
 # ############################################################################
+
+function configure-dotfiles {
+    # This file is needed, computer specific Xres settings goes here
+    touch ~/.Xresources.d/model
+
+    configure-arch
+    configure-ubuntu
+
+    configure-systemd
+    configure-systemduser
+    configure-systemdroot
+
+    configure-keyboard
+}
 
 function configure-arch {
     is-arch && return
@@ -271,15 +283,15 @@ function configure-systemduser {
     echo "===== Configuring systemd user ====="
 
     if [[ -z $DISABLE_GUI ]]; then
-        [[ -z $DISABLE_CLIPMENU ]] && systemctl --user enable clipmenud.service
-        [[ -z $DISABLE_GEOCLUE ]] && systemctl --user enable geoclue-agent.service
-        [[ -z $DISABLE_REDSHIFT ]] && systemctl --user enable redshift.service
-        [[ -z $DISABLE_UNCLUTTER ]] && systemctl --user enable unclutter.service
-        [[ -z $DISABLE_UDISKIE ]] && systemctl --user enable udiskie.service
-        [[ -z $DISABLE_XCAPE ]] && systemctl --user enable xcape.service
+        [[ -z $DISABLE_COPYQ ]] && systemctl --user enable --now copyq.service
+        [[ -z $DISABLE_GEOCLUE ]] && systemctl --user enable --now geoclue-agent.service
+        [[ -z $DISABLE_REDSHIFT ]] && systemctl --user enable --now redshift.service
+        [[ -z $DISABLE_UNCLUTTER ]] && systemctl --user enable --now unclutter.service
+        [[ -z $DISABLE_UDISKIE ]] && systemctl --user enable --now udiskie.service
+        [[ -z $DISABLE_XCAPE ]] && systemctl --user enable --now xcape.service
     fi
 
-    [[ -z $DISABLE_SYNCTHING ]] && systemctl --user enable syncthing.service
+    [[ -z $DISABLE_SYNCTHING ]] && systemctl --user enable --now syncthing.service
 }
 
 # Some unit files needs to be run as root, I marked every unit file with #ROOT
@@ -294,13 +306,22 @@ function configure-systemdroot {
         if [[ -f "$file" ]] && [[ $(head -n 1 "$file") =~ "#ROOT" ]]; then
             echo "Installing $file"
             sudo cp "$file" /usr/lib/systemd/system/
-            sudo cp "$file" /usr/lib/systemd/system/
         fi
     done
 
     systemctl daemon-reload
 
+    # Enable the unit files
     systemctl enable --now pacupd.timer
+}
+
+function configure-keyboard {
+    [[ -n $DISABLE_KEYBOARD ]] && return
+
+    # Change keyboard layout to us(intl)
+    localectl set-x11-keymap 'us(intl)'
+    # Make it take effect immediately:
+    setxkbmap 'us(intl)'
 }
 
 
@@ -320,4 +341,8 @@ done
 if [[ $1 =~ install* ]] || [[ $1 =~ configure* ]]; then
     eval "${1}-${2}"
     exit 0
+elif [[ $1 =~ --help ]]; then
+    echo "=> Things you can disable"
+    echo "=> Run the script with --disable-xxx option"
+    grep -P --only-matching "DISABLE_\w+" ~/install.sh | sort -u
 fi
