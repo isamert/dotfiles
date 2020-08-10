@@ -12,15 +12,6 @@ export ANDROID_SDK_ROOT=/opt/android-sdk
 # Apply GTK themes to QT apps (qt5-styleplugins)
 export QT_QPA_PLATFORMTHEME=gtk2
 
-# fff {{{
-export FFF_CD_FILE=~/.cache/fff/fff.d
-export FFF_FAV1=/run/media/isa/
-export FFF_FAV2=~/Workspace/projects/
-export FFF_FAV3=~/Documents/
-export FFF_FAV4=~/Videos/Shows/
-export FFF_FAV5=~/Videos/Movies/
-# }}}
-
 # Ctrl-Shift-P to search menu items in GTK apps
 if [[ -f /usr/lib/libplotinus.so ]]; then
     export GTK3_MODULES=/usr/lib/libplotinus.so
@@ -44,14 +35,12 @@ export FZF_DEFAULT_OPTS="
 # Run ts_onfinish when a tsp job is finished
 export TS_ONFINISH=ts_onfinish
 
-# SLIMMERJS requires firefox 59
-if [[ -f $HOME/Workspace/temp/firefox/firefox-bin ]]; then
-    export SLIMERJSLAUNCHER=$HOME/Workspace/temp/firefox/firefox-bin
+# NPM make global installs in user directory
+# nvm already uses user dir, so skip if nvm is found
+if ! command -v nvm;; then
+    export NPM_PACKAGES="$HOME/.npm-packages"
+    export NODE_PATH="$NPM_PACKAGES/lib/node_modules:$NODE_PATH"
 fi
-
-# npm stuff (make it work for non-root global installs)
-export NPM_PACKAGES="$HOME/.npm-packages"
-export NODE_PATH="$NPM_PACKAGES/lib/node_modules:$NODE_PATH"
 
 export GOPATH="$HOME/.go"
 export R_LIBS_USER="$HOME/.rlibs"
@@ -78,12 +67,21 @@ export DIR_WALLPAPERS=$HOME/Pictures/wallpapers
 export DIR_SCREENSHOTS=$HOME/Pictures/screenshots
 export DIR_NOTES=$HOME/Documents/notes
 
-if [[ -f $HOME/.extrarc ]]; then
-    . $HOME/.extrarc
-fi
-
 if [[ -f /etc/profile.d/nix-daemon.sh ]]; then
     source /etc/profile.d/nix{,-daemon}.sh
+fi
+
+
+# Load profiles from /etc/profile.d
+if test -d /etc/profile.d/; then
+    for profile in /etc/profile.d/*.sh; do
+        test -r "$profile" && . "$profile"
+    done
+    unset profile
+fi
+
+if [[ -f $HOME/.extrarc ]]; then
+    . $HOME/.extrarc
 fi
 
 if ps 1 | grep sbin && file /sbin/init | grep systemd; then

@@ -6,31 +6,55 @@ antigen bundle git
 antigen bundle zsh-users/zsh-autosuggestions
 antigen bundle zsh-users/zsh-syntax-highlighting
 antigen bundle zsh-users/zsh-history-substring-search
-antigen bundle isamert/zsh-abbrev-alias
 antigen bundle zsh-users/zsh-completions
 antigen theme agnoster
 antigen apply
 # }}}
 
-# Settings {{{
+# history-substring-search settings {{{
+# bind UP and DOWN arrow keys to history substring search
+zmodload zsh/terminfo
+bindkey "$terminfo[kcuu1]" history-substring-search-up
+bindkey "$terminfo[kcud1]" history-substring-search-down
+bindkey -M vicmd 'k' history-substring-search-up
+bindkey -M vicmd 'j' history-substring-search-down
+# }}}
+
+# General settings {{{
 setopt autocd histignoredups appendhistory incappendhistory histreduceblanks
+
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'       # Case insensitive tab completion
+zstyle ':completion:*' rehash true                              # automatically find new executables in path
+zstyle ':completion:*' accept-exact '*(N)'
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path ~/.zsh/cache
 
 HISTFILE=~/.zsh_history
 HISTSIZE=100000
 SAVEHIST=100000
 HISTORY_SUBSTRING_SEARCH_FUZZY=1
+
+bindkey -v                                                      # enable vi keybindings
 # }}}
 
-# Abbreviations {{{
-abbrev-alias --init
-source <(sed 's/alias/abbrev-alias -g/' ~/.config/aliases)
+# Aliases {{{
+source ~/.config/aliases
 # }}}
 
-# Key-bindings {{{
-source /usr/share/fzf/key-bindings.zsh
+# Source some files {{{
+files=(
+    /usr/share/fzf/key-bindings.zsh                             # fzf history search keybindings
+    $HOME/.nix-profile/share/fzf/keybindings.zsh                # fzf history search keybindings
+)
+
+for file in $files; do
+    [[ -f "$file" ]] && source $file
+done
 # }}}
 
+# vterm integration (check out the file for more info) {{{
 is-emacs && source ~/.config/zsh/emacs.sh
+# }}}
 
 # Override agnoster themes prompt_dir {{{
 # https://github.com/sorin-ionescu/prezto/blob/master/modules/prompt/functions/prompt-pwd

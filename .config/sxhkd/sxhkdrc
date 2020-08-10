@@ -26,6 +26,14 @@ super + shift + f
 super + w
     bspc node --close
 
+# kill window
+super + shift + w
+    bspc  node -k
+
+# Make window sticky
+super + i
+    bspc node -g sticky
+
 # next/prev desktop
 super + {n,p}
     bspc desktop --focus {next,prev}.local

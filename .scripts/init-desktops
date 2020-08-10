@@ -15,10 +15,12 @@ monitors="$(xrandr -q | grep -w "connected" | cut -d' ' -f1)"
 export MONITOR_MAIN=""
 export MONITOR_SECONDARY=""
 
-# HDMI1-2 or DP1-2 should be the main monitor if they exists
+# External monitor should be the main monitor, if exists
 case "$monitors" in
     *HDMI1*) export MONITOR_MAIN="HDMI1" ;;
     *HDMI2*) export MONITOR_MAIN="HDMI2" ;;
+    *HDMI-1*) export MONITOR_MAIN="HDMI-1" ;;
+    *HDMI-2*) export MONITOR_MAIN="HDMI-2" ;;
     *DP1*) export MONITOR_MAIN="DP1" ;;
     *DP2*) export MONITOR_MAIN="DP2" ;;
     *VGA1*) export MONITOR_MAIN="VGA1" ;;
@@ -31,11 +33,9 @@ fi
 
 polybar main &
 
-# Run secondary polybar, if needed
-if [[ "$MONITOR_MAIN" != "LVDS1" ]]; then
-    export MONITOR_SECONDARY="LVDS1"
-    polybar secondary &
-fi
+# Run secondary polybar, if there is a secondary monitor
+MONITOR_SECONDARY=$(sed "/$MONITOR_MAIN/d" <<< $monitors)
+[[ -n "$MONITOR_SECONDARY" ]]; polybar secondary &
 
 # Set background
 feh --bg-scale "$HOME/.config/wall.png"
