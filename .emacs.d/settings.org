@@ -293,6 +293,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
 
 ** Fonts
 #+BEGIN_SRC emacs-lisp
+;; TODO: make this a list and then use whichever font exists in the list
 (defconst my-font "Iosevka")
 
 (add-hook
@@ -635,6 +636,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
     :config
     (setq org-fancy-priorities-list '("🅰" "🅱" "🅲" "🅳")))
 
+  ;; This causes some aligning problems when used with the above one
   (use-package org-pretty-tags
     :diminish
     :ensure t
@@ -1957,4 +1959,136 @@ Hit <C-j> after these and get:
   (goto-char (point-min))
   (helm-imenu)
   (setq helm-full-frame nil))
+#+end_src
+** bullet.org
+I have a ~bullet.org~ file that I keep my daily journal and here are some utility functions that use with it. I may document this later (or even publish it as a package?)
+
+#+begin_src emacs-lisp
+  ;; FIXME: insert short day name while creating the day
+  ;; TODO: archive functions: archive-montly, archive-yearly etc
+  ;; TODO: minor mode: org-pretty-tags, org-fancy-priorities
+  ;; TODO: montly, yearly goals/logs/headers.
+  ;;  -> Need some functions to quickly focus into current month logs, year logs etc.
+  ;;  -> Also create migration functions for these.
+  ;;  -> These should come before days of given month/year.
+
+  ;;; Code:
+
+  (defun isamert/insert-new-line-above (text)
+    "Insert a line above the current line with given TEXT."
+    (move-beginning-of-line nil)
+    (insert "\n")
+    (forward-line -1)
+    (insert text))
+
+  (defun isamert/insert-new-last-line (text)
+    "Insert a new line at the end of the file with given TEXT."
+    (goto-char (point-max))
+    (if (= (current-column) 0)
+        (insert (concat text "\n"))
+      (insert (concat "\n" text "\n"))))
+
+  (defun isamert/selected-region-text ()
+    (buffer-substring-no-properties (region-beginning) (region-end)))
+
+  (defun isamert/org-remove-subtree ()
+    (org-mark-subtree)
+    (delete-and-extract-region (region-beginning) (region-end)))
+
+
+
+  (defun isamert/bullet-find-a-day (day)
+    (let ((day-regex (concat "^\\[" day "\\( \\w+\\)?\\].*"))
+          (day-point nil))
+      (org-map-entries
+       (lambda ()
+         (let ((title (org-entry-get nil "ITEM")))
+           (when (string-match day-regex title)
+             (setq day-point (point-marker)))))
+       "LEVEL=1")
+      day-point))
+
+  (defun isamert/bullet-find-today ()
+    (isamert/bullet-find-a-day (isamert/today)))
+
+  (defun isamert/bullet-create-a-day (date focus)
+    (let ((day-entry (isamert/bullet-find-a-day date))
+          (day-regex "^\\[\\([0-9]+-[0-9]+-[0-9]+\\)\\( \\w+\\)?\\].*")
+          (is-last-older nil)
+          (result-date nil)
+          (given-date (date-to-time (concat date "T00")))
+          (content (concat "* [" date "] [/]")))
+      (if day-entry
+          (goto-char day-entry)
+        (progn
+          (org-map-entries
+           (lambda ()
+             (let ((title (org-entry-get nil "ITEM")))
+               (save-match-data
+                 (when (string-match day-regex title)
+                   (let ((current-date (date-to-time (concat (match-string 1 title) "T00"))))
+                     (when (and (not result-date) (time-less-p given-date current-date))
+                       (setq result-date (point-marker))
+                       ))))))
+           "LEVEL=1")
+          (if result-date
+              (progn
+                (goto-char result-date)
+                (isamert/insert-new-line-above content))
+            (isamert/insert-new-last-line content))
+          (when focus
+            (org-narrow-to-subtree))))))
+
+  (defun isamert/bullet-create-given-day (focus)
+    (interactive "P")
+    (isamert/bullet-create-a-day (org-read-date) focus))
+
+  (defun isamert/bullet-focus-a-day (day)
+    "Focus to given DAY."
+    (let ((day-entry (isamert/bullet-find-a-day day)))
+      (when day-entry (progn (goto-char day-entry) (org-narrow-to-subtree)))
+      day-entry))
+
+  (defun isamert/bullet-focus-given-day ()
+    "Focus given days header. If it does not exists, create it."
+    (interactive)
+    (let ((given-date (org-read-date)))
+      (when (not (isamert/bullet-focus-a-day given-date))
+        (isamert/bullet-create-a-day given-date t))))
+
+  (defun isamert/bullet-focus-today ()
+    "Focus todays header. If it does not exists, create it."
+    (interactive)
+    (when (not (isamert/bullet-focus-a-day (isamert/today)))
+      (isamert/bullet-create-today t)))
+
+  (defun isamert/bullet-focus-yesterday ()
+    (interactive)
+    (isamert/bullet-focus-a-day (isamert/date "yesterday")))
+
+  (defun isamert/bullet-create-today (focus)
+    (interactive "P")
+    (isamert/bullet-create-a-day (isamert/today) focus))
+
+  ;; TODO: new line fixes
+  (defun isamert/bullet-move-todos-yesterday-to-today ()
+    (interactive)
+    (isamert/bullet-focus-yesterday)
+    (let* ((item-points '())
+           (items (org-map-entries
+                   (lambda ()
+                     (setq item-points (cons (point) item-points))
+                     (org-mark-subtree)
+                     (isamert/selected-region-text))
+                   "LEVEL=2/TODO")))
+      (mapcar (lambda (x)
+                (goto-char x)
+                (isamert/org-remove-subtree))
+              item-points)
+      (widen)
+      (isamert/bullet-focus-today)
+      (goto-char (point-max))
+      (mapcar (lambda (item)
+                (insert item))
+              items)))
 #+end_src
