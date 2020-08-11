@@ -95,6 +95,9 @@ super + shift + e
 super + {r, shift + r}
     bspc node @/ -C {forward,backward}
 
+super + o
+    bspwmc toggle_inactive_opacity
+
 # #############################################################################
 # apps
 # #############################################################################
