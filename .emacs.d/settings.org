@@ -1399,6 +1399,7 @@ Enable leader key and bind some keys.
       "or" 'org-mode-restart
       "oa" 'org-agenda
       "on" 'org-toggle-narrow-to-subtree
+      "ow" 'widen
 
       ;; magit/git
       "gs" 'magit-status
@@ -1739,15 +1740,18 @@ Hit <C-j> after these and get:
                          '((">="     . ?≥)
                            ("<="     . ?≤)
                            ("defun"  . ?ƒ)
-                           ("or"     . ?≔)
                            ("lambda" . ?λ)))
 
 #+end_src
 
 * my/
-** org-mode links
+** org-mode enhancements
 #+begin_src emacs-lisp
+  ;; TODO: create a function for detecting backlings for header under the cursor.
+
   (defun isamert/org-link-header ()
+    "Interactively select a header and insert it as a link into the buffer.
+  Headers are gathered from all the org files found in `org-directory`."
     (interactive)
     (let* ((cmd (concat "cd " org-directory "; " "rg -t org \"^\\*+\" "))
            (headers (split-string (shell-command-to-string cmd) "\n" t))
@@ -1756,10 +1760,50 @@ Hit <C-j> after these and get:
                   :sources (helm-build-sync-source "headers"
                              :candidates headers
                              :fuzzy-match t)))
-           (link-name (read-string "Enter link name: " selected))
-           ;; TODO: replace filename:match to filename::match
-           (selected-link (concat "[[file:" selected "][" link-name "]]")))
+           (file-and-header (isamert/replace-string (isamert/replace-string-regexp selected "\\(\\*\\|TODO\\|IN-PROGRESS\\|DONE\\|WAITING\\)" "") ": "  "::*"))
+           (link-name (read-string "Enter link text: " (cadr (split-string file-and-header "::\\*"))))
+           (selected-link (concat "[[file:" file-and-header "][" link-name "]]")))
       (insert selected-link)))
+
+#+end_src
+
+** scratch/temporary buffers in side windows
+Here I define two important functions and their helpers.  The following functions are pretty useful for quick note taking or evaluating elisp. Having these buffers in a side window makes them immune to some window commands which is what I want.
+
+- isamert/display-side-scratch-buffer :: This one opens (or closes if it's open) the *scratch* buffer in a side window, on the right. This is nice for quickly evaluating elisp, taking elisp related notes.
+- isamert/display-side-temp-org-buffer :: This one opens (or closes if it's open) the ~temp.org~ file in a in a side window, on the right. This is nice for taking some quick notes, writing some temporary todos etc.
+
+#+begin_src emacs-lisp
+  (defun isamert/buffer-visible-p (buffer)
+   "Check if given BUFFER is visible or not.  BUFFER is a string representing the buffer name."
+    (or (eq buffer (window-buffer (selected-window))) (get-buffer-window buffer)))
+
+  (defun isamert/display-buffer-in-side-window (buffer)
+    "Just like `display-buffer-in-side-window` but only takes a BUFFER and rest of the parameters are for my taste."
+    (select-window
+     (display-buffer-in-side-window
+      buffer
+      (list (cons 'side 'right)
+            (cons 'slot 0)
+            (cons 'window-parameters (list (cons 'no-delete-other-windows t)
+                                           (cons 'no-other-window nil)))))))
+
+  (defun isamert/display-side-scratch-buffer ()
+    "Toggle the scratch buffer in side window.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (if (isamert/buffer-visible-p "*scratch*")
+        (window-toggle-side-windows)
+      (isamert/display-buffer-in-side-window (get-buffer "*scratch*"))))
+
+  (defun isamert/display-side-temp-org-buffer ()
+    "Toggle `temp.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (if (isamert/buffer-visible-p "temp.org")
+        (window-toggle-side-windows)
+      (isamert/display-buffer-in-side-window
+       (save-window-excursion
+         (find-file "~/Documents/notes/temp.org")
+         (current-buffer)))))
 #+end_src
 
 ** org-X-today
@@ -1967,6 +2011,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   ;; FIXME: insert short day name while creating the day
   ;; TODO: archive functions: archive-montly, archive-yearly etc
   ;; TODO: minor mode: org-pretty-tags, org-fancy-priorities
+  ;; TODO: Different header for recurring events and this should be automatically copied to todays view (with calling focus today?)
   ;; TODO: montly, yearly goals/logs/headers.
   ;;  -> Need some functions to quickly focus into current month logs, year logs etc.
   ;;  -> Also create migration functions for these.
