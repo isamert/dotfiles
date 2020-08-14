@@ -17,6 +17,12 @@ if [[ -f /usr/lib/libplotinus.so ]]; then
     export GTK3_MODULES=/usr/lib/libplotinus.so
 fi
 
+export GOPATH="$HOME/.go"
+export R_LIBS_USER="$HOME/.rlibs"
+
+# the PATH
+export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin:$PATH
+
 # fzf stuff {{{
 export FZF_BINDINGS="\
 ctrl-d:page-down,ctrl-u:page-up,\
@@ -35,6 +41,16 @@ export FZF_DEFAULT_OPTS="
 # Run ts_onfinish when a tsp job is finished
 export TS_ONFINISH=ts_onfinish
 
+# node/nvm configuration {{{
+export NVM_DIR="$HOME/.nvm"
+# TODO: source nvm
+# source /usr/share/nvm/init-nvm.sh
+# OR
+#[ -z "$NVM_DIR" ] && export NVM_DIR="$HOME/.nvm"
+#source /usr/share/nvm/nvm.sh
+#source /usr/share/nvm/bash_completion
+#source /usr/share/nvm/install-nvm-exec
+
 # Make global NPM installs in user directory
 # nvm already uses user dir, so skip if nvm is found
 if ! command -v nvm; then
@@ -46,12 +62,7 @@ if ! command -v nvm; then
     export NPM_PACKAGES="$HOME/.npm-packages"
     export NODE_PATH="$NPM_PACKAGES/lib/node_modules:$NODE_PATH"
 fi
-
-export GOPATH="$HOME/.go"
-export R_LIBS_USER="$HOME/.rlibs"
-
-# the PATH
-export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin:$PATH
+# }}}
 
 if command -v jaro; then
     export BROWSER=jaro
