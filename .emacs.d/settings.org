@@ -1788,18 +1788,25 @@ Here I define two important functions and their helpers.  The following function
             (cons 'window-parameters (list (cons 'no-delete-other-windows t)
                                            (cons 'no-other-window nil)))))))
 
+  (defun isamert/remove-window-with-buffer (the-buffer-name)
+    "Remove window containing given THE-BUFFER-NAME."
+    (mapc (lambda (window)
+            (when (string-equal (buffer-name (window-buffer window)) the-buffer-name)
+              (delete-window window)))
+          (window-list (selected-frame))))
+
   (defun isamert/display-side-scratch-buffer ()
     "Toggle the scratch buffer in side window.  The buffer is opened in side window so it can't be accidentaly removed."
     (interactive)
     (if (isamert/buffer-visible-p "*scratch*")
-        (window-toggle-side-windows)
+        (isamert/remove-window-with-buffer "*scratch*")
       (isamert/display-buffer-in-side-window (get-buffer "*scratch*"))))
 
   (defun isamert/display-side-temp-org-buffer ()
     "Toggle `temp.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
     (interactive)
     (if (isamert/buffer-visible-p "temp.org")
-        (window-toggle-side-windows)
+        (isamert/remove-window-with-buffer "temp.org")
       (isamert/display-buffer-in-side-window
        (save-window-excursion
          (find-file "~/Documents/notes/temp.org")
