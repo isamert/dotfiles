@@ -558,6 +558,9 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 ;; Http request in org-mode babel.
 (use-package ob-http :ensure t)
 
+;; Typescript
+(use-package ob-typescript :ensure t)
+
 ;; Scheme
 (use-package geiser
   :ensure t
@@ -638,7 +641,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 
   ;; This causes some aligning problems when used with the above one
   (use-package org-pretty-tags
-    :diminish
+    :diminish org-pretty-tags-mode
     :ensure t
     :config
     (setq org-pretty-tags-surrogate-strings
@@ -659,11 +662,6 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 #+BEGIN_SRC emacs-lisp
 (use-package org-ql :ensure t)
 #+END_SRC
-** note-taking (org-roam)
-#+begin_src emacs-lisp
-  (use-package org-roam
-    :ensure t)
-#+end_src
 ** TODO org-capture
 - [ ] Add a shortcut.
 - [ ] Add more templates.
@@ -757,22 +755,15 @@ Show TODO/FIXME etc in magit-status buffer.
 Eyebrowse creates pre-defined workspaces. Don't use them like tabs, I generally use every workspace for different projects/different contexts.
 
 #+BEGIN_SRC emacs-lisp
-(use-package eyebrowse
-  :ensure t
-  :diminish eyebrowse-mode
-  :init
-  (setq eyebrowse-new-workspace t
-        eyebrowse-mode-line-style 'current) ;; Only show the current workspace number in modeline. not all the active workspaces
-  :config
-  (progn
-    (define-key eyebrowse-mode-map (kbd "M-1") 'eyebrowse-switch-to-window-config-1)
-    (define-key eyebrowse-mode-map (kbd "M-2") 'eyebrowse-switch-to-window-config-2)
-    (define-key eyebrowse-mode-map (kbd "M-3") 'eyebrowse-switch-to-window-config-3)
-    (define-key eyebrowse-mode-map (kbd "M-4") 'eyebrowse-switch-to-window-config-4)
-    (define-key eyebrowse-mode-map (kbd "M-5") 'eyebrowse-switch-to-window-config-5)
-    (define-key evil-normal-state-map (kbd "M-.") 'eyebrowse-next-window-config)
-    (define-key evil-normal-state-map (kbd "M-,") 'eyebrowse-prev-window-config)
-    (eyebrowse-mode t)))
+  (use-package perspective
+    :ensure t
+    :config
+    (evil-define-key 'normal persp-mode-map
+      (kbd "M-,") 'persp-prev
+      (kbd "M-.") 'persp-next
+      (kbd "M-h") 'evil-window-left
+      (kbd "M-l") 'evil-window-right)
+    (add-hook 'kill-emacs-hook #'persp-state-save))
 #+END_SRC
 
 ** avy
@@ -940,29 +931,32 @@ I have manually set up names for projects in treemacs, because it was fairly eas
 
 ** company
 *** Install and configure
+
 #+BEGIN_SRC emacs-lisp
-(use-package company
-  :ensure t
-  :init
-  (setq company-selection-wrap-around t  ;; return to first completion after the last one (cycles)
-        company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode org-mode markdown-mode)
-        company-minimum-prefix-length 1) ;; start completing after 1 char
-  :config
-  (progn
+  (use-package company
+    :ensure t
+    :init
+    (setq company-selection-wrap-around t  ;; return to first completion after the last one (cycles)
+          company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode)
+          company-minimum-prefix-length 1) ;; start completing after 1 char
+    :config
     (add-hook 'after-init-hook 'global-company-mode)
     (company-tng-configure-default)   ;; cycle trough suggestions using tab
-    (evil-define-key 'insert 'global
-      (kbd "M-i") 'company-complete)))
 
-;; Nice icons for completions (works with company-lsp)
-;; (use-package company-box
-;;   :ensure t
-;;   :diminish
-;;   :quelpa (company-box
-;;            :fetcher github
-;;            :branch "WIP"
-;;            :repo "yyoncho/company-box")
-;;   :hook (company-mode . company-box-mode))
+    (evil-define-key 'insert 'global
+      (kbd "C-SPC") 'company-complete)
+    (define-key company-active-map
+      (kbd "<return>") 'company-complete-selection))
+
+  ;; TODO: Nice icons for completions (works with company-lsp)
+  ;; (use-package company-box
+  ;;   :ensure t
+  ;;   :diminish
+  ;;   :quelpa (company-box
+  ;;            :fetcher github
+  ;;            :branch "WIP"
+  ;;            :repo "yyoncho/company-box")
+  ;;   :hook (company-mode . company-box-mode))
 #+END_SRC
 *** quickhelp
 Shows a nice tooltip while idling on a completion.
@@ -1074,6 +1068,12 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains some helpful commands that enriches ~vterm~ usage.
 
 #+BEGIN_SRC emacs-lisp
+  (defun evil-collection-vterm-escape-stay ()
+    "Go back to normal state but don't move cursor backwards.
+  Moving cursor backwards is the default vim behavior but
+  it is not appropriate in some cases like terminals."
+    (setq-local evil-move-cursor-back nil))
+
   (use-package vterm
     :ensure t
     :config
@@ -1087,19 +1087,20 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
       (kbd "]") 'vterm-next-prompt
       (kbd "u") 'vterm-undo
       (kbd "u") 'vterm-undo
-      (kbd "p") 'vterm-yank))
+      (kbd "p") 'vterm-yank)
+    (setq vterm-kill-buffer-on-exit t)
+    (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay))
 
-  (use-package multi-vterm
-    :ensure t
-    :config
-    ;; (evil-define-key 'normal vterm-mode-map
-    ;;   (kbd ",c")       #'multi-vterm
-    ;;   (kbd ",n")       #'multi-vterm-next
-    ;;   (kbd ",p")       #'multi-vterm-prev
-    ;;   (kbd "i")        #'evil-insert-resume
-    ;;   (kbd "o")        #'evil-insert-resume
-    ;;   )
-    (isamert/shackle-window "\\*vterm-dedicated\\*" 0.4))
+  (defconst isamert/vterm-dedicated-buffer-name "*vterm-dedicated*")
+  (isamert/shackle-window isamert/vterm-dedicated-buffer-name 40)
+
+  (defun isamert/vterm-dedicated ()
+    "Open/toggle a dedicated vterm buffer."
+    (interactive)
+    (cond
+     ((isamert/buffer-visible-p isamert/vterm-dedicated-buffer-name) (isamert/remove-window-with-buffer isamert/vterm-dedicated-buffer-name))
+     ((get-buffer isamert/vterm-dedicated-buffer-name) (switch-to-buffer-other-window isamert/vterm-dedicated-buffer-name))
+     (t (vterm isamert/vterm-dedicated-buffer-name))))
 #+END_SRC
 
 ** ispell
@@ -1186,51 +1187,50 @@ Quickly switch between windows/kill them or swap them with each other.
 
 ** telephone-line
 #+BEGIN_SRC emacs-lisp
-;; Color settings
-;; I just extracted these 2 functions from the telephone-line source.
-;; and only switched their colors.
-(defface telephone-line-evil-insert
-  '((t (:background "red" :inherit telephone-line-evil)))
-  "Face used in evil color-coded segments when in Insert state."
-  :group 'telephone-line-evil)
+  ;; Color settings
+  ;; I just extracted these 2 functions from the telephone-line source.
+  ;; and only switched their colors.
+  (defface telephone-line-evil-insert
+    '((t (:background "red" :inherit telephone-line-evil)))
+    "Face used in evil color-coded segments when in Insert state."
+    :group 'telephone-line-evil)
 
-(defface telephone-line-evil-normal
-  '((t (:background "dark slate blue" :inherit telephone-line-evil)))
-  "Face used in evil color-coded segments when in Normal state."
-  :group 'telephone-line-evil)
+  (defface telephone-line-evil-normal
+    '((t (:background "dark slate blue" :inherit telephone-line-evil)))
+    "Face used in evil color-coded segments when in Normal state."
+    :group 'telephone-line-evil)
 
-(use-package telephone-line
-  :ensure t
-  :config
-    (progn
-      ;; Separator settings
-      ;; FIXME: if I set theese here, non-gui emacs fail to show modeline
-      (setq telephone-line-primary-left-separator 'telephone-line-cubed-left
-            telephone-line-secondary-left-separator 'telephone-line-cubed-hollow-left
-            telephone-line-primary-right-separator 'telephone-line-cubed-right
-            telephone-line-secondary-right-separator 'telephone-line-cubed-hollow-right)
+  (use-package telephone-line
+    :ensure t
+    :config
+      (progn
+        ;; Separator settings
+        ;; FIXME: if I set theese here, non-gui emacs fail to show modeline
+        (setq telephone-line-primary-left-separator 'telephone-line-flat
+              telephone-line-secondary-left-separator 'telephone-line-flat
+              telephone-line-primary-right-separator 'telephone-line-flat
+              telephone-line-secondary-right-separator 'telephone-line-flat)
 
-       (setq telephone-line-evil-use-short-tag t)
+         (setq telephone-line-evil-use-short-tag t)
 
-      ;; Define segments
-      (setq telephone-line-lhs
-          '((evil   . (telephone-line-evil-tag-segment))
-            (accent . (telephone-line-vc-segment
-                       telephone-line-process-segment))
-            (nil    . (telephone-line-buffer-segment
-                       telephone-line-minor-mode-segment))))
+        ;; Define segments
+        (setq telephone-line-lhs
+            '((evil   . (telephone-line-evil-tag-segment))
+              (accent . (telephone-line-vc-segment
+                         telephone-line-process-segment))
+              (nil    . (telephone-line-buffer-segment))))
 
-      (setq telephone-line-center-rhs
-          '((nil    . (telephone-line-flycheck-segment))))
+        (setq telephone-line-center-rhs
+            '((nil    . (telephone-line-flycheck-segment))))
 
-      (setq telephone-line-rhs
-          '((nil    . (telephone-line-misc-info-segment))
-            (accent . (telephone-line-major-mode-segment))
-            (evil   . (telephone-line-airline-position-segment))))
+        (setq telephone-line-rhs
+            '((nil    . (telephone-line-misc-info-segment))
+              (accent . (telephone-line-major-mode-segment))
+              (evil   . (telephone-line-airline-position-segment))))
 
-      ;; Misc settings
-      (setq telephone-line-height 20)
-      (telephone-line-mode t)))
+        ;; Misc settings
+        (setq telephone-line-height 20)
+        (telephone-line-mode t)))
 #+END_SRC
 
 ** expand-region
@@ -1258,13 +1258,14 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
 
 ** yasnippets
 #+BEGIN_SRC emacs-lisp
-(use-package yasnippet
-  :ensure t
-  ;;:hook (prog-mode . yas-minor-mode)
-  :config
-  (setq yas-snippet-dirs '("~/.emacs.d/snippets"))
-  ;; (yas-reload-all)
-  (yas-global-mode 1))
+  (use-package yasnippet
+    :ensure t
+    :config
+    (setq yas-snippet-dirs '("~/.emacs.d/snippets"))
+    (yas-global-mode 1)
+
+    (evil-define-key 'insert 'global
+      (kbd "M-s") 'company-yasnippet))
 #+END_SRC
 
 ** highlight-indent-guides
@@ -1345,30 +1346,26 @@ Better help dialogs with syntax highlighting, references, source etc.
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
 ** Some general keybindings
 #+BEGIN_SRC emacs-lisp
-(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-(global-set-key (kbd "C-x k") 'kill-this-buffer)
+  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
-(evil-define-key 'normal 'global
-  "?"  'helm-semantic-or-imenu
-  (kbd "M-e") 'er/expand-region
-  (kbd "M-f") 'treemacs
-  (kbd "C-f") 'helm-occur
-  (kbd "C-s") 'save-buffer)
+  (evil-define-key 'normal 'global
+    "?"  'helm-semantic-or-imenu
+    (kbd "M-e") 'er/expand-region
+    (kbd "M-f") 'treemacs
+    (kbd "C-f") 'helm-occur
+    (kbd "C-s") 'save-buffer)
 
-(evil-define-key 'normal prog-mode-map
-  (kbd "M-;") 'comment-line
-  (kbd "M-:") 'comment-dwim
-  "gd" 'xref-find-definitions
-  "gf" 'xref-find-references)
+  (evil-define-key 'normal prog-mode-map
+    (kbd "M-;") 'comment-line
+    (kbd "M-:") 'comment-dwim
+    "gd" 'xref-find-definitions
+    "gf" 'xref-find-references)
 
-(evil-define-key 'normal lsp-mode-map
-  "gf" 'lsp-ui-peek-find-references
-  "gd" 'lsp-ui-peek-find-definitions
-  "gi" 'lsp-ui-peek-find-implementation
-  "ga" 'lsp-execute-code-action)
-
-(evil-define-key 'insert prog-mode-map
-  (kbd "M-s") 'company-yasnippet)
+  (evil-define-key 'normal lsp-mode-map
+    "gf" 'lsp-ui-peek-find-references
+    "gd" 'lsp-ui-peek-find-definitions
+    "gi" 'lsp-ui-peek-find-implementation
+    "ga" 'lsp-execute-code-action)
 #+END_SRC
 
 ** evil-leader
@@ -1726,7 +1723,6 @@ Hit <C-j> after these and get:
 ** typescript
 #+begin_src emacs-lisp
 (use-package typescript-mode :ensure t)
-(use-package ob-typescript :ensure t)
 #+end_src
 
 ** json
@@ -2068,7 +2064,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
           (day-regex "^\\[\\([0-9]+-[0-9]+-[0-9]+\\)\\( \\w+\\)?\\].*")
           (is-last-older nil)
           (result-date nil)
-          (given-date (date-to-time (concat date "T00")))
+          (given-date (date-to-time (concat date "T000")))
           (content (concat "* [" date "] [/]")))
       (if day-entry
           (goto-char day-entry)
@@ -2078,7 +2074,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
              (let ((title (org-entry-get nil "ITEM")))
                (save-match-data
                  (when (string-match day-regex title)
-                   (let ((current-date (date-to-time (concat (match-string 1 title) "T00"))))
+                   (let ((current-date (date-to-time (concat (match-string 1 title) "T000"))))
                      (when (and (not result-date) (time-less-p given-date current-date))
                        (setq result-date (point-marker))
                        ))))))
