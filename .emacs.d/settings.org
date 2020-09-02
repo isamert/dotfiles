@@ -736,10 +736,11 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
     :config
     (setq org-pretty-tags-surrogate-strings
           '(("work"  . "⚒")
-            ("side"  . "⟐")
-            ("must"  . "🔑")
+            ("side"  . "❄")
+            ("must"  . "✠")
             ("rutin" . "♟")
-            ("study" . "🜂")))
+            ("study" . "☣")))
+
     (org-pretty-tags-global-mode))
 
 
@@ -853,8 +854,8 @@ Show TODO/FIXME etc in magit-status buffer.
   :ensure t)
 #+END_SRC
 
-** eyebrowse
-Eyebrowse creates pre-defined workspaces. Don't use them like tabs, I generally use every workspace for different projects/different contexts.
+** perspective.el
+Although I like eyebrowse, what I really want is to have isolated workspaces because buffer management just gets pretty complicated. I like to combine perspective.el and eyebrowse and I saw that spacemacs has a layer called layouts that does exactly what I want but I haven't had the time to figure it out and apply to my config.
 
 #+BEGIN_SRC emacs-lisp
   (use-package perspective
@@ -862,10 +863,20 @@ Eyebrowse creates pre-defined workspaces. Don't use them like tabs, I generally 
     :config
     (evil-define-key 'normal persp-mode-map
       (kbd "M-,") 'persp-prev
-      (kbd "M-.") 'persp-next
-      (kbd "M-h") 'evil-window-left
-      (kbd "M-l") 'evil-window-right)
-    (add-hook 'kill-emacs-hook #'persp-state-save))
+      (kbd "M-.") 'persp-next)
+    (evil-leader/set-key
+      "ll" 'persp-switch-last
+      "ls" 'persp-switch
+      "lk" 'persp-kill
+      "lm" 'persp-toggle-modestring)
+    (add-hook 'kill-emacs-hook #'persp-state-save)
+    (persp-mode t))
+
+  (defun persp-toggle-modestring ()
+    (interactive)
+    (if persp-show-modestring
+        (persp-turn-off-modestring)
+      (persp-turn-on-modestring)))
 #+END_SRC
 
 ** avy
