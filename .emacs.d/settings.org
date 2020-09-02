@@ -425,7 +425,7 @@ Enable leader key and bind some keys.
       ;; buffers
       "bq" 'evil-quit
       "bd" 'evil-delete-buffer
-      "bb" 'bufler-switch-buffer)
+      "bb" 'bufler-switch-buffer))
 #+END_SRC
 
 ** evil-mc
