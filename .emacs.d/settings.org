@@ -2128,4 +2128,12 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (mapcar (lambda (item)
                 (insert item))
               items)))
+
+  ;; Keybindings
+  (evil-leader/set-key
+    "obt" 'isamert/bullet-focus-today
+    "obm" 'isamert/bullet-move-todos-yesterday-to-today
+    "oby" 'isamert/bullet-focus-yesterday
+    "obf" 'isamert/bullet-focus-given-day
+    "obc" 'isamert/bullet-create-given-day)
 #+end_src
