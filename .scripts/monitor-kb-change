@@ -1,0 +1,35 @@
+#! /usr/bin/env python3
+
+# Whenever I connect a new keyboard, I need to run xmodmap and restart xcape.
+# This script does this automatically.
+
+import pyudev
+import time
+import subprocess
+import argparse
+
+
+def reload_keyboard_settings(device):
+    print(device.device_path)
+
+    # My keyboard, from the output of `lsusb`
+    if not "045e:07a5".upper() in device.device_path.upper():
+        return
+
+    time.sleep(1)
+    xmod = subprocess.run("xmodmap ~/.Xmodmap", shell=True, capture_output=True)
+    xcape = subprocess.run("systemctl --user restart xcape", shell=True, capture_output=True)
+
+#
+# Init
+#
+ctx = pyudev.Context()
+monitor = pyudev.Monitor.from_netlink(ctx)
+monitor.filter_by("input")
+
+for device in iter(monitor.poll, None):
+    if device.action != "add" or not device.is_initialized:
+        continue
+
+    reload_keyboard_settings(device)
+

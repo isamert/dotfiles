@@ -68,7 +68,9 @@ function install-jaro {
 
     echo "===== Installing jaro ====="
 
-    curl -fLo ~/.local/share/bin/jaro --create-dirs https://raw.githubusercontent.com/isamert/jaro/master/jaro
+    local JARO_PATH=$HOME/.local/bin/jaro
+    curl -fLo "$JARO_PATH" --create-dirs https://raw.githubusercontent.com/isamert/jaro/master/jaro
+    chmod +x "$JARO_PATH"
     install-package guile
 }
 
@@ -282,13 +284,14 @@ function configure-systemduser {
 
     echo "===== Configuring systemd user ====="
 
-    if [[ -z $DISABLE_GUI ]]; then
-        [[ -z $DISABLE_COPYQ ]] && systemctl --user enable --now copyq.service
-        [[ -z $DISABLE_GEOCLUE ]] && systemctl --user enable --now geoclue-agent.service
-        [[ -z $DISABLE_REDSHIFT ]] && systemctl --user enable --now redshift.service
-        [[ -z $DISABLE_UNCLUTTER ]] && systemctl --user enable --now unclutter.service
-        [[ -z $DISABLE_UDISKIE ]] && systemctl --user enable --now udiskie.service
-        [[ -z $DISABLE_XCAPE ]] && systemctl --user enable --now xcape.service
+    if [[ -n $DISABLE_GUI ]]; then
+        [[ -n $DISABLE_COPYQ ]] && systemctl --user enable --now copyq.service
+        [[ -n $DISABLE_GEOCLUE ]] && systemctl --user enable --now geoclue-agent.service
+        [[ -n $DISABLE_REDSHIFT ]] && systemctl --user enable --now redshift.service
+        [[ -n $DISABLE_UNCLUTTER ]] && systemctl --user enable --now unclutter.service
+        [[ -n $DISABLE_UDISKIE ]] && systemctl --user enable --now udiskie.service
+        [[ -n $DISABLE_XCAPE ]] && systemctl --user enable --now xcape.service
+        [[ -n $DISABLE_XCAPE || -n $DISABLE_XMODMAP ]] && systemctl --user enable --now monitor-kb-change.service
     fi
 
     [[ -z $DISABLE_SYNCTHING ]] && systemctl --user enable --now syncthing.service

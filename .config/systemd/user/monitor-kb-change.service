@@ -1,0 +1,11 @@
+[Unit]
+Description=Detect when a keyboard is attached and make neccesary configurations
+
+[Service]
+ExecStart=/usr/bin/env python3 %h/.scripts/monitor-kb-change
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=user-graphical-login.target
+
