@@ -5,6 +5,8 @@ Description=xcape
 Type=forking
 ExecStart=xcape -e 'Hyper_L=Escape'
 Restart=always
+RestartSec=2
 
 [Install]
 WantedBy=user-graphical-login.target
+
