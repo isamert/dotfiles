@@ -85,7 +85,7 @@ super + {shift,_} + equal
 
 # switch to next card (nvidia/intel)
 super + shift + m
-    optimus-manager --no-confirm --switch auto
+    if [[ $(optimus-manager --print-mode | grep -iE '(intel|nvidia)') == *'intel' ]]; then; optimus-manager --no-confirm --switch nvidia; else; optimus-manager --no-confirm --switch nvidia; fi
 
 # logout
 super + shift + e
