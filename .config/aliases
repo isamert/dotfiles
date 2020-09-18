@@ -34,6 +34,7 @@ alias .....="cd ../../../.."
 alias df="df -H"
 alias du="ncdu"
 alias xpaste="xclip -selection clipboard -o" # paste cb content
+alias fastssh="ssh -Y -C -c chacha20-poly1305@openssh.com"
 
 #alias ls="
 #alias lls="ls -lthG --color --group-directories-first"
