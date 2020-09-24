@@ -97,7 +97,7 @@ Some basic variable and function definitions that will be used in configuration.
 
   (defun isamert/s-trim (s c)
     "Remove whitespace at the beginning and end of S."
-    (s-trim-left (s-trim-right s c) c))
+    (isamert/s-trim-left (isamert/s-trim-right s c) c))
 
 
   (defun isamert/find-all (regex str)
@@ -113,7 +113,7 @@ Some basic variable and function definitions that will be used in configuration.
 
 #+RESULTS:
 : isamert/find-all
-
+[[file:settings.org::*org-alert][org-alert]]
 ** Package repos
 Add ~melpa~ package archive.
 
@@ -729,19 +729,20 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
     :config
     (setq org-fancy-priorities-list '("🅰" "🅱" "🅲" "🅳")))
 
+  ;; TODO: fix line height problem
   ;; This causes some aligning problems when used with the above one
-  (use-package org-pretty-tags
-    :diminish org-pretty-tags-mode
-    :ensure t
-    :config
-    (setq org-pretty-tags-surrogate-strings
-          '(("work"  . "⚒")
-            ("side"  . "❄")
-            ("must"  . "✠")
-            ("rutin" . "♟")
-            ("study" . "☣")))
+  ;; (use-package org-pretty-tags
+  ;;   :diminish org-pretty-tags-mode
+  ;;   :ensure t
+  ;;   :config
+  ;;   (setq org-pretty-tags-surrogate-strings
+  ;;         '(("work"  . "⚒")
+  ;;           ("side"  . "❄")
+  ;;           ("must"  . "✠")
+  ;;           ("rutin" . "♟")
+  ;;           ("study" . "☣")))
 
-    (org-pretty-tags-global-mode))
+  ;;   (org-pretty-tags-global-mode))
 
 
   (isamert/prettify-mode 'org-mode-hook
@@ -996,7 +997,7 @@ This function adds =groupped_projects= to =projectile-project-search= path.
 (defun isamert/projectile-project-paths ()
   (append `(,isamert/projects-root)
     (isamert/flatmapcar (lambda (dir) (if (file-directory-p (concat dir "/.git")) '() `(,dir)))
-                (directory-files isamert/projects-root t directory-files-no-dot-files-regexp))))
+                (directory-files isamert/projects-root t "^[^.]"))))
 #+END_SRC
 
 *** Better project names
@@ -1104,62 +1105,53 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
 #+BEGIN_SRC emacs-lisp
 (use-package origami
   :ensure t
-  :hook ((web-mode . origami-mode)
-          (js-mode . origami-mode)))
+  :hook ((web-mode js-mode yaml-mode) . origami-mode))
 #+END_SRC
 ** lsp-mode
 #+BEGIN_SRC emacs-lisp
-(use-package lsp-mode
-  :commands lsp
-  :hook ((web-mode . lsp)
-         (js-mode . lsp)
-         (typescript-mode . lsp)
-         (dhall-mode . lsp)
-         (java-mode . lsp))
-  :init
-  (setq lsp-prefer-flymake nil
-        lsp-use-native-json t
-        lsp-enable-xref t
-        lsp-enable-links t
-        lsp-enable-folding t
-        lsp-enable-symbol-highlighting t
-        lsp-enable-indentation nil
-        lsp-enable-on-type-formatting nil
-        lsp-before-save-edits nil
-        lsp-enable-indentation nil
-        lsp-eldoc-render-all nil
-        ;;lsp-enable-completion-at-point nil
-        lsp-enable-snippet t))
+  (use-package lsp-mode
+    :commands lsp
+    :hook ((web-mode . lsp)
+           (js-mode . lsp)
+           (typescript-mode . lsp)
+           (dhall-mode . lsp)
+           (java-mode . lsp))
+    :init
+    (setq lsp-prefer-flymake nil
+          lsp-use-native-json t
+          lsp-enable-xref t
+          lsp-enable-links t
+          lsp-enable-folding t
+          lsp-enable-symbol-highlighting t
+          lsp-enable-indentation nil
+          lsp-enable-on-type-formatting nil
+          lsp-before-save-edits nil
+          lsp-enable-indentation nil
+          lsp-eldoc-render-all nil
+          ;;lsp-enable-completion-at-point nil
+          lsp-enable-snippet t))
 
-(use-package lsp-ui
-  :ensure t
-  :commands lsp-ui-mode
-  :config
-  (setq lsp-ui-sideline-show-code-actions nil))
+  (use-package lsp-ui
+    :ensure t
+    :commands lsp-ui-mode
+    :config
+    (setq lsp-ui-sideline-show-code-actions nil))
 
-(use-package company-lsp
-  :ensure t
-  :commands company-lsp
-  :config
-  (setq company-lsp-cache-candidates 'auto)
-  :init
-  (push 'company-lsp company-backends))
+  (use-package helm-lsp
+    :ensure t
+    :commands helm-lsp-workspace-symbol)
 
-(use-package helm-lsp
-  :ensure t
-  :commands helm-lsp-workspace-symbol)
+  (use-package lsp-treemacs
+    :ensure t
+    :commands lsp-treemacs
+    :config
+    (lsp-treemacs-sync-mode 1))
 
-(use-package lsp-treemacs
-  :ensure t
-  :commands lsp-treemacs
-  :config
-  (lsp-treemacs-sync-mode 1))
-
-(use-package dap-mode
-  :ensure t :after lsp-mode
-  :config
-  (dap-mode t)
-  (dap-ui-mode t))
+  (use-package dap-mode
+    :ensure t :after lsp-mode
+    :config
+    (dap-mode t)
+    (dap-ui-mode t))
 #+END_SRC
 
 ** eshell
@@ -1308,14 +1300,15 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 ** ace-window
 Quickly switch between windows/kill them or swap them with each other.
 #+begin_src emacs-lisp
-(use-package ace-window
-  :ensure t
-  :config
-  (setq aw-dispatch-always t)                   ;; show selection even if window count is < 3
-  (setq aw-keys '(?a ?d ?f ?g ?h ?j ?k ?l))     ;; window selection keys
-  (add-to-list 'aw-dispatch-alist '(?s aw-swap-window "Swap Windows")) ;; <ace-window>s => swap window with
-  (global-set-key (kbd "M-q") 'ace-window)
-)
+  (use-package ace-window
+    :ensure t
+    :config
+    (set-face-attribute 'aw-leading-char-face nil :height 400) ;; I'm blind I guess
+    (setq aw-dispatch-always t)                   ;; show selection even if window count is < 3
+    (setq aw-keys '(?a ?d ?f ?g ?h ?j ?k ?l))     ;; window selection keys
+    (add-to-list 'aw-dispatch-alist '(?s aw-swap-window "Swap Windows")) ;; <ace-window>s => swap window with
+    (evil-leader/set-key
+      "bq" 'ace-window))
 #+end_src
 
 ** telephone-line
@@ -1454,7 +1447,33 @@ Better help dialogs with syntax highlighting, references, source etc.
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
+** OSX
+#+begin_src emacs-lisp
+  (when (eq system-type 'darwin)
+    ;; I set the following in Linux using xmodmap but it's kinda
+    ;; impossible to do it in OSX I guess.
+
+    ;; I use an external keyboard, this makes AltGr and Meta (Alt) work as expected
+    ;; I have also inverted Meta and Control keys system-wide or something, so
+    ;; this setting is done according to that.
+    (setq ns-option-modifier 'meta
+          ns-right-alternate-modifier 'none)
+
+    ;; (define-key key-translition-map ...) is better than (global-define-key ...)
+    ;; because this just remaps key everywhere to given key so that the mappings
+    ;; works in command mode, isearch etc.
+    ;; AltGr + k -> Up
+    ;; AltGr + j -> Down
+    (define-key key-translation-map (kbd "˚") (kbd "<up>"))
+    (define-key key-translation-map (kbd "Δ") (kbd "<down>"))
+
+    ;; AltGr + [ -> (
+    ;; AltGr + ] -> )
+    (define-key key-translation-map (kbd "“") (kbd "("))
+    (define-key key-translation-map (kbd "‘") (kbd ")")))
+#+end_src
 ** Some general keybindings
+
 #+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
@@ -1733,28 +1752,142 @@ Hit <C-j> after these and get:
   (use-package nix-mode
     :ensure t
     :mode "\\.nix\\'")
+
+  (defun isamert/set-exec-path-from-nix-shell ()
+    (interactive)
+    (let ((path-from-shell (shell-command-to-string "nix-shell --quiet --run 'echo $PATH'")))
+      (setenv "PATH" path-from-shell)
+      (setq exec-path (split-string path-from-shell path-separator))))
 #+end_src
 * my/
 ** org-mode enhancements
 #+begin_src emacs-lisp
   ;; TODO: create a function for detecting backlings for header under the cursor.
 
+  ;;
+  ;; Formatting funcs
+  ;;
+
+  (defun isamert/b-blue (str)
+    (propertize str 'font-lock-face '(:foreground "sky blue" :height 150)))
+
+  (defun isamert/b-plum (str)
+    (propertize str 'font-lock-face '(:foreground "plum" :height 130)))
+
+  ;;
+  ;; Utility
+  ;;
+
+  ;; TODO: get keywords dynamically
+  ;; TODO: only remove the starts at the beginning of the line
+  (defun isamert/org-header-line-to-title (line)
+    "Remove TODO/*/unnecessary whitespace from given LINE.
+  Then return the title of given `org-mode` header.
+  Just like (org-entry-get nil \"ITEM\") but works on given string."
+    (--> line
+         (isamert/replace-string-regexp it "\\(\\*\\|TODO\\|PROG\\|DONE\\|WAIT\\)" "")
+         (isamert/replace-string-regexp it ":\\(\\w+:\\)+$" "")
+         (isamert/s-trim it "\\(\s\\|\n\\)")))
+
+  (defun isamert/org-find-header-of-given-line (file line-number)
+    "Find and return the first parent header of given LINE-NUMBER in FILE.
+  It returns a list in this format (result-line-number title)."
+    (-let ((line-content (shell-command-to-string (format "sed '%sq;d' %s" line-number file)))
+           (search-regexp (if (string-prefix-p "*" line-content)
+                              (format "^\\*{%d} " (->> (split-string line-content " ")
+                                                       (car)
+                                                       (length)
+                                                       (1-)))
+                            "^\\*"))
+           (cmd (format "head -n %s \"%s\" | tac | rg --line-number --max-count 1 '%s'"
+                        line-number
+                        file
+                        search-regexp))
+           ((result-line-number . title) (split-string (shell-command-to-string cmd) ":")))
+      (message (shell-command-to-string cmd))
+      `(,(- (1+ line-number) (string-to-number result-line-number))
+        ,(isamert/org-header-line-to-title (string-join title ":")))))
+
+  ;; TODO: probably will be pretty slow
+  (defun isamert/org-find-header-hierarchy-of-given-line (file line-number)
+    (let ((last-parent-info nil)
+          (last-parent-line))
+      (while (string= "" last-parent)
+        (setq last-parent (isamert/org-find-header-of-given-line file line)))))
+
+  (defun isamert/select-one-of (the-candidates &optional buffer-name)
+    (let ((name (if buffer-name
+                    buffer-name
+                  "isamert-select")))
+      (helm :buffer (format "*helm-%s*" name)
+            :sources (helm-build-sync-source name
+                       :candidates the-candidates
+                       :fuzzy-match t))))
+
+  ;;
+  ;; Main
+  ;;
+
+  ;; TODO: colorize this maybe
   (defun isamert/org-link-header ()
     "Interactively select a header and insert it as a link into the buffer.
   Headers are gathered from all the org files found in `org-directory`."
     (interactive)
-    (let* ((cmd (concat "cd " org-directory "; " "rg -t org \"^\\*+\" "))
-           (headers (split-string (shell-command-to-string cmd) "\n" t))
-           (selected
-            (helm :buffer "*helm-org-headers*"
-                  :sources (helm-build-sync-source "headers"
-                             :candidates headers
-                             :fuzzy-match t)))
-           (file-and-header (isamert/replace-string (isamert/replace-string-regexp selected "\\(\\*\\|TODO\\|IN-PROGRESS\\|DONE\\|WAITING\\)" "") ": "  "::*"))
-           (link-name (read-string "Enter link text: " (cadr (split-string file-and-header "::\\*"))))
-           (selected-link (concat "[[file:" file-and-header "][" link-name "]]")))
+    (-let* ((cmd (concat "cd " org-directory "; " "rg -t org \"^\\*+\" "))
+            (headers (--> (shell-command-to-string cmd)
+                          (split-string it "\n" t)
+                          (-map (lambda (line)
+                                  (-let (((file-name . content) (split-string line ":")))
+                                    (format "%s » %s"
+                                            (isamert/b-blue file-name)
+                                            (isamert/org-header-line-to-title (string-join content ":")))))
+                                it)))
+            (selected (isamert/select-one-of headers))
+            ((file-name . header-title) (split-string selected " » "))
+            (link-name (read-string "Enter link text: " header-title))
+            (selected-link (concat "[[file:" file-name "::*" (string-join header-title) "][" link-name "]]")))
       (insert selected-link)))
 
+  (defun isamert/org-backlinks ()
+    "List all the places that has refered the header under the cursor."
+    (interactive)
+    (-let ((curr-file-name (file-name-nondirectory (buffer-file-name)))
+           (header-title (org-entry-get nil "ITEM"))
+           (cmd (concat
+                 "rg"
+                 " --line-number"
+                 " --with-filename"
+                 " --no-heading"
+                 " --only-matching"
+                 " --ignore-case"
+                 " "
+                 "'(.{5,50})?\\[\\[file:(\\./)?"
+                 curr-file-name
+                 "::\\s*\\*?\\s*?"
+                 header-title
+                 "\s*\\]\\[([^\\[\\]]+)]\\](.{5,50})?' "
+                 " --replace"
+                 " "
+                 "'...$1$3$4...'"
+                 ))
+           (backlinks (mapcar (lambda (line)
+                                (-let (((file-name line-no . content) (split-string line ":")))
+                                  (format "%s:%s » %s » %s"
+                                          (isamert/b-blue file-name)
+                                          line-no
+                                          (->> (string-to-number line-no)
+                                               (isamert/org-find-header-of-given-line file-name)
+                                               (cadr)
+                                               (isamert/b-plum))
+                                          (string-join content ":"))))
+                              (split-string (shell-command-to-string cmd) "\n" t)))
+           (selected (isamert/select-one-of backlinks))
+           ((file-name line-no) (split-string selected ":")))
+      (find-file file-name)
+      (goto-char 0)
+      (->> (string-to-number line-no)
+           (1-)
+           (forward-line))))
 #+end_src
 
 ** scratch/temporary buffers in side windows
