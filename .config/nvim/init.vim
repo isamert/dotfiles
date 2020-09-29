@@ -14,18 +14,13 @@ call plug#begin('~/.local/share/nvim/plugged')
 " aesthetics
 Plug 'rakr/vim-one'                " i'm using this as airline theme
 Plug 'dkasak/gruvbox'              " general theme
-Plug 'mhinz/vim-startify'          " a nice startup screen
 Plug 'vim-airline/vim-airline'     " powerline stuff
-Plug 'junegunn/goyo.vim'           " distraction free writing
 Plug 'ryanoasis/vim-devicons'      " icons
 
 " utility
 Plug 'terryma/vim-multiple-cursors'
 Plug 'junegunn/fzf.vim'                      " Fuzzy finder (s. FZF)
 Plug 'airblade/vim-gitgutter'                " Show git changes
-Plug 'rhysd/devdocs.vim'                     " :DevDocs -> open stuff in DevDocs
-Plug 'jeffkreeftmeijer/vim-numbertoggle'     " Toggle between relative and normal lines when needed
-Plug 'majutsushi/tagbar'                     " list top-level stuff in a window
 Plug 'scrooloose/nerdtree'                   " tree like file manager
 Plug 'Xuyuanp/nerdtree-git-plugin'           " git flags for nerdtree
 Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
@@ -340,7 +335,6 @@ vnoremap Ç >
 
 " other {{{
 vnoremap t :Tabularize/
-nnoremap <leader>t :TagbarToggle<CR>
 " }}}
 
 " utility commands {{{
