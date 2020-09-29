@@ -109,11 +109,12 @@ Some basic variable and function definitions that will be used in configuration.
         (while (re-search-forward regex (point-max) t)
           (push (match-string 1) matches)))
       matches))
+
+  (defun isamert/s-split-once (str sep)
+    (--> (split-string str sep)
+         `(,(car it) ,(string-join (cdr it) sep))))
 #+END_SRC
 
-#+RESULTS:
-: isamert/find-all
-[[file:settings.org::*org-alert][org-alert]]
 ** Package repos
 Add ~melpa~ package archive.
 
@@ -425,7 +426,7 @@ Enable leader key and bind some keys.
       ;; buffers
       "bq" 'evil-quit
       "bd" 'evil-delete-buffer
-      "bb" 'bufler-switch-buffer))
+      "bb" 'helm-buffers-list)
 #+END_SRC
 
 ** evil-mc
@@ -704,8 +705,8 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 ;;   '((sequence "TODO" "IN-PROGRESS" "WAITING" "DONE")))
 
 (setq org-todo-keyword-faces
-      '(("WAITING" . (:foreground "yellow" :weight bold))
-        ("IN-PROGRESS" . (:foreground "magenta" :weight bold))))
+      '(("WAIT" . (:foreground "yellow" :weight bold))
+        ("PROG" . (:foreground "magenta" :weight bold))))
 #+END_SRC
 
 ** presentation
@@ -862,6 +863,7 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
   (use-package perspective
     :ensure t
     :config
+    (setq persp-state-default-file "~/.emacs.d/perspective-state")
     (evil-define-key 'normal persp-mode-map
       (kbd "M-,") 'persp-prev
       (kbd "M-.") 'persp-next)
@@ -869,11 +871,11 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
       "ll" 'persp-switch-last
       "ls" 'persp-switch
       "lk" 'persp-kill
-      "lm" 'persp-toggle-modestring)
+      "lm" 'isamert/persp-toggle-modestring)
     (add-hook 'kill-emacs-hook #'persp-state-save)
     (persp-mode t))
 
-  (defun persp-toggle-modestring ()
+  (defun isamert/persp-toggle-modestring ()
     (interactive)
     (if persp-show-modestring
         (persp-turn-off-modestring)
@@ -1191,6 +1193,8 @@ Get bash aliases and update eshell aliases. My aliases are in a file called =~/.
 ** vterm
 Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains some helpful commands that enriches ~vterm~ usage.
 
+- Use =C-z= to go in/out (you can also use =jk= to go back into normal mode from emacs mode) emacs state so that you can make use of use vi-mode in zsh.
+
 #+BEGIN_SRC emacs-lisp
   (defun evil-collection-vterm-escape-stay ()
     "Go back to normal state but don't move cursor backwards.
@@ -1208,25 +1212,135 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
       (kbd "C-c") 'vterm-send-C-c
       (kbd "C-r") 'vterm-send-C-r)
     (evil-define-key 'normal vterm-mode-map
+      (kbd "a") 'evil-emacs-state
+      (kbd "i") 'evil-emacs-state
       (kbd "[") 'vterm-previous-prompt
       (kbd "]") 'vterm-next-prompt
       (kbd "u") 'vterm-undo
       (kbd "u") 'vterm-undo
       (kbd "p") 'vterm-yank)
+    (evil-leader/set-key
+      "tt" 'isamert/vterm-toggle-dedicated
+      "tj" 'isamert/jump-to-visible-vterm
+      "tl" 'isamert/run-last-command-on-visible-vterm
+      "tr" 'isamert/run-command-on-visible-vterm-with-history)
     (setq vterm-kill-buffer-on-exit t)
-    (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay))
+    (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
+    (add-hook 'vterm-mode-hook #'evil-emacs-state))
+#+END_SRC
 
+*** Utility functions
+#+begin_src emacs-lisp
+  ;; FIXME: only apply first found, dont use --map
+  ;; FIXME: return true if window found
+  (defun isamert/select-window-with-buffer (buffer-name)
+    (--map (-as-> (window-buffer it) buffer
+                  (buffer-name buffer)
+                  (when (string-match buffer-name buffer)
+                    (select-window it)))
+           (window-list)))
+
+  (defmacro isamert/with-visible-vterm-window (&rest body)
+    `(with-selected-window (selected-window)
+       (when (isamert/select-window-with-buffer ".*vterm.*")
+         ,@body)))
+
+  (defun isamert/run-command-on-visible-vterm (cmd)
+    (isamert/with-visible-vterm-window
+     (vterm-send-string cmd)
+     (vterm-send-return)
+     cmd))
+
+  (defvar isamert/vterm-run-history '())
+  (defvar isamert/jump-to-vterm-last-window nil)
   (defconst isamert/vterm-dedicated-buffer-name "*vterm-dedicated*")
+
+  ;; FIXME: shackle does not work, it doesnt respect the 40
   (isamert/shackle-window isamert/vterm-dedicated-buffer-name 40)
 
-  (defun isamert/vterm-dedicated ()
+  (defun isamert/vterm-toggle-dedicated ()
     "Open/toggle a dedicated vterm buffer."
     (interactive)
     (cond
      ((isamert/buffer-visible-p isamert/vterm-dedicated-buffer-name) (isamert/remove-window-with-buffer isamert/vterm-dedicated-buffer-name))
      ((get-buffer isamert/vterm-dedicated-buffer-name) (switch-to-buffer-other-window isamert/vterm-dedicated-buffer-name))
      (t (vterm isamert/vterm-dedicated-buffer-name))))
-#+END_SRC
+
+  (defun isamert/run-last-command-on-visible-vterm ()
+    "Run last command on the currently visible vterm window and return back to current window."
+    (interactive)
+    (isamert/with-visible-vterm-window
+     (evil-insert 1)
+     (vterm-send-up)
+     (vterm-send-return)))
+
+  (defun isamert/jump-to-visible-vterm ()
+    "Jump to the visible vterm window.
+  When invoked in a vterm window, return back to last window that this command is invoked from"
+    (interactive)
+    (cond
+     ((string-match ".*vterm.*" (buffer-name (window-buffer (selected-window))))
+      (select-window isamert/jump-to-vterm-last-window))
+     (t
+      (setq isamert/jump-to-vterm-last-window (selected-window))
+      (isamert/select-window-with-buffer ".*vterm.*"))))
+
+  (defun isamert/run-command-on-visible-vterm-with-history ()
+    (interactive)
+    (let ((cmd (isamert/run-command-on-visible-vterm
+                   (isamert/select-one-of isamert/vterm-run-history
+                                          nil
+                                          "Run new command"
+                                          #'identity))))
+      (setq isamert/vterm-run-history (cons cmd (delete cmd isamert/vterm-run-history)))))
+
+  (defvar isamert/auto-focus-tmux-window t)
+  (defvar isamert/tmux-session nil)
+  (defun isamert/select-tmux-session ()
+    "Select a tmux session for other tmux commands to use."
+    (interactive)
+    (--> (shell-command-to-string "tmux list-sessions")
+         (split-string it "\n")
+         (--filter (not (string-equal it "")) it)
+         (isamert/select-one-of it)
+         (car (split-string it ":"))
+         (setq isamert/tmux-session it)))
+
+  (defun isamert/select-tmux-session-if-needed ()
+    (interactive)
+    (when (not isamert/tmux-session)
+      (isamert/select-tmux-session)))
+
+  (defun isamert/tmux-focus-perspective-window ()
+    "Focus to the tmux window that has the same name with current perspective.
+  Tmux session is infered from isamert/select-tmux-session"
+    (interactive)
+    (isamert/select-tmux-session-if-needed)
+    (--> (persp-name (persp-curr))
+         (format "tmux list-windows -t%s | grep %s" isamert/tmux-session it)
+         (shell-command-to-string it)
+         (car (split-string it ":"))
+         (format "tmux select-window -t%s:%s" isamert/tmux-session it)
+         (shell-command-to-string it)))
+
+  (defun isamert/auto-focus-tmux-advice-after (old-function &rest arguments)
+    (apply old-function arguments)
+    (when isamert/auto-focus-tmux-window
+      (isamert/tmux-focus-perspective-window)))
+
+  (defun isamert/auto-focus-tmux-advice-before (old-function &rest arguments)
+    (when isamert/auto-focus-tmux-window
+      (isamert/tmux-focus-perspective-window))
+    (apply old-function arguments))
+
+  ;; Focus to perspectives tmux pane before
+  (advice-add 'isamert/vterm-toggle-dedicated
+              :around #'isamert/auto-focus-tmux-advice-after)
+  (advice-add 'isamert/run-last-command-on-visible-vterm
+              :around #'isamert/auto-focus-tmux-advice-before)
+  (advice-add 'isamert/run-command-on-visible-vterm-with-history
+              :around #'isamert/auto-focus-tmux-advice-before)
+#+end_src
 
 ** ispell
 - Use =flyspell-mode= to start spell checking.
@@ -1264,7 +1378,9 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
       (kbd "h") 'treemacs-TAB-action
       (kbd "D") 'treemacs-delete
       (kbd "]") 'treemacs-next-project
-      (kbd "[") 'treemacs-previous-project))
+      (kbd "[") 'treemacs-previous-project
+      (kbd "zm") 'treemacs-collapse-all-projects
+      (kbd "za") 'treemacs-toggle-node))
 
   (use-package treemacs-evil
     :after treemacs evil
@@ -1360,10 +1476,13 @@ Quickly switch between windows/kill them or swap them with each other.
 #+END_SRC
 
 ** expand-region
-Select the nearest meaningful region with a keybinding. When you repeat it, it selects the next bigger meaningful region. Look [[*Keybindings][Keybindings]] for the binding.
+Select the nearest meaningful region with a keybinding. When you repeat it, it selects the next bigger meaningful region.
 #+BEGIN_SRC emacs-lisp
-(use-package expand-region
-  :ensure t)
+  (use-package expand-region
+    :ensure t
+    :config
+    (evil-define-key 'normal 'global
+      (kbd "M-e") 'er/expand-region))
 #+END_SRC
 
 ** howdoyou
@@ -1379,7 +1498,9 @@ When you search for something, it opens the results in an org-mode buffer. Resul
       (push (cons "How Do You"  (lambda (candidate) (howdoyou-query candidate)))
             helm-google-suggest-actions))
     (setq howdoyou-switch-to-answer-buffer t
-          howdoyou-number-of-answers 5))
+          howdoyou-number-of-answers 5)
+    (evil-leader/set-key
+      "hs" 'howdoyou-query))
 #+END_SRC
 
 ** yasnippets
@@ -1407,13 +1528,6 @@ When you search for something, it opens the results in an org-mode buffer. Resul
         ranger-cleanup-on-disable t
         ranger-width-preview 0.45
         ranger-show-literal nil)) ;; Toggle between literal and non-literal previews with zi
-#+END_SRC
-
-** bufler.el
-#+BEGIN_SRC emacs-lisp
-(use-package helm-bufler
-  :quelpa (helm-bufler :fetcher github :repo "alphapapa/bufler.el"
-                       :files ("helm-bufler.el")))
 #+END_SRC
 
 ** helm-evil-markers
@@ -1444,6 +1558,14 @@ Better help dialogs with syntax highlighting, references, source etc.
   (global-set-key (kbd "C-h k") #'helpful-key))
 #+end_src
 
+** writeroom-mode
+#+begin_src emacs-lisp
+  (use-package writeroom-mode
+    :ensure t
+    :config
+    (evil-leader/set-key
+      "W" 'writeroom-mode))
+#+end_src
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
@@ -1465,7 +1587,7 @@ Better help dialogs with syntax highlighting, references, source etc.
     ;; AltGr + k -> Up
     ;; AltGr + j -> Down
     (define-key key-translation-map (kbd "˚") (kbd "<up>"))
-    (define-key key-translation-map (kbd "Δ") (kbd "<down>"))
+    (define-key key-translation-map (kbd "∆") (kbd "<down>"))
 
     ;; AltGr + [ -> (
     ;; AltGr + ] -> )
@@ -1479,7 +1601,6 @@ Better help dialogs with syntax highlighting, references, source etc.
 
   (evil-define-key 'normal 'global
     "?"  'helm-semantic-or-imenu
-    (kbd "M-e") 'er/expand-region
     (kbd "M-f") 'treemacs
     (kbd "C-f") 'helm-occur
     (kbd "C-s") 'save-buffer)
@@ -1596,11 +1717,15 @@ Better help dialogs with syntax highlighting, references, source etc.
 
 ** haskell
 #+BEGIN_SRC emacs-lisp
-(use-package haskell-mode :ensure t)
-(use-package flycheck-haskell
-  :ensure t
-  :hook (haskell-mode . flycheck-haskell-setup))
+;; TODO: hlint
+
+(use-package haskell-mode
+  :ensure t)
+
 (use-package lsp-haskell
+  :config
+  (setq lsp-haskell-process-path-hie "ghcide")
+  (setq lsp-haskell-process-args-hie '())
   :ensure t)
 #+END_SRC
 
@@ -1753,11 +1878,19 @@ Hit <C-j> after these and get:
     :ensure t
     :mode "\\.nix\\'")
 
-  (defun isamert/set-exec-path-from-nix-shell ()
+  (defun isamert/import-env-from-nix-shell ()
     (interactive)
-    (let ((path-from-shell (shell-command-to-string "nix-shell --quiet --run 'echo $PATH'")))
-      (setenv "PATH" path-from-shell)
-      (setq exec-path (split-string path-from-shell path-separator))))
+    (when (not (and (file-exists-p "shell.nix") (executable-find "nix-shell")))
+      (error "shell.nix or nix-shell not found."))
+    (--> (shell-command-to-string "nix-shell --quiet --run 'env'")
+         (split-string it "\n")
+         (--map (-let (((name val) (isamert/s-split-once it "=")))
+                  (setenv name val)
+                  (when (string-equal name "PATH")
+                    (setq exec-path (split-string val path-separator)))
+                  `(,name ,val))
+                it))
+    (message "Done."))
 #+end_src
 * my/
 ** org-mode enhancements
@@ -1792,18 +1925,18 @@ Hit <C-j> after these and get:
   (defun isamert/org-find-header-of-given-line (file line-number)
     "Find and return the first parent header of given LINE-NUMBER in FILE.
   It returns a list in this format (result-line-number title)."
-    (-let ((line-content (shell-command-to-string (format "sed '%sq;d' %s" line-number file)))
-           (search-regexp (if (string-prefix-p "*" line-content)
-                              (format "^\\*{%d} " (->> (split-string line-content " ")
-                                                       (car)
-                                                       (length)
-                                                       (1-)))
-                            "^\\*"))
-           (cmd (format "head -n %s \"%s\" | tac | rg --line-number --max-count 1 '%s'"
-                        line-number
-                        file
-                        search-regexp))
-           ((result-line-number . title) (split-string (shell-command-to-string cmd) ":")))
+    (-let* ((line-content (shell-command-to-string (format "sed '%sq;d' %s" line-number file)))
+            (search-regexp (if (string-prefix-p "*" line-content)
+                               (format "^\\*{%d} " (->> (split-string line-content " ")
+                                                        (car)
+                                                        (length)
+                                                        (1-)))
+                             "^\\*"))
+            (cmd (format "head -n %s \"%s\" | tac | rg --line-number --max-count 1 '%s'"
+                         line-number
+                         file
+                         search-regexp))
+            ((result-line-number . title) (split-string (shell-command-to-string cmd) ":")))
       (message (shell-command-to-string cmd))
       `(,(- (1+ line-number) (string-to-number result-line-number))
         ,(isamert/org-header-line-to-title (string-join title ":")))))
@@ -1815,14 +1948,28 @@ Hit <C-j> after these and get:
       (while (string= "" last-parent)
         (setq last-parent (isamert/org-find-header-of-given-line file line)))))
 
-  (defun isamert/select-one-of (the-candidates &optional buffer-name)
-    (let ((name (if buffer-name
-                    buffer-name
-                  "isamert-select")))
-      (helm :buffer (format "*helm-%s*" name)
-            :sources (helm-build-sync-source name
+  (defun isamert/helm-dummy-source (action-name action)
+    (helm-build-dummy-source
+     action-name
+     :action (helm-make-actions action-name action)))
+
+  ;; I couldn't find a way to make helm return custom input
+  ;; as the selected one (na input that is not in the candidates list)
+  ;; so I used this solution:
+  ;; If ACTION-NAME is supplied and the input is not in the candidates, ACTION
+  ;; will be run.
+  ;; BUT, if action is something like (lambda (c) c), then the result will be returned.
+  (defun isamert/select-one-of (the-candidates &optional buffer-name action-name action)
+    (let* ((name (if buffer-name
+                     buffer-name
+                   "isamert-select"))
+           (source-1 (helm-build-sync-source name
                        :candidates the-candidates
-                       :fuzzy-match t))))
+                       :fuzzy-match t))
+           (source-2 (if action-name `(,(isamert/helm-dummy-source action-name action)) '()))
+           (sources (cons source-1 source-2)))
+      (helm :buffer (format "*helm-%s*" name)
+            :sources sources)))
 
   ;;
   ;; Main
@@ -1833,7 +1980,14 @@ Hit <C-j> after these and get:
     "Interactively select a header and insert it as a link into the buffer.
   Headers are gathered from all the org files found in `org-directory`."
     (interactive)
-    (-let* ((cmd (concat "cd " org-directory "; " "rg -t org \"^\\*+\" "))
+    (-let* ((cmd (concat "cd " org-directory "; "
+                         "rg"
+                         " --no-heading"
+                         " --with-filename"
+                         " --no-line-number"
+                         " -t org"
+                         " "
+                         "\"^\\*+ \" "))
             (headers (--> (shell-command-to-string cmd)
                           (split-string it "\n" t)
                           (-map (lambda (line)
@@ -1845,44 +1999,44 @@ Hit <C-j> after these and get:
             (selected (isamert/select-one-of headers))
             ((file-name . header-title) (split-string selected " » "))
             (link-name (read-string "Enter link text: " header-title))
-            (selected-link (concat "[[file:" file-name "::*" (string-join header-title) "][" link-name "]]")))
+            (selected-link (concat "[[file:" file-name "::" (string-join header-title) "][" link-name "]]")))
       (insert selected-link)))
 
   (defun isamert/org-backlinks ()
     "List all the places that has refered the header under the cursor."
     (interactive)
-    (-let ((curr-file-name (file-name-nondirectory (buffer-file-name)))
-           (header-title (org-entry-get nil "ITEM"))
-           (cmd (concat
-                 "rg"
-                 " --line-number"
-                 " --with-filename"
-                 " --no-heading"
-                 " --only-matching"
-                 " --ignore-case"
-                 " "
-                 "'(.{5,50})?\\[\\[file:(\\./)?"
-                 curr-file-name
-                 "::\\s*\\*?\\s*?"
-                 header-title
-                 "\s*\\]\\[([^\\[\\]]+)]\\](.{5,50})?' "
-                 " --replace"
-                 " "
-                 "'...$1$3$4...'"
-                 ))
-           (backlinks (mapcar (lambda (line)
-                                (-let (((file-name line-no . content) (split-string line ":")))
-                                  (format "%s:%s » %s » %s"
-                                          (isamert/b-blue file-name)
-                                          line-no
-                                          (->> (string-to-number line-no)
-                                               (isamert/org-find-header-of-given-line file-name)
-                                               (cadr)
-                                               (isamert/b-plum))
-                                          (string-join content ":"))))
-                              (split-string (shell-command-to-string cmd) "\n" t)))
-           (selected (isamert/select-one-of backlinks))
-           ((file-name line-no) (split-string selected ":")))
+    (-let* ((curr-file-name (file-name-nondirectory (buffer-file-name)))
+            (header-title (org-entry-get nil "ITEM"))
+            (cmd (concat
+                  "rg"
+                  " --line-number"
+                  " --with-filename"
+                  " --no-heading"
+                  " --only-matching"
+                  " --ignore-case"
+                  " "
+                  "'(.{5,50})?\\[\\[file:(\\./)?"
+                  curr-file-name
+                  "::\\s*\\*?\\s*?"
+                  header-title
+                  "\s*\\]\\[([^\\[\\]]+)]\\](.{5,50})?' "
+                  " --replace"
+                  " "
+                  "'...$1$3$4...'"
+                  ))
+            (backlinks (mapcar (lambda (line)
+                                 (-let (((file-name line-no . content) (split-string line ":")))
+                                   (format "%s:%s » %s » %s"
+                                           (isamert/b-blue file-name)
+                                           line-no
+                                           (->> (string-to-number line-no)
+                                                (isamert/org-find-header-of-given-line file-name)
+                                                (cadr)
+                                                (isamert/b-plum))
+                                           (string-join content ":"))))
+                               (split-string (shell-command-to-string cmd) "\n" t)))
+            (selected (isamert/select-one-of backlinks))
+            ((file-name line-no) (split-string selected ":")))
       (find-file file-name)
       (goto-char 0)
       (->> (string-to-number line-no)
@@ -1939,7 +2093,7 @@ Here I define two important functions and their helpers.  The following function
     (evil-leader/set-key
       "ts" 'isamert/toggle-side-scratch-buffer
       "to" 'isamert/toggle-side-temp-org-buffer
-      "tt" 'isamert/vterm-dedicated)
+      "tf" 'treemacs)
 #+end_src
 
 ** org-X-today
