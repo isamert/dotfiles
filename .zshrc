@@ -1,4 +1,4 @@
-[[ -z $__PROFILE_SOURCED ]] &&  . $HOME/.profile
+[[ $TERM == "dumb" ]] && unsetopt zle && PS1='$ ' && return
 
 # Plugins {{{
 source ~/.local/bin/antigen.zsh
@@ -46,8 +46,8 @@ source ~/.config/aliases
 
 # Source some files {{{
 files=(
-    /usr/share/fzf/key-bindings.zsh                             # fzf history search keybindings
-    $HOME/.nix-profile/share/fzf/keybindings.zsh                # fzf history search keybindings
+    /usr/share/fzf/key-bindings.zsh                              # fzf history search keybindings
+    $HOME/.nix-profile/share/fzf/key-bindings.zsh                # fzf history search keybindings
 )
 
 for file in $files; do
