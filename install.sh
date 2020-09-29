@@ -74,6 +74,17 @@ function install-jaro {
     install-package guile
 }
 
+function install-scli {
+    [[ -n $DISABLE_SCLI ]] && return
+
+    echo "===== Installing scli ====="
+
+    local SCLI_PATH=$HOME/.local/bin/scli
+    curl -fLo "$SCLI_PATH" --create-dirs https://raw.githubusercontent.com/isamert/scli/master/scli
+    chmod +x "$SCLI_PATH"
+    install-package python python-urwid python-urwid_readline
+}
+
 function install-nvim {
     [[ -n $DISABLE_NVIM ]] && return
 
@@ -82,6 +93,15 @@ function install-nvim {
     install-package neovim
     curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
     echo "===>>> Run :PlugInstall after opening vim. <<<==="
+}
+
+function install-tmux {
+    [[ -n $DISABLE_TMUX ]] && return
+
+    echo "===== Installing tmux ====="
+
+    install-package tmux
+    git clone https://github.com/tmux-plugins/tpm ~/.local/share/tmux/plugins/tpm
 }
 
 function install-bspwm {
