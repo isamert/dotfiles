@@ -295,7 +295,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
 ** Fonts
 #+BEGIN_SRC emacs-lisp
   ;; TODO: make this a list and then use whichever font exists in the list
-  (defconst my-font "Sarasa Mono J")
+  (defconst my-font "Iosevka Nerd Font")
 
   (add-hook
    'after-make-frame-functions
@@ -306,7 +306,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
                              :font my-font
                              :weight 'normal
                              :width 'normal
-                             :height 120)))))
+                             :height 140)))))
 #+END_SRC
 
 ** all-the-icons
@@ -514,7 +514,7 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 #+END_SRC
 
 ** evil-snipe
-Overall better =f/F/t/T= and . Nice visual feedbacks. I don't use two-char searching, just using the f-override mode. I'm =avy= for more precise jumps.
+Overall better =f/F/t/T= and . Nice visual feedbacks. I don't use two-char searching, just using the f-override mode. I'm using =avy= for more precise jumps.
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-snipe
@@ -871,8 +871,11 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
       "ll" 'persp-switch-last
       "ls" 'persp-switch
       "lk" 'persp-kill
+      "lS" 'persp-state-save
+      "lL" 'persp-state-load
       "lm" 'isamert/persp-toggle-modestring)
-    (add-hook 'kill-emacs-hook #'persp-state-save)
+    ;; Manually saving is probably a better idea
+    ;; (add-hook 'kill-emacs-hook #'persp-state-save)
     (persp-mode t))
 
   (defun isamert/persp-toggle-modestring ()
@@ -1117,6 +1120,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
            (js-mode . lsp)
            (typescript-mode . lsp)
            (dhall-mode . lsp)
+           (haskell-mode . lsp)
            (java-mode . lsp))
     :init
     (setq lsp-prefer-flymake nil
@@ -1205,6 +1209,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (use-package vterm
     :ensure t
     :config
+    (define-key vterm-mode-map (kbd "C-u") 'vterm-send-C-u)
     (evil-define-key 'insert vterm-mode-map
       (kbd "C-]") 'vterm-send-escape
       (kbd "C-w") 'vterm-send-C-w
@@ -1251,6 +1256,11 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
      (vterm-send-return)
      cmd))
 
+  (defun isamert/send-selected-text-to-visible-vterm (start end)
+    (interactive "r")
+    (when (use-region-p)
+      (isamert/run-command-on-visible-vterm (buffer-substring start end))))
+
   (defvar isamert/vterm-run-history '())
   (defvar isamert/jump-to-vterm-last-window nil)
   (defconst isamert/vterm-dedicated-buffer-name "*vterm-dedicated*")
@@ -1270,7 +1280,6 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     "Run last command on the currently visible vterm window and return back to current window."
     (interactive)
     (isamert/with-visible-vterm-window
-     (evil-insert 1)
      (vterm-send-up)
      (vterm-send-return)))
 
@@ -1292,7 +1301,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
                                           nil
                                           "Run new command"
                                           #'identity))))
-      (setq isamert/vterm-run-history (cons cmd (delete cmd isamert/vterm-run-history)))))
+      (when cmd
+        (setq isamert/vterm-run-history (cons cmd (delete cmd isamert/vterm-run-history))))))
 
   (defvar isamert/auto-focus-tmux-window t)
   (defvar isamert/tmux-session nil)
@@ -1563,8 +1573,22 @@ Better help dialogs with syntax highlighting, references, source etc.
   (use-package writeroom-mode
     :ensure t
     :config
+    ;; TODO set this to higher value for programming modes, keep 81 for org/md mode etc. or maybe set it interactively?
+    (setq writeroom-width 81) ;; Better for org-mode
     (evil-leader/set-key
       "W" 'writeroom-mode))
+#+end_src
+
+** git-link
+#+begin_src emacs-lisp
+  (use-package git-link
+    :ensure
+    :config
+    (setq git-link-open-in-browser t)
+    (evil-leader/set-key
+      "gll" 'git-link
+      "glh" 'git-link-homepage
+      "glc" 'git-commit))
 #+end_src
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
@@ -1743,12 +1767,6 @@ Better help dialogs with syntax highlighting, references, source etc.
   ;;          (eslint (and root (expand-file-name "node_modules/.bin/eslint" root))))
   ;;     (when (and eslint (file-executable-p eslint))
   ;;       (setq-local flycheck-javascript-eslint-executable eslint))))
-
-  ;; ;; Use eslint from node-modules
-  ;; (add-hook 'js-mode-hook #'use-eslint-from-node-modules)
-
-  ;; ;; Disable LSP-flycheck, because I'm using flycheck with eslint
-  ;; (add-hook 'js-mode-hook (lambda () (setq-local lsp-prefer-flymake :none)))
 
   (use-package indium
     :ensure t)
@@ -2042,6 +2060,11 @@ Hit <C-j> after these and get:
       (->> (string-to-number line-no)
            (1-)
            (forward-line))))
+
+  ;; Keybindings
+  (evil-leader/set-key
+    "ol" 'isamert/org-link-header
+    "oL" 'isamert/org-backlinks)
 #+end_src
 
 ** scratch/temporary buffers in side windows
@@ -2347,6 +2370,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (isamert/bullet-find-a-day (isamert/today)))
 
   (defun isamert/bullet-create-a-day (date focus)
+    (widen)
     (let ((day-entry (isamert/bullet-find-a-day date))
           (day-regex "^\\[\\([0-9]+-[0-9]+-[0-9]+\\)\\( \\w+\\)?\\].*")
           (is-last-older nil)
@@ -2380,6 +2404,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
 
   (defun isamert/bullet-focus-a-day (day)
     "Focus to given DAY."
+    (widen)
     (let ((day-entry (isamert/bullet-find-a-day day)))
       (when day-entry (progn (goto-char day-entry) (org-narrow-to-subtree)))
       day-entry))
@@ -2415,7 +2440,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
                      (setq item-points (cons (point) item-points))
                      (org-mark-subtree)
                      (isamert/selected-region-text))
-                   "LEVEL=2/TODO")))
+                   "LEVEL=2/TODO|PROG")))
       (mapcar (lambda (x)
                 (goto-char x)
                 (isamert/org-remove-subtree))
@@ -2427,8 +2452,16 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
                 (insert item))
               items)))
 
+  (defun isamert/bullet-focus-backlog ()
+    (interactive)
+    (widen)
+    (goto-char (org-find-exact-headline-in-buffer "Backlog"))
+    (org-narrow-to-subtree))
+
+
   ;; Keybindings
   (evil-leader/set-key
+    "obb" 'isamert/bullet-focus-backlog
     "obt" 'isamert/bullet-focus-today
     "obm" 'isamert/bullet-move-todos-yesterday-to-today
     "oby" 'isamert/bullet-focus-yesterday
