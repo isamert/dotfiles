@@ -1,9 +1,9 @@
-bar.font0: IBM Plex Sans:fontformat=truetype:size=11:antialias=false;0
-bar.font1: Ubuntu Mono Nerd Font:fontformat=truetype:size=13:antialias=false;0
+bar.font0: IBM Plex Sans:fontformat=truetype:size=10:antialias=false;0
+bar.font1: Ubuntu Nerd Font:fontformat=truetype:size=12:antialias=false;0
 bar.font2: Liberation Sans:fontformat=truetype:size=11:antialias=false;0
 bar.border: 0
 bar.radius: 0
-bar.height: 30
+bar.height: 25
 bar.width: 100%
 
 ! vi:syntax=xdefaults

@@ -64,9 +64,10 @@ is-emacs && source ~/.config/zsh/emacs.sh
 function prompt_dir {
     setopt localoptions extendedglob
 
+    # FIXME: this breaks the input line completely
     # If we are in emacs vterm, send the current directory to emacs vterm
     # This establishes directory tracking
-    is-emacs && vterm_printf "51;A$(whoami)@$(hostname):$(pwd)";
+    # is-emacs && vterm_printf "51;A$(whoami)@$(hostname):$(pwd)";
 
     local current_pwd="${PWD/#$HOME/~}"
     local ret_directory

@@ -7,10 +7,13 @@ export AUR_HELPER=trizen
 export KEYBOARD_LAYOUTS='us(intl)',tr
 
 # To be able to deploy android apps from commandline.
-export ANDROID_SDK_ROOT=/opt/android-sdk
+if [[ -f /opt/android-sdk ]]; then
+    export ANDROID_SDK_ROOT=/opt/android-sdk
+fi
 
-# Apply GTK themes to QT apps (qt5-styleplugins)
-export QT_QPA_PLATFORMTHEME=gtk2
+# Use q5ct program to configure qt themes
+# and gtk-theme-switch2 (aur) for gtk
+export QT_QPA_PLATFORMTHEME=qt5ct
 
 # Ctrl-Shift-P to search menu items in GTK apps
 if [[ -f /usr/lib/libplotinus.so ]]; then
@@ -50,21 +53,9 @@ export NVM_DIR="$HOME/.nvm"
 #source /usr/share/nvm/nvm.sh
 #source /usr/share/nvm/bash_completion
 #source /usr/share/nvm/install-nvm-exec
-
-# Make global NPM installs in user directory
-# nvm already uses user dir, so skip if nvm is found
-if ! command -v nvm; then
-    # Need to configure npmrc to use given prefix
-    if [[ ! -f $HOME/.npmrc ]]; then
-        echo 'prefix=${HOME}/.npm-packages' > $HOME/.npmrc
-    fi
-
-    export NPM_PACKAGES="$HOME/.npm-packages"
-    export NODE_PATH="$NPM_PACKAGES/lib/node_modules:$NODE_PATH"
-fi
 # }}}
 
-if command -v jaro; then
+if command -v jaro > /dev/null 2>&1; then
     export BROWSER=jaro
     export EDITOR="jaro --method=edit"
     export VISUAL=jaro
@@ -72,7 +63,7 @@ else
     export EDITOR=nvim
 fi
 
-export SHELL=/usr/bin/zsh
+export SHELL=/bin/zsh
 
 # Hyper + Y brings up a dmenu that lists the videos found in following playlist
 export YT_MAIN_PLAYLIST=PLXawKvexOu0psiAqHCV5IFxdnWxZN1OVc
@@ -91,21 +82,13 @@ export DIR_NOTES=$HOME/Documents/notes
 [[ -f $HOME/.nix-profile/etc/profile.d/nix.sh ]] && source $HOME/.nix-profile/etc/profile.d/nix{,-daemon}.sh
 # }}}
 
-# Load profiles from /etc/profile.d
-if test -d /etc/profile.d/; then
-    for profile in /etc/profile.d/*.sh; do
-        test -r "$profile" && . "$profile"
-    done
-    unset profile
-fi
-
 if [[ -f $HOME/.extrarc ]]; then
     . $HOME/.extrarc
 fi
 
-if ps 1 | grep sbin && file /sbin/init | grep systemd; then
-    systemctl --user import-environment
-    systemctl --user start user-login.target &
+if pgrep systemd > /dev/null 2>&1; then
+    systemctl --user import-environment > /dev/null 2>&1
+    systemctl --user start user-login.target > /dev/null 2>&1 &
 fi
 
 # less colors (systemd can't import these) {{{
@@ -118,8 +101,6 @@ export LESS_TERMCAP_us=$'\E[1;32m'     # begin underline
 export LESS_TERMCAP_ue=$'\E[0m'        # reset underline
 export GROFF_NO_SGR=1                  # for konsole and gnome-terminal
 # }}}
-
-export __PROFILE_SOURCED=1
 
 # vi: foldmethod=marker
 

@@ -92,7 +92,7 @@ interval = 300
 click-left = popup mail
 
 format-prefix = " "
-format-underline = #f90000
+format-underline = ${xrdb:color1}
 
 [module/optimus]
 type = custom/script
@@ -101,7 +101,7 @@ exec = optimus-manager --print-mode | grep GPU | cut -d: -f2 | tr -d ' ' | sed '
 interval = 30000000
 
 format-prefix = " "
-format-underline = #f90000
+format-underline = ${xrdb:color2}
 
 [module/pacman]
 type = custom/script
@@ -109,7 +109,7 @@ exec = pacman -Sup | wc -l
 interval = 3600
 
 format-prefix = " "
-format-underline = #f90000
+format-underline = ${xrdb:color3}
 
 [module/github]
 type = internal/github
@@ -130,7 +130,7 @@ ramp-2 = 
 ramp-3 = 
 ramp-4 = 
 
-format-underline = #f90000
+format-underline = ${xrdb:color4}
 
 [module/xwindow]
 type = internal/xwindow
@@ -146,15 +146,15 @@ blacklist-0 = num lock
 
 format-prefix = " "
 format-prefix-foreground = ${colors.foreground-alt}
-format-prefix-underline = ${colors.secondary}
+format-prefix-underline = ${xrdb:color5}
 
 label-layout = %layout%
-label-layout-underline = ${colors.secondary}
+label-layout-underline = ${xrdb:color5}
 
 label-indicator-padding = 2
 label-indicator-margin = 1
-label-indicator-background = ${colors.secondary}
-label-indicator-underline = ${colors.secondary}
+label-indicator-background = ${xrdb:color5}
+label-indicator-underline = ${xrdb:color5}
 
 [module/bspwm]
 type = internal/bspwm
@@ -194,7 +194,7 @@ type = internal/cpu
 interval = 2
 format-prefix = " "
 format-prefix-foreground = ${colors.foreground-alt}
-format-underline = #f90000
+format-underline = ${xrdb:color6}
 label = %percentage:2%%
 
 [module/memory]
@@ -202,7 +202,7 @@ type = internal/memory
 interval = 2
 format-prefix = " "
 format-prefix-foreground = ${colors.foreground-alt}
-format-underline = #4bffdc
+format-underline = ${xrdb:color7}
 label = %{A1:popup htop &:} %percentage_used%% %{A}
 
 [module/eth]
@@ -210,7 +210,7 @@ type = internal/network
 interface = enp5s0
 interval = 3.0
 
-format-connected-underline = #55aa55
+format-connected-underline = ${xrdb:color8}
 format-connected-prefix = ""
 format-connected-prefix-foreground = ${colors.foreground-alt}
 label-connected = %local_ip%
@@ -222,7 +222,7 @@ interval = 20
 date = " %d-%m"
 time = %H:%M
 
-format-underline = #0a6cf5
+format-underline = ${xrdb:color13}
 label = %{A1:popup calendar&:}  %date%   %time% %{A}
 
 [module/volume]
@@ -239,8 +239,8 @@ ramp-volume-0 =
 ramp-volume-1 =墳
 ramp-volume-2 =
 
-format-volume-underline = #f50a4d
-format-muted-underline = #f50a4d
+format-volume-underline = ${xrdb:color10}
+format-muted-underline = ${xrdb:color10}
 
 [module/battery]
 type = internal/battery
@@ -251,7 +251,7 @@ full-at = 95
 format-full =
 
 format-charging = <animation-charging> <label-charging>
-format-charging-underline = #ffb52a
+format-charging-underline = ${xrdb:color11}
 
 format-discharging = <ramp-capacity> <label-discharging>
 format-discharging-underline = ${self.format-charging-underline}
@@ -273,7 +273,7 @@ thermal-zone = 0
 warn-temperature = 60
 
 format = <ramp> <label>
-format-underline = #f50a4d
+format-underline = ${xrdb:color12}
 format-warn = <ramp> <label-warn>
 format-warn-underline = ${self.format-underline}
 

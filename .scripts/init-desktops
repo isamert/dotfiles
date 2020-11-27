@@ -41,5 +41,4 @@ MONITOR_SECONDARY=$(sed "/$MONITOR_MAIN/d" <<< $monitors)
 feh --bg-scale "$HOME/.config/wall.png"
 
 # Create 5 desktops for each monitor
-xrandr -q | grep -w "connected" | cut -d' ' -f1 | xargs -I {} bspc monitor "{}" --reset-desktops I II III IV V
-
+xrandr -q | grep -w "connected" | cut -d' ' -f1 | xargs -I {} bspc monitor "{}" --reset-desktops I II III IV V VI VII VIII IX X

@@ -35,8 +35,8 @@ super + i
     bspc node -g sticky
 
 # next/prev desktop
-super + {n,p}
-    bspc desktop --focus {next,prev}.local
+super + {comma,period}
+    bspc desktop --focus {prev,next}.local.occupied
 
 # focus/move to the given desktop on current monitor
 super + {_,shift + }{1-5}

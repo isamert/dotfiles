@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# I use API of the invidious to interact with youtube
+# https://github.com/iv-org/invidious/wiki/API
+INVIDIOUS_INSTANCE="https://invidious.zapashcanon.fr/api/v1"
+
 all_name='[ALL]'
 
 function trim {
@@ -100,14 +104,32 @@ function youtube {
         local HISTORY=$(sort -u "$SEARCH_HISTORY_FILE" | uniq "$SEARCH_HISTORY_FILE" | sed '/^\s*$/d')
         echo "$HISTORY" > "$SEARCH_HISTORY_FILE"
     fi
+
     [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]] && exit
 
-    local RESULT=$(curl -N -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36" -L --data-urlencode "search_query=$SEARCH_STRING" "https://www.youtube.com/results" | pup --charset UTF-8 "h3.yt-lockup-title json{}" | jq ".[] | \"<span foreground='grey' size='small'>\" + .children[0].href + \"</span> | \" + .children[0].title + \"<span size='small' foreground='green'> (\" + .children[1].text + \") </span>\"" | sed -r 's/\/watch\?v=//;s/"//g;/list=/d;/\/user\//d' | dmenu -markup-rows -async-pre-read 0 | cut -d'>' -f2 | cut -d'<' -f1)
+    if [[ -n "$PLAYLIST" ]]; then
+        echo "Searching for playlist: $PLAYLIST"
+        # TODO: this only fetches first page of the playlist
+        # api accepts page url parameter, every page has 100 videos
+        local SEARCH_RESULTS=$(curl "$INVIDIOUS_INSTANCE/playlists/$PLAYLIST" | jq '.videos')
+    else
+        local SEARCH_RESULTS=$(curl -G --data-urlencode "q=$SEARCH_STRING" "$INVIDIOUS_INSTANCE/search")
+    fi
+    SEARCH_RESULTS=$(echo $SEARCH_RESULTS | sed "s/&/&amp;/g")
+    echo "$SEARCH_RESULTS"
 
-    [[ -z $RESULT ]] && exit
+    local SELECTED=$( \
+        echo "$SEARCH_RESULTS" \
+            | jq -r '.[] | "\(.title), <span foreground=\"grey\" size=\"small\">[\((.viewCount // 1000) / 1000 | floor)K views, \(.lengthSeconds / 60 | floor) min]</span>"' \
+            | nl -n 'ln' -s '. ' -w1 \
+            | dmenu -markup-rows -async-pre-read 0 \
+            | cut -d'.' -f1 \
+          )
 
-    local URL="https://youtube.com/watch?v=$RESULT"
+    [[ -z $SELECTED ]] && exit
 
+    local URL="https://youtube.com/watch?v=$(echo "$SEARCH_RESULTS" | jq -r ".[$((SELECTED - 1))].videoId")"
+    echo "$URL"
 
     if [[ $VIDEO = 1 ]]; then
         tsp mpv "$URL"
