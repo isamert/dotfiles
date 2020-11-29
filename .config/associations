@@ -1,3 +1,9 @@
+;; To experiment with this in shell, do:
+;; $ guile
+;; guile> (load ".local/bin/jaro")
+;; guile> (load ".config/associactions")
+
+;; To catch all matches: (useful for debugging)
 ;;(assoc
 ;;  #:pattern ".*"
 ;;  #:program "echo %f >> ~/debug-jaro")
@@ -6,8 +12,14 @@
 ;; Some utilities
 ;;
 
+(define (screen-props)
+  (map string->number (string-split (string-trim-both (read-sys-out "xrandr | awk ' /*/ {print $1}'")) #\x)))
+
+(define (screen-width)
+  (car (screen-props)))
+
 (define (screen-height)
-  (string-trim-both (read-sys-out "xrandr | grep '*' | awk '{print $1}' | cut -d'x' -f2 | head -n 1")))
+  (cadr (screen-props)))
 
 (define (parent-path path)
   (string-join (reverse (cdr (reverse (string-split path #\/)))) "/"))
@@ -84,7 +96,7 @@
               "--x11-name=youtube"
               "--geometry=-10-10"
               ,(format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
-              "--autofit=880x495"
+              ,(format #f "--autofit=~ax~a" (/ (screen-width) 3) (/ (screen-height) 3))
               "%f")
   #:on-error (open-with 'browser))
 
