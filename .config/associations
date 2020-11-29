@@ -96,7 +96,7 @@
               "--x11-name=youtube"
               "--geometry=-10-10"
               ,(format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
-              ,(format #f "--autofit=~ax~a" (/ (screen-width) 3) (/ (screen-height) 3))
+              ,(format #f "--autofit=~ax~a" (floor (/ (screen-width) 3)) (floor (/ (screen-height) 3)))
               "%f")
   #:on-error (open-with 'browser))
 
