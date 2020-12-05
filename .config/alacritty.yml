@@ -1,21 +1,15 @@
-#window:
-  #title: Alacritty
-  #class:
-    # Application instance name
-    #instance: Alacritty
-    # General application class
-    #general: Alacritty
+window:
+  dynamic_title: true
 
 font:
   normal:
     family: Iosevka
-  size: 11.0
+  size: 12.0
 
 
 draw_bold_text_with_bright_colors: true
 live_config_reload: true
 background_opacity: 0.8
-dynamic_title: true
 
 shell:
   program: /usr/bin/zsh
@@ -25,33 +19,37 @@ mouse:
     launcher:
       program: jaro
 
-# Colors (Darkside)
+# Colors (Gruvbox dark)
 colors:
+  # Default colors
   primary:
-    background: "#222324"
-    foreground: "#BABABA"
+    # hard contrast: background = '#1d2021'
+    background: '#282828'
+    # soft contrast: background = '#32302f'
+    foreground: '#ebdbb2'
 
   # Normal colors
   normal:
-    black:    "#000000"
-    red:      "#E8341C"
-    green:    "#68C256"
-    yellow:   "#F2D42C"
-    blue:     "#1C98E8"
-    magenta:  "#8E69C9"
-    cyan:     "#1C98E8"
-    white:    "#BABABA"
+    black:   '#282828'
+    red:     '#cc241d'
+    green:   '#98971a'
+    yellow:  '#d79921'
+    blue:    '#458588'
+    magenta: '#b16286'
+    cyan:    '#689d6a'
+    white:   '#a89984'
 
   # Bright colors
   bright:
-    black:    "#666666"
-    red:      "#E05A4F"
-    green:    "#77B869"
-    yellow:   "#EFD64B"
-    blue:     "#387CD3"
-    magenta:  "#957BBE"
-    cyan:     "#3D97E2"
-    white:    "#BABABA"
+    black:   '#928374'
+    red:     '#fb4934'
+    green:   '#b8bb26'
+    yellow:  '#fabd2f'
+    blue:    '#83a598'
+    magenta: '#d3869b'
+    cyan:    '#8ec07c'
+    white:   '#ebdbb2'
+
 
 key_bindings:
   - { key: U,  mods: Shift|Control,   mode: ~Alt, action: ScrollPageUp,  }

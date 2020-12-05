@@ -110,6 +110,7 @@ if "--movie_dirs" in sys.argv:
 
 if "--help" in sys.argv:
     print("sub-extract [--(interactive|auto)] [--noconfirm] [--help] archive-file")
+    print("This program extracts a subtitle file from an archive file into the selected movie folder.")
     print("")
     print("\t--auto")
     print("\t\tAutomatically matches the sub file with the movie using some heuristics. (Default)")

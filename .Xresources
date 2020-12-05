@@ -1,24 +1,8 @@
 #include ".Xresources.d/model"
 #include ".Xresources.d/colors"
 #include ".Xresources.d/urxvt"
-#include ".Xresources.d/st"
 #include ".Xresources.d/polybar"
 #include ".Xresources.d/rofi"
-
-#ifdef N550JK
-sp.top.height: 36
-sp.bot.height: 36
-menu.file_contents.geometry: 300x30
-#endif
-
-#ifdef X220
-sp.top.height: 20
-sp.bot.height: 20
-menu.file_contents.geometry: 150x30
-#endif
-
-sp.top.width: 100%
-sp.bot.width: 100%
 
 wm.gaps: 0
 wm.border: 2

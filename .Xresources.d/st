@@ -1,9 +1,0 @@
-st.termname: st-256color
-st.shell: /bin/zsh
-st.font: Iosevka:pixelsize=14:antialias=true:autohint=true
-st.alpha: 0.85
-st.borderpx: 1
-st.xfps: 300
-st.actionfps: 75
-
-! vi:syntax=xdefaults

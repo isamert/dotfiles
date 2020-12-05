@@ -8,7 +8,7 @@
 # bspc rule --add 'float'     state=floating
 
 # st, urxvt, urxvtc, alacritty
-RUNNER='st'
+RUNNER='alacritty'
 FLOAT=''
 OPAQUE=''
 GEOMETRY=''
@@ -34,37 +34,41 @@ fi
 
 if [[ -n "$FLOAT" ]]; then
     case "$RUNNER" in
-        "st") OPTS+=(-c float) ;;
-        "urxvt"*) OPTS+=(-name float) ;;
+        "st")        OPTS+=(-c float) ;;
+        "urxvt"*)    OPTS+=(-name float) ;;
         "alacritty") OPTS+=(--class float) ;;
     esac
 fi
 
 if [[ -n "$NAME" ]]; then
     case "$RUNNER" in
-        "st") OPTS+=(-c "$NAME") ;;
-        "urxvt"*) OPTS+=(-name "$NAME") ;;
+        "st")        OPTS+=(-c "$NAME") ;;
+        "urxvt"*)    OPTS+=(-name "$NAME") ;;
         "alacritty") OPTS+=(--class "$NAME") ;;
     esac
 fi
 
 if [[ -n "$OPAQUE" ]]; then
     case "$RUNNER" in
-        "st") OPTS+=(-A 1) ;;
-        "urxvt"*) OPTS+=(-bg "$(xrdb-get-value '*background')") ;;
-        "alacritty")
-            # FIXME: use this when available instead of this god-awful solution
-            # https://github.com/alacritty/alacritty/issues/1258
-            sed '/background_opacity/c\background_opacity: 1.0' ~/.config/alacritty.yml > /tmp/alacritty.yml;
-            OPTS+=(--config-file /tmp/alacritty.yml) ;;
+        "st")        OPTS+=(-A 1) ;;
+        "urxvt"*)    OPTS+=(-bg "$(xrdb-get-value '*background')") ;;
+        "alacritty") OPTS+=(--option background_opacity=1) ;;
     esac
 fi
 
-# FIXME: alacritty only supports WxH for now, check --dimensions
 if [[ -n "$GEOMETRY" ]]; then
     case "$RUNNER" in
         "st"|"urxvt"*) OPTS+=(-g "$GEOMETRY") ;;
-        "alacritty") OPTS+=(--dimensions "$(echo "$GEOMETRY" | cut -dx -f1)" "$(echo "$GEOMETRY" | cut -dx -f2)") ;;
+        "alacritty")
+            W=$(echo "$GEOMETRY" | cut -dx -f1)
+            H=$(echo "$GEOMETRY" | cut -dx -f2)
+            OPTS+=(--dimensions $W $H)
+            if echo $GEOMETRY | grep "+"; then
+               X=$(echo "$GEOMETRY" | cut -dx -f2 | cut -d+ -f2)
+               Y=$(echo "$GEOMETRY" | cut -dx -f2 | cut -d+ -f3)
+               OPTS+=(--position $X $Y)
+            fi
+            ;;
     esac
 fi
 

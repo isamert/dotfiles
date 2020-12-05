@@ -159,7 +159,7 @@ function folders {
 }
 
 function file_contents {
-    term --opaque --float --geometry=$(xrdb-get-value menu.file_contents.geometry) -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
+    term --name="tophalf" -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
 }
 
 # Use `menu passwords -dump` to print password info into stdout.

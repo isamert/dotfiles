@@ -13,10 +13,15 @@ bspc config border_width          $(xrdb-get-value wm.border)
 bspc config split_ratio           0.52
 
 
+TOP_GAP=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
+SCREEN_WIDTH=$(bspwmc focused_monitor_width)
+SCREEN_HEIGHT=$(bspwmc focused_monitor_height)
 bspc rule --add '*:float'     state=floating
-bspc rule --add '*:padtop'    state=floating
-bspc rule --add 'float'       state=floating
-bspc rule --add 'padtop'      state=floating
+bspc rule --add '*:tophalf'\
+     state=floating\
+     sticky=on\
+     border=off\
+     rectangle=${SCREEN_WIDTH}x$((SCREEN_HEIGHT / 2))+0+${TOP_GAP}
 
 bspc rule --add Pinta            state=floating
 bspc rule --add Sxiv             state=floating
