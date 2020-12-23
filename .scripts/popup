@@ -51,7 +51,7 @@ function translate-term {
     local COMMAND="trans -sl en -hl tr -to tr -interactive -v -pager bat"
 
     if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-        term --float --opaque -T "$WINDOW_TITLE" -g $GEOMETRY -e $COMMAND
+        term --float -e $COMMAND
     else
         wmctrl -c "$WINDOW_TITLE"
     fi

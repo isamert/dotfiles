@@ -4,7 +4,7 @@ window:
 font:
   normal:
     family: Iosevka
-  size: 12.0
+  size: 11.0
 
 
 draw_bold_text_with_bright_colors: true
@@ -54,6 +54,10 @@ colors:
 key_bindings:
   - { key: U,  mods: Shift|Control,   mode: ~Alt, action: ScrollPageUp,  }
   - { key: D,  mods: Shift|Control,   mode: ~Alt, action: ScrollPageDown }
+
+  # Vi mode
+  - { key: A,                           mode: Vi, action: ToggleViMode            }
+
   #
   #- { key: Paste,                                action: Paste          }
   #- { key: Copy,                                 action: Copy           }
@@ -63,6 +67,7 @@ key_bindings:
   #- { key: PageDown,  mods: Shift,   mode: ~Alt, action: ScrollPageDown }
   #- { key: Home,      mods: Shift,   mode: ~Alt, action: ScrollToTop,   }
   #- { key: End,       mods: Shift,   mode: ~Alt, action: ScrollToBottom }
+  #
 
   # Vi Mode
   #- { key: Space,  mods: Shift|Control, mode: Vi, action: ScrollToBottom          }

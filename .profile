@@ -24,7 +24,7 @@ export GOPATH="$HOME/.go"
 export R_LIBS_USER="$HOME/.rlibs"
 
 # the PATH
-export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin:$PATH
+export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin:$HOME/.cargo/bin:$PATH
 
 # fzf stuff {{{
 export FZF_BINDINGS="\

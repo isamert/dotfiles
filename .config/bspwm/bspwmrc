@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 bspc config automatic_scheme longest_side
 bspc config initial_polarity second_child
@@ -23,12 +23,14 @@ bspc rule --add '*:tophalf'\
      border=off\
      rectangle=${SCREEN_WIDTH}x$((SCREEN_HEIGHT / 2))+0+${TOP_GAP}
 
+# TODO: generalize this
+bspc rule --add 'Crow Translate' state=floating rectangle=$((SCREEN_WIDTH / 3 + 100))x400+$((SCREEN_WIDTH / 2 - (SCREEN_WIDTH / 3 + 100) / 2 ))+${TOP_GAP}
+
 bspc rule --add Pinta            state=floating
 bspc rule --add Sxiv             state=floating
 bspc rule --add Zenity           state=floating
 bspc rule --add feh              state=floating
-bspc rule --add copyq            state=floating
-bspc rule --add 'Crow Translate' state=floating
+bspc rule --add copyq            state=floating border=off
 bspc rule --add 'whatsapp-nativefier-d52542' state=floating
 
 bspc rule --add mpv           state=floating

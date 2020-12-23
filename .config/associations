@@ -48,7 +48,7 @@
 (assoc
   #:pattern "^(text|application)/(x-)?csv$"
   #:program "sc-im %f"
-  #:term "st -e"
+  #:term "term -e"
   #:view #t
   #:edit (open-with 'editor))
 
@@ -62,7 +62,7 @@
   #:name 'editor
   #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript)")
   #:program "nvim %f"
-  #:term "st -e"
+  #:term "term -e"
   #:view (open-with 'bat)
   #:edit #t)
 
@@ -80,8 +80,8 @@
 
 (assoc
   #:pattern "inode/directory"
-  #:program "lf %f"
-  #:term "st -e"
+  #:program "ranger %f"
+  #:term "term -e"
   #:tmux "tmux split-window -h")
 
 (assoc
@@ -118,7 +118,7 @@
 (assoc
   #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
   #:program "tuir %f"
-  #:term "st -e"
+  #:term "term -e"
   #:tmux "tmux split-window -h"
   #:on-error (open-with 'browser))
 
