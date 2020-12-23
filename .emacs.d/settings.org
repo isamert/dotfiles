@@ -20,32 +20,32 @@ Some basic variable and function definitions that will be used in configuration.
 #+BEGIN_SRC emacs-lisp
   (defun isamert/mkdir-if-not (dir)
     "Create the DIR if it does not exist return DIR."
-      (unless (file-exists-p dir)
-              (make-directory dir))
-      dir)
+    (unless (file-exists-p dir)
+      (make-directory dir))
+    dir)
 
   ;; SOURCE: https://www.reddit.com/r/emacs/comments/345vtl/make_helm_window_at_the_bottom_without_using_any/
   (defun isamert/shackle-window (name size)
     "Make the buffer NAME appear at bottom of the window, filling SIZE percent of the window."
     (add-to-list 'display-buffer-alist
                  `(,name
-                    (display-buffer-in-side-window)
-                    (inhibit-same-window . t)
-                    (window-height . ,size))))
+                   (display-buffer-in-side-window)
+                   (inhibit-same-window . t)
+                   (window-height . ,size))))
 
 
   (defmacro isamert/prettify-mode (mode pairs)
-    "Prettify given PAIRS in given MODE."
+    "Prettify given PAIRS in given MODE. Just a simple wrapper around `prettify-symbols-mode`"
     `(add-hook ,mode (lambda ()
-                     (mapc (lambda (pair)
+                       (mapc (lambda (pair)
                                (push pair prettify-symbols-alist))
                              ,pairs)
-                     (prettify-symbols-mode))))
+                       (prettify-symbols-mode))))
 
   ;; SOURCE: https://github.com/azzamsa/scripts.el#kill-all-buffers
   (defun isamert/kill-all-other-buffers nil
     "Kill all buffers but current buffer and special buffers.
-  Buffers that start with '*' and white space ignored"
+    Buffers that start with '*' and white space ignored"
     (interactive)
     (when (y-or-n-p "Really kill all other buffers? ")
       (let ((killed-bufs 0))
@@ -58,9 +58,8 @@ Some basic variable and function definitions that will be used in configuration.
               (funcall 'kill-buffer buffer))))
         (message "Killed %d buffer(s)" killed-bufs))))
 
-  ;; Like =delq= but removes more than just one item.
   (defun isamert/delq* (list &rest elems)
-    "Remove ELEMS from LIST"
+    "Remove ELEMS from LIST. Like =delq= but removes more than just one item."
     (let ((l list))
       (mapc (lambda (item) (setq l (delq item l))) elems)
       l))
@@ -99,7 +98,6 @@ Some basic variable and function definitions that will be used in configuration.
     "Remove whitespace at the beginning and end of S."
     (isamert/s-trim-left (isamert/s-trim-right s c) c))
 
-
   (defun isamert/find-all (regex str)
     "Find all occurences of REGEX in given STR."
     (let ((matches))
@@ -111,8 +109,27 @@ Some basic variable and function definitions that will be used in configuration.
       matches))
 
   (defun isamert/s-split-once (str sep)
+    "Split given STR just once with given SEP. Returns a list of two elements."
     (--> (split-string str sep)
          `(,(car it) ,(string-join (cdr it) sep))))
+
+  (defun isamert/s-split-n-times (str sep n)
+    "Split given STR N times with given SEP. Returns a list of (N+1) elements."
+    (--> (split-string str sep)
+         (append (-take n it)  (string-join (-drop n it) sep))))
+
+  (defun isamert/region-or (what)
+    "Returns currently selected string or WHAT-at-point string. WHAT can be 'symbol 'word etc."
+    (if (use-region-p)
+        (buffer-substring-no-properties (region-beginning) (region-end))
+      (thing-at-point what t)))
+
+  (defun isamert/define-key (&rest k+c)
+    (let ((mode (car k+c)))
+    (setq k+c (cdr k+c))
+      (while k+c
+        (define-key mode (car k+c) (cadr k+c))
+        (setq k+c (cddr k+c)))))
 #+END_SRC
 
 ** Package repos
@@ -185,6 +202,12 @@ Save recent files. Also exclude package files that appears after installing a pa
 (add-to-list 'recentf-exclude (format "%s/\\.emacs\\.d/elpa/.*" (getenv "HOME")))
 #+END_SRC
 
+** Save minibuffer, kill-ring, search-ring history
+#+begin_src emacs-lisp
+  (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring)
+        savehist-file "~/.emacs.d/savehist")
+  (savehist-mode 1)
+#+end_src
 ** Better scrolling
 *** Better settings for mouse scroll
 #+BEGIN_SRC emacs-lisp
@@ -234,6 +257,7 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
     (setq undo-tree-auto-save-history t
           undo-tree-history-directory-alist `(("." . ,undo-dir))
           undo-tree-enable-undo-in-region nil) ;; this fixes something?
+    (setq evil-undo-system 'undo-tree)
   :config
   (global-undo-tree-mode))
 #+END_SRC
@@ -249,7 +273,7 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
 
 #+BEGIN_SRC emacs-lisp
 (defvar run-after-save-alist
-  '(("~/.(Xresources|Xdefaults)" . "xrdb %; notify-send 'xrdb updated'")
+  '(("~/.\\(Xresources\\|Xdefaults\\)" . "xrdb %; notify-send 'xrdb updated'")
     ("~/.Xresources.d/.*"        . "xrdb ~/.Xresources; notify-send 'xrdb updated'")
     ("~/.config/sxhkd/sxhkdrc"   . "pkill -USR1 -x sxhkd; notify-send 'sxhkd updated'"))
   "File association list with their respective command.")
@@ -296,6 +320,9 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
 #+BEGIN_SRC emacs-lisp
   ;; TODO: make this a list and then use whichever font exists in the list
   (defconst my-font "Iosevka Nerd Font")
+  (defvar my-font-size 110)
+  (when (> (display-pixel-width) 1920)
+    (setq my-font-size 150))
 
   (add-hook
    'after-make-frame-functions
@@ -306,7 +333,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
                              :font my-font
                              :weight 'normal
                              :width 'normal
-                             :height 140)))))
+                             :height my-font-size)))))
 #+END_SRC
 
 ** all-the-icons
@@ -404,6 +431,10 @@ Make some temproary windows appear at bottom.
   (evil-mode 1))
 #+END_SRC
 
+** Ex Commands
+#+begin_src emacs-lisp
+  (evil-ex-define-cmd "Q" 'evil-quit)
+#+end_src
 ** evil-leader
 Enable leader key and bind some keys.
 #+BEGIN_SRC emacs-lisp
@@ -420,28 +451,39 @@ Enable leader key and bind some keys.
     (evil-leader/set-key
       ;; generic
       ";"   'eval-last-sexp
+      ":"   'eval-expression
       "f"   'projectile-find-file
       "c"   'execute-C-c-C-c
 
       ;; buffers
       "bq" 'evil-quit
       "bd" 'evil-delete-buffer
-      "bb" 'helm-buffers-list)
+      "bb" 'helm-buffers-list))
 #+END_SRC
 
 ** evil-mc
-Multiple cursors for evil. =C-n= to create a cursor on next match. =A= and =I= creates cursors in visual selection mode as you may expect.
+Multiple cursors for evil.
+- =C-n= / =C-p= are used for creating cursors
+- =M-n= / =M-p= are used for cycling through cursors.
+- =A= and =I= creates cursors in visual selection mode as you may expect.
+- =gq= to clear all cursors.
 
 #+BEGIN_SRC emacs-lisp
-(use-package evil-mc
-  :ensure t
-  :diminish evil-mc-mode
-  :config
-  (progn
+  (use-package evil-mc
+    :ensure t
+    :diminish evil-mc-mode
+    :config
+
+    ;; I use "gr" for something else
+    ;; The only function I use is "grq" (evil-mc-undo-all-cursors),
+    ;; So I'll just bind that to something else
+    (evil-define-key* '(normal visual) evil-mc-key-map (kbd "gr") nil)
+    (evil-define-key 'normal evil-mc-key-map (kbd "gq") 'evil-mc-undo-all-cursors)
+
     (evil-define-key 'visual evil-mc-key-map
       "A" #'evil-mc-make-cursor-in-visual-selection-end
       "I" #'evil-mc-make-cursor-in-visual-selection-beg)
-    (global-evil-mc-mode 1)))
+    (global-evil-mc-mode 1))
 #+END_SRC
 
 ** evil-surround
@@ -514,7 +556,8 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 #+END_SRC
 
 ** evil-snipe
-Overall better =f/F/t/T= and . Nice visual feedbacks. I don't use two-char searching, just using the f-override mode. I'm using =avy= for more precise jumps.
+- Overall better =f/F/t/T= and . Nice visual feedbacks.
+- =s/S= does 2-char searching.
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-snipe
@@ -551,54 +594,71 @@ To move between visual lines instead of real lines:
 ** keybindings
 #+begin_src emacs-lisp
   (evil-leader/set-key
-    "oi" 'org-toggle-inline-images
-    "or" 'org-mode-restart
-    "oa" 'org-agenda
-    "on" 'org-toggle-narrow-to-subtree
-    "ow" 'widen)
+    "oo"  'org-open-at-point
+    "oi"  'org-toggle-inline-images
+    "or"  'org-mode-restart
+    "oa"  'org-agenda
+    "on"  'org-toggle-narrow-to-subtree
+    "ow"  'widen
 
-  (defun outline-up-heading-or-backward-heading-same-level ()
+    ;; link stuff
+    "oyy"  'org-store-link
+    "oyi" 'org-copy-id
+    "oyp" 'org-insert-link
+
+    ;; org-clock
+    "occ" 'org-clock-in
+    "ocC" 'org-clock-cancel
+    "ocl" 'org-clock-in-last
+    "oco" 'org-clock-out
+    "ocg" 'org-clock-goto)
+
+  (defun isamert/outline-up-heading-or-backward-heading-same-level ()
     "Focus the previous upper level heading or if it does not exist go backwards on same heading level."
     (interactive)
     (condition-case nil
       (progn (outline-up-heading 1) (message "ye"))
       (error (org-backward-heading-same-level 1))))
 
-  (defun outline-up-heading-forward-or-forward-heading-same-level ()
+  (defun isamert/outline-up-heading-forward-or-forward-heading-same-level ()
     "Focus the next upper level heading or if it does not exist go forward on same heading level."
     (interactive)
     (condition-case nil
       (progn (outline-up-heading 1) (org-forward-heading-same-level 1) (message "ye"))
       (error (org-forward-heading-same-level 1))))
 
-  (outline-up-heading-or-backward-heading-same-level)
   (evil-define-key 'normal org-mode-map
-    "[" 'org-previous-visible-heading
-    "]" 'org-next-visible-heading
-    "(" 'outline-up-heading-or-backward-heading-same-level
-    ")" 'outline-up-heading-forward-or-forward-heading-same-level
+    "[[" 'org-previous-visible-heading
+    "]]" 'org-next-visible-heading
+    "(" 'isamert/outline-up-heading-or-backward-heading-same-level
+    ")" 'isamert/outline-up-heading-forward-or-forward-heading-same-level
     "-" 'org-cycle-list-bullet
+    ;; FIXME: find a solution for H-{h,j,k,l} in macOS
     (kbd "H-h") 'org-shiftleft
     (kbd "H-j") 'org-shiftdown
     (kbd "H-k") 'org-shiftup
     (kbd "H-l") 'org-shiftright
+
+    ;; Hyper for macos is C-M-s
+    (kbd "C-M-s-h") 'org-shiftleft
+    (kbd "C-M-s-j") 'org-shiftdown
+    (kbd "C-M-s-k") 'org-shiftup
+    (kbd "C-M-s-l") 'org-shiftright
+
+    ;; FIXME: mac hyper already contains shift
     (kbd "M-H") 'org-shiftmetaleft
     (kbd "M-J") 'org-shiftmetadown
     (kbd "M-K") 'org-shiftmetaup
     (kbd "M-L") 'org-shiftmetaright
 
-  ;; FIXME: M-h,j,k,l conflicts with split swithcing shourtcuts
-  ;; so I just prefixed them with Hyper but this does not feel natural.
+    ;; FIXME: M-h,j,k,l conflicts with split swithcing shourtcuts
+    ;; so I just prefixed them with Hyper but this does not feel natural.
+    ;; FIXME: find a solution for M-H-{h,j,k,l} in macOS
     (kbd "M-H-h") 'org-metaleft
     (kbd "M-H-j") 'org-metadown
     (kbd "M-H-k") 'org-metaup
     (kbd "M-H-l") 'org-metaright
-
-    "t" 'org-todo
-    "T" 'org-set-tags-command
-    "E" 'org-ctrl-c-ctrl-c
-    "O" 'org-open-at-point
-    "Y" 'org-store-link)
+)
 
   (evil-leader/set-key-for-mode 'org-mode
     "d" 'org-babel-remove-result
@@ -615,11 +675,13 @@ To move between visual lines instead of real lines:
 
 ** some vars
 #+BEGIN_SRC emacs-lisp
-(when (file-directory-p "~/Documents/notes")
-  (setq life-org "~/Documents/notes/life.org")
-  (setq bullet-org "~/Documents/notes/bullet.org")
-  (setq org-directory "~/Documents/notes")
-  (setq org-agenda-files `(,life-org ,bullet-org)))
+  (when (file-directory-p "~/Documents/notes")
+    (setq life-org "~/Documents/notes/life.org")
+    (setq bullet-org "~/Documents/notes/bullet.org")
+    (setq org-directory "~/Documents/notes")
+    (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id) ;; org-store-link creates an ID for header only if called interactively and if there is no custom id
+    (setq org-agenda-files `(,life-org ,bullet-org "~/Documents/notes/well.org")) ;; FIXME well.org
+    (org-babel-lob-ingest "~/Documents/notes/utils.org")) ;; With this, I can call functions inside this file in other org files
 #+END_SRC
 
 ** better defaults
@@ -664,6 +726,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
  '((emacs-lisp . t)
    (scheme . t)
    (python . t)
+   (haskell . t)
    (js . t)
    (sql . t)
    (shell . t)
@@ -691,22 +754,22 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 ** agenda
 #+BEGIN_SRC emacs-lisp
 (when (fboundp 'life-org)
-  (setq org-agenda-files `(,life-org)
-        org-agenda-use-time-grid t
+  (setq org-agenda-use-time-grid t
         org-agenda-time-grid '((weekly today require-timed remove-match)
                                (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------")))
 #+END_SRC
 ** todo keywords
 #+BEGIN_SRC emacs-lisp
-;; Add this to org files if you need:
-;; #+TODO: TODO IN-PROGRESS WAITING DONE
-;; OR
-;; (setq org-todo-keywords
-;;   '((sequence "TODO" "IN-PROGRESS" "WAITING" "DONE")))
+  ;; Add this to org files if you need:
+  ;; #+TODO: TODO IN-PROGRESS WAITING DONE
+  ;; OR
+  (setq org-todo-keywords
+    '((sequence "TODO(t)" "PROG(p)" "WAIT(w)" "DONE(d)")))
+  ;; Now you can do C-c C-t {t,p,w,d} to set the state directly
 
-(setq org-todo-keyword-faces
-      '(("WAIT" . (:foreground "yellow" :weight bold))
-        ("PROG" . (:foreground "magenta" :weight bold))))
+  (setq org-todo-keyword-faces
+        '(("WAIT" . (:foreground "yellow" :weight bold))
+          ("PROG" . (:foreground "magenta" :weight bold))))
 #+END_SRC
 
 ** presentation
@@ -776,6 +839,26 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   ;; (org-alert-enable))
 #+end_src
 * Other packages
+** image-mode
+I want to be able to kill image buffers with simply hitting =q=. This does that.
+
+#+begin_src emacs-lisp
+  (evil-set-initial-state 'image-mode 'normal)
+  (evil-define-key 'normal image-mode-map
+    "q" #'evil-delete-buffer)
+#+end_src
+** hippie-expand
+#+begin_src emacs-lisp
+(evil-define-key 'insert 'global
+  (kbd "M-e") 'hippie-expand)
+
+;; https://stackoverflow.com/questions/8722301/force-hippie-expand-to-respect-capitalization
+(defadvice hippie-expand (around hippie-expand-case-fold)
+  "Try to do case-sensitive matching (not effective with all hippie-expand-try-functions-list functions)."
+  (let ((case-fold-search nil))
+    ad-do-it))
+(ad-activate 'hippie-expand)
+#+end_src
 ** tramp
 #+begin_src emacs-lisp
 (setq tramp-default-method "ssh"
@@ -783,6 +866,80 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       vc-handled-backends '(Git) ;; only try to handle git, this speeds up things a little bit
 )
 #+end_src
+** tree-sitter
+This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting. Especially for JS/TS and Rust. See [[https://ubolonton.github.io/emacs-tree-sitter/][this page]] for more information.
+
+#+begin_src emacs-lisp
+  (use-package tree-sitter
+    :ensure t
+    :config
+    (global-tree-sitter-mode)
+    (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
+
+  (use-package tree-sitter-langs
+    :ensure t)
+#+end_src
+** treemacs
+#+BEGIN_SRC emacs-lisp
+  (use-package treemacs
+    :ensure t
+    :defer t
+    :config
+    (setq treemacs-show-hidden-files nil
+          treemacs-width 34
+          treemacs-space-between-root-nodes nil
+          treemacs-indentation 2)
+    ;; (set-face-attribute 'treemacs-root-face nil
+    ;; :foreground (face-attribute 'default :foreground)
+    ;;                     :height 1.1
+    ;;                     :weight 'normal)
+    (add-to-list 'treemacs-ignored-file-predicates (lambda (filename abspath) (string-equal filename "node_modules")))
+    (evil-define-key 'treemacs treemacs-mode-map ;; Treemacs has it's own mode, named treemacs. (https://github.com/Alexander-Miller/treemacs/issues/484#issuecomment-509909312)
+      (kbd "M-f") 'treemacs
+      (kbd "M-l") 'evil-window-right
+      (kbd "\\") 'treemacs-visit-node-horizontal-split
+      (kbd "-") 'treemacs-visit-node-vertical-split
+      (kbd "W") 'treemacs-switch-workspace
+      (kbd "E") 'treemacs-edit-workspaces
+      (kbd "l") 'treemacs-TAB-action
+      (kbd "h") 'treemacs-TAB-action
+      (kbd "D") 'treemacs-delete
+      (kbd "]") 'treemacs-next-project
+      (kbd "[") 'treemacs-previous-project
+      (kbd "zm") 'treemacs-collapse-all-projects
+      (kbd "za") 'treemacs-toggle-node))
+
+  (use-package treemacs-evil
+    :after treemacs evil
+    :ensure t)
+
+  (use-package treemacs-projectile
+    :after treemacs projectile
+    :ensure t)
+
+  (use-package treemacs-icons-dired
+    :after treemacs dired
+    :ensure t
+    :config (treemacs-icons-dired-mode))
+
+  (use-package treemacs-magit
+    :after treemacs magit
+    :ensure t)
+
+  (defun aorst/treemacs-setup-title ()
+    (let ((bg (face-attribute 'default :background))
+          (fg (face-attribute 'default :foreground)))
+      (face-remap-add-relative 'header-line
+                               :background bg :foreground fg
+                               :box `(:line-width ,(/ (line-pixel-height) 2) :color ,bg)))
+    (setq header-line-format
+          '((:eval
+             (let* ((text (treemacs-workspace->name (treemacs-current-workspace)))
+                    (extra-align (+ (/ (length text) 2) 1))
+                    (width (- (/ (window-width) 2) extra-align)))
+               (concat (make-string width ?\s) text))))))
+#+END_SRC
+
 ** winner-mode
 This mode allows you to do /undo/ /redo/ operations on window layout changes. My most frequent use case is that sometimes I just want to focus on one window for a while and then return back to my old layout setup. These keybindings allows me to do that.
 
@@ -796,6 +953,7 @@ This mode allows you to do /undo/ /redo/ operations on window layout changes. My
 #+END_SRC
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options.
+
 #+BEGIN_SRC emacs-lisp
 (use-package which-key
   :ensure t
@@ -804,23 +962,55 @@ A package that shows key combinations. (for example press C-x and wait) It also 
   (which-key-mode))
 #+END_SRC
 ** magit
+- Read this for some useful status mode keymaps: https://endlessparentheses.com/it-s-magit-and-you-re-the-magician.html
+  - y :: Branch viewer (delete branches with ~k~)
+  - ll :: Log current
+  - bs :: Branch spin-off; create and checkout to a new branch, carry over the ongoing changes. It also undoes the changes in the current branch
+  - bc :: Branch create; you can directly create new branch from *origin/develop* for instance
+
 #+BEGIN_SRC emacs-lisp
   (use-package magit
     :ensure t
-    :bind
-    (:map magit-status-mode-map
-          ("j" . 'next-line)
-          ("k" . 'previous-line))
     :config
     ;; Following snippet is needed to update modeline after a checkout happens
     (advice-add 'magit-checkout :after (lambda (a) (vc-refresh-state)))
-    (defun isamert/git-commit-setup ()
-      (when (string= (treemacs-workspace->name (treemacs-current-workspace)) "Work")
-        (insert (shell-command-to-string "~/.local/bin/huawei commit-msg"))))
+
+    (isamert/define-key magit-status-mode-map
+     "["  'magit-section-backward
+     "]"  'magit-section-forward
+     "("  'magit-section-backward-sibling
+     ")"  'magit-section-forward-sibling
+     "za" 'magit-section-toggle
+     "zm" 'magit-section-show-level-1
+     "zR" 'magit-section-show-level-4
+     "zA" 'magit-section-toggle-children
+     "j"  'next-line
+     "k"  'previous-line
+     "v"  'set-mark-command
+     "V"  'set-mark-command
+     "o"  'magit-diff-visit-file
+     "K"  'magit-discard)
+
+    (isamert/define-key magit-log-mode-map
+     "["  'magit-section-backward
+     "]"  'magit-section-forward
+     "("  'magit-section-backward-sibling
+     ")"  'magit-section-forward-sibling
+     "za" 'magit-section-toggle
+     "zm" 'magit-section-show-level-1
+     "zR" 'magit-section-show-level-4
+     "zA" 'magit-section-toggle-children
+     "j"  'next-line
+     "k"  'previous-line
+     "v"  'set-mark-command
+     "V"  'set-mark-command
+     "o"  'magit-diff-visit-file
+     "K"  'magit-discard)
 
     (evil-leader/set-key
       ;; magit/git
       "gs" 'magit-status
+      "gf" 'magit-file-dispatch
       "gg" 'my/helm-grep-git-grep-current-project
       "gp" 'magit-pull
       "gP" 'magit-push
@@ -828,24 +1018,30 @@ A package that shows key combinations. (for example press C-x and wait) It also 
       "gcc" 'magit-checkout
       "gcf" 'magit-file-checkout
       "gbb" 'magit-branch
-      "gbc" 'magit-branch-create)
-
-    (add-hook 'git-commit-setup-hook 'isamert/git-commit-setup))
+      "gbc" 'magit-branch-create))
 #+END_SRC
 
 *** magit-todos
 Show TODO/FIXME etc in magit-status buffer.
 #+BEGIN_SRC emacs-lisp
-(use-package magit-todos
-  :ensure t
-  :init (magit-todos-mode 1)
-  :bind
-  (:map magit-todos-section-map
-    ("j" . 'next-line)
-    ("k" . 'previous-line))
-  (:map magit-todos-item-section-map
-    ("j" . 'next-line)
-    ("k" . 'previous-line)))
+  (use-package magit-todos
+    :ensure t
+    :init (magit-todos-mode 1)
+    :bind
+    (:map magit-todos-section-map
+      ("["  . 'magit-section-backward)
+      ("]"  . 'magit-section-forward)
+      ("("  . 'magit-section-backward-sibling)
+      (")"  . 'magit-section-forward-sibling)
+      ("za" . 'magit-section-toggle)
+      ("zm" . 'magit-section-show-level-1)
+      ("zR" . 'magit-section-show-level-4)
+      ("zA" . 'magit-section-toggle-children)
+      ("j"  . 'next-line)
+      ("k"  . 'previous-line))
+    (:map magit-todos-item-section-map
+      ("j" . 'next-line)
+      ("k" . 'previous-line)))
 #+END_SRC
 
 ** goto-chg
@@ -873,6 +1069,7 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
       "lk" 'persp-kill
       "lS" 'persp-state-save
       "lL" 'persp-state-load
+      "lr" 'persp-rename
       "lm" 'isamert/persp-toggle-modestring)
     ;; Manually saving is probably a better idea
     ;; (add-hook 'kill-emacs-hook #'persp-state-save)
@@ -916,6 +1113,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
       "SPC" 'helm-M-x
       "RET" 'helm-mini
       "hh" 'helm-resume
+      "hk" 'helm-show-kill-ring
       "hr" 'helm-rg
       "hp" 'my/helm-projectile-rg-current-project
       "hm" 'helm-my-files
@@ -935,20 +1133,41 @@ Set ~<tab>~ for selecting next result and ~<backtab>~ for selecting previous res
 (define-key helm-map (kbd "TAB") 'helm-next-line)
 (define-key helm-map (kbd "<backtab>") 'helm-previous-line)
 #+END_SRC
-*** helm-rg (ripgrep)
+*** helm-rg
 =rip-grep= is a pretty fast grep replacement. This is a helm ui for ripgrep.
 
-#+BEGIN_SRC emacs-lisp
-(use-package helm-rg
-  :ensure t)
-#+END_SRC
+| Key   | Functionality                           |
+|-------+-----------------------------------------|
+| ~M-i~ | Insert the current line into the buffer |
+| ~M-d~ | Set directory to search                 |
+| ~M-m~ | Set extra args to rg                    |
+| ~M-g~ | Set glob                                |
+| ~M-c~ | Set case sensitivity                    |
+| ~C-p~ | Focus to prev files results             |
+| ~C-n~ | Focus to next files results             |
 
-*** helm-org-rifle
-Search in my org files, takes headers into account while searching. =helm-org-rifle-org-directory= is very useful(I set org-directory while configuring org).
-
 #+BEGIN_SRC emacs-lisp
-(use-package helm-org-rifle
-  :ensure t)
+  (use-package helm-rg
+    :ensure t
+    :config
+    (setq helm-rg-prepend-file-name-line-at-top-of-matches t
+          helm-rg-include-file-on-every-match-line nil)
+
+    (define-key helm-rg-map (kbd "C-n") #'helm-rg--file-forward) ;; Focus the next file's results
+    (define-key helm-rg-map (kbd "C-p") #'helm-rg--file-backward) ;; Focus the prev file's results
+    (define-key helm-rg-map (kbd "M-i") #'isamert/helm-rg-insert-line-to-buffer))
+
+  (defun isamert/helm-rg-insert-line-to-buffer ()
+    "Upon invocation, quit helm and insert the currently selected result into the buffer. Filename and line number are removed prior to inserting."
+    (interactive)
+    (with-helm-alive-p
+      (helm-run-after-exit
+       (lambda (sel)
+         (--> (split-string sel ":")
+              (if helm-rg-include-file-on-every-match-line (cddr it) (cdr it))
+              (string-join it ":")
+              (progn (end-of-line) (insert (format "\n%s" it)))))
+       (format "%s" (helm-get-selection nil t)))))
 #+END_SRC
 
 *** helm-my-files
@@ -980,8 +1199,29 @@ A quick access menu for the files that I frequently open.
                          :fuzzy-match t))))
     (find-file selected-file)))
 #+END_SRC
+*** helm-xref
+Use helm as interface for xref results.
+
+#+begin_src emacs-lisp
+(use-package helm-xref :ensure t)
+#+end_src
+*** utility
+- A specialized version of this function is also defined in [[helm-rg]]
+
+#+begin_src emacs-lisp
+  (defun isamert/helm-insert-line-to-buffer ()
+    "Upon invocation, quit helm and insert the currently selected result into the buffer."
+    (interactive)
+    (with-helm-alive-p
+      (helm-run-after-exit
+       (lambda (sel) (end-of-line) (insert (format "\n%s" sel)))
+       (format "%s" (helm-get-selection nil t)))))
+
+    (define-key helm-map (kbd "M-i") #'isamert/helm-insert-line-to-buffer)
+#+end_src
 ** projectile
 A project management tool. I set a project path below and make sure projectile scans that directory for projects.
+
 *** Groupped projects
 I have all my projects under =~/Workspace/projects=. Some of them are groupped under another directory. This functions loops trough all of the directories and finds the ones without =.git= folder and adds those folders to project paths. Consider this:
 #+BEGIN_QUOTE
@@ -1029,6 +1269,7 @@ I have manually set up names for projects in treemacs, because it was fairly eas
 *** Load
 #+BEGIN_SRC emacs-lisp
   (defun isamert/projectile-discover-projects ()
+    (interactive)
     (setq projectile-project-search-path (isamert/projectile-project-paths))
     (projectile-discover-projects-in-search-path))
 
@@ -1057,54 +1298,49 @@ I have manually set up names for projects in treemacs, because it was fairly eas
 
 ** flycheck
 #+BEGIN_SRC emacs-lisp
-(use-package flycheck
-  :diminish
-  :ensure t
-  :init (global-flycheck-mode)
-  :config
-  (setq flycheck-idle-change-delay 1
-        flycheck-check-syntax-automatically '(save new-line mode-enabled))) ;; (save idle-change new-line mode-enabled)
+  (use-package flycheck
+    :diminish
+    :ensure t
+    :init (global-flycheck-mode)
+    :config
+    (setq flycheck-idle-change-delay 1
+          flycheck-check-syntax-automatically '(save new-line mode-enabled)) ;; (save idle-change new-line mode-enabled)
+    ;; TODO: also investigate for navigating seperatly  next/prev warnings/errors
+    ;; https://github.com/flycheck/flycheck/commit/c1630b075cbdf3ab11ac97b83dcb0559213f0202
+    (evil-define-key 'normal flycheck-mode-map
+      (kbd "]e") 'flycheck-next-error
+      (kbd "[e") 'flycheck-previous-error))
 #+END_SRC
 
 ** company
 *** Install and configure
-
 #+BEGIN_SRC emacs-lisp
   (use-package company
     :ensure t
     :init
     (setq company-selection-wrap-around t  ;; return to first completion after the last one (cycles)
-          company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode)
+          company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode) ;; disable on some modes
           company-minimum-prefix-length 1) ;; start completing after 1 char
     :config
     (add-hook 'after-init-hook 'global-company-mode)
-    (company-tng-configure-default)   ;; cycle trough suggestions using tab
+    ;; (company-tng-configure-default)   ;; cycle trough suggestions using tab
+    ;; Instead of the above, I just use M-{j,k} for up/down
 
     (evil-define-key 'insert 'global
       (kbd "C-SPC") 'company-complete)
     (define-key company-active-map
       (kbd "<return>") 'company-complete-selection))
+#+END_SRC
+*** company-box
+Nice company front-end with icons and very nice documentation on hover thing.
 
-  ;; TODO: Nice icons for completions (works with company-lsp)
-  ;; (use-package company-box
-  ;;   :ensure t
-  ;;   :diminish
-  ;;   :quelpa (company-box
-  ;;            :fetcher github
-  ;;            :branch "WIP"
-  ;;            :repo "yyoncho/company-box")
-  ;;   :hook (company-mode . company-box-mode))
-#+END_SRC
-*** quickhelp
-Shows a nice tooltip while idling on a completion.
-#+BEGIN_SRC emacs-lisp
-(use-package company-quickhelp
-  :ensure t
-  :config
-  (progn
-    (company-quickhelp-mode))
-    (eval-after-load 'company '(define-key company-active-map (kbd "M-p") 'company-quickhelp-manual-begin))) ;; Alt-p shows the popup manually
-#+END_SRC
+#+begin_src emacs-lisp
+  (use-package company-box
+    :ensure t
+    :after (company)
+    :hook (company-mode . company-box-mode))
+#+end_src
+
 ** origami-mode
 This seems working better than =hs-minor-mode= and also it's supposedly works with =lsp-mode=.
 #+BEGIN_SRC emacs-lisp
@@ -1123,7 +1359,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
            (haskell-mode . lsp)
            (java-mode . lsp))
     :init
-    (setq lsp-prefer-flymake nil
+    (setq lsp-diagnostic-package nil ;; prefer flycheck
           lsp-use-native-json t
           lsp-enable-xref t
           lsp-enable-links t
@@ -1132,29 +1368,32 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
           lsp-enable-indentation nil
           lsp-enable-on-type-formatting nil
           lsp-before-save-edits nil
-          lsp-enable-indentation nil
-          lsp-eldoc-render-all nil
+          lsp-eldoc-render-all t
           ;;lsp-enable-completion-at-point nil
           lsp-enable-snippet t))
 
   (use-package lsp-ui
     :ensure t
+    :after (lsp-mode)
     :commands lsp-ui-mode
     :config
     (setq lsp-ui-sideline-show-code-actions nil))
 
   (use-package helm-lsp
     :ensure t
+    :after (lsp-mode)
     :commands helm-lsp-workspace-symbol)
 
   (use-package lsp-treemacs
     :ensure t
+    :after (lsp-mode)
     :commands lsp-treemacs
     :config
     (lsp-treemacs-sync-mode 1))
 
   (use-package dap-mode
-    :ensure t :after lsp-mode
+    :ensure t
+    :after (lsp-mode)
     :config
     (dap-mode t)
     (dap-ui-mode t))
@@ -1202,8 +1441,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 #+BEGIN_SRC emacs-lisp
   (defun evil-collection-vterm-escape-stay ()
     "Go back to normal state but don't move cursor backwards.
-  Moving cursor backwards is the default vim behavior but
-  it is not appropriate in some cases like terminals."
+    Moving cursor backwards is the default vim behavior but
+    it is not appropriate in some cases like terminals."
     (setq-local evil-move-cursor-back nil))
 
   (use-package vterm
@@ -1215,19 +1454,19 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
       (kbd "C-w") 'vterm-send-C-w
       (kbd "C-t") 'vterm-send-C-t
       (kbd "C-c") 'vterm-send-C-c
-      (kbd "C-r") 'vterm-send-C-r)
+      (kbd "C-r") 'vterm-send-C-r
+      (kbd "M-\\") 'vterm-send-M-\\
+      (kbd "M--") 'vterm-send-M--
+      (kbd "M-a") 'vterm-send-M-a)
     (evil-define-key 'normal vterm-mode-map
-      (kbd "a") 'evil-emacs-state
-      (kbd "i") 'evil-emacs-state
-      (kbd "[") 'vterm-previous-prompt
-      (kbd "]") 'vterm-next-prompt
-      (kbd "u") 'vterm-undo
-      (kbd "u") 'vterm-undo
-      (kbd "p") 'vterm-yank)
+      "a"  'evil-emacs-state
+      "i"  'evil-emacs-state)
+
     (evil-leader/set-key
       "tt" 'isamert/vterm-toggle-dedicated
       "tj" 'isamert/jump-to-visible-vterm
       "tl" 'isamert/run-last-command-on-visible-vterm
+      "ty" 'isamert/send-selected-text-to-visible-vterm
       "tr" 'isamert/run-command-on-visible-vterm-with-history)
     (setq vterm-kill-buffer-on-exit t)
     (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
@@ -1236,6 +1475,14 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 
 *** Utility functions
 #+begin_src emacs-lisp
+  (defun vterm-send-M-\\ ()
+    (interactive)
+    (vterm-send-key "\\" nil t nil))
+
+  (defun vterm-send-M-- ()
+    (interactive)
+    (vterm-send-key "-" nil t nil))
+
   ;; FIXME: only apply first found, dont use --map
   ;; FIXME: return true if window found
   (defun isamert/select-window-with-buffer (buffer-name)
@@ -1364,65 +1611,6 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 (add-hook 'markdown-mode-hook 'flyspell-mode)
 #+END_SRC
 
-** treemacs
-#+BEGIN_SRC emacs-lisp
-  (use-package treemacs
-    :ensure t
-    :defer t
-    :config
-    (setq treemacs-show-hidden-files nil
-          treemacs-width 34
-          treemacs-space-between-root-nodes nil
-          treemacs-indentation 2)
-    ;; (set-face-attribute 'treemacs-root-face nil
-    ;; :foreground (face-attribute 'default :foreground)
-    ;;                     :height 1.1
-    ;;                     :weight 'normal)
-    (add-to-list 'treemacs-ignored-file-predicates (lambda (filename abspath) (string-equal filename "node_modules")))
-    (evil-define-key 'treemacs treemacs-mode-map ;; Treemacs has it's own mode, named treemacs. (https://github.com/Alexander-Miller/treemacs/issues/484#issuecomment-509909312)
-      (kbd "M-f") 'treemacs
-      (kbd "M-l") 'evil-window-right
-      (kbd "W") 'treemacs-switch-workspace
-      (kbd "E") 'treemacs-edit-workspaces
-      (kbd "l") 'treemacs-TAB-action
-      (kbd "h") 'treemacs-TAB-action
-      (kbd "D") 'treemacs-delete
-      (kbd "]") 'treemacs-next-project
-      (kbd "[") 'treemacs-previous-project
-      (kbd "zm") 'treemacs-collapse-all-projects
-      (kbd "za") 'treemacs-toggle-node))
-
-  (use-package treemacs-evil
-    :after treemacs evil
-    :ensure t)
-
-  (use-package treemacs-projectile
-    :after treemacs projectile
-    :ensure t)
-
-  (use-package treemacs-icons-dired
-    :after treemacs dired
-    :ensure t
-    :config (treemacs-icons-dired-mode))
-
-  (use-package treemacs-magit
-    :after treemacs magit
-    :ensure t)
-
-  (defun aorst/treemacs-setup-title ()
-    (let ((bg (face-attribute 'default :background))
-          (fg (face-attribute 'default :foreground)))
-      (face-remap-add-relative 'header-line
-                               :background bg :foreground fg
-                               :box `(:line-width ,(/ (line-pixel-height) 2) :color ,bg)))
-    (setq header-line-format
-          '((:eval
-             (let* ((text (treemacs-workspace->name (treemacs-current-workspace)))
-                    (extra-align (+ (/ (length text) 2) 1))
-                    (width (- (/ (window-width) 2) extra-align)))
-               (concat (make-string width ?\s) text))))))
-#+END_SRC
-
 ** ace-window
 Quickly switch between windows/kill them or swap them with each other.
 #+begin_src emacs-lisp
@@ -1496,7 +1684,7 @@ Select the nearest meaningful region with a keybinding. When you repeat it, it s
 #+END_SRC
 
 ** howdoyou
-When you search for something, it opens the results in an org-mode buffer. Results are fetched from SX sites.
+When you search for something, it opens the results in an org-mode buffer. Results are fetched from SX (stack-exchange, stackoverflow etc) sites.
 - =howdoyou-query= :: search function
 - =C-M-Right= :: next answer
 - =C-M-Left= :: prev answer
@@ -1518,26 +1706,35 @@ When you search for something, it opens the results in an org-mode buffer. Resul
   (use-package yasnippet
     :ensure t
     :config
+    (push #'yas-hippie-try-expand hippie-expand-try-functions-list) ;; hippie-expand tries yas first
     (setq yas-snippet-dirs '("~/.emacs.d/snippets"))
-    (yas-global-mode 1)
-
-    (evil-leader/set-key "s" 'yas-insert-snippet)
+    (evil-leader/set-key
+      "ss" 'yas-insert-snippet
+      "sv" 'yas-visit-snippet-file
+      "se" 'yas-visit-snippet
+      "sn" 'yas-new-snippet
+      "sc" 'yas-new-snippet)
     (evil-define-key 'insert 'global
-      (kbd "M-s") 'company-yasnippet))
+      (kbd "M-s") 'company-yasnippet)
+    (yas-global-mode 1))
 #+END_SRC
 
-** ranger.el
+** ranger.el (deer)
 - You can add/remove parent windows with using =z+= or =z-=.
 - Use =zP= to toggle between minimal (deer) and full ranged mode.
 
 #+BEGIN_SRC emacs-lisp
-(use-package ranger
-  :ensure t
-  :config
-  (setq ranger-max-preview-size 10 ;; MB
-        ranger-cleanup-on-disable t
-        ranger-width-preview 0.45
-        ranger-show-literal nil)) ;; Toggle between literal and non-literal previews with zi
+  (use-package ranger
+    :ensure t
+    :config
+    (setq ranger-max-preview-size 10 ;; MB
+          ranger-cleanup-on-disable t
+          ranger-width-preview 0.45
+          ranger-show-literal nil)   ;; Toggle between literal and non-literal previews with zi
+    (ranger-override-dired-mode t))  ;; Use minimal ranger (only one window, no previews and parents but shortcuts are same) instead of dired
+
+    (isamert/define-key ranger-mode-map
+     "."  'ranger-toggle-dotfiles)
 #+END_SRC
 
 ** helm-evil-markers
@@ -1556,6 +1753,19 @@ This brings up a helm menu when I hit ='= and lists all the local and global mar
     (helm-evil-markers-toggle))
 #+END_SRC
 
+** string-inflection
+- In the case of =string-inflection-ruby-style-cycle=   : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacs_lisp~
+- In the case of =string-inflection-python-style-cycle= : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacs_lisp~
+- In the case of =string-inflection-java-style-cycle=   : ~emacsLisp => EMACS_LISP => EmacsLisp => emacsLisp~
+- In the case of =string-inflection-all-cycle=          : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacsLisp => emacs-lisp => Emacs_Lisp => emacs_lisp~
+
+#+begin_src emacs-lisp
+  (use-package string-inflection
+    :ensure t
+    :config
+    (evil-define-key 'normal 'global (kbd "M-c") #'string-inflection-all-cycle))
+#+end_src
+
 ** helpful
 Better help dialogs with syntax highlighting, references, source etc.
 
@@ -1565,7 +1775,13 @@ Better help dialogs with syntax highlighting, references, source etc.
   :config
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
-  (global-set-key (kbd "C-h k") #'helpful-key))
+  (global-set-key (kbd "C-h k") #'helpful-key)
+  (global-set-key (kbd "C-h p") #'helpful-at-point)
+
+  (evil-define-key 'normal helpful-mode-map
+        "q" 'evil-delete-buffer))
+
+
 #+end_src
 
 ** writeroom-mode
@@ -1573,8 +1789,7 @@ Better help dialogs with syntax highlighting, references, source etc.
   (use-package writeroom-mode
     :ensure t
     :config
-    ;; TODO set this to higher value for programming modes, keep 81 for org/md mode etc. or maybe set it interactively?
-    (setq writeroom-width 81) ;; Better for org-mode
+    (setq writeroom-width 200) ;; Better for org-mode
     (evil-leader/set-key
       "W" 'writeroom-mode))
 #+end_src
@@ -1589,11 +1804,771 @@ Better help dialogs with syntax highlighting, references, source etc.
       "gll" 'git-link
       "glh" 'git-link-homepage
       "glc" 'git-commit))
+
+  (defun isamert/git-link-homepage ()
+    "Like git-link-homepage itself but it does not open in browser, simply returns the address as string."
+    (interactive)
+    (let ((git-link-open-in-browser nil))
+      (call-interactively 'git-link-homepage)
+      (car kill-ring)))
 #+end_src
+** bufler
+#+begin_src emacs-lisp
+  (use-package bufler
+    :ensure t
+    :config
+    (evil-define-key 'normal bufler-list-mode-map
+      (kbd "K") 'bufler-list-buffer-kill
+      (kbd "<return>") 'bufler-list-buffer-switch
+      (kbd "q") 'quit-window
+      (kbd "p") 'bufler-list-buffer-peek))
+
+  (use-package helm-bufler
+    :ensure t)
+#+end_src
+** smartparens
+#+begin_src emacs-lisp
+  (defun sp-wrap-quote-double () (interactive) (sp-wrap-with-pair "\""))
+  (defun sp-wrap-quote-single () (interactive) (sp-wrap-with-pair "'"))
+  (defun sp-wrap-backtick () (interactive) (sp-wrap-with-pair "`"))
+  (defun sp-wrap-angle () (interactive) (sp-wrap-with-pair "<"))
+  (defun sp-wrap-equal () (interactive) (sp-wrap-with-pair "="))
+  (defun sp-wrap-tilda () (interactive) (sp-wrap-with-pair "~"))
+  (defun sp-wrap-slash () (interactive) (sp-wrap-with-pair "/"))
+  (defun sp-wrap-star () (interactive) (sp-wrap-with-pair "*"))
+
+  (use-package smartparens
+    :ensure t
+    :config
+    (require 'smartparens-config)
+    (evil-define-key 'visual sp-keymap
+      "S("  #'sp-wrap-round
+      "S["  #'sp-wrap-square
+      "S'"  #'sp-wrap-quote-single
+      "S`"  #'sp-wrap-backtick
+      "S<"  #'sp-wrap-angle
+      "S\"" #'sp-wrap-quote-double
+      "S="  #'sp-wrap-equal
+      "S{"  #'sp-wrap-curly
+      "S/"  #'sp-wrap-slash
+      "S*"  #'sp-wrap-star
+      "S~"  #'sp-wrap-tilda)
+    (smartparens-global-mode))
+
+(sp-with-modes '(php-mode)
+  (sp-local-pair "/*." ".*/" :post-handlers '(("| " "SPC")))
+  (sp-local-pair "{" nil :post-handlers '(("||\n[i]" "RET") my-php-wrap-handler))
+  (sp-local-pair "(" nil :prefix "\\(\\sw\\|\\s_\\)*"))
+#+end_src
+
+** tab-out
+When you press tab, jump out from the current enclosing parens/quotes etc. When there is no enclosing stuff, TAB key automatically fallbacks to it's default behavior.
+
+#+begin_src emacs-lisp
+  (use-package tab-jump-out
+    :ensure t
+    :diminish
+    :quelpa (tab-jump-out
+             :fetcher github
+             :repo "zhangkaiyulw/tab-jump-out")
+    :config
+    ;; This is not defined as a global minor mode, so define one and enable it
+    (define-globalized-minor-mode global-tab-jump-out-mode tab-jump-out-mode (lambda () (tab-jump-out-mode)))
+    (global-tab-jump-out-mode 1))
+#+end_src
+** beacon
+#+begin_src emacs-lisp
+(use-package beacon
+  :ensure t
+  :config
+  (beacon-mode 1)
+  (setq beacon-blink-duration 0.5
+        beacon-push-mark 50
+        beacon-color "#9F72D9"))
+#+end_src
+** highlight-thing
+Automatically highlights the symbol under the cursor in the buffer. Simply use evils ~*~ and ~#~ to jump between them.
+
+#+begin_src emacs-lisp
+  (use-package highlight-thing
+    :ensure t
+    :config
+    (setq highlight-thing-prefer-active-region t) ;; Highlight the selected text in visual mode
+    (setq highlight-thing-ignore-list '("False" "True" "->" "::" "defun" "def"))
+    (add-hook 'prog-mode-hook 'highlight-thing-mode))
+#+end_src
+** dumb-jump
+Jumps to definition by using regex, generally works. Use =gd=.
+
+#+begin_src emacs-lisp
+  (use-package dumb-jump
+    :ensure t
+    :config
+    ;;(setq dumb-jump-prefer-searcher 'rg)
+    (setq dumb-jump-force-searcher 'ag
+          dumb-jump-ignore-context t
+          dumb-jump-fallback-search nil)
+    (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
+#+end_src
+** TODO dumb jump to documentation
+- devdocs.io?
+- hoogle?
+** elfeed
+#+begin_src emacs-lisp
+    ;; TODO: experiment with custom faces
+    ;; (defface elfeed-comic
+    ;;   '((t :foreground "#BFF"))
+    ;;   "Marks comics in Elfeed."
+    ;;   :group 'elfeed)
+    ;;
+    ;; (push '(comic elfeed-comic)
+    ;;       elfeed-search-face-alist)
+
+    (defun isamert/elfeed-auto-tag-url (pairs)
+      "Takes a list of url-regex and tag-list pairs and adds a new entry hook for each of them."
+      (--map
+       (add-hook 'elfeed-new-entry-hook
+                 (elfeed-make-tagger :feed-url (car it)
+                                     :add (cdr it)))
+       pairs))
+
+    (defun isamert/elfeed-auto-tag-title (pairs)
+      "Takes a list of title-regex and tag-list pairs and adds a new entry hook for each of them."
+      (--map
+       (add-hook 'elfeed-new-entry-hook
+                 (elfeed-make-tagger :entry-title (car it)
+                                     :add (cdr it)))
+       pairs))
+
+    ;; https://github.com/skeeto/.emacs.d/blob/master/etc/feed-setup.el
+    (defvar youtube-feed-format
+      '(("^UC" . "https://www.youtube.com/feeds/videos.xml?channel_id=%s")
+        ("^PL" . "https://www.youtube.com/feeds/videos.xml?playlist_id=%s")
+        (""    . "https://www.youtube.com/feeds/videos.xml?user=%s")))
+
+    (defun isamert/elfeed--expand (listing)
+      "Expand feed URLs depending on their tags."
+      (cl-destructuring-bind (url . tags) listing
+        (cond
+         ((member 'youtube tags)
+          (let* ((case-fold-search nil)
+                 (test (lambda (s r) (string-match-p r s)))
+                 (format (cl-assoc url youtube-feed-format :test test)))
+            (cons (format (cdr format) url) tags)))
+          ((member 'reddit tags) (cons (format "https://www.reddit.com/r/%s/.rss" url) tags))
+         (listing))))
+
+    (defmacro isamert/elfeed-config (&rest feeds)
+      "Minimizes feed listing indentation without being weird about it."
+      (declare (indent 0))
+      `(setf elfeed-feeds (mapcar #'isamert/elfeed--expand ',feeds)))
+
+   (use-package elfeed
+      :ensure t
+      :config
+      ;; When adding tags, don't add any hierarchical tags like (blog blog-software), or (metal metal-black)
+      ;; Just use something like: (blog software) and (metal black)
+      (isamert/elfeed-config
+        ("https://www.archlinux.org/feeds/news/" update linux)
+
+        ("http://nullprogram.com/feed/" blog dev)
+        ("http://xenodium.com/rss.xml" blog dev)
+        ("https://eli.thegreenplace.net/feeds/all.atom.xml" blog dev)
+        ("https://drewdevault.com/feed.xml" blog dev)
+        ("https://haskell-explained.gitlab.io/blog/feeds/rss.xml" blog dev haskell)
+        ("http://www.haskellforall.com/feeds/posts/default" blog dev haskell)
+        ("https://chrispenner.ca/atom.xml" blog dev haskell)
+        ("https://emacsredux.com/atom.xml" blog emacs)
+        ("https://lexi-lambda.github.io/feeds/all.rss.xml" blog dev haskell)
+        ("https://jaspervdj.be/rss.xml" blog dev haskell)
+
+        ("http://explosm.net/rss" comic)
+
+        ("BlackMetalUpdates" youtube music metal black)
+        ("XOdiumNostrumX" youtube music metal extreme)
+        ("ForgottenChants" youtube music metal extreme folk)
+        ("UCUIIM9pPaSdRg7xquOX7s-w" youtube music metal power) ;; Unknown Power Metal YT
+        ("UCzCWehBejA23yEz3zp7jlcg" youtube music metal black) ;; Black Metal Promotion
+        ("UCZQHDXu4JvsmptR86XDyaRQ" youtube music metal heavy classic) ;; Rare & Obsucre Metal Archives
+
+        ("commandline" reddit linux cli)
+
+        ("UCyoQK-mZXr2ws4C0nXGCH1w" youtube philosophy) ;; Zero Books
+        ("UCSkzHxIcfoEr69MWBdo0ppg" youtube philosophy) ;; Cuck philosophy
+        ("thephilosophytube" youtube fun philosophy)
+        ("ContraPoints" youtube fun philosophy)
+        ("UC738SsV6BSLUVvMgKnEFFzQ" youtube philosophy) ;; Epoch Philosophy
+        ("ShaunandnotJen" youtube philosophy commentary) ;; Shaun
+        ("UCkS_HP3m9NXOgswVAKbMeJQ" youtube philosophy) ;; Then & Now
+        ("UCjnpuIGovFFUBLG5BeHzTag" youtube philosophy podcast) ;; Philosophize This
+        ("aliabdaal" youtube vlog)
+        ("UCYO_jab_esuFRV4b17AJtAw" youtube fun science animation) ; 3Blue1Brown
+        ("UCsXVk37bltHxD1rDPwtNM8Q" youtube fun science animation) ;; Kurzgesagt – In a Nutshel
+        ("numberphile" youtube fun science)
+        ("ProZD" youtube fun skit)
+        ("UC0uTPqBCFIpZxlz_Lv1tk_g" youtube emacs dev) ;; Protesilaos Stavrou
+        ("UC2NXVB__-v-hf-l6wcg1zjQ" youtube linux dev cli) ;; Tom on the internet
+        ("UC2eYFnH61tmytImy1mTYvhA" youtube linux cli) ;; Luke Smith
+        ("OmegaDungeon" youtube linux cli) ;; Brodie Robertson
+        ("UCEbYhDd6c6vngsF5PQpFVWg" youtube dev haskell) ;; Tsoding
+        ("UCUgxpaK7ySR-z6AXA5-uDuw" youtube dev haskell) ;; Haskell at Work
+        ("MentalOutlawStudios" youtube cli linux)
+        ("UCbnGhYfkxiZdOPrZg4RBevw" youtube emacs cli linux) ;; Ravar's Path
+        ("polyglut" youtube emacs) ;; Xah Lee
+        ("babyWOGUE" youtube linux fun)
+        ("UC8ENHE5xdFSwx71u3fDH5Xw" youtube vim cli dev) ;; ThePrimeagen
+        ("mzamansky" youtube emacs)
+        ("YourMovieSucksDOTorg" youtube fun movie)
+        ("RedLetterMedia" youtube fun movie)
+        ("MrDanielmac" youtube movie)
+        ("CineFix" youtube movie fun)
+        ("hotbananastud" youtube fun skit) ;; Brandon Rogers
+        ("ilkercanikligil" youtube fun turkce) ;; Flu TV
+        ("199sokak" youtube fun turkish skit) ;; Kamusal Mizah
+        ("UC3Xu0FQeizzXhUtthFjFs8g" youtube fun skit vlog) ;; Deniz Bagdas
+        ("codyko69" youtube fun commentary)
+        ("conmech" youtube fun turkce) ;; Efe Aydal
+        ("tvMisha" youtube fun turkce vlog)
+
+        ("UCWXCrItCF6ZgXrdozUS-Idw" youtube fun animation) ; ExplosmEntertainment
+      )
+
+      (isamert/elfeed-auto-tag-url '(("youtube\\.com" youtube)))
+      (isamert/elfeed-auto-tag-title '(("youtube\\.com" youtube)
+                                       ("c\\+\\+"  (programming c++))
+                                       ("python"   (programming python))
+                                       ("haskell"  (programming haskell))))
+
+
+      ;; To apply hooks to all existing entries, use: elfeed-apply-hooks-now
+
+      (evil-define-key 'normal elfeed-search-mode-map
+        (kbd "RET") 'elfeed-search-show-entry
+        (kbd "S-<return>") 'elfeed-search-browse-url
+        "o" 'elfeed-search-browse-url
+        "y" 'elfeed-search-yank
+
+        ;; refresh
+        "R" 'elfeed-search-fetch
+        "r" 'elfeed-search-update--force
+
+        ;; filter
+        ;;   - examples:
+        ;;     - +tag OR -tag (unread is also a tag)
+        ;;     - #number-of-entries-limit (like #20)
+        ;;     - !inverse-regex (!x?emacs will filter out titles containing x?emacs regex)
+        ;;     - =regex (entries that contains the regex will be shown)
+        ;;     - +unread +youtube =emacs #10 @5-months-ago
+        "s" 'elfeed-search-live-filter
+        "S" 'elfeed-search-set-filter
+
+        "q" 'elfeed-search-quit-window)
+
+      (evil-define-key '(normal visual) elfeed-search-mode-map
+        "+" 'elfeed-search-tag-all
+        "-" 'elfeed-search-untag-all
+        "t" 'elfeed-search-tag-all
+        "T" 'elfeed-search-untag-all
+        "U" 'elfeed-search-tag-all-unread
+        "u" 'elfeed-search-untag-all-unread)
+
+      (evil-define-key 'normal elfeed-show-mode-map
+        (kbd "S-<return>") 'elfeed-show-visit
+        "go" 'elfeed-show-visit
+
+        (kbd "<tab>") 'elfeed-show-next-link
+
+        ;; filter
+        "s" 'elfeed-show-new-live-search
+
+        ;; +/- like the tag search syntax
+        "+" 'elfeed-show-tag
+        "-" 'elfeed-show-untag
+        "t" 'elfeed-show-tag
+        "T" 'elfeed-show-untag
+
+        "]]" 'elfeed-show-next
+        "[[" 'elfeed-show-prev
+        "gj" 'elfeed-show-next
+        "gk" 'elfeed-show-prev
+
+        ;; refresh
+        "gr" 'elfeed-show-refresh
+
+        ;; quit
+        "q" 'elfeed-kill-buffer))
+
+  (use-package elfeed-web
+    :ensure t)
+#+end_src
+
+** eradio
+Play internet radios.
+
+#+begin_src emacs-lisp
+  (use-package eradio
+    :ensure t
+    :diminish
+    :quelpa (eradio
+             :fetcher github
+             :repo "isamert/eradio")
+
+    :config
+    (evil-leader/set-key
+      "err" 'eradio-toggle
+      "erR" 'isamert/eradio-random-channel
+      "erp" 'eradio-play
+      "erk" 'isamert/eradio-kill-song-title
+      "erl" 'isamert/eradio-log-song-title
+      "ers" 'eradio-show-song-title
+      "ers" 'eradio-stop)
+
+    (setq eradio-mpv-socket "/tmp/eradio-socket")
+    (setq eradio-player `("mpv" "--no-video" "--no-terminal" ,(concat "--input-ipc-server=" eradio-mpv-socket)))
+
+    (setq eradio-channels '(("racap.ru // ambient"              . "http://79.111.119.111:8002/ambient")
+                            ("racap.ru // anime"                . "http://79.111.119.111:8002/anime")
+                            ("racap.ru // avantgardejazz"       . "http://79.111.119.111:8002/avantgardejazz")
+                            ("racap.ru // avantprog"            . "http://79.111.119.111:8002/avantprog")
+                            ("racap.ru // breakcore"            . "http://79.111.119.111:8002/breakcore")
+                            ("racap.ru // brutaldeathmetal"     . "http://79.111.119.111:8002/brutaldeathmetal")
+                            ("racap.ru // clubdance"            . "http://79.111.119.111:8002/clubdance")
+                            ("racap.ru // contemporaryjazz"     . "http://79.111.119.111:8002/contemporaryjazz")
+                            ("racap.ru // countryrock"          . "http://79.111.119.111:8002/countryrock")
+                            ("racap.ru // darkcabaret"          . "http://79.111.119.111:8002/darkcabaret")
+                            ("racap.ru // darkfolk"             . "http://79.111.119.111:8002/darkfolk")
+                            ("racap.ru // darkmetal"            . "http://79.111.119.111:8002/darkmetal")
+                            ("racap.ru // darkpsytrance"        . "http://79.111.119.111:8002/darkpsytrance")
+                            ("racap.ru // droneambient"         . "http://79.111.119.111:8002/droneambient")
+                            ("racap.ru // dsbm"                 . "http://79.111.119.111:8002/dsbm")
+                            ("racap.ru // electro"              . "http://79.111.119.111:8002/electro")
+                            ("racap.ru // electroindustrial"    . "http://79.111.119.111:8002/electroindustrial")
+                            ("racap.ru // electronicore"        . "http://79.111.119.111:8002/electronicore")
+                            ("racap.ru // epicmetal"            . "http://79.111.119.111:8002/epicmetal")
+                            ("racap.ru // eurodisco"            . "http://79.111.119.111:8002/eurodisco")
+                            ("racap.ru // eurohouse"            . "http://79.111.119.111:8002/eurohouse")
+                            ("racap.ru // experimentalmusic"    . "http://79.111.119.111:8002/experimentalmusic")
+                            ("racap.ru // funk"                 . "http://79.111.119.111:8002/funk")
+                            ("racap.ru // indieelectronic"      . "http://79.111.119.111:8002/indieelectronic")
+                            ("racap.ru // instrumentalmetal"    . "http://79.111.119.111:8002/instrumentalmetal")
+                            ("racap.ru // jazzfusion"           . "http://79.111.119.111:8002/jazzfusion")
+                            ("racap.ru // jazzrock"             . "http://79.111.119.111:8002/jazzrock")
+                            ("racap.ru // latinjazz"            . "http://79.111.119.111:8002/latinjazz")
+                            ("racap.ru // liquidfunk"           . "http://79.111.119.111:8002/liquidfunk")
+                            ("racap.ru // melodicblackmetal"    . "http://79.111.119.111:8002/melodicblackmetal")
+                            ("racap.ru // melodicheavy"         . "http://79.111.119.111:8002/melodicheavy")
+                            ("racap.ru // melodicpower"         . "http://79.111.119.111:8002/melodicpower")
+                            ("racap.ru // middleeast"           . "http://79.111.119.111:8002/middleeast")
+                            ("racap.ru // mintechhouse"         . "http://79.111.119.111:8002/mintechhouse")
+                            ("racap.ru // nativeamerican"       . "http://79.111.119.111:8002/nativeamerican")
+                            ("racap.ru // neoclassicalmetal"    . "http://79.111.119.111:8002/neoclassicalmetal")
+                            ("racap.ru // neoprogrock"          . "http://79.111.119.111:8002/neoprogrock")
+                            ("racap.ru // neurofunk"            . "http://79.111.119.111:8002/neurofunk")
+                            ("racap.ru // nudisco"              . "http://79.111.119.111:8002/nudisco")
+                            ("racap.ru // orientalmetal"        . "http://79.111.119.111:8002/orientalmetal")
+                            ("racap.ru // paganmetal"           . "http://79.111.119.111:8002/paganmetal")
+                            ("racap.ru // pianojazz"            . "http://79.111.119.111:8002/pianojazz")
+                            ("racap.ru // postgrunge"           . "http://79.111.119.111:8002/postgrunge")
+                            ("racap.ru // posthardcore"         . "http://79.111.119.111:8002/posthardcore")
+                            ("racap.ru // progdeath"            . "http://79.111.119.111:8002/progdeath")
+                            ("racap.ru // proghouse"            . "http://79.111.119.111:8002/proghouse")
+                            ("racap.ru // progpowermetal"       . "http://79.111.119.111:8002/progpowermetal")
+                            ("racap.ru // progressiverock"      . "http://79.111.119.111:8002/progressiverock")
+                            ("racap.ru // psychedelicrock"      . "http://79.111.119.111:8002/psychedelicrock")
+                            ("racap.ru // psychobilly"          . "http://79.111.119.111:8002/psychobilly")
+                            ("racap.ru // psytrance"            . "http://79.111.119.111:8002/psytrance")
+                            ("racap.ru // shoegazing"           . "http://79.111.119.111:8002/shoegazing")
+                            ("racap.ru // siberia"              . "http://79.111.119.111:8002/siberia")
+                            ("racap.ru // soulfulhouse"         . "http://79.111.119.111:8002/soulfulhouse")
+                            ("racap.ru // spacemusic"           . "http://79.111.119.111:8002/spacemusic")
+                            ("racap.ru // spacerock"            . "http://79.111.119.111:8002/spacerock")
+                            ("racap.ru // speedmetal"           . "http://79.111.119.111:8002/speedmetal")
+                            ("racap.ru // stonerrock"           . "http://79.111.119.111:8002/stonerrock")
+                            ("racap.ru // surfrock"             . "http://79.111.119.111:8002/surfrock")
+                            ("racap.ru // symphonicblackmetal"  . "http://79.111.119.111:8002/symphonicblackmetal")
+                            ("racap.ru // upliftingtrance"      . "http://79.111.119.111:8002/upliftingtrance")
+
+                            ("radcap.ru // aabmds"            . "http://79.120.39.202:8002/aabmds")
+                            ("radcap.ru // acousticguitar"    . "http://79.120.39.202:8002/acousticguitar")
+                            ("radcap.ru // africanfolk"       . "http://79.120.39.202:8002/africanfolk")
+                            ("radcap.ru // altrock"           . "http://79.120.39.202:8002/altrock")
+                            ("radcap.ru // arabicpop"         . "http://79.120.39.202:8002/arabicpop")
+                            ("radcap.ru // artrock"           . "http://79.120.39.202:8002/artrock")
+                            ("radcap.ru // balkan"            . "http://79.120.39.202:8002/balkan")
+                            ("radcap.ru // bardru"            . "http://79.120.39.202:8002/bardru")
+                            ("radcap.ru // bigband"           . "http://79.120.39.202:8002/bigband")
+                            ("radcap.ru // bluesrock"         . "http://79.120.39.202:8002/bluesrock")
+                            ("radcap.ru // breakbeat"         . "http://79.120.39.202:8002/breakbeat")
+                            ("radcap.ru // britpop"           . "http://79.120.39.202:8002/britpop")
+                            ("radcap.ru // chamberjazz"       . "http://79.120.39.202:8002/chamberjazz")
+                            ("radcap.ru // chorus"            . "http://79.120.39.202:8002/chorus")
+                            ("radcap.ru // classpiano"        . "http://79.120.39.202:8002/classpiano")
+                            ("radcap.ru // cooljazz"          . "http://79.120.39.202:8002/cooljazz")
+                            ("radcap.ru // crust"             . "http://79.120.39.202:8002/crust")
+                            ("radcap.ru // darkambient"       . "http://79.120.39.202:8002/darkambient")
+                            ("radcap.ru // darkdubstep"       . "http://79.120.39.202:8002/darkdubstep")
+                            ("radcap.ru // darkelectro"       . "http://79.120.39.202:8002/darkelectro")
+                            ("radcap.ru // darkjazz"          . "http://79.120.39.202:8002/darkjazz")
+                            ("radcap.ru // deathdoom"         . "http://79.120.39.202:8002/deathdoom")
+                            ("radcap.ru // deephouse"         . "http://79.120.39.202:8002/deephouse")
+                            ("radcap.ru // dixieland"         . "http://79.120.39.202:8002/dixieland")
+                            ("radcap.ru // dreamtrance"       . "http://79.120.39.202:8002/dreamtrance")
+                            ("radcap.ru // dronemetal"        . "http://79.120.39.202:8002/dronemetal")
+                            ("radcap.ru // drumstep"          . "http://79.120.39.202:8002/drumstep")
+                            ("radcap.ru // dubstep"           . "http://79.120.39.202:8002/dubstep")
+                            ("radcap.ru // dubtechno"         . "http://79.120.39.202:8002/dubtechno")
+                            ("radcap.ru // electroclash"      . "http://79.120.39.202:8002/electroclash")
+                            ("radcap.ru // erotic"            . "http://79.120.39.202:8002/erotic")
+                            ("radcap.ru // ethnojazz"         . "http://79.120.39.202:8002/ethnojazz")
+                            ("radcap.ru // ethnotronica"      . "http://79.120.39.202:8002/ethnotronica")
+                            ("radcap.ru // eurobeat"          . "http://79.120.39.202:8002/eurobeat")
+                            ("radcap.ru // eurodance"         . "http://79.120.39.202:8002/eurodance")
+                            ("radcap.ru // folkmetal"         . "http://79.120.39.202:8002/folkmetal")
+                            ("radcap.ru // futuregarage"      . "http://79.120.39.202:8002/futuregarage")
+                            ("radcap.ru // futurepop"         . "http://79.120.39.202:8002/futurepop")
+                            ("radcap.ru // gangstarap"        . "http://79.120.39.202:8002/gangstarap")
+                            ("radcap.ru // glam"              . "http://79.120.39.202:8002/glam")
+                            ("radcap.ru // goatrance"         . "http://79.120.39.202:8002/goatrance")
+                            ("radcap.ru // groovemetal"       . "http://79.120.39.202:8002/groovemetal")
+                            ("radcap.ru // grunge"            . "http://79.120.39.202:8002/grunge")
+                            ("radcap.ru // hammond"           . "http://79.120.39.202:8002/hammond")
+                            ("radcap.ru // hardcoretech"      . "http://79.120.39.202:8002/hardcoretech")
+                            ("radcap.ru // harpblues"         . "http://79.120.39.202:8002/harpblues")
+                            ("radcap.ru // heavypsych"        . "http://79.120.39.202:8002/heavypsych")
+                            ("radcap.ru // indiancinema"      . "http://79.120.39.202:8002/indiancinema")
+                            ("radcap.ru // indierock"         . "http://79.120.39.202:8002/indierock")
+                            ("radcap.ru // industrialmetal"   . "http://79.120.39.202:8002/industrialmetal")
+                            ("radcap.ru // instrumentalrock"  . "http://79.120.39.202:8002/instrumentalrock")
+                            ("radcap.ru // jazzfunk"          . "http://79.120.39.202:8002/jazzfunk")
+                            ("radcap.ru // jazzpop"           . "http://79.120.39.202:8002/jazzpop")
+                            ("radcap.ru // jazzrap"           . "http://79.120.39.202:8002/jazzrap")
+                            ("radcap.ru // klezmer"           . "http://79.120.39.202:8002/klezmer")
+                            ("radcap.ru // leftfield"         . "http://79.120.39.202:8002/leftfield")
+                            ("radcap.ru // mathmetal"         . "http://79.120.39.202:8002/mathmetal")
+                            ("radcap.ru // mathrock"          . "http://79.120.39.202:8002/mathrock")
+                            ("radcap.ru // metalcore"         . "http://79.120.39.202:8002/metalcore")
+                            ("radcap.ru // mintechno"         . "http://79.120.39.202:8002/mintechno")
+                            ("radcap.ru // modernclassical"   . "http://79.120.39.202:8002/modernclassical")
+                            ("radcap.ru // musicgame"         . "http://79.120.39.202:8002/musicgame")
+                            ("radcap.ru // neoclassical"      . "http://79.120.39.202:8002/neoclassical")
+                            ("radcap.ru // newwave"           . "http://79.120.39.202:8002/newwave")
+                            ("radcap.ru // noise"             . "http://79.120.39.202:8002/noise")
+                            ("radcap.ru // noiserock"         . "http://79.120.39.202:8002/noiserock")
+                            ("radcap.ru // opera"             . "http://79.120.39.202:8002/opera")
+                            ("radcap.ru // pop80"             . "http://79.120.39.202:8002/pop80")
+                            ("radcap.ru // postmetal"         . "http://79.120.39.202:8002/postmetal")
+                            ("radcap.ru // postpunk"          . "http://79.120.39.202:8002/postpunk")
+                            ("radcap.ru // progtrance"        . "http://79.120.39.202:8002/progtrance")
+                            ("radcap.ru // psyprog"           . "http://79.120.39.202:8002/psyprog")
+                            ("radcap.ru // reggae"            . "http://79.120.39.202:8002/reggae")
+                            ("radcap.ru // relaxation"        . "http://79.120.39.202:8002/relaxation")
+                            ("radcap.ru // retrowave"         . "http://79.120.39.202:8002/retrowave")
+                            ("radcap.ru // romantic"          . "http://79.120.39.202:8002/romantic")
+                            ("radcap.ru // salsa"             . "http://79.120.39.202:8002/salsa")
+                            ("radcap.ru // smoothjazz"        . "http://79.120.39.202:8002/smoothjazz")
+                            ("radcap.ru // soul"              . "http://79.120.39.202:8002/soul")
+                            ("radcap.ru // spacesynth"        . "http://79.120.39.202:8002/spacesynth")
+                            ("radcap.ru // strings"           . "http://79.120.39.202:8002/strings")
+                            ("radcap.ru // swing"             . "http://79.120.39.202:8002/swing")
+                            ("radcap.ru // symphorock"        . "http://79.120.39.202:8002/symphorock")
+                            ("radcap.ru // tango"             . "http://79.120.39.202:8002/tango")
+                            ("radcap.ru // vocaljazz"         . "http://79.120.39.202:8002/vocaljazz")
+                            ("radcap.ru // vocaltrance"       . "http://79.120.39.202:8002/vocaltrance")
+
+                            ("radcap.ru // 60collection"        . "http://213.141.131.10:8002/60collection")
+                            ("radcap.ru // 70collection"        . "http://213.141.131.10:8002/70collection")
+                            ("radcap.ru // 90collection"        . "http://213.141.131.10:8002/90collection")
+                            ("radcap.ru // acoustic"            . "http://213.141.131.10:8002/acoustic")
+                            ("radcap.ru // americana"           . "http://213.141.131.10:8002/americana")
+                            ("radcap.ru // andean"              . "http://213.141.131.10:8002/andean")
+                            ("radcap.ru // atmosphericdoom"     . "http://213.141.131.10:8002/atmosphericdoom")
+                            ("radcap.ru // avantrock"           . "http://213.141.131.10:8002/avantrock")
+                            ("radcap.ru // balearichouse"       . "http://213.141.131.10:8002/balearichouse")
+                            ("radcap.ru // bigroomhouse"        . "http://213.141.131.10:8002/bigroomhouse")
+                            ("radcap.ru // caucasus"            . "http://213.141.131.10:8002/caucasus")
+                            ("radcap.ru // chamber"             . "http://213.141.131.10:8002/chamber")
+                            ("radcap.ru // chants"              . "http://213.141.131.10:8002/chants")
+                            ("radcap.ru // chicanorap"          . "http://213.141.131.10:8002/chicanorap")
+                            ("radcap.ru // christianrock"       . "http://213.141.131.10:8002/christianrock")
+                            ("radcap.ru // clarinet"            . "http://213.141.131.10:8002/clarinet")
+                            ("radcap.ru // classavant"          . "http://213.141.131.10:8002/classavant")
+                            ("radcap.ru // classguitar"         . "http://213.141.131.10:8002/classguitar")
+                            ("radcap.ru // clavecin"            . "http://213.141.131.10:8002/clavecin")
+                            ("radcap.ru // cloudrap"            . "http://213.141.131.10:8002/cloudrap")
+                            ("radcap.ru // cpop"                . "http://213.141.131.10:8002/cpop")
+                            ("radcap.ru // crossoverjazz"       . "http://213.141.131.10:8002/crossoverjazz")
+                            ("radcap.ru // dancepunk"           . "http://213.141.131.10:8002/dancepunk")
+                            ("radcap.ru // detroittechno"       . "http://213.141.131.10:8002/detroittechno")
+                            ("radcap.ru // ecmrecords"          . "http://213.141.131.10:8002/ecmrecords")
+                            ("radcap.ru // edmtrap"             . "http://213.141.131.10:8002/edmtrap")
+                            ("radcap.ru // electroswing"        . "http://213.141.131.10:8002/electroswing")
+                            ("radcap.ru // electrotechno"       . "http://213.141.131.10:8002/electrotechno")
+                            ("radcap.ru // enigmatic"           . "http://213.141.131.10:8002/enigmatic")
+                            ("radcap.ru // ethereal"            . "http://213.141.131.10:8002/ethereal")
+                            ("radcap.ru // europeanfolk"        . "http://213.141.131.10:8002/europeanfolk")
+                            ("radcap.ru // experimentaltechno"  . "http://213.141.131.10:8002/experimentaltechno")
+                            ("radcap.ru // fado"                . "http://213.141.131.10:8002/fado")
+                            ("radcap.ru // fieldrecording"      . "http://213.141.131.10:8002/fieldrecording")
+                            ("radcap.ru // folkpop"             . "http://213.141.131.10:8002/folkpop")
+                            ("radcap.ru // folkpunk"            . "http://213.141.131.10:8002/folkpunk")
+                            ("radcap.ru // forestpsytrance"     . "http://213.141.131.10:8002/forestpsytrance")
+                            ("radcap.ru // frenchrap"           . "http://213.141.131.10:8002/frenchrap")
+                            ("radcap.ru // funkrock"            . "http://213.141.131.10:8002/funkrock")
+                            ("radcap.ru // funkyhouse"          . "http://213.141.131.10:8002/funkyhouse")
+                            ("radcap.ru // futurebass"          . "http://213.141.131.10:8002/futurebass")
+                            ("radcap.ru // germanrap"           . "http://213.141.131.10:8002/germanrap")
+                            ("radcap.ru // hardcorepunk"        . "http://213.141.131.10:8002/hardcorepunk")
+                            ("radcap.ru // hardhouse"           . "http://213.141.131.10:8002/hardhouse")
+                            ("radcap.ru // harp"                . "http://213.141.131.10:8002/harp")
+                            ("radcap.ru // healing"             . "http://213.141.131.10:8002/healing")
+                            ("radcap.ru // honkytonk"           . "http://213.141.131.10:8002/honkytonk")
+                            ("radcap.ru // idmambient"          . "http://213.141.131.10:8002/idmambient")
+                            ("radcap.ru // illbient"            . "http://213.141.131.10:8002/illbient")
+                            ("radcap.ru // italopop"            . "http://213.141.131.10:8002/italopop")
+                            ("radcap.ru // jazzmetal"           . "http://213.141.131.10:8002/jazzmetal")
+                            ("radcap.ru // jumpblues"           . "http://213.141.131.10:8002/jumpblues")
+                            ("radcap.ru // jungle"              . "http://213.141.131.10:8002/jungle")
+                            ("radcap.ru // louisianablues"      . "http://213.141.131.10:8002/louisianablues")
+                            ("radcap.ru // lovesongs"           . "http://213.141.131.10:8002/lovesongs")
+                            ("radcap.ru // manele"              . "http://213.141.131.10:8002/manele")
+                            ("radcap.ru // mantras"             . "http://213.141.131.10:8002/mantras")
+                            ("radcap.ru // medieval"            . "http://213.141.131.10:8002/medieval")
+                            ("radcap.ru // medievalfolk"        . "http://213.141.131.10:8002/medievalfolk")
+                            ("radcap.ru // medievalmetal"       . "http://213.141.131.10:8002/medievalmetal")
+                            ("radcap.ru // memphisrap"          . "http://213.141.131.10:8002/memphisrap")
+                            ("radcap.ru // minimalism"          . "http://213.141.131.10:8002/minimalism")
+                            ("radcap.ru // modaljazz"           . "http://213.141.131.10:8002/modaljazz")
+                            ("radcap.ru // musiqueconcrete"     . "http://213.141.131.10:8002/musiqueconcrete")
+                            ("radcap.ru // ndh"                 . "http://213.141.131.10:8002/ndh")
+                            ("radcap.ru // nightpsytrance"      . "http://213.141.131.10:8002/nightpsytrance")
+                            ("radcap.ru // nitzhonot"           . "http://213.141.131.10:8002/nitzhonot")
+                            ("radcap.ru // oceania"             . "http://213.141.131.10:8002/oceania")
+                            ("radcap.ru // oldschoolhiphop"     . "http://213.141.131.10:8002/oldschoolhiphop")
+                            ("radcap.ru // popsoul"             . "http://213.141.131.10:8002/popsoul")
+                            ("radcap.ru // progfolk"            . "http://213.141.131.10:8002/progfolk")
+                            ("radcap.ru // progheavy"           . "http://213.141.131.10:8002/progheavy")
+                            ("radcap.ru // psychfolk"           . "http://213.141.131.10:8002/psychfolk")
+                            ("radcap.ru // reggaeton"           . "http://213.141.131.10:8002/reggaeton")
+                            ("radcap.ru // renaissance"         . "http://213.141.131.10:8002/renaissance")
+                            ("radcap.ru // sacred"              . "http://213.141.131.10:8002/sacred")
+                            ("radcap.ru // singersongwriter"    . "http://213.141.131.10:8002/singersongwriter")
+                            ("radcap.ru // slavonicneofolk"     . "http://213.141.131.10:8002/slavonicneofolk")
+                            ("radcap.ru // slideguitar"         . "http://213.141.131.10:8002/slideguitar")
+                            ("radcap.ru // slowcore"            . "http://213.141.131.10:8002/slowcore")
+                            ("radcap.ru // sonata"              . "http://213.141.131.10:8002/sonata")
+                            ("radcap.ru // speedheavy"          . "http://213.141.131.10:8002/speedheavy")
+                            ("radcap.ru // symphodeath"         . "http://213.141.131.10:8002/symphodeath")
+                            ("radcap.ru // symphogoth"          . "http://213.141.131.10:8002/symphogoth")
+                            ("radcap.ru // symphopower"         . "http://213.141.131.10:8002/symphopower")
+                            ("radcap.ru // techtrance"          . "http://213.141.131.10:8002/techtrance")
+                            ("radcap.ru // thirdstream"         . "http://213.141.131.10:8002/thirdstream")
+                            ("radcap.ru // thrashblack"         . "http://213.141.131.10:8002/thrashblack")
+                            ("radcap.ru // thrashheavy"         . "http://213.141.131.10:8002/thrashheavy")
+                            ("radcap.ru // tribalhouse"         . "http://213.141.131.10:8002/tribalhouse")
+                            ("radcap.ru // trumpetjazz"         . "http://213.141.131.10:8002/trumpetjazz")
+                            ("radcap.ru // turkishpop"          . "http://213.141.131.10:8002/turkishpop")
+                            ("radcap.ru // ukhiphop"            . "http://213.141.131.10:8002/ukhiphop")
+                            ("radcap.ru // undergroundtechno"   . "http://213.141.131.10:8002/undergroundtechno")
+                            ("radcap.ru // violin"              . "http://213.141.131.10:8002/violin")
+                            ("radcap.ru // abstracthiphop"      . "http://79.111.14.76:8002/abstracthiphop")
+                            ("radcap.ru // acidjazz"            . "http://79.111.14.76:8002/acidjazz")
+                            ("radcap.ru // acousticblues"       . "http://79.111.14.76:8002/acousticblues")
+                            ("radcap.ru // ambientdub"          . "http://79.111.14.76:8002/ambientdub")
+                            ("radcap.ru // aor"                 . "http://79.111.14.76:8002/aor")
+                            ("radcap.ru // avantgardemetal"     . "http://79.111.14.76:8002/avantgardemetal")
+                            ("radcap.ru // ballroomdance"       . "http://79.111.14.76:8002/ballroomdance")
+                            ("radcap.ru // baroque"             . "http://79.111.14.76:8002/baroque")
+                            ("radcap.ru // beatdown"            . "http://79.111.14.76:8002/beatdown")
+                            ("radcap.ru // bebop"               . "http://79.111.14.76:8002/bebop")
+                            ("radcap.ru // blackdeath"          . "http://79.111.14.76:8002/blackdeath")
+                            ("radcap.ru // bluegrass"           . "http://79.111.14.76:8002/bluegrass")
+                            ("radcap.ru // bossanova"           . "http://79.111.14.76:8002/bossanova")
+                            ("radcap.ru // cello"               . "http://79.111.14.76:8002/cello")
+                            ("radcap.ru // celtic"              . "http://79.111.14.76:8002/celtic")
+                            ("radcap.ru // chamberpop"          . "http://79.111.14.76:8002/chamberpop")
+                            ("radcap.ru // chicagoblues"        . "http://79.111.14.76:8002/chicagoblues")
+                            ("radcap.ru // chillout"            . "http://79.111.14.76:8002/chillout")
+                            ("radcap.ru // crossoverprog"       . "http://79.111.14.76:8002/crossoverprog")
+                            ("radcap.ru // dancehall"           . "http://79.111.14.76:8002/dancehall")
+                            ("radcap.ru // darktechno"          . "http://79.111.14.76:8002/darktechno")
+                            ("radcap.ru // darkwave"            . "http://79.111.14.76:8002/darkwave")
+                            ("radcap.ru // deathcore"           . "http://79.111.14.76:8002/deathcore")
+                            ("radcap.ru // deathstep"           . "http://79.111.14.76:8002/deathstep")
+                            ("radcap.ru // doom"                . "http://79.111.14.76:8002/doom")
+                            ("radcap.ru // dreampop"            . "http://79.111.14.76:8002/dreampop")
+                            ("radcap.ru // drumbass"            . "http://79.111.14.76:8002/drumbass")
+                            ("radcap.ru // dub"                 . "http://79.111.14.76:8002/dub")
+                            ("radcap.ru // eastcoastrap"        . "http://79.111.14.76:8002/eastcoastrap")
+                            ("radcap.ru // easylistening"       . "http://79.111.14.76:8002/easylistening")
+                            ("radcap.ru // ebm"                 . "http://79.111.14.76:8002/ebm")
+                            ("radcap.ru // eclecticprog"        . "http://79.111.14.76:8002/eclecticprog")
+                            ("radcap.ru // electricblues"       . "http://79.111.14.76:8002/electricblues")
+                            ("radcap.ru // electrohouse"        . "http://79.111.14.76:8002/electrohouse")
+                            ("radcap.ru // femalemetal"         . "http://79.111.14.76:8002/femalemetal")
+                            ("radcap.ru // flamenco"            . "http://79.111.14.76:8002/flamenco")
+                            ("radcap.ru // flute"               . "http://79.111.14.76:8002/flute")
+                            ("radcap.ru // folkrock"            . "http://79.111.14.76:8002/folkrock")
+                            ("radcap.ru // folkrockru"          . "http://79.111.14.76:8002/folkrockru")
+                            ("radcap.ru // freejazz"            . "http://79.111.14.76:8002/freejazz")
+                            ("radcap.ru // frenchchanson"       . "http://79.111.14.76:8002/frenchchanson")
+                            ("radcap.ru // fullon"              . "http://79.111.14.76:8002/fullon")
+                            ("radcap.ru // glitch"              . "http://79.111.14.76:8002/glitch")
+                            ("radcap.ru // gospel"              . "http://79.111.14.76:8002/gospel")
+                            ("radcap.ru // gothicrock"          . "http://79.111.14.76:8002/gothicrock")
+                            ("radcap.ru // hardbop"             . "http://79.111.14.76:8002/hardbop")
+                            ("radcap.ru // hardcoremetal"       . "http://79.111.14.76:8002/hardcoremetal")
+                            ("radcap.ru // hardstyle"           . "http://79.111.14.76:8002/hardstyle")
+                            ("radcap.ru // heavymetal"          . "http://79.111.14.76:8002/heavymetal")
+                            ("radcap.ru // heavypowermetal"     . "http://79.111.14.76:8002/heavypowermetal")
+                            ("radcap.ru // heavyprog"           . "http://79.111.14.76:8002/heavyprog")
+                            ("radcap.ru // idm"                 . "http://79.111.14.76:8002/idm")
+                            ("radcap.ru // indianfolk"          . "http://79.111.14.76:8002/indianfolk")
+                            ("radcap.ru // indiefolk"           . "http://79.111.14.76:8002/indiefolk")
+                            ("radcap.ru // industrial"          . "http://79.111.14.76:8002/industrial")
+                            ("radcap.ru // lo-fi"               . "http://79.111.14.76:8002/lo-fi")
+                            ("radcap.ru // lounge"              . "http://79.111.14.76:8002/lounge")
+                            ("radcap.ru // mainstreamjazz"      . "http://79.111.14.76:8002/mainstreamjazz")
+                            ("radcap.ru // martialindustrial"   . "http://79.111.14.76:8002/martialindustrial")
+                            ("radcap.ru // melodicmetalcore"    . "http://79.111.14.76:8002/melodicmetalcore")
+                            ("radcap.ru // metalstep"           . "http://79.111.14.76:8002/metalstep")
+                            ("radcap.ru // nujazz"              . "http://79.111.14.76:8002/nujazz")
+                            ("radcap.ru // numetal"             . "http://79.111.14.76:8002/numetal")
+                            ("radcap.ru // nwobhm"              . "http://79.111.14.76:8002/nwobhm")
+                            ("radcap.ru // orthodox"            . "http://79.111.14.76:8002/orthodox")
+                            ("radcap.ru // pianoblues"          . "http://79.111.14.76:8002/pianoblues")
+                            ("radcap.ru // pianorock"           . "http://79.111.14.76:8002/pianorock")
+                            ("radcap.ru // poppunk"             . "http://79.111.14.76:8002/poppunk")
+                            ("radcap.ru // postblack"           . "http://79.111.14.76:8002/postblack")
+                            ("radcap.ru // postbop"             . "http://79.111.14.76:8002/postbop")
+                            ("radcap.ru // postrock"            . "http://79.111.14.76:8002/postrock")
+                            ("radcap.ru // progmetalcore"       . "http://79.111.14.76:8002/progmetalcore")
+                            ("radcap.ru // psybient"            . "http://79.111.14.76:8002/psybient")
+                            ("radcap.ru // rockabilly"          . "http://79.111.14.76:8002/rockabilly")
+                            ("radcap.ru // soulblues"           . "http://79.111.14.76:8002/soulblues")
+                            ("radcap.ru // souljazz"            . "http://79.111.14.76:8002/souljazz")
+                            ("radcap.ru // soundnat"            . "http://79.111.14.76:8002/soundnat")
+                            ("radcap.ru // southernrock"        . "http://79.111.14.76:8002/southernrock")
+                            ("radcap.ru // symphony"            . "http://79.111.14.76:8002/symphony")
+                            ("radcap.ru // texasblues"          . "http://79.111.14.76:8002/texasblues")
+                            ("radcap.ru // thrashdeath"         . "http://79.111.14.76:8002/thrashdeath")
+                            ("radcap.ru // tradelectronic"      . "http://79.111.14.76:8002/tradelectronic")
+                            ("radcap.ru // triphop"             . "http://79.111.14.76:8002/triphop")
+                            ("radcap.ru // undergroundrap"      . "http://79.111.14.76:8002/undergroundrap")
+                            ("radcap.ru // vikingmetal"         . "http://79.111.14.76:8002/vikingmetal")
+                            ("radcap.ru // westernswing"        . "http://79.111.14.76:8002/westernswing")
+
+                            ("radcap.ru // 80ru"                . "http://79.120.77.11:8002/80ru")
+                            ("radcap.ru // altmetal"            . "http://79.120.77.11:8002/altmetal")
+                            ("radcap.ru // ambienttechno"       . "http://79.120.77.11:8002/ambienttechno")
+                            ("radcap.ru // blackdoom"           . "http://79.120.77.11:8002/blackdoom")
+                            ("radcap.ru // blackmetal"          . "http://79.120.77.11:8002/blackmetal")
+                            ("radcap.ru // blues"               . "http://79.120.77.11:8002/blues")
+                            ("radcap.ru // brokenbeat"          . "http://79.120.77.11:8002/brokenbeat")
+                            ("radcap.ru // chillwave"           . "http://79.120.77.11:8002/chillwave")
+                            ("radcap.ru // classcross"          . "http://79.120.77.11:8002/classcross")
+                            ("radcap.ru // classical"           . "http://79.120.77.11:8002/classical")
+                            ("radcap.ru // clubru"              . "http://79.120.77.11:8002/clubru")
+                            ("radcap.ru // country"             . "http://79.120.77.11:8002/country")
+                            ("radcap.ru // countryblues"        . "http://79.120.77.11:8002/countryblues")
+                            ("radcap.ru // dancepop"            . "http://79.120.77.11:8002/dancepop")
+                            ("radcap.ru // deathmetal"          . "http://79.120.77.11:8002/deathmetal")
+                            ("radcap.ru // deltablues"          . "http://79.120.77.11:8002/deltablues")
+                            ("radcap.ru // disco"               . "http://79.120.77.11:8002/disco")
+                            ("radcap.ru // downtempo"           . "http://79.120.77.11:8002/downtempo")
+                            ("radcap.ru // frenchpop"           . "http://79.120.77.11:8002/frenchpop")
+                            ("radcap.ru // funeraldoom"         . "http://79.120.77.11:8002/funeraldoom")
+                            ("radcap.ru // gothicdoom"          . "http://79.120.77.11:8002/gothicdoom")
+                            ("radcap.ru // gothicmetal"         . "http://79.120.77.11:8002/gothicmetal")
+                            ("radcap.ru // grime"               . "http://79.120.77.11:8002/grime")
+                            ("radcap.ru // grindcore"           . "http://79.120.77.11:8002/grindcore")
+                            ("radcap.ru // guitarjazz"          . "http://79.120.77.11:8002/guitarjazz")
+                            ("radcap.ru // gypsyru"             . "http://79.120.77.11:8002/gypsyru")
+                            ("radcap.ru // happyhardcore"       . "http://79.120.77.11:8002/happyhardcore")
+                            ("radcap.ru // hardcorerap"         . "http://79.120.77.11:8002/hardcorerap")
+                            ("radcap.ru // hardrock"            . "http://79.120.77.11:8002/hardrock")
+                            ("radcap.ru // hardtrance"          . "http://79.120.77.11:8002/hardtrance")
+                            ("radcap.ru // heavyblues"          . "http://79.120.77.11:8002/heavyblues")
+                            ("radcap.ru // hiphop"              . "http://79.120.77.11:8002/hiphop")
+                            ("radcap.ru // horrorpunk"          . "http://79.120.77.11:8002/horrorpunk")
+                            ("radcap.ru // house"               . "http://79.120.77.11:8002/house")
+                            ("radcap.ru // impressionism"       . "http://79.120.77.11:8002/impressionism")
+                            ("radcap.ru // industrialrock"      . "http://79.120.77.11:8002/industrialrock")
+                            ("radcap.ru // instrumental"        . "http://79.120.77.11:8002/instrumental")
+                            ("radcap.ru // instrumentalhiphop"  . "http://79.120.77.11:8002/instrumentalhiphop")
+                            ("radcap.ru // jazz"                . "http://79.120.77.11:8002/jazz")
+                            ("radcap.ru // manouche"            . "http://79.120.77.11:8002/manouche")
+                            ("radcap.ru // mathcore"            . "http://79.120.77.11:8002/mathcore")
+                            ("radcap.ru // mcreative"           . "http://79.120.77.11:8002/mcreative")
+                            ("radcap.ru // meditation"          . "http://79.120.77.11:8002/meditation")
+                            ("radcap.ru // melodicdeath"        . "http://79.120.77.11:8002/melodicdeath")
+                            ("radcap.ru // misc"                . "http://79.120.77.11:8002/misc")
+                            ("radcap.ru // newage"              . "http://79.120.77.11:8002/newage")
+                            ("radcap.ru // oldies"              . "http://79.120.77.11:8002/oldies")
+                            ("radcap.ru // organ"               . "http://79.120.77.11:8002/organ")
+                            ("radcap.ru // piano"               . "http://79.120.77.11:8002/piano")
+                            ("radcap.ru // poetryru"            . "http://79.120.77.11:8002/poetryru")
+                            ("radcap.ru // pop"                 . "http://79.120.77.11:8002/pop")
+                            ("radcap.ru // popballads"          . "http://79.120.77.11:8002/popballads")
+                            ("radcap.ru // poprock"             . "http://79.120.77.11:8002/poprock")
+                            ("radcap.ru // popru"               . "http://79.120.77.11:8002/popru")
+                            ("radcap.ru // postshanson"         . "http://79.120.77.11:8002/postshanson")
+                            ("radcap.ru // powermetal"          . "http://79.120.77.11:8002/powermetal")
+                            ("radcap.ru // progmetal"           . "http://79.120.77.11:8002/progmetal")
+                            ("radcap.ru // pumpinghouse"        . "http://79.120.77.11:8002/pumpinghouse")
+                            ("radcap.ru // punk"                . "http://79.120.77.11:8002/punk")
+                            ("radcap.ru // punkru"              . "http://79.120.77.11:8002/punkru")
+                            ("radcap.ru // rap"                 . "http://79.120.77.11:8002/rap")
+                            ("radcap.ru // rapru"               . "http://79.120.77.11:8002/rapru")
+                            ("radcap.ru // rnb"                 . "http://79.120.77.11:8002/rnb")
+                            ("radcap.ru // rock"                . "http://79.120.77.11:8002/rock")
+                            ("radcap.ru // rockballads"         . "http://79.120.77.11:8002/rockballads")
+                            ("radcap.ru // rockroll"            . "http://79.120.77.11:8002/rockroll")
+                            ("radcap.ru // rockru"              . "http://79.120.77.11:8002/rockru")
+                            ("radcap.ru // rocksteady"          . "http://79.120.77.11:8002/rocksteady")
+                            ("radcap.ru // romanceru"           . "http://79.120.77.11:8002/romanceru")
+                            ("radcap.ru // russianfolk"         . "http://79.120.77.11:8002/russianfolk")
+                            ("radcap.ru // saxophone"           . "http://79.120.77.11:8002/saxophone")
+                            ("radcap.ru // schlager"            . "http://79.120.77.11:8002/schlager")
+                            ("radcap.ru // shansonru"           . "http://79.120.77.11:8002/shansonru")
+                            ("radcap.ru // sludgemetal"         . "http://79.120.77.11:8002/sludgemetal")
+                            ("radcap.ru // stonermetal"         . "http://79.120.77.11:8002/stonermetal")
+                            ("radcap.ru // straightahead"       . "http://79.120.77.11:8002/straightahead")
+                            ("radcap.ru // suomisaundi"         . "http://79.120.77.11:8002/suomisaundi")
+                            ("radcap.ru // symphometal"         . "http://79.120.77.11:8002/symphometal")
+                            ("radcap.ru // synthpop"            . "http://79.120.77.11:8002/synthpop")
+                            ("radcap.ru // techdeathmetal"      . "http://79.120.77.11:8002/techdeathmetal")
+                            ("radcap.ru // techno"              . "http://79.120.77.11:8002/techno")
+                            ("radcap.ru // thrashmetal"         . "http://79.120.77.11:8002/thrashmetal")
+                            ("radcap.ru // trance"              . "http://79.120.77.11:8002/trance")
+                            ("radcap.ru // ussr"                . "http://79.120.77.11:8002/ussr")
+                            ("radcap.ru // vocal"               . "http://79.120.77.11:8002/vocal")
+                            ("radcap.ru // witchhouse"          . "http://79.120.77.11:8002/witchhouse")
+                            )))
+
+  (defun isamert/eradio-kill-song-title ()
+      (interactive)
+      (let ((song-title (eradio-get-song-title)))
+        (kill-new song-title)
+        (message song-title)))
+
+  (defun isamert/eradio-log-song-title ()
+      (interactive)
+      (let ((song-title (eradio-get-song-title)))
+        (shell-command-to-string (format "echo '* %s' >> ~/Documents/notes/songs.org" song-title))
+        (message song-title)))
+
+  (defun isamert/eradio-random-channel ()
+    (interactive)
+    (let ((channel-pair (nth (random (length eradio-channels)) eradio-channels)))
+      (eradio-stop)
+      (eradio-play-low-level (cdr channel-pair))
+      (message "Playing channel: %s" (car channel-pair))))
+#+end_src
+
 * Keybindings
 - For leader key bindings, see: [[*evil-leader][evil-leader]]
 - For avy        bindings, see: [[*Bindings][avy/bindings]]
-** OSX
+** macOS
 #+begin_src emacs-lisp
   (when (eq system-type 'darwin)
     ;; I set the following in Linux using xmodmap but it's kinda
@@ -1610,8 +2585,17 @@ Better help dialogs with syntax highlighting, references, source etc.
     ;; works in command mode, isearch etc.
     ;; AltGr + k -> Up
     ;; AltGr + j -> Down
+    ;; AltGr + l -> Right
+    ;; AltGr + h -> Left
     (define-key key-translation-map (kbd "˚") (kbd "<up>"))
     (define-key key-translation-map (kbd "∆") (kbd "<down>"))
+    (define-key key-translation-map (kbd "¬") (kbd "<right>"))
+    (define-key key-translation-map (kbd "˙") (kbd "<left>"))
+
+    (define-key key-translation-map (kbd "") (kbd "S-<up>"))
+    (define-key key-translation-map (kbd "Ô") (kbd "S-<down>"))
+    (define-key key-translation-map (kbd "Ò") (kbd "S-<right>"))
+    (define-key key-translation-map (kbd "Ó") (kbd "S-<left>"))
 
     ;; AltGr + [ -> (
     ;; AltGr + ] -> )
@@ -1633,7 +2617,7 @@ Better help dialogs with syntax highlighting, references, source etc.
     (kbd "M-;") 'comment-line
     (kbd "M-:") 'comment-dwim
     "gd" 'xref-find-definitions
-    "gf" 'xref-find-references)
+    "gr" 'xref-find-references)
 
   (evil-define-key 'normal lsp-mode-map
     "gf" 'lsp-ui-peek-find-references
@@ -1647,37 +2631,62 @@ Better help dialogs with syntax highlighting, references, source etc.
 - A-h,j,k,l to switch between splits.
 - A-H,J,K,L shrink, enlarge split.
 #+BEGIN_SRC emacs-lisp
-(evil-define-key 'normal 'global
-  (kbd "M-\\") 'split-window-right
-  (kbd "M--") 'split-window-below
-  (kbd "M-J") 'enlarge-window
-  (kbd "M-K") 'shrink-window
-  (kbd "M-L") 'enlarge-window-horizontally
-  (kbd "M-H") 'shrink-window-horizontally)
+  (defun isamert/split-window-right-vterm ()
+    (interactive)
+    (split-window-right)
+    (other-window 1)
+    (vterm))
 
-;; This is needed to override other modes mappings
-(define-minor-mode movement-map-mode
-  "Overrides all major and minor mode keys" t)
+  (defun isamert/split-window-below-vterm ()
+    (interactive)
+    (split-window-below)
+    (other-window 1)
+    (vterm))
 
-(defvar movement-map (make-sparse-keymap "movement-map")
-  "Override all major and minor mode keys")
+  (defun isamert/split-window-below ()
+    (interactive)
+    (split-window-below)
+    (other-window 1))
 
-(evil-define-key 'normal movement-map
-  (kbd "M-j") 'evil-window-down
-  (kbd "M-k") 'evil-window-up
-  (kbd "M-h") 'evil-window-left
-  (kbd "M-l") 'evil-window-right)
+  (defun isamert/split-window-right ()
+    (interactive)
+    (split-window-right)
+    (other-window 1))
 
-(evil-define-key 'normal treemacs-mode-map
-  (kbd "M-j") 'evil-window-down
-  (kbd "M-k") 'evil-window-up
-  (kbd "M-h") 'evil-window-left
-  (kbd "M-l") 'evil-window-right)
 
-(evil-make-intercept-map movement-map)
+  (evil-define-key 'normal 'global
+    (kbd "M-\\") 'isamert/split-window-right
+    (kbd "M-|")  'isamert/split-window-right-vterm
+    (kbd "M--")  'isamert/split-window-below
+    (kbd "M-_")  'isamert/split-window-below-vterm
+    (kbd "M-J")  'enlarge-window
+    (kbd "M-K")  'shrink-window
+    (kbd "M-L")  'enlarge-window-horizontally
+    (kbd "M-H")  'shrink-window-horizontally)
 
-(add-to-list 'emulation-mode-map-alists
-  `((movement-map-mode . ,movement-map)))
+  ;; This is needed to override other modes mappings
+  (define-minor-mode movement-map-mode
+    "Overrides all major and minor mode keys" t)
+
+  (defvar movement-map (make-sparse-keymap "movement-map")
+    "Override all major and minor mode keys")
+
+  (evil-define-key 'normal movement-map
+    (kbd "M-j") 'evil-window-down
+    (kbd "M-k") 'evil-window-up
+    (kbd "M-h") 'evil-window-left
+    (kbd "M-l") 'evil-window-right)
+
+  (evil-define-key 'normal treemacs-mode-map
+    (kbd "M-j") 'evil-window-down
+    (kbd "M-k") 'evil-window-up
+    (kbd "M-h") 'evil-window-left
+    (kbd "M-l") 'evil-window-right)
+
+  (evil-make-intercept-map movement-map)
+
+  (add-to-list 'emulation-mode-map-alists
+               `((movement-map-mode . ,movement-map)))
 #+END_SRC
 
 * Language specific
@@ -1694,8 +2703,8 @@ Better help dialogs with syntax highlighting, references, source etc.
   :config
   (evil-define-key 'normal markdown-mode-map
     (kbd "TAB") 'markdown-cycle
-    (kbd "]") 'markdown-outline-next
-    (kbd "[") 'markdown-outline-previous))
+    (kbd "]]") 'markdown-outline-next
+    (kbd "[[") 'markdown-outline-previous))
 #+END_SRC
 
 ** python
@@ -1741,8 +2750,6 @@ Better help dialogs with syntax highlighting, references, source etc.
 
 ** haskell
 #+BEGIN_SRC emacs-lisp
-;; TODO: hlint
-
 (use-package haskell-mode
   :ensure t)
 
@@ -1756,57 +2763,26 @@ Better help dialogs with syntax highlighting, references, source etc.
 ** rust
 #+BEGIN_SRC emacs-lisp
 (use-package rust-mode :ensure t)
+;; (setq lsp-rust-server 'rls)
+(setq lsp-rust-server 'rust-analyzer)
 #+END_SRC
 
 ** javascript
 #+BEGIN_SRC emacs-lisp
-  ;; (defun use-eslint-from-node-modules ()
-  ;;   (let* ((root (locate-dominating-file
-  ;;                 (or (buffer-file-name) default-directory)
-  ;;                 "node_modules"))
-  ;;          (eslint (and root (expand-file-name "node_modules/.bin/eslint" root))))
-  ;;     (when (and eslint (file-executable-p eslint))
-  ;;       (setq-local flycheck-javascript-eslint-executable eslint))))
+  (defun isamert/use-eslint-from-node-modules ()
+    "Set the eslint exacutable to the one that is found in node_modules and enable flycheck with eslint as the checker."
+    (interactive)
+    (--> (or (buffer-file-name) default-directory)
+         (locate-dominating-file it "node_modules")
+         (expand-file-name "node_modules/.bin/eslint" it)
+         (if (file-executable-p it)
+             (progn
+               (setq-local flycheck-javascript-eslint-executable it)
+               (flycheck-mode t)
+               (flycheck-select-checker 'javascript-eslint))
+           (message "eslint not found."))))
 
-  (use-package indium
-    :ensure t)
-
-  (evil-leader/set-key-for-mode 'js-mode
-    "e" 'indium-eval-region)
-  (evil-leader/set-key-for-mode 'org-mode
-    "e" 'org-babel-execute-src-block)
-  (evil-leader/set-key-for-mode 'emacs-lisp-mode
-    "e" 'eval-last-sexp)
-
-  ;; Mode specific REPL jumps
-  (evil-leader/set-key-for-mode 'js-mode
-    "r" 'indium-switch-to-repl-buffer)
-#+END_SRC
-
-** web-mode
-I use web-mode for JSX, it's simply better than emacs 27 JSX mode and js2-mode.
-#+BEGIN_SRC emacs-lisp
-(use-package web-mode
-  :ensure t
-  :mode ("\\.jsx\\'")
-  :init
-  (setq web-mode-enable-current-element-highlight t
-        web-mode-enable-current-column-highlight t
-        web-mode-enable-auto-pairing t
-        web-mode-enable-auto-closing t
-        web-mode-enable-auto-opening t)
-
-  ;; Use eslint with web-mode for jsx files
-  (flycheck-add-mode 'javascript-eslint 'web-mode)
-
-  ;; Disable LSP-flycheck, because I'm using flycheck with eslint
-  (add-hook 'js-mode-hook (lambda () (setq-local lsp-prefer-flymake :none)))
-
-  :config
-  ;; Change some colors and stuff
-  (set-face-attribute 'web-mode-html-tag-face nil :weight 'bold)
-  (set-face-attribute 'web-mode-keyword-face nil :weight 'bold)
-  (set-face-attribute 'web-mode-function-call-face nil :weight 'normal :foreground "normal"))
+  (add-hook 'js-mode #'isamert/use-eslint-from-node-modules)
 #+END_SRC
 
 ** java
@@ -1830,7 +2806,7 @@ Hit <C-j> after these and get:
 #+BEGIN_SRC emacs-lisp
 (use-package emmet-mode
   :ensure t
-  :hook (web-mode css-mode sgml-mode)
+  :hook (js-mode css-mode sgml-mode)
   :init
   (setq emmet-expand-jsx-className? t
         emmet-self-closing-tag-style " /"))
@@ -1866,7 +2842,26 @@ Hit <C-j> after these and get:
 
 ** json
 #+begin_src emacs-lisp
-(use-package json-mode :ensure t)
+  (use-package json-mode
+    :ensure t)
+
+  (defun isamert/jsons-print-path-python ()
+    (interactive)
+    (let ((jsons-path-printer 'jsons-print-path-python))
+      (jsons-print-path)))
+
+  (defun isamert/jsons-print-path-javascript-js-jq ()
+    (interactive)
+    (let ((jsons-path-printer 'jsons-print-path-jq))
+      (jsons-print-path)))
+
+  ;;  Provides jsons-print-path function, it simply kills the path to the key under point
+  (use-package json-snatcher
+    :ensure t
+    :config
+    ;; Copies paths like:.definition.summary.pastGroup.trackingResults[0].trackingItemReferenceId
+    ;; I've created two functions above for the variations
+    (setq jsons-path-printer 'jsons-print-path-jq))
 #+end_src
 
 ** elisp
@@ -1876,7 +2871,6 @@ Hit <C-j> after these and get:
                            ("<="     . ?≤)
                            ("defun"  . ?ƒ)
                            ("lambda" . ?λ)))
-
 #+end_src
 
 ** dhall
@@ -1910,7 +2904,57 @@ Hit <C-j> after these and get:
                 it))
     (message "Done."))
 #+end_src
-* my/
+** swift
+#+begin_src emacs-lisp
+  (use-package swift-mode
+    :ensure t)
+#+end_src
+* Misc functions
+** google search
+#+begin_src emacs-lisp
+  (defun isamert/google-this ()
+    "Search selected region or current word in Google. Let's you edit the query beforehand."
+    (interactive)
+    (browse-url
+     (format
+      "https://google.com/search?q=%s"
+      (read-string
+       "Googling: "
+       (isamert/region-or 'word)))))
+
+  (evil-leader/set-key
+    "/g"   'isamert/google-this)
+#+end_src
+
+#+end_src
+** google translate
+#+begin_src emacs-lisp
+  ;; FIXME: ggrep -> grep
+  (defun isamert/google-translate-this (from to)
+    "Translate selected region or current word with google. Let's you edit the query beforehand. Result is printed into minibuffer."
+    (interactive
+     `(,(read-string "From: " "en") ,(read-string "To: " "tr")))
+    (message
+     (shell-command-to-string
+      (format
+       "curl -s -A 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0' \"%s\" --data-urlencode 'q=%s' | ggrep -Po '<div dir=\"ltr\" class=\"t0\">\\K[^<]*' | tr -d '\\n'"
+       (format "https://translate.google.com/m?sl=%s&tl=%s&ie=UTF-8" from to)
+       (read-string
+        "Translating: "
+        (isamert/region-or 'word))))))
+
+  (defun isamert/google-translate-this-en-to-tr ()
+    (interactive)
+    (isamert/google-translate-this "en" "tr"))
+
+  (defun isamert/google-translate-this-tr-to-en ()
+    (interactive)
+    (isamert/google-translate-this "tr" "en"))
+
+  (evil-leader/set-key
+    "/tt"   'isamert/google-translate-this-en-to-tr
+    "/te"   'isamert/google-translate-this-tr-to-en)
+#+end_src
 ** org-mode enhancements
 #+begin_src emacs-lisp
   ;; TODO: create a function for detecting backlings for header under the cursor.
@@ -1921,6 +2965,12 @@ Hit <C-j> after these and get:
 
   (defun isamert/b-blue (str)
     (propertize str 'font-lock-face '(:foreground "sky blue" :height 150)))
+
+  (defun isamert/b-green (str)
+    (propertize str 'font-lock-face '(:foreground "green" :height 130)))
+
+  (defun isamert/b-yellow (str)
+    (propertize str 'font-lock-face '(:foreground "green" :height 130)))
 
   (defun isamert/b-plum (str)
     (propertize str 'font-lock-face '(:foreground "plum" :height 130)))
@@ -1993,6 +3043,16 @@ Hit <C-j> after these and get:
   ;; Main
   ;;
 
+  (defun isamert/org-file-get-header-id (file-path header-line)
+    "Return the id of given header at HEADER-LINE in FILE-PATH."
+    (interactive)
+    (with-current-buffer (let ((enable-local-variables  ())) (find-file-noselect file-path))
+      (goto-char 0)
+      (forward-line header-line)
+      (org-id-get nil 'create)
+      (save-buffer)
+      (org-id-get nil 'create)))
+
   ;; TODO: colorize this maybe
   (defun isamert/org-link-header ()
     "Interactively select a header and insert it as a link into the buffer.
@@ -2002,24 +3062,30 @@ Hit <C-j> after these and get:
                          "rg"
                          " --no-heading"
                          " --with-filename"
-                         " --no-line-number"
+                         " --line-number"
                          " -t org"
                          " "
                          "\"^\\*+ \" "))
             (headers (--> (shell-command-to-string cmd)
                           (split-string it "\n" t)
                           (-map (lambda (line)
-                                  (-let (((file-name . content) (split-string line ":")))
-                                    (format "%s » %s"
+                                  (-let (((file-name line-number . content) (split-string line ":")))
+                                    (format "%s:%s %s %s"
                                             (isamert/b-blue file-name)
+                                            line-number
+                                            (isamert/b-green "»")
                                             (isamert/org-header-line-to-title (string-join content ":")))))
                                 it)))
             (selected (isamert/select-one-of headers))
-            ((file-name . header-title) (split-string selected " » "))
+            ((file-name-with-line . header-title) (split-string selected " » "))
+            ((file-name header-line) (split-string file-name-with-line ":"))
             (link-name (read-string "Enter link text: " header-title))
-            (selected-link (concat "[[file:" file-name "::" (string-join header-title) "][" link-name "]]")))
+            (header-id (isamert/org-file-get-header-id file-name (1- (string-to-number header-line))))
+            ;;(selected-link (concat "[[file:" file-name "::" (string-join header-title) "][" link-name "]]")))
+            (selected-link (concat "[[id:" header-id "][" link-name "]]")))
       (insert selected-link)))
 
+  ;; FIXME: this does not show backlinks that uses id's
   (defun isamert/org-backlinks ()
     "List all the places that has refered the header under the cursor."
     (interactive)
@@ -2085,6 +3151,7 @@ Here I define two important functions and their helpers.  The following function
       buffer
       (list (cons 'side 'right)
             (cons 'slot 0)
+            (cons 'window-width 84)
             (cons 'window-parameters (list (cons 'no-delete-other-windows t)
                                            (cons 'no-other-window nil)))))))
 
@@ -2094,6 +3161,17 @@ Here I define two important functions and their helpers.  The following function
             (when (string-equal (buffer-name (window-buffer window)) the-buffer-name)
               (delete-window window)))
           (window-list (selected-frame))))
+
+  (defun isamert/toggle-side-buffer-with-file (file-path)
+    "Toggle FILE-PATH in a side buffer. The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (let ((fname (file-name-nondirectory file-path)))
+    (if (isamert/buffer-visible-p fname)
+        (isamert/remove-window-with-buffer fname)
+      (isamert/display-buffer-in-side-window
+       (save-window-excursion
+         (find-file file-path)
+         (current-buffer))))))
 
   (defun isamert/toggle-side-scratch-buffer ()
     "Toggle the scratch buffer in side window.  The buffer is opened in side window so it can't be accidentaly removed."
@@ -2105,17 +3183,24 @@ Here I define two important functions and their helpers.  The following function
   (defun isamert/toggle-side-temp-org-buffer ()
     "Toggle `temp.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
     (interactive)
-    (if (isamert/buffer-visible-p "temp.org")
-        (isamert/remove-window-with-buffer "temp.org")
-      (isamert/display-buffer-in-side-window
-       (save-window-excursion
-         (find-file "~/Documents/notes/temp.org")
-         (current-buffer)))))
+    (isamert/toggle-side-buffer-with-file "~/Documents/notes/temp.org"))
+
+  (defun isamert/toggle-side-bullet-org-buffer ()
+    "Toggle `bullet.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (isamert/toggle-side-buffer-with-file "~/Documents/notes/bullet.org"))
+
+  (defun isamert/toggle-side-projects-buffer ()
+    "Toggle `projects.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (isamert/toggle-side-buffer-with-file "~/Documents/notes/projects.org"))
 
     ;; Toggle temproary buffers
     (evil-leader/set-key
       "ts" 'isamert/toggle-side-scratch-buffer
       "to" 'isamert/toggle-side-temp-org-buffer
+      "th" 'isamert/toggle-side-bullet-org-buffer
+      "tp" 'isamert/toggle-side-projects-buffer
       "tf" 'treemacs)
 #+end_src
 
@@ -2127,23 +3212,6 @@ Here I define two important functions and their helpers.  The following function
 
 (defun isamert/today nil
   (format-time-string "%Y-%m-%d %a"))
-
-(defun isamert/insert-today nil
-  (interactive)
-  (insert (isamert/today)))
-
-(defun isamert/org-x-today (x)
-  (end-of-line)
-  (newline)
-  (insert (concat (upcase x) ": <" (isamert/today) ">")))
-
-(defun isamert/org-deadline-today nil
-  (interactive)
-  (isamert/org-x-today "deadline"))
-
-(defun isamert/org-schedule-today nil
-  (interactive)
-  (isamert/org-x-today "scheduled"))
 #+END_SRC
 ** org-babel extension functions
 #+BEGIN_SRC emacs-lisp
@@ -2182,29 +3250,27 @@ Here I define two important functions and their helpers.  The following function
 
 ** helm extensions
 #+begin_src emacs-lisp
-(defun my/helm-projectile-rg-current-project nil
-  "Search in current project using ripgrep."
-  (interactive)
-  (setq-local helm-rg-default-directory (projectile-project-root))
-  (helm-rg nil)
-  (setq-local helm-rg-default-directory 'default))
+  (defun my/helm-projectile-rg-current-project nil
+    "Search in current project using ripgrep."
+    (interactive)
+    (let ((helm-rg-default-directory (projectile-project-root)))
+      (helm-rg nil)))
 
-(defun my/helm-projectile-rg-all-projects nil
-  "Search in all projectile projects using ripgrep. If projectile-project-search-path contains multiple paths, only the first path is taken into account."
-  (interactive)
-  (setq-local helm-rg-default-directory (car projectile-project-search-path))
-  (helm-rg nil)
-  (setq-local helm-rg-default-directory 'default))
+  (defun my/helm-projectile-rg-all-projects nil
+    "Search in current project using ripgrep."
+    (interactive)
+    (let ((helm-rg-default-directory (car projectile-project-search-path)))
+      (helm-rg nil)))
 
-(defun my/helm-grep-ag-current-project (arg)
-  "Search in current project using ag"
-  (interactive "P")
-  (helm-grep-ag (projectile-project-root) arg))
+  (defun my/helm-grep-ag-current-project (arg)
+    "Search in current project using ag"
+    (interactive "P")
+    (helm-grep-ag (projectile-project-root) arg))
 
-(defun my/helm-grep-git-grep-current-project (arg)
-  "Search in current project using ag"
-  (interactive "P")
-  (helm-grep-git-1 (projectile-project-root) arg))
+  (defun my/helm-grep-git-grep-current-project (arg)
+    "Search in current project using ag"
+    (interactive "P")
+    (helm-grep-git-1 (projectile-project-root) arg))
 #+end_src
 
 ** functions for easy indentation switching
@@ -2212,7 +3278,7 @@ Here I define two important functions and their helpers.  The following function
 
 #+BEGIN_SRC emacs-lisp
 (defun isamert/setup-indent (n)
-  (interactive "nHow many spaces do you want?")
+  (interactive "nHow many spaces do you want? ")
   (setq-local tab-width n)
   ;; java/c/c++
   (setq-local c-basic-offset n)
@@ -2220,7 +3286,7 @@ Here I define two important functions and their helpers.  The following function
   (setq-local coffee-tab-width n) ; coffeescript
   (setq-local javascript-indent-level n) ; javascript-mode
   (setq-local js-indent-level n) ; js-mode
-  (setq-local js2-basic-offset n) ; js2-mode, in latest js2-mode, it's alias of js-indent-level
+  ;;(setq-local js2-basic-offset n) ; js2-mode, in latest js2-mode, it's alias of js-indent-level
   (setq-local web-mode-markup-indent-offset n) ; web-mode, html tag in html file
   (setq-local web-mode-css-indent-offset n) ; web-mode, css in html file
   (setq-local web-mode-code-indent-offset n) ; web-mode, js code in html file
@@ -2274,48 +3340,6 @@ Here I define two important functions and their helpers.  The following function
   (defun isamert/create-tsdoc-string-template ()
     (interactive)
     (isamert/create-jsdoc-string-template t))
-#+end_src
-** others
-#+begin_src emacs-lisp
-;; see this: https://github.com/emacs-evil/evil/issues/301
-(defun evil-fix-map nil
-  (evil-insert)
-  (evil-normal))
-#+end_src
-
-** workflow
-#+BEGIN_SRC emacs-lisp
-(defun isamert/init-daily ()
-  (interactive)
-  (find-file life-org)
-  (split-window-right)
-  (other-window 1)
-  (find-file bullet-org)
-  (eyebrowse-switch-to-window-config-2)
-  (org-agenda-list)
-  (other-window 1)
-  (delete-window)
-  (eyebrowse-switch-to-window-config-5)
-  (find-file "~/.emacs.d/settings.org")
-  (eyebrowse-switch-to-window-config-1))
-#+END_SRC
-** TODO arrange
-#+begin_src emacs-lisp
-(defun isamert/time-stamp (arg)
-  "Interactively select a datetime and return it as string"
-  (with-temp-buffer
-    (org-time-stamp arg)
-    (buffer-string)))
-#+end_src
-** TODO outsiders
-#+begin_src emacs-lisp
-(defun bookmark-search ()
-  (interactive)
-  (find-file "~/Documents/notes/bookmarks.org")
-  (setq helm-full-frame t)
-  (goto-char (point-min))
-  (helm-imenu)
-  (setq helm-full-frame nil))
 #+end_src
 ** bullet.org
 I have a ~bullet.org~ file that I keep my daily journal and here are some utility functions that use with it. I may document this later (or even publish it as a package?)
@@ -2467,4 +3491,219 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "oby" 'isamert/bullet-focus-yesterday
     "obf" 'isamert/bullet-focus-given-day
     "obc" 'isamert/bullet-create-given-day)
+#+end_src
+
+** Paste screenshots into org-mode buffers
+#+begin_src emacs-lisp
+  ;; TODO: save images under docs/images/screenshot_date_....
+  (defun isamert/org-attach-image-from-clipboard (file-path)
+    (interactive "sSave file to (leave empty to create a temp file): ")
+    (let ((file (if (and file-path (not (string-empty-p file-path)))
+                    file-path
+                  (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
+      (cond
+       ((locate-file "xclip" exec-path) (shell-command (format "xclip -selection clipboard -target image/png -out > %s" file)))
+       ((locate-file "pngpaste" exec-path) (shell-command (format "pngpaste %s" file)))
+       (t (message "Either install xclip (for linux) or pngpaste (for mac) to get this functionality.")))
+      (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
+      (org-display-inline-images)))
+
+  (evil-leader/set-key
+    "op"  'isamert/org-attach-image-from-clipboard)
+#+end_src
+** xah-open-file-at-curser
+This is better than =find-file-at-point= because it takes line numbers etc. into account.
+
+#+begin_src emacs-lisp
+  (defun xah-open-file-at-cursor ()
+    "Open the file path under cursor.
+  If there is text selection, uses the text selection for path.
+  If the path starts with “http://”, open the URL in browser.
+  Input path can be {relative, full path, URL}.
+  Path may have a trailing “:‹n›” that indicates line number, or “:‹n›:‹m›” with line and column number. If so, jump to that line number.
+  If path does not have a file extension, automatically try with “.el” for elisp files.
+  This command is similar to `find-file-at-point' but without prompting for confirmation.
+
+  URL `http://ergoemacs.org/emacs/emacs_open_file_path_fast.html'
+  Version 2020-10-17"
+    (interactive)
+    (let* (
+           ($inputStr
+            (if (use-region-p)
+                (buffer-substring-no-properties (region-beginning) (region-end))
+              (let ($p0 $p1 $p2
+                        ;; chars that are likely to be delimiters of file path or url, e.g. whitespace, comma. The colon is a problem. cuz it's in url, but not in file name. Don't want to use just space as delimiter because path or url are often in brackets or quotes as in markdown or html
+                        ($pathStops "^  \t\n\"`'‘’“”|[]{}「」<>〔〕〈〉《》【】〖〗«»‹›❮❯❬❭〘〙·。\\"))
+                (setq $p0 (point))
+                (skip-chars-backward $pathStops)
+                (setq $p1 (point))
+                (goto-char $p0)
+                (skip-chars-forward $pathStops)
+                (setq $p2 (point))
+                (goto-char $p0)
+                (buffer-substring-no-properties $p1 $p2))))
+           ($path
+            (replace-regexp-in-string
+             "^file:///" "/"
+             (replace-regexp-in-string
+              ":\\'" "" $inputStr))))
+      (if (string-match-p "\\`https?://" $path)
+          (if (fboundp 'xahsite-url-to-filepath)
+              (let (($x (xahsite-url-to-filepath $path)))
+                (if (string-match "^http" $x )
+                    (browse-url $x)
+                  (find-file $x)))
+            (progn (browse-url $path)))
+        (progn ; not starting “http://”
+          (if (string-match "#" $path )
+              (let (
+                    ( $fpath (substring $path 0 (match-beginning 0)))
+                    ( $fractPart (substring $path (1+ (match-beginning 0)))))
+                (if (file-exists-p $fpath)
+                    (progn
+                      (find-file $fpath)
+                      (goto-char 1)
+                      (search-forward $fractPart ))
+                  (when (y-or-n-p (format "file no exist: 「%s」. Create?" $fpath))
+                    (find-file $fpath))))
+            (if (string-match "^\\`\\(.+?\\):\\([0-9]+\\)\\(:[0-9]+\\)?\\'" $path)
+                (let (
+                      ($fpath (match-string 1 $path))
+                      ($line-num (string-to-number (match-string 2 $path))))
+                  (if (file-exists-p $fpath)
+                      (progn
+                        (find-file $fpath)
+                        (goto-char 1)
+                        (forward-line (1- $line-num)))
+                    (when (y-or-n-p (format "file no exist: 「%s」. Create?" $fpath))
+                      (find-file $fpath))))
+              (if (file-exists-p $path)
+                  (progn ; open f.ts instead of f.js
+                    (let (($ext (file-name-extension $path))
+                          ($fnamecore (file-name-sans-extension $path)))
+                      (if (and (string-equal $ext "js")
+                               (file-exists-p (concat $fnamecore ".ts")))
+                          (find-file (concat $fnamecore ".ts"))
+                        (find-file $path))))
+                (if (file-exists-p (concat $path ".el"))
+                    (find-file (concat $path ".el"))
+                  (when (y-or-n-p (format "file no exist: 「%s」. Create?" $path))
+                    (find-file $path ))))))))))
+
+(define-key evil-normal-state-map (kbd "gf") 'xah-open-file-at-cursor)
+#+end_src
+
+** rename current file
+#+begin_src emacs-lisp
+;; source: http://steve.yegge.googlepages.com/my-dot-emacs-file
+(defun isamert/rename-current-file-name-and-buffer (new-name)
+  "Renames both current buffer and file it's visiting to NEW-NAME."
+  (interactive "sNew name: ")
+  (let ((name (buffer-name))
+        (filename (buffer-file-name)))
+    (if (not filename)
+        (message "Buffer '%s' is not visiting a file!" name)
+      (if (get-buffer new-name)
+          (message "A buffer named '%s' already exists!" new-name)
+        (progn
+          (rename-file filename new-name 1)
+          (rename-buffer new-name)
+          (set-visited-file-name new-name)
+          (set-buffer-modified-p nil))))))
+#+end_src
+* WELL
+** Automatically insert issue numbers into commit messages
+#+begin_src emacs-lisp
+  (defun well/git-commit-message-setup ()
+    "Automatically insert issue number to commit message."
+    (--> (magit-get-current-branch)
+         (split-string it "-")
+         (string-join (-take 2 it) "-")
+         (if (string-match "/well-he-arbiter/" (projectile-project-root))
+             (format "[%s] " it)
+           (format "%s - " it))
+
+         (insert it)))
+
+
+  ;; (when (string= (treemacs-workspace->name (treemacs-current-workspace)) "Well")
+  (add-hook 'git-commit-setup-hook 'well/git-commit-message-setup)
+#+end_src
+
+** Open MR page
+#+begin_src emacs-lisp
+  (defun isamert/git-link-my-merge-requests ()
+    (interactive)
+    (browse-url (format "%s/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=%s" (isamert/git-link-homepage) "isamert.well")))
+
+  (evil-leader/set-key
+    "glm" 'isamert/git-link-my-merge-requests)
+#+end_src
+** JS env setup
+#+begin_src emacs-lisp
+  ;; LSP does not work well with UI projects
+  (remove-hook 'js-mode-hook 'lsp)
+
+  (defun well/setup-tide-mode ()
+    (interactive)
+    (lsp-mode -1)
+    (tide-setup)
+    (flycheck-mode +1)
+    (setq flycheck-check-syntax-automatically '(save mode-enabled))
+    (eldoc-mode +1)
+    (highlight-thing-mode -1)
+    (tide-hl-identifier-mode +1)
+    (lsp-ui-mode +1)
+    (company-mode +1))
+
+  (defun well/setup-js ()
+    "If it's an UI project, run tide. Otherwise run lsp."
+    (interactive)
+    (if (string-match "/ui/" (projectile-project-root))
+        (isamert/setup-indent 2)
+        (well/setup-tide-mode)
+      (lsp)))
+
+
+  (add-hook 'js-mode-hook 'well/setup-js)
+#+end_src
+
+** Haskell env setup
+#+begin_src emacs-lisp
+(remove-hook 'haskell-mode-hook 'lsp)
+;; FIXME: following brokes some stuff in org mode, probably need to use flycheck-hook or something
+(add-hook 'haskell-mode-hook (lambda () (flycheck-select-checker 'haskell-hlint)))
+#+end_src
+** Misc functions
+#+begin_src emacs-lisp
+  (defun well/open-jira-issue-at-point ()
+    (interactive)
+    (browse-url (format "https://wellco.atlassian.net/browse/%s" (thing-at-point 'symbol))))
+
+  (evil-leader/set-key "oj" 'well/open-jira-issue-at-point)
+
+  (defun well/init-daily ()
+    (interactive)
+    (find-file "/ssh:mia3:/data/data/com.termux/files/home/storage/shared/Documents/notes/life.org")
+    (split-window-right)
+    (other-window 1)
+    (find-file "/ssh:mia3:/data/data/com.termux/files/home/storage/shared/Documents/notes/bullet.org"))
+
+  (defun well/send-text-to-mia3 (text)
+    (interactive "sText: ")
+    (shell-command-to-string (format "ssh mia3 \"tmux send-keys 'termux-clipboard-set \\\"%s\\\"' ENTER\"" text)))
+
+  (defun well/send-clipboard-to-mia3 ()
+    (interactive)
+    (shell-command-to-string (format "ssh mia3 \"tmux send-keys 'termux-clipboard-set \\\"%s\\\"' ENTER\"" (current-kill 0))))
+#+end_src
+** Misc bindings
+#+begin_src emacs-lisp
+  (defun isamert/toggle-side-well-org-buffer ()
+    "Toggle `well.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (isamert/toggle-side-buffer-with-file "~/Documents/notes/well.org"))
+
+  (evil-leader/set-key
+    "tw" 'isamert/toggle-side-well-org-buffer)
 #+end_src
