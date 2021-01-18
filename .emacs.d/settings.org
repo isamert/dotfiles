@@ -138,6 +138,7 @@ Add ~melpa~ package archive.
 #+BEGIN_SRC emacs-lisp
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+(add-to-list 'package-archives '("org" . "https://orgmode.org/elpa/"))
 (package-initialize)
 (unless package-archive-contents (package-refresh-contents)) ;; Update archives
 #+END_SRC
@@ -347,14 +348,13 @@ You should run =all-the-icons-install-fonts= command after this.
 Set a nicer theme.
 
 #+BEGIN_SRC emacs-lisp
-(add-hook 'after-make-frame-functions
-  (lambda (frame)
-    (with-selected-frame frame
-      (use-package doom-themes ;; spacemacs-theme
+(use-package doom-themes ;; spacemacs-theme
         :ensure t
         :defer t
         :init
-        (load-theme 'doom-one t)))))
+        (load-theme 'doom-one t))
+
+(add-hook 'after-make-frame-functions (lambda (frame) (with-selected-frame frame (load-theme 'doom-one t))))
 #+END_SRC
 
 ** Frame title
@@ -424,9 +424,10 @@ Make some temproary windows appear at bottom.
   :ensure t
   :init
   (setq evil-want-integration t
-        evil-want-keybinding nil ;; Do not load evil-keybindings for now
+        ;; evil-want-keybinding t
         evil-want-C-i-jump nil   ;; Makes tab key work as expected in terminal
-        evil-want-C-u-scroll t)
+        evil-want-C-u-scroll nil ;; Over the time I found myself utilizing C-u more and more, so disable this
+  )
   :config
   (evil-mode 1))
 #+END_SRC
@@ -591,10 +592,16 @@ To move between visual lines instead of real lines:
 #+END_SRC
 
 * org-mode
+** org-plus-contrib
+#+begin_src emacs-lisp
+  (use-package org
+    :ensure org-plus-contrib)
+#+end_src
 ** keybindings
 #+begin_src emacs-lisp
   (evil-leader/set-key
     "oo"  'org-open-at-point
+    "op"  'org-set-property
     "oi"  'org-toggle-inline-images
     "or"  'org-mode-restart
     "oa"  'org-agenda
@@ -613,25 +620,11 @@ To move between visual lines instead of real lines:
     "oco" 'org-clock-out
     "ocg" 'org-clock-goto)
 
-  (defun isamert/outline-up-heading-or-backward-heading-same-level ()
-    "Focus the previous upper level heading or if it does not exist go backwards on same heading level."
-    (interactive)
-    (condition-case nil
-      (progn (outline-up-heading 1) (message "ye"))
-      (error (org-backward-heading-same-level 1))))
-
-  (defun isamert/outline-up-heading-forward-or-forward-heading-same-level ()
-    "Focus the next upper level heading or if it does not exist go forward on same heading level."
-    (interactive)
-    (condition-case nil
-      (progn (outline-up-heading 1) (org-forward-heading-same-level 1) (message "ye"))
-      (error (org-forward-heading-same-level 1))))
-
   (evil-define-key 'normal org-mode-map
     "[[" 'org-previous-visible-heading
     "]]" 'org-next-visible-heading
-    "(" 'isamert/outline-up-heading-or-backward-heading-same-level
-    ")" 'isamert/outline-up-heading-forward-or-forward-heading-same-level
+    "(" 'outline-backward-same-level
+    ")" 'outline-forward-same-level
     "-" 'org-cycle-list-bullet
     ;; FIXME: find a solution for H-{h,j,k,l} in macOS
     (kbd "H-h") 'org-shiftleft
@@ -658,30 +651,34 @@ To move between visual lines instead of real lines:
     (kbd "M-H-j") 'org-metadown
     (kbd "M-H-k") 'org-metaup
     (kbd "M-H-l") 'org-metaright
-)
+  )
 
   (evil-leader/set-key-for-mode 'org-mode
     "d" 'org-babel-remove-result
     "D" 'my/org-babel-remove-all-results)
 #+end_src
 
-*** evil bindings for org-agenda
-#+BEGIN_SRC emacs-lisp
-(add-hook 'org-agenda-mode-hook
-  (lambda ()
-    (define-key org-agenda-mode-map "j" 'evil-next-line)
-    (define-key org-agenda-mode-map "k" 'evil-previous-line)))
-#+END_SRC
-
 ** some vars
 #+BEGIN_SRC emacs-lisp
   (when (file-directory-p "~/Documents/notes")
-    (setq life-org "~/Documents/notes/life.org")
-    (setq bullet-org "~/Documents/notes/bullet.org")
-    (setq org-directory "~/Documents/notes")
-    (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id) ;; org-store-link creates an ID for header only if called interactively and if there is no custom id
-    (setq org-agenda-files `(,life-org ,bullet-org "~/Documents/notes/well.org")) ;; FIXME well.org
-    (org-babel-lob-ingest "~/Documents/notes/utils.org")) ;; With this, I can call functions inside this file in other org files
+    (defconst life-org "~/Documents/notes/life.org")
+    (defconst bullet-org "~/Documents/notes/bullet.org")
+    (defconst reality-org "~/Documents/notes/reality.org")
+    (defconst projects-org "~/Documents/notes/projects.org")
+    (defconst work-org "~/Documents/notes/well.org")
+
+    ;; Put archive files under an archive/ directory
+    ;; I don't want them to pollute my directory
+    (setq org-archive-location "archive/%s_archive::")
+    (setq org-directory "~/Documents/notes"
+          org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id
+          ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
+          org-agenda-files `(,life-org ,bullet-org ,projects-org ,reality-org ,work-org))
+
+
+
+    ;; With the following, I can call functions inside this file in other org files
+    (org-babel-lob-ingest "~/Documents/notes/utils.org"))
 #+END_SRC
 
 ** better defaults
@@ -713,12 +710,6 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 
 ;; Typescript
 (use-package ob-typescript :ensure t)
-
-;; Scheme
-(use-package geiser
-  :ensure t
-  :init
-  (setq geiser-default-implementation 'guile))
 
 ;; Allow these languages to run in code blocks
 (org-babel-do-load-languages
@@ -757,6 +748,18 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (setq org-agenda-use-time-grid t
         org-agenda-time-grid '((weekly today require-timed remove-match)
                                (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------")))
+
+  (evil-set-initial-state 'org-agenda-mode 'normal)
+  (evil-define-key 'normal org-agenda-mode-map
+    (kbd "<RET>") 'org-agenda-switch-to
+    (kbd "\t") 'org-agenda-goto
+    "w" 'org-agenda-week-view
+    "d" 'org-agenda-day-view
+    "t" 'org-agenda-todo
+    "L" 'org-agenda-log-mode
+    "q" 'org-agenda-quit
+    "R" 'org-agenda-clockreport-mode
+    "r" 'org-agenda-redo)
 #+END_SRC
 ** todo keywords
 #+BEGIN_SRC emacs-lisp
@@ -791,7 +794,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
     :ensure t
     :hook (org-mode . org-fancy-priorities-mode)
     :config
-    (setq org-fancy-priorities-list '("🅰" "🅱" "🅲" "🅳")))
+    (setq org-fancy-priorities-list '("🅰" "🅱" "🅲" "🅳" "🅴")))
 
   ;; TODO: fix line height problem
   ;; This causes some aligning problems when used with the above one
@@ -1060,9 +1063,6 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
     :ensure t
     :config
     (setq persp-state-default-file "~/.emacs.d/perspective-state")
-    (evil-define-key 'normal persp-mode-map
-      (kbd "M-,") 'persp-prev
-      (kbd "M-.") 'persp-next)
     (evil-leader/set-key
       "ll" 'persp-switch-last
       "ls" 'persp-switch
@@ -1091,7 +1091,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
   :init
   (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)) ;; Only use these for jumping.
   :config
-  (define-key evil-normal-state-map (kbd "M-s") 'avy-goto-char)   ;; Go to any char
+  (define-key evil-normal-state-map (kbd "M-s") 'avy-goto-char-2)   ;; Go to any char
   (define-key evil-normal-state-map (kbd "M-S") 'avy-goto-word-1)) ;; Go to beginning of a word
 #+END_SRC
 
@@ -1357,6 +1357,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
            (typescript-mode . lsp)
            (dhall-mode . lsp)
            (haskell-mode . lsp)
+           (rust-mode . lsp)
            (java-mode . lsp))
     :init
     (setq lsp-diagnostic-package nil ;; prefer flycheck
@@ -1711,7 +1712,7 @@ When you search for something, it opens the results in an org-mode buffer. Resul
     (evil-leader/set-key
       "ss" 'yas-insert-snippet
       "sv" 'yas-visit-snippet-file
-      "se" 'yas-visit-snippet
+      "se" 'yas-visit-snippet-file
       "sn" 'yas-new-snippet
       "sc" 'yas-new-snippet)
     (evil-define-key 'insert 'global
@@ -1773,6 +1774,7 @@ Better help dialogs with syntax highlighting, references, source etc.
 (use-package helpful
   :ensure t
   :config
+  ;; Override default help bindings
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
   (global-set-key (kbd "C-h k") #'helpful-key)
@@ -1780,8 +1782,6 @@ Better help dialogs with syntax highlighting, references, source etc.
 
   (evil-define-key 'normal helpful-mode-map
         "q" 'evil-delete-buffer))
-
-
 #+end_src
 
 ** writeroom-mode
@@ -1828,6 +1828,8 @@ Better help dialogs with syntax highlighting, references, source etc.
 #+end_src
 ** smartparens
 #+begin_src emacs-lisp
+  (sp-local-pair 'org-mode "+" "+")
+
   (defun sp-wrap-quote-double () (interactive) (sp-wrap-with-pair "\""))
   (defun sp-wrap-quote-single () (interactive) (sp-wrap-with-pair "'"))
   (defun sp-wrap-backtick () (interactive) (sp-wrap-with-pair "`"))
@@ -1836,6 +1838,7 @@ Better help dialogs with syntax highlighting, references, source etc.
   (defun sp-wrap-tilda () (interactive) (sp-wrap-with-pair "~"))
   (defun sp-wrap-slash () (interactive) (sp-wrap-with-pair "/"))
   (defun sp-wrap-star () (interactive) (sp-wrap-with-pair "*"))
+  (defun sp-wrap-plus () (interactive) (sp-wrap-with-pair "+"))
 
   (use-package smartparens
     :ensure t
@@ -1852,13 +1855,25 @@ Better help dialogs with syntax highlighting, references, source etc.
       "S{"  #'sp-wrap-curly
       "S/"  #'sp-wrap-slash
       "S*"  #'sp-wrap-star
+      "S+"  #'sp-wrap-plus
+      "S#"  #'sp-wrap-star
       "S~"  #'sp-wrap-tilda)
+
+    (evil-define-key*
+     '(normal insert) sp-keymap
+     (kbd "M-[") #'sp-forward-barf-sexp
+     (kbd "M-]") #'sp-forward-slurp-sexp
+     (kbd "M-{") #'sp-backward-slurp-sexp
+     (kbd "M-}") #'sp-backward-barf-sexp)
+
     (smartparens-global-mode))
 
-(sp-with-modes '(php-mode)
-  (sp-local-pair "/*." ".*/" :post-handlers '(("| " "SPC")))
-  (sp-local-pair "{" nil :post-handlers '(("||\n[i]" "RET") my-php-wrap-handler))
-  (sp-local-pair "(" nil :prefix "\\(\\sw\\|\\s_\\)*"))
+  ;; TODO: do stuff like these
+  (sp-with-modes '(php-mode)
+    (sp-local-pair "/*." ".*/" :post-handlers '(("| " "SPC")))
+    (sp-local-pair "{" nil :post-handlers '(("||\n[i]" "RET") my-php-wrap-handler))
+    (sp-local-pair "(" nil :prefix "\\(\\sw\\|\\s_\\)*"))
+
 #+end_src
 
 ** tab-out
@@ -1873,10 +1888,16 @@ When you press tab, jump out from the current enclosing parens/quotes etc. When 
              :repo "zhangkaiyulw/tab-jump-out")
     :config
     ;; This is not defined as a global minor mode, so define one and enable it
-    (define-globalized-minor-mode global-tab-jump-out-mode tab-jump-out-mode (lambda () (tab-jump-out-mode)))
+    (define-globalized-minor-mode global-tab-jump-out-mode tab-jump-out-mode
+      (lambda ()
+        (tab-jump-out-mode)
+        (push "/" tab-jump-out-delimiters)
+        (push "=" tab-jump-out-delimiters)))
     (global-tab-jump-out-mode 1))
 #+end_src
 ** beacon
+It helps you to find your cursor when you change buffers/windows etc with a little animation.
+
 #+begin_src emacs-lisp
 (use-package beacon
   :ensure t
@@ -1981,6 +2002,14 @@ Jumps to definition by using regex, generally works. Use =gd=.
         ("https://emacsredux.com/atom.xml" blog emacs)
         ("https://lexi-lambda.github.io/feeds/all.rss.xml" blog dev haskell)
         ("https://jaspervdj.be/rss.xml" blog dev haskell)
+        ("https://blog.m-ou.se/index.xml" blog dev rust)
+        ("http://xion.io/feeds/atom.xml" blog dev rust)
+        ("https://ag91.github.io/rss.xml" blog dev emacs)
+        ("https://chrisdone.com/rss.xml" blog dev haskell)
+        ("https://two-wrongs.com/feed" blog dev)
+
+        ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay)
+        ("https://www.lesswrong.com/feed.xml?view=curated-rss" blog essay)
 
         ("http://explosm.net/rss" comic)
 
@@ -2069,6 +2098,8 @@ Jumps to definition by using regex, generally works. Use =gd=.
         "-" 'elfeed-search-untag-all
         "t" 'elfeed-search-tag-all
         "T" 'elfeed-search-untag-all
+        "A" 'elfeed-search-tag-all-unread
+        "a" 'elfeed-search-untag-all-unread
         "U" 'elfeed-search-tag-all-unread
         "u" 'elfeed-search-untag-all-unread)
 
@@ -2671,7 +2702,7 @@ Play internet radios.
   (defvar movement-map (make-sparse-keymap "movement-map")
     "Override all major and minor mode keys")
 
-  (evil-define-key 'normal movement-map
+  (evil-define-key '(normal motion emacs) movement-map
     (kbd "M-j") 'evil-window-down
     (kbd "M-k") 'evil-window-up
     (kbd "M-h") 'evil-window-left
@@ -2762,9 +2793,12 @@ Play internet radios.
 
 ** rust
 #+BEGIN_SRC emacs-lisp
-(use-package rust-mode :ensure t)
+(use-package rust-mode
+  :ensure t
+  :after (lsp-mode)
+  (setq lsp-rust-server 'rust-analyzer
+        lsp-rust-clippy-preference 'on))
 ;; (setq lsp-rust-server 'rls)
-(setq lsp-rust-server 'rust-analyzer)
 #+END_SRC
 
 ** javascript
@@ -2909,6 +2943,14 @@ Hit <C-j> after these and get:
   (use-package swift-mode
     :ensure t)
 #+end_src
+** scheme
+#+begin_src emacs-lisp
+  ;; Scheme
+  (use-package geiser
+    :ensure t
+    :init
+    (setq geiser-default-implementation 'guile))
+#+end_src
 * Misc functions
 ** google search
 #+begin_src emacs-lisp
@@ -3046,12 +3088,13 @@ Hit <C-j> after these and get:
   (defun isamert/org-file-get-header-id (file-path header-line)
     "Return the id of given header at HEADER-LINE in FILE-PATH."
     (interactive)
-    (with-current-buffer (let ((enable-local-variables  ())) (find-file-noselect file-path))
-      (goto-char 0)
-      (forward-line header-line)
-      (org-id-get nil 'create)
-      (save-buffer)
-      (org-id-get nil 'create)))
+    (save-excursion
+      (with-current-buffer (let ((enable-local-variables  ())) (find-file-noselect file-path))
+        (goto-char 0)
+        (forward-line header-line)
+        (org-id-get nil 'create)
+        (save-buffer)
+        (org-id-get nil 'create))))
 
   ;; TODO: colorize this maybe
   (defun isamert/org-link-header ()
@@ -3495,7 +3538,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
 
 ** Paste screenshots into org-mode buffers
 #+begin_src emacs-lisp
-  ;; TODO: save images under docs/images/screenshot_date_....
+  ;; TODO: save images under a predefined place on empty file-path instead of cache (defvar ...)
   (defun isamert/org-attach-image-from-clipboard (file-path)
     (interactive "sSave file to (leave empty to create a temp file): ")
     (let ((file (if (and file-path (not (string-empty-p file-path)))
@@ -3505,11 +3548,10 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
        ((locate-file "xclip" exec-path) (shell-command (format "xclip -selection clipboard -target image/png -out > %s" file)))
        ((locate-file "pngpaste" exec-path) (shell-command (format "pngpaste %s" file)))
        (t (message "Either install xclip (for linux) or pngpaste (for mac) to get this functionality.")))
-      (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
-      (org-display-inline-images)))
+      (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))))
 
   (evil-leader/set-key
-    "op"  'isamert/org-attach-image-from-clipboard)
+    "oP"  'isamert/org-attach-image-from-clipboard)
 #+end_src
 ** xah-open-file-at-curser
 This is better than =find-file-at-point= because it takes line numbers etc. into account.
@@ -3612,6 +3654,16 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
           (set-buffer-modified-p nil))))))
 #+end_src
 * WELL
+** Basics
+#+begin_src emacs-lisp
+(set-face-attribute 'default nil
+                             :font my-font
+                             :weight 'normal
+                             :width 'normal
+                             :height my-font-size)
+(load-theme 'doom-one t)
+#+end_src
+
 ** Automatically insert issue numbers into commit messages
 #+begin_src emacs-lisp
   (defun well/git-commit-message-setup ()
@@ -3659,7 +3711,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   (defun well/setup-js ()
     "If it's an UI project, run tide. Otherwise run lsp."
     (interactive)
-    (if (string-match "/ui/" (projectile-project-root))
+    (if (string-match "/ui/" (or (projectile-project-root) ""))
         (isamert/setup-indent 2)
         (well/setup-tide-mode)
       (lsp)))
@@ -3672,22 +3724,44 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 #+begin_src emacs-lisp
 (remove-hook 'haskell-mode-hook 'lsp)
 ;; FIXME: following brokes some stuff in org mode, probably need to use flycheck-hook or something
-(add-hook 'haskell-mode-hook (lambda () (flycheck-select-checker 'haskell-hlint)))
+;; (add-hook 'haskell-mode-hook (lambda () (flycheck-select-checker 'haskell-hlint)))
 #+end_src
 ** Misc functions
 #+begin_src emacs-lisp
+  (defun well/open-jira-issue (issue-number)
+    (interactive "sIssue number: ")
+    (browse-url (format "https://wellco.atlassian.net/browse/%s" issue-number)))
+
   (defun well/open-jira-issue-at-point ()
     (interactive)
-    (browse-url (format "https://wellco.atlassian.net/browse/%s" (thing-at-point 'symbol))))
+    (well/open-jira-issue (thing-at-point 'symbol)))
 
-  (evil-leader/set-key "oj" 'well/open-jira-issue-at-point)
-
-  (defun well/init-daily ()
+  ;; When on ejira header -> open JIRA page
+  ;; When in well.org -> go to current headers ejira equivalent
+  ;; When thing-at-point is an issue number
+  ;;  if arg is non-nil -> open(or create) it on well.org
+  ;;  else -> open(or create) it on ejira
+  (defun well/jira-dwim (arg)
     (interactive)
-    (find-file "/ssh:mia3:/data/data/com.termux/files/home/storage/shared/Documents/notes/life.org")
-    (split-window-right)
-    (other-window 1)
-    (find-file "/ssh:mia3:/data/data/com.termux/files/home/storage/shared/Documents/notes/bullet.org"))
+    (let ((curr-id (format "%s" (thing-at-point 'symbol)))
+          (entry-id (org-entry-get nil "ID" t)))
+      (cond
+       ;; TODO (and arg ...) Goto well.org header containing curr-id, if not create it (use properties like JIRA for well.org)
+       ;; TODO (and arg ...) if in well.org header, goto ejira header
+       ((org-id-find curr-id) (org-id-goto curr-id))
+       (entry-id (well/open-jira-issue entry-id))
+       ((s-prefix? "SIR" curr-id)
+        (org-id-goto "SIR")
+        (end-of-line)
+        (org-insert-subheading nil)
+        (end-of-line)
+        (insert "Placeholder")
+        (org-set-property "TYPE" "ejira-story")
+        (org-set-property "ID" curr-id)
+        (ejira-pull-item-under-point))
+       (t (message "No issue found under cursor or this is not a ejira context.")))))
+
+  (evil-leader/set-key "oj" 'well/jira-dwim)
 
   (defun well/send-text-to-mia3 (text)
     (interactive "sText: ")
