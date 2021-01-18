@@ -1,8 +1,0 @@
-[Unit]
-Description=Newsboad reload service
-
-[Service]
-Type=oneshot
-ExecStartPre=-killall -s SIGINT newsboat
-ExecStart=newsboat -x reload
-ExecStartPost=-notify-send "Newsboat" "Feeds have been reloaded."

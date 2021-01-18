@@ -1,8 +1,0 @@
-# This unit is started from ~/.xprofile
-# Other units that requires graphical env needs to have
-# WantedBy=user-graphical-login.target
-
-[Unit]
-Description=User Graphical Login
-Requires=default.target user-login.target
-After=default.target user-login.target

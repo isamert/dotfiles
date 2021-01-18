@@ -1,8 +1,0 @@
-#include ".Xresources.d/model"
-#include ".Xresources.d/colors"
-#include ".Xresources.d/urxvt"
-#include ".Xresources.d/polybar"
-#include ".Xresources.d/rofi"
-
-wm.gaps: 0
-wm.border: 2

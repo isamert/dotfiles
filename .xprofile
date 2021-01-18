@@ -1,1 +1,0 @@
-systemctl --user start user-graphical-login.target &

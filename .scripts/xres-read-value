@@ -1,2 +1,0 @@
-#!/bin/sh
-grep -v "!"  "$HOME/.Xresources" | grep "$1" | cut -d ":" -f 2 | xargs

@@ -1,2 +1,0 @@
-#!/bin/sh
-zenity --password --title "Enter your password" 2> /dev/null

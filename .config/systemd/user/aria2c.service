@@ -1,9 +1,0 @@
-[Unit]
-Description=aria2c: a download manager
-
-[Service]
-Type=forking
-ExecStart=aria2c
-
-[Install]
-WantedBy=user-graphical-login.target

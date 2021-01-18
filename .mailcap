@@ -1,9 +1,0 @@
-text/html; w3m -v -F -T text/html %s; edit=jaro --method=edit; compose=jaro --method=edit; nametemplate=%s.html; copiousoutput
-text/*; jaro '%s'; copiousoutput
-application/*; jaro '%s'
-image/*; jaro '%s'
-audio/*; jaro '%s'
-video/*; jaro '%s'
-message/*; jaro '%s'
-model/*; jaro '%s'
-*/*; jaro '%s'
