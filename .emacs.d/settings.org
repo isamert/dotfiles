@@ -604,6 +604,7 @@ To move between visual lines instead of real lines:
     "op"  'org-set-property
     "oi"  'org-toggle-inline-images
     "or"  'org-mode-restart
+    "os"  'org-schedule
     "oa"  'org-agenda
     "on"  'org-toggle-narrow-to-subtree
     "ow"  'widen
@@ -623,8 +624,9 @@ To move between visual lines instead of real lines:
   (evil-define-key 'normal org-mode-map
     "[[" 'org-previous-visible-heading
     "]]" 'org-next-visible-heading
-    "(" 'outline-backward-same-level
-    ")" 'outline-forward-same-level
+    ;; TODO: find better movements
+    ;;"(" 'outline-backward-same-level
+    ;")" 'outline-forward-same-level
     "-" 'org-cycle-list-bullet
     ;; FIXME: find a solution for H-{h,j,k,l} in macOS
     (kbd "H-h") 'org-shiftleft
@@ -655,7 +657,7 @@ To move between visual lines instead of real lines:
 
   (evil-leader/set-key-for-mode 'org-mode
     "d" 'org-babel-remove-result
-    "D" 'my/org-babel-remove-all-results)
+    "D" 'isamert/org-babel-remove-all-results)
 #+end_src
 
 ** some vars
@@ -744,22 +746,23 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 
 ** agenda
 #+BEGIN_SRC emacs-lisp
-(when (fboundp 'life-org)
-  (setq org-agenda-use-time-grid t
-        org-agenda-time-grid '((weekly today require-timed remove-match)
-                               (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------")))
+  (when (fboundp 'life-org)
+    (setq org-agenda-use-time-grid t
+          org-agenda-time-grid '((weekly today require-timed remove-match)
+                                 (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------")))
 
-  (evil-set-initial-state 'org-agenda-mode 'normal)
-  (evil-define-key 'normal org-agenda-mode-map
-    (kbd "<RET>") 'org-agenda-switch-to
-    (kbd "\t") 'org-agenda-goto
-    "w" 'org-agenda-week-view
-    "d" 'org-agenda-day-view
-    "t" 'org-agenda-todo
-    "L" 'org-agenda-log-mode
-    "q" 'org-agenda-quit
-    "R" 'org-agenda-clockreport-mode
-    "r" 'org-agenda-redo)
+    (evil-set-initial-state 'org-agenda-mode 'normal)
+    (evil-define-key 'normal org-agenda-mode-map
+      (kbd "<RET>") 'org-agenda-switch-to
+      (kbd "\t") 'org-agenda-goto
+      "s" 'org-agenda-schedule
+      "w" 'org-agenda-week-view
+      "d" 'org-agenda-day-view
+      "t" 'org-agenda-todo
+      "L" 'org-agenda-log-mode
+      "q" 'org-agenda-quit
+      "R" 'org-agenda-clockreport-mode
+      "r" 'org-agenda-redo)
 #+END_SRC
 ** todo keywords
 #+BEGIN_SRC emacs-lisp
@@ -1331,6 +1334,7 @@ I have manually set up names for projects in treemacs, because it was fairly eas
     (define-key company-active-map
       (kbd "<return>") 'company-complete-selection))
 #+END_SRC
+
 *** company-box
 Nice company front-end with icons and very nice documentation on hover thing.
 
@@ -1343,6 +1347,7 @@ Nice company front-end with icons and very nice documentation on hover thing.
 
 ** origami-mode
 This seems working better than =hs-minor-mode= and also it's supposedly works with =lsp-mode=.
+
 #+BEGIN_SRC emacs-lisp
 (use-package origami
   :ensure t
@@ -1360,8 +1365,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
            (rust-mode . lsp)
            (java-mode . lsp))
     :init
-    (setq lsp-diagnostic-package nil ;; prefer flycheck
-          lsp-use-native-json t
+    (setq lsp-use-native-json t
           lsp-enable-xref t
           lsp-enable-links t
           lsp-enable-folding t
@@ -1369,9 +1373,16 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
           lsp-enable-indentation nil
           lsp-enable-on-type-formatting nil
           lsp-before-save-edits nil
-          lsp-eldoc-render-all t
-          ;;lsp-enable-completion-at-point nil
-          lsp-enable-snippet t))
+          lsp-eldoc-render-all nil
+          lsp-enable-snippet t)
+
+    (evil-define-key 'normal lsp-mode-map
+      "gr" 'lsp-ui-peek-find-references
+      "gd" 'lsp-ui-peek-find-definitions
+      "gi" 'lsp-ui-peek-find-implementation
+      "ga" 'lsp-execute-code-action))
+
+  ;; ^ Disable eldoc, popup documentation is enough.
 
   (use-package lsp-ui
     :ensure t
@@ -1828,18 +1839,6 @@ Better help dialogs with syntax highlighting, references, source etc.
 #+end_src
 ** smartparens
 #+begin_src emacs-lisp
-  (sp-local-pair 'org-mode "+" "+")
-
-  (defun sp-wrap-quote-double () (interactive) (sp-wrap-with-pair "\""))
-  (defun sp-wrap-quote-single () (interactive) (sp-wrap-with-pair "'"))
-  (defun sp-wrap-backtick () (interactive) (sp-wrap-with-pair "`"))
-  (defun sp-wrap-angle () (interactive) (sp-wrap-with-pair "<"))
-  (defun sp-wrap-equal () (interactive) (sp-wrap-with-pair "="))
-  (defun sp-wrap-tilda () (interactive) (sp-wrap-with-pair "~"))
-  (defun sp-wrap-slash () (interactive) (sp-wrap-with-pair "/"))
-  (defun sp-wrap-star () (interactive) (sp-wrap-with-pair "*"))
-  (defun sp-wrap-plus () (interactive) (sp-wrap-with-pair "+"))
-
   (use-package smartparens
     :ensure t
     :config
@@ -1859,6 +1858,8 @@ Better help dialogs with syntax highlighting, references, source etc.
       "S#"  #'sp-wrap-star
       "S~"  #'sp-wrap-tilda)
 
+    (sp-local-pair 'org-mode "+" "+")
+
     (evil-define-key*
      '(normal insert) sp-keymap
      (kbd "M-[") #'sp-forward-barf-sexp
@@ -1874,6 +1875,15 @@ Better help dialogs with syntax highlighting, references, source etc.
     (sp-local-pair "{" nil :post-handlers '(("||\n[i]" "RET") my-php-wrap-handler))
     (sp-local-pair "(" nil :prefix "\\(\\sw\\|\\s_\\)*"))
 
+  (defun sp-wrap-quote-double () (interactive) (sp-wrap-with-pair "\""))
+  (defun sp-wrap-quote-single () (interactive) (sp-wrap-with-pair "'"))
+  (defun sp-wrap-backtick () (interactive) (sp-wrap-with-pair "`"))
+  (defun sp-wrap-angle () (interactive) (sp-wrap-with-pair "<"))
+  (defun sp-wrap-equal () (interactive) (sp-wrap-with-pair "="))
+  (defun sp-wrap-tilda () (interactive) (sp-wrap-with-pair "~"))
+  (defun sp-wrap-slash () (interactive) (sp-wrap-with-pair "/"))
+  (defun sp-wrap-star () (interactive) (sp-wrap-with-pair "*"))
+  (defun sp-wrap-plus () (interactive) (sp-wrap-with-pair "+"))
 #+end_src
 
 ** tab-out
@@ -2639,22 +2649,18 @@ Play internet radios.
   (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
   (evil-define-key 'normal 'global
-    "?"  'helm-semantic-or-imenu
-    (kbd "M-f") 'treemacs
-    (kbd "C-f") 'helm-occur
-    (kbd "C-s") 'save-buffer)
+    ")" #'evil-digit-argument-or-evil-beginning-of-line
+    ;; ^ I use shifted-by-default version of number row, so this helps.
+    "?"  #'helm-semantic-or-imenu
+    (kbd "M-f") #'treemacs
+    (kbd "C-f") #'helm-occur
+    (kbd "C-s") #'save-buffer)
 
   (evil-define-key 'normal prog-mode-map
     (kbd "M-;") 'comment-line
     (kbd "M-:") 'comment-dwim
     "gd" 'xref-find-definitions
     "gr" 'xref-find-references)
-
-  (evil-define-key 'normal lsp-mode-map
-    "gf" 'lsp-ui-peek-find-references
-    "gd" 'lsp-ui-peek-find-definitions
-    "gi" 'lsp-ui-peek-find-implementation
-    "ga" 'lsp-execute-code-action)
 #+END_SRC
 
 ** Better split management
@@ -2968,19 +2974,19 @@ Hit <C-j> after these and get:
     "/g"   'isamert/google-this)
 #+end_src
 
-#+end_src
 ** google translate
 #+begin_src emacs-lisp
   ;; FIXME: ggrep -> grep
   (defun isamert/google-translate-this (from to)
-    "Translate selected region or current word with google. Let's you edit the query beforehand. Result is printed into minibuffer."
+    "Translate selected region or current word from FROM to TO.
+  Let's you edit the query beforehand.  Result is printed into minibuffer.
+  You need to install `translate-shell' to make this work."
     (interactive
      `(,(read-string "From: " "en") ,(read-string "To: " "tr")))
     (message
      (shell-command-to-string
       (format
-       "curl -s -A 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0' \"%s\" --data-urlencode 'q=%s' | ggrep -Po '<div dir=\"ltr\" class=\"t0\">\\K[^<]*' | tr -d '\\n'"
-       (format "https://translate.google.com/m?sl=%s&tl=%s&ie=UTF-8" from to)
+       "trans -b en:tr \"%s\""
        (read-string
         "Translating: "
         (isamert/region-or 'word))))))
@@ -3258,14 +3264,14 @@ Here I define two important functions and their helpers.  The following function
 #+END_SRC
 ** org-babel extension functions
 #+BEGIN_SRC emacs-lisp
-(defun my/org-babel-remove-all-results nil
-  (interactive)
-  (goto-char 1)
-  (let ((total-removed 0))
-    (while (org-babel-next-src-block)
-      (when (org-babel-remove-result)
-        (setq total-removed (+ total-removed 1))))
-    (message (format "%d result blocks are removed." total-removed))))
+  (defun isamert/org-babel-remove-all-results nil
+    (interactive)
+    (goto-char 1)
+    (let ((total-removed 0))
+      (while (org-babel-next-src-block)
+        (when (org-babel-remove-result)
+          (setq total-removed (+ total-removed 1))))
+      (message (format "%d result blocks are removed." total-removed))))
 #+END_SRC
 
 ** increment/decrement numbers
@@ -3389,15 +3395,15 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
 
 #+begin_src emacs-lisp
   ;; FIXME: insert short day name while creating the day
-  ;; TODO: archive functions: archive-montly, archive-yearly etc
-  ;; TODO: minor mode: org-pretty-tags, org-fancy-priorities
-  ;; TODO: Different header for recurring events and this should be automatically copied to todays view (with calling focus today?)
-  ;; TODO: montly, yearly goals/logs/headers.
-  ;;  -> Need some functions to quickly focus into current month logs, year logs etc.
-  ;;  -> Also create migration functions for these.
-  ;;  -> These should come before days of given month/year.
 
-  ;;; Code:
+  ;; Keybindings
+  (evil-leader/set-key
+    "obb" 'isamert/bullet-focus-backlog
+    "obt" 'isamert/bullet-focus-today
+    "obm" 'isamert/bullet-move-todos-yesterday-to-today
+    "oby" 'isamert/bullet-focus-yesterday
+    "obf" 'isamert/bullet-focus-given-day
+    "obc" 'isamert/bullet-create-given-day)
 
   (defun isamert/insert-new-line-above (text)
     "Insert a line above the current line with given TEXT."
@@ -3419,7 +3425,6 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   (defun isamert/org-remove-subtree ()
     (org-mark-subtree)
     (delete-and-extract-region (region-beginning) (region-end)))
-
 
 
   (defun isamert/bullet-find-a-day (day)
@@ -3477,14 +3482,14 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       day-entry))
 
   (defun isamert/bullet-focus-given-day ()
-    "Focus given days header. If it does not exists, create it."
+    "Focus given days header.  If it does not exists, create it."
     (interactive)
     (let ((given-date (org-read-date)))
       (when (not (isamert/bullet-focus-a-day given-date))
         (isamert/bullet-create-a-day given-date t))))
 
   (defun isamert/bullet-focus-today ()
-    "Focus todays header. If it does not exists, create it."
+    "Focus todays header.  If it does not exists, create it."
     (interactive)
     (when (not (isamert/bullet-focus-a-day (isamert/today)))
       (isamert/bullet-create-today t)))
@@ -3524,16 +3529,6 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (widen)
     (goto-char (org-find-exact-headline-in-buffer "Backlog"))
     (org-narrow-to-subtree))
-
-
-  ;; Keybindings
-  (evil-leader/set-key
-    "obb" 'isamert/bullet-focus-backlog
-    "obt" 'isamert/bullet-focus-today
-    "obm" 'isamert/bullet-move-todos-yesterday-to-today
-    "oby" 'isamert/bullet-focus-yesterday
-    "obf" 'isamert/bullet-focus-given-day
-    "obc" 'isamert/bullet-create-given-day)
 #+end_src
 
 ** Paste screenshots into org-mode buffers
