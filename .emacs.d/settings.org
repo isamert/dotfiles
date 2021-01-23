@@ -1017,7 +1017,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
       ;; magit/git
       "gs" 'magit-status
       "gf" 'magit-file-dispatch
-      "gg" 'my/helm-grep-git-grep-current-project
+      "gg" 'isamert/helm-grep-git-grep-current-project
       "gp" 'magit-pull
       "gP" 'magit-push
       "gr" 'magit-reset
@@ -1118,7 +1118,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
       "hh" 'helm-resume
       "hk" 'helm-show-kill-ring
       "hr" 'helm-rg
-      "hp" 'my/helm-projectile-rg-current-project
+      "hp" 'isamert/helm-projectile-rg-current-project
       "hm" 'helm-my-files
       "ho" 'helm-org-rifle-org-directory)
     (helm-mode 1)
@@ -3005,7 +3005,10 @@ Hit <C-j> after these and get:
 #+end_src
 ** org-mode enhancements
 #+begin_src emacs-lisp
-  ;; TODO: create a function for detecting backlings for header under the cursor.
+  ;; Keybindings
+  (evil-leader/set-key
+    "ol" 'isamert/org-link-header
+    "oL" 'isamert/org-backlinks)
 
   ;;
   ;; Formatting funcs
@@ -3102,10 +3105,9 @@ Hit <C-j> after these and get:
         (save-buffer)
         (org-id-get nil 'create))))
 
-  ;; TODO: colorize this maybe
   (defun isamert/org-link-header ()
     "Interactively select a header and insert it as a link into the buffer.
-  Headers are gathered from all the org files found in `org-directory`."
+  Headers are gathered from all the org files found in `org-directory'."
     (interactive)
     (-let* ((cmd (concat "cd " org-directory "; "
                          "rg"
@@ -3175,11 +3177,6 @@ Hit <C-j> after these and get:
       (->> (string-to-number line-no)
            (1-)
            (forward-line))))
-
-  ;; Keybindings
-  (evil-leader/set-key
-    "ol" 'isamert/org-link-header
-    "oL" 'isamert/org-backlinks)
 #+end_src
 
 ** scratch/temporary buffers in side windows
@@ -3253,15 +3250,6 @@ Here I define two important functions and their helpers.  The following function
       "tf" 'treemacs)
 #+end_src
 
-** org-X-today
-#+BEGIN_SRC emacs-lisp
-(defun isamert/date (date)
-  "Display the time described by DATE. DATE can be 'now', 'yesterday', 'two days ago' etc."
-  (isamert/s-trim-right (shell-command-to-string (concat "date --date='" date "' +'%Y-%m-%d %a'")) "\n"))
-
-(defun isamert/today nil
-  (format-time-string "%Y-%m-%d %a"))
-#+END_SRC
 ** org-babel extension functions
 #+BEGIN_SRC emacs-lisp
   (defun isamert/org-babel-remove-all-results nil
@@ -3274,49 +3262,26 @@ Here I define two important functions and their helpers.  The following function
       (message (format "%d result blocks are removed." total-removed))))
 #+END_SRC
 
-** increment/decrement numbers
-#+begin_src emacs-lisp
-(defun increment-number-decimal (&optional arg)
-  "Increment the number forward from point by 'arg'."
-  (interactive "p*")
-  (save-excursion
-    (save-match-data
-      (let (inc-by field-width answer)
-        (setq inc-by (if arg arg 1))
-        (skip-chars-backward "0123456789")
-        (when (re-search-forward "[0-9]+" nil t)
-          (setq field-width (- (match-end 0) (match-beginning 0)))
-          (setq answer (+ (string-to-number (match-string 0) 10) inc-by))
-          (when (< answer 0)
-            (setq answer (+ (expt 10 field-width) answer)))
-          (replace-match (format (concat "%0" (int-to-string field-width) "d")
-                                 answer)))))))
-
-(defun decrement-number-decimal (&optional arg)
-  (interactive "p*")
-  (increment-number-decimal (if arg (- arg) -1)))
-#+end_src
-
 ** helm extensions
 #+begin_src emacs-lisp
-  (defun my/helm-projectile-rg-current-project nil
+  (defun isamert/helm-projectile-rg-current-project nil
     "Search in current project using ripgrep."
     (interactive)
     (let ((helm-rg-default-directory (projectile-project-root)))
       (helm-rg nil)))
 
-  (defun my/helm-projectile-rg-all-projects nil
+  (defun isamert/helm-projectile-rg-all-projects nil
     "Search in current project using ripgrep."
     (interactive)
     (let ((helm-rg-default-directory (car projectile-project-search-path)))
       (helm-rg nil)))
 
-  (defun my/helm-grep-ag-current-project (arg)
+  (defun isamert/helm-grep-ag-current-project (arg)
     "Search in current project using ag"
     (interactive "P")
     (helm-grep-ag (projectile-project-root) arg))
 
-  (defun my/helm-grep-git-grep-current-project (arg)
+  (defun isamert/helm-grep-git-grep-current-project (arg)
     "Search in current project using ag"
     (interactive "P")
     (helm-grep-git-1 (projectile-project-root) arg))
@@ -3344,52 +3309,6 @@ Here I define two important functions and their helpers.  The following function
   (message "OK!"))
 #+END_SRC
 
-** create jsdoc string for typescript functions
-#+begin_src emacs-lisp
-  (defun isamert/create-jsdoc-string-template (ts)
-    "Insterts a JSDOC template for a well typed function TypeScript function.
-     If TS is true, simply outputs a TSDOC template."
-    (interactive "P")
-    (let ((str (thing-at-point 'line t))
-          (paramsstr)
-          (return-type)
-          (params)
-          (return-doc "")
-          (param-docs))
-      (save-match-data
-        (string-match ".*(\\(\\(\\w+: .+,? ?\\)+\\))\\(?:: \\(.+\\)\\)? {" str)
-        (setq paramsstr (match-string 1 str)
-              return-type (match-string 3 str)
-              params (isamert/find-all "\\([A-Za-z_]+: .+?\\)\\(?:,\\|$\\)" paramsstr)))
-
-      (setq param-docs
-            (mapcar (lambda (sig)
-                      (let* ((sig-split (split-string sig ": "))
-                             (name (nth 0 sig-split))
-                             (full-type (nth 1 sig-split))
-                             (has-default (string-match "=" full-type))
-                             (type-and-val (split-string full-type "="))
-                             (type (if has-default (nth 0 type-and-val) full-type))
-                             (full-name (if has-default (format "[%s=%s]" name (nth 1 type-and-val)) name)))
-                        (if ts
-                          (format "* @param %s - \n" name)
-                          (format "* @param {%s} %s - \n" type full-name))))
-                    params))
-
-      (when (not ts)
-        (setq return-doc (format "* @return {%s}\n" return-type)))
-      (forward-line -1)
-      (mapcar (lambda (line)
-                (indent-according-to-mode)
-                (insert line)
-                (indent-according-to-mode))
-              (isamert/flatten `(("\n/**\n*\n") ,param-docs (,return-doc) ("*/"))))))
-
-
-  (defun isamert/create-tsdoc-string-template ()
-    (interactive)
-    (isamert/create-jsdoc-string-template t))
-#+end_src
 ** bullet.org
 I have a ~bullet.org~ file that I keep my daily journal and here are some utility functions that use with it. I may document this later (or even publish it as a package?)
 
@@ -3404,6 +3323,13 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "oby" 'isamert/bullet-focus-yesterday
     "obf" 'isamert/bullet-focus-given-day
     "obc" 'isamert/bullet-create-given-day)
+
+  (defun isamert/today nil
+    (format-time-string "%Y-%m-%d %a"))
+
+  (defun isamert/date (date)
+    "Display the time described by DATE. DATE can be 'now', 'yesterday', 'two days ago' etc."
+    (isamert/s-trim-right (shell-command-to-string (concat "date --date='" date "' +'%Y-%m-%d %a'")) "\n"))
 
   (defun isamert/insert-new-line-above (text)
     "Insert a line above the current line with given TEXT."
@@ -3548,6 +3474,24 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   (evil-leader/set-key
     "oP"  'isamert/org-attach-image-from-clipboard)
 #+end_src
+** rename current file
+#+begin_src emacs-lisp
+;; source: http://steve.yegge.googlepages.com/my-dot-emacs-file
+(defun isamert/rename-current-file-name-and-buffer (new-name)
+  "Renames both current buffer and file it's visiting to NEW-NAME."
+  (interactive "sNew name: ")
+  (let ((name (buffer-name))
+        (filename (buffer-file-name)))
+    (if (not filename)
+        (message "Buffer '%s' is not visiting a file!" name)
+      (if (get-buffer new-name)
+          (message "A buffer named '%s' already exists!" new-name)
+        (progn
+          (rename-file filename new-name 1)
+          (rename-buffer new-name)
+          (set-visited-file-name new-name)
+          (set-buffer-modified-p nil))))))
+#+end_src
 ** xah-open-file-at-curser
 This is better than =find-file-at-point= because it takes line numbers etc. into account.
 
@@ -3630,25 +3574,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 (define-key evil-normal-state-map (kbd "gf") 'xah-open-file-at-cursor)
 #+end_src
 
-** rename current file
-#+begin_src emacs-lisp
-;; source: http://steve.yegge.googlepages.com/my-dot-emacs-file
-(defun isamert/rename-current-file-name-and-buffer (new-name)
-  "Renames both current buffer and file it's visiting to NEW-NAME."
-  (interactive "sNew name: ")
-  (let ((name (buffer-name))
-        (filename (buffer-file-name)))
-    (if (not filename)
-        (message "Buffer '%s' is not visiting a file!" name)
-      (if (get-buffer new-name)
-          (message "A buffer named '%s' already exists!" new-name)
-        (progn
-          (rename-file filename new-name 1)
-          (rename-buffer new-name)
-          (set-visited-file-name new-name)
-          (set-buffer-modified-p nil))))))
-#+end_src
 * WELL
+Company related stuff.
+
 ** Basics
 #+begin_src emacs-lisp
 (set-face-attribute 'default nil
