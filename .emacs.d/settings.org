@@ -42,22 +42,6 @@ Some basic variable and function definitions that will be used in configuration.
                              ,pairs)
                        (prettify-symbols-mode))))
 
-  ;; SOURCE: https://github.com/azzamsa/scripts.el#kill-all-buffers
-  (defun isamert/kill-all-other-buffers nil
-    "Kill all buffers but current buffer and special buffers.
-    Buffers that start with '*' and white space ignored"
-    (interactive)
-    (when (y-or-n-p "Really kill all other buffers? ")
-      (let ((killed-bufs 0))
-        (dolist (buffer (delq (current-buffer) (buffer-list)))
-          (let ((name (buffer-name buffer)))
-            (when (and name (not (string-equal name ""))
-                       (/= (aref name 0) ?\s)
-                       (string-match "^[^\*]" name))
-              (cl-incf killed-bufs)
-              (funcall 'kill-buffer buffer))))
-        (message "Killed %d buffer(s)" killed-bufs))))
-
   (defun isamert/delq* (list &rest elems)
     "Remove ELEMS from LIST. Like =delq= but removes more than just one item."
     (let ((l list))
@@ -68,19 +52,9 @@ Some basic variable and function definitions that will be used in configuration.
     "Check if FONT exists"
     (if (null (x-list-fonts font)) nil t))
 
-  (defun isamert/flatten (list-of-lists) (apply #'append list-of-lists))
-  (defun isamert/flatmapcar (fun list) (isamert/flatten (mapcar fun list)))
-
   (defun isamert/assoc-regexp (key list &optional fn)
     "Like `assoc` but uses `string-match (car pair) KEY` for comparasion and returns all the matching pairs. FN is applied to the keys before matching, if present."
     (seq-filter (lambda (pair) (when (string-match (if fn (funcall fn (car pair)) (car pair)) key) pair)) list))
-
-  ;; SOURCE: https://stackoverflow.com/a/17325791
-  (defun isamert/replace-string (in what with)
-    (replace-regexp-in-string (regexp-quote what) with in nil 'literal))
-
-  (defun isamert/replace-string-regexp (in what with)
-    (replace-regexp-in-string what with in nil 'literal))
 
   (defun isamert/s-trim-left (s c)
     "Remove C's at the beginning of S."
@@ -107,16 +81,6 @@ Some basic variable and function definitions that will be used in configuration.
         (while (re-search-forward regex (point-max) t)
           (push (match-string 1) matches)))
       matches))
-
-  (defun isamert/s-split-once (str sep)
-    "Split given STR just once with given SEP. Returns a list of two elements."
-    (--> (split-string str sep)
-         `(,(car it) ,(string-join (cdr it) sep))))
-
-  (defun isamert/s-split-n-times (str sep n)
-    "Split given STR N times with given SEP. Returns a list of (N+1) elements."
-    (--> (split-string str sep)
-         (append (-take n it)  (string-join (-drop n it) sep))))
 
   (defun isamert/region-or (what)
     "Returns currently selected string or WHAT-at-point string. WHAT can be 'symbol 'word etc."
@@ -209,6 +173,7 @@ Save recent files. Also exclude package files that appears after installing a pa
         savehist-file "~/.emacs.d/savehist")
   (savehist-mode 1)
 #+end_src
+
 ** Better scrolling
 *** Better settings for mouse scroll
 #+BEGIN_SRC emacs-lisp
@@ -287,17 +252,10 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
     (let* ((fname (buffer-file-name))
            (match (isamert/assoc-regexp fname run-after-save-alist 'expand-file-name)))
       (when match
-        (mapcar (lambda (pair) (shell-command (isamert/replace-string (cdr pair) "%" fname))) match))))
+        (mapcar (lambda (pair) (shell-command (s-replace "%" fname (cdr pair)))) match))))
 
   (add-hook 'after-save-hook 'isamert/post-save-run-command)
 #+END_SRC
-
-** Disable shift select mode
-This needs a little bit of explanation. So, I have remapped =AltGr + {h,j,k,l}= to arrow keys, using =xmodmap=. That means I can use h,j,k,l as directional keys in insert mode too, with the help of AltGr. This is quite helpful for quick/little movements and pretty easy to get used to. As a natural extension, I've remapped =AltGr + Shift + {h,j,k,l}= to =Home, PageDown, PageUp, End= but there is a little bit of problem with that, remapping also registers the shift key so that when I do =AltGr + Shift + h=, it is registered as =Shift + Home= but I just want it to register as =Home=. I haven't able to fix this in using =xmodmap= so I'm simply disabling the shift selection mode in emacs to get my desired result.
-
-#+begin_src emacs-lisp
-(setq shift-select-mode nil)
-#+end_src
 
 * Visuals
 ** General
@@ -348,13 +306,20 @@ You should run =all-the-icons-install-fonts= command after this.
 Set a nicer theme.
 
 #+BEGIN_SRC emacs-lisp
-(use-package doom-themes ;; spacemacs-theme
-        :ensure t
-        :defer t
-        :init
-        (load-theme 'doom-one t))
+  (use-package doom-themes
+    :ensure t
+    :defer t
+    :init
+    (enable-theme 'doom-one))
 
-(add-hook 'after-make-frame-functions (lambda (frame) (with-selected-frame frame (load-theme 'doom-one t))))
+  ;; (use-package zerodark-theme
+  ;;   :ensure t
+  ;;   :config
+  ;;   (load-theme 'zerodark t)
+  ;;   ;; Optionally setup the modeline
+  ;;   (zerodark-setup-modeline-format))
+
+  (add-hook 'after-make-frame-functions (lambda (frame) (with-selected-frame frame (load-theme 'doom-one t))))
 #+END_SRC
 
 ** Frame title
@@ -387,7 +352,7 @@ This code highlights the portion of line that exceeds 120 columns and trailing s
 
 #+BEGIN_SRC emacs-lisp
 (setq whitespace-style '(face empty tabs trailing)) ;; lines-tail
-(setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode)) ;; Disable in org-mode and markdown-mode
+(setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode)) ;; Disable in org-mode and markdown-mode
 (global-whitespace-mode t)
 (diminish 'global-whitespace-mode)
 #+END_SRC
@@ -420,29 +385,39 @@ Make some temproary windows appear at bottom.
 * evil-mode
 ** Install
 #+BEGIN_SRC emacs-lisp
-(use-package evil
-  :ensure t
-  :init
-  (setq evil-want-integration t
-        ;; evil-want-keybinding t
-        evil-want-C-i-jump nil   ;; Makes tab key work as expected in terminal
-        evil-want-C-u-scroll nil ;; Over the time I found myself utilizing C-u more and more, so disable this
-  )
-  :config
-  (evil-mode 1))
+  (use-package evil
+    :ensure t
+    :init
+    (setq evil-want-integration t
+          evil-want-keybinding nil
+          evil-want-C-i-jump nil
+          ;; ^ Makes tab key work as expected in terminal
+          evil-kill-on-visual-paste nil
+          ;; ^ When I paste something in visual mode, I don't want it to take over the kill ring
+          evil-want-C-u-scroll nil)
+          ;; ^ Over the time I found myself utilizing C-u more and more, so disable this
+    :config
+    (evil-mode 1))
 #+END_SRC
 
 ** Ex Commands
 #+begin_src emacs-lisp
   (evil-ex-define-cmd "Q" 'evil-quit)
 #+end_src
+
+** evil-collection
+#+begin_src emacs-lisp
+  (use-package evil-collection
+    :after evil
+    :ensure t
+    :config
+    (evil-collection-init '(magit)))
+#+end_src
+
 ** evil-leader
 Enable leader key and bind some keys.
-#+BEGIN_SRC emacs-lisp
-  (defun execute-C-c-C-c ()
-    (interactive)
-    (execute-kbd-macro (kbd "C-c C-c")))
 
+#+BEGIN_SRC emacs-lisp
   (use-package evil-leader
     :ensure t
     :init
@@ -452,22 +427,20 @@ Enable leader key and bind some keys.
     (evil-leader/set-key
       ;; generic
       ";"   'eval-last-sexp
-      ":"   'eval-expression
-      "f"   'projectile-find-file
-      "c"   'execute-C-c-C-c
 
       ;; buffers
       "bq" 'evil-quit
-      "bd" 'evil-delete-buffer
-      "bb" 'helm-buffers-list))
+      "bd" 'evil-delete-buffer))
 #+END_SRC
 
 ** evil-mc
 Multiple cursors for evil.
 - =C-n= / =C-p= are used for creating cursors
-- =M-n= / =M-p= are used for cycling through cursors.
+- =M-n= / =M-p= are used for cycling through already created cursors.
 - =A= and =I= creates cursors in visual selection mode as you may expect.
 - =gq= to clear all cursors.
+
+Sometimes I want to create cursors manually, instead of automatic matches. For that I need to use =evil-mc-make-cursor-here= after doing =evil-mc-pause-all-cursors= and then I need to resume them. Seems tedious.
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-mc
@@ -571,6 +544,14 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
   (add-hook 'magit-mode-hook 'turn-off-evil-snipe-override-mode))
 #+END_SRC
 
+** goto-chg
+=g;= goes to the last change. (repeatable)
+
+#+BEGIN_SRC emacs-lisp
+(use-package goto-chg
+  :ensure t)
+#+END_SRC
+
 ** Visual line movement
 To move between visual lines instead of real lines:
 #+BEGIN_SRC emacs-lisp
@@ -597,6 +578,7 @@ To move between visual lines instead of real lines:
   (use-package org
     :ensure org-plus-contrib)
 #+end_src
+
 ** keybindings
 #+begin_src emacs-lisp
   (evil-leader/set-key
@@ -685,17 +667,23 @@ To move between visual lines instead of real lines:
 
 ** better defaults
 #+BEGIN_SRC emacs-lisp
-(setq org-src-fontify-natively t             ;; Enable code highlighting in ~SRC~ blocks.
-      org-hierarchical-todo-statistics t     ;; Show all children in todo statistics [1/5]
-      org-imenu-depth 7                      ;; include up to 7-depth headers in imenu search
-      org-image-actual-width nil             ;; Disable showing inline images in full width. Now you can add `#+ATTR_*: :width 300` to resize inline images
-      org-ellipsis "..⤵"                     ;; Replace ... with ..↯ in collapsed sections
-      org-habit-show-habits-only-for-today t ;; If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
-)
+  (setq org-src-fontify-natively t
+        ;; ^ Enable code highlighting in ~SRC~ blocks.
+        org-hierarchical-todo-statistics t
+        ;; ^ Show all children in todo statistics [1/5]
+        org-imenu-depth 7
+        ;; ^ include up to 7-depth headers in imenu search
+        org-image-actual-width nil
+        ;; ^ Disable showing inline images in full width. Now you can add `#+ATTR_*: :width 300` to resize inline images
+        org-ellipsis "..⤵"
+        ;; ^ Replace ... with ..↯ in collapsed sections
+        org-habit-show-habits-only-for-today t)
+        ;; ^ If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
 #+END_SRC
 
 ** auto indent subsections
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
+
 #+BEGIN_SRC emacs-lisp
   (add-hook
    'org-mode-hook
@@ -707,27 +695,27 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 
 ** babel
 #+begin_src emacs-lisp
-;; Http request in org-mode babel.
-(use-package ob-http :ensure t)
+  ;; Http request in org-mode babel.
+  (use-package ob-http :ensure t)
 
-;; Typescript
-(use-package ob-typescript :ensure t)
+  ;; Typescript
+  (use-package ob-typescript :ensure t)
 
-;; Allow these languages to run in code blocks
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((emacs-lisp . t)
-   (scheme . t)
-   (python . t)
-   (haskell . t)
-   (js . t)
-   (sql . t)
-   (shell . t)
-   (R . t)
-   (typescript . t)
-   (http . t)))
+  ;; Allow these languages to run in code blocks
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (scheme . t)
+     (python . t)
+     (haskell . t)
+     (js . t)
+     (sql . t)
+     (shell . t)
+     (R . t)
+     (typescript . t)
+     (http . t)))
 
-(setq org-confirm-babel-evaluate nil) ;; Don't ask permissions for evaluating code blocks
+  (setq org-confirm-babel-evaluate nil) ;; Don't ask permissions for evaluating code blocks
 #+end_src
 
 ** exports
@@ -748,8 +736,8 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 #+BEGIN_SRC emacs-lisp
   (when (fboundp 'life-org)
     (setq org-agenda-use-time-grid t
-          org-agenda-time-grid '((weekly today require-timed remove-match)
-                                 (800 1000 1200 1400 1600 1800 2000 2200) "......" "----------------")))
+          org-agenda-time-grid '((today remove-match)
+                                 (800 900 1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100 2200 2300 2400) "......" "----------------")))
 
     (evil-set-initial-state 'org-agenda-mode 'normal)
     (evil-define-key 'normal org-agenda-mode-map
@@ -764,6 +752,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       "R" 'org-agenda-clockreport-mode
       "r" 'org-agenda-redo)
 #+END_SRC
+
 ** todo keywords
 #+BEGIN_SRC emacs-lisp
   ;; Add this to org files if you need:
@@ -786,6 +775,9 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 
 ** fancy/pretty stuff
 #+begin_src emacs-lisp
+  (setq org-tags-column 0)
+  ;; ^ This does not work well with combination of org-fancy-priorities and org-pretty tags, so I disable it
+
   ;; Make headings look better with nice bullets.
   ;; It also adjusts the size of headings according to their level.
   (use-package org-bullets
@@ -799,20 +791,21 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
     :config
     (setq org-fancy-priorities-list '("🅰" "🅱" "🅲" "🅳" "🅴")))
 
-  ;; TODO: fix line height problem
-  ;; This causes some aligning problems when used with the above one
-  ;; (use-package org-pretty-tags
-  ;;   :diminish org-pretty-tags-mode
-  ;;   :ensure t
-  ;;   :config
-  ;;   (setq org-pretty-tags-surrogate-strings
-  ;;         '(("work"  . "⚒")
-  ;;           ("side"  . "❄")
-  ;;           ("must"  . "✠")
-  ;;           ("rutin" . "♟")
-  ;;           ("study" . "☣")))
+  ;; Pretty nice website to find unicode stuff: unicode-table.com
+  (use-package org-pretty-tags
+    :diminish org-pretty-tags-mode
+    :ensure t
+    :config
+    (setq org-pretty-tags-surrogate-strings
+          '(("work"  . "⚒")
+            ("side"  . "❄")
+            ("must"  . "✠")
+            ("rutin" . "♟")
+            ("study" . "☣")
+            ("movie" . "")
+            ))
 
-  ;;   (org-pretty-tags-global-mode))
+    (org-pretty-tags-global-mode))
 
 
   (isamert/prettify-mode 'org-mode-hook
@@ -820,30 +813,44 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
                            ("[X]" . "☑" )
                            ("[-]" . "❍" )))
 #+end_src
+
+** org-clock
+- TODO: find a Linux equivalent
+- TODO: add an explanation
+
+#+begin_src emacs-lisp
+  ;; https://github.com/koddo/org-clock-statusbar-app
+
+  (defun isamert/org-clock-statusbar-clock-in ()
+    (interactive)
+    (call-process "/usr/bin/osascript"
+                  nil
+                  0
+                  nil
+                  "-e"
+                  (concat "tell application \"org-clock-statusbar\" to clock in \""
+                          (replace-regexp-in-string "\"" "\\\\\"" org-clock-current-task)
+                          "\"")))
+
+  (defun isamert/org-clock-statusbar-clock-out ()
+    (interactive)
+    (call-process "/usr/bin/osascript"
+                  nil
+                  0
+                  nil
+                  "-e"
+                  "tell application \"org-clock-statusbar\" to clock out"))
+
+  (when (eq system-type 'darwin)
+    (add-hook 'org-clock-in-hook #'isamert/org-clock-statusbar-clock-in)
+    (add-hook 'org-clock-out-hook #'isamert/org-clock-statusbar-clock-out))
+#+end_src
+
 ** org-ql
 #+BEGIN_SRC emacs-lisp
 (use-package org-ql :ensure t)
 #+END_SRC
-** TODO org-capture
-- [ ] Add a shortcut.
-- [ ] Add more templates.
-- [ ] Maybe add a way to call it outside of emacs.
 
-#+BEGIN_SRC emacs-lisp
-;; (setq org-capture-templates
-;;      '(("t" "Todo" entry (file+headline life-org "Current")
-;;         "* TODO %?\n  %i\n  %a")))
-#+END_SRC
-
-** TODO org-alert
-#+begin_src emacs-lisp
-;; (use-package org-alert
-  ;; :ensure t
-  ;; :config
-  ;; (setq alert-default-style 'libnotify
-        ;; alert-fade-time 10)
-  ;; (org-alert-enable))
-#+end_src
 * Other packages
 ** image-mode
 I want to be able to kill image buffers with simply hitting =q=. This does that.
@@ -853,25 +860,29 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (evil-define-key 'normal image-mode-map
     "q" #'evil-delete-buffer)
 #+end_src
+
 ** hippie-expand
 #+begin_src emacs-lisp
-(evil-define-key 'insert 'global
-  (kbd "M-e") 'hippie-expand)
+  (evil-define-key 'insert 'global
+    (kbd "M-e") 'hippie-expand)
 
-;; https://stackoverflow.com/questions/8722301/force-hippie-expand-to-respect-capitalization
-(defadvice hippie-expand (around hippie-expand-case-fold)
-  "Try to do case-sensitive matching (not effective with all hippie-expand-try-functions-list functions)."
-  (let ((case-fold-search nil))
-    ad-do-it))
-(ad-activate 'hippie-expand)
+  ;; https://stackoverflow.com/questions/8722301/force-hippie-expand-to-respect-capitalization
+  (defadvice hippie-expand (around hippie-expand-case-fold)
+    "Try to do case-sensitive matching (not effective with all hippie-expand-try-functions-list functions)."
+    (let ((case-fold-search nil))
+      ad-do-it))
+  (ad-activate 'hippie-expand)
 #+end_src
+
 ** tramp
 #+begin_src emacs-lisp
-(setq tramp-default-method "ssh"
-      tramp-verbose 2            ;; only show errors and warnings
-      vc-handled-backends '(Git) ;; only try to handle git, this speeds up things a little bit
-)
+  (setq tramp-default-method "ssh"
+        tramp-verbose 2
+        ;; ^ only show errors and warnings
+        vc-handled-backends '(Git))
+        ;; ^ only try to handle git, this speeds up things a little bit
 #+end_src
+
 ** tree-sitter
 This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting. Especially for JS/TS and Rust. See [[https://ubolonton.github.io/emacs-tree-sitter/][this page]] for more information.
 
@@ -883,8 +894,10 @@ This is a generic parser for bunch of languages. You can also inspect the syntax
     (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
 
   (use-package tree-sitter-langs
+    :after tree-sitter
     :ensure t)
 #+end_src
+
 ** treemacs
 #+BEGIN_SRC emacs-lisp
   (use-package treemacs
@@ -895,12 +908,10 @@ This is a generic parser for bunch of languages. You can also inspect the syntax
           treemacs-width 34
           treemacs-space-between-root-nodes nil
           treemacs-indentation 2)
-    ;; (set-face-attribute 'treemacs-root-face nil
-    ;; :foreground (face-attribute 'default :foreground)
-    ;;                     :height 1.1
-    ;;                     :weight 'normal)
     (add-to-list 'treemacs-ignored-file-predicates (lambda (filename abspath) (string-equal filename "node_modules")))
-    (evil-define-key 'treemacs treemacs-mode-map ;; Treemacs has it's own mode, named treemacs. (https://github.com/Alexander-Miller/treemacs/issues/484#issuecomment-509909312)
+
+    (evil-define-key 'treemacs treemacs-mode-map
+      ;; Treemacs has it's own mode, named treemacs.
       (kbd "M-f") 'treemacs
       (kbd "M-l") 'evil-window-right
       (kbd "\\") 'treemacs-visit-node-horizontal-split
@@ -913,7 +924,10 @@ This is a generic parser for bunch of languages. You can also inspect the syntax
       (kbd "]") 'treemacs-next-project
       (kbd "[") 'treemacs-previous-project
       (kbd "zm") 'treemacs-collapse-all-projects
-      (kbd "za") 'treemacs-toggle-node))
+      (kbd "za") 'treemacs-toggle-node)
+
+    (evil-define-key 'normal 'global
+      (kbd "M-f") #'treemacs))
 
   (use-package treemacs-evil
     :after treemacs evil
@@ -950,24 +964,27 @@ This is a generic parser for bunch of languages. You can also inspect the syntax
 This mode allows you to do /undo/ /redo/ operations on window layout changes. My most frequent use case is that sometimes I just want to focus on one window for a while and then return back to my old layout setup. These keybindings allows me to do that.
 
 #+BEGIN_SRC emacs-lisp
-(setq winner-dont-bind-my-keys t)
-(winner-mode t)
-(evil-define-key 'normal 'global
-  (kbd "C-w 1") 'delete-other-windows
-  (kbd "C-w r") 'winner-redo
-  (kbd "C-w u") 'winner-undo)
+  (setq winner-dont-bind-my-keys t)
+  (winner-mode t)
+  (evil-define-key 'normal 'global
+    (kbd "C-w 1") 'delete-other-windows
+    (kbd "C-w r") 'winner-redo
+    (kbd "C-w u") 'winner-undo)
 #+END_SRC
+
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options.
 
 #+BEGIN_SRC emacs-lisp
-(use-package which-key
-  :ensure t
-  :diminish which-key-mode
-  :config
-  (which-key-mode))
+  (use-package which-key
+    :ensure t
+    :diminish which-key-mode
+    :config
+    (which-key-mode))
 #+END_SRC
+
 ** magit
+*** Installation
 - Read this for some useful status mode keymaps: https://endlessparentheses.com/it-s-magit-and-you-re-the-magician.html
   - y :: Branch viewer (delete branches with ~k~)
   - ll :: Log current
@@ -1017,7 +1034,6 @@ A package that shows key combinations. (for example press C-x and wait) It also 
       ;; magit/git
       "gs" 'magit-status
       "gf" 'magit-file-dispatch
-      "gg" 'isamert/helm-grep-git-grep-current-project
       "gp" 'magit-pull
       "gP" 'magit-push
       "gr" 'magit-reset
@@ -1048,14 +1064,6 @@ Show TODO/FIXME etc in magit-status buffer.
     (:map magit-todos-item-section-map
       ("j" . 'next-line)
       ("k" . 'previous-line)))
-#+END_SRC
-
-** goto-chg
-=g;= goes to the last change. (repeatable)
-
-#+BEGIN_SRC emacs-lisp
-(use-package goto-chg
-  :ensure t)
 #+END_SRC
 
 ** perspective.el
@@ -1089,143 +1097,131 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
 avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using a given char. Hit ~M-s~ and the char you want to jump.
 
 #+BEGIN_SRC emacs-lisp
-(use-package avy
-  :ensure t
-  :init
-  (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)) ;; Only use these for jumping.
-  :config
-  (define-key evil-normal-state-map (kbd "M-s") 'avy-goto-char-2)   ;; Go to any char
-  (define-key evil-normal-state-map (kbd "M-S") 'avy-goto-word-1)) ;; Go to beginning of a word
-#+END_SRC
-
-** helm
-*** Enable and set defaults
-#+BEGIN_SRC emacs-lisp
-  (use-package helm
+  (use-package avy
     :ensure t
-    :diminish helm-mode
     :init
-    (setq helm-mode-fuzzy-match t
-          helm-completion-in-region-fuzzy-match t
-          helm-candidate-number-limit 100
-          projectile-completion-system 'helm
-          helm-buffer-skip-remote-checking t) ;; This disables file-exist-p check for TRAMP files, otherwise buffer listing has huge delay.
+    (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)) ;; Only use these for jumping.
     :config
-    (evil-leader/set-key
-      ;; helm
-      "SPC" 'helm-M-x
-      "RET" 'helm-mini
-      "hh" 'helm-resume
-      "hk" 'helm-show-kill-ring
-      "hr" 'helm-rg
-      "hp" 'isamert/helm-projectile-rg-current-project
-      "hm" 'helm-my-files
-      "ho" 'helm-org-rifle-org-directory)
-    (helm-mode 1)
-    (isamert/shackle-window "\\*[hH]elm*" 0.35) ;; make helm windows appear at bottom
-    (helm-adaptive-mode 1))
+    (define-key evil-normal-state-map (kbd "M-s") 'avy-goto-char-2)   ;; Go to any char
+    (define-key evil-normal-state-map (kbd "M-S") 'avy-goto-word-1)) ;; Go to beginning of a word
 #+END_SRC
 
-*** Better selection
-Set ~<tab>~ for selecting next result and ~<backtab>~ for selecting previous result.
+** selectrum
+A nice, fast minibuffer narrowing framework. It works well with quite a lot of package.
+- =prescient.el= brings history and more intelligent filtering to selectrum.
+- =marginalia.el= brings annotations to selectrum, ie. it adds current keybinding of a command, summary of command to M-x.
+  - =C-M-a= cycles the detail level.
+- =embark.el= adds actions to selectrum. Actions are context specific, ie. the commands is based on if currently selected item is a file, folder, buffer etc.
+  - =C-o= activates command mode. Next key should be command.
+  - =C-S-o= disables command mode.
+- =miniframe.el= shows all selectrum prompts in a nice mini popup frame.
 
-#+BEGIN_SRC emacs-lisp
-(define-key helm-map (kbd "M-`") 'helm-select-action)
-(define-key helm-map (kbd "M-a") 'helm-select-action)
-(define-key helm-map (kbd "M-RET") 'helm-execute-persistent-action)
-(define-key helm-map (kbd "TAB") 'helm-next-line)
-(define-key helm-map (kbd "<backtab>") 'helm-previous-line)
-#+END_SRC
-*** helm-rg
-=rip-grep= is a pretty fast grep replacement. This is a helm ui for ripgrep.
-
-| Key   | Functionality                           |
-|-------+-----------------------------------------|
-| ~M-i~ | Insert the current line into the buffer |
-| ~M-d~ | Set directory to search                 |
-| ~M-m~ | Set extra args to rg                    |
-| ~M-g~ | Set glob                                |
-| ~M-c~ | Set case sensitivity                    |
-| ~C-p~ | Focus to prev files results             |
-| ~C-n~ | Focus to next files results             |
-
-#+BEGIN_SRC emacs-lisp
-  (use-package helm-rg
+#+begin_src emacs-lisp
+  (use-package selectrum
     :ensure t
     :config
-    (setq helm-rg-prepend-file-name-line-at-top-of-matches t
-          helm-rg-include-file-on-every-match-line nil)
+    (setq selectrum-extend-current-candidate-highlight t)
+    (selectrum-mode))
 
-    (define-key helm-rg-map (kbd "C-n") #'helm-rg--file-forward) ;; Focus the next file's results
-    (define-key helm-rg-map (kbd "C-p") #'helm-rg--file-backward) ;; Focus the prev file's results
-    (define-key helm-rg-map (kbd "M-i") #'isamert/helm-rg-insert-line-to-buffer))
+  (use-package selectrum-prescient
+    :ensure t
+    :after selectrum
+    :config
+    (prescient-persist-mode +1)
+    (selectrum-prescient-mode +1))
 
-  (defun isamert/helm-rg-insert-line-to-buffer ()
-    "Upon invocation, quit helm and insert the currently selected result into the buffer. Filename and line number are removed prior to inserting."
-    (interactive)
-    (with-helm-alive-p
-      (helm-run-after-exit
-       (lambda (sel)
-         (--> (split-string sel ":")
-              (if helm-rg-include-file-on-every-match-line (cddr it) (cdr it))
-              (string-join it ":")
-              (progn (end-of-line) (insert (format "\n%s" it)))))
-       (format "%s" (helm-get-selection nil t)))))
-#+END_SRC
+  (use-package marginalia
+    :ensure t
+    :after selectrum
+    :bind (:map minibuffer-local-map
+                ("C-M-a" . marginalia-cycle))
 
-*** helm-my-files
-A quick access menu for the files that I frequently open.
+    :init
+    (marginalia-mode)
+    ;; Refresh selectrum when `marginalia-cycle' is called.
+    (advice-add
+     #'marginalia-cycle
+     :after
+     (labmda ()
+             (when (bound-and-true-p selectrum-mode)
+               (selectrum-exhibit)))))
 
-#+BEGIN_SRC emacs-lisp
-(defun isamert/org-files ()
-  (mapcar
-    (lambda (file) (concat org-directory "/" file))
-    (if (file-directory-p org-directory)
-        (directory-files org-directory nil "^\\w+.*.org$")
-         '())))
+  ;; TODO: Create some actions
+  (use-package embark
+    :ensure t
+    :after selectrum
+    :bind (:map minibuffer-local-map
+                ("C-o" . embark-act)
+                ("C-S-o" . embark-act-noexit)
+                :map embark-file-map
+                ("j" . dired-jump)))
 
-(defun isamert/dotfiles ()
-  (let* ((output (shell-command-to-string "git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME ls-tree --full-tree -r HEAD | cut -f2"))
-         (files (mapcar (lambda (file) (concat "~/" file)) (split-string output "\n" t))))
-    files))
+  (use-package mini-frame
+    :ensure t
+    :config
+    (setq mini-frame-show-parameters
+          '((top . 0.15)
+            (width . 0.55)
+            (left . 0.5))
+          mini-frame-color-shift-step 15)
+    (mini-frame-mode +1))
 
-(defun isamert/files ()
-  (append (isamert/org-files) (isamert/dotfiles)))
+  ;; https://github.com/raxod502/selectrum/wiki/Additional-Configuration#display-minibuffer-in-a-child-frame-with-mini-frame
+  ;; Remove the following when upgrading to 27.2
+  (define-advice fit-frame-to-buffer (:around (f &rest args) dont-skip-ws-for-mini-frame)
+    (cl-letf* ((orig (symbol-function #'window-text-pixel-size))
+               ((symbol-function #'window-text-pixel-size)
+                (lambda (win from to &rest args)
+                  (apply orig
+                         (append (list win from
+                                       (if (and (window-minibuffer-p win)
+                                                (frame-root-window-p win)
+                                                (eq t to))
+                                           nil
+                                         to))
+                                 args)))))
+      (apply f args)))
+#+end_src
 
-(defun helm-my-files ()
-  "List my files"
-  (interactive)
-  (let ((selected-file
-        (helm :buffer "*helm-my-files*"
-              :sources (helm-build-sync-source "isamert/files"
-                         :candidates (isamert/files)
-                         :fuzzy-match t))))
-    (find-file selected-file)))
-#+END_SRC
-*** helm-xref
-Use helm as interface for xref results.
+** consult
+#+begin_src emacs-lisp
+  (use-package consult
+    :ensure t
+    :config
+    (advice-add #'register-preview :override #'consult-register-window)
+
+    ;; TODO: Handle previews, maybe disable it for commands that opens new buffers
+    ;; Configure preview. Note that the preview-key can also be configured on a
+    ;; per-command basis via `consult-config'.
+    ;; The default value is 'any, such that any key triggers the preview.
+    ;; (setq consult-preview-key 'any)
+    ;; (setq consult-preview-key (kbd "M-p"))
+    ;; (setq consult-preview-key (list (kbd "<S-down>") (kbd "<S-up>")))
+    (evil-define-key 'normal 'global
+      (kbd "?") 'consult-imenu
+      (kbd "M-g") 'consult-goto-line
+      (kbd "M-r") 'consult-ripgrep
+      (kbd "C-f") 'consult-line)
+
+    (evil-leader/set-key
+      "gg" 'consult-git-grep
+      "RET" 'consult-buffer)
+
+    (setq consult-find-command "fd --full-path ARG OPTS"
+          consult-ripgrep-command "rg --null --line-buffered --color=always --max-columns=500 --no-heading --smart-case --line-number . -e ARG OPTS"
+          consult-project-root-function #'isamert/current-project-root))
+#+end_src
+
+** project.el
+I was using projectile earlier but [[consuel]] functions are just more than enough for project management. I only use couple of functions from =project.el= which is already built-in to Emacs.
 
 #+begin_src emacs-lisp
-(use-package helm-xref :ensure t)
-#+end_src
-*** utility
-- A specialized version of this function is also defined in [[helm-rg]]
-
-#+begin_src emacs-lisp
-  (defun isamert/helm-insert-line-to-buffer ()
-    "Upon invocation, quit helm and insert the currently selected result into the buffer."
+  (defun isamert/current-project-root ()
+    "Return the root path of current project."
     (interactive)
-    (with-helm-alive-p
-      (helm-run-after-exit
-       (lambda (sel) (end-of-line) (insert (format "\n%s" sel)))
-       (format "%s" (helm-get-selection nil t)))))
-
-    (define-key helm-map (kbd "M-i") #'isamert/helm-insert-line-to-buffer)
+    (cdr (project-current)))
 #+end_src
-** projectile
-A project management tool. I set a project path below and make sure projectile scans that directory for projects.
 
-*** Groupped projects
 I have all my projects under =~/Workspace/projects=. Some of them are groupped under another directory. This functions loops trough all of the directories and finds the ones without =.git= folder and adds those folders to project paths. Consider this:
 #+BEGIN_QUOTE
 ~/Workspace/projects
@@ -1238,66 +1234,46 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
      └── .git
 #+END_QUOTE
 
-This function adds =groupped_projects= to =projectile-project-search= path.
-#+BEGIN_SRC emacs-lisp
-(defconst isamert/projects-root "~/Workspace/projects")
+#+begin_src emacs-lisp
+  (defconst isamert/projects-root "~/Workspace/projects")
 
-(defun isamert/projectile-project-paths ()
-  (append `(,isamert/projects-root)
-    (isamert/flatmapcar (lambda (dir) (if (file-directory-p (concat dir "/.git")) '() `(,dir)))
-                (directory-files isamert/projects-root t "^[^.]"))))
-#+END_SRC
+  (defun isamert/project-paths ()
+    "Find every project dir under `isamert/projects-root'.
+  Every folder without a \".git\" folder is considered to be a project group folder."
+    (append `(,isamert/projects-root)
+            (-flatten (-map (lambda (dir) (if (file-directory-p (concat dir "/.git")) '() `(,dir)))
+                            (directory-files isamert/projects-root t "^[^.]")))))
 
-*** Better project names
-I have manually set up names for projects in treemacs, because it was fairly easy. You just need to edit an org file, it's simple as that. So whenever a custom name is available in treemacs, I also want to use it as the project name in projectile. Here I replace the projectile's project name function with mine to do that.
+  (defun isamert/find-file-in (dir)
+    "Find file in DIR.
+  fd is already fast enough, no need for `consuel-find's async approach."
+    (interactive "D")
+    (let ((default-directory dir))
+      (->> (shell-command-to-string "fd .")
+           (s-split "\n")
+           (completing-read "Open file: ")
+           (find-file))))
 
-#+BEGIN_SRC emacs-lisp
-(defun isamert/treemacs-project-name-from-path (path)
-  "Returns treemacs project name for given project in PATH. If not found, returns nil."
-  (let ((path-stripped (isamert/s-trim-right path "\/")))
-    (car (mapcar
-          'treemacs-project->name
-          (seq-filter
-           (lambda (project)
-             (when (string= path-stripped
-                            (isamert/s-trim-right (treemacs-project->path project) "/"))
-               project))
-           (isamert/flatmapcar 'treemacs-workspace->projects (treemacs-workspaces)))))))
-
-(defun isamert/projectile-custom-project-name (project-root)
-  (or (isamert/treemacs-project-name-from-path project-root)
-      (projectile-default-project-name project-root)))
-#+END_SRC
-
-*** Load
-#+BEGIN_SRC emacs-lisp
-  (defun isamert/projectile-discover-projects ()
+  (defun isamert/find-file-in-current-project-or-dir ()
     (interactive)
-    (setq projectile-project-search-path (isamert/projectile-project-paths))
-    (projectile-discover-projects-in-search-path))
+    (isamert/find-file-in (or (isamert/current-project-root) default-directory)))
 
-  (use-package projectile
-    :ensure t
-    :diminish projectile-mode
-    :init
-    (setq projectile-completion-system 'helm
-          projectile-enable-caching t
-          projectile-project-search-path (isamert/projectile-project-paths))
-    :config
-    (projectile-discover-projects-in-search-path)
-    (setq projectile-globally-ignored-files (append '("Cargo.lock" ".tern-port"))
-          projectile-globally-ignored-directories (append '(".stack-work" "target" "node_modules" "build" "dist"))
-          projectile-globally-ignored-file-suffixes (append '("~" ".rs.bk"))
-          projectile-project-name-function 'isamert/projectile-custom-project-name)
-    (projectile-mode)
+  (defun isamert/switch-to-project ()
+    "List all projects found under `isamert/project-paths' and switch to selected."
+    (interactive)
+    "Switch to project: "
+    (->> (isamert/project-paths)
+         (--map (shell-command-to-string (format "fd --exact-depth 1 --type d . %s" it)))
+         (-reduce #'concat)
+         (s-split "\n")
+         (--map (s-replace (expand-file-name "~") "~" it))
+         (completing-read "Switch to project: ")
+         (isamert/find-file-in)))
 
-    (evil-leader/set-key
-      "pp" 'projectile-switch-project
-      "pf" 'projectile-find-file-in-known-projects
-      "pc" 'projectile-invalidate-cache
-      "pd" 'isamert/projectile-discover-projects
-      "pr" 'projectile-recentf))
-#+END_SRC
+  (evil-define-key 'normal 'global
+    (kbd "M-F") 'isamert/find-file-in-current-project-or-dir
+    (kbd "M-P") 'isamert/switch-to-project)
+#+end_src
 
 ** flycheck
 #+BEGIN_SRC emacs-lisp
@@ -1316,34 +1292,35 @@ I have manually set up names for projects in treemacs, because it was fairly eas
 #+END_SRC
 
 ** company
-*** Install and configure
+An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of other stuff.
+- =company-box= :: Nice company front-end with icons and very nice documentation on hover thing.
+
 #+BEGIN_SRC emacs-lisp
   (use-package company
     :ensure t
     :init
-    (setq company-selection-wrap-around t  ;; return to first completion after the last one (cycles)
-          company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode) ;; disable on some modes
-          company-minimum-prefix-length 1) ;; start completing after 1 char
     :config
-    (add-hook 'after-init-hook 'global-company-mode)
-    ;; (company-tng-configure-default)   ;; cycle trough suggestions using tab
-    ;; Instead of the above, I just use M-{j,k} for up/down
+    (setq company-selection-wrap-around t
+          ;; ^ Return to first completion after the last one (cycles)
+          company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode org-mode markdown-mode)
+          ;; ^ Disable on some modes
+          company-minimum-prefix-length 1)
+          ;; ^ Start completing after 1 char
 
-    (evil-define-key 'insert 'global
-      (kbd "C-SPC") 'company-complete)
-    (define-key company-active-map
-      (kbd "<return>") 'company-complete-selection))
-#+END_SRC
+    (define-key company-active-map (kbd "<tab>") nil)
+    ;; ^ Disable tab key, so yasnippet and tab-out works nicely within company mode
+    (evil-define-key 'insert 'global (kbd "C-SPC") 'company-complete)
+    ;; ^ C-SPC force triggers company completion at point
+    (define-key company-active-map (kbd "<return>") 'company-complete-selection)
+    ;; ^ Enter simply applies the current selection
 
-*** company-box
-Nice company front-end with icons and very nice documentation on hover thing.
+    (add-hook 'after-init-hook 'global-company-mode))
 
-#+begin_src emacs-lisp
   (use-package company-box
     :ensure t
-    :after (company)
+    :after company
     :hook (company-mode . company-box-mode))
-#+end_src
+#+END_SRC
 
 ** origami-mode
 This seems working better than =hs-minor-mode= and also it's supposedly works with =lsp-mode=.
@@ -1353,6 +1330,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
   :ensure t
   :hook ((web-mode js-mode yaml-mode) . origami-mode))
 #+END_SRC
+
 ** lsp-mode
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-mode
@@ -1409,40 +1387,6 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
     :config
     (dap-mode t)
     (dap-ui-mode t))
-#+END_SRC
-
-** eshell
-*** aliases
-Get bash aliases and update eshell aliases. My aliases are in a file called =~/.config/aliases= in bash format. I convert them to abbreviations in fish/zsh shell and I convert them to eshell aliases in here.
-#+BEGIN_SRC emacs-lisp
-(defun eshell-update-aliases-if-needed nil
-  (interactive)
-  (when (file-newer-than-file-p "~/.config/aliases" eshell-aliases-file)
-      (progn
-          (shell-command-to-string
-            (concat
-              "grep -vE '^(#|$)' ~/.config/aliases"
-              "|"
-              "sed -r 's/=/ /; s/(.*)\".*/\\1 $*/; s/\"//;' "
-              ">"
-              eshell-aliases-file
-              ))
-          (eshell-read-aliases-list))))
-
-(when (file-exists-p "~/.config/aliases")
-  (add-hook 'eshell-mode-hook 'eshell-update-aliases-if-needed))
-#+END_SRC
-
-*** clear
-#+BEGIN_SRC emacs-lisp
-(defun eshell-clear-buffer ()
-  "Clear terminal"
-  (interactive)
-  (let ((inhibit-read-only t))
-    (erase-buffer)))
-
-(defun eshell/clear nil
-  (eshell-clear-buffer))
 #+END_SRC
 
 ** vterm
@@ -1623,77 +1567,18 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 (add-hook 'markdown-mode-hook 'flyspell-mode)
 #+END_SRC
 
-** ace-window
-Quickly switch between windows/kill them or swap them with each other.
+** moodline
+Light weight and nice modeline.
+
 #+begin_src emacs-lisp
-  (use-package ace-window
-    :ensure t
-    :config
-    (set-face-attribute 'aw-leading-char-face nil :height 400) ;; I'm blind I guess
-    (setq aw-dispatch-always t)                   ;; show selection even if window count is < 3
-    (setq aw-keys '(?a ?d ?f ?g ?h ?j ?k ?l))     ;; window selection keys
-    (add-to-list 'aw-dispatch-alist '(?s aw-swap-window "Swap Windows")) ;; <ace-window>s => swap window with
-    (evil-leader/set-key
-      "bq" 'ace-window))
+(use-package mood-line
+  :ensure t
+  :diminish
+  :quelpa (mood-line
+           :fetcher gitlab
+                    :repo "jessieh/mood-line")
+  :init (mood-line-mode))
 #+end_src
-
-** telephone-line
-#+BEGIN_SRC emacs-lisp
-  ;; Color settings
-  ;; I just extracted these 2 functions from the telephone-line source.
-  ;; and only switched their colors.
-  (defface telephone-line-evil-insert
-    '((t (:background "red" :inherit telephone-line-evil)))
-    "Face used in evil color-coded segments when in Insert state."
-    :group 'telephone-line-evil)
-
-  (defface telephone-line-evil-normal
-    '((t (:background "dark slate blue" :inherit telephone-line-evil)))
-    "Face used in evil color-coded segments when in Normal state."
-    :group 'telephone-line-evil)
-
-  (use-package telephone-line
-    :ensure t
-    :config
-      (progn
-        ;; Separator settings
-        ;; FIXME: if I set theese here, non-gui emacs fail to show modeline
-        (setq telephone-line-primary-left-separator 'telephone-line-flat
-              telephone-line-secondary-left-separator 'telephone-line-flat
-              telephone-line-primary-right-separator 'telephone-line-flat
-              telephone-line-secondary-right-separator 'telephone-line-flat)
-
-         (setq telephone-line-evil-use-short-tag t)
-
-        ;; Define segments
-        (setq telephone-line-lhs
-            '((evil   . (telephone-line-evil-tag-segment))
-              (accent . (telephone-line-vc-segment
-                         telephone-line-process-segment))
-              (nil    . (telephone-line-buffer-segment))))
-
-        (setq telephone-line-center-rhs
-            '((nil    . (telephone-line-flycheck-segment))))
-
-        (setq telephone-line-rhs
-            '((nil    . (telephone-line-misc-info-segment))
-              (accent . (telephone-line-major-mode-segment))
-              (evil   . (telephone-line-airline-position-segment))))
-
-        ;; Misc settings
-        (setq telephone-line-height 20)
-        (telephone-line-mode t)))
-#+END_SRC
-
-** expand-region
-Select the nearest meaningful region with a keybinding. When you repeat it, it selects the next bigger meaningful region.
-#+BEGIN_SRC emacs-lisp
-  (use-package expand-region
-    :ensure t
-    :config
-    (evil-define-key 'normal 'global
-      (kbd "M-e") 'er/expand-region))
-#+END_SRC
 
 ** howdoyou
 When you search for something, it opens the results in an org-mode buffer. Results are fetched from SX (stack-exchange, stackoverflow etc) sites.
@@ -1747,22 +1632,6 @@ When you search for something, it opens the results in an org-mode buffer. Resul
 
     (isamert/define-key ranger-mode-map
      "."  'ranger-toggle-dotfiles)
-#+END_SRC
-
-** helm-evil-markers
-This brings up a helm menu when I hit ='= and lists all the local and global marks.
-
-#+BEGIN_SRC emacs-lisp
-  (use-package helm-evil-markers
-    :quelpa (helm-evil-markers :fetcher github :repo "xueeinstein/helm-evil-markers"
-                               :files ("helm-evil-markers.el"))
-    :config
-    (setq helm-evil-markers-exclusion-enabled t)
-    (evil-leader/set-key
-      "mm" 'helm-mark-ring
-      "mg" 'helm-global-mark-ring
-      "ma" 'helm-all-mark-rings)
-    (helm-evil-markers-toggle))
 #+END_SRC
 
 ** string-inflection
@@ -1823,6 +1692,7 @@ Better help dialogs with syntax highlighting, references, source etc.
       (call-interactively 'git-link-homepage)
       (car kill-ring)))
 #+end_src
+
 ** bufler
 #+begin_src emacs-lisp
   (use-package bufler
@@ -1837,6 +1707,7 @@ Better help dialogs with syntax highlighting, references, source etc.
   (use-package helm-bufler
     :ensure t)
 #+end_src
+
 ** smartparens
 #+begin_src emacs-lisp
   (use-package smartparens
@@ -1905,6 +1776,7 @@ When you press tab, jump out from the current enclosing parens/quotes etc. When 
         (push "=" tab-jump-out-delimiters)))
     (global-tab-jump-out-mode 1))
 #+end_src
+
 ** beacon
 It helps you to find your cursor when you change buffers/windows etc with a little animation.
 
@@ -1917,6 +1789,7 @@ It helps you to find your cursor when you change buffers/windows etc with a litt
         beacon-push-mark 50
         beacon-color "#9F72D9"))
 #+end_src
+
 ** highlight-thing
 Automatically highlights the symbol under the cursor in the buffer. Simply use evils ~*~ and ~#~ to jump between them.
 
@@ -1924,10 +1797,12 @@ Automatically highlights the symbol under the cursor in the buffer. Simply use e
   (use-package highlight-thing
     :ensure t
     :config
-    (setq highlight-thing-prefer-active-region t) ;; Highlight the selected text in visual mode
-    (setq highlight-thing-ignore-list '("False" "True" "->" "::" "defun" "def"))
+    (setq highlight-thing-prefer-active-region t
+          ;; ^ Highlight the selected text in visual mode
+          highlight-thing-ignore-list '("False" "True" "->" "::" "defun" "def"))
     (add-hook 'prog-mode-hook 'highlight-thing-mode))
 #+end_src
+
 ** dumb-jump
 Jumps to definition by using regex, generally works. Use =gd=.
 
@@ -1941,6 +1816,7 @@ Jumps to definition by using regex, generally works. Use =gd=.
           dumb-jump-fallback-search nil)
     (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 #+end_src
+
 ** TODO dumb jump to documentation
 - devdocs.io?
 - hoogle?
@@ -2607,8 +2483,8 @@ Play internet radios.
 #+end_src
 
 * Keybindings
-- For leader key bindings, see: [[*evil-leader][evil-leader]]
-- For avy        bindings, see: [[*Bindings][avy/bindings]]
+Keybindings are generally set in-place, following have no context, so they are here.
+
 ** macOS
 #+begin_src emacs-lisp
   (when (eq system-type 'darwin)
@@ -2643,17 +2519,13 @@ Play internet radios.
     (define-key key-translation-map (kbd "“") (kbd "("))
     (define-key key-translation-map (kbd "‘") (kbd ")")))
 #+end_src
+
 ** Some general keybindings
 
 #+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
   (evil-define-key 'normal 'global
-    ")" #'evil-digit-argument-or-evil-beginning-of-line
-    ;; ^ I use shifted-by-default version of number row, so this helps.
-    "?"  #'helm-semantic-or-imenu
-    (kbd "M-f") #'treemacs
-    (kbd "C-f") #'helm-occur
     (kbd "C-s") #'save-buffer)
 
   (evil-define-key 'normal prog-mode-map
@@ -2667,6 +2539,7 @@ Play internet radios.
 - A-- splits below, A-\ splits right.
 - A-h,j,k,l to switch between splits.
 - A-H,J,K,L shrink, enlarge split.
+
 #+BEGIN_SRC emacs-lisp
   (defun isamert/split-window-right-vterm ()
     (interactive)
@@ -2936,7 +2809,7 @@ Hit <C-j> after these and get:
       (error "shell.nix or nix-shell not found."))
     (--> (shell-command-to-string "nix-shell --quiet --run 'env'")
          (split-string it "\n")
-         (--map (-let (((name val) (isamert/s-split-once it "=")))
+         (--map (-let (((name val) (s-split-up-to "=" it 1)))
                   (setenv name val)
                   (when (string-equal name "PATH")
                     (setq exec-path (split-string val path-separator)))
@@ -2944,11 +2817,13 @@ Hit <C-j> after these and get:
                 it))
     (message "Done."))
 #+end_src
+
 ** swift
 #+begin_src emacs-lisp
   (use-package swift-mode
     :ensure t)
 #+end_src
+
 ** scheme
 #+begin_src emacs-lisp
   ;; Scheme
@@ -2957,6 +2832,7 @@ Hit <C-j> after these and get:
     :init
     (setq geiser-default-implementation 'guile))
 #+end_src
+
 * Misc functions
 ** google search
 #+begin_src emacs-lisp
@@ -3003,6 +2879,30 @@ Hit <C-j> after these and get:
     "/tt"   'isamert/google-translate-this-en-to-tr
     "/te"   'isamert/google-translate-this-tr-to-en)
 #+end_src
+
+** Open one of my special files
+#+begin_src emacs-lisp
+  (defun isamert/org-files ()
+    "Find all of the org files in home directory."
+    (mapcar
+      (lambda (file) (concat org-directory "/" file))
+      (if (file-directory-p org-directory)
+          (directory-files org-directory nil "^\\w+.*.org$")
+           '())))
+
+  (defun isamert/dotfiles ()
+    (--> (shell-command-to-string "git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME ls-tree --full-tree -r HEAD | cut -f2")
+         (split-string it "\n" t)
+         (--map (concat "~/" it) it)))
+
+  (defun isamert/files ()
+    "Open one of my special files like my dot-files, org-files etc."
+    (interactive)
+    (find-file (completing-read "Open: " (append (isamert/org-files) (isamert/dotfiles)))))
+
+  (evil-define-key 'normal 'global (kbd "M-m") 'isamert/files)
+#+end_src
+
 ** org-mode enhancements
 #+begin_src emacs-lisp
   ;; Keybindings
@@ -3037,9 +2937,10 @@ Hit <C-j> after these and get:
   Then return the title of given `org-mode` header.
   Just like (org-entry-get nil \"ITEM\") but works on given string."
     (--> line
-         (isamert/replace-string-regexp it "\\(\\*\\|TODO\\|PROG\\|DONE\\|WAIT\\)" "")
-         (isamert/replace-string-regexp it ":\\(\\w+:\\)+$" "")
-         (isamert/s-trim it "\\(\s\\|\n\\)")))
+         (s-replace-regexp "\\(\\*\\|TODO\\|PROG\\|DONE\\|WAIT\\)" "" it) ;; Remove TODO states
+         (s-replace-regexp "\\(\\[#.\\{1\\}\\]\\\)" "" it) ;; Remove priorities
+         (s-replace-regexp ":\\(\\w+:\\)+$"  "" it) ;; Remove tags
+         (s-trim it)))
 
   (defun isamert/org-find-header-of-given-line (file line-number)
     "Find and return the first parent header of given LINE-NUMBER in FILE.
@@ -3474,24 +3375,40 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   (evil-leader/set-key
     "oP"  'isamert/org-attach-image-from-clipboard)
 #+end_src
-** rename current file
+
+** Current file functionality
 #+begin_src emacs-lisp
-;; source: http://steve.yegge.googlepages.com/my-dot-emacs-file
-(defun isamert/rename-current-file-name-and-buffer (new-name)
-  "Renames both current buffer and file it's visiting to NEW-NAME."
-  (interactive "sNew name: ")
-  (let ((name (buffer-name))
-        (filename (buffer-file-name)))
-    (if (not filename)
-        (message "Buffer '%s' is not visiting a file!" name)
-      (if (get-buffer new-name)
-          (message "A buffer named '%s' already exists!" new-name)
-        (progn
-          (rename-file filename new-name 1)
-          (rename-buffer new-name)
-          (set-visited-file-name new-name)
-          (set-buffer-modified-p nil))))))
+  ;; source: http://steve.yegge.googlepages.com/my-dot-emacs-file
+  (defun isamert/rename-current-file-name-and-buffer (new-name)
+    "Renames both current buffer and file it's visiting to NEW-NAME."
+    (interactive "sNew name: ")
+    (let ((name (buffer-name))
+          (filename (buffer-file-name)))
+      (if (not filename)
+          (message "Buffer '%s' is not visiting a file!" name)
+        (if (get-buffer new-name)
+            (message "A buffer named '%s' already exists!" new-name)
+          (progn
+            (rename-file filename new-name 1)
+            (rename-buffer new-name)
+            (set-visited-file-name new-name)
+            (set-buffer-modified-p nil))))))
+
+  ;; Slightly modified version of: http://www.ergoemacs.org/emacs/elisp_delete-current-file.html
+  (defun isamert/delete-current-file ()
+    "Delete the current file and copy it's content to `kill-ring'."
+    (interactive)
+    (when (y-or-n-p (format "Do you really want to remove this: \"%s\"?" (buffer-file-name)))
+      (kill-new (buffer-string))
+      (message "Buffer content copied to kill-ring.")
+      (when (and (buffer-file-name) (file-exists-p (buffer-file-name)))
+        (delete-file (buffer-file-name))
+        (message "Deleted file: 「%s」." (buffer-file-name)))
+      (let ((buffer-offer-save nil))
+        (set-buffer-modified-p nil)
+        (kill-buffer (current-buffer)))))
 #+end_src
+
 ** xah-open-file-at-curser
 This is better than =find-file-at-point= because it takes line numbers etc. into account.
 
@@ -3614,6 +3531,7 @@ Company related stuff.
   (evil-leader/set-key
     "glm" 'isamert/git-link-my-merge-requests)
 #+end_src
+
 ** JS env setup
 #+begin_src emacs-lisp
   ;; LSP does not work well with UI projects
@@ -3649,6 +3567,7 @@ Company related stuff.
 ;; FIXME: following brokes some stuff in org mode, probably need to use flycheck-hook or something
 ;; (add-hook 'haskell-mode-hook (lambda () (flycheck-select-checker 'haskell-hlint)))
 #+end_src
+
 ** Misc functions
 #+begin_src emacs-lisp
   (defun well/open-jira-issue (issue-number)
@@ -3665,7 +3584,7 @@ Company related stuff.
   ;;  if arg is non-nil -> open(or create) it on well.org
   ;;  else -> open(or create) it on ejira
   (defun well/jira-dwim (arg)
-    (interactive)
+    (interactive "P")
     (let ((curr-id (format "%s" (thing-at-point 'symbol)))
           (entry-id (org-entry-get nil "ID" t)))
       (cond
@@ -3694,6 +3613,7 @@ Company related stuff.
     (interactive)
     (shell-command-to-string (format "ssh mia3 \"tmux send-keys 'termux-clipboard-set \\\"%s\\\"' ENTER\"" (current-kill 0))))
 #+end_src
+
 ** Misc bindings
 #+begin_src emacs-lisp
   (defun isamert/toggle-side-well-org-buffer ()
