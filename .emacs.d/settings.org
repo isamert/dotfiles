@@ -2,18 +2,12 @@
 #+AUTHOR: İsa Mert Gürbüz
 #+BABEL: :cache yes
 #+PROPERTY: header-args :tangle yes
+#+STARTUP: overview
 
 * Introduction
 This is my emacs configuration. My main focus is sanity. I'm a person who get frustrated pretty easily. So instead of optimizing the time spent on doing things, I try to find ways of doing things that does not make me frustrated. Most of the time you get speed boost as a byproduct.
 
 * Preparation
-** Load path
-Define the load path. It's for auto-loading =.el= files. Any =.el= file that you put under this path will be loaded by emacs at startup.
-
-#+BEGIN_SRC emacs-lisp
-(add-to-list 'load-path "~/.emacs.d/load")
-#+END_SRC
-
 ** Variables and functions
 Some basic variable and function definitions that will be used in configuration.
 
@@ -43,7 +37,7 @@ Some basic variable and function definitions that will be used in configuration.
                        (prettify-symbols-mode))))
 
   (defun isamert/delq* (list &rest elems)
-    "Remove ELEMS from LIST. Like =delq= but removes more than just one item."
+    "Remove ELEMS from LIST. Like `delq' but removes more than just one item."
     (let ((l list))
       (mapc (lambda (item) (setq l (delq item l))) elems)
       l))
@@ -56,32 +50,6 @@ Some basic variable and function definitions that will be used in configuration.
     "Like `assoc` but uses `string-match (car pair) KEY` for comparasion and returns all the matching pairs. FN is applied to the keys before matching, if present."
     (seq-filter (lambda (pair) (when (string-match (if fn (funcall fn (car pair)) (car pair)) key) pair)) list))
 
-  (defun isamert/s-trim-left (s c)
-    "Remove C's at the beginning of S."
-    (if (string-match (concat "\\`[" c "]+") s)
-        (replace-match "" t t s)
-      s))
-
-  (defun isamert/s-trim-right (s c)
-    "Remove C's at the end of S."
-    (if (string-match (concat "[" c "]+\\'") s)
-        (replace-match "" t t s)
-      s))
-
-  (defun isamert/s-trim (s c)
-    "Remove whitespace at the beginning and end of S."
-    (isamert/s-trim-left (isamert/s-trim-right s c) c))
-
-  (defun isamert/find-all (regex str)
-    "Find all occurences of REGEX in given STR."
-    (let ((matches))
-      (with-temp-buffer
-        (insert str)
-        (goto-char (point-min))
-        (while (re-search-forward regex (point-max) t)
-          (push (match-string 1) matches)))
-      matches))
-
   (defun isamert/region-or (what)
     "Returns currently selected string or WHAT-at-point string. WHAT can be 'symbol 'word etc."
     (if (use-region-p)
@@ -89,6 +57,7 @@ Some basic variable and function definitions that will be used in configuration.
       (thing-at-point what t)))
 
   (defun isamert/define-key (&rest k+c)
+    "Simple wrapper around `define-key' that let's you define-keys multiple times in one call."
     (let ((mode (car k+c)))
     (setq k+c (cdr k+c))
       (while k+c
@@ -97,14 +66,19 @@ Some basic variable and function definitions that will be used in configuration.
 #+END_SRC
 
 ** Package repos
-Add ~melpa~ package archive.
+Add ~melpa~ and ~org~ package archives.
 
 #+BEGIN_SRC emacs-lisp
-(require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
-(add-to-list 'package-archives '("org" . "https://orgmode.org/elpa/"))
-(package-initialize)
-(unless package-archive-contents (package-refresh-contents)) ;; Update archives
+  (require 'package)
+
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+  (add-to-list 'package-archives '("org" . "https://orgmode.org/elpa/"))
+
+  (package-initialize)
+
+  ;; Update the packages
+  (unless package-archive-contents
+    (package-refresh-contents))
 #+END_SRC
 
 ** use-package
@@ -163,8 +137,8 @@ Some sources about the variables that I changed:
 Save recent files. Also exclude package files that appears after installing a package or after an update from recent list.
 
 #+BEGIN_SRC emacs-lisp
-(recentf-mode t)
-(add-to-list 'recentf-exclude (format "%s/\\.emacs\\.d/elpa/.*" (getenv "HOME")))
+  (recentf-mode t)
+  (add-to-list 'recentf-exclude (format "%s/\\.emacs\\.d/elpa/.*" (getenv "HOME")))
 #+END_SRC
 
 ** Save minibuffer, kill-ring, search-ring history
@@ -177,26 +151,26 @@ Save recent files. Also exclude package files that appears after installing a pa
 ** Better scrolling
 *** Better settings for mouse scroll
 #+BEGIN_SRC emacs-lisp
-(setq mouse-wheel-scroll-amount '(1 ((shift) . 1))) ;; one line at a time
-(setq mouse-wheel-progressive-speed nil)            ;; don't accelerate scrolling
-(setq mouse-wheel-follow-mouse 't)                  ;; scroll window under mouse
+  (setq mouse-wheel-scroll-amount '(1 ((shift) . 1))) ;; one line at a time
+  (setq mouse-wheel-progressive-speed nil)            ;; don't accelerate scrolling
+  (setq mouse-wheel-follow-mouse 't)                  ;; scroll window under mouse
 #+END_SRC
 
 *** Mouse shortcuts for zooming
 - Ctrl-Scroll to zoom in and out
 
 #+BEGIN_SRC emacs-lisp
-(global-set-key [C-mouse-4] 'text-scale-increase)
-(global-set-key [C-mouse-5] 'text-scale-decrease)
-(global-set-key (kbd "C-+") 'text-scale-increase)
-(global-set-key (kbd "C-=") 'text-scale-decrease)
+  (global-set-key [C-mouse-4] 'text-scale-increase)
+  (global-set-key [C-mouse-5] 'text-scale-decrease)
+  (global-set-key (kbd "C-+") 'text-scale-increase)
+  (global-set-key (kbd "C-=") 'text-scale-decrease)
 #+END_SRC
 
 *** Conservative scrolling
 If the cursor is at the end of the file, when you scroll emacs does a strange jump. This fixes it.
 
 #+BEGIN_SRC emacs-lisp
-(setq scroll-conservatively 100) ;; When cursor reaches end, just scroll line-by-line
+  (setq scroll-conservatively 100) ;; When cursor reaches end, just scroll line-by-line
 #+END_SRC
 
 ** Place all backup files in same directory
@@ -212,37 +186,38 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
 ** Undo tree (Persistent undo and stuff)
 - ~undo-tree~ gives a persistent undo.
 - Also it keeps undo history as a tree instead of a linear history. ~undo-tree-visualize~ may help.
+
 #+BEGIN_SRC emacs-lisp
-(defconst undo-dir (isamert/mkdir-if-not "~/.emacs.d/undo/"))
+  (defconst undo-dir
+    (isamert/mkdir-if-not "~/.emacs.d/undo/"))
 
-
-(use-package undo-tree
-  :diminish undo-tree-mode
-  :ensure t
-  :init
-    (setq undo-tree-auto-save-history t
-          undo-tree-history-directory-alist `(("." . ,undo-dir))
-          undo-tree-enable-undo-in-region nil) ;; this fixes something?
-    (setq evil-undo-system 'undo-tree)
-  :config
-  (global-undo-tree-mode))
+  (use-package undo-tree
+    :diminish undo-tree-mode
+    :ensure t
+    :init
+      (setq undo-tree-auto-save-history t
+            undo-tree-history-directory-alist `(("." . ,undo-dir))
+            undo-tree-enable-undo-in-region nil) ;; this fixes something?
+      (setq evil-undo-system 'undo-tree)
+    :config
+    (global-undo-tree-mode))
 #+END_SRC
 
 ** Remove trailing space before save
 #+BEGIN_SRC emacs-lisp
-(add-hook 'before-save-hook
-          'delete-trailing-whitespace)
+  (add-hook 'before-save-hook
+            'delete-trailing-whitespace)
 #+END_SRC
 
 ** Automatically run some commands after saving specific files
 This is like =autocmd BufWritePost= of vim. When a particular file is edited, I want to make sure a command runs after the save.
 
 #+BEGIN_SRC emacs-lisp
-(defvar run-after-save-alist
-  '(("~/.\\(Xresources\\|Xdefaults\\)" . "xrdb %; notify-send 'xrdb updated'")
-    ("~/.Xresources.d/.*"        . "xrdb ~/.Xresources; notify-send 'xrdb updated'")
-    ("~/.config/sxhkd/sxhkdrc"   . "pkill -USR1 -x sxhkd; notify-send 'sxhkd updated'"))
-  "File association list with their respective command.")
+  (defvar run-after-save-alist
+    '(("~/.\\(Xresources\\|Xdefaults\\)" . "xrdb %; notify-send 'xrdb updated'")
+      ("~/.Xresources.d/.*"              . "xrdb ~/.Xresources; notify-send 'xrdb updated'")
+      ("~/.config/sxhkd/sxhkdrc"         . "pkill -USR1 -x sxhkd; notify-send 'sxhkd updated'"))
+    "File association list with their respective command.")
 #+END_SRC
 
 *** Implementation
@@ -262,37 +237,58 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
 Hide menubar and toolbar and replace blinking cursor with nice static box cursor.
 
 #+BEGIN_SRC emacs-lisp
-(menu-bar-mode 0)                ;; Disable menubar
-(tool-bar-mode 0)                ;; Disable toolbar
-(blink-cursor-mode 0)            ;; Disable blinking cursor
-(scroll-bar-mode -1)             ;; Disable scrollbars
-(setq inhibit-startup-message t) ;; Close startup screen
-(global-hl-line-mode t)          ;; Highlight current line
+  (menu-bar-mode 0)                ;; Disable menubar
+  (tool-bar-mode 0)                ;; Disable toolbar
+  (blink-cursor-mode 0)            ;; Disable blinking cursor
+  (scroll-bar-mode -1)             ;; Disable scrollbars
+  (global-hl-line-mode t)          ;; Highlight current line
+  (setq inhibit-startup-message t) ;; Close startup screen
 
-;; Disable global-hl-line-mode in eshell, ansi-term, vterm
-(mapcar
-  (lambda (mode) (add-hook mode (lambda () (setq-local global-hl-line-mode nil))))
-  '(eshell-mode-hook term-mode-hook vterm-mode-hook))
+  ;; Disable global-hl-line-mode in eshell, ansi-term, vterm
+  (mapcar
+    (lambda (mode) (add-hook mode (lambda () (setq-local global-hl-line-mode nil))))
+    '(eshell-mode-hook term-mode-hook vterm-mode-hook))
 #+END_SRC
 
-** Fonts
+** Fonts and theme
 #+BEGIN_SRC emacs-lisp
-  ;; TODO: make this a list and then use whichever font exists in the list
-  (defconst my-font "Iosevka Nerd Font")
-  (defvar my-font-size 110)
-  (when (> (display-pixel-width) 1920)
-    (setq my-font-size 150))
+    (use-package doom-themes
+      :ensure t
+      :defer t
+      :init (enable-theme 'doom-one))
 
-  (add-hook
-   'after-make-frame-functions
-   (lambda (frame)
-     (with-selected-frame frame
-       (when (isamert/font-exists-p my-font)
-         (set-face-attribute 'default nil
-                             :font my-font
-                             :weight 'normal
-                             :width 'normal
-                             :height my-font-size)))))
+    (defconst isamert/fonts
+      '("Iosevka Nerd Font"))
+
+    (defvar isamert/font-size
+      (if (> (display-pixel-width) 1920) 150 110)
+      "Default font size.  It's bigger if screen is >1080P.")
+
+    (defun isamert/set-font-and-theme-config ()
+      "Configure font and theme."
+      ;; Set the first avilable font from the `isamert/fonts' list
+      (-each-r-while isamert/fonts #'isamert/font-exists-p
+	(lambda (font)
+	  (when
+	    (set-face-attribute 'default nil
+				:font font
+				:weight 'normal
+				:width 'normal
+				:height isamert/font-size))))
+      ;; ...and load the theme
+      (load-theme 'doom-one t))
+
+    (add-hook 'after-make-frame-functions (lambda (frame) (with-selected-frame frame (load-theme 'doom-one t))))
+
+    (if (daemonp)
+	;; Following sets font/font-size for each emacsclients frame
+	(add-hook 'after-make-frame-functions
+		  (lambda (frame)
+		    (with-selected-frame frame
+		      (isamert/set-font-and-theme-config))))
+      ;; Not in daemon mode, set theme etc directly
+      ;;(isamert/set-font-and-theme-config)
+      )
 #+END_SRC
 
 ** all-the-icons
@@ -300,26 +296,6 @@ You should run =all-the-icons-install-fonts= command after this.
 
 #+BEGIN_SRC emacs-lisp
 (use-package all-the-icons :ensure t)
-#+END_SRC
-
-** Theme
-Set a nicer theme.
-
-#+BEGIN_SRC emacs-lisp
-  (use-package doom-themes
-    :ensure t
-    :defer t
-    :init
-    (enable-theme 'doom-one))
-
-  ;; (use-package zerodark-theme
-  ;;   :ensure t
-  ;;   :config
-  ;;   (load-theme 'zerodark t)
-  ;;   ;; Optionally setup the modeline
-  ;;   (zerodark-setup-modeline-format))
-
-  (add-hook 'after-make-frame-functions (lambda (frame) (with-selected-frame frame (load-theme 'doom-one t))))
 #+END_SRC
 
 ** Frame title
@@ -334,52 +310,57 @@ Make window title contain buffer name so it's easier to identify windows. I use 
 Just enable parenthesis matching.
 
 #+BEGIN_SRC emacs-lisp
-(setq show-paren-style 'parenthesis)
-(show-paren-mode 1)
+  (setq show-paren-style 'parenthesis)
+  (show-paren-mode 1)
 #+END_SRC
 
 *** Rainbow
-Colors parantheses depending on their dept.
+Colors parentheses depending on their dept.
 
 #+BEGIN_SRC emacs-lisp
-(use-package rainbow-delimiters
-  :ensure t
-  :hook (prog-mode . rainbow-delimiters-mode))
+  (use-package rainbow-delimiters
+    :ensure t
+    :hook (prog-mode . rainbow-delimiters-mode))
 #+END_SRC
 
-** 120 column line limit and trailing spaces
-This code highlights the portion of line that exceeds 120 columns and trailing spaces.
+** Highlight trailing spaces
+Following highlights trailing spaces. Also see: [[Remove trailing space before save]]
 
 #+BEGIN_SRC emacs-lisp
-(setq whitespace-style '(face empty tabs trailing)) ;; lines-tail
-(setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode)) ;; Disable in org-mode and markdown-mode
-(global-whitespace-mode t)
-(diminish 'global-whitespace-mode)
-#+END_SRC
+  (require 'whitespace)
 
-** Shackle windows
-Make some temproary windows appear at bottom.
+  (setq whitespace-style '(face empty tabs trailing))
+  (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode))
+  (global-whitespace-mode t)
 
-#+BEGIN_SRC emacs-lisp
-(isamert/shackle-window "\\*Help\\*" 0.4)
-(isamert/shackle-window "\\*Warnings*\\*" 0.2)
-(isamert/shackle-window "\\*Backtrace*\\*" 0.4)
-(isamert/shackle-window "\\*Flycheck.*" 0.4)
-(isamert/shackle-window "\\*Org Src.*\\*" 0.4)
-(isamert/shackle-window "\\*Agenda Commands\\*" 0.4)
-(isamert/shackle-window "\\*Org Agenda\\*" 0.4)
-(isamert/shackle-window "\\*Org Select\\*" 0.4)
-(isamert/shackle-window "CAPTURE-*" 0.4)
-(isamert/shackle-window "magit.*" 0.7)
-(isamert/shackle-window "\\*xref\\*" 0.4)
-(isamert/shackle-window "\\*Org-Babel Error Output\\*" 0.4)
-(isamert/shackle-window "\\*curl error\\*" 0.4)
+  ;; Hide whitespace mode in modeline
+  (diminish 'global-whitespace-mode)
 #+END_SRC
 
 ** Spaces instead of tabs
 #+BEGIN_SRC emacs-lisp
-(setq-default tab-width 4)
-(setq-default indent-tabs-mode nil)
+  (setq-default tab-width 4)
+  (setq-default indent-tabs-mode nil)
+#+END_SRC
+
+** Shackle windows
+Make some temproary windows appear at bottom. This makes buffer management so much easier. Buffers that will match given regex will appear at bottom while covering the given amount of screen.
+
+#+BEGIN_SRC emacs-lisp
+  (isamert/shackle-window "\\*Help\\*" 0.4)
+  (isamert/shackle-window "\\*Warnings*\\*" 0.2)
+  (isamert/shackle-window "\\*Backtrace*\\*" 0.4)
+  (isamert/shackle-window "\\*Flycheck.*" 0.4)
+  (isamert/shackle-window "\\*Org Src.*\\*" 0.4)
+  (isamert/shackle-window "\\*Agenda Commands\\*" 0.4)
+  (isamert/shackle-window "\\*Org Agenda\\*" 0.4)
+  (isamert/shackle-window "\\*Org Select\\*" 0.4)
+  (isamert/shackle-window "CAPTURE-*" 0.4)
+  (isamert/shackle-window "magit.*" 0.7)
+  (isamert/shackle-window "\\*xref\\*" 0.4)
+  (isamert/shackle-window "\\*Org-Babel Error Output\\*" 0.4)
+  (isamert/shackle-window "\\*curl error\\*" 0.4)
+  (isamert/shackle-window "\\*helpful.*\\*" 0.4)
 #+END_SRC
 
 * evil-mode
@@ -387,31 +368,44 @@ Make some temproary windows appear at bottom.
 #+BEGIN_SRC emacs-lisp
   (use-package evil
     :ensure t
-    :init
+    :config
     (setq evil-want-integration t
-          evil-want-keybinding nil
+          evil-want-keybinding t
           evil-want-C-i-jump nil
           ;; ^ Makes tab key work as expected in terminal
           evil-kill-on-visual-paste nil
           ;; ^ When I paste something in visual mode, I don't want it to take over the kill ring
           evil-want-C-u-scroll nil)
-          ;; ^ Over the time I found myself utilizing C-u more and more, so disable this
-    :config
+          ;; ^ Over the time I found myself utilizing emacs C-u more and more, so disable this
+
+    ;; Make horizontal movement cross lines
+    (setq-default evil-cross-lines t)
+
+    ;; Move between visual lines instead of real lines
+    (evil-define-key 'normal 'global
+      (kbd "<remap> <evil-next-line>") #'evil-next-visual-line
+      (kbd "<remap> <evil-previous-line>") #'evil-previous-visual-line)
+    (evil-define-key 'motion 'global
+      (kbd "<remap> <evil-next-line>") #'evil-next-visual-line
+      (kbd "<remap> <evil-previous-line>") #'evil-previous-visual-line)
+
+    ;; Change cursor colors based on current mode.
+    (setq evil-normal-state-cursor '("green" box)
+          evil-visual-state-cursor '("orange" box)
+          evil-emacs-state-cursor '("purple" box)
+          evil-insert-state-cursor '("pink" bar)
+          evil-replace-state-cursor '("red" bar)
+          evil-operator-state-cursor '("red" hollow))
+
     (evil-mode 1))
 #+END_SRC
 
 ** Ex Commands
-#+begin_src emacs-lisp
-  (evil-ex-define-cmd "Q" 'evil-quit)
-#+end_src
+Some ex commands aliases to prevent typos. See [[https://blog.sanctum.geek.nz/vim-koans/][this]].
 
-** evil-collection
 #+begin_src emacs-lisp
-  (use-package evil-collection
-    :after evil
-    :ensure t
-    :config
-    (evil-collection-init '(magit)))
+  (evil-ex-define-cmd "Q" #'evil-quit)
+  (evil-ex-define-cmd "Wq" #'evil-save-and-quit)
 #+end_src
 
 ** evil-leader
@@ -420,9 +414,10 @@ Enable leader key and bind some keys.
 #+BEGIN_SRC emacs-lisp
   (use-package evil-leader
     :ensure t
-    :init
-    (global-evil-leader-mode)
+    :after evil
     :config
+    (global-evil-leader-mode)
+
     (evil-leader/set-leader "SPC")
     (evil-leader/set-key
       ;; generic
@@ -435,24 +430,34 @@ Enable leader key and bind some keys.
 
 ** evil-mc
 Multiple cursors for evil.
-- =C-n= / =C-p= are used for creating cursors
-- =M-n= / =M-p= are used for cycling through already created cursors.
-- =A= and =I= creates cursors in visual selection mode as you may expect.
-- =gq= to clear all cursors.
 
-Sometimes I want to create cursors manually, instead of automatic matches. For that I need to use =evil-mc-make-cursor-here= after doing =evil-mc-pause-all-cursors= and then I need to resume them. Seems tedious.
+- Basics
+  - =C-n= / =C-p= are used for creating cursors
+  - =M-n= / =M-p= are used for cycling through already created cursors.
+  - =A= and =I= creates cursors in visual selection mode as you may expect.
+  - =gkk= to clear all cursors.
+
+- To be able to create cursors at arbitrary positions:
+  - =gkp= to pause all cursors. (Your main cursors moves freely while mc cursors stays still)
+  - =gkr= to resume paused cursors.
+  - =gkh= create a cursor at the point of main cursor. (Use after =gkp=).
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-mc
     :ensure t
+    :after evil
     :diminish evil-mc-mode
     :config
-
-    ;; I use "gr" for something else
-    ;; The only function I use is "grq" (evil-mc-undo-all-cursors),
-    ;; So I'll just bind that to something else
+    ;; I use "gr" (which is the default key combination that brings up evil-mc commands) for something else
+    ;; So remove "gr" binding
     (evil-define-key* '(normal visual) evil-mc-key-map (kbd "gr") nil)
-    (evil-define-key 'normal evil-mc-key-map (kbd "gq") 'evil-mc-undo-all-cursors)
+
+    ;; Add my bindings using "gk"
+    (evil-define-key 'normal evil-mc-key-map
+      (kbd "gkk") #'evil-mc-undo-all-cursors
+      (kbd "gkp") #'evil-mc-pause-cursors
+      (kbd "gkr") #'evil-mc-resume-cursors
+      (kbd "gkh") #'evil-mc-make-cursor-here)
 
     (evil-define-key 'visual evil-mc-key-map
       "A" #'evil-mc-make-cursor-in-visual-selection-end
@@ -468,64 +473,67 @@ Change surroundings. Do =cs"'= to turn ="Hello world!"= into ='Hello world!'=.
 - =Hello= ~ysw}~ ={Hello}=    (~}])~ does not add spaces)
 
 #+BEGIN_SRC emacs-lisp
-(use-package evil-surround
-  :ensure t
-  :init
-  (global-evil-surround-mode 1))
+  (use-package evil-surround
+    :ensure t
+    :after evil
+    :init
+    (global-evil-surround-mode 1))
 #+END_SRC
 
 ** evil-escape
 Return back to normal mode using ~jk~ from anywhere. It does not play well with multiple cursors, so use ~ESC~ to when using evil-mc related stuff.
 
 #+BEGIN_SRC emacs-lisp
-(use-package evil-escape
-  :diminish
-  :ensure t
-  :init
-  (setq evil-escape-key-sequence "jk"
-        evil-escape-delay 0.2)
-  :config
-  (evil-escape-mode 1))
+  (use-package evil-escape
+    :diminish
+    :after evil
+    :ensure t
+    :config
+    (setq evil-escape-key-sequence "jk"
+          evil-escape-delay 0.2)
+    (evil-escape-mode 1))
 #+END_SRC
 
 ** evil-matchit
 Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=, =da%= etc. works as expected.
 
 #+BEGIN_SRC emacs-lisp
-(use-package evil-matchit
-  :diminish
-  :ensure t
-  :config
-  (global-evil-matchit-mode 1))
+  (use-package evil-matchit
+    :diminish
+    :after evil
+    :ensure t
+    :config
+    (global-evil-matchit-mode 1))
 #+END_SRC
 
 ** evil-goggles
 ~evil-goggles~ gives nice visual feedbacks while editing with evil-mode. When you do =dd=, =yw=, =ciw= or something similar, it will give a visual feedback for the selection. Feels kinda natural to have this.
 
 #+BEGIN_SRC emacs-lisp
-(use-package evil-goggles
-  :ensure t
-  :diminish
-  :config
-  (setq evil-goggles-duration 0.20
-        evil-goggles-pulse nil
-        evil-goggles-enable-change t
-        evil-goggles-enable-delete t
-        evil-goggles-enable-indent t
-        evil-goggles-enable-yank t
-        evil-goggles-enable-join t
-        evil-goggles-enable-fill-and-move t
-        evil-goggles-enable-paste t
-        evil-goggles-enable-shift t
-        evil-goggles-enable-surround t
-        evil-goggles-enable-commentary t
-        evil-goggles-enable-nerd-commenter t
-        evil-goggles-enable-replace-with-register t
-        evil-goggles-enable-set-marker t
-        evil-goggles-enable-undo t
-        evil-goggles-enable-redo t)
-  (evil-goggles-mode)
-  (evil-goggles-use-diff-faces))
+  (use-package evil-goggles
+    :ensure t
+    :after evil
+    :diminish
+    :config
+    (setq evil-goggles-duration 0.20
+          evil-goggles-pulse nil
+          evil-goggles-enable-change t
+          evil-goggles-enable-delete t
+          evil-goggles-enable-indent t
+          evil-goggles-enable-yank t
+          evil-goggles-enable-join t
+          evil-goggles-enable-fill-and-move t
+          evil-goggles-enable-paste t
+          evil-goggles-enable-shift t
+          evil-goggles-enable-surround t
+          evil-goggles-enable-commentary t
+          evil-goggles-enable-nerd-commenter t
+          evil-goggles-enable-replace-with-register t
+          evil-goggles-enable-set-marker t
+          evil-goggles-enable-undo t
+          evil-goggles-enable-redo t)
+    (evil-goggles-mode)
+    (evil-goggles-use-diff-faces))
 
 #+END_SRC
 
@@ -534,42 +542,25 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 - =s/S= does 2-char searching.
 
 #+BEGIN_SRC emacs-lisp
-(use-package evil-snipe
-  :ensure t
-  :diminish evil-snipe-local-mode
-  :init
-  (evil-snipe-mode 1)
-  (evil-snipe-override-mode 1)
-  (setq evil-snipe-scope 'visible)
-  (add-hook 'magit-mode-hook 'turn-off-evil-snipe-override-mode))
+  (use-package evil-snipe
+    :ensure t
+    :after evil
+    :diminish evil-snipe-local-mode
+    :config
+    (evil-snipe-mode 1)
+    (evil-snipe-override-mode 1)
+    (setq evil-snipe-scope 'visible)
+    (add-hook 'magit-mode-hook 'turn-off-evil-snipe-override-mode))
 #+END_SRC
 
 ** goto-chg
-=g;= goes to the last change. (repeatable)
+- =g;= goes to the last change. (repeatable)
+- There is also =gv= which selects the last selection. Not related to this package, it's a default functionality but I wanted to mention.
 
 #+BEGIN_SRC emacs-lisp
-(use-package goto-chg
-  :ensure t)
-#+END_SRC
-
-** Visual line movement
-To move between visual lines instead of real lines:
-#+BEGIN_SRC emacs-lisp
-(setq-default evil-cross-lines t) ;; Make horizontal movement cross lines
-(define-key evil-normal-state-map (kbd "<remap> <evil-next-line>") 'evil-next-visual-line)
-(define-key evil-normal-state-map (kbd "<remap> <evil-previous-line>") 'evil-previous-visual-line)
-(define-key evil-motion-state-map (kbd "<remap> <evil-next-line>") 'evil-next-visual-line)
-(define-key evil-motion-state-map (kbd "<remap> <evil-previous-line>") 'evil-previous-visual-line)
-#+END_SRC
-
-** Change cursor color according to mode
-#+BEGIN_SRC emacs-lisp
-(setq evil-normal-state-cursor '("green" box)
-      evil-visual-state-cursor '("orange" box)
-      evil-emacs-state-cursor '("red" box)
-      evil-insert-state-cursor '("red" bar)
-      evil-replace-state-cursor '("red" bar)
-      evil-operator-state-cursor '("red" hollow))
+  (use-package goto-chg
+    :after evil
+    :ensure t)
 #+END_SRC
 
 * org-mode
@@ -579,7 +570,7 @@ To move between visual lines instead of real lines:
     :ensure org-plus-contrib)
 #+end_src
 
-** keybindings
+** Keybindings
 #+begin_src emacs-lisp
   (evil-leader/set-key
     "oo"  'org-open-at-point
@@ -642,7 +633,7 @@ To move between visual lines instead of real lines:
     "D" 'isamert/org-babel-remove-all-results)
 #+end_src
 
-** some vars
+** Some vars
 #+BEGIN_SRC emacs-lisp
   (when (file-directory-p "~/Documents/notes")
     (defconst life-org "~/Documents/notes/life.org")
@@ -659,13 +650,11 @@ To move between visual lines instead of real lines:
           ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
           org-agenda-files `(,life-org ,bullet-org ,projects-org ,reality-org ,work-org))
 
-
-
     ;; With the following, I can call functions inside this file in other org files
     (org-babel-lob-ingest "~/Documents/notes/utils.org"))
 #+END_SRC
 
-** better defaults
+** Better defaults
 #+BEGIN_SRC emacs-lisp
   (setq org-src-fontify-natively t
         ;; ^ Enable code highlighting in ~SRC~ blocks.
@@ -679,10 +668,17 @@ To move between visual lines instead of real lines:
         ;; ^ Replace ... with ..↯ in collapsed sections
         org-habit-show-habits-only-for-today t)
         ;; ^ If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
+
+  ;; http://www.foldl.me/2012/disabling-electric-indent-mode/
+  (defun isamert/disable-electric-indent ()
+    (set (make-local-variable 'electric-indent-functions)
+               (list (lambda (arg) 'no-indent))))
+
+  (add-hook 'org-mode-hook #'isamert/disable-electric-indent)
 #+END_SRC
 
-** auto indent subsections
-Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier.
+** Auto indent subsections
+Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier. This does not add any spaces/tabs to the text file, the indentation is only visually apparent in Emacs.
 
 #+BEGIN_SRC emacs-lisp
   (add-hook
@@ -693,9 +689,11 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
    t)
 #+END_SRC
 
-** babel
+** Babel
 #+begin_src emacs-lisp
   ;; Http request in org-mode babel.
+  ;; You can get the generated curl command after executing the code
+  ;; block, from *curl command history* buffer
   (use-package ob-http :ensure t)
 
   ;; Typescript
@@ -715,10 +713,29 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (typescript . t)
      (http . t)))
 
-  (setq org-confirm-babel-evaluate nil) ;; Don't ask permissions for evaluating code blocks
+  ;; Don't ask permissions for evaluating code blocks
+  (setq org-confirm-babel-evaluate nil)
+
+  ;; Make certain files exacutable when tangled
+  ;; Source: https://lists.gnu.org/archive/html/emacs-orgmode/2011-02/msg00465.html
+  (defun isamert/make-tangled-files-executable ()
+    (message (symbol-name major-mode))
+    (message (buffer-file-name))
+    (when (or (s-match "\\.\\(sh\\|py\\)$" (buffer-file-name))
+              (s-match "\\(python\\|sh\\)" (symbol-name major-mode)))
+      (set-file-modes (buffer-file-name) #o755)))
+  (add-hook 'org-babel-post-tangle-hook 'isamert/make-tangled-files-executable)
+
+  (defun isamert/org-babel-tangle-current-block ()
+    (interactive)
+    (let ((current-prefix-arg '(4)))
+      (call-interactively 'org-babel-tangle)))
+
+  (evil-leader/set-key
+    "ot" 'isamert/org-babel-tangle-current-block)
 #+end_src
 
-** exports
+** Exporting
 *** HTML
 #+BEGIN_SRC emacs-lisp
 (use-package htmlize :ensure t)
@@ -732,7 +749,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       org-icalendar-use-deadline '(todo-due event-if-todo))
 #+END_SRC
 
-** agenda
+** Agenda
 #+BEGIN_SRC emacs-lisp
   (when (fboundp 'life-org)
     (setq org-agenda-use-time-grid t
@@ -753,7 +770,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       "r" 'org-agenda-redo)
 #+END_SRC
 
-** todo keywords
+** ToDo keywords
 #+BEGIN_SRC emacs-lisp
   ;; Add this to org files if you need:
   ;; #+TODO: TODO IN-PROGRESS WAITING DONE
@@ -767,16 +784,17 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
           ("PROG" . (:foreground "magenta" :weight bold))))
 #+END_SRC
 
-** presentation
+** Presentation
 #+BEGIN_SRC emacs-lisp
 (use-package org-tree-slide
   :ensure t)
 #+END_SRC
 
-** fancy/pretty stuff
+** Fancy/pretty stuff
 #+begin_src emacs-lisp
   (setq org-tags-column 0)
   ;; ^ This does not work well with combination of org-fancy-priorities and org-pretty tags, so I disable it
+  ;; And it also makes sense to disable this because it restricts yyour heading char limit.
 
   ;; Make headings look better with nice bullets.
   ;; It also adjusts the size of headings according to their level.
@@ -798,13 +816,11 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
     :config
     (setq org-pretty-tags-surrogate-strings
           '(("work"  . "⚒")
+            ("meeting" . "☎")
             ("side"  . "❄")
             ("must"  . "✠")
             ("rutin" . "♟")
-            ("study" . "☣")
-            ("movie" . "")
-            ))
-
+            ("study" . "☣")))
     (org-pretty-tags-global-mode))
 
 
@@ -852,6 +868,25 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 #+END_SRC
 
 * Other packages
+** dired
+#+begin_src emacs-lisp
+  (defun isamert/dired-up-directory ()
+    "Like `dired-up-directory' but it does not create a new frame.
+    Uses the existing one."
+    (interactive)
+    (find-alternate-file ".."))
+
+  (setq dired-dwim-target t
+        ls-lisp-dirs-first t
+        ls-lisp-use-insert-directory-program nil)
+  (put 'dired-find-alternate-file 'disabled nil)
+
+  (evil-define-key 'normal dired-mode-map
+    "h" 'isamert/dired-up-directory
+    "l" 'dired-find-alternate-file
+    "gg" 'evil-goto-first-line
+    "G" 'evil-goto-line)
+#+end_src
 ** image-mode
 I want to be able to kill image buffers with simply hitting =q=. This does that.
 
@@ -921,8 +956,10 @@ This is a generic parser for bunch of languages. You can also inspect the syntax
       (kbd "l") 'treemacs-TAB-action
       (kbd "h") 'treemacs-TAB-action
       (kbd "D") 'treemacs-delete
-      (kbd "]") 'treemacs-next-project
-      (kbd "[") 'treemacs-previous-project
+      (kbd "]]") 'treemacs-next-neighbour
+      (kbd "[[") 'treemacs-previous-neighbour
+      (kbd "]p") 'treemacs-next-project
+      (kbd "[p") 'treemacs-previous-project
       (kbd "zm") 'treemacs-collapse-all-projects
       (kbd "za") 'treemacs-toggle-node)
 
@@ -940,7 +977,7 @@ This is a generic parser for bunch of languages. You can also inspect the syntax
   (use-package treemacs-icons-dired
     :after treemacs dired
     :ensure t
-    :config (treemacs-icons-dired-mode))
+    :config (treemacs-icons-dired-mode -1))
 
   (use-package treemacs-magit
     :after treemacs magit
@@ -1091,6 +1128,12 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
     (if persp-show-modestring
         (persp-turn-off-modestring)
       (persp-turn-on-modestring)))
+
+  ;; https://github.com/nex3/perspective-el/issues/150
+  (defun persp-update-modestring ()
+    "Override the `persp-update-modestring' function to only show current perspectives name in the modeline."
+    (when persp-show-modestring
+      (set-frame-parameter nil 'persp--modestring (format "[%s]" (persp-current-name)))))
 #+END_SRC
 
 ** avy
@@ -1100,12 +1143,43 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
   (use-package avy
     :ensure t
     :init
-    (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)) ;; Only use these for jumping.
+    (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p) ;; Only use these for jumping.
+          avy-all-windows nil)
     :config
-    (define-key evil-normal-state-map (kbd "M-s") 'avy-goto-char-2)   ;; Go to any char
-    (define-key evil-normal-state-map (kbd "M-S") 'avy-goto-word-1)) ;; Go to beginning of a word
+
+    ;; ^ Only search in current window/buffer
+    (evil-define-key 'normal 'global
+      (kbd "?") 'consult-imenu
+      (kbd "M-s") 'avy-goto-char-2 ;; Go to any char
+      (kbd "M-S") 'avy-goto-word-1 ;; Go to beginning of a word
+      (kbd "M-g") 'avy-goto-line))
 #+END_SRC
 
+** ace-window
+- =C-u M-a= starts ace-window in *swap* mode.
+- Some shortcuts, after doing =M-a=:
+  - x - delete window
+  - m - swap windows
+  - M - move window
+  - c - copy window
+  - j - select buffer
+  - n - select the previous window
+  - u - select buffer in the other window
+  - c - split window fairly, either vertically or horizontally
+  - v - split window vertically
+  - b - split window horizontally
+  - o - maximize current window
+  - ? - show these command bindings
+
+#+begin_src emacs-lisp
+  (use-package ace-windpw
+    :ensure t
+    :config
+    (custom-set-faces
+     '(aw-leading-char-face
+       ((t (:foreground "deep sky blue" :bold t :height 3.0)))))
+    (global-set-key (kbd "M-a") 'ace-window))
+#+end_src
 ** selectrum
 A nice, fast minibuffer narrowing framework. It works well with quite a lot of package.
 - =prescient.el= brings history and more intelligent filtering to selectrum.
@@ -1121,6 +1195,8 @@ A nice, fast minibuffer narrowing framework. It works well with quite a lot of p
     :ensure t
     :config
     (setq selectrum-extend-current-candidate-highlight t)
+    (evil-define-key 'normal 'global
+      (kbd "M-r") #'selectrum-repeat)
     (selectrum-mode))
 
   (use-package selectrum-prescient
@@ -1190,35 +1266,39 @@ A nice, fast minibuffer narrowing framework. It works well with quite a lot of p
     :config
     (advice-add #'register-preview :override #'consult-register-window)
 
-    ;; TODO: Handle previews, maybe disable it for commands that opens new buffers
-    ;; Configure preview. Note that the preview-key can also be configured on a
-    ;; per-command basis via `consult-config'.
-    ;; The default value is 'any, such that any key triggers the preview.
-    ;; (setq consult-preview-key 'any)
-    ;; (setq consult-preview-key (kbd "M-p"))
-    ;; (setq consult-preview-key (list (kbd "<S-down>") (kbd "<S-up>")))
+    (setq consult-preview-key (kbd "M-m"))
+    ;; ^ When you do M-m on a candidate, it previews it
+
     (evil-define-key 'normal 'global
       (kbd "?") 'consult-imenu
-      (kbd "M-g") 'consult-goto-line
-      (kbd "M-r") 'consult-ripgrep
+      (kbd "M-o") 'isamert/consult-ripgrep-project
+      (kbd "M-y") 'consult-yank
       (kbd "C-f") 'consult-line)
 
     (evil-leader/set-key
       "gg" 'consult-git-grep
       "RET" 'consult-buffer)
 
-    (setq consult-find-command "fd --full-path ARG OPTS"
-          consult-ripgrep-command "rg --null --line-buffered --color=always --max-columns=500 --no-heading --smart-case --line-number . -e ARG OPTS"
+    (setq consult-find-command "fd --hidden --full-path ARG OPTS"
+          consult-ripgrep-command "rg --ignore-file '.git/**' --hidden --null --line-buffered --color=always --max-columns=500 --no-heading --smart-case --line-number . -e ARG OPTS"
           consult-project-root-function #'isamert/current-project-root))
+
+  (defun isamert/consult-ripgrep-project ()
+    "`consult-ripgrep' in current project.
+  `consult-ripgrep' with `consult-project-root-function' shows full path of the
+  file in the results.  I don't want that."
+    (interactive)
+    (consult-ripgrep (isamert/current-project-root)))
 #+end_src
 
 ** project.el
-I was using projectile earlier but [[consuel]] functions are just more than enough for project management. I only use couple of functions from =project.el= which is already built-in to Emacs.
+I was using projectile earlier but [[consult]] functions are just more than enough for project management. I only use couple of functions from =project.el= which is already built-in to Emacs.
 
 #+begin_src emacs-lisp
   (defun isamert/current-project-root ()
     "Return the root path of current project."
     (interactive)
+    ;; `project-current' is a function from project.el
     (cdr (project-current)))
 #+end_src
 
@@ -1276,6 +1356,8 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
 #+end_src
 
 ** flycheck
+- Use =ge= (=consult-flycheck=) to list and jump any of the errors/warnings in the buffer.
+  - Write ~i SPC~, ~w SPC~, ~e SPC~ to show infos, warnings, errors only in the =consult-flycheck=
 #+BEGIN_SRC emacs-lisp
   (use-package flycheck
     :diminish
@@ -1283,12 +1365,16 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
     :init (global-flycheck-mode)
     :config
     (setq flycheck-idle-change-delay 1
-          flycheck-check-syntax-automatically '(save new-line mode-enabled)) ;; (save idle-change new-line mode-enabled)
-    ;; TODO: also investigate for navigating seperatly  next/prev warnings/errors
-    ;; https://github.com/flycheck/flycheck/commit/c1630b075cbdf3ab11ac97b83dcb0559213f0202
+          flycheck-check-syntax-automatically '(save new-line mode-enabled))
+         ;; ^ Alternatives are (save idle-change new-line mode-enabled)
+
+    (use-package consult-flycheck
+      :ensure t)
+
     (evil-define-key 'normal flycheck-mode-map
-      (kbd "]e") 'flycheck-next-error
-      (kbd "[e") 'flycheck-previous-error))
+      (kbd "ge") #'consult-flycheck
+      (kbd "]e") #'flycheck-next-error
+      (kbd "[e") #'flycheck-previous-error))
 #+END_SRC
 
 ** company
@@ -1555,43 +1641,77 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
               :around #'isamert/auto-focus-tmux-advice-before)
 #+end_src
 
-** ispell
+** Spell checking
 - Use =flyspell-mode= to start spell checking.
-#+BEGIN_SRC emacs-lisp
-(setq ispell-program-name "hunspell"
-      ispell-local-dictionary "en_US"
-      ispell-local-dictionary-alist
-      '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
+- ~z=~ or ~zw~ to correct current spelling mistake.
+  - ~C-u zw~ to correct all mistakes in order.
 
-(add-hook 'org-mode-hook 'flyspell-mode)
-(add-hook 'markdown-mode-hook 'flyspell-mode)
+*** Configuration
+See [[https://isamert.net/2021/01/31/emacs-te-turkce-imla-denetimi.html][this]] for rationale behind the following configuration.
+
+#+BEGIN_SRC emacs-lisp
+  (setq ispell-program-name "hunspell"
+        ispell-local-dictionary "en_US"
+        ispell-local-dictionary-alist
+        '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)
+          ("tr_TR" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "tr_TR") nil utf-8)))
+
+  (add-hook 'org-mode-hook 'flyspell-mode)
+  (add-hook 'markdown-mode-hook 'flyspell-mode)
 #+END_SRC
 
-** moodline
+*** flyspell-correct
+Better way to correct spelling mistakes. By default it uses completing-read, so it's compatible with selectrum. This also makes it easy to save words into personal dictonary or silence warnings for session because it shows these options in the correction menu.
+#+begin_src emacs-lisp
+  (use-package flyspell-correct
+    :ensure t
+    :config
+    ;; Rebind default evil ispell keys to flyspell-correct ones
+    (evil-define-key 'normal 'global
+      (kbd "z=") #'flyspell-correct-at-point
+      (kbd "zw") #'flyspell-correct-wrapper))
+      ;; ^ This goes to nearest spelling mistake.
+      ;; If called with C-u, it goes into rapid mode where you correct all mistakes in order.
+#+end_src
+
+** moodline modeline
 Light weight and nice modeline.
 
 #+begin_src emacs-lisp
-(use-package mood-line
-  :ensure t
-  :diminish
-  :quelpa (mood-line
-           :fetcher gitlab
-                    :repo "jessieh/mood-line")
-  :init (mood-line-mode))
+  (use-package mood-line
+    :ensure t
+    :diminish
+    :quelpa (mood-line
+             :fetcher gitlab
+             :repo "jessieh/mood-line")
+    :config (mood-line-mode))
 #+end_src
 
+** TODO mini-modeline
+- Moves modeline to the minibuffer and disables modeline in all windows.
+- FIXME: does not work with [[moodline modeline]]
+
+#+begin_src
+  (use-package mini-modeline
+    :quelpa (mini-modeline :repo "kiennq/emacs-mini-modeline" :fetcher github)
+    :after mood-line
+    :config
+    (setq mini-modeline-enhance-visual nil)
+    ;; ^ Otherwise it breaks the color of completion menu popup.
+    (setq mini-modeline-update-interval 0.5)
+    ;; ^ Not sure
+    (mini-modeline-mode t))
+#+end_src
 ** howdoyou
 When you search for something, it opens the results in an org-mode buffer. Results are fetched from SX (stack-exchange, stackoverflow etc) sites.
 - =howdoyou-query= :: search function
 - =C-M-Right= :: next answer
 - =C-M-Left= :: prev answer
+
 #+BEGIN_SRC emacs-lisp
   (use-package howdoyou
     :ensure t
     :config
-    (with-eval-after-load "helm-net"
-      (push (cons "How Do You"  (lambda (candidate) (howdoyou-query candidate)))
-            helm-google-suggest-actions))
     (setq howdoyou-switch-to-answer-buffer t
           howdoyou-number-of-answers 5)
     (evil-leader/set-key
@@ -1614,24 +1734,6 @@ When you search for something, it opens the results in an org-mode buffer. Resul
     (evil-define-key 'insert 'global
       (kbd "M-s") 'company-yasnippet)
     (yas-global-mode 1))
-#+END_SRC
-
-** ranger.el (deer)
-- You can add/remove parent windows with using =z+= or =z-=.
-- Use =zP= to toggle between minimal (deer) and full ranged mode.
-
-#+BEGIN_SRC emacs-lisp
-  (use-package ranger
-    :ensure t
-    :config
-    (setq ranger-max-preview-size 10 ;; MB
-          ranger-cleanup-on-disable t
-          ranger-width-preview 0.45
-          ranger-show-literal nil)   ;; Toggle between literal and non-literal previews with zi
-    (ranger-override-dired-mode t))  ;; Use minimal ranger (only one window, no previews and parents but shortcuts are same) instead of dired
-
-    (isamert/define-key ranger-mode-map
-     "."  'ranger-toggle-dotfiles)
 #+END_SRC
 
 ** string-inflection
@@ -1669,7 +1771,7 @@ Better help dialogs with syntax highlighting, references, source etc.
   (use-package writeroom-mode
     :ensure t
     :config
-    (setq writeroom-width 200) ;; Better for org-mode
+    (setq writeroom-width 150) ;; Better for org-mode
     (evil-leader/set-key
       "W" 'writeroom-mode))
 #+end_src
@@ -1729,7 +1831,7 @@ Better help dialogs with syntax highlighting, references, source etc.
       "S#"  #'sp-wrap-star
       "S~"  #'sp-wrap-tilda)
 
-    (sp-local-pair 'org-mode "+" "+")
+    (sp-local-pair 'org-mode "=" "=" :actions :rem)
 
     (evil-define-key*
      '(normal insert) sp-keymap
@@ -1893,6 +1995,7 @@ Jumps to definition by using regex, generally works. Use =gd=.
         ("https://ag91.github.io/rss.xml" blog dev emacs)
         ("https://chrisdone.com/rss.xml" blog dev haskell)
         ("https://two-wrongs.com/feed" blog dev)
+        ("https://beepb00p.xyz/rss.xml" blog dev)
 
         ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay)
         ("https://www.lesswrong.com/feed.xml?view=curated-rss" blog essay)
@@ -1920,7 +2023,6 @@ Jumps to definition by using regex, generally works. Use =gd=.
         ("UCYO_jab_esuFRV4b17AJtAw" youtube fun science animation) ; 3Blue1Brown
         ("UCsXVk37bltHxD1rDPwtNM8Q" youtube fun science animation) ;; Kurzgesagt – In a Nutshel
         ("numberphile" youtube fun science)
-        ("ProZD" youtube fun skit)
         ("UC0uTPqBCFIpZxlz_Lv1tk_g" youtube emacs dev) ;; Protesilaos Stavrou
         ("UC2NXVB__-v-hf-l6wcg1zjQ" youtube linux dev cli) ;; Tom on the internet
         ("UC2eYFnH61tmytImy1mTYvhA" youtube linux cli) ;; Luke Smith
@@ -2029,20 +2131,19 @@ Play internet radios.
     :quelpa (eradio
              :fetcher github
              :repo "isamert/eradio")
-
     :config
     (evil-leader/set-key
       "err" 'eradio-toggle
-      "erR" 'isamert/eradio-random-channel
+      "erR" 'eradio-random-channel
       "erp" 'eradio-play
-      "erk" 'isamert/eradio-kill-song-title
-      "erl" 'isamert/eradio-log-song-title
+      "erk" 'eradio-kill-song-title
+      "erl" 'eradio-log-song-title
       "ers" 'eradio-show-song-title
       "ers" 'eradio-stop)
 
+    (setq eradio-log-path "~/Documents/notes/songs.org")
     (setq eradio-mpv-socket "/tmp/eradio-socket")
     (setq eradio-player `("mpv" "--no-video" "--no-terminal" ,(concat "--input-ipc-server=" eradio-mpv-socket)))
-
     (setq eradio-channels '(("racap.ru // ambient"              . "http://79.111.119.111:8002/ambient")
                             ("racap.ru // anime"                . "http://79.111.119.111:8002/anime")
                             ("racap.ru // avantgardejazz"       . "http://79.111.119.111:8002/avantgardejazz")
@@ -2461,25 +2562,6 @@ Play internet radios.
                             ("radcap.ru // vocal"               . "http://79.120.77.11:8002/vocal")
                             ("radcap.ru // witchhouse"          . "http://79.120.77.11:8002/witchhouse")
                             )))
-
-  (defun isamert/eradio-kill-song-title ()
-      (interactive)
-      (let ((song-title (eradio-get-song-title)))
-        (kill-new song-title)
-        (message song-title)))
-
-  (defun isamert/eradio-log-song-title ()
-      (interactive)
-      (let ((song-title (eradio-get-song-title)))
-        (shell-command-to-string (format "echo '* %s' >> ~/Documents/notes/songs.org" song-title))
-        (message song-title)))
-
-  (defun isamert/eradio-random-channel ()
-    (interactive)
-    (let ((channel-pair (nth (random (length eradio-channels)) eradio-channels)))
-      (eradio-stop)
-      (eradio-play-low-level (cdr channel-pair))
-      (message "Playing channel: %s" (car channel-pair))))
 #+end_src
 
 * Keybindings
@@ -2639,13 +2721,11 @@ Keybindings are generally set in-place, following have no context, so they are h
      ("not" .      #x2757)
      ("in" .       #x2208)
      ("not in" .   #x2209)
-     ("return" .   #x27fc)
      ("yield" .    #x27fb)
      ("for" .      #x2200)
      ;; Base Types
      ("int" .      #x2124)
      ("float" .    #x211d)
-     ("str" .      #x1d54a)
      ("True" .     #x1d54b)
      ("False" .    #x1d53d)
      ;; Mypy
@@ -2660,14 +2740,21 @@ Keybindings are generally set in-place, following have no context, so they are h
 
 ** haskell
 #+BEGIN_SRC emacs-lisp
-(use-package haskell-mode
-  :ensure t)
+  (use-package haskell-mode
+    :ensure t)
 
-(use-package lsp-haskell
-  :config
-  (setq lsp-haskell-process-path-hie "ghcide")
-  (setq lsp-haskell-process-args-hie '())
-  :ensure t)
+  (use-package lsp-haskell
+    :ensure t
+    :config
+    (setq lsp-haskell-process-path-hie "ghcide"
+          lsp-haskell-process-args-hie '()))
+
+  (use-package ormolu
+    :ensure t
+    :hook (haskell-mode . ormolu-format-on-save-mode)
+    :bind
+    (:map haskell-mode-map
+          ("C-c r" . ormolu-format-buffer)))
 #+END_SRC
 
 ** rust
@@ -2695,7 +2782,7 @@ Keybindings are generally set in-place, following have no context, so they are h
                (flycheck-select-checker 'javascript-eslint))
            (message "eslint not found."))))
 
-  (add-hook 'js-mode #'isamert/use-eslint-from-node-modules)
+  (add-hook 'js-mode-hook #'isamert/use-eslint-from-node-modules)
 #+END_SRC
 
 ** java
@@ -2719,7 +2806,7 @@ Hit <C-j> after these and get:
 #+BEGIN_SRC emacs-lisp
 (use-package emmet-mode
   :ensure t
-  :hook (js-mode css-mode sgml-mode)
+  :hook (js-mode css-mode sgml-mode web-mode)
   :init
   (setq emmet-expand-jsx-className? t
         emmet-self-closing-tag-style " /"))
@@ -2834,7 +2921,25 @@ Hit <C-j> after these and get:
 #+end_src
 
 * Misc functions
-** google search
+** My Android phone and Emacs
+I have an Android phone that is running [[https://termux.com/][Termux]] all the time. If you install Termux through [[https://www.f-droid.org/][F-Droid]] you can also install [[https://f-droid.org/en/packages/com.termux.api/][Termux:API]] package which brings bunch of commands like =termux-clipboard-set=, =termux-sms-list= etc. Much of the commands requires to be called in foreground, so they are not very useful over SSH but you can work around that by starting a =tmux= session on the phone and executing commands on that tmux session through SSH. This way I can send arbitrary text to my phones clipboard using the commands below.
+
+#+begin_src emacs-lisp
+  (defvar isamert/phone-hostname
+    "mia3"
+    "Hostname or local address to connect to my phone by SSH.")
+
+  (defun well/send-text-to-my-phone (text)
+    "Send TEXT to my phones clipboard."
+    (interactive "sText: ")
+    (shell-command-to-string (format "echo '%s' | ssh %s -T 'cat > ~/clip'; ssh mia3 \"tmux send-keys 'cat ~/clip | termux-clipboard-set' ENTER\"" isamert/phone-hostname text)))
+
+  (defun well/send-clipboard-to-my-phone ()
+    "Send current clipboard content to my phones clipboard."
+    (interactive)
+    (well/send-text-to-mia3 (current-kill 0)))
+#+end_src
+** Google search
 #+begin_src emacs-lisp
   (defun isamert/google-this ()
     "Search selected region or current word in Google. Let's you edit the query beforehand."
@@ -2850,9 +2955,8 @@ Hit <C-j> after these and get:
     "/g"   'isamert/google-this)
 #+end_src
 
-** google translate
+** Google translate
 #+begin_src emacs-lisp
-  ;; FIXME: ggrep -> grep
   (defun isamert/google-translate-this (from to)
     "Translate selected region or current word from FROM to TO.
   Let's you edit the query beforehand.  Result is printed into minibuffer.
@@ -2862,7 +2966,7 @@ Hit <C-j> after these and get:
     (message
      (shell-command-to-string
       (format
-       "trans -b en:tr \"%s\""
+       "trans en:tr \"%s\""
        (read-string
         "Translating: "
         (isamert/region-or 'word))))))
@@ -2881,6 +2985,8 @@ Hit <C-j> after these and get:
 #+end_src
 
 ** Open one of my special files
+=isamert/files= creates a list of my dotfiles and org-files and lets you select one of them.
+
 #+begin_src emacs-lisp
   (defun isamert/org-files ()
     "Find all of the org files in home directory."
@@ -2903,7 +3009,8 @@ Hit <C-j> after these and get:
   (evil-define-key 'normal 'global (kbd "M-m") 'isamert/files)
 #+end_src
 
-** org-mode enhancements
+** TODO org-mode enhancements
+I need to rewrite these two functions using [[https://github.com/isamert/marks][marks]] for both speed and accuracy. Also I should remove the =helm= dependency, I need to figure out a way to keep font colors with selectrum (=consult-flycheck=, =consult-lines= etc. are already doing this.)
 #+begin_src emacs-lisp
   ;; Keybindings
   (evil-leader/set-key
@@ -3080,136 +3187,6 @@ Hit <C-j> after these and get:
            (forward-line))))
 #+end_src
 
-** scratch/temporary buffers in side windows
-Here I define two important functions and their helpers.  The following functions are pretty useful for quick note taking or evaluating elisp. Having these buffers in a side window makes them immune to some window commands which is what I want.
-
-- isamert/display-side-scratch-buffer :: This one opens (or closes if it's open) the *scratch* buffer in a side window, on the right. This is nice for quickly evaluating elisp, taking elisp related notes.
-- isamert/display-side-temp-org-buffer :: This one opens (or closes if it's open) the ~temp.org~ file in a in a side window, on the right. This is nice for taking some quick notes, writing some temporary todos etc.
-
-#+begin_src emacs-lisp
-  (defun isamert/buffer-visible-p (buffer)
-   "Check if given BUFFER is visible or not.  BUFFER is a string representing the buffer name."
-    (or (eq buffer (window-buffer (selected-window))) (get-buffer-window buffer)))
-
-  (defun isamert/display-buffer-in-side-window (buffer)
-    "Just like `display-buffer-in-side-window` but only takes a BUFFER and rest of the parameters are for my taste."
-    (select-window
-     (display-buffer-in-side-window
-      buffer
-      (list (cons 'side 'right)
-            (cons 'slot 0)
-            (cons 'window-width 84)
-            (cons 'window-parameters (list (cons 'no-delete-other-windows t)
-                                           (cons 'no-other-window nil)))))))
-
-  (defun isamert/remove-window-with-buffer (the-buffer-name)
-    "Remove window containing given THE-BUFFER-NAME."
-    (mapc (lambda (window)
-            (when (string-equal (buffer-name (window-buffer window)) the-buffer-name)
-              (delete-window window)))
-          (window-list (selected-frame))))
-
-  (defun isamert/toggle-side-buffer-with-file (file-path)
-    "Toggle FILE-PATH in a side buffer. The buffer is opened in side window so it can't be accidentaly removed."
-    (interactive)
-    (let ((fname (file-name-nondirectory file-path)))
-    (if (isamert/buffer-visible-p fname)
-        (isamert/remove-window-with-buffer fname)
-      (isamert/display-buffer-in-side-window
-       (save-window-excursion
-         (find-file file-path)
-         (current-buffer))))))
-
-  (defun isamert/toggle-side-scratch-buffer ()
-    "Toggle the scratch buffer in side window.  The buffer is opened in side window so it can't be accidentaly removed."
-    (interactive)
-    (if (isamert/buffer-visible-p "*scratch*")
-        (isamert/remove-window-with-buffer "*scratch*")
-      (isamert/display-buffer-in-side-window (get-buffer "*scratch*"))))
-
-  (defun isamert/toggle-side-temp-org-buffer ()
-    "Toggle `temp.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
-    (interactive)
-    (isamert/toggle-side-buffer-with-file "~/Documents/notes/temp.org"))
-
-  (defun isamert/toggle-side-bullet-org-buffer ()
-    "Toggle `bullet.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
-    (interactive)
-    (isamert/toggle-side-buffer-with-file "~/Documents/notes/bullet.org"))
-
-  (defun isamert/toggle-side-projects-buffer ()
-    "Toggle `projects.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
-    (interactive)
-    (isamert/toggle-side-buffer-with-file "~/Documents/notes/projects.org"))
-
-    ;; Toggle temproary buffers
-    (evil-leader/set-key
-      "ts" 'isamert/toggle-side-scratch-buffer
-      "to" 'isamert/toggle-side-temp-org-buffer
-      "th" 'isamert/toggle-side-bullet-org-buffer
-      "tp" 'isamert/toggle-side-projects-buffer
-      "tf" 'treemacs)
-#+end_src
-
-** org-babel extension functions
-#+BEGIN_SRC emacs-lisp
-  (defun isamert/org-babel-remove-all-results nil
-    (interactive)
-    (goto-char 1)
-    (let ((total-removed 0))
-      (while (org-babel-next-src-block)
-        (when (org-babel-remove-result)
-          (setq total-removed (+ total-removed 1))))
-      (message (format "%d result blocks are removed." total-removed))))
-#+END_SRC
-
-** helm extensions
-#+begin_src emacs-lisp
-  (defun isamert/helm-projectile-rg-current-project nil
-    "Search in current project using ripgrep."
-    (interactive)
-    (let ((helm-rg-default-directory (projectile-project-root)))
-      (helm-rg nil)))
-
-  (defun isamert/helm-projectile-rg-all-projects nil
-    "Search in current project using ripgrep."
-    (interactive)
-    (let ((helm-rg-default-directory (car projectile-project-search-path)))
-      (helm-rg nil)))
-
-  (defun isamert/helm-grep-ag-current-project (arg)
-    "Search in current project using ag"
-    (interactive "P")
-    (helm-grep-ag (projectile-project-root) arg))
-
-  (defun isamert/helm-grep-git-grep-current-project (arg)
-    "Search in current project using ag"
-    (interactive "P")
-    (helm-grep-git-1 (projectile-project-root) arg))
-#+end_src
-
-** functions for easy indentation switching
-- http://blog.binchen.org/posts/easy-indentation-setup-in-emacs-for-web-development.html
-
-#+BEGIN_SRC emacs-lisp
-(defun isamert/setup-indent (n)
-  (interactive "nHow many spaces do you want? ")
-  (setq-local tab-width n)
-  ;; java/c/c++
-  (setq-local c-basic-offset n)
-  ;; web development
-  (setq-local coffee-tab-width n) ; coffeescript
-  (setq-local javascript-indent-level n) ; javascript-mode
-  (setq-local js-indent-level n) ; js-mode
-  ;;(setq-local js2-basic-offset n) ; js2-mode, in latest js2-mode, it's alias of js-indent-level
-  (setq-local web-mode-markup-indent-offset n) ; web-mode, html tag in html file
-  (setq-local web-mode-css-indent-offset n) ; web-mode, css in html file
-  (setq-local web-mode-code-indent-offset n) ; web-mode, js code in html file
-  (setq-local css-indent-offset n) ; css-mode
-  (setq-local typescript-indent-level n) ; typescript-mode
-  (message "OK!"))
-#+END_SRC
-
 ** bullet.org
 I have a ~bullet.org~ file that I keep my daily journal and here are some utility functions that use with it. I may document this later (or even publish it as a package?)
 
@@ -3230,7 +3207,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
 
   (defun isamert/date (date)
     "Display the time described by DATE. DATE can be 'now', 'yesterday', 'two days ago' etc."
-    (isamert/s-trim-right (shell-command-to-string (concat "date --date='" date "' +'%Y-%m-%d %a'")) "\n"))
+    (s-trim-right (shell-command-to-string (concat "date --date='" date "' +'%Y-%m-%d %a'"))))
 
   (defun isamert/insert-new-line-above (text)
     "Insert a line above the current line with given TEXT."
@@ -3357,6 +3334,141 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (goto-char (org-find-exact-headline-in-buffer "Backlog"))
     (org-narrow-to-subtree))
 #+end_src
+
+** Scratch/temporary buffers in side windows
+Here I define two important functions and their helpers.  The following functions are pretty useful for quick note taking or evaluating elisp. Having these buffers in a side window makes them immune to some window commands which is what I want.
+
+- isamert/display-side-scratch-buffer :: This one opens (or closes if it's open) the *scratch* buffer in a side window, on the right. This is nice for quickly evaluating elisp, taking elisp related notes.
+- isamert/display-side-temp-org-buffer :: This one opens (or closes if it's open) the ~temp.org~ file in a in a side window, on the right. This is nice for taking some quick notes, writing some temporary todos etc.
+
+#+begin_src emacs-lisp
+  (defun isamert/buffer-visible-p (buffer)
+   "Check if given BUFFER is visible or not.  BUFFER is a string representing the buffer name."
+    (or (eq buffer (window-buffer (selected-window))) (get-buffer-window buffer)))
+
+  (defun isamert/display-buffer-in-side-window (buffer)
+    "Just like `display-buffer-in-side-window` but only takes a BUFFER and rest of the parameters are for my taste."
+    (set-window-dedicated-p
+     ;; ^ Setting this to nil so that `pop-to-buffer-same-window' calls works in this window
+     ;;   otherwise it'll set `window-dedicated-p' to `side' and this will cause `pop-to-buffer-same-window'
+     ;;   to open stuff in another window.
+     (select-window
+      (display-buffer-in-side-window
+       buffer
+       (list (cons 'side 'right)
+             (cons 'slot 0)
+             (cons 'window-width 84)
+             (cons 'window-parameters (list (cons 'no-delete-other-windows t)
+                                            (cons 'no-other-window nil))))))
+     nil))
+
+  (defun isamert/remove-window-with-buffer (the-buffer-name)
+    "Remove window containing given THE-BUFFER-NAME."
+    (mapc (lambda (window)
+            (when (string-equal (buffer-name (window-buffer window)) the-buffer-name)
+              (delete-window window)))
+          (window-list (selected-frame))))
+
+  (defun isamert/toggle-side-buffer-with-file (file-path)
+    "Toggle FILE-PATH in a side buffer. The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (let ((fname (file-name-nondirectory file-path)))
+    (if (isamert/buffer-visible-p fname)
+        (isamert/remove-window-with-buffer fname)
+      (isamert/display-buffer-in-side-window
+       (save-window-excursion
+         (find-file file-path)
+         (current-buffer))))))
+
+  (defun isamert/toggle-side-scratch-buffer ()
+    "Toggle the scratch buffer in side window.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (if (isamert/buffer-visible-p "*scratch*")
+        (isamert/remove-window-with-buffer "*scratch*")
+      (isamert/display-buffer-in-side-window (get-buffer "*scratch*"))))
+
+  (defun isamert/toggle-side-temp-org-buffer ()
+    "Toggle `temp.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (isamert/toggle-side-buffer-with-file "~/Documents/notes/temp.org"))
+
+  (defun isamert/toggle-side-bullet-org-buffer ()
+    "Toggle `bullet.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (isamert/toggle-side-buffer-with-file "~/Documents/notes/bullet.org"))
+
+  (defun isamert/toggle-side-projects-buffer ()
+    "Toggle `projects.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (isamert/toggle-side-buffer-with-file "~/Documents/notes/projects.org"))
+
+    ;; Toggle temproary buffers
+    (evil-leader/set-key
+      "ts" 'isamert/toggle-side-scratch-buffer
+      "to" 'isamert/toggle-side-temp-org-buffer
+      "th" 'isamert/toggle-side-bullet-org-buffer
+      "tp" 'isamert/toggle-side-projects-buffer
+      "tf" 'treemacs)
+#+end_src
+
+** org-babel extension functions
+#+BEGIN_SRC emacs-lisp
+  (defun isamert/org-babel-remove-all-results nil
+    (interactive)
+    (goto-char 1)
+    (let ((total-removed 0))
+      (while (org-babel-next-src-block)
+        (when (org-babel-remove-result)
+          (setq total-removed (+ total-removed 1))))
+      (message (format "%d result blocks are removed." total-removed))))
+#+END_SRC
+
+** helm extensions
+#+begin_src emacs-lisp
+  (defun isamert/helm-projectile-rg-current-project nil
+    "Search in current project using ripgrep."
+    (interactive)
+    (let ((helm-rg-default-directory (projectile-project-root)))
+      (helm-rg nil)))
+
+  (defun isamert/helm-projectile-rg-all-projects nil
+    "Search in current project using ripgrep."
+    (interactive)
+    (let ((helm-rg-default-directory (car projectile-project-search-path)))
+      (helm-rg nil)))
+
+  (defun isamert/helm-grep-ag-current-project (arg)
+    "Search in current project using ag"
+    (interactive "P")
+    (helm-grep-ag (projectile-project-root) arg))
+
+  (defun isamert/helm-grep-git-grep-current-project (arg)
+    "Search in current project using ag"
+    (interactive "P")
+    (helm-grep-git-1 (projectile-project-root) arg))
+#+end_src
+
+** functions for easy indentation switching
+- http://blog.binchen.org/posts/easy-indentation-setup-in-emacs-for-web-development.html
+
+#+BEGIN_SRC emacs-lisp
+(defun isamert/setup-indent (n)
+  (interactive "nHow many spaces do you want? ")
+  (setq-local tab-width n)
+  ;; java/c/c++
+  (setq-local c-basic-offset n)
+  ;; web development
+  (setq-local coffee-tab-width n) ; coffeescript
+  (setq-local javascript-indent-level n) ; javascript-mode
+  (setq-local js-indent-level n) ; js-mode
+  ;;(setq-local js2-basic-offset n) ; js2-mode, in latest js2-mode, it's alias of js-indent-level
+  (setq-local web-mode-markup-indent-offset n) ; web-mode, html tag in html file
+  (setq-local web-mode-css-indent-offset n) ; web-mode, css in html file
+  (setq-local web-mode-code-indent-offset n) ; web-mode, js code in html file
+  (setq-local css-indent-offset n) ; css-mode
+  (setq-local typescript-indent-level n) ; typescript-mode
+  (message "OK!"))
+#+END_SRC
 
 ** Paste screenshots into org-mode buffers
 #+begin_src emacs-lisp
@@ -3491,40 +3603,59 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 (define-key evil-normal-state-map (kbd "gf") 'xah-open-file-at-cursor)
 #+end_src
 
-* WELL
-Company related stuff.
+** YouTube search
+I already have a shell script that does search in Youtube using =rofi= as the interface but it does not work on macOS. So this is a tiny wrapper around that, instead of rofi, it uses emacs itself.
 
-** Basics
 #+begin_src emacs-lisp
-(set-face-attribute 'default nil
-                             :font my-font
-                             :weight 'normal
-                             :width 'normal
-                             :height my-font-size)
-(load-theme 'doom-one t)
+  (defun isamert/search-youtube (query)
+    (interactive "sQuery: ")
+    (->>
+     (format "menu youtube --out %s" query)
+     (shell-command-to-string)
+     (s-split "\n")
+     (completing-read "Select video to play: ")
+     (s-match "https://youtu.be/.*")
+     (car)
+     (format "mpv %s")
+     (start-process-shell-command "mpv-yt" nil)))
+
+  (defalias 'isamert/search-yt 'isamert/search-youtube)
+#+end_src
+* WELL
+Company/work related stuff.
+
+#+begin_src emacs-lisp
+  ;; TODO: Maybe just check if it's a Mac or not?
+  (defun well/is-well ()
+    "Return if current computer is Well computer or not."
+    (string= (treemacs-workspace->name (treemacs-current-workspace)) "Well"))
 #+end_src
 
 ** Automatically insert issue numbers into commit messages
 #+begin_src emacs-lisp
   (defun well/git-commit-message-setup ()
-    "Automatically insert issue number to commit message."
-    (--> (magit-get-current-branch)
-         (split-string it "-")
-         (string-join (-take 2 it) "-")
-         (if (string-match "/well-he-arbiter/" (projectile-project-root))
-             (format "[%s] " it)
-           (format "%s - " it))
+    "Insert the JIRA ticket number in front of the commit message.  If it already exists (like for example when you use --amend), does not do anything."
+    (let* ((issue-prefix (--> (magit-get-current-branch)
+                              (split-string it "-")
+                              (string-join (-take 2 it) "-")
+                              (if (string-match "/well-he-arbiter/" (projectile-project-root))
+                                  (format "[%s] " it)
+                                (format "%s - " it))))
+           (issue-prefix-exists (save-excursion
+                                  (goto-char (point-min))
+                                  (search-forward issue-prefix nil t))))
+      (when (not issue-prefix-exists)
+        (goto-char (point-min))
+        (insert issue-prefix))))
 
-         (insert it)))
-
-
-  ;; (when (string= (treemacs-workspace->name (treemacs-current-workspace)) "Well")
-  (add-hook 'git-commit-setup-hook 'well/git-commit-message-setup)
+  (when (well/is-well)
+    (add-hook 'git-commit-setup-hook 'well/git-commit-message-setup))
 #+end_src
 
 ** Open MR page
 #+begin_src emacs-lisp
   (defun isamert/git-link-my-merge-requests ()
+    "Open all of my merge requests in browser for the current repository."
     (interactive)
     (browse-url (format "%s/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=%s" (isamert/git-link-homepage) "isamert.well")))
 
@@ -3533,16 +3664,16 @@ Company related stuff.
 #+end_src
 
 ** JS env setup
-#+begin_src emacs-lisp
-  ;; LSP does not work well with UI projects
-  (remove-hook 'js-mode-hook 'lsp)
+LSP does not work well with UI projects. So I use tide for UI projects and LSP for backend projects.
 
+#+begin_src emacs-lisp
   (defun well/setup-tide-mode ()
     (interactive)
     (lsp-mode -1)
     (tide-setup)
     (flycheck-mode +1)
     (setq flycheck-check-syntax-automatically '(save mode-enabled))
+    (flycheck-add-next-checker 'python-flake8 'python-pylint)
     (eldoc-mode +1)
     (highlight-thing-mode -1)
     (tide-hl-identifier-mode +1)
@@ -3550,22 +3681,23 @@ Company related stuff.
     (company-mode +1))
 
   (defun well/setup-js ()
-    "If it's an UI project, run tide. Otherwise run lsp."
+    "If it's an UI project, run tide.  Otherwise run lsp."
     (interactive)
-    (if (string-match "/ui/" (or (projectile-project-root) ""))
+    (if (string-match "/ui/" (or (isamert/current-project-root) ""))
         (isamert/setup-indent 2)
         (well/setup-tide-mode)
       (lsp)))
 
-
-  (add-hook 'js-mode-hook 'well/setup-js)
+  (when (well/is-well)
+    (remove-hook 'js-mode-hook 'lsp)
+    (add-hook 'js-mode-hook 'well/setup-js))
 #+end_src
 
 ** Haskell env setup
 #+begin_src emacs-lisp
-(remove-hook 'haskell-mode-hook 'lsp)
-;; FIXME: following brokes some stuff in org mode, probably need to use flycheck-hook or something
-;; (add-hook 'haskell-mode-hook (lambda () (flycheck-select-checker 'haskell-hlint)))
+  (remove-hook 'haskell-mode-hook 'lsp)
+  ;; FIXME: following brokes some stuff in org mode, probably need to use flycheck-hook or something
+  ;; (add-hook 'haskell-mode-hook (lambda () (flycheck-select-checker 'haskell-hlint)))
 #+end_src
 
 ** Misc functions
@@ -3604,14 +3736,6 @@ Company related stuff.
        (t (message "No issue found under cursor or this is not a ejira context.")))))
 
   (evil-leader/set-key "oj" 'well/jira-dwim)
-
-  (defun well/send-text-to-mia3 (text)
-    (interactive "sText: ")
-    (shell-command-to-string (format "ssh mia3 \"tmux send-keys 'termux-clipboard-set \\\"%s\\\"' ENTER\"" text)))
-
-  (defun well/send-clipboard-to-mia3 ()
-    (interactive)
-    (shell-command-to-string (format "ssh mia3 \"tmux send-keys 'termux-clipboard-set \\\"%s\\\"' ENTER\"" (current-kill 0))))
 #+end_src
 
 ** Misc bindings
@@ -3623,4 +3747,72 @@ Company related stuff.
 
   (evil-leader/set-key
     "tw" 'isamert/toggle-side-well-org-buffer)
+#+end_src
+** Token management
+#+begin_src emacs-lisp
+  ;; Setup:
+  ;;   (well/switch-{development,integration,validation})
+  ;;   (well/set-refresh-token)
+  ;;
+  ;; Getting:
+  ;;   (well/access-token)
+  ;;   (well/auth-token)
+
+
+  ;; Customization
+
+  (defcustom well/internal-auth-util-path
+    "~/Workspace/projects/shared/awslibrary/lib/auth/InternalAuthUtil.js"
+    "Path to InternalAuthUtil.js, see: https://wellco.atlassian.net/wiki/spaces/HA/pages/1344962568/Getting+admin+tokens")
+
+  ;; State
+
+  (defvar well/token-last-update
+    nil)
+
+  ;; Code
+
+  (defun well/switch-env (env)
+    (setenv "AWS_PROFILE" env)
+    (setenv "CI_ENVIRONMENT_NAME" env)
+    (when (not (getenv "REFRESH_TOKEN"))
+      (well/set-refresh-token)))
+
+  (defun well/switch-development ()
+    (interactive)
+    (well/switch-env "development"))
+
+  (defun well/switch-integration ()
+    (interactive)
+    (well/switch-env "integration"))
+
+  (defun well/switch-validation ()
+    (interactive)
+    (well/switch-env "validation"))
+
+  (defun well/set-refresh-token ()
+    (interactive)
+    (setenv "REFRESH_TOKEN" (read-string "REFRESH_TOKEN: ")))
+
+  (defun well/refresh-tokens ()
+    (interactive)
+    (-let [tokens (shell-command-to-string (format "node %s useTokens" well/internal-auth-util-path))]
+      (setenv "ACCESS_TOKEN" (cadr (s-match "accessToken:[ \n\t]+'\\(.*\\)'" tokens)))
+      (setenv "AUTH_TOKEN" (cadr (s-match "authToken:[ \n\t]+'\\(.*\\)'" tokens)))
+      (setq well/token-last-update (string-to-number (format-time-string "%s")))))
+
+  (defun well/tokens ()
+    (interactive)
+    (when (or (not well/token-last-update)
+              (< (+ well/token-last-update 290) (string-to-number (format-time-string "%s"))))
+      (well/refresh-tokens))
+    `(,(getenv "ACCESS_TOKEN") . ,(getenv "AUTH_TOKEN")))
+
+  (defun well/access-token ()
+    (interactive)
+    (car (well/tokens)))
+
+  (defun well/auth-token ()
+    (interactive)
+    (cdr (well/tokens)))
 #+end_src
