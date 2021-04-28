@@ -245,26 +245,24 @@ This is my window manager.
 #+begin_src bash :tangle ~/.config/bspwm/bspwmrc
   #!/bin/bash
 
-  init-desktops
-
   bspc config automatic_scheme longest_side
   bspc config initial_polarity second_child
 
   bspc config pointer_follows_focus false
   bspc config focus_follows_pointer true
   bspc config single_monocle        true
-  bspc config gapless_monocle       false
+  bspc config gapless_monocle       true
   bspc config borderless_monocle    true
   bspc config window_gap            "$(xrdb-get-value wm.gaps)"
   bspc config border_width          "$(xrdb-get-value wm.border)"
   bspc config split_ratio           0.52
 
 
-  export TOP_GAP=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
-  export SCREEN_WIDTH=$(bspwmc focused_monitor_width)
-  export SCREEN_HEIGHT=$(bspwmc focused_monitor_height)
-  export RECT_TOP_HALF=${SCREEN_WIDTH}x$((SCREEN_HEIGHT / 2))+0+${TOP_GAP}
-  export RECT_TOP_POPUP="$((SCREEN_WIDTH / 3 + 100))x400+$((SCREEN_WIDTH / 2 - (SCREEN_WIDTH / 3 + 100) / 2 ))+${TOP_GAP}"
+  TOP_GAP=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
+  SCREEN_WIDTH=$(bspwmc focused_monitor_width)
+  SCREEN_HEIGHT=$(bspwmc focused_monitor_height)
+  RECT_TOP_HALF=${SCREEN_WIDTH}x$((SCREEN_HEIGHT / 2))+0+${TOP_GAP}
+  RECT_TOP_POPUP="$((SCREEN_WIDTH / 3 + 100))x400+$((SCREEN_WIDTH / 2 - (SCREEN_WIDTH / 3 + 100) / 2 ))+${TOP_GAP}"
 
   bspc rule --add '*:float'   state=floating
   bspc rule --add '*:tophalf' state=floating sticky=on border=off rectangle="$RECT_TOP_HALF"
@@ -275,8 +273,9 @@ This is my window manager.
   bspc rule --add Zenity           state=floating
   bspc rule --add feh              state=floating
   bspc rule --add copyq            state=floating border=off
-  bspc rule --add mpv              state=floating
-  bspc rule --add 'mpv:youtube'    focus=off
+  bspc rule --add 'mpv:youtube'    state=floating focus=off
+  bspc rule --add Emacs            state=tiled
+  bspc rule --add emacs            state=tiled
 
   # Don't manage some windows
   bspc rule --add Screenkey     manage=off
@@ -285,6 +284,8 @@ This is my window manager.
 
   bspc rule -a Vivaldi-stable desktop='^1' follow=on
   bspc rule -a firefox        desktop='^1' follow=on
+
+  init-desktops
 #+end_src
 ** Polybar
 #+begin_src conf :tangle ~/.config/polybar/config
@@ -327,7 +328,7 @@ This is my window manager.
 
   modules-left = bspwm xwindow
   modules-center = mpd
-  modules-right = pacman optimus xkeyboard volume memory cpu temperature battery date powermenu
+  modules-right = pacman xkeyboard volume memory cpu temperature battery date powermenu
 
   tray-position = right
   tray-padding = 2
@@ -644,10 +645,6 @@ This is my window manager.
   super + w
       bspc node --close
 
-  # kill window
-  super + shift + w
-      bspc  node -k
-
   # Make window sticky
   super + i
       bspc node -g sticky
@@ -679,7 +676,7 @@ This is my window manager.
 
   # focus next/prev window
   alt + {_, shift +} Tab
-      bspc node -f {next,prev}.local
+      bspc node -f {next,prev}.window.local
 
   # change gap size
   super {_, shift +} g
@@ -738,12 +735,13 @@ This is my window manager.
   hyper + x
       /bin/sh -c "term --float --geometry=150x20 -e fuzzy kill"
 
+  # An interactive calculator
   hyper + equal
       menu calc
 
   # run some apps directly
-  hyper + r; {f, q, e, r, t, v, w, k}
-      {firefox, qutebrowser, emacsclient -c, jaro ~, lxtask, vivaldi-stable, whatsapp-nativefier-dark, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
+  hyper + r; {f, q, e, r, t, v, k}
+      {firefox, qbittorrent, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
 
   hyper + r; p; {s, p, w}
       pqiv {~/Pictures/screenshots/, ~/Pictures/phone/Camera, ~/Pictures/wallpapers/}
@@ -752,29 +750,32 @@ This is my window manager.
   super + a
       menu menu
 
-  hyper + {a, f, F, m, M, P, o, y, Y, b}
-      menu {menu,files --open,file_contents,mpd-artists,mpd-all,mpd-playlist,passwords,youtube --video,youtube --video --playlist=$YT_MAIN_PLAYLIST, bookmarks}
+  # Show some menus: an app menu, searc in files, search in file contents, youtube
+  hyper + {a, f, F, o, y, Y, b}
+      menu {menu,files --open,file_contents,passwords,youtube --video,youtube --video --playlist=$YT_MAIN_PLAYLIST, bookmarks}
 
-  # popups
-  hyper + {c,n,t,i}
-      popup {calendar,music,translate,mail}
+  # Show popups for calendar, translate and mail
+  hyper + {c,t,i}
+      popup {calendar,translate,mail}
 
-  # random wallpaper
+  # Set a Random wallpaper
   hyper + apostrophe
       feh --bg-scale $(find "$DIR_WALLPAPERS" | shuf -n 1)
 
-  # screenshot
+  # Take screenshot
   {Print, hyper + s, shift + Print, control + Print, control + shift + Print}
       take-ss --{full,clip-area,area,wait-full,wait-area}
 
+  # Take screenshot and edit it
   hyper + S
       take-ss --edit-area
 
+  # Save clipboard image as file
   hyper + alt + s
-      if cb-save ~/cb.png; then notify-send "Saved."; else; notify-send "Not saved."; fi
+      cb-save
 
   # toggle notification center
-  hyper + N
+  hyper + n
       kill -s USR1 $(pidof deadd-notification-center)
 
   # #############################################################################
@@ -947,6 +948,8 @@ This is my window manager.
 
     # Vi mode
     - { key: A,                           mode: Vi, action: ToggleViMode   }
+    - { key: 5,  mods: Shift,             mode: Vi, action: Last }
+    # ^ See https://github.com/alacritty/alacritty/issues/4111
 
     #
     #- { key: Paste,                                action: Paste          }
@@ -1013,7 +1016,6 @@ This is my window manager.
     #- { key: Add,      mods: Control,                 action: IncreaseFontSize }
     #- { key: Subtract, mods: Control,                 action: DecreaseFontSize }
     #- { key: Minus,    mods: Control,                 action: DecreaseFontSize }
-
 #+end_src
 
 * Shells
@@ -1118,13 +1120,13 @@ This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really 
   alias git-todo="rg 'FIXME|TODO'"
   alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd+ | bc"
 #+end_src
-** Zsh
+* Zsh
 Check out these links to get a grasp of how all of these stuff work. I also tried to add notes to each file.
 - https://wiki.archlinux.org/index.php/Zsh
 - https://unix.stackexchange.com/questions/71253/what-should-shouldnt-go-in-zshenv-zshrc-zlogin-zprofile-zlogout
 - https://blog.flowblok.id.au/2013-02/shell-startup-scripts.html (I don't use the technique described here, just linking this for amazing graphs)
 
-*** ~/.zshenv
+** ~/.zshenv
 - This file is sourced first.
 - This file is sourced every time, no matter which type of shell you are firing up (interactive/non-interactive/login/non-login).
 - System-wide equivalent of this file is =/etc/zshenv= or =/etc/zsh/zshenv=.
@@ -1178,7 +1180,7 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   # vi: foldmethod=marker
 #+end_src
 
-*** ~/.zprofile
+** ~/.zprofile
 - This file is sourced after =.zshenv=.
 - This file is read *only* while logging in and it's only sourced once.
 - System-wide equivalent of this file is =/etc/zprofile= or =/etc/zsh/zprofile=.
@@ -1211,22 +1213,6 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   export BSPWM_SOCKET="/tmp/bspwm-socket"
   export XDG_CONFIG_DIRS=/usr/etc/xdg:/etc/xdg
 
-  # FZF configuration {{{
-  export FZF_BINDINGS="\
-    ctrl-d:page-down,ctrl-u:page-up,\
-    alt-j:preview-down,alt-k:preview-up,\
-    alt-d:preview-page-down,alt-u:preview-page-up,\
-    alt-e:execute($EDITOR {}),\
-    alt-y:execute-silent(echo {} | xcopy),\
-    ctrl-p:toggle-preview"
-
-  export FZF_DEFAULT_OPTS="
-    --bind \"$FZF_BINDINGS\" \
-    --header='(c-p: toggle-preview | c-d/u: page up/down | a-j/k: preview up/down | a-y: copy | a-e: edit)' \
-    --reverse"
-  # }}}
-
-
   # Following automatically calls "startx" when you login on tty1:
   if [[ -z ${DISPLAY} && ${XDG_VTNR} -eq 1 ]]; then
       # Logs can be found in ~/.xorg.log
@@ -1234,83 +1220,41 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   fi
 #+end_src
 
-*** ~/.zshrc
+** Dumb mode
 #+begin_src bash :tangle ~/.zshrc
+  # Don't do any configuration if dumb terminal is requested
   [[ $TERM == "dumb" ]] && unsetopt zle && PS1='$ ' && return
+#+end_src
 
-  # Plugins {{{
-  source ~/.local/bin/antigen.zsh
+** Installing plugins
+#+begin_src bash :tangle ~/.zshrc
+  # Required some plugins (like fzf-tab) to work
+  autoload -Uz compinit; compinit
+  ANTIGEN_FILE=$HOME/.local/bin/antigen.zsh
+
+  if [[ ! -f $ANTIGEN_FILE ]]; then
+     echo 'Installing antigen...'
+     curl -L git.io/antigen > $ANTIGEN_FILE
+  else
+     source $ANTIGEN_FILE
+  fi
 
   antigen use oh-my-zsh
   antigen bundle git
   antigen bundle zsh-users/zsh-autosuggestions
   antigen bundle zsh-users/zsh-syntax-highlighting
   antigen bundle zsh-users/zsh-history-substring-search
-  antigen bundle zsh-users/zsh-completions
   antigen bundle kutsan/zsh-system-clipboard
-  antigen theme agnoster
+  antigen theme tjkirch # agnoster
+  antigen bundle Aloxaf/fzf-tab
   antigen apply
-  # }}}
 
-  # history-substring-search settings {{{
-  # bind UP and DOWN arrow keys to history substring search
-  zmodload zsh/terminfo
-  bindkey "$terminfo[kcuu1]" history-substring-search-up
-  bindkey "$terminfo[kcud1]" history-substring-search-down
-  bindkey -M vicmd 'k' history-substring-search-up
-  bindkey -M vicmd 'j' history-substring-search-down
-  # }}}
+  # enable emacs keybindings
+  bindkey -e
+#+end_src
 
-  # General settings {{{
-  setopt autocd histignoredups appendhistory incappendhistory histreduceblanks
-
-  zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'       # Case insensitive tab completion
-  zstyle ':completion:*' rehash true                              # automatically find new executables in path
-  zstyle ':completion:*' accept-exact '*(N)'
-  zstyle ':completion:*' use-cache on
-  zstyle ':completion:*' cache-path ~/.zsh/cache
-
-  HISTFILE=~/.zsh_history
-  HISTSIZE=100000
-  SAVEHIST=100000
-  HISTORY_SUBSTRING_SEARCH_FUZZY=1
-
-  bindkey -v                                                      # enable vi keybindings
-  # }}}
-
-  # Aliases {{{
-  source ~/.config/aliases
-  # }}}
-
-  # Source some files {{{
-  files=(
-      /usr/share/fzf/key-bindings.zsh                              # fzf history search keybindings
-      $HOME/.nix-profile/share/fzf/key-bindings.zsh                # fzf history search keybindings
-  )
-
-  for file in $files; do
-      [[ -f "$file" ]] && source $file
-  done
-  # }}}
-
-  # vterm integration (check out the file for more info) {{{
-  if is-emacs; then
-      <<zsh-emacs-configuration>>
-  fi
-  # }}}
-
-  # less colors (systemd can't import these) {{{
-  export LESS_TERMCAP_mb=$'\E[1;31m'     # begin bold
-  export LESS_TERMCAP_md=$'\E[1;36m'     # begin blink
-  export LESS_TERMCAP_me=$'\E[0m'        # reset bold/blink
-  export LESS_TERMCAP_so=$'\E[01;44;33m' # begin reverse video
-  export LESS_TERMCAP_se=$'\E[0m'        # reset reverse video
-  export LESS_TERMCAP_us=$'\E[1;32m'     # begin underline
-  export LESS_TERMCAP_ue=$'\E[0m'        # reset underline
-  export GROFF_NO_SGR=1                  # for konsole and gnome-terminal
-  # }}}
-
-  # Override agnoster themes prompt_dir {{{
+** Theme settings
+#+begin_src bash :tangle ~/.zshrc
   # https://github.com/sorin-ionescu/prezto/blob/master/modules/prompt/functions/prompt-pwd
   function prompt_dir {
       setopt localoptions extendedglob
@@ -1337,109 +1281,201 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
       unset current_pwd
       prompt_segment blue $CURRENT_FG "$ret_directory"
   }
-  # }}}
-
-  <<zsh-utility-functions>>
-
-  # This file contains stuff that I don't want to commit to git
-  # or stuff that are temporarily there etc.
-  [[ -f $HOME/.extrarc ]] && source $HOME/.extrarc
-
-  # vi: foldmethod=marker
 #+end_src
 
-*** Utility functions
-The following gets tangled into =~/.zshrc=.
+** Plugin configuration
+*** history-substring-search
+#+begin_src bash :tangle ~/.zshrc
+  # bind UP and DOWN arrow keys to history substring search
+  zmodload zsh/terminfo
+  bindkey "$terminfo[kcuu1]" history-substring-search-up
+  bindkey "$terminfo[kcud1]" history-substring-search-down
+  bindkey -M vicmd 'k' history-substring-search-up
+  bindkey -M vicmd 'j' history-substring-search-down
+#+end_src
 
-#+name: zsh-utility-functions
-#+begin_src bash
-  # Utility functions (functions I only use interactively) {{{
+*** fzf-tab
+- You also may need to run =build-fzf-tab-module= for the first time.
+
+#+begin_src bash :tangle ~/.zshrc
+  # disable sort when completing `git checkout`
+  zstyle ':completion:*:git-checkout:*' sort false
+  # set descriptions format to enable group support
+  zstyle ':completion:*:descriptions' format '[%d]'
+  # preview directory's content with lsd when completing cd
+  zstyle ':fzf-tab:complete:cd:*' fzf-preview 'lsd -1 --icon=always --color=always $realpath'
+  # replace current query with current candidate's text (so that you
+  # trigger continuous completion with "/")
+  #zstyle ':fzf-tab:*' fzf-bindings 'tab:replace-query'
+  # zstyle ':fzf-tab:*' fzf-command ftb-tmux-popup
+
+  enable-fzf-tab
+#+end_src
+
+** Utility functions
+#+begin_src bash :tangle ~/.zshrc
   function mkcd { mkdir -p "$1"; cd "$1"; } # Make and cd to the dir
   function cpcd { cp "$1" "$2" && cd "$2"; } # Copy and go to the directory
   function mvcd { mv "$1" "$2" && cd "$2"; } # Move and cd to the dir
   function cheat { curl http://cheat.sh/"$1"; }
   function shortenurl { curl -F"shorten=$1" "https://0x0.st"; }
   function uploadfile { curl -F"file=@$1" "https://0x0.st"; }
-  # # ex - archive extractor
-  # # usage: ex <file>
-  function ex {
-    if [[ -f $1 ]] ; then
-      case $1 in
-        ,*.tar.bz2)   tar xjf "$1"   ;;
-        ,*.tar.gz)    tar xzf "$1"   ;;
-        ,*.bz2)       bunzip2 "$1"   ;;
-        ,*.rar)       unrar x "$1"   ;;
-        ,*.gz)        gunzip "$1"    ;;
-        ,*.tar)       tar xf "$1"    ;;
-        ,*.tbz2)      tar xjf "$1"   ;;
-        ,*.tgz)       tar xzf "$1"   ;;
-        ,*.zip)       unzip "$1"     ;;
-        ,*.Z)         uncompress "$1";;
-        ,*.7z)        7z x "$1"      ;;
-        ,*)           echo "'$1' cannot be extracted via ex()" ;;
+
+  function extract {
+      if [[ -f $1 ]] ; then
+          case $1 in
+              ,*.tar.bz2) tar xjf "$1"   ;;
+              ,*.tar.gz)  tar xzf "$1"   ;;
+              ,*.bz2)     bunzip2 "$1"   ;;
+              ,*.rar)     unrar x "$1"   ;;
+              ,*.gz)      gunzip "$1"    ;;
+              ,*.tar)     tar xf "$1"    ;;
+              ,*.tbz2)    tar xjf "$1"   ;;
+              ,*.tgz)     tar xzf "$1"   ;;
+              ,*.zip)     unzip "$1"     ;;
+              ,*.Z)       uncompress "$1";;
+              ,*.7z)      7z x "$1"      ;;
+              ,*)        echo "'$1' cannot be extracted via ex()" ;;
+          esac
+      else
+          echo "Usage:"
+          echo "ex <archive-name>"
+      fi
+  }
+
+  function compress {
+      local EXT="$1"; shift
+      case "$EXT" in
+          -h|--help)
+              echo "Usage:"
+              echo "compress <archive-name>.EXT file1 file2"
+              echo
+              echo "EXT can be one of the following: .7z .tar.gz .tar.bz2 .zip"
+              ;;
+          ,*.7z)
+              7z a "$EXT" "$@"
+              ;;
+          ,*.tar.gz)
+              tar -czvf "$EXT" "$@"
+              ;;
+          ,*.tar.bz2)
+              tar -cjvf "$EXT" "$@"
+              ;;
+          ,*.zip)
+              zip -r "$EXT" "$@"
+              ;;
+          ,*)
+              echo "Unrecognized EXT: $1"
+              echo
+              compress --help
+              ;;
       esac
-    else
-      echo "'$1' is not a valid file"
-    fi
   }
-  # }}}
 #+end_src
-*** Emacs configuration
-The following gets tangled into =~/.zshrc=.
 
-#+name: zsh-emacs-configuration
-#+begin_src bash
-  # With this function we can send elisp commands while we are on emacs vterm
-  # for example, "elisp message hey" would send (message "hey") to emacs.
-  function elisp {
-      if [[ -n "$TMUX" ]]; then
-          # tell tmux to pass the escape sequences through
-          # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
-          printf "\ePtmux;\e\e]51;E"
-      elif [[ "${TERM%%-*}" = "screen" ]]; then
-          # GNU screen (screen, screen-256color, screen-256color-bce)
-          printf "\eP\e]51;E"
-      else
+** General settings
+#+begin_src bash :tangle ~/.zshrc
+  FILES_TO_SOURCE=(
+      $HOME/.config/aliases
+      # ^ All aliases, also sourcing it from other shells
+      /usr/share/fzf/key-bindings.zsh
+      # ^ fzf history search keybindings
+      $HOME/.nix-profile/share/fzf/key-bindings.zsh
+      # ^ fzf history search keybindings
+      $HOME/.extrarc
+      # ^ Contains stuff that I don't want to commit to git
+  )
+
+  for file in $FILES_TO_SOURCE; do
+      [[ -f "$file" ]] && source $file
+  done
+
+  # Colors for less
+  export LESS_TERMCAP_mb=$'\E[1;31m'     # begin bold
+  export LESS_TERMCAP_md=$'\E[1;36m'     # begin blink
+  export LESS_TERMCAP_me=$'\E[0m'        # reset bold/blink
+  export LESS_TERMCAP_so=$'\E[01;44;33m' # begin reverse video
+  export LESS_TERMCAP_se=$'\E[0m'        # reset reverse video
+  export LESS_TERMCAP_us=$'\E[1;32m'     # begin underline
+  export LESS_TERMCAP_ue=$'\E[0m'        # reset underline
+  export GROFF_NO_SGR=1                  # for konsole and gnome-terminal
+
+  # Some variables
+  export FZF_DEFAULT_OPTS='--reverse --bind="tab:replace-query"'
+
+  setopt autocd histignoredups appendhistory incappendhistory histreduceblanks
+  # unsetopt BEEP
+  unsetopt LIST_BEEP
+
+  # Case insensitive tab completion
+  zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+  # automatically find new executables in path
+  zstyle ':completion:*' rehash true
+  zstyle ':completion:*' accept-exact '*(N)'
+  zstyle ':completion:*' use-cache on
+  zstyle ':completion:*' cache-path ~/.zsh/cache
+
+  HISTFILE=~/.zsh_history
+  HISTSIZE=100000
+  SAVEHIST=100000
+  HISTORY_SUBSTRING_SEARCH_FUZZY=1
+#+end_src
+
+** Emacs configuration
+#+begin_src bash :tangle ~/.zshrc
+  if is-emacs; then
+      # With this function we can send elisp commands while we are on emacs vterm
+      # for example, "elisp message hey" would send (message "hey") to emacs.
+      function elisp {
+          if [[ -n "$TMUX" ]]; then
+              # tell tmux to pass the escape sequences through
+              # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
+              printf "\ePtmux;\e\e]51;E"
+          elif [[ "${TERM%%-*}" = "screen" ]]; then
+              # GNU screen (screen, screen-256color, screen-256color-bce)
+              printf "\eP\e]51;E"
+          else
+              printf "\e]51;E"
+          fi
+
           printf "\e]51;E"
-      fi
+          local r
+          while [[ $# -gt 0 ]]; do
+              r="${1//\\/\\\\}"
+              r="${r//\"/\\\"}"
+              printf '"%s" ' "$r"
+              shift
+          done
 
-      printf "\e]51;E"
-      local r
-      while [[ $# -gt 0 ]]; do
-          r="${1//\\/\\\\}"
-          r="${r//\"/\\\"}"
-          printf '"%s" ' "$r"
-          shift
-      done
+          if [[ -n "$TMUX" ]]; then
+              # tell tmux to pass the escape sequences through
+              # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
+              printf "\007\e\\"
+          elif [[ "${TERM%%-*}" = "screen" ]]; then
+              # GNU screen (screen, screen-256color, screen-256color-bce)
+              printf "\007\e\\"
+          else
+              printf "\e\\"
+          fi
+      }
 
-      if [[ -n "$TMUX" ]]; then
-          # tell tmux to pass the escape sequences through
-          # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
-          printf "\007\e\\"
-      elif [[ "${TERM%%-*}" = "screen" ]]; then
-          # GNU screen (screen, screen-256color, screen-256color-bce)
-          printf "\007\e\\"
-      else
-          printf "\e\\"
-      fi
-  }
+      # Helper for clearing screen
+      function vterm_printf {
+          if [[ -n "$TMUX" ]]; then
+              # tell tmux to pass the escape sequences through
+              # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
+              printf "\ePtmux;\e\e]%s\007\e\\" "$1"
+          elif [[ "${TERM%%-*}" = "screen" ]]; then
+              # GNU screen (screen, screen-256color, screen-256color-bce)
+              printf "\eP\e]%s\007\e\\" "$1"
+          else
+              printf "\e]%s\e\\" "$1"
+          fi
+      }
 
-  # Helper for clearing screen
-  function vterm_printf {
-      if [[ -n "$TMUX" ]]; then
-          # tell tmux to pass the escape sequences through
-          # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
-          printf "\ePtmux;\e\e]%s\007\e\\" "$1"
-      elif [[ "${TERM%%-*}" = "screen" ]]; then
-          # GNU screen (screen, screen-256color, screen-256color-bce)
-          printf "\eP\e]%s\007\e\\" "$1"
-      else
-          printf "\e]%s\e\\" "$1"
-      fi
-  }
-
-  # Rebind clear so that scrollback is also cleared on emacs vterm
-  alias clear='vterm_printf "51;Evterm-clear-scrollback";tput clear'
+      # Rebind clear so that scrollback is also cleared on emacs vterm
+      alias clear='vterm_printf "51;Evterm-clear-scrollback";tput clear'
+  fi
 #+end_src
 * Utilities
 ** .tmux.conf
@@ -1553,21 +1589,9 @@ In this file I define some file associations. Please refer to [[https://github.c
   (define (screen-height)
     (string->number (string-trim-both (read-sys-out "bspwmc focused_monitor_height"))))
 
-  (define (parent-path path)
-    (string-join (reverse (cdr (reverse (string-split path #\/)))) "/"))
-
-  (define (index-of a b)
-    (let [(tail (member a (reverse b)))]
-      (and tail (length (cdr tail)))))
-
   ;;
   ;; Associations
   ;;
-
-  (assoc
-    #:pattern "x-scheme-handler/mpv"
-    #:program "which ffmpeg; which mpv; ffmpeg -version; ffmpeg -protocols 2>&1; echo hehehe-$(echo %f | sed 's/mpv:\\/\\///'); vlc $(echo %f | sed 's/mpv:\\/\\///')"
-    #:view #t)
 
   (assoc
     #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
@@ -1628,7 +1652,8 @@ In this file I define some file associations. Please refer to [[https://github.c
                 "^https?://(www.)?youtu.be/"
                 "^https?://(www.)?v.redd.it/\\w+/DASH"
                 "^https?://([a-zA-Z-]+)?streamable.com"
-                "^https?://giant.gfycat.com/*+"
+                "^https?://giant.gfycat.com/.+"
+                "https?://v.redd.it/.+"
                 "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
     #:program `("tsp"
                 "mpv"
@@ -1656,7 +1681,7 @@ In this file I define some file associations. Please refer to [[https://github.c
 
   (assoc
     #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
-    #:program "tuir %f"
+    #:program "ttrv %f"
     #:term "term -e"
     #:tmux "tmux split-window -h"
     #:on-error (open-with 'browser))
@@ -1736,6 +1761,9 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
   use-formatting=true
   wrap-at=75
   contacts-autohide=true
+  color=true
+  partition-contacts=true
+  clipboard-keep-attachments=true
 #+end_src
 ** .inputrc
 If I ever need to resort to use bash.
@@ -2489,7 +2517,13 @@ mpd_music_dir = "~/Music" # Needed for tag editor
 #+begin_src conf :tangle ~/.config/pqivrc
   [options]
   thumbnail-persistence=yes
+  thumbnail-size=256x256
   hide-info-box=yes
+  browse=yes
+  auto-montage-mode=yes
+  max-depth=2
+  lazy-load=yes
+  allow-empty-window=yes
 
   [keybindings]
   ;; next/prev image
@@ -2620,8 +2654,17 @@ This file is just used for loading the configuration through an org file.
   (org-babel-load-file "~/.emacs.d/settings.org")
 #+end_src
 ** Neovim
+*** Install vim-plug
+You need to install =vim-plug= to be able to install vim extensions.
+
+#+begin_src sh
+  sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
+         https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+#+end_src
+
+
 *** Configuration
-#+begin_src vim :tangle ~/.config/nvim/init.vim
+#+begin_src vimrc :tangle ~/.config/nvim/init.vim
   " ##################################################
   "                   (_)
   "         __   ___ _ __ ___  _ __ ___
@@ -2995,194 +3038,194 @@ This file is just used for loading the configuration through an org file.
   " vi: foldmethod=marker
 #+end_src
 *** Minimal configuration
-#+begin_src vim :tangle ~/.config/nvim/minimal.vim
-" ##################################################
-"                   (_)
-"         __   ___ _ __ ___  _ __ ___
-"         \ \ / / | '_ ` _ \| '__/ __|
-"          \ V /| | | | | | | | | (__
-"         (_)_/ |_|_| |_| |_|_|  \___|
-" ##################################################
+#+begin_src vimrc :tangle ~/.config/nvim/minimal.vim
+  " ##################################################
+  "                   (_)
+  "         __   ___ _ __ ___  _ __ ___
+  "         \ \ / / | '_ ` _ \| '__/ __|
+  "          \ V /| | | | | | | | | (__
+  "         (_)_/ |_|_| |_| |_|_|  \___|
+  " ##################################################
 
 
-" visuals {{{
-set background=dark                " rearranges colors for dark background
-set colorcolumn=80                 " 80-col line
-set termguicolors                  " true color support
-set number relativenumber          " line numbers relative to current line ()
-set cursorline                     " highlight current line
-"hi Normal guibg=none ctermbg=none| " transparent background
-" }}}
+  " visuals {{{
+  set background=dark                " rearranges colors for dark background
+  set colorcolumn=80                 " 80-col line
+  set termguicolors                  " true color support
+  set number relativenumber          " line numbers relative to current line ()
+  set cursorline                     " highlight current line
+  "hi Normal guibg=none ctermbg=none| " transparent background
+  " }}}
 
-" tabs and spaces {{{
-set mouse=a               " enable mouse (helps precise resizing etc)
-set tabstop=4             " tab-char width
-set shiftwidth=4          " indent-level width
-set softtabstop=4         " column count inserted by the tab key
-set expandtab             " tabs -> spaces
-set smartindent           " do it smart
-filetype plugin indent on " determine indent by plugins
-" }}}
+  " tabs and spaces {{{
+  set mouse=a               " enable mouse (helps precise resizing etc)
+  set tabstop=4             " tab-char width
+  set shiftwidth=4          " indent-level width
+  set softtabstop=4         " column count inserted by the tab key
+  set expandtab             " tabs -> spaces
+  set smartindent           " do it smart
+  filetype plugin indent on " determine indent by plugins
+  " }}}
 
-" better defaults {{{
-" search/completion
-set ignorecase " ignore case while searching
-set smartcase  " abc -> Abc and abc, Abc -> only Abc (works in combination with ^^)
-set splitbelow
-set splitright
-set foldmethod=syntax " (indent, marker: fold between {{{ }}})
-" }}}
+  " better defaults {{{
+  " search/completion
+  set ignorecase " ignore case while searching
+  set smartcase  " abc -> Abc and abc, Abc -> only Abc (works in combination with ^^)
+  set splitbelow
+  set splitright
+  set foldmethod=syntax " (indent, marker: fold between {{{ }}})
+  " }}}
 
-" utility {{{
-set showmatch             " visually indicate matching parens
-set autoread              " update buffer if file is edited externally
-set title                 " terminal inherits title
-set clipboard=unnamedplus " use system clipboard
-set inccommand=nosplit    " show effects of a command live
-set spelllang=en_us       " default spelllang
-set signcolumn=yes        " removes flickering caused by lang server
-set undofile              " saves undo history to file (nvim's undodir default is OK)
-set completeopt=menu,menuone,preview,noselect,noinsert
-" }}}
+  " utility {{{
+  set showmatch             " visually indicate matching parens
+  set autoread              " update buffer if file is edited externally
+  set title                 " terminal inherits title
+  set clipboard=unnamedplus " use system clipboard
+  set inccommand=nosplit    " show effects of a command live
+  set spelllang=en_us       " default spelllang
+  set signcolumn=yes        " removes flickering caused by lang server
+  set undofile              " saves undo history to file (nvim's undodir default is OK)
+  set completeopt=menu,menuone,preview,noselect,noinsert
+  " }}}
 
-" netrw (file browser) {{{
-" :help netrw-quickmap
-let g:netrw_banner = 0       " remove banner
-let g:netrw_liststyle = 3    " tree style listing
-let g:netrw_browse_split = 4 " ...
-let g:netrw_altv = 1         " spawn it at left split
-let g:netrw_usetab = 1       " use tab for expanding/shrinking folders
-let g:netrw_winsize = 10     " occupies 10% of window
-" }}}
+  " netrw (file browser) {{{
+  " :help netrw-quickmap
+  let g:netrw_banner = 0       " remove banner
+  let g:netrw_liststyle = 3    " tree style listing
+  let g:netrw_browse_split = 4 " ...
+  let g:netrw_altv = 1         " spawn it at left split
+  let g:netrw_usetab = 1       " use tab for expanding/shrinking folders
+  let g:netrw_winsize = 10     " occupies 10% of window
+  " }}}
 
-" trailing spaces {{{
-set listchars=tab:▸\ ,trail:·       " Show trailing spaces and tabs
-set list                            " ^^ enable it
-autocmd BufWritePre * :%s/\s\+$//e  " remove trailing spaces on save
-" }}}
+  " trailing spaces {{{
+  set listchars=tab:▸\ ,trail:·       " Show trailing spaces and tabs
+  set list                            " ^^ enable it
+  autocmd BufWritePre * :%s/\s\+$//e  " remove trailing spaces on save
+  " }}}
 
-" autocomplete key mappings (tab, stab to select next, prev completion from list) {{{
-inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
-inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
-autocmd! CompleteDone * if pumvisible() == 0 | pclose | endif " Close preview menu when completion is done
-" }}}
+  " autocomplete key mappings (tab, stab to select next, prev completion from list) {{{
+  inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
+  inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+  inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
+  autocmd! CompleteDone * if pumvisible() == 0 | pclose | endif " Close preview menu when completion is done
+  " }}}
 
-" stuff {{{
-nmap <space> <leader>
-inoremap jk <ESC>|         " jk escapes to normal mode
-tnoremap jk <C-\><C-n>|    " jk escapes to normal mode (in terminal mode)
-tnoremap <Esc> <C-\><C-n>| " esc escapes to normal mode
-" }}}
+  " stuff {{{
+  nmap <space> <leader>
+  inoremap jk <ESC>|         " jk escapes to normal mode
+  tnoremap jk <C-\><C-n>|    " jk escapes to normal mode (in terminal mode)
+  tnoremap <Esc> <C-\><C-n>| " esc escapes to normal mode
+  " }}}
 
-" split mappings {{{
-" next sections looks pretty much like my i3 config except Win key is replaced
-" with the Alt key
-" move between buffers with alt+hjkl
-nnoremap <A-h> <C-w>h
-nnoremap <A-j> <C-w>j
-nnoremap <A-k> <C-w>k
-nnoremap <A-l> <C-w>l
+  " split mappings {{{
+  " next sections looks pretty much like my i3 config except Win key is replaced
+  " with the Alt key
+  " move between buffers with alt+hjkl
+  nnoremap <A-h> <C-w>h
+  nnoremap <A-j> <C-w>j
+  nnoremap <A-k> <C-w>k
+  nnoremap <A-l> <C-w>l
 
-" faster resize for buffers
-nnoremap <A-J> <C-w>+
-nnoremap <A-K> <C-w>-
-nnoremap <A-L> <C-w>>
-nnoremap <A-H> <C-w><
-tnoremap <A-J> <C-\><C-n><C-w>+
-tnoremap <A-K> <C-\><C-n><C-w>-
-tnoremap <A-L> <C-\><C-n><C-w>>
-tnoremap <A-H> <C-\><C-n><C-w><
+  " faster resize for buffers
+  nnoremap <A-J> <C-w>+
+  nnoremap <A-K> <C-w>-
+  nnoremap <A-L> <C-w>>
+  nnoremap <A-H> <C-w><
+  tnoremap <A-J> <C-\><C-n><C-w>+
+  tnoremap <A-K> <C-\><C-n><C-w>-
+  tnoremap <A-L> <C-\><C-n><C-w>>
+  tnoremap <A-H> <C-\><C-n><C-w><
 
-" faster split creation/deletion
-nnoremap <silent> <A--> :split<CR>
-nnoremap <silent> <A-\> :vsplit<CR>
-nnoremap <silent> <A-w> :bd<CR>
+  " faster split creation/deletion
+  nnoremap <silent> <A--> :split<CR>
+  nnoremap <silent> <A-\> :vsplit<CR>
+  nnoremap <silent> <A-w> :bd<CR>
 
-" change buffers
-nnoremap <silent> <C-l> :bn<CR>
-nnoremap <silent> <C-h> :bp<CR>
-" }}}
+  " change buffers
+  nnoremap <silent> <C-l> :bn<CR>
+  nnoremap <silent> <C-h> :bp<CR>
+  " }}}
 
-" tabs {{{
-nnoremap <silent> <A-.> :tabnext<CR>|               " alt-.  -> next tab
-tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>|     " alt-.  -> next tab (terminal mode)
-nnoremap <silent> <A-,> :tabprevious<CR>|           " alt-,  -> prev tab
-tnoremap <silent> <A-,> <C-\><C-n>:tabprevious<CR>| " alt-,  -> prev tab (terminal mode)
-nnoremap <silent> <A-1> :1 tabn<CR>|                " alt-1  -> goes to tab 1
-nnoremap <silent> <A-2> :2 tabn<CR>|                " ^^
-nnoremap <silent> <A-3> :3 tabn<CR>|                " ^^
-nnoremap <silent> <A-4> :4 tabn<CR>|                " ^^
-nnoremap <silent> <A-5> :5 tabn<CR>|                " ^^
-nnoremap <silent> <C-t> :tabnew<CR>|                " ctrl-t -> new tab
-" }}}
+  " tabs {{{
+  nnoremap <silent> <A-.> :tabnext<CR>|               " alt-.  -> next tab
+  tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>|     " alt-.  -> next tab (terminal mode)
+  nnoremap <silent> <A-,> :tabprevious<CR>|           " alt-,  -> prev tab
+  tnoremap <silent> <A-,> <C-\><C-n>:tabprevious<CR>| " alt-,  -> prev tab (terminal mode)
+  nnoremap <silent> <A-1> :1 tabn<CR>|                " alt-1  -> goes to tab 1
+  nnoremap <silent> <A-2> :2 tabn<CR>|                " ^^
+  nnoremap <silent> <A-3> :3 tabn<CR>|                " ^^
+  nnoremap <silent> <A-4> :4 tabn<CR>|                " ^^
+  nnoremap <silent> <A-5> :5 tabn<CR>|                " ^^
+  nnoremap <silent> <C-t> :tabnew<CR>|                " ctrl-t -> new tab
+  " }}}
 
-" indention mappings {{{
-vnoremap <Tab> >gv|     " tab indents in visual mode
-vnoremap <S-Tab> <gv|   " s-tab de-indents in visual mode
-inoremap <S-Tab> <C-d>| " s-tab de-indents in insert mode
-" }}}
+  " indention mappings {{{
+  vnoremap <Tab> >gv|     " tab indents in visual mode
+  vnoremap <S-Tab> <gv|   " s-tab de-indents in visual mode
+  inoremap <S-Tab> <C-d>| " s-tab de-indents in insert mode
+  " }}}
 
-" move visual lines (j,k works in traditional way) {{{
-onoremap <silent> j gj
-onoremap <silent> k gk
-nnoremap <silent> j gj
-nnoremap <silent> k gk
-vnoremap <silent> j gj
-vnoremap <silent> k gk
-" }}}
+  " move visual lines (j,k works in traditional way) {{{
+  onoremap <silent> j gj
+  onoremap <silent> k gk
+  nnoremap <silent> j gj
+  nnoremap <silent> k gk
+  vnoremap <silent> j gj
+  vnoremap <silent> k gk
+  " }}}
 
-" Master Wq bindings {{{
-command! Wq wq
-command! W w
-command! Q q
-nnoremap <silent> <CR> :nohlsearch<CR><CR>| " enter -> clear search highlighting
-nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
-nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
-tnoremap <silent> <C-q> <C-\><C-n>:q<CR>|   " ctrl-q -> quit (term)
-" }}}
+  " Master Wq bindings {{{
+  command! Wq wq
+  command! W w
+  command! Q q
+  nnoremap <silent> <CR> :nohlsearch<CR><CR>| " enter -> clear search highlighting
+  nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
+  nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
+  tnoremap <silent> <C-q> <C-\><C-n>:q<CR>|   " ctrl-q -> quit (term)
+  " }}}
 
-" Turkish keyboard mappings {{{
-nnoremap Ş :
-nnoremap ı i
-nnoremap ğ [
-nnoremap ü ]
-nnoremap Ğ {
-nnoremap Ü }
-nnoremap ç .
-nnoremap Ö <
-nnoremap Ç >
-vnoremap Ş :
-vnoremap ı i
-vnoremap ğ [
-vnoremap ü ]
-vnoremap Ğ {
-vnoremap Ü }
-vnoremap ç .
-vnoremap Ö <
-vnoremap Ç >
-" }}}
+  " Turkish keyboard mappings {{{
+  nnoremap Ş :
+  nnoremap ı i
+  nnoremap ğ [
+  nnoremap ü ]
+  nnoremap Ğ {
+  nnoremap Ü }
+  nnoremap ç .
+  nnoremap Ö <
+  nnoremap Ç >
+  vnoremap Ş :
+  vnoremap ı i
+  vnoremap ğ [
+  vnoremap ü ]
+  vnoremap Ğ {
+  vnoremap Ü }
+  vnoremap ç .
+  vnoremap Ö <
+  vnoremap Ç >
+  " }}}
 
-" move in insert mode {{{
-inoremap <C-l> <right>| " ctrl-l -> move right in insert mode
-inoremap <C-h> <left>|  " ...
-inoremap <C-j> <down>|  " ...
-inoremap <C-k> <up>|    " ...
-" }}}
+  " move in insert mode {{{
+  inoremap <C-l> <right>| " ctrl-l -> move right in insert mode
+  inoremap <C-h> <left>|  " ...
+  inoremap <C-j> <down>|  " ...
+  inoremap <C-k> <up>|    " ...
+  " }}}
 
-" utility commands {{{
-command! ConfigReload so $MYVIMRC " reload vim config
-command! ConfigEdit e $MYVIMRC    " edit vim config
-command! Vterm vsplit|term
-command! Term split|term
-command! SpellCheckEn setlocal spell! spelllang=en_us
-" }}}
+  " utility commands {{{
+  command! ConfigReload so $MYVIMRC " reload vim config
+  command! ConfigEdit e $MYVIMRC    " edit vim config
+  command! Vterm vsplit|term
+  command! Term split|term
+  command! SpellCheckEn setlocal spell! spelllang=en_us
+  " }}}
 
-" vi: foldmethod=marker
+  " vi: foldmethod=marker
 #+end_src
 * Firefox
 ** tridactyl
-#+begin_src vim
+#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
   sanitise tridactyllocal tridactylsync
 
   colors quake
@@ -3202,6 +3245,9 @@ command! SpellCheckEn setlocal spell! spelllang=en_us
   command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
   command copyimageurl composite hint -pipe img src | yank
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
+  command copyimageurl composite hint -pipe img src | yank
+  command ytdlhint composite hint -W ! tri-ytdl
+  command ytdl withUrl ! tri-ytdl
 
   " key-bindings
   bind <A-.> tabnext
@@ -3212,11 +3258,33 @@ command! SpellCheckEn setlocal spell! spelllang=en_us
   bind - zoom -0.1 true
   bind p pin
   bind m jaro
-  bind M jaroHint
-  bind ;i copyImage
+  bind M jarohint
+  bind ;i copyimage
+
 
   " vim: set filetype=vim:
 #+end_src
+
+** tri-ytdl
+I use this script with tridactyl to download and save stuff that ~youtube-dl~ can handle. See ~ytdl~ command in tridactyl. It simply save selected link into =~/Documents/memes=. It asks for a file name, if you give an empty file name, it'll create it automatically.
+
+#+begin_src bash :tangle ~/.scripts/tri-ytdl
+  #!/bin/bash
+  cd ~/Documents/memes
+  notify-send "Starting the download..."
+
+  FILE_NAME=$(zenity --entry)
+
+  if [[ -n "$FILE_NAME" ]]; then
+      youtube-dl --no-mtime --output "$FILE_NAME.%(ext)s" "$@"
+  else
+      youtube-dl --no-mtime "$@"
+  fi
+
+  echo -n "$(pwd)/$(/bin/ls -tr | tail -n 1)" | xcopy
+  notify-send "Download finished!" "File path copied to your clipboard."
+#+end_src
+
 * Some desktop files
 ** .local/share/applications/shortcuts.desktop
 Some shortcuts to some folders. These stuff appears in rofi so that, for example, I can just search for =screenshots= and hit enter to open my screenshots directory in =pqiv=.
@@ -3598,22 +3666,28 @@ This part is almost completely untouched. Needs some revamp.
 #+end_src
 ** .scripts/cb-save
 #+begin_src bash :tangle ~/.scripts/cb-save
-  #!/bin/sh
+  #!/bin/bash
 
-  # Save the image in clipboard to given file name.
-  # If first argument is `--display` or `-d`, instead
-  # of saving, it will show the image in the image viewer.
+  FILENAME=$1
 
-  if [ "$1" = "--display" ] || [ "$1" = "-d" ]; then
+  if [[ -z "$FILENAME" ]]; then
+      FILENAME=$(zenity --entry --text="Enter file to save image: (like ~/image.png)")
+  fi
+
+  if [[ "$FILENAME" = "--display" ]]; then
       file=$(mktemp "XXXXX.png")
       if xclip -selection clipboard -t image/png -o > "$file"; then
           feh "$file"
-      else
-          notify-send "Error" "No images in clipboard"
+          exit 0
       fi
-  else
-      xclip -selection clipboard -t image/png -o > "$*"
+  elif [[ -n "$FILENAME" ]]; then
+      if xclip -selection clipboard -t image/png -o > "$FILENAME"; then
+          notify-send "Image saved" "Clipboard image saved in $FILENAME"
+          exit 0
+      fi
   fi
+
+  notify-send "cb-save error" "No images in clipboard or empty path"
 #+end_src
 ** .scripts/chroot-galileo
 #+begin_src bash :tangle ~/.scripts/chroot-galileo
@@ -4109,7 +4183,7 @@ This part is almost completely untouched. Needs some revamp.
 
   # I use API of the invidious to interact with youtube
   # https://github.com/iv-org/invidious/wiki/API
-  INVIDIOUS_INSTANCE="https://invidious.snopyta.org/api/v1"
+  INVIDIOUS_INSTANCE="https://invidious.xyz/api/v1"
 
   all_name='[ALL]'
 
@@ -4125,73 +4199,6 @@ This part is almost completely untouched. Needs some revamp.
       rofi -dmenu -fuzzy -i "$@"
   }
 
-  function _mpd-artists {
-      mpc list artist | sort -f | dmenu -columns 4 -p artist
-  }
-
-  function _mpd-albums {
-      local artist="$1"
-      local albums
-
-      mapfile -t albums < <(mpc list album artist "$artist")
-      if (( ${#albums[@]} > 1 )) ; then
-          {
-              printf '%s\n' "$all_name"
-              printf '%s\n' "${albums[@]}" | sort -f
-          } | dmenu -p album
-      else
-          # We only have one album, so just use that.
-          printf '%s\n' "${albums[0]}"
-      fi
-  }
-
-  function mpd-playlist {
-      local format="%position% - %title% - %album% - %artist%"
-      local track
-
-      track=$(mpc playlist -f "$format" | dmenu -i -p track)
-      track=$(printf '%s' "${track%% *}")
-
-      [[ -z $track ]] || mpc play $track
-  }
-
-  function mpd-artists {
-      local artist=$(_mpd-artists)
-      [[ $artist ]] || exit 1
-
-      local album=$(_mpd-albums "$artist")
-      #[[ $album ]] || exit 2
-
-      if [[ $album == "$all_name" ]]; then
-          mpc clear
-          mpc find artist "$artist" | sort | mpc add
-          mpc play
-      else
-          local songs=$(mpc find artist "$artist" album "$album")
-          if [[ -z "$songs" ]] && [[ -n "$artist" ]]; then
-              [[ -n "$album" ]] && menu youtube "$artist $album"
-          else
-              mpc clear
-              echo "$songs" | sort | mpc add
-              mpc play
-          fi
-      fi
-  }
-
-  function mpd-all {
-      # Show all music files and play selected one. (If it'ts not found search
-      # in youtube.)
-
-      local SONG=$(mpc listall | dmenu)
-      if [ -n "$SONG" ]; then
-          if ! mpc add "$SONG" && [[ -n "$SONG" ]]; then
-              menu youtube "$SONG"
-          else
-              mpc play "$(mpc playlist | wc -l)" # Play the last (just added) song
-          fi
-      fi
-  }
-
   function youtube {
       # Search given string in youtube and show results. Play selected one in mpd or mpv.
 
@@ -4201,7 +4208,7 @@ This part is almost completely untouched. Needs some revamp.
               "--video")           local VIDEO=1                               ;;
               "--playlist="*)      local PLAYLIST=${arg/*=/}                   ;;
               "--out")             local ONLY_PRINT=1                          ;;
-              ,*)                   local SEARCH_STRING="${SEARCH_STRING} $arg" ;;
+              ,*)                  local SEARCH_STRING="${SEARCH_STRING} $arg" ;;
           esac
       done
 
@@ -4271,7 +4278,7 @@ This part is almost completely untouched. Needs some revamp.
   }
 
   function file_contents {
-      term --name="tophalf" -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
+      term --tophalf -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
   }
 
   # Use `menu passwords -dump` to print password info into stdout.
@@ -4346,180 +4353,6 @@ This part is almost completely untouched. Needs some revamp.
       calc*) rofi -show calc -modi calc -no-show-match -no-sort ;;
       ,*) rofi -async-pre-read 0 -modi combi,window,run,vms:rofi_vms,calc -combi-modi window,drun,run -show combi "$@" ;;
   esac
-#+end_src
-** .scripts/mgm
-#+begin_src bash :tangle ~/.scripts/mgm
-  #!/bin/bash
-
-  API="https://servis.mgm.gov.tr/web/"
-  UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"
-  headers=('-H' "Origin: https://mgm.gov.tr" '-H' "Host: mgm.gov.tr" '-H' "User-Agent: $UA")
-
-  parse_event() {
-      event=""
-      case $1 in
-          "A") event="Açık" ;;
-          "AB") event="Az Bulutlu" ;;
-          "PB") event="Parçalı Bulutlu" ;;
-          "CB") event="Çok Bulutlu" ;;
-          "HY") event="Hafif Yağmurlu" ;;
-          "Y") event="Yağmurlu" ;;
-          "KY") event="Kuvvetli Yağmurlu" ;;
-          "KKY") event="Karla Karışık Yağmurlu" ;;
-          "HKY") event="Hafif Kar Yağışlı" ;;
-          "K") event="Kar Yağışlı" ;;
-          "YKY") event="Yoğun Kar Yağışlı" ;;
-          "HSY") event="Hafif Sağanak Yağışlı" ;;
-          "SY") event="Sağanak Yağışlı" ;;
-          "KSY") event="Kuvvetli Sağanak Yağışlı" ;;
-          "MSY") event="Mevzi Sağanak Yağışlı" ;;
-          "DY") event="Dolu" ;;
-          "GSY") event="Gökgürültülü Sağanak Yağışlı" ;;
-          "KGY") event="Kuvvetli Gökgürültülü Sağanak Yağışlı" ;;
-          "SIS") event="Sisli" ;;
-          "PUS") event="Puslu" ;;
-          "DMN") event="Dumanlı" ;;
-          "KF") event="Kum veya Toz Taşınımı" ;;
-          "R") event="Rüzgarlı" ;;
-          "GKR") event="Güneyli Kuvvetli Rüzgar" ;;
-          "KKR") event="Kuzeyli Kuvvetli Rüzgar" ;;
-          "SCK") event="Sıcak" ;;
-          "SGK") event="Soğuk" ;;
-          "HHY") event="Yağışlı" ;;
-      esac
-      echo "$event"
-  }
-
-  find_merkez() {
-      curl -Gs "${headers[@]}" "${API}merkezler" --data-urlencode "il=$IL" --data-urlencode "ilce=$ILCE" | jq '.[0]'
-  }
-
-  get() {
-      query=$(echo "$MERKEZ" | jq ".${3}")
-      curl -s  "${headers[@]}" "${API}${1}?${2}=${query}" | jq '.[0]'
-  }
-
-
-  RAW="no"
-  if [ $1 = "--help" ] || [ $1 = "-h" ]; then
-      echo "mgm IL ILCE"
-      echo "mgm --raw IL ILCE"
-      echo
-      echo "- ILCE is optional."
-      exit
-  elif [ $1 = "--raw" ] || [ $1 =  "-r" ]; then
-      shift
-      RAW=yes
-  fi
-
-  IL="$1"
-  ILCE="$2"
-  MERKEZ=$(find_merkez "$IL" "$ILCE")
-
-  #get "sondurumlar" "merkezid" "merkezId"
-  #get "tahminler/saatlik" "istno" "saatlikTahminIstNo"
-  #get "tahminler/gunluk" "istno" "gunlukTahminIstNo"
-
-
-  sondurum=$(get "sondurumlar" "merkezid" "merkezId")
-  if [ $RAW = "yes" ]; then
-      echo "$sondurum"
-  else
-      humidity=$(echo "$sondurum" | jq '.nem')
-      temperature=$(echo "$sondurum" | jq '.sicaklik')
-      rainChance=$(echo "$sondurum" | jq '.yagis00Now')
-      event=$(parse_event "$(echo "$sondurum" | jq -r '.hadiseKodu')")
-
-      echo "SONDURUM"
-      echo "========"
-      echo "Hadise:           $event"
-      echo "Sicaklik:         $temperature"
-      echo "Nem:              $humidity"
-      echo "Yagmur olasiligi: $rainChance"
-  fi
-
-  # TODO: add peak points
-#+end_src
-** .scripts/monitor-kb-change
-#+begin_src python :tangle ~/.scripts/monitor-kb-change
-  #! /usr/bin/env python3
-
-  # Whenever I connect a new keyboard, I need to run xmodmap and restart xcape.
-  # This script does this automatically.
-
-  import pyudev
-  import time
-  import subprocess
-  import argparse
-
-
-  def reload_keyboard_settings(device):
-      # My keyboard, from the output of `lsusb`
-      if not "045e:07a5".upper() in device.device_path.upper():
-          return
-
-      time.sleep(1)
-      xmod = subprocess.run("xmodmap ~/.Xmodmap", shell=True, capture_output=True)
-      xcape = subprocess.run("killall xcape", shell=True, capture_output=True) # systemd will restart it
-
-  #
-  # Init
-  #
-  ctx = pyudev.Context()
-  monitor = pyudev.Monitor.from_netlink(ctx)
-  monitor.filter_by("input")
-
-  for device in iter(monitor.poll, None):
-      if device.action != "add" or not device.is_initialized:
-          continue
-
-      reload_keyboard_settings(device)
-
-#+end_src
-** .scripts/mpd-yt
-#+begin_src bash :tangle ~/.scripts/mpd-yt
-  #!/bin/bash
-
-  # Play youtube link using mpd.
-  # Usage: mpd-yt [play|add] [youtube_url|direct_music_link] [OPTIONAL: track_name] [OPTIONAL: album_name] [OPTIONAL: artist_name]
-
-  cmd="$1"
-  url="$2"
-  track="$3"
-  album="$4"
-  artist="$5"
-  port=6600
-
-  function send_mpd_command {
-      mpd_command="$1"
-      mpd_id="$2"
-      mpd_args="$3"
-      echo -e "$mpd_command $mpd_id $mpd_args\nclose" | nc localhost $port
-  }
-
-  if [[ $url = *"youtube.com/watch"* ]]; then
-      info_all=$(youtube-dl -f 'bestaudio[ext=m4a]' -o "%(title)s ^ %(duration)s ^ %(artist)s ^ %(album)s ^ %(track)s" "$url" -g --get-filename)
-      url=$(echo $info_all | cut -d" " -f1)
-      info=$(echo $info_all | cut -d" " -f2-)
-      echo $info_all
-
-      video_name=$(echo $info | cut -d^ -f1 | xargs)
-      [[ -z $artist ]] && artist=$(echo $info | cut -d^ -f3 | xargs)
-      [[ -z $album ]] && album=$(echo $info | cut -d^ -f4 | xargs)
-      [[ -z $track ]] && track=$(echo $info | cut -d^ -f5 | xargs)
-      [[ $track == "NA" ]] && track=$video_name
-  fi
-
-  while read answer; do
-      read id_answer
-      id=$(echo $id_answer | cut -d: -f2 | xargs)
-      send_mpd_command addtagid $id "title \"$track\""
-      send_mpd_command addtagid $id "artist \"$artist\""
-      send_mpd_command addtagid $id "album \"$album\""
-
-      [[ $cmd = "play" ]] && send_mpd_command playid $id
-      exit
-  done < <(echo -e "addid $url\nclose" | nc localhost $port)
 #+end_src
 ** .scripts/phone
 #+begin_src bash :tangle ~/.scripts/phone
@@ -4845,7 +4678,7 @@ This part is almost completely untouched. Needs some revamp.
 #+end_src
 ** .scripts/switch-keyboard-layout
 #+begin_src bash :tangle ~/.scripts/switch-keyboard-layout
-  #!/bin/sh -
+  #!/bin/bash
 
   # This script switches between layouts that are defined in ~/.profile.
   # The variable is $KEYBOARD_LAYOUTS and you need to set a comma separated list
@@ -4855,28 +4688,27 @@ This part is almost completely untouched. Needs some revamp.
   # Afterwards you need to update `KEYBOARD_LAYOUTS`, first item must be your default layout.
   # Rest are just the ones that you want to switch.
 
-  function get_current_layout {
+  get_current_layout() {
       setxkbmap -query | grep layout | cut -f2 -d ":" | xargs
   }
 
   # Switch to next layout
-  current_layout=$(get_current_layout)
-  layouts=(${KEYBOARD_LAYOUTS//,/ })
-  for i in "${!layouts[@]}"
-  do
-      if [ "$current_layout" == "${layouts[i]}" ]
-      then
-          if [ ! "${layouts[i+1]}" ]
-          then
-              setxkbmap ${layouts[0]}
+  CURRENT_LAYOUT=$(get_current_layout)
+  LAYOUTS=(${KEYBOARD_LAYOUTS//,/ })
+  for i in "${!LAYOUTS[@]}"; do
+      if [[ "$CURRENT_LAYOUT" == "${LAYOUTS[i]}" ]]; then
+          if [[ ! "${LAYOUTS[i+1]}" ]]; then
+              NEW_LAYOUT=${LAYOUTS[0]}
           else
-              setxkbmap ${layouts[i+1]}
+              NEW_LAYOUT=${LAYOUTS[i+1]}
           fi
       fi
   done
 
-  # Reload .Xmodmap
+  setxkbmap $NEW_LAYOUT
   [[ -f ~/.Xmodmap ]] && xmodmap ~/.Xmodmap
+
+  notify-send --icon=keyboard "Current layout: $NEW_LAYOUT"
 #+end_src
 ** .scripts/take-ss
 #+begin_src bash :tangle ~/.scripts/take-ss
@@ -4906,24 +4738,6 @@ This part is almost completely untouched. Needs some revamp.
 
   notify-send "Screenshot" "Screenshot saved and path is copied to clipboard (if any)"
 #+end_src
-** .scripts/tdk
-#+begin_src bash :tangle ~/.scripts/tdk
-  #!/bin/bash
-
-  get_response() {
-      curl --location --get --silent "http://sozluk.gov.tr/gts" --data-urlencode "ara=$*"
-  }
-
-  if [ "$1" = "--raw" ] || [ "$1" = "-r" ]; then
-      shift
-      response=$(get_response "$*")
-      echo "$response" | jq -C | less --RAW-CONTROL-CHARS --quit-if-one-screen
-  else
-      response=$(get_response "$*")
-      echo "$response" | jq -C '.[] | .anlamlarListe | map({tur: (try .ozelliklerListe[].tam_adi catch ""), anlam: .anlam, ornek: (try {cumle: .orneklerListe[].ornek, yazar: .orneklerListe[].yazar[].kisa_adi} catch "")})' | less --RAW-CONTROL-CHARS --quit-if-one-screen
-  fi
-
-#+end_src
 ** .scripts/term
 #+begin_src bash :tangle ~/.scripts/term
   #!/bin/bash
@@ -4950,6 +4764,7 @@ This part is almost completely untouched. Needs some revamp.
           "--geometry="*) GEOMETRY=${arg#*=}; shift ;;
           "--float") FLOAT='1'; shift ;;
           "--opaque") OPAQUE='1'; shift ;;
+          "--tophalf") TOPHALF='1'; shift ;;
       esac
   done
 
@@ -4965,6 +4780,14 @@ This part is almost completely untouched. Needs some revamp.
           "st")        OPTS+=(-c float) ;;
           "urxvt"*)    OPTS+=(-name float) ;;
           "alacritty") OPTS+=(--class float) ;;
+      esac
+  fi
+
+  if [[ -n "$TOPHALF" ]]; then
+      case "$RUNNER" in
+          "st")        OPTS+=(-c tophalf) ;;
+          "urxvt"*)    OPTS+=(-name tophalf) ;;
+          "alacritty") OPTS+=(--class tophalf) ;;
       esac
   fi
 
@@ -5139,4 +4962,186 @@ This part is almost completely untouched. Needs some revamp.
 #+begin_src bash :tangle ~/.scripts/xres-read-value
   #!/bin/sh
   grep -v "!"  "$HOME/.Xresources" | grep "$1" | cut -d ":" -f 2 | xargs
+#+end_src
+** Information utilities
+*** .scripts/mgm
+#+begin_src bash :tangle ~/.scripts/mgm
+  #!/bin/bash
+
+  API="https://servis.mgm.gov.tr/web/"
+  UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"
+  headers=('-H' "Origin: https://mgm.gov.tr" '-H' "Host: mgm.gov.tr" '-H' "User-Agent: $UA")
+
+  parse_event() {
+      event=""
+      case $1 in
+          "A") event="Açık" ;;
+          "AB") event="Az Bulutlu" ;;
+          "PB") event="Parçalı Bulutlu" ;;
+          "CB") event="Çok Bulutlu" ;;
+          "HY") event="Hafif Yağmurlu" ;;
+          "Y") event="Yağmurlu" ;;
+          "KY") event="Kuvvetli Yağmurlu" ;;
+          "KKY") event="Karla Karışık Yağmurlu" ;;
+          "HKY") event="Hafif Kar Yağışlı" ;;
+          "K") event="Kar Yağışlı" ;;
+          "YKY") event="Yoğun Kar Yağışlı" ;;
+          "HSY") event="Hafif Sağanak Yağışlı" ;;
+          "SY") event="Sağanak Yağışlı" ;;
+          "KSY") event="Kuvvetli Sağanak Yağışlı" ;;
+          "MSY") event="Mevzi Sağanak Yağışlı" ;;
+          "DY") event="Dolu" ;;
+          "GSY") event="Gökgürültülü Sağanak Yağışlı" ;;
+          "KGY") event="Kuvvetli Gökgürültülü Sağanak Yağışlı" ;;
+          "SIS") event="Sisli" ;;
+          "PUS") event="Puslu" ;;
+          "DMN") event="Dumanlı" ;;
+          "KF") event="Kum veya Toz Taşınımı" ;;
+          "R") event="Rüzgarlı" ;;
+          "GKR") event="Güneyli Kuvvetli Rüzgar" ;;
+          "KKR") event="Kuzeyli Kuvvetli Rüzgar" ;;
+          "SCK") event="Sıcak" ;;
+          "SGK") event="Soğuk" ;;
+          "HHY") event="Yağışlı" ;;
+      esac
+      echo "$event"
+  }
+
+  find_merkez() {
+      curl -Gs "${headers[@]}" "${API}merkezler" --data-urlencode "il=$IL" --data-urlencode "ilce=$ILCE" | jq '.[0]'
+  }
+
+  get() {
+      query=$(echo "$MERKEZ" | jq ".${3}")
+      curl -s  "${headers[@]}" "${API}${1}?${2}=${query}" | jq '.[0]'
+  }
+
+
+  RAW="no"
+  if [[ $1 = "--help" ]] || [[ $1 = "-h" ]]; then
+      echo "mgm IL ILCE"
+      echo "mgm --raw IL ILCE"
+      echo
+      echo "- ILCE is optional."
+      exit
+  elif [[ $1 = "--raw" ]] || [[ $1 =  "-r" ]]; then
+      shift
+      RAW=yes
+  fi
+
+  IL="$1"
+  ILCE="$2"
+
+  if [[ -z $IL ]]; then
+      INPUT=$(zenity --entry --text="İl/ilçe (İlçe zorunlu değil): ")
+      IL=$(echo "$INPUT" | cut -d'/' -f1)
+      case $INPUT in
+          ,*/*) ILCE=$(echo "$INPUT" | cut -d'/' -f2) ;;
+      esac
+  fi
+
+  MERKEZ=$(find_merkez "$IL" "$ILCE")
+
+  #get "sondurumlar" "merkezid" "merkezId"
+  #get "tahminler/saatlik" "istno" "saatlikTahminIstNo"
+  #get "tahminler/gunluk" "istno" "gunlukTahminIstNo"
+
+  sondurum=$(get "sondurumlar" "merkezid" "merkezId")
+  if [[ $RAW = "yes" ]]; then
+      echo "$sondurum"
+  else
+      humidity=$(echo "$sondurum" | jq '.nem')
+      temperature=$(echo "$sondurum" | jq '.sicaklik')
+      rainChance=$(echo "$sondurum" | jq '.yagis00Now')
+      event=$(parse_event "$(echo "$sondurum" | jq -r '.hadiseKodu')")
+
+      read -r -d '' SONDURUM << EOF
+  SONDURUM
+  ========
+  Hadise:           $event
+  Sicaklik:         $temperature
+  Nem:              $humidity
+  Yagmur olasiligi: $rainChance
+  EOF
+
+      if [[ -t 1 ]]; then
+          echo "$SONDURUM"
+      else
+          zenity --info --no-wrap --text="$SONDURUM"
+      fi
+  fi
+
+  # TODO: add peak points
+#+end_src
+*** .scripts/tdk
+#+begin_src bash :tangle ~/.scripts/tdk
+  #!/bin/bash
+
+  # Kullanim:
+  # tdk kelime - Anlamlari JSON olarak ekrana basar
+  # tdk        - Interaktif olarak kelimeyi ister ve anlamlari ekrana basar
+  # Interactive shell'den cagirilmadiginda GUI araciligiyla kelimeleri
+  # ister ve yine anlamlari GUI uzerinden siralar
+
+  get_response() {
+      curl --location --get --silent "http://sozluk.gov.tr/gts" --data-urlencode "ara=$*"
+  }
+
+  INPUT="$*"
+  if [[ -z $INPUT ]]; then
+      INPUT=$(zenity --entry --text="Kelime girin: ")
+  fi
+
+  RESULT=$(get_response $INPUT | jq '.[] | .anlamlarListe | map({tur: (try .ozelliklerListe[].tam_adi catch ""), anlam: .anlam, ornek: (try {cumle: .orneklerListe[].ornek, yazar: .orneklerListe[].yazar[].kisa_adi} catch "")})')
+
+  if [[ -t 1 ]]; then
+      echo $RESULT | jq -C '.'
+  else
+      zenity --info --no-wrap --text="$(echo "$RESULT" | jq)"
+  fi
+#+end_src
+
+** System administration
+*** .scripts/toggle-touchpad
+#+begin_src bash :tangle ~/.scripts/toggle-touchpad
+  #!/bin/bash
+
+  DEVICE_IDS=$()
+
+  xinput list | grep -iE "(touchpad|trackpoint)" | grep -ioE 'id=[0-9]+' | cut -d= -f2 | while read DEVICE_ID ; do
+      if xinput list-props $DEVICE_ID | grep "Device Enabled.*:.*1"; then
+          xinput disable $DEVICE_ID
+          notify-send --icon=touchpad-indicator "Device [id=$DEVICE_ID] disabled"
+      else
+          xinput enable $DEVICE_ID
+          notify-send --icon=touchpad-indicator "Device [id=$DEVICE_ID] enabled"
+      fi
+  done
+#+end_src
+
+*** .scripts/setbrightness
+#+begin_src bash :tangle ~/.scripts/setbrightness
+  #!/bin/bash
+
+  BFILE=/sys/class/backlight/intel_backlight/brightness
+  MFILE=/sys/class/backlight/intel_backlight/max_brightness
+
+  if [[ -n $1 ]]; then
+      case $1 in
+          max|MAX)
+              echo $(cat $MFILE) > $BFILE
+              ;;
+          med*|MED*)
+              echo $(( $(cat $MFILE) / 2 )) > $BFILE
+              ;;
+          low*|LOW*)
+              echo $(( $(cat $MFILE) / 12 )) > $BFILE
+              ;;
+          ,*)
+              echo $1 > $BFILE
+              ;;
+      esac
+  else
+      set-brightness $(echo -e "MAX\nMEDIUM\nLOW" | dmenu -i)
+  fi
 #+end_src
