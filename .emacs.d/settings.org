@@ -137,7 +137,11 @@ Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this p
 
 #+begin_src emacs-lisp
   (add-to-list 'load-path "~/.emacs.d/load/")
-  ;; Also load isamert-secrets.el
+#+end_src
+
+Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables defined here throughout my configuration. It contains some api-keys, some tokens or some passwords etc. that I don't want to leak into public. Instead of doing mutations on an external hidden script, I define variables in this external hidden script and reference them in the configuration. This way the logic stays in the public configuration file so that everyone can take a look, but only the variable itself will be hidden from the public.
+
+#+begin_src emacs-lisp
   (load "isamert-secrets")
 #+end_src
 * Basics

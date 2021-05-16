@@ -3,9 +3,13 @@
 ;; I also like to know what's been going on
 
 (defvar isamert/feeds
-  '(("https://t24.com.tr/rss/haber/gundem" news turkish)
+  `((,isamert/github-feed-link personal)
+
+    ("https://t24.com.tr/rss/haber/gundem" news turkish)
     ("https://t24.com.tr/rss/haber/politika" news turkish)
     ("https://t24.com.tr/rss/haber/dunya" news turkish)
+
+    ("https://hnrss.org/frontpage" news)
 
     ("https://www.archlinux.org/feeds/news/" update linux)
     ("https://blog.tecosaur.com/tmio/rss.xml" update emacs)
