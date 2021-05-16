@@ -272,7 +272,7 @@ This is my window manager.
   bspc rule --add Sxiv             state=floating
   bspc rule --add Zenity           state=floating
   bspc rule --add feh              state=floating
-  bspc rule --add copyq            state=floating border=off
+  bspc rule --add copyq            state=floating border=off  rectangle="$RECT_TOP_HALF"
   bspc rule --add 'mpv:youtube'    state=floating focus=off
   bspc rule --add Emacs            state=tiled
   bspc rule --add emacs            state=tiled
@@ -280,7 +280,6 @@ This is my window manager.
   # Don't manage some windows
   bspc rule --add Screenkey     manage=off
   bspc rule --add 'dota2'       border=off
-
 
   bspc rule -a Vivaldi-stable desktop='^1' follow=on
   bspc rule -a firefox        desktop='^1' follow=on
@@ -649,10 +648,6 @@ This is my window manager.
   super + i
       bspc node -g sticky
 
-  # next/prev desktop
-  super + {comma,period}
-      bspc desktop --focus {prev,next}.local.occupied
-
   # focus/move to the given desktop on current monitor
   super + {_,shift + }{1-5}
       bspc {desktop --focus, node --to-desktop} $(bspc query -D -m | sed -n "{1-5}p")
@@ -662,8 +657,11 @@ This is my window manager.
       bspc node --focus last
 
   # focus next/prev monitor
+  # I don't want this shortcut to cycle, that's why I use {west, east}.
+  # If I'm on the most left corner, then "super + ," will not jump into
+  # the rightmost monitor
   super + {comma, period}
-      bspc monitor {prev, next} --focus
+      bspc monitor {west, east} --focus
 
   # move current window to next/prev monitor
   super + shift + {comma, period}
@@ -675,8 +673,8 @@ This is my window manager.
       bspc node --to-desktop $(bspc query -D -m (bspc query -M | sed -n "{1-5}p") -d .active)
 
   # focus next/prev window
-  alt + {_, shift +} Tab
-      bspc node -f {next,prev}.window.local
+  alt + Tab
+      bspc node -f next.window.local.!floating
 
   # change gap size
   super {_, shift +} g
@@ -1245,11 +1243,15 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   antigen bundle zsh-users/zsh-syntax-highlighting
   antigen bundle zsh-users/zsh-history-substring-search
   antigen bundle kutsan/zsh-system-clipboard
-  antigen theme tjkirch # agnoster
+  antigen theme agnoster
   antigen bundle Aloxaf/fzf-tab
   antigen apply
+#+end_src
 
+** Key bindings
+#+begin_src bash :tangle ~/.zshrc
   # enable emacs keybindings
+  # Use C-x C-e to edit command in $EDITOR
   bindkey -e
 #+end_src
 
@@ -1621,9 +1623,8 @@ In this file I define some file associations. Please refer to [[https://github.c
 
   (assoc
     #:name 'editor
-    #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript)")
-    #:program "nvim %f"
-    #:term "term -e"
+    #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript|xml)")
+    #:program "emacsclient -c %f"
     #:view (open-with 'bat)
     #:edit #t)
 
@@ -3236,18 +3237,24 @@ You need to install =vim-plug= to be able to install vim extensions.
 
   " commands
   command withUrl composite get_current_url |
+
   command sync open localhost:8384
+
   command mpv withUrl ! mpv --x11-name=youtube --geometry=853x480-20-20
   command mpvhint hint -W ! mpv
   command mpd withUrl ! mpd-yt play
+
   command jaro withUrl ! jaro
   command jarohint hint -W ! jaro
+
   command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
-  command copyimageurl composite hint -pipe img src | yank
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
-  command ytdlhint composite hint -W ! tri-ytdl
-  command ytdl withUrl ! tri-ytdl
+
+  " Download stuff with youtube-dl into my memes folder
+  " It asks for a file name, without any extension etc
+  command ytdlhint composite hint -W exclaim_quiet tri-ytdl
+  command ytdl withUrl exclaim_quiet tri-ytdl
 
   " key-bindings
   bind <A-.> tabnext
@@ -3260,6 +3267,7 @@ You need to install =vim-plug= to be able to install vim extensions.
   bind m jaro
   bind M jarohint
   bind ;i copyimage
+  bind ;d ytdlhint
 
 
   " vim: set filetype=vim:
@@ -3273,7 +3281,7 @@ I use this script with tridactyl to download and save stuff that ~youtube-dl~ ca
   cd ~/Documents/memes
   notify-send "Starting the download..."
 
-  FILE_NAME=$(zenity --entry)
+  FILE_NAME=$(zenity --entry --text="Enter meme file name (without extension).\nIt will be saved under ~/Documents/memes")
 
   if [[ -n "$FILE_NAME" ]]; then
       youtube-dl --no-mtime --output "$FILE_NAME.%(ext)s" "$@"
@@ -3498,9 +3506,9 @@ This part is almost completely untouched. Needs some revamp.
   # otherwise focus the newest floating node
   function focus_toggle_floating {
       if is_floating; then
-          bspc node newest.!floating --focus
+          bspc node "newest.!hidden.!floating.local.window" --focus
       else
-          bspc node newest.floating --focus
+          bspc node "newest.!hidden.floating.local.window" --focus
       fi
   }
 
@@ -3509,9 +3517,9 @@ This part is almost completely untouched. Needs some revamp.
   function focus {
       local dir="$1"
       if is_floating; then
-          bspc node --focus "$dir.floating"
+          bspc node --focus "$dir.!hidden.floating"
       else
-          bspc node --focus "$dir.!floating"
+          bspc node --focus "$dir.!hidden.!floating"
       fi
   }
 
