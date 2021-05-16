@@ -405,6 +405,16 @@ Colors parentheses depending on their dept.
 Make some temproary windows appear at bottom. This makes buffer management so much easier. Buffers that will match given regex will appear at bottom while covering the given amount of screen.
 
 #+BEGIN_SRC emacs-lisp
+  ;; SOURCE: https://www.reddit.com/r/emacs/comments/345vtl/make_helm_window_at_the_bottom_without_using_any/
+  (defun isamert/shackle-window (name size)
+    "Make the buffer NAME appear at bottom of the window, filling
+    SIZE percent of the window."
+    (add-to-list 'display-buffer-alist
+                 `(,name
+                   (display-buffer-in-side-window)
+                   (inhibit-same-window . t)
+                   (window-height . ,size))))
+
   (isamert/shackle-window "\\*Help\\*" 0.4)
   (isamert/shackle-window "\\*Warnings*\\*" 0.2)
   (isamert/shackle-window "\\*Backtrace*\\*" 0.4)
@@ -419,18 +429,6 @@ Make some temproary windows appear at bottom. This makes buffer management so mu
   (isamert/shackle-window "\\*Org-Babel Error Output\\*" 0.4)
   (isamert/shackle-window "\\*curl error\\*" 0.4)
   (isamert/shackle-window "\\*helpful.*\\*" 0.4)
-
-  ;; SOURCE: https://www.reddit.com/r/emacs/comments/345vtl/make_helm_window_at_the_bottom_without_using_any/
-  (defun isamert/shackle-window (name size)
-    "Make the buffer NAME appear at bottom of the window, filling
-    SIZE percent of the window."
-    (add-to-list 'display-buffer-alist
-                 `(,name
-                   (display-buffer-in-side-window)
-                   (inhibit-same-window . t)
-                   (window-height . ,size))))
-
-
 #+END_SRC
 
 ** Miscellaneous packages
@@ -2338,14 +2336,14 @@ I try to maximize my Emacs usage which brings it's own benefits and downsides wh
 
 ** elfeed
 #+begin_src emacs-lisp
-    ;; TODO: experiment with custom faces
-    ;; (defface elfeed-comic
-    ;;   '((t :foreground "#BFF"))
-    ;;   "Marks comics in Elfeed."
-    ;;   :group 'elfeed)
-    ;;
-    ;; (push '(comic elfeed-comic)
-    ;;       elfeed-search-face-alist)
+  ;; TODO: experiment with custom faces
+  ;; (defface elfeed-comic
+  ;;   '((t :foreground "#BFF"))
+  ;;   "Marks comics in Elfeed."
+  ;;   :group 'elfeed)
+  ;;
+  ;; (push '(comic elfeed-comic)
+  ;;       elfeed-search-face-alist)
 
   (defun isamert/elfeed-auto-tag-url (pairs)
     "Takes a list of url-regex and tag-list pairs and adds a new entry hook for each of them."
