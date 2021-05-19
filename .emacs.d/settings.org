@@ -503,15 +503,19 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
        (("l" visual-line-mode "Wrap lines" :toggle t)
         ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
         ("g" fci-mode "Fill column" :toggle t)
-        ("<SPC>" nil "Quit" :color blue)))))
+        ("<SPC>" nil "Quit" :color blue))))
+
+    (evil-leader/set-key
+      "a" #'appearance/body))
 #+end_src
 * evil-mode
-** Install
+** Basic configuration
 #+BEGIN_SRC emacs-lisp
   (use-package evil
     :ensure t
     :init
-    ;; Disable evil bindings in insert mode
+    ;; Disable evil bindings in insert mode. This needs to be called
+    ;; before loading evil mode
     (setq evil-disable-insert-state-bindings t)
     :config
     ;; But I want some default evil bindings in insert mode, so just
@@ -523,12 +527,18 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
       (kbd "C-p") #'evil-complete-previous
       (kbd "C-o") #'evil-execute-in-normal-state)
 
-    (setq evil-want-integration t
-          evil-want-keybinding t
-          evil-kill-on-visual-paste nil
-          ;; ^ When I paste something in visual mode, I don't want it to take over the kill ring
-          evil-want-C-u-scroll nil)
-          ;; ^ Over the time I found myself utilizing emacs C-u more and more, so disable this
+    (evil-define-key 'normal 'global
+      "Q" #'evil-quit)
+
+    (setq evil-want-integration t)
+    (setq evil-want-keybinding t)
+    ;; When I paste something in visual mode, I don't want it to take
+    ;; over the kill ring I also use evil-exchange, which eliminates the
+    ;; need for this totally
+    (setq evil-kill-on-visual-paste nil)
+    ;; ^ Over the time I found myself utilizing emacs C-u more and more,
+    ;; so disable this
+    (setq evil-want-C-u-scroll nil)
 
     ;; Make horizontal movement cross lines
     (setq-default evil-cross-lines t)
@@ -551,14 +561,6 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
 
     (evil-mode 1))
 #+END_SRC
-
-** Ex Commands
-Some ex commands aliases to prevent typos. See [[https://blog.sanctum.geek.nz/vim-koans/][this]].
-
-#+begin_src emacs-lisp
-  (evil-ex-define-cmd "Q" #'evil-quit)
-  (evil-ex-define-cmd "Wq" #'evil-save-and-quit)
-#+end_src
 
 ** evil-leader
 Enable leader key and bind some keys.
@@ -791,6 +793,14 @@ Also (defined elsewhere):
     (interactive "p")
     (dotimes (_ count) (save-excursion (evil-insert-newline-below))))
 #+end_src
+** evil-exchange
+Change two parts of the text
+#+begin_src emacs-lisp
+  (use-package evil-exchange
+    :ensure t
+    :config
+    (evil-exchange-install))
+#+end_src
 ** goto-chg
 - =g;= goes to the last change. (repeatable)
 - There is also =gv= which selects the last selection. Not related to this package, it's a default functionality but I wanted to mention.
@@ -861,7 +871,7 @@ Also (defined elsewhere):
   (evil-define-key 'normal org-mode-map
     "[[" #'outline-previous-visible-heading
     "]]" #'org-next-visible-heading
-    "[{" #'outline-up-heading
+    "[{" #'isamert/outline-up-heading-or-backward-same-level
     "]}" #'isamert/outline-up-level-then-forward
     "-"  #'org-cycle-list-bullet
 
@@ -900,6 +910,13 @@ Also (defined elsewhere):
     (interactive)
     (ignore-errors (outline-up-heading 1))
     (outline-forward-same-level 1))
+
+  (defun isamert/outline-up-heading-or-backward-same-level ()
+    "Go to one level up or go back same level."
+    (interactive)
+    (condition-case nil
+        (outline-up-heading 1)
+      (error (outline-backward-same-level 1))))
 #+end_src
 
 ** Some vars
@@ -1072,6 +1089,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
           '(("work"  . "⚒")
             ("meeting" . "☎")
             ("side"  . "❄")
+            ("learning" . "♢")
             ("must"  . "✠")
             ("rutin" . "♟")
             ("study" . "☣")))
@@ -1326,8 +1344,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
       "gr" 'magit-reset
       "gcc" 'magit-checkout
       "gcf" 'magit-file-checkout
-      "gbb" 'magit-branch
-      "gbc" 'magit-branch-create))
+      "gb" 'magit-branch))
 #+END_SRC
 
 *** magit-todos
@@ -2152,6 +2169,7 @@ automatically by the usage of =M-q=.
 
 ** Spell checking
 - Use =flyspell-mode= to start spell checking.
+- Use =ispell-change-dictonary= to change dictionaries.
 - ~z=~ or ~zw~ to correct current spelling mistake.
   - ~C-u zw~ to correct all mistakes in order.
 
@@ -2386,6 +2404,7 @@ I try to maximize my Emacs usage which brings it's own benefits and downsides wh
     ;; Just use something like: (blog software) and (metal black)
 
     (load "feeds")
+    (setq elfeed-curl-extra-arguments '("--netrc"))
     (setq elfeed-feeds (mapcar #'isamert/elfeed--expand isamert/feeds))
     (isamert/elfeed-auto-tag-url '(("youtube\\.com" youtube)))
     (isamert/elfeed-auto-tag-title '(("youtube\\.com" youtube)
@@ -2602,7 +2621,6 @@ Keybindings are generally set in-place, following have no context, so they are h
     (split-window-right)
     (other-window 1))
 
-
   (evil-define-key 'normal 'global
     (kbd "M-\\") 'isamert/split-window-right
     (kbd "M-|")  'isamert/split-window-right-vterm
@@ -2613,29 +2631,32 @@ Keybindings are generally set in-place, following have no context, so they are h
     (kbd "M-L")  'enlarge-window-horizontally
     (kbd "M-H")  'shrink-window-horizontally)
 
+  ;; TODO: Experiment with not having the following bindings. This frees
+  ;; up M-{h,j,k,l} keys so that I can bind anything else. Try to use
+  ;; M-a to do window-switching
+
   ;; This is needed to override other modes mappings
-  (define-minor-mode movement-map-mode
-    "Overrides all major and minor mode keys" t)
+  (define-minor-mode movement-map-mode "Overrides all major and minor mode keys" t)
 
-  (defvar movement-map (make-sparse-keymap "movement-map")
-    "Override all major and minor mode keys")
+  ;; (defvar movement-map (make-sparse-keymap "movement-map")
+  ;;   "Override all major and minor mode keys")
 
-  (evil-define-key '(normal motion emacs) movement-map
-    (kbd "M-j") 'evil-window-down
-    (kbd "M-k") 'evil-window-up
-    (kbd "M-h") 'evil-window-left
-    (kbd "M-l") 'evil-window-right)
+  ;; (evil-define-key '(normal motion emacs) movement-map
+  ;;   (kbd "M-j") 'evil-window-down
+  ;;   (kbd "M-k") 'evil-window-up
+  ;;   (kbd "M-h") 'evil-window-left
+  ;;   (kbd "M-l") 'evil-window-right)
 
-  (evil-define-key 'normal treemacs-mode-map
-    (kbd "M-j") 'evil-window-down
-    (kbd "M-k") 'evil-window-up
-    (kbd "M-h") 'evil-window-left
-    (kbd "M-l") 'evil-window-right)
+  ;; (evil-define-key 'normal treemacs-mode-map
+  ;;   (kbd "M-j") 'evil-window-down
+  ;;   (kbd "M-k") 'evil-window-up
+  ;;   (kbd "M-h") 'evil-window-left
+  ;;   (kbd "M-l") 'evil-window-right)
 
-  (evil-make-intercept-map movement-map)
+  ;; (evil-make-intercept-map movement-map)
 
-  (add-to-list 'emulation-mode-map-alists
-               `((movement-map-mode . ,movement-map)))
+  ;; (add-to-list 'emulation-mode-map-alists
+  ;;              `((movement-map-mode . ,movement-map)))
 #+END_SRC
 
 * Language specific

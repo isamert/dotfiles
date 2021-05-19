@@ -96,8 +96,6 @@ prefix=${HOME}/.npm-packages
   emacs --daemon
   crow &
   syncthing -no-browser -no-restart -logflags=0 &
-  # mpd
-  # mpdscribble
 
   exec bspwm
 #+end_src
@@ -1357,7 +1355,7 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
           ,*.7z)
               7z a "$EXT" "$@"
               ;;
-          ,*.tar.gz)
+          ,*.tar.gz|*.tgz)
               tar -czvf "$EXT" "$@"
               ;;
           ,*.tar.bz2)
@@ -1372,6 +1370,68 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
               compress --help
               ;;
       esac
+  }
+
+  function encrypt {
+      case "$1" in
+          -h|--help)
+              echo "Usage:"
+              echo "encrypt <input-file> [<output-file>]"
+              echo
+              echo "If <output-file> is skipped, then the output will be <input-file>.encrypted"
+              ;;
+          ,*)
+              local INPUT="$1"
+              local OUTPUT="$2"
+
+              if [[ ! -f "$INPUT" ]]; then
+                  echo "$INPUT not found."
+                  exit 1
+              fi
+
+              if [[ -z "$OUTPUT" ]]; then
+                  OUTPUT="${INPUT}.encrypted"
+              fi
+
+              if [[ -f "$OUTPUT" ]]; then
+                  echo "$OUTPUT already exists."
+                  exit 1
+              fi
+
+              gpg --symmetric --cipher-algo AES256 --output "$OUTPUT" "$INPUT"
+              ;;
+          esac
+  }
+
+  function decrypt {
+      case "$1" in
+          -h|--help)
+              echo "Usage:"
+              echo "decrypt <input-file> [<output-file>]"
+              echo
+              echo "If <output-file> is skipped, then the output will be <input-file> but the last suffix is removed"
+              ;;
+          ,*)
+              local INPUT="$1"
+              local OUTPUT="$2"
+
+              if [[ ! -f "$INPUT" ]]; then
+                  echo "$INPUT not found."
+                  exit 1
+              fi
+
+              if [[ -z "$OUTPUT" ]]; then
+                  OUTPUT="${INPUT%.*}"
+              fi
+
+              if [[ -f "$OUTPUT" ]]; then
+                  echo "$OUTPUT already exists."
+                  exit 1
+              fi
+
+              gpg --decrypt --output "$OUTPUT" "$INPUT"
+              ;;
+          esac
   }
 #+end_src
 
@@ -1596,137 +1656,137 @@ In this file I define some file associations. Please refer to [[https://github.c
   ;;
 
   (assoc
-    #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
-    #:program "zathura %f"
-    #:view #t)
+   #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
+   #:program "zathura %f"
+   #:view #t)
 
   (assoc
-    #:pattern "\\.org$"
-    #:program "emacsclient -c --tty %f"
-    #:term "emacsclient -c %f"
-    #:on-error "notify-send 'error' 'emacs daemon is not working'"
-    #:view (open-with 'bat)
-    #:standalone #t)
+   #:pattern "\\.org$"
+   #:program "emacsclient -c --tty %f"
+   #:term "emacsclient -c %f"
+   #:on-error "notify-send 'error' 'emacs daemon is not working'"
+   #:view (open-with 'bat)
+   #:standalone #t)
 
   (assoc
-    #:pattern "^(text|application)/(x-)?csv$"
-    #:program "sc-im %f"
-    #:term "term -e"
-    #:view #t
-    #:edit (open-with 'editor))
+   #:pattern "^(text|application)/(x-)?csv$"
+   #:program "sc-im %f"
+   #:term "term -e"
+   #:view #t
+   #:edit (open-with 'editor))
 
   (assoc
-    #:pattern '("^text/html" "^application/x?htm")
-    #:program (open-with 'browser)
-    #:view #t
-    #:edit (open-with 'editor))
+   #:pattern '("^text/html" "^application/x?htm")
+   #:program (open-with 'browser)
+   #:view #t
+   #:edit (open-with 'editor))
 
   (assoc
-    #:name 'editor
-    #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript|xml)")
-    #:program "emacsclient -c %f"
-    #:view (open-with 'bat)
-    #:edit #t)
+   #:name 'editor
+   #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript|xml)")
+   #:program "emacsclient -c %f"
+   #:view (open-with 'bat)
+   #:edit #t)
 
   (assoc
-    #:pattern "^video/"
-    #:program "mpv %f"
-    #:on-error "vlc %f"
-    #:view #t)
+   #:pattern "^video/"
+   #:program "mpv %f"
+   #:on-error "vlc %f"
+   #:view #t)
 
   (assoc
-    #:pattern "^audio/"
-    #:program "mpc insert %f"
-    #:on-success "mpc next"
-    #:on-error "mpv %f")
+   #:pattern "^audio/"
+   #:program "mpc insert %f"
+   #:on-success "mpc next"
+   #:on-error "mpv %f")
 
   (assoc
-    #:pattern "inode/directory"
-    #:program "ranger %f"
-    #:term "term -e"
-    #:tmux "tmux split-window -h")
+   #:pattern "inode/directory"
+   #:program "ranger %f"
+   #:term "term -e"
+   #:tmux "tmux split-window -h")
 
-  ;; TODO: make the command lazy, currently (screen-*) functions are
-  ;; called everytime this script is called
   (assoc
-    #:pattern '("^https?://(www.)?youtube.com/watch\\?.*v="
-                "^https?://(www.)?youtu.be/"
-                "^https?://(www.)?v.redd.it/\\w+/DASH"
-                "^https?://([a-zA-Z-]+)?streamable.com"
-                "^https?://giant.gfycat.com/.+"
-                "https?://v.redd.it/.+"
-                "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
-    #:program `("tsp"
+   #:pattern '("^https?://(www.)?youtube.com/watch\\?.*v="
+               "^https?://(www.)?youtu.be/"
+               "^https?://(www.)?v.redd.it/\\w+/DASH"
+               "^https?://([a-zA-Z-]+)?streamable.com"
+               "^https?://giant.gfycat.com/.+"
+               "https?://v.redd.it/.+"
+               "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
+   #:program (lambda (file mimetype)
+               (system*
+                "tsp"
                 "mpv"
                 "--x11-name=youtube"
                 "--geometry=-10-10"
-                ,(format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
-                ,(format #f "--autofit=~ax~a" (floor (/ (screen-width) 3)) (floor (/ (screen-height) 3)))
-                "%f")
-    #:on-error (open-with 'browser))
+                (format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
+                (format #f "--autofit=~ax~a" (floor (/ (screen-width) 3)) (floor (/ (screen-height) 3)))
+                file))
+   #:on-error (open-with 'browser))
 
   (assoc
-    #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
-    #:program "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && pqiv $TMP_IMG"
-    #:on-error "feh --start-at %f"
-    #:view #t
-    #:edit "pinta %f")
+   #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
+   #:program "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && pqiv $TMP_IMG"
+   #:on-error "feh --start-at %f"
+   #:view #t
+   #:edit "pinta %f")
 
   ;; Open all images in a folder starting with given image in pqiv
   (assoc
-    #:pattern "^image/.*$"
-    #:program "pqiv --browse --lazy-load --max-depth=3 %f"
-    #:on-error "feh --start-at %f"
-    #:view #t
-    #:edit "pinta %f")
+   #:pattern "^image/.*$"
+   #:program "pqiv --browse --lazy-load --max-depth=3 %f"
+   #:on-error "feh --start-at %f"
+   #:view #t
+   #:edit "pinta %f")
 
   (assoc
-    #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
-    #:program "ttrv %f"
-    #:term "term -e"
-    #:tmux "tmux split-window -h"
-    #:on-error (open-with 'browser))
+   #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
+   #:program "ttrv %f"
+   #:term "term -e"
+   #:tmux "tmux split-window -h"
+   #:on-error (open-with 'browser))
 
   (assoc
-    #:pattern '("^magnet:" "\\.torrent$")
-    #:program "qbittorrent %f"
-    #:on-success "notify-send 'Success' 'Torrent added to download list'"
-    #:on-error "notify-send 'Fail' 'Can't add torrent"
-    #:edit (open-with 'editor))
+   #:pattern '("^magnet:" "\\.torrent$")
+   #:program "qbittorrent %f"
+   #:on-success "notify-send 'Success' 'Torrent added to download list'"
+   #:on-error "notify-send 'Fail' 'Can't add torrent"
+   #:edit (open-with 'editor))
 
   (assoc
-    #:name 'browser
-    #:pattern '("^https?://.*"
-                "^.*\\.html?(#[\\w_-]+)?")
-    #:program "qutebrowser %f"
-    #:test "pgrep qutebrowser"
-    #:on-fail "firefox %f"
-    #:view #t
-    #:edit (open-with 'editor))
+   #:name 'browser
+   #:pattern '("^https?://.*"
+               "^.*\\.html?(#[\\w_-]+)?")
+   #:program "qutebrowser %f"
+   #:test "pgrep qutebrowser"
+   #:on-fail "firefox %f"
+   #:view #t
+   #:edit (open-with 'editor))
 
   (assoc
-    #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
-    #:program "xarchiver %f"
-    #:view "xarchiver %f")
+   #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
+   #:program "xarchiver %f"
+   #:view "xarchiver %f")
 
   (assoc
-    #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
-    #:program "desktopeditors %F")
+   #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
+   #:program "desktopeditors %F")
 
   (assoc
-    #:pattern ".*"
-    #:program (select-alternative-with "fzf")
-    #:standalone #t)
+   #:pattern ".*"
+   #:program (select-alternative-with "dmenu")
+   #:standalone #t)
 
   ;;
   ;; Rest is used only with references
   ;;
 
   (assoc
-    #:name 'bat
-    #:pattern ".*"
-    #:program "bat --paging=always %f"
-    #:view #t)
+   #:name 'bat
+   #:pattern ".*"
+   #:program "bat --paging=always %f"
+   #:view #t)
 
   ;; vi:syntax=scheme
 #+end_src
@@ -4715,6 +4775,8 @@ This part is almost completely untouched. Needs some revamp.
 
   setxkbmap $NEW_LAYOUT
   [[ -f ~/.Xmodmap ]] && xmodmap ~/.Xmodmap
+
+  killall xcape && xcape -e 'Hyper_L=Escape'
 
   notify-send --icon=keyboard "Current layout: $NEW_LAYOUT"
 #+end_src

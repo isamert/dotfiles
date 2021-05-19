@@ -4,6 +4,7 @@
 
 (defvar isamert/feeds
   `((,isamert/github-feed-link personal)
+    ("https://mail.google.com/mail/feed/atom" personal)
 
     ("https://t24.com.tr/rss/haber/gundem" news turkish)
     ("https://t24.com.tr/rss/haber/politika" news turkish)
@@ -14,6 +15,7 @@
     ("https://www.archlinux.org/feeds/news/" update linux)
     ("https://blog.tecosaur.com/tmio/rss.xml" update emacs)
 
+    ("http://aecepoglu.com/posts/index.xml" blog dev turkish soostone)
     ("http://nullprogram.com/feed/" blog dev)
     ("http://xenodium.com/rss.xml" blog dev)
     ("https://eli.thegreenplace.net/feeds/all.atom.xml" blog dev)
