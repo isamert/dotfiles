@@ -1827,11 +1827,6 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
     :config
     (setq lsp-ui-sideline-show-code-actions nil))
 
-  (use-package helm-lsp
-    :ensure t
-    :after (lsp-mode)
-    :commands helm-lsp-workspace-symbol)
-
   (use-package lsp-treemacs
     :ensure t
     :after (lsp-mode)
@@ -2112,9 +2107,6 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
       (kbd "<return>") 'bufler-list-buffer-switch
       (kbd "q") 'quit-window
       (kbd "p") 'bufler-list-buffer-peek))
-
-  (use-package helm-bufler
-    :ensure t)
 #+end_src
 
 ** tab-out
@@ -2995,181 +2987,81 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
 #+end_src
 
 ** TODO org-mode enhancements
-I need to rewrite these two functions using [[https://github.com/isamert/marks][marks]] for both speed and accuracy. Also I should remove the =helm= dependency, I need to figure out a way to keep font colors with selectrum (=consult-flycheck=, =consult-lines= etc. are already doing this.)
+I need to rewrite these functions using [[https://github.com/isamert/marks][marks]] for both speed and accuracy.
+
 #+begin_src emacs-lisp
   ;; Keybindings
+
   (evil-leader/set-key
     "ol" 'isamert/org-link-header
-    "oL" 'isamert/org-backlinks)
-
-  ;;
-  ;; Formatting funcs
-  ;;
-
-  (defun isamert/b-blue (str)
-    (propertize str 'font-lock-face '(:foreground "sky blue" :height 150)))
-
-  (defun isamert/b-green (str)
-    (propertize str 'font-lock-face '(:foreground "green" :height 130)))
-
-  (defun isamert/b-yellow (str)
-    (propertize str 'font-lock-face '(:foreground "green" :height 130)))
-
-  (defun isamert/b-plum (str)
-    (propertize str 'font-lock-face '(:foreground "plum" :height 130)))
+    ;; TODO: rewrite this:
+    ;;"oL" 'isamert/org-backlinks
+  )
 
   ;;
   ;; Utility
   ;;
 
-  ;; TODO: get keywords dynamically
-  ;; TODO: only remove the starts at the beginning of the line
   (defun isamert/org-header-line-to-title (line)
     "Remove TODO/*/unnecessary whitespace from given LINE.
   Then return the title of given `org-mode` header.
   Just like (org-entry-get nil \"ITEM\") but works on given string."
-    (--> line
-         (s-replace-regexp "\\(\\*\\|TODO\\|PROG\\|DONE\\|WAIT\\)" "" it) ;; Remove TODO states
-         (s-replace-regexp "\\(\\[#.\\{1\\}\\]\\\)" "" it) ;; Remove priorities
-         (s-replace-regexp ":\\(\\w+:\\)+$"  "" it) ;; Remove tags
-         (s-trim it)))
-
-  (defun isamert/org-find-header-of-given-line (file line-number)
-    "Find and return the first parent header of given LINE-NUMBER in FILE.
-  It returns a list in this format (result-line-number title)."
-    (-let* ((line-content (shell-command-to-string (format "sed '%sq;d' %s" line-number file)))
-            (search-regexp (if (string-prefix-p "*" line-content)
-                               (format "^\\*{%d} " (->> (split-string line-content " ")
-                                                        (car)
-                                                        (length)
-                                                        (1-)))
-                             "^\\*"))
-            (cmd (format "head -n %s \"%s\" | tac | rg --line-number --max-count 1 '%s'"
-                         line-number
-                         file
-                         search-regexp))
-            ((result-line-number . title) (split-string (shell-command-to-string cmd) ":")))
-      (message (shell-command-to-string cmd))
-      `(,(- (1+ line-number) (string-to-number result-line-number))
-        ,(isamert/org-header-line-to-title (string-join title ":")))))
-
-  ;; TODO: probably will be pretty slow
-  (defun isamert/org-find-header-hierarchy-of-given-line (file line-number)
-    (let ((last-parent-info nil)
-          (last-parent-line))
-      (while (string= "" last-parent)
-        (setq last-parent (isamert/org-find-header-of-given-line file line)))))
-
-  (defun isamert/helm-dummy-source (action-name action)
-    (helm-build-dummy-source
-     action-name
-     :action (helm-make-actions action-name action)))
-
-  ;; I couldn't find a way to make helm return custom input
-  ;; as the selected one (na input that is not in the candidates list)
-  ;; so I used this solution:
-  ;; If ACTION-NAME is supplied and the input is not in the candidates, ACTION
-  ;; will be run.
-  ;; BUT, if action is something like (lambda (c) c), then the result will be returned.
-  (defun isamert/select-one-of (the-candidates &optional buffer-name action-name action)
-    (let* ((name (if buffer-name
-                     buffer-name
-                   "isamert-select"))
-           (source-1 (helm-build-sync-source name
-                       :candidates the-candidates
-                       :fuzzy-match t))
-           (source-2 (if action-name `(,(isamert/helm-dummy-source action-name action)) '()))
-           (sources (cons source-1 source-2)))
-      (helm :buffer (format "*helm-%s*" name)
-            :sources sources)))
-
-  ;;
-  ;; Main
-  ;;
+    (->> line
+      (s-replace-regexp "\\(\\*\\|TODO\\|PROG\\|DONE\\|WAIT\\)" "") ;; Remove TODO states
+      (s-replace-regexp "\\(\\[#.\\{1\\}\\]\\\)" "") ;; Remove priorities
+      (s-replace-regexp ":\\(\\w+:\\)+$"  "") ;; Remove tags
+      (replace-regexp-in-string "\\[\\[.*\\]\\[\\(.*\\)\\]\\]"  "\\1") ;; Fix links
+      (replace-regexp-in-string "\\[\\[\\(.*\\)\\]\\]"  "\\1") ;; Fix links
+      (s-trim)))
 
   (defun isamert/org-file-get-header-id (file-path header-line)
     "Return the id of given header at HEADER-LINE in FILE-PATH."
     (interactive)
     (save-excursion
-      (with-current-buffer (let ((enable-local-variables  ())) (find-file-noselect file-path))
+      (with-current-buffer (let ((enable-local-variables nil)) (find-file-noselect file-path))
         (goto-char 0)
         (forward-line header-line)
         (org-id-get nil 'create)
         (save-buffer)
         (org-id-get nil 'create))))
 
+  (defun isamert/org-all-headers ()
+    "Return all headers in `org-directory'."
+    (->> (concat "cd " org-directory "; "
+                 "rg"
+                 " --no-heading" " --with-filename"
+                 " --line-number" " -t org"
+                 " " "\"^\\*+ \" ")
+      (shell-command-to-string)
+      (s-split "\n")
+      (--filter (not (s-blank? it)))
+      (--map
+       (-let* (((fname line . content) (split-string it ":"))
+               (header (isamert/org-header-line-to-title (string-join content ":"))))
+         `(,(format
+             "%s:%s %s %s"
+             (propertize fname 'face '(:foreground "plum"  :slant italic))
+             (propertize line 'face '(:slant italic :weight thin))
+             (propertize "»" 'face '(:foreground "green"))
+             (propertize header 'face '(:foreground "sky blue" :weight bold)))
+           .
+           (:fname ,fname :line ,(1- (string-to-number line)) :header ,header))))))
+
   (defun isamert/org-link-header ()
     "Interactively select a header and insert it as a link into the buffer.
   Headers are gathered from all the org files found in `org-directory'."
     (interactive)
-    (-let* ((cmd (concat "cd " org-directory "; "
-                         "rg"
-                         " --no-heading"
-                         " --with-filename"
-                         " --line-number"
-                         " -t org"
-                         " "
-                         "\"^\\*+ \" "))
-            (headers (--> (shell-command-to-string cmd)
-                          (split-string it "\n" t)
-                          (-map (lambda (line)
-                                  (-let (((file-name line-number . content) (split-string line ":")))
-                                    (format "%s:%s %s %s"
-                                            (isamert/b-blue file-name)
-                                            line-number
-                                            (isamert/b-green "»")
-                                            (isamert/org-header-line-to-title (string-join content ":")))))
-                                it)))
-            (selected (isamert/select-one-of headers))
-            ((file-name-with-line . header-title) (split-string selected " » "))
-            ((file-name header-line) (split-string file-name-with-line ":"))
-            (link-name (read-string "Enter link text: " header-title))
-            (header-id (isamert/org-file-get-header-id file-name (1- (string-to-number header-line))))
-            ;;(selected-link (concat "[[file:" file-name "::" (string-join header-title) "][" link-name "]]")))
-            (selected-link (concat "[[id:" header-id "][" link-name "]]")))
+    (let* ((headers (isamert/org-all-headers))
+           (selected (cdr (assoc-string (completing-read "Select header:" headers) headers)))
+           (link-name (read-string "Enter link text: " (plist-get selected :header)))
+           (header-id (isamert/org-file-get-header-id (plist-get selected :fname) (plist-get selected :line)))
+           (selected-link (concat "[[id:" header-id "][" link-name "]]")))
       (insert selected-link)))
 
-  ;; FIXME: this does not show backlinks that uses id's
-  (defun isamert/org-backlinks ()
-    "List all the places that has refered the header under the cursor."
-    (interactive)
-    (-let* ((curr-file-name (file-name-nondirectory (buffer-file-name)))
-            (header-title (org-entry-get nil "ITEM"))
-            (cmd (concat
-                  "rg"
-                  " --line-number"
-                  " --with-filename"
-                  " --no-heading"
-                  " --only-matching"
-                  " --ignore-case"
-                  " "
-                  "'(.{5,50})?\\[\\[file:(\\./)?"
-                  curr-file-name
-                  "::\\s*\\*?\\s*?"
-                  header-title
-                  "\s*\\]\\[([^\\[\\]]+)]\\](.{5,50})?' "
-                  " --replace"
-                  " "
-                  "'...$1$3$4...'"
-                  ))
-            (backlinks (mapcar (lambda (line)
-                                 (-let (((file-name line-no . content) (split-string line ":")))
-                                   (format "%s:%s » %s » %s"
-                                           (isamert/b-blue file-name)
-                                           line-no
-                                           (->> (string-to-number line-no)
-                                                (isamert/org-find-header-of-given-line file-name)
-                                                (cadr)
-                                                (isamert/b-plum))
-                                           (string-join content ":"))))
-                               (split-string (shell-command-to-string cmd) "\n" t)))
-            (selected (isamert/select-one-of backlinks))
-            ((file-name line-no) (split-string selected ":")))
-      (find-file file-name)
-      (goto-char 0)
-      (->> (string-to-number line-no)
-           (1-)
-           (forward-line))))
+  jk
+
+  ;; TODO Removed backlinks implementation, I will implement it once
+  ;; minimal functionality within "marks" is done
 #+end_src
 
 ** bullet.org
