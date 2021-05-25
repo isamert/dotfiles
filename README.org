@@ -20,8 +20,8 @@ This is primarily WIP. I just copied my dotfiles over here and categorized them 
     ;; Make certain files exacutable when tangled
     ;; Source: https://lists.gnu.org/archive/html/emacs-orgmode/2011-02/msg00465.html
     (defun isamert/make-tangled-files-executable ()
-      (when (or (s-match "\\.\\(sh\\|py\\)$" (buffer-file-name))
-                (s-match "\\(python\\|sh\\)" (symbol-name major-mode)))
+      (when (or (string-match-p  "\\.\\(sh\\|py\\)$" (buffer-file-name))
+                (string-match-p  "\\(python\\|sh\\)$" (symbol-name major-mode)))
         (set-file-modes (buffer-file-name) #o755)))
     (add-hook 'org-babel-post-tangle-hook 'isamert/make-tangled-files-executable)
   #+end_src

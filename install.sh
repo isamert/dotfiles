@@ -25,8 +25,8 @@ done
 read -r -d '' EMACS_INSTALL_POST_TANGLE_HOOK <<EOF
 (add-hook
  'org-babel-post-tangle-hook
- '(lambda () (when (or (string-match-p "\\\\(python\\\\|sh\\\\)" (buffer-file-name))
-                       (string-match-p "\\\\(python\\\\|sh\\\\)"  (symbol-name major-mode)))
+ '(lambda () (when (or (string-match-p "\\\\.\\\\(py\\\\|sh\\\\)$" (buffer-file-name))
+                       (string-match-p "\\\\(python\\\\|sh\\\\)" (symbol-name major-mode)))
                (set-file-modes (buffer-file-name) #o755))))
 EOF
 
