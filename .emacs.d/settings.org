@@ -17,9 +17,18 @@ This is my emacs configuration. My main focus is sanity. I'm a person who get fr
   ;;; Code:
 #+end_src
 
+* Usage notes
+** Updating packages
+Currently, I don't use an external package manager, =package.el= satisfies my needs. Here is how I do the updates:
+- =package-refresh-contents=
+- =list-packages=
+- Hit =U= to mark all packages that needs updating.
+- Hit =X= to update all those packages.
+
+I do this quite infrequently. If everything is working fine as it is, I tend to not update anything.
 * Preparation
 ** Package repos
-Add ~melpa~ and ~org~ package archives.
+Add ~melpa~ and ~org~ package archives and update them if needed.
 
 #+BEGIN_SRC emacs-lisp
   (require 'package)
@@ -34,16 +43,26 @@ Add ~melpa~ and ~org~ package archives.
     (package-refresh-contents))
 #+END_SRC
 
-** use-package
-Install ~use-package~. From now on I will use ~use-package~ to install and configure packages.
+** Installing packages
+I use =use-package= to install packages and configure them but I do absolute minimal usage of it.
 
 #+BEGIN_SRC emacs-lisp
-(unless (package-installed-p 'use-package)
- (package-install 'use-package))
+  (unless (package-installed-p 'use-package)
+    (package-install 'use-package))
+
+  (eval-when-compile
+    (require 'use-package))
 #+END_SRC
 
-*** quelpa
-Helps you to install packages from other sources, like github etc.
+I tend to not use the =use-package= goodies while configuring my packages, meaning that I don't use =:hook=, =:bind= etc. as they have relatively simpler alternatives in Emacs and using =use-package= alternatives of these makes copy/pasting harder. Here are the keywords that I use the most:
+- =:init= :: This gets called before the package gets initialized.
+- =:config= :: This gets called after the package is initialized.
+- =:after= :: This makes the current definition to wait the loading of listed packages, like =:after (evil org)= makes it wait for the =evil= and =org= packages to be loaded.
+- =:if= :: Loads the package conditionally, like =:if (eq system-type 'darwin)=.
+
+*** Installing packages from other sources using =quelpa= (like GitHub/GitLab/Web file etc.)
+I use =quelpa= for this.
+- Use =quelpa-upgrade= and select a package or use =quelpa-upgrade-all= for updating all packages.
 
 #+BEGIN_SRC emacs-lisp
   (use-package quelpa-use-package
@@ -52,9 +71,9 @@ Helps you to install packages from other sources, like github etc.
     :config (quelpa-use-package-activate-advice))
 #+END_SRC
 
-Here is an example that shows you how to install a package from github:
+Here is an example that shows you how to install a package from Github:
 
-#+BEGIN_SRC
+#+BEGIN_SRC emacs-lisp :tangle no
   (use-package PACKAGE-NAME
     :ensure t
     :diminish
@@ -64,12 +83,14 @@ Here is an example that shows you how to install a package from github:
              :repo "yyoncho/company-box"))
 #+END_SRC
 
-*** diminish
-diminish.el provides a way to hide mode indicators from mode line. Either pass ~:diminish t~ to use-package while installing or just call ~(diminish 'x-mode)~.
+*** Hiding mode indicators from modeline
+~diminish.el~ provides a way to hide mode indicators from mode line. Either pass ~:diminish t~ to use-package while installing or just call ~(diminish 'x-mode)~.
 
 #+BEGIN_SRC emacs-lisp
-(use-package diminish :ensure t)
+  (use-package diminish :ensure t)
 #+END_SRC
+
+Currently I use [[mini-modeline]] as my modeline and it already hides minor mode indicators from the modeline. So this package is not needed but better have it as I might change my modeline in the future.
 
 ** Essential packages
 I use =s.el= and =dash.el= extensively. They already come as a dependency with other packages but I may use them before loading any package, so:
@@ -98,16 +119,9 @@ Some basic variable and function definitions that will be used in configuration.
                              ,pairs)
                        (prettify-symbols-mode))))
 
-  (defun isamert/delq* (list &rest elems)
-    "Remove ELEMS from LIST.
-  Like `delq' but removes more than just one item."
-    (let ((l list))
-      (mapc (lambda (item) (setq l (delq item l))) elems)
-      l))
-
   (defun isamert/font-exists-p (font)
     "Check if FONT exists."
-    (if (null (x-list-fonts font)) nil t))
+    (x-list-fonts font))
 
   (defun isamert/assoc-regexp (key list &optional fn)
     "Like `assoc` but uses `string-match (car pair) KEY` for
@@ -144,6 +158,7 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 #+begin_src emacs-lisp
   (load "isamert-secrets")
 #+end_src
+
 * Basics
 ** Sane defaults
 #+BEGIN_SRC emacs-lisp
@@ -831,14 +846,15 @@ Change two parts of the text
           ;; ^ If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
           )
 
-    ;; Strike-through DONE
-    (set-face-attribute 'org-headline-done nil :strike-through t)
+    (defun isamert/org-set-faces ()
+      (set-face-attribute 'org-headline-done nil :strike-through t))
 
     ;; http://www.foldl.me/2012/disabling-electric-indent-mode/
     (defun isamert/disable-electric-indent ()
       (set (make-local-variable 'electric-indent-functions)
            (list (lambda (arg) 'no-indent))))
 
+    (add-hook 'org-mode-hook #'isamert/org-set-faces)
     (add-hook 'org-mode-hook #'isamert/disable-electric-indent))
 #+end_src
 
@@ -1278,8 +1294,8 @@ A package that shows key combinations. (for example press C-x and wait) It also 
     :config
     (custom-set-faces
      `(which-key-posframe
-       ((t (:background ,(mini-frame-get-background-color))))))
-    ;; ^ Calculated this color by calling `mini-frame-get-background-color'
+       ((t (:background-color ,(mini-frame-get-background-color)
+            :background ,(mini-frame-get-background-color))))))
     (setq which-key-posframe-border-width 12)
     (setq which-key-posframe-poshandler 'posframe-poshandler-frame-top-center)
     (which-key-posframe-mode))
@@ -1395,7 +1411,12 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
 
     ;; HACK: With the following change, consult-buffer changes perspective
     ;; if selected buffer is in another perspective.
-    (setq consult--buffer-display #'persp-switch-to-buffer))
+    (setq consult--buffer-display #'isamert/persp-switch-to-buffer))
+
+  (defun isamert/persp-switch-to-buffer (buffer-or-name &optional norecord force-same-window)
+    "Same as `persp-switch-to-buffer'"
+    (ignore norecord force-same-window)
+    (persp-switch-to-buffer buffer-or-name))
 
   (defun isamert/persp-toggle-modestring ()
     (interactive)
@@ -1601,7 +1622,9 @@ Some key points:
   (use-package embark
     :ensure t
     :after selectrum
-    :bind (("M-e" . embark-act)))
+    :config
+    (evil-define-key 'normal 'global
+      (kbd "M-e") #'embark-act))
 
   (use-package embark-consult
     :ensure t
@@ -2037,22 +2060,29 @@ When you search for something, it opens the results in an org-mode buffer. Resul
       "hs" 'howdoyou-query))
 #+END_SRC
 
-** yasnippets
+** yasnippets and yankpad
+I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more information on that. =yasnippet= is used while expanding the snippets defined in =yankpad= so that I can utilize all the goodies =yasnippet= offers.
+
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet
+    :ensure t)
+
+  (use-package yankpad
     :ensure t
+    :after yasnippet
     :config
-    (push #'yas-hippie-try-expand hippie-expand-try-functions-list) ;; hippie-expand tries yas first
-    (setq yas-snippet-dirs '("~/.emacs.d/snippets"))
+    (setq yankpad-file "~/.emacs.d/yankpad.org")
+    (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand)
     (evil-leader/set-key
-      "ss" 'yas-insert-snippet
-      "sv" 'yas-visit-snippet-file
-      "se" 'yas-visit-snippet-file
-      "sn" 'yas-new-snippet
-      "sc" 'yas-new-snippet)
+      "sr" #'yankpad-reload
+      "sc" #'yankpad-set-category
+      "se" #'yankpad-edit
+      "ss" #'yankpad-map
+      "sm" #'yankpad-map)
+
     (evil-define-key 'insert 'global
-      (kbd "M-s") 'company-yasnippet)
-    (yas-global-mode 1))
+      (kbd "M-s") #'yankpad-insert
+      (kbd "M-e") #'yankpad-expand))
 #+END_SRC
 
 ** git-link
@@ -2537,7 +2567,7 @@ Manage media and streams through =completing-read=.
     :diminish
     :quelpa (orgmdb
              :fetcher github
-             :repo "isamert/orgmdb")
+             :repo "isamert/orgmdb.el")
     :config
     (setq orgmdb-omdb-apikey isamert/orgmdb-omdb-apikey))
 #+end_src
@@ -2631,32 +2661,29 @@ Keybindings are generally set in-place, following have no context, so they are h
     (kbd "M-L")  'enlarge-window-horizontally
     (kbd "M-H")  'shrink-window-horizontally)
 
-  ;; TODO: Experiment with not having the following bindings. This frees
-  ;; up M-{h,j,k,l} keys so that I can bind anything else. Try to use
-  ;; M-a to do window-switching
-
   ;; This is needed to override other modes mappings
   (define-minor-mode movement-map-mode "Overrides all major and minor mode keys" t)
 
-  ;; (defvar movement-map (make-sparse-keymap "movement-map")
-  ;;   "Override all major and minor mode keys")
+  (defvar movement-map (make-sparse-keymap "movement-map")
+    "Override all major and minor mode keys")
 
-  ;; (evil-define-key '(normal motion emacs) movement-map
-  ;;   (kbd "M-j") 'evil-window-down
-  ;;   (kbd "M-k") 'evil-window-up
-  ;;   (kbd "M-h") 'evil-window-left
-  ;;   (kbd "M-l") 'evil-window-right)
+  (evil-define-key '(normal motion emacs) movement-map
+    (kbd "M-j") 'evil-window-down
+    (kbd "M-k") 'evil-window-up
+    (kbd "M-h") 'evil-window-left
+    (kbd "M-l") 'evil-window-right)
 
-  ;; (evil-define-key 'normal treemacs-mode-map
-  ;;   (kbd "M-j") 'evil-window-down
-  ;;   (kbd "M-k") 'evil-window-up
-  ;;   (kbd "M-h") 'evil-window-left
-  ;;   (kbd "M-l") 'evil-window-right)
+  (evil-define-key 'normal treemacs-mode-map
+    (kbd "M-j") 'evil-window-down
+    (kbd "M-k") 'evil-window-up
+    (kbd "M-h") 'evil-window-left
+    (kbd "M-l") 'evil-window-right)
 
-  ;; (evil-make-intercept-map movement-map)
+  (evil-make-intercept-map movement-map)
 
-  ;; (add-to-list 'emulation-mode-map-alists
-  ;;              `((movement-map-mode . ,movement-map)))
+  (add-to-list
+   'emulation-mode-map-alists
+   `((movement-map-mode . ,movement-map)))
 #+END_SRC
 
 * Language specific
@@ -3151,18 +3178,21 @@ I need to rewrite these two functions using [[https://github.com/isamert/marks][
 I have a ~bullet.org~ file that I keep my daily journal and here are some utility functions that use with it. I may document this later (or even publish it as a package?)
 
 #+begin_src emacs-lisp
-  ;; FIXME: insert short day name while creating the day
-
   ;; Keybindings
-  (evil-leader/set-key
-    "obb" 'isamert/bullet-focus-backlog
-    "obt" 'isamert/bullet-focus-today
-    "obm" 'isamert/bullet-move-todos-yesterday-to-today
-    "oby" 'isamert/bullet-focus-yesterday
-    "obf" 'isamert/bullet-focus-given-day
-    "obc" 'isamert/bullet-create-given-day)
 
-  (defun isamert/today nil
+  (evil-leader/set-key
+    "obb" 'isamert/bullet-focus-non-day-header
+    "oby" 'isamert/bullet-focus-yesterday
+    "obt" 'isamert/bullet-focus-today
+    "obf" 'isamert/bullet-focus-given-day
+    "obr" 'isamert/bullet-focus-recurring)
+
+  ;;
+  ;; Date utils
+  ;;
+
+  (defun isamert/today ()
+    "Get todays date in format YYYY-MM-DD Day."
     (format-time-string "%Y-%m-%d %a"))
 
   (defun isamert/u ()
@@ -3170,132 +3200,103 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (string-to-number (format-time-string "%u")))
 
   (defun isamert/date (date)
-    "Display the time described by DATE. DATE can be 'now', 'yesterday', 'two days ago' etc."
-    (s-trim-right (shell-command-to-string (concat "date --date='" date "' +'%Y-%m-%d %a'"))))
+    "Display the time described by DATE.
+  DATE can be 'now', 'yesterday', 'two days ago' etc."
+    (s-trim-right
+     (shell-command-to-string
+      (concat "date --date='" date "' +'%Y-%m-%d %a'"))))
 
-  (defun isamert/insert-new-line-above (text)
-    "Insert a line above the current line with given TEXT."
-    (move-beginning-of-line nil)
-    (insert "\n")
-    (forward-line -1)
-    (insert text))
+  ;;
+  ;; Create utils
+  ;;
 
-  (defun isamert/insert-new-last-line (text)
-    "Insert a new line at the end of the file with given TEXT."
+  (defun isamert/bullet-create-a-day (date)
+    "Create given DATE heading in bullet.org in the appropriate place..
+  DATE should be in the form of YYYY-MM-DD."
+    (when-let ((point (isamert/bullet-find-a-day date)))
+      (goto-char point)
+      (user-error "The day already exists"))
+    (widen)
     (goto-char (point-max))
-    (if (= (current-column) 0)
-        (insert (concat text "\n"))
-      (insert (concat "\n" text "\n"))))
+    (while (re-search-backward "^* \\[\\([0-9]+-[0-9]+-[0-9]+\\)\\( \\w+\\)?\\].*" nil t)
+      (when (time-less-p
+             (date-to-time (concat (match-string 1) "T000"))
+             (date-to-time (concat date "T000")))
+        (org-insert-heading-after-current)
+        (insert (format "[%s %s] [/]" date (format-time-string "%a")))
+        (org-narrow-to-subtree)
+        ;; FIXME Not the coolest way to break the loop
+        (user-error "Inserted the day"))))
 
-  (defun isamert/selected-region-text ()
-    (buffer-substring-no-properties (region-beginning) (region-end)))
-
-  (defun isamert/org-remove-subtree ()
-    (org-mark-subtree)
-    (delete-and-extract-region (region-beginning) (region-end)))
-
+  ;;
+  ;; Focus a day
+  ;;
 
   (defun isamert/bullet-find-a-day (day)
-    (let ((day-regex (concat "^\\[" day "\\( \\w+\\)?\\].*"))
-          (day-point nil))
-      (org-map-entries
-       (lambda ()
-         (let ((title (org-entry-get nil "ITEM")))
-           (when (string-match day-regex title)
-             (setq day-point (point-marker)))))
-       "LEVEL=1")
-      day-point))
-
-  (defun isamert/bullet-find-today ()
-    (isamert/bullet-find-a-day (isamert/today)))
-
-  (defun isamert/bullet-create-a-day (date focus)
-    (widen)
-    (let ((day-entry (isamert/bullet-find-a-day date))
-          (day-regex "^\\[\\([0-9]+-[0-9]+-[0-9]+\\)\\( \\w+\\)?\\].*")
-          (is-last-older nil)
-          (result-date nil)
-          (given-date (date-to-time (concat date "T000")))
-          (content (concat "* [" date "] [/]")))
-      (if day-entry
-          (goto-char day-entry)
-        (progn
-          (org-map-entries
-           (lambda ()
-             (let ((title (org-entry-get nil "ITEM")))
-               (save-match-data
-                 (when (string-match day-regex title)
-                   (let ((current-date (date-to-time (concat (match-string 1 title) "T000"))))
-                     (when (and (not result-date) (time-less-p given-date current-date))
-                       (setq result-date (point-marker))
-                       ))))))
-           "LEVEL=1")
-          (if result-date
-              (progn
-                (goto-char result-date)
-                (isamert/insert-new-line-above content))
-            (isamert/insert-new-last-line content))
-          (when focus
-            (org-narrow-to-subtree))))))
-
-  (defun isamert/bullet-create-given-day (focus)
-    (interactive "P")
-    (isamert/bullet-create-a-day (org-read-date) focus))
+    (save-excursion
+      (widen)
+      (goto-char (point-max))
+      (when (re-search-backward (concat "^* \\[" day "\\( \\w+\\)?\\]") nil t)
+        (point-marker))))
 
   (defun isamert/bullet-focus-a-day (day)
     "Focus to given DAY."
     (widen)
-    (let ((day-entry (isamert/bullet-find-a-day day)))
-      (when day-entry (progn (goto-char day-entry) (org-narrow-to-subtree)))
-      day-entry))
+    (when-let ((day-entry (isamert/bullet-find-a-day day)))
+      (goto-char day-entry)
+      (beginning-of-line)
+      (org-narrow-to-subtree)
+      t))
 
-  (defun isamert/bullet-focus-given-day ()
-    "Focus given days header.  If it does not exists, create it."
-    (interactive)
-    (let ((given-date (org-read-date)))
-      (when (not (isamert/bullet-focus-a-day given-date))
-        (isamert/bullet-create-a-day given-date t))))
+  (defun isamert/bullet-focus-given-day (date)
+    "Focus given DATE's header.
+  If it does not exists, create it."
+    (interactive
+     (list (org-read-date)))
+    (when (not (isamert/bullet-focus-a-day date))
+      (isamert/bullet-create-a-day date)))
 
   (defun isamert/bullet-focus-today ()
-    "Focus todays header.  If it does not exists, create it."
+    "Focus todays header.
+  If it does not exists, create it."
     (interactive)
-    (when (not (isamert/bullet-focus-a-day (isamert/today)))
-      (isamert/bullet-create-today t)))
+    (let ((today (format-time-string "%Y-%m-%d")))
+      (when (not (isamert/bullet-focus-a-day today))
+        (isamert/bullet-create-a-day today))))
 
   (defun isamert/bullet-focus-yesterday ()
+    "Focus yesterdays header."
     (interactive)
     (isamert/bullet-focus-a-day (isamert/date "yesterday")))
 
-  (defun isamert/bullet-create-today (focus)
-    (interactive "P")
-    (isamert/bullet-create-a-day (isamert/today) focus))
+  ;;
+  ;; Focus non-day
+  ;;
 
-  ;; TODO: new line fixes
-  (defun isamert/bullet-move-todos-yesterday-to-today ()
-    (interactive)
-    (isamert/bullet-focus-yesterday)
-    (let* ((item-points '())
-           (items (org-map-entries
-                   (lambda ()
-                     (setq item-points (cons (point) item-points))
-                     (org-mark-subtree)
-                     (isamert/selected-region-text))
-                   "LEVEL=2/TODO|PROG")))
-      (mapcar (lambda (x)
-                (goto-char x)
-                (isamert/org-remove-subtree))
-              item-points)
-      (widen)
-      (isamert/bullet-focus-today)
-      (goto-char (point-max))
-      (mapcar (lambda (item)
-                (insert item))
-              items)))
+  (defun isamert/bullet-get-all-non-day-headers ()
+    "Return all non-day header names.
+  This function assumes all the non-day headers are at the top."
+    (save-excursion
+      (save-match-data
+        (let ((headers '()))
+          (widen)
+          (goto-char 0)
+          (loop
+           (when (not (re-search-forward "^* \\(.*\\)" nil t))
+             (return))
+           (if (s-prefix? "[" (match-string 1))
+               (return)
+             (push (match-string 1) headers)))
+          headers))))
 
-  (defun isamert/bullet-focus-backlog ()
-    (interactive)
+  (defun isamert/bullet-focus-non-day-header (text)
+    "Interactively select and focus a non-day header."
+    (interactive
+     (thread-last (isamert/bullet-get-all-non-day-headers)
+       (completing-read "Select header: ")
+       (list)))
     (widen)
-    (goto-char (org-find-exact-headline-in-buffer "Backlog"))
+    (goto-char (org-find-exact-headline-in-buffer text))
     (org-narrow-to-subtree))
 #+end_src
 
@@ -3432,22 +3433,24 @@ Here I define two important functions and their helpers.  The following function
 #+end_src
 
 ** Current file functionality
+Sometimes I just want to delete/rename/move etc. the current file without resorting to dired or any other file manager. Here are some interactive functions to do that.
+
 #+begin_src emacs-lisp
-  ;; source: http://steve.yegge.googlepages.com/my-dot-emacs-file
+  ;; Slightly modified from:
+  ;; http://steve.yegge.googlepages.com/my-dot-emacs-file
   (defun isamert/rename-current-file-name-and-buffer (new-name)
     "Renames both current buffer and file it's visiting to NEW-NAME."
-    (interactive "sNew name: ")
+    (interactive "FNew name: ")
     (let ((name (buffer-name))
           (filename (buffer-file-name)))
-      (if (not filename)
-          (message "Buffer '%s' is not visiting a file!" name)
-        (if (get-buffer new-name)
-            (message "A buffer named '%s' already exists!" new-name)
-          (progn
-            (rename-file filename new-name 1)
-            (rename-buffer new-name)
-            (set-visited-file-name new-name)
-            (set-buffer-modified-p nil))))))
+      (when (not filename)
+        (user-error "Buffer '%s' is not visiting a file!" name))
+      (when (get-buffer new-name)
+        (user-error "A buffer named '%s' already exists!" new-name))
+      (rename-file filename new-name 1)
+      (rename-buffer new-name)
+      (set-visited-file-name new-name)
+      (set-buffer-modified-p nil)))
 
   ;; Slightly modified version of: http://www.ergoemacs.org/emacs/elisp_delete-current-file.html
   (defun isamert/delete-current-file ()

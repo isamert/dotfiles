@@ -165,76 +165,34 @@ keysym dead_acute = apostrophe quotedbl
 #+end_src
 ** .Xresources
 #+begin_src conf :tangle ~/.Xresources
-  #include ".Xresources.d/colors"
-  #include ".Xresources.d/urxvt"
-  #include ".Xresources.d/polybar"
-
-  ! !!!!!!!!!!!!!!
-  ! Window manager
-  ! !!!!!!!!!!!!!!
-
-  wm.gaps: 0
-  wm.border: 2
-
-  ! !!!!
-  ! Rofi
-  ! !!!!
-
-  rofi.theme: andrea
-
-  ! !!!!!!!
-  ! Polybar
-  ! !!!!!!!
-
-  bar.font0: IBM Plex Sans:fontformat=truetype:size=10:antialias=true;0
-  bar.font1: Ubuntu Mono Nerd Font:fontformat=truetype:size=10:antialias=true;0
-  bar.font2: Liberation Sans:fontformat=truetype:size=10:antialias=false;0
-  bar.border: 0
-  bar.radius: 0
-  bar.height: 25
-  bar.width: 100%
-
-  ! !!!!!!
-  ! Colors
-  ! !!!!!!
-
-  #define BACKGROUND #282828
-  #define FOREGROUND #ebdbb2
-  #define COLOR0  #282828
-  #define COLOR8  #928374
-  #define COLOR1  #cc241d
-  #define COLOR9  #fb4934
-  #define COLOR2  #98971a
-  #define COLOR10 #b8bb26
-  #define COLOR3  #d79921
-  #define COLOR11 #fabd2f
-  #define COLOR4  #458588
-  #define COLOR12 #83a598
-  #define COLOR5  #b16286
-  #define COLOR13 #d3869b
-  #define COLOR6  #689d6a
-  #define COLOR14 #8ec07c
-  #define COLOR7  #a89984
-  #define COLOR15 #ebdbb2
-
-  ,*background: BACKGROUND
-  ,*foreground: FOREGROUND
-  ,*color0:  COLOR0
-  ,*color8:  COLOR8
-  ,*color1:  COLOR1
-  ,*color9:  COLOR9
-  ,*color2:  COLOR2
-  ,*color10: COLOR10
-  ,*color3:  COLOR3
-  ,*color11: COLOR11
-  ,*color4:  COLOR4
-  ,*color12: COLOR12
-  ,*color5:  COLOR5
-  ,*color13: COLOR13
-  ,*color6:  COLOR6
-  ,*color14: COLOR14
-  ,*color7:  COLOR7
-  ,*color15: COLOR15
+  ! hard contrast: *background: #1d2021
+  ,*background: #282828
+  ! soft contrast: *background: #32302f
+  ,*foreground: #ebdbb2
+  ! Black + DarkGrey
+  ,*color0:  #282828
+  ,*color8:  #928374
+  ! DarkRed + Red
+  ,*color1:  #cc241d
+  ,*color9:  #fb4934
+  ! DarkGreen + Green
+  ,*color2:  #98971a
+  ,*color10: #b8bb26
+  ! DarkYellow + Yellow
+  ,*color3:  #d79921
+  ,*color11: #fabd2f
+  ! DarkBlue + Blue
+  ,*color4:  #458588
+  ,*color12: #83a598
+  ! DarkMagenta + Magenta
+  ,*color5:  #b16286
+  ,*color13: #d3869b
+  ! DarkCyan + Cyan
+  ,*color6:  #689d6a
+  ,*color14: #8ec07c
+  ! LightGrey + White
+  ,*color7:  #a89984
+  ,*color15: #ebdbb2
 #+end_src
 * Window management/DE
 ** BSPWM
@@ -251,8 +209,8 @@ This is my window manager.
   bspc config single_monocle        true
   bspc config gapless_monocle       true
   bspc config borderless_monocle    true
-  bspc config window_gap            "$(xrdb-get-value wm.gaps)"
-  bspc config border_width          "$(xrdb-get-value wm.border)"
+  bspc config window_gap            3
+  bspc config border_width          2
   bspc config split_ratio           0.52
 
 
@@ -285,6 +243,18 @@ This is my window manager.
   init-desktops
 #+end_src
 ** Polybar
+*** Global configuration
+I keep some of the polybar related variables inside the ~Xresources~ file so that I can access these values using =xrdb-get-value= command if I need to.
+
+#+begin_src conf :tangle ~/.Xresources
+  bar.font0: IBM Plex Sans:fontformat=truetype:size=10:antialias=true;0
+  bar.font1: Ubuntu Nerd Font:fontformat=truetype:size=10:antialias=true;0
+  bar.border: 0
+  bar.radius: 0
+  bar.height: 25
+  bar.width: 100%
+#+end_src
+*** Main configuration
 #+begin_src conf :tangle ~/.config/polybar/config
   [colors]
   background = ${xrdb:background}
@@ -308,7 +278,6 @@ This is my window manager.
 
   font-0 = ${xrdb:bar.font0}
   font-1 = ${xrdb:bar.font1}
-  font-2 = ${xrdb:bar.font2}
 
   border-size = ${xrdb:bar.border}
   border-color = #00000000
@@ -323,18 +292,12 @@ This is my window manager.
   module-margin-left = 0
   module-margin-right = 1
 
-  modules-left = bspwm xwindow
-  modules-center = mpd
+  modules-left = bspwm xwindowlong
   modules-right = pacman xkeyboard volume memory cpu temperature battery date powermenu
 
   tray-position = right
   tray-padding = 2
-
-  scroll-up = bspwm-wsnext
-  scroll-down = bspwm-wsprev
-
   cursor-click = pointer
-  cursor-scroll = ns-resize
 
   [bar/secondary]
   monitor = ${env:MONITOR_SECONDARY}
@@ -349,7 +312,6 @@ This is my window manager.
 
   font-0 = ${xrdb:bar.font0}
   font-1 = ${xrdb:bar.font1}
-  font-2 = ${xrdb:bar.font2}
 
   border-size = ${xrdb:bar.border}
   border-color = #00000000
@@ -365,22 +327,7 @@ This is my window manager.
 
   modules-left = bspwm xwindowlong
   modules-right = xbacklight
-
-  scroll-up = bspwm-wsnext
-  scroll-down = bspwm-wsprev
-
   cursor-click = pointer
-  cursor-scroll = ns-resize
-
-  [module/mail]
-  type = custom/script
-  exec = PYTHONWARNINGS="ignore" mailcheck --user 'isamertgurbuz@gmail.com' --password $(getpassword '/email/gmail') --server 'imap.gmail.com' --user isamert --password $(getpassword '/email/protonmail') --server proton
-  interval = 300
-
-  click-left = popup mail
-
-  format-prefix = " "
-  format-underline = ${xrdb:color1}
 
   [module/optimus]
   type = custom/script
@@ -463,20 +410,6 @@ This is my window manager.
   label-empty-foreground = ${colors.foreground-alt}
   label-empty-padding = 0
 
-  [module/mpd]
-  type = internal/mpd
-
-  format-online = %{A1:popup music &:} <icon-prev> <icon-stop>   <label-song>   <toggle> <icon-next> %{A}
-
-  icon-prev = 
-  icon-stop = 
-  icon-play = 
-  icon-pause = 
-  icon-next = 
-
-  label-song-maxlen = 100
-  label-song-ellipsis = true
-
   [module/cpu]
   type = internal/cpu
   interval = 2
@@ -514,7 +447,7 @@ This is my window manager.
   label = %{A1:popup calendar&:}  %date%   %time% %{A}
 
   [module/volume]
-  type = internal/volume
+  type = internal/alsa
 
   format-volume = <ramp-volume> <label-volume>
   label-volume = %percentage%%
@@ -536,8 +469,6 @@ This is my window manager.
   adapter = AC0
   full-at = 95
 
-  format-full =
-
   format-charging = <animation-charging> <label-charging>
   format-charging-underline = ${xrdb:color11}
 
@@ -558,7 +489,7 @@ This is my window manager.
   [module/temperature]
   type = internal/temperature
   thermal-zone = 0
-  warn-temperature = 60
+  warn-temperature = 65
 
   format = <ramp> <label>
   format-underline = ${xrdb:color12}
@@ -605,19 +536,12 @@ This is my window manager.
 
   [settings]
   screenchange-reload = true
-  ;compositing-background = xor
-  ;compositing-background = screen
-  ;compositing-foreground = source
-  ;compositing-border = over
-
-  ; vim:ft=dosini
 #+end_src
 ** sxhkd
-#+begin_src conf :tangle ~/.config/sxhkd/sxhkdrc
-  # #############################################################################
-  # bspwm
-  # #############################################################################
+This is the global keybinding manager.
 
+*** BSPWM bindings
+#+begin_src conf :tangle ~/.config/sxhkd/sxhkdrc
   # focus/swap with left/down/up/right window
   super + {_,shift + } {h,j,k,l}
       {bspwmc focus, euclid_mover} {west,south,north,east}
@@ -694,40 +618,36 @@ This is my window manager.
   super + {shift,_} + equal
       xdo resize {-w +50 -h +50, -w -50 -h -50}
 
-  # switch to next card (nvidia/intel)
-  super + shift + m
-      if [[ $(optimus-manager --print-mode | grep -iE '(intel|nvidia)') == *'intel' ]]; then; optimus-manager --no-confirm --switch nvidia; else; optimus-manager --no-confirm --switch nvidia; fi
-
-  # logout
-  super + shift + e
-      for node in $(bspc query -N); do bspc node $node --close; done; bspc quit
-
   # rotate window tree
   super + {r, shift + r}
       bspc node @/ -C {forward,backward}
 
-  super + o
-      bspwmc toggle_inactive_opacity
+  # logout
+  super + shift + e
+      for node in $(bspc query -N); do bspc node $node --close; done; bspc quit
+#+end_src
 
-  # #############################################################################
-  # apps
-  # #############################################################################
-
+*** Running apps etc.
+#+begin_src conf :tangle ~/.config/sxhkd/sxhkdrc
   # open a terminal (with shift it floats, with ctrl its opaque, with ctrl + shift its floating opaque)
   {super, hyper} + {_, shift + ctrl +, shift +, ctrl +} Return
       term {_,_} {_, --float --opaque --geometry=100x20, --float --geometry=100x20, --opaque}
 
-  # open a terminal at
+  # open a terminal at east,west,south,north
   hyper + {_,shift + } {backslash,minus}
       bspc node -p {east,west,south,north}; \
       term
 
+  # Open scratchpad at bottom or top. Top scratchpad is shared across
+  # desktops, bottom one is dedicated to given desktop
   hyper + {e, d}
       bspwmc {scratchpad_top, scratchpad_bot}
 
+  # Open the clipboard manager
   hyper + q
       copyq toggle
 
+  # Open a window to select and kill process' interactively
   hyper + x
       /bin/sh -c "term --float --geometry=150x20 -e fuzzy kill"
 
@@ -735,7 +655,7 @@ This is my window manager.
   hyper + equal
       menu calc
 
-  # run some apps directly
+  # Run some apps directly
   hyper + r; {f, q, e, r, t, v, k}
       {firefox, qbittorrent, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
 
@@ -747,14 +667,15 @@ This is my window manager.
       menu menu
 
   # Show some menus: an app menu, searc in files, search in file contents, youtube
-  hyper + {a, f, F, o, y, Y, b}
-      menu {menu,files --open,file_contents,passwords,youtube --video,youtube --video --playlist=$YT_MAIN_PLAYLIST, bookmarks}
+  hyper + {a, f, F, o, y, b}
+      menu {menu,files --open,file_contents,passwords,youtube --video, bookmarks}
 
-  # Show popups for calendar, translate and mail
-  hyper + {c,t,i}
-      popup {calendar,translate,mail}
+  # Show popup for translate
+  hyper + t
+    qdbus io.crow_translate.CrowTranslate /io/crow_translate/CrowTranslate/MainWindow open || \
+    term --float -e trans -sl en -hl tr -to tr -interactive -v -pager bat
 
-  # Set a Random wallpaper
+  # Set a random wallpaper
   hyper + apostrophe
       feh --bg-scale $(find "$DIR_WALLPAPERS" | shuf -n 1)
 
@@ -770,14 +691,24 @@ This is my window manager.
   hyper + alt + s
       cb-save
 
-  # toggle notification center
+  # Toggle notification center
   hyper + n
       kill -s USR1 $(pidof deadd-notification-center)
+#+end_src
 
-  # #############################################################################
-  # sound/music
-  # #############################################################################
+*** System management
+#+begin_src conf :tangle ~/.config/sxhkd/sxhkdrc
+  control + alt + k
+      switch-keyboard-layout
 
+  control + alt + o
+      mediastuff switch-audio-channel --interactive
+
+  control + alt + l
+      lockscreen
+#+end_src
+*** Media/sound management
+#+begin_src conf :tangle ~/.config/sxhkd/sxhkdrc
   # volume down/up
   hyper + {9,0}
       amixer set Master 5%{-,+}
@@ -805,21 +736,14 @@ This is my window manager.
   # next/prev song
   XF86Audio{Prev,Next}
       mpc {prev,next}
-
-  # #############################################################################
-  # various
-  # #############################################################################
-
-  control + alt + k
-      switch-keyboard-layout
-
-  control + alt + o
-      mediastuff switch-audio-channel --interactive
-
-  control + alt + l
-      lockscreen
 #+end_src
-** Rofi theme
+** Rofi
+*** Global configuration
+#+begin_src conf :tangle ~/.Xresources
+  rofi.theme: andrea
+#+end_src
+
+*** Theme
 #+begin_src js :tangle ~/.config/rofi/andrea.rasi
   configuration {
       /* modi: "drun,window,windowcd"; */
@@ -862,7 +786,7 @@ This is my window manager.
 
   inputbar {
       padding: 10px 10px 10px 20px;
-      border-radius: 99px;
+      border-radius: 7px;
       margin: 0 0 30px 0;
       background-color: rgba(255, 255, 255, 0.1);
       border: 1px;
@@ -875,7 +799,7 @@ This is my window manager.
   }
 
   element {
-      border-radius: 2px;
+      border-radius: 7px;
       padding: 4px 8px;
   }
 
@@ -893,7 +817,6 @@ This is my window manager.
       family: Iosevka
     size: 11.0
 
-
   draw_bold_text_with_bright_colors: true
   live_config_reload: true
   background_opacity: 0.8
@@ -901,10 +824,18 @@ This is my window manager.
   shell:
     program: /usr/bin/zsh
 
-  mouse:
-    url:
-      launcher:
-        program: jaro
+  hints:
+    enabled:
+     - regex: "(ipfs:|ipns:|magnet:|mailto:|gemini:|gopher:|https:|http:|news:|file:|git:|ssh:|ftp:)\
+               [^\u0000-\u001F\u007F-\u009F<>\"\\s{-}\\^⟨⟩`]+"
+       command: jaro
+       post_processing: true
+       mouse:
+         enabled: true
+         mods: None
+       binding:
+         key: F
+         mods: Control|Shift
 
   # Colors (Gruvbox dark)
   colors:
@@ -944,74 +875,9 @@ This is my window manager.
 
     # Vi mode
     - { key: A,                           mode: Vi, action: ToggleViMode   }
+    - { key: Return,                      mode: Vi, action: ToggleViMode   }
     - { key: 5,  mods: Shift,             mode: Vi, action: Last }
     # ^ See https://github.com/alacritty/alacritty/issues/4111
-
-    #
-    #- { key: Paste,                                action: Paste          }
-    #- { key: Copy,                                 action: Copy           }
-    #- { key: L,         mods: Control,             action: ClearLogNotice }
-    #- { key: L,         mods: Control, mode: ~Vi,  chars: "\x0c"          }
-    #- { key: PageUp,    mods: Shift,   mode: ~Alt, action: ScrollPageUp,  }
-    #- { key: PageDown,  mods: Shift,   mode: ~Alt, action: ScrollPageDown }
-    #- { key: Home,      mods: Shift,   mode: ~Alt, action: ScrollToTop,   }
-    #- { key: End,       mods: Shift,   mode: ~Alt, action: ScrollToBottom }
-    #
-
-    # Vi Mode
-    #- { key: Space,  mods: Shift|Control, mode: Vi, action: ScrollToBottom          }
-    #- { key: Space,  mods: Shift|Control,           action: ToggleViMode            }
-    #- { key: Escape,                      mode: Vi, action: ClearSelection          }
-    #- { key: I,                           mode: Vi, action: ScrollToBottom          }
-    #- { key: I,                           mode: Vi, action: ToggleViMode            }
-    #- { key: Y,      mods: Control,       mode: Vi, action: ScrollLineUp            }
-    #- { key: E,      mods: Control,       mode: Vi, action: ScrollLineDown          }
-    #- { key: G,                           mode: Vi, action: ScrollToTop             }
-    #- { key: G,      mods: Shift,         mode: Vi, action: ScrollToBottom          }
-    #- { key: B,      mods: Control,       mode: Vi, action: ScrollPageUp            }
-    #- { key: F,      mods: Control,       mode: Vi, action: ScrollPageDown          }
-    #- { key: U,      mods: Control,       mode: Vi, action: ScrollHalfPageUp        }
-    #- { key: D,      mods: Control,       mode: Vi, action: ScrollHalfPageDown      }
-    #- { key: Y,                           mode: Vi, action: Copy                    }
-    #- { key: Y,                           mode: Vi, action: ClearSelection          }
-    #- { key: Copy,                        mode: Vi, action: ClearSelection          }
-    #- { key: V,                           mode: Vi, action: ToggleNormalSelection   }
-    #- { key: V,      mods: Shift,         mode: Vi, action: ToggleLineSelection     }
-    #- { key: V,      mods: Control,       mode: Vi, action: ToggleBlockSelection    }
-    #- { key: V,      mods: Alt,           mode: Vi, action: ToggleSemanticSelection }
-    #- { key: Return,                      mode: Vi, action: Open                    }
-    #- { key: K,                           mode: Vi, action: Up                      }
-    #- { key: J,                           mode: Vi, action: Down                    }
-    #- { key: H,                           mode: Vi, action: Left                    }
-    #- { key: L,                           mode: Vi, action: Right                   }
-    #- { key: Up,                          mode: Vi, action: Up                      }
-    #- { key: Down,                        mode: Vi, action: Down                    }
-    #- { key: Left,                        mode: Vi, action: Left                    }
-    #- { key: Right,                       mode: Vi, action: Right                   }
-    #- { key: Key0,                        mode: Vi, action: First                   }
-    #- { key: Key4,   mods: Shift,         mode: Vi, action: Last                    }
-    #- { key: Key6,   mods: Shift,         mode: Vi, action: FirstOccupied           }
-    #- { key: H,      mods: Shift,         mode: Vi, action: High                    }
-    #- { key: M,      mods: Shift,         mode: Vi, action: Middle                  }
-    #- { key: L,      mods: Shift,         mode: Vi, action: Low                     }
-    #- { key: B,                           mode: Vi, action: SemanticLeft            }
-    #- { key: W,                           mode: Vi, action: SemanticRight           }
-    #- { key: E,                           mode: Vi, action: SemanticRightEnd        }
-    #- { key: B,      mods: Shift,         mode: Vi, action: WordLeft                }
-    #- { key: W,      mods: Shift,         mode: Vi, action: WordRight               }
-    #- { key: E,      mods: Shift,         mode: Vi, action: WordRightEnd            }
-    #- { key: Key5,   mods: Shift,         mode: Vi, action: Bracket                 }
-
-    # (Windows, Linux, and BSD only)
-    #- { key: V,        mods: Control|Shift,           action: Paste            }
-    #- { key: C,        mods: Control|Shift,           action: Copy             }
-    #- { key: C,        mods: Control|Shift, mode: Vi, action: ClearSelection   }
-    #- { key: Insert,   mods: Shift,                   action: PasteSelection   }
-    #- { key: Key0,     mods: Control,                 action: ResetFontSize    }
-    #- { key: Equals,   mods: Control,                 action: IncreaseFontSize }
-    #- { key: Add,      mods: Control,                 action: IncreaseFontSize }
-    #- { key: Subtract, mods: Control,                 action: DecreaseFontSize }
-    #- { key: Minus,    mods: Control,                 action: DecreaseFontSize }
 #+end_src
 
 * Shells
@@ -1094,15 +960,6 @@ This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really 
   alias gf="fuzzy git files"
   alias gc="git commit -m"
   alias gpm="git push origin master"
-
-  alias cfg="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
-  alias cfgc="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME commit -m"
-  alias cfgs="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME status"
-  alias cfgp="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME push origin master"
-  alias cfga="fuzzy git add --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
-  alias cfgl="fuzzy git log --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
-  alias cfgf="fuzzy git files --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
-  alias cfge='eval $EDITOR $(git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME ls-files --full-name | fzf --preview "bat --color=always --style=header,numbers {}")'
 
   # useful
   alias clearvimswap="rm $HOME/.local/share/nvim/swap/*"
@@ -4512,89 +4369,6 @@ This part is almost completely untouched. Needs some revamp.
           shift;
           run_command termux-tts-speak "$@"
           ;;
-  esac
-#+end_src
-** .scripts/popup
-#+begin_src bash :tangle ~/.scripts/popup
-  #!/bin/bash
-
-  # BAR_BORDER is the border size of top bar (in my case polybar.)
-  # BAR_HEIGHT is the height of top bar.
-  # WINDOW_BORDER is the border size of windows.
-  BAR_BORDER=$(xrdb-get-value "bar.border")
-  BAR_HEIGHT=$(xrdb-get-value "bar.height")
-  WINDOW_BORDER=$(xrdb-get-value "wm.border")
-
-  function calendar {
-      local GEOMETRY="100x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
-      local WINDOW_TITLE="calendar-popup-window"
-
-      if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-          term --float --opaque --title=$WINDOW_TITLE --geometry=$GEOMETRY -e ikhal
-      else
-          wmctrl -c $WINDOW_TITLE && vdirsyncer sync calendar
-      fi
-  }
-
-  function music {
-      MUSIC=ncmpcpp
-
-      local SCREEN_WIDTH=$(bspwmc focused_window_width)
-      local Y=$((BAR_HEIGHT+BAR_BORDER*2))
-      local GEOMETRY="110x20-$(((SCREEN_WIDTH - 822) / 2))+$Y"
-      local WINDOW_TITLE="Music Popup"
-
-      if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-          term --float --opaque -T "$WINDOW_TITLE" -g $GEOMETRY -e $MUSIC 2> /dev/null &
-          bspwmc center_floating --name "$WINDOW_TITLE"
-      else
-          wmctrl -c "$WINDOW_TITLE"
-      fi
-  }
-
-  function htop {
-      local GEOMETRY="80x9-$((2*WINDOW_BORDER))+$((BAR_HEIGHT+BAR_BORDER*2))"
-      local WINDOW_TITLE="Task manager"
-
-      if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-          term --float --opaque --class="$WINDOW_TITLE" -g $GEOMETRY -e htop
-      else
-          wmctrl -c "$WINDOW_TITLE"
-      fi
-  }
-
-  function translate {
-      # Use crow-translate if its open
-      if ! qdbus io.crow_translate.CrowTranslate /io/crow_translate/CrowTranslate/MainWindow open; then
-         local GEOMETRY="100x15-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
-         local WINDOW_TITLE="Translator (:set verbose 0/1)"
-         local COMMAND="trans -sl en -hl tr -to tr -interactive -v -pager bat"
-
-         if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-             term --float --title="$WINDOW_TITLE" --geometry=$GEOMETRY -e $COMMAND
-         else
-             wmctrl -c "$WINDOW_TITLE"
-         fi
-      fi
-  }
-
-  function mail {
-      local GEOMETRY="100x20-$((WINDOW_BORDER + BAR_BORDER))+$((BAR_HEIGHT+BAR_BORDER))"
-      local WINDOW_TITLE="neomutt-popup-window"
-
-      if [[ $(wmctrl -l) != *$WINDOW_TITLE* ]]; then
-          term --float --opaque -T $WINDOW_TITLE -g $GEOMETRY -e neomutt
-      else
-          wmctrl -c $WINDOW_TITLE
-      fi
-  }
-
-  case "$1" in
-      "calendar")   calendar;;
-      "mail")       mail;;
-      "music")      music;;
-      "htop")       htop;;
-      "translate")  shift; translate "$@";;
   esac
 #+end_src
 ** .scripts/rofi_vms
