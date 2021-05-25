@@ -2065,7 +2065,8 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
 
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet
-    :ensure t)
+    :ensure t
+    (yas-global-mode))
 
   (use-package yankpad
     :ensure t

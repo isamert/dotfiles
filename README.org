@@ -1,130 +1,4991 @@
-#+TITLE: isamert's dotfiles
+#+STARTUP: overview
+#+PROPERTY: header-args :mkdirp yes :noweb yes
 
-Here in this repository you can find my configurations for various applications and some scripts for managing/automating these programs. I do not expect anybody to copy this repository as-is and start using it, considerable amount of these files consists specific solutions for my specific workflow. Albeit I do recommend you to take a tour of this repository and copy/change the part you're interested in. There is a lot of stuff going on, so I'll try to give a quick summary of what is what and how I use them. Beware, there will be a lot of rambling!
+* Introduction
+This is primarily WIP. I just copied my dotfiles over here and categorized them and nothing else. Still better than my old method of managing dotfiles.
 
-* General workflow and thoughts
-My configurations generally focuses on software development with a keyboard-driven workflow. I'm not a pragmatist, I simply try to create a workflow that I can enjoy. Sometimes this means a decrease in productivity but an overall increase in /my/ sanity. Here are some main, overly-talked-about topics that I want to share my views on:
+- TODO items ::
+  - [ ] Need to convert some global variable hacks into noweb references.
+  - [ ] Create a bash library for my scripts, using noweb references.
+  - [ ] Explain each and every config file with at east 2 sentences.
+  - [ ] Find a way to make scripts exactable after tangling.
+  - [ ] Searx and invidious instances global vars
 
-** Keyboard vs. Mouse
-I hate mouse. I do not use it unless it's absolutely necessary. It causes physical pain and doing a switch between keyboard and mouse while working simply destroys my focus. I get frustrated pretty easily. If a program is not usable without a mouse, I simply do not use it.
+** Some general information
+- ~org-babel-tangle~ to tangle all files.
+- ~C-u org-babel-tangle~ to only tangle current file.
+- You'll want to make sure some of the files should tangle with executable permission. For that:
+  #+begin_src elisp
+    ;; I already have this in my emacs config, left this here as a reference:
+    ;; Make certain files exacutable when tangled
+    ;; Source: https://lists.gnu.org/archive/html/emacs-orgmode/2011-02/msg00465.html
+    (defun isamert/make-tangled-files-executable ()
+      (when (or (s-match "\\.\\(sh\\|py\\)$" (buffer-file-name))
+                (s-match "\\(python\\|sh\\)" (symbol-name major-mode)))
+        (set-file-modes (buffer-file-name) #o755)))
+    (add-hook 'org-babel-post-tangle-hook 'isamert/make-tangled-files-executable)
+  #+end_src
 
-** Simplicity and comprehensiveness
-- While I do appreciate the /[[https://github.com/isamert/st][st]]/ as a terminal emulator, I do not use it because it's the /fastest/ and/or it's the lightest terminal emulator out there; I use it because it works quite flawlessly with the programs I use.
-- I do my scripting generally in /bash/ instead of /sh/. Yes, bash does not work everywhere and it has it's own quirkiness but writing and maintaining a bash script is just so much easier than a UNIX-compliant /sh/ script. I do not seek for comprehensiveness because I think it's not an achievable goal. But I do try to generalize my solutions whenever it's easy to do.
+* Programming languages
+** R
+#+begin_src R :tangle ~/.Rprofile
+  options(repos = c(CRAN = "https://cran.rstudio.com"))
+#+end_src
 
-* The operating system
-I use Arch Linux. Arch Linux, unironically, is, the most stable system I've ever used to this date. The large userbase and AUR makes everything pretty easy to install and tinker with. Although I would very much like to use [[https://nixos.org][NixOS]] or, better yet, [[https://guix.gnu.org][GNU Guix]], but it practically seems like a very big undertaking at the moment. Eventually I would like to try both and replace Arch with one of them. My main interest in these systems is that being able to configure whole system declaratively. The only theoretic drawback of this kind of configuration is that it makes you dependent on one specific system. One can argue that both Nix and Guix can be installed on other systems as package managers, but this is the only package management aspect of it and the stability of that kind of setups is questionable. On practical side, the small userbase frightens me. This is especially true for Guix as like I wasn't even able to boot a real computer with a GUIX USB stick and couldn't get any real help.
+** Guile
+Just activate readline.
 
-** Service/Task configuration
-I use =systemd= to orchestrate my services and system tasks. You can find all of my unit files under =~/.config/systemd/user=. The most important part of this unit files are the =user-login.target= and =user-graphical-login.target=. The first one is called by the =~/.profile= file using these lines:
+#+begin_src scheme :tangle ~/.guile
+  (use-modules (ice-9 readline))
+  (activate-readline)
+#+end_src
 
-#+BEGIN_SRC bash
-systemctl --user import-environment
-systemctl --user start user-login.target &
-#+END_SRC
+** Python
+Run =ipython= with some defaults.
 
-=systemd --user= does not automatically import user environment variables, so the first line solves this problem. The second line starts =user-login.target= which then simply starts all the startup applications that does not need a graphical environment. The =user-graphical-login.target= is called by the =~/.xprofile= file. This file is sourced by the login manager on startup, then =user-graphical-login.target= starts the startup applications that requires a graphical environment. With this kind of configuration, I'm not bound to use a graphical environment all the time and the switch between non-gui and gui environments are simple.
+#+begin_src python :tangle ~/.ipython/profile_default/ipython_config.py
+  c.TerminalInteractiveShell.editing_mode = 'vi'
+  c.InteractiveShellApp.exec_lines = ['import os, sys, itertools, math\n']
+#+end_src
 
-** TODO NixOs vs GNU Guix
-* Window management
-I do not use any desktop environment, like KDE and GNOME. I use a window manager called [[https://github.com/baskerville/bspwm][BSPWM]]. BSPWM is one of the most minimal and easy to configure tiling window manager out there. The configuration method it uses is brilliant. It's configured trough a binary, called =bspc=. This kind of configuration does not make you dependent on a home-baked configuration language and it's quirkiness, instead you are free to use any language you want. As my BSPWM initialization, I use a bash script that consists this line:
+** Javascript
+Install global packages to user-local.
 
-#+BEGIN_SRC bash
-xrandr -q | grep -w "connected" | cut -d' ' -f1 | xargs -I {} bspc monitor "{}" --reset-desktops I II III IV V
-#+END_SRC
+#+begin_src bash :tangle ~/.npmrc
+prefix=${HOME}/.npm-packages
+#+end_src
 
-With this command, I can create 5 virtual desktops for each monitor connected to my computer. See how easy it is to integrate?
+* X related
+** .xinitrc
+#+begin_src sh :tangle ~/.xinitrc
+  #!/bin/sh
 
-I also have a script called =bspwmc= which just contains extra functionally for BSPWM that I wrote. For example I created some functions for moving/resizing floating windows:
+  # Source some required stuff
+  if [[ -d /etc/X11/xinit/xinitrc.d ]] ; then
+      for f in /etc/X11/xinit/xinitrc.d/?*.sh ; do
+          echo "Sourcing $f"
+          [[ -x "$f" ]] && . "$f"
+      done
+      unset f
+  fi
 
-[[file:https://user-images.githubusercontent.com/8031017/73112108-17422100-3f1e-11ea-9069-b33861d42388.gif]]
+  # See `man dbus-launch`
+  if [[ -z "$DBUS_SESSION_BUS_ADDRESS" ]]; then
+      # If not found, launch a new one
+      eval $(dbus-launch --sh-syntax)
+      echo "D-Bus per-session daemon address is: $DBUS_SESSION_BUS_ADDRESS"
+  fi
 
-** Display manager
-I use =X.org=. While =Wayland= seems promising, it does not have the fraction of tooling that X.org has. There is also no analogues of BSPWM for Wayland. If you have a dual Nvidia+Intel GPU laptop, namely Optimus laptops, you don't really have any other sane choice but using X.org and [[https://github.com/Askannz/optimus-manager][optimus-manager]].
+  sysresources=/etc/X11/xinit/.Xresources
+  sysmodmap=/etc/X11/xinit/.Xmodmap
+  [[ -f $sysresources ]] && xrdb -merge $sysresources
+  [[ -f $sysmodmap ]] && xmodmap $sysmodmap
+  setxkbmap $(echo "$KEYBOARD_LAYOUTS" | cut -d',' -f1)
+  xrdb -merge $HOME/.Xresources
+  xmodmap $HOME/.Xmodmap
+  xsetroot -cursor_name left_ptr
 
-* Keyboard configuration and shortcuts
-I modify the keyboard layout with =xmodmap= and create keyboard shortcuts with =sxhkd=. For example, with the help of =xmodmap= I remap =CapsLock= key as the =Hyper= key, which is just another modifier key like =Ctrl= key. Then I create shortcuts using =sxhkd=, for example =Hyper+a= opens up a menu that lists all the applications that are installed in my machine.
+  deadd-notification-center &
+  picom -b
+  xcape -e 'Hyper_L=Escape'
+  sxhkd &
+  unclutter &
+  redshift -l 39:35 &
+  udiskie --smart-tray --notify &
+  copyq &
+  emacs --daemon
+  crow &
+  syncthing -no-browser -no-restart -logflags=0 &
 
-I also use =xmodmap= for adding Unicode characters to my layout which enables me to use Unicode characters while coding without depending on any other extensions. Here is a list of characters that I have mapped in my =~/.Xmodmap= file:
+  exec bspwm
+#+end_src
 
-#+BEGIN_SRC
-AltGr + l → λ  | AltGr + a → →
-AltGr + x → ❌ | AltGr + f → ∀
-AltGr + n → ¬  | AltGr + d → ⇒
-AltGr + , → ≤  | AltGr + . → ≥
-AltGr + = → ≠  | AltGr + shift + = → ≔
-AltGr + / → ÷  | AltGr + ; → ∷
-AltGr + 8 → ×  | AltGr + t -> ✓
-#+END_SRC
+** .Xmodmap
+This file contains some mappings for my keyboard. I can simply change how a key (or some simple key combinations) behave in  X level which  has little to none performance implications. Also see [[https://isamert.net/2020/05/30/better-keyboard-experience-in-linux.html][this post]] for further details.
 
-Here is an example keybinding from my =~/.config/sxhkd/sxhkdrc=:
+#+begin_src xmodmap :tangle ~/.Xmodmap
+!! Map CapsLock to Hyper key
+!! Unmap capslock
+clear Lock
+keycode 66 = Hyper_L
+!! Leave mod4 as windows key _only_
+remove mod4 = Hyper_L
 
-#+BEGIN_SRC
-hyper + {bracketleft, bracketright}
-    mediastuff all_seek {-,+}3%
-#+END_SRC
+!! Set mod3 to capslock
+add mod3 = Hyper_L
 
-When you press =Hyper + [= or =Hyper + ]=, sxhkd grabs this and calls the script named =mediastuff= with given parameters. In this particular case, this script seeks the song by 3 percent forward or backward based on given input. Observe how easy it is to bind multiple keys on same rule.
+!! Fix my bluetooth keyboard:
+!! My bluetooth keyboard does not have ESC key, in it's place
+!! it has the Backwards key. So I'm simply rebinding it to ESC.
+!! (Unfortunately XF86Backwards key gets overridden by ESC in my thinkpad)
+keycode 166 = Escape NoSymbol Escape NoSymbol Escape Escape
+keycode 166 = Escape
+keycode 248 = Super_L
 
-* Multimedia and entertainment
-I use =mpv= for videos, =mpd= for music. I also have some scripts that builds upon the functionalities of =mpv=, =mpd=, =youtube-viewer=, =youtube-dl= etc.
+!! Quick access for some unicode chars
+!! altgr + b → λ  | altgr + a → →
+!! altgr + x → ❌ | altgr + f → ∀
+!! altgr + n → ¬  | altgr + d → ⇒
+!! altgr + , → ≤  | altgr + . → ≥
+!! altgr + = → ≠  | altgr + shift + = → ≔
+!! altgr + / → ÷  | altgr + ; → ∷
+!! altgr + 8 → ×  | altgr + t -> ✓
+keysym b = b B b B U03BB
+keysym a = a A a A U2192
+keysym x = x X x X U274C
+keysym f = f F f F U2200
+keysym n = n N n N U00AC
+keysym d = d D d D U21D2
+keysym t = t T t T U2713
+keysym 8 = 8 asterisk 8 asterisk multiply
+keysym comma = comma less comma less U2264
+keysym period = period greater period greater U2265
+keysym equal = equal plus equal plus U2260 U2254
+keysym question = slash question slash question division
+keysym semicolon = semicolon colon semicolon colon U2237
 
-** Music management
-I have an =mpd= server running all the time. I control it with =ncmpcpp=. I also have some dmenu scripts that allows me to quickly access my music library.
+!! A comfy way to use h,j,k,l as directional keys.
+!! With this configuration I'm able to use these keys as arrow key by simply pressing
+!! them with AltGr.
+keysym h = h H h H Left Home
+keysym j = j J j J Down Prior
+keysym k = k K k K Up Next
+keysym l = l L l L Right End
 
-[[file:https://user-images.githubusercontent.com/8031017/73128764-4cfe0d00-3fe5-11ea-8f9c-81fac77e805a.png]]
-[[file:https://user-images.githubusercontent.com/8031017/73128763-4cfe0d00-3fe5-11ea-84f5-ea1744b72856.png]]
+!! AltGr+[ -> (, AltGr+] -> )
+keysym bracketleft = bracketleft braceleft bracketleft braceleft parenleft
+keysym bracketright = bracketright braceright bracketright braceright parenright
 
-The second menu also does a search on YouTube if the input is not found on my local library. (The youtube menu script, under the =~/.scripts/menu=, is kind of an abomination right now, but it does work.)
+!! Fix us(intl)
+!! I'm using us(intl) to be able to use ISO_Shift_Level3 as AltGr, other
+!! keyboards does not permit usage of it AFAIK. But I don't want to use dead_*
+!! keys. So I map them to their original bindings.
+keysym dead_grave = grave asciitilde
+keysym dead_acute = apostrophe quotedbl
+#+end_src
+** .Xresources
+#+begin_src conf :tangle ~/.Xresources
+  ! hard contrast: *background: #1d2021
+  ,*background: #282828
+  ! soft contrast: *background: #32302f
+  ,*foreground: #ebdbb2
+  ! Black + DarkGrey
+  ,*color0:  #282828
+  ,*color8:  #928374
+  ! DarkRed + Red
+  ,*color1:  #cc241d
+  ,*color9:  #fb4934
+  ! DarkGreen + Green
+  ,*color2:  #98971a
+  ,*color10: #b8bb26
+  ! DarkYellow + Yellow
+  ,*color3:  #d79921
+  ,*color11: #fabd2f
+  ! DarkBlue + Blue
+  ,*color4:  #458588
+  ,*color12: #83a598
+  ! DarkMagenta + Magenta
+  ,*color5:  #b16286
+  ,*color13: #d3869b
+  ! DarkCyan + Cyan
+  ,*color6:  #689d6a
+  ,*color14: #8ec07c
+  ! LightGrey + White
+  ,*color7:  #a89984
+  ,*color15: #ebdbb2
+#+end_src
+* Window management/DE
+** BSPWM
+This is my window manager.
 
-** Video management
-I keep all of the movies and shows under =~/Videos/Movies= and =~/Videos/Shows= respectively. For quick access, I use the shortcut =Hyper+f= which simply lists all the files under my home directory using =dmenu= (The script tries to ignore unrelated files and folders, like hidden ones and temporary ones. So it's kind of fast.).
+#+begin_src bash :tangle ~/.config/bspwm/bspwmrc
+  #!/bin/bash
 
-[[file:https://user-images.githubusercontent.com/8031017/73128976-3908da00-3fea-11ea-83e7-19dbd53ecb96.png]]
+  bspc config automatic_scheme longest_side
+  bspc config initial_polarity second_child
 
-I have integrated =subdl=, a program that downloads subtitles for given video file from opensubtitles.org, with =mpv=. To get a subtitle, I simply hit =T= (or =Alt+T= for Turkish subtitles) and it downloads and loads the subtitle automatically for me. Observe these lines from =~/.config/mpv/input.conf=:
+  bspc config pointer_follows_focus false
+  bspc config focus_follows_pointer true
+  bspc config single_monocle        true
+  bspc config gapless_monocle       true
+  bspc config borderless_monocle    true
+  bspc config window_gap            3
+  bspc config border_width          2
+  bspc config split_ratio           0.52
 
-#+BEGIN_SRC
+
+  TOP_GAP=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
+  SCREEN_WIDTH=$(bspwmc focused_monitor_width)
+  SCREEN_HEIGHT=$(bspwmc focused_monitor_height)
+  RECT_TOP_HALF=${SCREEN_WIDTH}x$((SCREEN_HEIGHT / 2))+0+${TOP_GAP}
+  RECT_TOP_POPUP="$((SCREEN_WIDTH / 3 + 100))x400+$((SCREEN_WIDTH / 2 - (SCREEN_WIDTH / 3 + 100) / 2 ))+${TOP_GAP}"
+
+  bspc rule --add '*:float'   state=floating
+  bspc rule --add '*:tophalf' state=floating sticky=on border=off rectangle="$RECT_TOP_HALF"
+
+  bspc rule --add 'Crow Translate' state=floating rectangle="$RECT_TOP_POPUP"
+  bspc rule --add Pinta            state=floating
+  bspc rule --add Sxiv             state=floating
+  bspc rule --add Zenity           state=floating
+  bspc rule --add feh              state=floating
+  bspc rule --add copyq            state=floating border=off  rectangle="$RECT_TOP_HALF"
+  bspc rule --add 'mpv:youtube'    state=floating focus=off
+  bspc rule --add Emacs            state=tiled
+  bspc rule --add emacs            state=tiled
+
+  # Don't manage some windows
+  bspc rule --add Screenkey     manage=off
+  bspc rule --add 'dota2'       border=off
+
+  bspc rule -a Vivaldi-stable desktop='^1' follow=on
+  bspc rule -a firefox        desktop='^1' follow=on
+
+  init-desktops
+#+end_src
+** Polybar
+*** Global configuration
+I keep some of the polybar related variables inside the ~Xresources~ file so that I can access these values using =xrdb-get-value= command if I need to.
+
+#+begin_src conf :tangle ~/.Xresources
+  bar.font0: IBM Plex Sans:fontformat=truetype:size=10:antialias=true;0
+  bar.font1: Ubuntu Nerd Font:fontformat=truetype:size=10:antialias=true;0
+  bar.border: 0
+  bar.radius: 0
+  bar.height: 25
+  bar.width: 100%
+#+end_src
+*** Main configuration
+#+begin_src conf :tangle ~/.config/polybar/config
+  [colors]
+  background = ${xrdb:background}
+  background-alt = ${xrdb:background}
+  foreground = ${xrdb:foreground}
+  foreground-alt = ${xrdb:color7}
+  primary = ${xrdb:color3}
+  secondary = ${xrdb:color4}
+  alert = ${xrdb:color1}
+
+  [bar/main]
+  monitor = ${env:MONITOR_MAIN}
+  width = ${xrdb:bar.width}
+  height = ${xrdb:bar.height}
+  radius = ${xrdb:bar.radius}
+  fixed-center = true
+  wm-restack = bspwm
+
+  background = ${colors.background}
+  foreground = ${colors.foreground}
+
+  font-0 = ${xrdb:bar.font0}
+  font-1 = ${xrdb:bar.font1}
+
+  border-size = ${xrdb:bar.border}
+  border-color = #00000000
+
+  line-size = 3
+  line-color = #f00
+
+  module-margin = 0
+  format-padding = 0
+  padding-left = 0
+  padding-right = 2
+  module-margin-left = 0
+  module-margin-right = 1
+
+  modules-left = bspwm xwindowlong
+  modules-right = pacman xkeyboard volume memory cpu temperature battery date powermenu
+
+  tray-position = right
+  tray-padding = 2
+  cursor-click = pointer
+
+  [bar/secondary]
+  monitor = ${env:MONITOR_SECONDARY}
+  width = ${xrdb:bar.width}
+  height = ${xrdb:bar.height}
+  radius = ${xrdb:bar.radius}
+  fixed-center = true
+  wm-restack = bspwm
+
+  background = ${colors.background}
+  foreground = ${colors.foreground}
+
+  font-0 = ${xrdb:bar.font0}
+  font-1 = ${xrdb:bar.font1}
+
+  border-size = ${xrdb:bar.border}
+  border-color = #00000000
+
+  line-size = 3
+  line-color = #f00
+
+  padding-left = 0
+  padding-right = 2
+
+  module-margin-left = 1
+  module-margin-right = 2
+
+  modules-left = bspwm xwindowlong
+  modules-right = xbacklight
+  cursor-click = pointer
+
+  [module/optimus]
+  type = custom/script
+  exec-if = systemctl is-active --quiet optimus-manager
+  exec = optimus-manager --print-mode | grep GPU | cut -d: -f2 | tr -d ' ' | sed 's/.*/\u&/'
+  interval = 30000000
+
+  format-prefix = " "
+  format-underline = ${xrdb:color2}
+
+  [module/pacman]
+  type = custom/script
+  exec = pacman -Sup | wc -l
+  interval = 3600
+
+  format-prefix = " "
+  format-underline = ${xrdb:color3}
+
+  [module/github]
+  type = internal/github
+  token = ${env:GITHUB_ACCESS_TOKEN}
+  empty-notifications = false
+  interval = 1800
+
+  [module/xbacklight]
+  type = internal/xbacklight
+  enable-scroll = true
+
+  label = %percentage%%
+  format = <ramp> <label>
+
+  ramp-0 = 
+  ramp-1 = 
+  ramp-2 = 
+  ramp-3 = 
+  ramp-4 = 
+
+  format-underline = ${xrdb:color4}
+
+  [module/xwindow]
+  type = internal/xwindow
+  label = %title:0:30:...%
+
+  [module/xwindowlong]
+  type = internal/xwindow
+  label = %title:0:150:...%
+
+  [module/xkeyboard]
+  type = internal/xkeyboard
+  blacklist-0 = num lock
+
+  format-prefix = " "
+  format-prefix-foreground = ${colors.foreground-alt}
+  format-prefix-underline = ${xrdb:color5}
+
+  label-layout = %layout%
+  label-layout-underline = ${xrdb:color5}
+
+  label-indicator-padding = 2
+  label-indicator-margin = 1
+  label-indicator-background = ${xrdb:color5}
+  label-indicator-underline = ${xrdb:color5}
+
+  [module/bspwm]
+  type = internal/bspwm
+
+  label-focused = %index%
+  label-focused-background = ${colors.background-alt}
+  label-focused-underline= ${colors.primary}
+  label-focused-padding = 2
+
+  label-occupied = %index%
+  label-occupied-padding = 2
+
+  label-urgent = %index%!
+  label-urgent-background = ${colors.alert}
+  label-urgent-padding = 2
+
+  label-empty =
+  label-empty-foreground = ${colors.foreground-alt}
+  label-empty-padding = 0
+
+  [module/cpu]
+  type = internal/cpu
+  interval = 2
+  format-prefix = " "
+  format-prefix-foreground = ${colors.foreground-alt}
+  format-underline = ${xrdb:color6}
+  label = %percentage:2%%
+
+  [module/memory]
+  type = internal/memory
+  interval = 2
+  format-prefix = " "
+  format-prefix-foreground = ${colors.foreground-alt}
+  format-underline = ${xrdb:color7}
+  label = %{A1:popup htop &:} %percentage_used%% %{A}
+
+  [module/eth]
+  type = internal/network
+  interface = enp5s0
+  interval = 3.0
+
+  format-connected-underline = ${xrdb:color8}
+  format-connected-prefix = ""
+  format-connected-prefix-foreground = ${colors.foreground-alt}
+  label-connected = %local_ip%
+
+  [module/date]
+  type = internal/date
+  interval = 20
+
+  date = " %d-%m"
+  time = %H:%M
+
+  format-underline = ${xrdb:color13}
+  label = %{A1:popup calendar&:}  %date%   %time% %{A}
+
+  [module/volume]
+  type = internal/alsa
+
+  format-volume = <ramp-volume> <label-volume>
+  label-volume = %percentage%%
+
+  format-muted-prefix = " "
+  format-muted-foreground = ${colors.foreground-alt}
+  label-muted-foreground = #66
+
+  ramp-volume-0 =
+  ramp-volume-1 =墳
+  ramp-volume-2 =
+
+  format-volume-underline = ${xrdb:color10}
+  format-muted-underline = ${xrdb:color10}
+
+  [module/battery]
+  type = internal/battery
+  battery = BAT0
+  adapter = AC0
+  full-at = 95
+
+  format-charging = <animation-charging> <label-charging>
+  format-charging-underline = ${xrdb:color11}
+
+  format-discharging = <ramp-capacity> <label-discharging>
+  format-discharging-underline = ${self.format-charging-underline}
+
+  ramp-capacity-0 = 
+  ramp-capacity-1 = 
+  ramp-capacity-2 = 
+  ramp-capacity-foreground = ${colors.foreground-alt}
+
+  animation-charging-0 = 
+  animation-charging-1 = 
+  animation-charging-2 = 
+  animation-charging-foreground = ${colors.foreground-alt}
+  animation-charging-framerate = 750
+
+  [module/temperature]
+  type = internal/temperature
+  thermal-zone = 0
+  warn-temperature = 65
+
+  format = <ramp> <label>
+  format-underline = ${xrdb:color12}
+  format-warn = <ramp> <label-warn>
+  format-warn-underline = ${self.format-underline}
+
+  label = %temperature-c%
+  label-warn = %temperature-c%
+  label-warn-foreground = ${colors.secondary}
+
+  ramp-2 = 
+  ramp-1 = 
+  ramp-0 = 
+  ramp-foreground = ${colors.foreground-alt}
+
+  [module/powermenu]
+  type = custom/menu
+
+  expand-right = true
+
+  format-spacing = 1
+
+  label-open = ⏻
+  label-open-foreground = ${colors.secondary}
+  label-close =  cancel
+  label-close-foreground = ${colors.secondary}
+  label-separator = |
+  label-separator-foreground = ${colors.foreground-alt}
+
+  menu-0-0 = reboot
+  menu-0-0-exec = menu-open-1
+  menu-0-1 = power off
+  menu-0-1-exec = menu-open-2
+
+  menu-1-0 = cancel
+  menu-1-0-exec = menu-open-0
+  menu-1-1 = reboot
+  menu-1-1-exec = reboot
+
+  menu-2-0 = power off
+  menu-2-0-exec = poweroff
+  menu-2-1 = cancel
+  menu-2-1-exec = menu-open-0
+
+  [settings]
+  screenchange-reload = true
+#+end_src
+** sxhkd
+This is the global keybinding manager.
+
+*** BSPWM bindings
+#+begin_src conf :tangle ~/.config/sxhkd/sxhkdrc
+  # focus/swap with left/down/up/right window
+  super + {_,shift + } {h,j,k,l}
+      {bspwmc focus, euclid_mover} {west,south,north,east}
+
+  # split
+  super + {_,shift + } {backslash,minus}
+      bspc node -p {east,west,south,north}
+
+  # set the window state
+  super + {t,shift + t,s,f}
+      bspc node --state "~{tiled,pseudo_tiled,floating,fullscreen}"
+
+  # toggle between fullscreen(monacle) and tiled desktop layout
+  super + m
+      bspc desktop --layout next
+
+  # focus last floating window
+  super + shift + f
+      bspwmc focus_toggle_floating
+
+  # close window
+  super + w
+      bspc node --close
+
+  # Make window sticky
+  super + i
+      bspc node -g sticky
+
+  # focus/move to the given desktop on current monitor
+  super + {_,shift + }{1-5}
+      bspc {desktop --focus, node --to-desktop} $(bspc query -D -m | sed -n "{1-5}p")
+
+  # focus the last node
+  super + Tab
+      bspc node --focus last
+
+  # focus next/prev monitor
+  # I don't want this shortcut to cycle, that's why I use {west, east}.
+  # If I'm on the most left corner, then "super + ," will not jump into
+  # the rightmost monitor
+  super + {comma, period}
+      bspc monitor {west, east} --focus
+
+  # move current window to next/prev monitor
+  super + shift + {comma, period}
+      bspc node --to-desktop $(bspc query -D -m {prev, next} -d .active | sed -n "1p")
+
+  # move current window to Nth monitor
+  # (no, I don't have 5 monitors but just in case. hehe)
+  super + alt + {1-5}
+      bspc node --to-desktop $(bspc query -D -m (bspc query -M | sed -n "{1-5}p") -d .active)
+
+  # focus next/prev window
+  alt + Tab
+      bspc node -f next.window.local.!floating
+
+  # change gap size
+  super {_, shift +} g
+      bspc config window_gap $(expr $(bspc config window_gap) {-,+} 3)
+
+  # resize windows
+  super + alt + {j,l,k,h}
+      bspwmc resize {h, w} {+50, -50}
+
+  # center focused floating window
+  super + C
+      bspwmc center_floating true
+
+  # move floating window to corners
+  super + shift + {Q,W,A,S}
+      bspwmc move_floating {Q,W,A,S}
+
+  # resize a floating window from all sides
+  super + {shift,_} + equal
+      xdo resize {-w +50 -h +50, -w -50 -h -50}
+
+  # rotate window tree
+  super + {r, shift + r}
+      bspc node @/ -C {forward,backward}
+
+  # logout
+  super + shift + e
+      for node in $(bspc query -N); do bspc node $node --close; done; bspc quit
+#+end_src
+
+*** Running apps etc.
+#+begin_src conf :tangle ~/.config/sxhkd/sxhkdrc
+  # open a terminal (with shift it floats, with ctrl its opaque, with ctrl + shift its floating opaque)
+  {super, hyper} + {_, shift + ctrl +, shift +, ctrl +} Return
+      term {_,_} {_, --float --opaque --geometry=100x20, --float --geometry=100x20, --opaque}
+
+  # open a terminal at east,west,south,north
+  hyper + {_,shift + } {backslash,minus}
+      bspc node -p {east,west,south,north}; \
+      term
+
+  # Open scratchpad at bottom or top. Top scratchpad is shared across
+  # desktops, bottom one is dedicated to given desktop
+  hyper + {e, d}
+      bspwmc {scratchpad_top, scratchpad_bot}
+
+  # Open the clipboard manager
+  hyper + q
+      copyq toggle
+
+  # Open a window to select and kill process' interactively
+  hyper + x
+      /bin/sh -c "term --float --geometry=150x20 -e fuzzy kill"
+
+  # An interactive calculator
+  hyper + equal
+      menu calc
+
+  # Run some apps directly
+  hyper + r; {f, q, e, r, t, v, k}
+      {firefox, qbittorrent, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
+
+  hyper + r; p; {s, p, w}
+      pqiv {~/Pictures/screenshots/, ~/Pictures/phone/Camera, ~/Pictures/wallpapers/}
+
+  # menus (an escape hatch if hyper key does not work for some reason)
+  super + a
+      menu menu
+
+  # Show some menus: an app menu, searc in files, search in file contents, youtube
+  hyper + {a, f, F, o, y, b}
+      menu {menu,files --open,file_contents,passwords,youtube --video, bookmarks}
+
+  # Show popup for translate
+  hyper + t
+    qdbus io.crow_translate.CrowTranslate /io/crow_translate/CrowTranslate/MainWindow open || \
+    term --float -e trans -sl en -hl tr -to tr -interactive -v -pager bat
+
+  # Set a random wallpaper
+  hyper + apostrophe
+      feh --bg-scale $(find "$DIR_WALLPAPERS" | shuf -n 1)
+
+  # Take screenshot
+  {Print, hyper + s, shift + Print, control + Print, control + shift + Print}
+      take-ss --{full,clip-area,area,wait-full,wait-area}
+
+  # Take screenshot and edit it
+  hyper + S
+      take-ss --edit-area
+
+  # Save clipboard image as file
+  hyper + alt + s
+      cb-save
+
+  # Toggle notification center
+  hyper + n
+      kill -s USR1 $(pidof deadd-notification-center)
+#+end_src
+
+*** System management
+#+begin_src conf :tangle ~/.config/sxhkd/sxhkdrc
+  control + alt + k
+      switch-keyboard-layout
+
+  control + alt + o
+      mediastuff switch-audio-channel --interactive
+
+  control + alt + l
+      lockscreen
+#+end_src
+*** Media/sound management
+#+begin_src conf :tangle ~/.config/sxhkd/sxhkdrc
+  # volume down/up
+  hyper + {9,0}
+      amixer set Master 5%{-,+}
+
+  # volume down/up
+  XF86Audio{Lower,Raise}Volume
+      amixer set Master 5%{-,+}
+
+  # audio/mic toggle
+  XF86Audio{_,Mic}Mute
+      amixer set {Master,Capture} toggle
+
+  # toggle music
+  {hyper + p, XF86AudioPlay}
+      mediastuff all_toggle
+
+  # seek song
+  hyper + {bracketleft, bracketright}
+      mediastuff all_seek {-,+}3%
+
+  # next/prev song
+  hyper + shift + {bracketleft, bracketright}
+      mpc {prev,next}
+
+  # next/prev song
+  XF86Audio{Prev,Next}
+      mpc {prev,next}
+#+end_src
+** Rofi
+*** Global configuration
+#+begin_src conf :tangle ~/.Xresources
+  rofi.theme: andrea
+#+end_src
+
+*** Theme
+#+begin_src js :tangle ~/.config/rofi/andrea.rasi
+  configuration {
+      /* modi: "drun,window,windowcd"; */
+      /* combi-modi: "drun,window,windowcd"; */
+      /* font: "Inter Regular 14"; */
+      fixed-num-lines: true;
+      show-icons: true;
+      icon-theme: "deepin";
+      drun-show-actions: true;
+      case-sensitive: false;
+      fullscreen: true;
+      window-format: "{w}\t{t}";
+      display-window: "  ";
+      display-windowcd: "  ";
+      display-drun: "  ";
+      /* display-run: ; */
+      /* display-ssh: ; */
+      /* display-combi: ; */
+      /* display-keys: ; */
+      /* kb-primary-paste: "Control+V,Shift+Insert"; */
+      /* kb-secondary-paste: "Control+v,Insert"; */
+      /* kb-move-front: "Control+a"; */
+      /* kb-move-end: "Control+e"; */
+      kb-clear-line: "";
+      kb-remove-word-back: "Control+w";
+      /* kb-mode-next: "alt+period"; */
+      kb-mode-previous: "alt+comma";
+  }
+
+  ,* {
+      background-color: transparent;
+      color: white;
+  }
+
+  window {
+      padding: 15% 20%;
+      y-offset: -200px;
+      background-color: rgba(2, 4, 8, 0.9);
+  }
+
+  inputbar {
+      padding: 10px 10px 10px 20px;
+      border-radius: 7px;
+      margin: 0 0 30px 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px;
+      border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  prompt {
+      margin: 2px 4px 0 0;
+      font: "Font Awesome 5 Free 10";
+  }
+
+  element {
+      border-radius: 7px;
+      padding: 4px 8px;
+  }
+
+  element.selected {
+      background-color: rgba(255, 255, 255, 0.1);
+  }
+#+end_src
+* Alacritty terminal
+#+begin_src yaml :tangle ~/.config/alacritty.yml
+  window:
+    dynamic_title: true
+
+  font:
+    normal:
+      family: Iosevka
+    size: 11.0
+
+  draw_bold_text_with_bright_colors: true
+  live_config_reload: true
+  background_opacity: 0.8
+
+  shell:
+    program: /usr/bin/zsh
+
+  hints:
+    enabled:
+     - regex: "(ipfs:|ipns:|magnet:|mailto:|gemini:|gopher:|https:|http:|news:|file:|git:|ssh:|ftp:)\
+               [^\u0000-\u001F\u007F-\u009F<>\"\\s{-}\\^⟨⟩`]+"
+       command: jaro
+       post_processing: true
+       mouse:
+         enabled: true
+         mods: None
+       binding:
+         key: F
+         mods: Control|Shift
+
+  # Colors (Gruvbox dark)
+  colors:
+    # Default colors
+    primary:
+      # hard contrast: background = '#1d2021'
+      background: '#282828'
+      # soft contrast: background = '#32302f'
+      foreground: '#ebdbb2'
+
+    # Normal colors
+    normal:
+      black:   '#282828'
+      red:     '#cc241d'
+      green:   '#98971a'
+      yellow:  '#d79921'
+      blue:    '#458588'
+      magenta: '#b16286'
+      cyan:    '#689d6a'
+      white:   '#a89984'
+
+    # Bright colors
+    bright:
+      black:   '#928374'
+      red:     '#fb4934'
+      green:   '#b8bb26'
+      yellow:  '#fabd2f'
+      blue:    '#83a598'
+      magenta: '#d3869b'
+      cyan:    '#8ec07c'
+      white:   '#ebdbb2'
+
+
+  key_bindings:
+    - { key: U,  mods: Shift|Control,   mode: ~Alt, action: ScrollPageUp,  }
+    - { key: D,  mods: Shift|Control,   mode: ~Alt, action: ScrollPageDown }
+
+    # Vi mode
+    - { key: A,                           mode: Vi, action: ToggleViMode   }
+    - { key: Return,                      mode: Vi, action: ToggleViMode   }
+    - { key: 5,  mods: Shift,             mode: Vi, action: Last }
+    # ^ See https://github.com/alacritty/alacritty/issues/4111
+#+end_src
+
+* Shells
+** Aliases
+This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really use it).
+
+#+begin_src bash :tangle ~/.config/aliases
+  # NOTE:  Do not use alias xxx='...', use ". (For eshell converting script)
+
+  # package management
+  alias aur="$AUR_HELPER"
+  alias aurin="$AUR_HELPER -S"
+  alias aurs="$AUR_HELPER -Ss"
+  alias aurupg="$AUR_HELPER -Syu"
+  alias pac="sudo pacman"
+  alias pacs="pacman -Ss"
+  alias pacin="sudo pacman -S"
+  alias pacinf="fuzzy pacman"
+  alias pacf="fuzzy pacman"
+  alias pacins="sudo pacman -U"    # Install from file
+  alias pacupd="sudo pacman -Sy"
+  alias pacupg="sudo pacman -Syu"
+  alias pacfile="pacman -Fs"       # Find package that contains given file
+  alias pacbin="pacman -Fs"        # Same as above
+  alias pacre="sudo pacman -R"     # Leave dependencies and configurations
+  alias pacrem="sudo pacman -Rns"
+  alias pacpac="fuzzy packages"    # A fuzzy, interactive package finder
+
+  # process management
+  alias nameof="ps -o comm= -p" # Get the name of given PID
+  alias fuckall="killall -s 9"
+  alias fkill="fuzzy kill"
+
+  # utility
+  alias mktar="tar -cvf"
+  alias mkbz2="tar -cvjf"
+  alias mkgz="tar -cvzf"
+  alias ...="cd ../.."
+  alias ....="cd ../../.."
+  alias .....="cd ../../../.."
+  alias df="df -H"
+  alias du="ncdu"
+  alias xpaste="xclip -selection clipboard -o" # paste cb content
+  alias fastssh="ssh -Y -C -c chacha20-poly1305@openssh.com"
+
+  #alias ls="
+  #alias lls="ls -lthG --color --group-directories-first"
+  alias ls="lsd --group-dirs first --classify"
+  alias ll="lsd --group-dirs first --classify --oneline"
+  alias lls="lsd --group-dirs first --classify --long"
+  alias lla="lsd --group-dirs first --classify --long --all"
+  alias tree="lsd --tree"
+
+  # abbrv
+  alias n="nvim"
+  alias v="jaro --method=view"
+  alias e="jaro --method=edit"
+  alias mt="jaro --mime-type"
+  alias how="howdoi --color --all"
+  alias mkx="chmod +x"
+  alias yt="youtube-viewer --player=mpv"
+  alias ytm="youtube-viewer --player=mpv --no-video"
+
+  alias ctl="systemctl "
+  alias ctlu="systemctl --user"
+  alias ctls="systemctl status"
+  alias ctlus="systemctl --user status"
+  alias ctle="systemctl enable --now"
+  alias ctlue="systemctl --user enable"
+
+  # master Wq
+  alias :q="exit"
+  alias :wq="exit"
+
+  # git
+  alias g="git"
+  alias gs="git status"
+  alias ga="fuzzy git add"
+  alias gl="fuzzy git log"
+  alias gf="fuzzy git files"
+  alias gc="git commit -m"
+  alias gpm="git push origin master"
+
+  # useful
+  alias clearvimswap="rm $HOME/.local/share/nvim/swap/*"
+  function is-emacs { [[ "$INSIDE_EMACS" = "vterm" ]]; }
+
+  # stuff
+  alias ipaddr="curl https://api.ipify.org"
+  alias ipinfo="curl https://ipinfo.io"
+  alias download-website="wget --recursive --page-requisites --html-extension
+      --convert-links --no-parent --limit-rate=500K" # Download a website completely
+  alias git-todo="rg 'FIXME|TODO'"
+  alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd+ | bc"
+#+end_src
+* Zsh
+Check out these links to get a grasp of how all of these stuff work. I also tried to add notes to each file.
+- https://wiki.archlinux.org/index.php/Zsh
+- https://unix.stackexchange.com/questions/71253/what-should-shouldnt-go-in-zshenv-zshrc-zlogin-zprofile-zlogout
+- https://blog.flowblok.id.au/2013-02/shell-startup-scripts.html (I don't use the technique described here, just linking this for amazing graphs)
+
+** ~/.zshenv
+- This file is sourced first.
+- This file is sourced every time, no matter which type of shell you are firing up (interactive/non-interactive/login/non-login).
+- System-wide equivalent of this file is =/etc/zshenv= or =/etc/zsh/zshenv=.
+
+- Having your essential environment variables (like =PATH=) set here is also important.
+  - For example when you run =unison= to sync content between your computers, =unison= connects to the other computer through =ssh=. This connection is done on a =non-interactive/non-login= shell (or just take this as an example: =ssh some-computer 'echo $PATH'= this is also done on a =non-interactive/non-login= shell). So if your =unison= binary is not in one of the paths that appear in default =PATH= variable, it'll fail to find it. So you need to add the path that
+
+#+begin_src sh :tangle ~/.zshenv
+  # For aurin, aursearch... aliases. (Also used in some other scripts)
+  export AUR_HELPER=trizen
+
+  # To be able to deploy android apps from commandline.
+  if [[ -f /opt/android-sdk ]]; then
+      export ANDROID_SDK_ROOT=/opt/android-sdk
+  fi
+
+  export GOPATH="$HOME/.go"
+  export R_LIBS_USER="$HOME/.rlibs"
+
+  # The PATH
+  export PATH=$HOME/.nix-profile/bin:$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin:$HOME/.cargo/bin:$PATH
+  # The nix path will be re-added by `/etc/profile.d/nix.sh` when
+  # it gets sourced when .zprofile is sourced but I need it before that for
+  # some programs to work over ssh correctly.
+
+  # Run ts_onfinish when a tsp job is finished
+  export TS_ONFINISH=ts_onfinish
+
+  # node/nvm configuration {{{
+  export NVM_DIR="$HOME/.nvm"
+  # TODO: source nvm
+  # source /usr/share/nvm/init-nvm.sh
+  # OR
+  #[ -z "$NVM_DIR" ] && export NVM_DIR="$HOME/.nvm"
+  #source /usr/share/nvm/nvm.sh
+  #source /usr/share/nvm/bash_completion
+  #source /usr/share/nvm/install-nvm-exec
+  # }}}
+
+  export SHELL=/bin/zsh
+
+  # Hyper + Y brings up a dmenu that lists the videos found in following playlist
+  export YT_MAIN_PLAYLIST=PLXawKvexOu0psiAqHCV5IFxdnWxZN1OVc
+
+  # Some constants
+  export PASSWORD_STORE=$HOME/Documents/sync/passwords.kdbx
+  export DIR_WALLPAPERS=$HOME/Pictures/wallpapers
+  export DIR_SCREENSHOTS=$HOME/Pictures/screenshots
+  export DIR_NOTES=$HOME/Documents/notes
+
+  # vi: foldmethod=marker
+#+end_src
+
+** ~/.zprofile
+- This file is sourced after =.zshenv=.
+- This file is read *only* while logging in and it's only sourced once.
+- System-wide equivalent of this file is =/etc/zprofile= or =/etc/zsh/zprofile=.
+- This is where I run =startx= which essentially calls [[.xinitrc]]
+- I put stuff that is not going to change during the session, this may include
+  - Stuff that is static. For example my =KEYBOARD_LAYOUTS= are not going to change but I may want to update =PATH= variable, hence it's in =.zshenv=.
+  - Stuff that takes time to load. Because this file is loaded at the start and only sourced once, it makes sense to load heavy stuff here.
+
+- A lot of programs (like Java, Flatpak or anything that wants to edit your PATH or similar environment variables) put their configuration under =/etc/profile.d/=. Normally, =/etc/profile= (which is automatically sourced by =bash= at startup), also sources these files. In my system (or Arch Linux in general) also have =/etc/zsh/zprofile= which contains the following: =emulate sh -c 'source /etc/profile'=. So essentially sourcing the stuff under =/etc/profile.d/= is automatically handled.
+
+#+begin_src sh :tangle ~/.zprofile
+  # Changing this is not goint to change your keyboard layout. For more info, read ~/.scripts/switch-keyboard-layout
+  # See `localectl list-x11-keymap-layouts` for your options. (It's generally 2-char country code.)
+  # Set your default layout with `localectl set-keymap` and localectl set-x11-keymap
+  export KEYBOARD_LAYOUTS='us(intl),tr'
+
+  # Use `qt5ct` program to configure qt themes
+  # and use `lxappearance` for gtk
+  export QT_QPA_PLATFORMTHEME=qt5ct
+
+  if command -v jaro > /dev/null 2>&1; then
+      export BROWSER=jaro
+      export EDITOR="jaro --method=edit"
+      export VISUAL=jaro
+  else
+      export EDITOR=nvim
+  fi
+
+  export XDG_CONFIG_HOME="$HOME/.config"
+  export BSPWM_SOCKET="/tmp/bspwm-socket"
+  export XDG_CONFIG_DIRS=/usr/etc/xdg:/etc/xdg
+
+  # Following automatically calls "startx" when you login on tty1:
+  if [[ -z ${DISPLAY} && ${XDG_VTNR} -eq 1 ]]; then
+      # Logs can be found in ~/.xorg.log
+      exec startx -- -keeptty -nolisten tcp > ~/.xorg.log 2>&1
+  fi
+#+end_src
+
+** Dumb mode
+#+begin_src bash :tangle ~/.zshrc
+  # Don't do any configuration if dumb terminal is requested
+  [[ $TERM == "dumb" ]] && unsetopt zle && PS1='$ ' && return
+#+end_src
+
+** Installing plugins
+#+begin_src bash :tangle ~/.zshrc
+  # Required some plugins (like fzf-tab) to work
+  autoload -Uz compinit; compinit
+  ANTIGEN_FILE=$HOME/.local/bin/antigen.zsh
+
+  if [[ ! -f $ANTIGEN_FILE ]]; then
+     echo 'Installing antigen...'
+     curl -L git.io/antigen > $ANTIGEN_FILE
+  else
+     source $ANTIGEN_FILE
+  fi
+
+  antigen use oh-my-zsh
+  antigen bundle git
+  antigen bundle zsh-users/zsh-autosuggestions
+  antigen bundle zsh-users/zsh-syntax-highlighting
+  antigen bundle zsh-users/zsh-history-substring-search
+  antigen bundle kutsan/zsh-system-clipboard
+  antigen theme agnoster
+  antigen bundle Aloxaf/fzf-tab
+  antigen apply
+#+end_src
+
+** Key bindings
+#+begin_src bash :tangle ~/.zshrc
+  # enable emacs keybindings
+  # Use C-x C-e to edit command in $EDITOR
+  bindkey -e
+#+end_src
+
+** Theme settings
+#+begin_src bash :tangle ~/.zshrc
+  # https://github.com/sorin-ionescu/prezto/blob/master/modules/prompt/functions/prompt-pwd
+  function prompt_dir {
+      setopt localoptions extendedglob
+
+      # FIXME: this breaks the input line completely
+      # If we are in emacs vterm, send the current directory to emacs vterm
+      # This establishes directory tracking
+      # is-emacs && vterm_printf "51;A$(whoami)@$(hostname):$(pwd)";
+
+      local current_pwd="${PWD/#$HOME/~}"
+      local ret_directory
+
+      if [[ "$current_pwd" == (#m)[/~] ]]; then
+          ret_directory="$MATCH"
+          unset MATCH
+      elif zstyle -m ':prezto:module:prompt' pwd-length 'full'; then
+          ret_directory=${PWD}
+      elif zstyle -m ':prezto:module:prompt' pwd-length 'long'; then
+          ret_directory=${current_pwd}
+      else
+          ret_directory="${${${${(@j:/:M)${(@s:/:)current_pwd}##.#?}:h}%/}//\%/%%}/${${current_pwd:t}//\%/%%}"
+      fi
+
+      unset current_pwd
+      prompt_segment blue $CURRENT_FG "$ret_directory"
+  }
+#+end_src
+
+** Plugin configuration
+*** history-substring-search
+#+begin_src bash :tangle ~/.zshrc
+  # bind UP and DOWN arrow keys to history substring search
+  zmodload zsh/terminfo
+  bindkey "$terminfo[kcuu1]" history-substring-search-up
+  bindkey "$terminfo[kcud1]" history-substring-search-down
+  bindkey -M vicmd 'k' history-substring-search-up
+  bindkey -M vicmd 'j' history-substring-search-down
+#+end_src
+
+*** fzf-tab
+- You also may need to run =build-fzf-tab-module= for the first time.
+
+#+begin_src bash :tangle ~/.zshrc
+  # disable sort when completing `git checkout`
+  zstyle ':completion:*:git-checkout:*' sort false
+  # set descriptions format to enable group support
+  zstyle ':completion:*:descriptions' format '[%d]'
+  # preview directory's content with lsd when completing cd
+  zstyle ':fzf-tab:complete:cd:*' fzf-preview 'lsd -1 --icon=always --color=always $realpath'
+  # replace current query with current candidate's text (so that you
+  # trigger continuous completion with "/")
+  #zstyle ':fzf-tab:*' fzf-bindings 'tab:replace-query'
+  # zstyle ':fzf-tab:*' fzf-command ftb-tmux-popup
+
+  enable-fzf-tab
+#+end_src
+
+** Utility functions
+#+begin_src bash :tangle ~/.zshrc
+  function mkcd { mkdir -p "$1"; cd "$1"; } # Make and cd to the dir
+  function cpcd { cp "$1" "$2" && cd "$2"; } # Copy and go to the directory
+  function mvcd { mv "$1" "$2" && cd "$2"; } # Move and cd to the dir
+  function cheat { curl http://cheat.sh/"$1"; }
+  function shortenurl { curl -F"shorten=$1" "https://0x0.st"; }
+  function uploadfile { curl -F"file=@$1" "https://0x0.st"; }
+
+  function extract {
+      if [[ -f $1 ]] ; then
+          case $1 in
+              ,*.tar.bz2) tar xjf "$1"   ;;
+              ,*.tar.gz)  tar xzf "$1"   ;;
+              ,*.bz2)     bunzip2 "$1"   ;;
+              ,*.rar)     unrar x "$1"   ;;
+              ,*.gz)      gunzip "$1"    ;;
+              ,*.tar)     tar xf "$1"    ;;
+              ,*.tbz2)    tar xjf "$1"   ;;
+              ,*.tgz)     tar xzf "$1"   ;;
+              ,*.zip)     unzip "$1"     ;;
+              ,*.Z)       uncompress "$1";;
+              ,*.7z)      7z x "$1"      ;;
+              ,*)        echo "'$1' cannot be extracted via ex()" ;;
+          esac
+      else
+          echo "Usage:"
+          echo "ex <archive-name>"
+      fi
+  }
+
+  function compress {
+      local EXT="$1"; shift
+      case "$EXT" in
+          -h|--help)
+              echo "Usage:"
+              echo "compress <archive-name>.EXT file1 file2"
+              echo
+              echo "EXT can be one of the following: .7z .tar.gz .tar.bz2 .zip"
+              ;;
+          ,*.7z)
+              7z a "$EXT" "$@"
+              ;;
+          ,*.tar.gz|*.tgz)
+              tar -czvf "$EXT" "$@"
+              ;;
+          ,*.tar.bz2)
+              tar -cjvf "$EXT" "$@"
+              ;;
+          ,*.zip)
+              zip -r "$EXT" "$@"
+              ;;
+          ,*)
+              echo "Unrecognized EXT: $1"
+              echo
+              compress --help
+              ;;
+      esac
+  }
+
+  function encrypt {
+      case "$1" in
+          -h|--help)
+              echo "Usage:"
+              echo "encrypt <input-file> [<output-file>]"
+              echo
+              echo "If <output-file> is skipped, then the output will be <input-file>.encrypted"
+              ;;
+          ,*)
+              local INPUT="$1"
+              local OUTPUT="$2"
+
+              if [[ ! -f "$INPUT" ]]; then
+                  echo "$INPUT not found."
+                  exit 1
+              fi
+
+              if [[ -z "$OUTPUT" ]]; then
+                  OUTPUT="${INPUT}.encrypted"
+              fi
+
+              if [[ -f "$OUTPUT" ]]; then
+                  echo "$OUTPUT already exists."
+                  exit 1
+              fi
+
+              gpg --symmetric --cipher-algo AES256 --output "$OUTPUT" "$INPUT"
+              ;;
+          esac
+  }
+
+  function decrypt {
+      case "$1" in
+          -h|--help)
+              echo "Usage:"
+              echo "decrypt <input-file> [<output-file>]"
+              echo
+              echo "If <output-file> is skipped, then the output will be <input-file> but the last suffix is removed"
+              ;;
+          ,*)
+              local INPUT="$1"
+              local OUTPUT="$2"
+
+              if [[ ! -f "$INPUT" ]]; then
+                  echo "$INPUT not found."
+                  exit 1
+              fi
+
+              if [[ -z "$OUTPUT" ]]; then
+                  OUTPUT="${INPUT%.*}"
+              fi
+
+              if [[ -f "$OUTPUT" ]]; then
+                  echo "$OUTPUT already exists."
+                  exit 1
+              fi
+
+              gpg --decrypt --output "$OUTPUT" "$INPUT"
+              ;;
+          esac
+  }
+#+end_src
+
+** General settings
+#+begin_src bash :tangle ~/.zshrc
+  FILES_TO_SOURCE=(
+      $HOME/.config/aliases
+      # ^ All aliases, also sourcing it from other shells
+      /usr/share/fzf/key-bindings.zsh
+      # ^ fzf history search keybindings
+      $HOME/.nix-profile/share/fzf/key-bindings.zsh
+      # ^ fzf history search keybindings
+      $HOME/.extrarc
+      # ^ Contains stuff that I don't want to commit to git
+  )
+
+  for file in $FILES_TO_SOURCE; do
+      [[ -f "$file" ]] && source $file
+  done
+
+  # Colors for less
+  export LESS_TERMCAP_mb=$'\E[1;31m'     # begin bold
+  export LESS_TERMCAP_md=$'\E[1;36m'     # begin blink
+  export LESS_TERMCAP_me=$'\E[0m'        # reset bold/blink
+  export LESS_TERMCAP_so=$'\E[01;44;33m' # begin reverse video
+  export LESS_TERMCAP_se=$'\E[0m'        # reset reverse video
+  export LESS_TERMCAP_us=$'\E[1;32m'     # begin underline
+  export LESS_TERMCAP_ue=$'\E[0m'        # reset underline
+  export GROFF_NO_SGR=1                  # for konsole and gnome-terminal
+
+  # Some variables
+  export FZF_DEFAULT_OPTS='--reverse --bind="tab:replace-query"'
+
+  setopt autocd histignoredups appendhistory incappendhistory histreduceblanks
+  # unsetopt BEEP
+  unsetopt LIST_BEEP
+
+  # Case insensitive tab completion
+  zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+  # automatically find new executables in path
+  zstyle ':completion:*' rehash true
+  zstyle ':completion:*' accept-exact '*(N)'
+  zstyle ':completion:*' use-cache on
+  zstyle ':completion:*' cache-path ~/.zsh/cache
+
+  HISTFILE=~/.zsh_history
+  HISTSIZE=100000
+  SAVEHIST=100000
+  HISTORY_SUBSTRING_SEARCH_FUZZY=1
+#+end_src
+
+** Emacs configuration
+#+begin_src bash :tangle ~/.zshrc
+  if is-emacs; then
+      # With this function we can send elisp commands while we are on emacs vterm
+      # for example, "elisp message hey" would send (message "hey") to emacs.
+      function elisp {
+          if [[ -n "$TMUX" ]]; then
+              # tell tmux to pass the escape sequences through
+              # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
+              printf "\ePtmux;\e\e]51;E"
+          elif [[ "${TERM%%-*}" = "screen" ]]; then
+              # GNU screen (screen, screen-256color, screen-256color-bce)
+              printf "\eP\e]51;E"
+          else
+              printf "\e]51;E"
+          fi
+
+          printf "\e]51;E"
+          local r
+          while [[ $# -gt 0 ]]; do
+              r="${1//\\/\\\\}"
+              r="${r//\"/\\\"}"
+              printf '"%s" ' "$r"
+              shift
+          done
+
+          if [[ -n "$TMUX" ]]; then
+              # tell tmux to pass the escape sequences through
+              # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
+              printf "\007\e\\"
+          elif [[ "${TERM%%-*}" = "screen" ]]; then
+              # GNU screen (screen, screen-256color, screen-256color-bce)
+              printf "\007\e\\"
+          else
+              printf "\e\\"
+          fi
+      }
+
+      # Helper for clearing screen
+      function vterm_printf {
+          if [[ -n "$TMUX" ]]; then
+              # tell tmux to pass the escape sequences through
+              # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
+              printf "\ePtmux;\e\e]%s\007\e\\" "$1"
+          elif [[ "${TERM%%-*}" = "screen" ]]; then
+              # GNU screen (screen, screen-256color, screen-256color-bce)
+              printf "\eP\e]%s\007\e\\" "$1"
+          else
+              printf "\e]%s\e\\" "$1"
+          fi
+      }
+
+      # Rebind clear so that scrollback is also cleared on emacs vterm
+      alias clear='vterm_printf "51;Evterm-clear-scrollback";tput clear'
+  fi
+#+end_src
+* Utilities
+** .tmux.conf
+#+begin_src conf :tangle ~/.tmux.conf
+  # ####################################################
+  #      __                                         ____
+  #     / /_____ ___  __  ___  __ _________  ____  / __/
+  #    / __/ __ `__ \/ / / / |/_// ___/ __ \/ __ \/ /_
+  #  _/ /_/ / / / / / /_/ />  <_/ /__/ /_/ / / / / __/
+  # (_)__/_/ /_/ /_/\__,_/_/|_(_)___/\____/_/ /_/_/
+  # ####################################################
+
+  # Add plugins (PREFIX I -> install them)
+  set -g @plugin 'tmux-plugins/tpm'
+  set -g @plugin 'tmux-plugins/tmux-resurrect'        # PREFIX C-s -> save, PREFIX C-r -> restore
+  set -g @plugin 'tmux-plugins/tmux-prefix-highlight' # Highlight when prefix is pressed, in copy mode etc.
+
+  # tmux-prefix-highlight settings (Show indicator when in copy mode, and Sync for synchronized panes)
+  set -g @prefix_highlight_show_copy_mode 'on'
+  set -g @prefix_highlight_copy_mode_attr 'fg=white,bg=yellow,bold' # default is 'fg=default,bg=yellow'
+  set -g @prefix_highlight_show_sync_mode 'on'
+  set -g @prefix_highlight_sync_mode_attr 'fg=black,bg=green' # default is 'fg=default,bg=yellow'
+
+  # St stuff
+  set -g default-terminal "st-256color"
+  set -g terminal-overrides ',st-256color:Tc'
+
+  set -g default-shell $PREFIX/bin/zsh
+  set -g mouse on
+  set -g base-index 1 # Window indexes starts from 1
+  setw -g pane-base-index 1 # Pane indexes starts from 1
+  set -s escape-time 0 # Remove the delay after hitting <ESC>
+  set-option -g set-titles off
+  set-window-option -g automatic-rename on
+
+  # Reload config
+  bind r source-file ~/.tmux.conf
+
+  # Set prefix to A-a
+  unbind C-b
+  set -g prefix M-a
+  bind-key M-a send-prefix
+
+  # Increase the time of display-panes (PREFIX q)
+  set -g display-panes-time 4000
+
+  # Split remaps
+  bind \\ split-window -h -c '#{pane_current_path}'
+  bind - split-window -v -c '#{pane_current_path}'
+  unbind '"'
+  unbind %
+
+  # Vim-like pane switches
+  bind k selectp -U
+  bind j selectp -D
+  bind h selectp -L
+  bind l selectp -R
+
+  # Pane switches (without prefix key)
+  bind -n M-h select-pane -L
+  bind -n M-j select-pane -D
+  bind -n M-k select-pane -U
+  bind -n M-l select-pane -R
+  bind -n M-\\ split-window -h -c '#{pane_current_path}'
+  bind -n M--  split-window -v -c '#{pane_current_path}'
+
+  # Swapping shortcuts
+  bind-key W choose-tree -Zw "swap-window -t '%%'"
+  bind-key P choose-tree -Zw "swap-pane -t '%%'"
+
+  # Vi keys for copy-mode
+  setw -g mode-keys vi
+  bind-key -T copy-mode-vi v send-keys -X begin-selection
+  bind-key -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel
+  bind-key -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "xclip -selection clipboard"
+
+  # Status bar theme
+  set -g status-position bottom
+  set -g status-left-length 32
+
+  set -g status-fg white
+  set -g status-bg black
+
+  set -g status-left '#[fg=colour235,bg=colour252,bold] #S #[fg=colour252,bg=colour238,nobold]#[fg=colour245,bg=colour238,bold] #(whoami) #[fg=colour238,bg=black,nobold]'
+  set -g window-status-format "#[fg=white,bg=black] #I #W "
+  set -g window-status-current-format "#[fg=black,bg=colour39]#[fg=colour25,bg=colour39,noreverse,bold] #I  #W #[fg=colour39,bg=black,nobold]"
+  set -g status-right "#{prefix_highlight}"
+
+  # Load tmux plugin manager
+  run '~/.local/share/tmux/plugins/tpm/tpm'
+#+end_src
+** jaro
+*** Configuration
+In this file I define some file associations. Please refer to [[https://github.com/isamert/jaro][jaro]] README for more info. It's simply an =xdg-open= alternative.
+
+- To experiment associations/jaro, do:
+  #+begin_src bash
+    $ guile
+    guile> (load ".local/bin/jaro")
+    guile> (load ".config/associactions")
+  #+end_src
+
+#+begin_src scheme :tangle ~/.config/associations
+  ;;
+  ;; Some utilities
+  ;;
+
+  (define (screen-width)
+    (string->number (string-trim-both (read-sys-out "bspwmc focused_monitor_width"))))
+
+  (define (screen-height)
+    (string->number (string-trim-both (read-sys-out "bspwmc focused_monitor_height"))))
+
+  ;;
+  ;; Associations
+  ;;
+
+  (assoc
+   #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
+   #:program "zathura %f"
+   #:view #t)
+
+  (assoc
+   #:pattern "\\.org$"
+   #:program "emacsclient -c --tty %f"
+   #:term "emacsclient -c %f"
+   #:on-error "notify-send 'error' 'emacs daemon is not working'"
+   #:view (open-with 'bat)
+   #:standalone #t)
+
+  (assoc
+   #:pattern "^(text|application)/(x-)?csv$"
+   #:program "sc-im %f"
+   #:term "term -e"
+   #:view #t
+   #:edit (open-with 'editor))
+
+  (assoc
+   #:pattern '("^text/html" "^application/x?htm")
+   #:program (open-with 'browser)
+   #:view #t
+   #:edit (open-with 'editor))
+
+  (assoc
+   #:name 'editor
+   #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript|xml)")
+   #:program "emacsclient -c %f"
+   #:view (open-with 'bat)
+   #:edit #t)
+
+  (assoc
+   #:pattern "^video/"
+   #:program "mpv %f"
+   #:on-error "vlc %f"
+   #:view #t)
+
+  (assoc
+   #:pattern "^audio/"
+   #:program "mpc insert %f"
+   #:on-success "mpc next"
+   #:on-error "mpv %f")
+
+  (assoc
+   #:pattern "inode/directory"
+   #:program "ranger %f"
+   #:term "term -e"
+   #:tmux "tmux split-window -h")
+
+  (assoc
+   #:pattern '("^https?://(www.)?youtube.com/watch\\?.*v="
+               "^https?://(www.)?youtu.be/"
+               "^https?://(www.)?v.redd.it/\\w+/DASH"
+               "^https?://([a-zA-Z-]+)?streamable.com"
+               "^https?://giant.gfycat.com/.+"
+               "https?://v.redd.it/.+"
+               "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
+   #:program (lambda (file mimetype)
+               (system*
+                "tsp"
+                "mpv"
+                "--x11-name=youtube"
+                "--geometry=-10-10"
+                (format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
+                (format #f "--autofit=~ax~a" (floor (/ (screen-width) 3)) (floor (/ (screen-height) 3)))
+                file))
+   #:on-error (open-with 'browser))
+
+  (assoc
+   #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
+   #:program "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && pqiv $TMP_IMG"
+   #:on-error "feh --start-at %f"
+   #:view #t
+   #:edit "pinta %f")
+
+  ;; Open all images in a folder starting with given image in pqiv
+  (assoc
+   #:pattern "^image/.*$"
+   #:program "pqiv --browse --lazy-load --max-depth=3 %f"
+   #:on-error "feh --start-at %f"
+   #:view #t
+   #:edit "pinta %f")
+
+  (assoc
+   #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
+   #:program "ttrv %f"
+   #:term "term -e"
+   #:tmux "tmux split-window -h"
+   #:on-error (open-with 'browser))
+
+  (assoc
+   #:pattern '("^magnet:" "\\.torrent$")
+   #:program "qbittorrent %f"
+   #:on-success "notify-send 'Success' 'Torrent added to download list'"
+   #:on-error "notify-send 'Fail' 'Can't add torrent"
+   #:edit (open-with 'editor))
+
+  (assoc
+   #:name 'browser
+   #:pattern '("^https?://.*"
+               "^.*\\.html?(#[\\w_-]+)?")
+   #:program "qutebrowser %f"
+   #:test "pgrep qutebrowser"
+   #:on-fail "firefox %f"
+   #:view #t
+   #:edit (open-with 'editor))
+
+  (assoc
+   #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
+   #:program "xarchiver %f"
+   #:view "xarchiver %f")
+
+  (assoc
+   #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
+   #:program "desktopeditors %F")
+
+  (assoc
+   #:pattern ".*"
+   #:program (select-alternative-with "dmenu")
+   #:standalone #t)
+
+  ;;
+  ;; Rest is used only with references
+  ;;
+
+  (assoc
+   #:name 'bat
+   #:pattern ".*"
+   #:program "bat --paging=always %f"
+   #:view #t)
+
+  ;; vi:syntax=scheme
+#+end_src
+
+*** .mailcap
+Just redirect everything to [[jaro]].
+
+#+begin_src conf :tangle ~/.mailcap
+  text/html; w3m -v -F -T text/html %s; edit=jaro --method=edit; compose=jaro --method=edit; nametemplate=%s.html; copiousoutput
+  text/*; jaro '%s'; copiousoutput
+  application/*; jaro '%s'
+  image/*; jaro '%s'
+  audio/*; jaro '%s'
+  video/*; jaro '%s'
+  message/*; jaro '%s'
+  model/*; jaro '%s'
+  ,*/*; jaro '%s'
+#+end_src
+
+*** .urlview
+Redirect everything to [[jaro]].
+
+#+begin_src conf :tangle ~/.urlview
+  COMMAND jaro
+#+end_src
+** scli
+Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
+
+#+begin_src conf :tangle ~/.config/sclirc
+  open-command=jaro %u
+  enable-notifications=true
+  save-history=true
+  use-formatting=true
+  wrap-at=75
+  contacts-autohide=true
+  color=true
+  partition-contacts=true
+  clipboard-keep-attachments=true
+#+end_src
+** .inputrc
+If I ever need to resort to use bash.
+
+#+begin_src bash :tangle ~/.inputrc
+  $include /etc/inputrc
+
+  # Fixes del key
+  set enable-keypad on
+  # Obvious
+  set completion-ignore-case on
+  # Treat - and _ as same while completing
+  set completion-map-case on
+  # Make Alt key work
+  set meta-flag on
+  set input-meta on
+  set convert-meta on
+  set output-meta on
+  # TAB once
+  set show-all-if-ambiguous on
+  set show-all-if-unmodified on
+  # COLORS
+  # Color files by types
+  set colored-stats on
+  # Append char to indicate type
+  set visible-stats on
+  # Mark symlinked directories
+  set mark-symlinked-directories on
+  # Color the common prefix
+  set colored-completion-prefix on
+  # Color the common prefix in menu-complete
+  set menu-complete-display-prefix on
+
+  #
+  # Vi mode settings
+  #
+  set editing-mode vi
+  set show-mode-in-prompt on
+  # use | cursor in insert mode, block cursor in normal mode
+  set vi-ins-mode-string \1\e[6 q\2
+  set vi-cmd-mode-string \1\e[2 q\2
+  # Search history using what is currently on screen (before cursor)
+
+  # Cycle (tab and shift-tab)
+  TAB: menu-complete
+  "\e[Z": menu-complete-backward
+#+end_src
+
+* Media
+** MPD
+*** Config
+#+begin_src bash :tangle ~/.config/mpd/mpd.conf
+# Files and directories #######################################################
+#
+# This setting controls the top directory which MPD will search to discover the
+# available audio files and add them to the daemon's online database. This
+# setting defaults to the XDG directory, otherwise the music directory will be
+# be disabled and audio files will only be accepted over ipc socket (using
+# file:// protocol) or streaming files over an accepted protocol.
+#
+music_directory		"~/Music"
+#
+# This setting sets the MPD internal playlist directory. The purpose of this
+# directory is storage for playlists created by MPD. The server will use
+# playlist files not created by the server but only if they are in the MPD
+# format. This setting defaults to playlist saving being disabled.
+#
+playlist_directory "~/.config/mpd/playlists"
+#
+# This setting sets the location of the MPD database. This file is used to
+# load the database at server start up and store the database while the
+# server is not up. This setting defaults to disabled which will allow
+# MPD to accept files over ipc socket (using file:// protocol) or streaming
+# files over an accepted protocol.
+#
+db_file "~/.config/mpd/mpd.db"
+#
+# These settings are the locations for the daemon log files for the daemon.
+# These logs are great for troubleshooting, depending on your log_level
+# settings.
+#
+# The special value "syslog" makes MPD use the local syslog daemon. This
+# setting defaults to logging to syslog, otherwise logging is disabled.
+#
+log_file "~/.config/mpd/mpd.log"
+#
+# This setting sets the location of the file which stores the process ID
+# for use of mpd --kill and some init scripts. This setting is disabled by
+# default and the pid file will not be stored.
+#
+pid_file "~/.config/mpd/mpd.pid"
+#
+# This setting sets the location of the file which contains information about
+# most variables to get MPD back into the same general shape it was in before
+# it was brought down. This setting is disabled by default and the server
+# state will be reset on server start up.
+#
+state_file "~/.config/mpd/mpdstate"
+#
+# The location of the sticker database.  This is a database which
+# manages dynamic information attached to songs.
+#
+sticker_file "~/.config/mpd/sticker.sql"
+#
+###############################################################################
+
+
+
+# General music daemon options ################################################
+#
+# This setting specifies the user that MPD will run as. MPD should never run as
+# root and you may use this setting to make MPD change its user ID after
+# initialization. This setting is disabled by default and MPD is run as the
+# current user.
+#
+user "isa"
+#
+# This setting specifies the group that MPD will run as. If not specified
+# primary group of user specified with "user" setting will be used (if set).
+# This is useful if MPD needs to be a member of group such as "audio" to
+# have permission to use sound card.
+#
+#group				"nogroup"
+#
+# This setting sets the address for the daemon to listen on. Careful attention
+# should be paid if this is assigned to anything other then the default, any.
+# This setting can deny access to control of the daemon.
+#
+# For network
+bind_to_address		"any"
+#
+# And for Unix Socket
+#bind_to_address		"~/.mpd/socket"
+#
+# This setting is the TCP port that is desired for the daemon to get assigned
+# to.
+#
+#port				"6600"
+#
+# This setting controls the type of information which is logged. Available
+# setting arguments are "default", "secure" or "verbose". The "verbose" setting
+# argument is recommended for troubleshooting, though can quickly stretch
+# available resources on limited hardware storage.
+#
+#log_level			"default"
+#
+# If you have a problem with your MP3s ending abruptly it is recommended that
+# you set this argument to "no" to attempt to fix the problem. If this solves
+# the problem, it is highly recommended to fix the MP3 files with vbrfix
+# (available from <http://www.willwap.co.uk/Programs/vbrfix.php>), at which
+# point gapless MP3 playback can be enabled.
+#
+#gapless_mp3_playback			"yes"
+#
+# This setting enables MPD to create playlists in a format usable by other
+# music players.
+#
+#save_absolute_paths_in_playlists	"no"
+#
+# This setting defines a list of tag types that will be extracted during the
+# audio file discovery process. Optionally, 'comment' can be added to this
+# list.
+#
+#metadata_to_use	"artist,album,title,track,name,genre,date,composer,performer,disc"
+#
+# This setting enables automatic update of MPD's database when files in
+# music_directory are changed.
+#
+auto_update	"yes"
+
+audio_output {
+    type "alsa"
+    name "ALSA device"
+    mixer_type "software"
+}
+
+audio_output {
+    type  "httpd"
+    name  "HTTP Stream"
+    #encoder  "vorbis"  # optional, vorbis or lame
+    port  "8000"
+    #quality  "5.0"   # do not define if bitrate is defined
+    bitrate  "256"   # do not define if quality is defined
+    #format  "44100:16:1"
+    max_clients "2"   # optional 0=no limit
+}
+#+end_src
+*** TODO Playlists
+- Merge with eradio config.
+#+begin_src bash :tangle ~/.config/mpd/playlists/radio.m3u
+http://79.120.39.202:8002/postmetal
+http://79.111.119.111:8002/melodicblackmetal
+http://79.120.39.202:8002/aabmds
+http://79.111.14.76:8002/avantgardemetal
+http://79.111.14.76:8002/blackdeath
+#+end_src
+** MPV
+*** Configuration
+#+begin_src bash :tangle ~/.config/mpv/mpv.conf
+input-ipc-server=/tmp/mpvsocket
+
+# Display Turkish subtitles if available, fall back to English otherwise.
+slang=tr,en
+
+# Play Korean audio if available, fall back to English otherwise.
+# (I watch Korean stuff a lot and they always gets overridden by English audio)
+alang=ko,en,eng
+
+# If the file seems to be valid UTF-8, prefer UTF-8, otherwise use Turkish
+# encoding.
+sub-codepage=cp1254
+
+# Search these directories for subtitles
+sub-file-paths=sub:Sub:subs:Subs:subtitle:Subtitle:subtitles:Subtitles
+
+# Load all subtitles from directories listed above
+sub-auto=all
+
+# 10 from bottom
+sub-pos=90
+
+# Filter subtitle additions for the deaf or hard-of-hearing (SDH)
+sub-filter-sdh=yes
+sub-filter-sdh-harder=yes
+#+end_src
+*** Bindings
+#+begin_src bash :tangle ~/.config/mpv/input.conf
+# Show youtube comments
+# This gets the video ID from filename, as mpv sets it this way.
+c run "term" "--float" "-e" "/bin/bash" "-c" "ID='https://www.youtube.com/${filename}'; straw-viewer --colorful --comments-order=top --comments=$ID --page=1 --no-interactive | bat --style=plain --paging=always"
+
+# Copy the filename
+y run "/bin/sh" "-c" "printf ${filename} | xclip -selection clipboard"; show-text "Filename copied: ${filename}"
+
+! add chapter -1 # skip to previous chapter
+@ add chapter 1 # next
+
+# Download subtitle
 T run     "mediastuff" "mpv-subdl" "${path}" "eng" # english subtitle
 Alt+t run "mediastuff" "mpv-subdl" "${path}" "tur" # turkish subtitle
-#+END_SRC
 
-I also have a shortcut that does a direct search on youtube and plays the result in =mpv=. This search menu is toggled with =Hyper+y=.
+l seek 5
+h seek -5
+j seek -60
+k seek 60
 
-** RSS
-I use =newsboat= to follow RSS feeds. RSS feeds consists of blogs, YouTube channels, podcasts, subreddits etc. This helps me focus on what I really want to follow and discard the distractions (All kind of /recommendations/ feature on every website is a big distraction, I try to avoid them because my willpower is pretty weak). I also watch YouTube videos using mpv. I created a simple shortcut that opens up YouTube video comments in a terminal window. See how this workflow goes along with =newsboat=:
+f cycle fullscreen
+p cycle pause
+m cycle mute
 
-[[file:https://user-images.githubusercontent.com/8031017/73128975-137bd080-3fea-11ea-862f-4e69ceb484b7.gif]]
+0 add volume 2
+9 add volume -2
 
-* TODO Programming workflow
-- tmux sessions for each virtual desktop
-- commandline tools, fuzzy script (git etc.)
+s cycle sub
+a cycle audio  # switch audio streams
 
-** emacs vs. vim (and some thoughts on /kakoune/)
-I use =emacs= for every kind of project that I have. I also use =neovim=, but I use it as a lightweight editor that I spawn for short periods of time for like quick fixes, previews etc. I try to make the editing experience as same as possible for these two editors. For example I use =evil-mode= to emulate vim keys in =emacs=.
+# resize subtitle
++ add sub-scale +0.1
+- add sub-scale -0.1
 
-Some may argue that =neovim= is just obsolete in the presence of =emacs= or vice versa. I totally disagree with this. I was a vim-only user back then, until I discovered the =org-mode=. I made the switch to =emacs=. But =emacs= has a lot of problems. First and foremost, the load time is just borderline bad, especially on a 5400 RPM hard-disk. The server mode significantly improves the overall feel but it has it own quirkiness too. Also I really like to use =emacs= in a GUI mode but keeping everything compatible between GUI mode and terminal mode is just not really an option. Some extensions just flat-out does not work in terminal mode, some behave really weird. Emacs term mode is also quite bad and slow. I use a lot of terminal only programs and considering this, going emacs-only is just a hard job with little to none benefits.
+Alt+0 set window-scale 0.25
+Alt+1 set window-scale 0.5
+Alt+2 set window-scale 0.75
+Alt+3 set window-scale 1
+Alt+4 set window-scale 1.5
+Alt+5 set window-scale 2
 
-You can read my =emacs= configuration in detail from [[file:./.emacs.d/settings.org][here]], it's a self-documenting =.org= file. As for my =neovim= configuration, you can take a look at it from [[file:./.config/nvim/init.vim][here]] (it's not self documenting like the =emacs= one). Although my =neovim= configuration is focused on simplicity, I also maintain a minimal configuration for =vim=, that you can take a look at from [[file:./.config/nvim/minimal.vim][here]]. It's just the plugin-less version of my real configuration. The rationale here is that a lot of programs have some kind of vim emulation mode and I'm able to copy my configuration trough here without dealing with the plugins. It's also nice to copy this file into friends computers without bloating their system and I feel at home while using their computer.
+CTRL+l script-message osc-playlist
 
-Another nicety of having =neovim=/=vim= under your usage is that it's wildy supported everywhere. For example, it's easy to find a plugin for editing =sxhkd= configuration file wheres there is none for =emacs=. (Well, for this particular case it may be really easy to implement such a mode for =emacs= but you also take the burden of maintaining of that piece of =elisp=.)
+# Do smaller, always exact (non-keyframe-limited), seeks with shift.
+# Don't show them on the OSD (no-osd).
+Shift+l no-osd seek  1 exact
+Shift+h no-osd seek -1 exact
+Shift+j no-osd seek  5 exact
+Shift+k no-osd seek -5 exact
+#+end_src
+** ncmpcpp
+*** Configuration
+#+begin_src bash :tangle ~/.config/ncmpcpp/config
+ncmpcpp_directory = ~/.cache/ncmpcpp
 
-Another thing I like about vim is that the plugin called =ALE=. As I said earlier, I use =neovim= for quick edits, like editing my configuration files and bash scripts. =ALE= is just a zero-config plugin that detects gazillions of different linters/syntax checkers/language servers on your system and makes use of them automatically. This significantly improves your /quick-edits/. At most, you only need to install a simple program and you got your =bash= scripts linted, =markdown= files prettified, =yaml= files validated etc. Wheres I use =lsp-mode= on =emacs= and I like to fine tune my setting for the language servers I will be dealing with because it's important to have things in your way when doing long sessions of coding.
+##### song format #####
+##
+## For a song format you can use:
+##
+## %l - length
+## %f - filename
+## %D - directory
+## %a - artist
+## %A - album artist
+## %t - title
+## %b - album
+## %y - date
+## %n - track number (01/12 -> 01)
+## %N - full track info (01/12 -> 01/12)
+## %g - genre
+## %c - composer
+## %p - performer
+## %d - disc
+## %C - comment
+## %P - priority
+## $R - begin right alignment
+#song_window_title_format = {%a - }{%t} - ncmpcpp
+user_interface = alternative
+display_bitrate = yes
+enable_window_title = no
+progressbar_look = —|
+mpd_music_dir = "~/Music" # Needed for tag editor
+#+end_src
+*** Bindings
+#+begin_src bash :tangle ~/.config/ncmpcpp/bindings
+  def_key "L"
+      show_lyrics
+  def_key "?"
+      show_lyrics
 
-*** TODO kakoune
-...
+  def_key "j"
+      scroll_down
+  def_key "k"
+      scroll_up
+  def_key "h"
+      previous_column
+  def_key "l"
+      next_column
+  def_key "l"
+    play_item
 
-** TODO org-mode
-...
-* TODO Other
-** TODO Shell
-- zsh customizations
-** TODO Password management
-** TODO Extra tools
-- jaro
-- ~/.scripts
-** TODO Popups
-=~/.scripts/popup=
-** TODO On multi-monitor setups and multi-computer setups
-** TODO Meta
-- how do i keep my dotfiles synced?
+  def_key "G"
+    move_end
+  def_key "g"
+    move_home
+
+  def_key "/"
+      find
+  def_key "/"
+      find_item_forward
+  def_key "n"
+      next_found_item
+  def_key "N"
+      previous_found_item
+
+  def_key "v"
+    select_item
+
+  def_key "d"
+    delete_playlist_items
+  def_key "d"
+    delete_browser_items
+  def_key "d"
+    delete_stored_playlist
+
+  #
+  # The defaults for reference
+  #
+
+  #def_key "mouse"
+  #  mouse_event
+  #
+  #def_key "up"
+  #  scroll_up
+  #
+  #def_key "shift-up"
+  #  select_item
+  #  scroll_up
+  #
+  #def_key "down"
+  #  scroll_down
+  #
+  #def_key "shift-down"
+  #  select_item
+  #  scroll_down
+  #
+  #def_key "["
+  #  scroll_up_album
+  #
+  #def_key "]"
+  #  scroll_down_album
+  #
+  #def_key "{"
+  #  scroll_up_artist
+  #
+  #def_key "}"
+  #  scroll_down_artist
+  #
+  #def_key "page_up"
+  #  page_up
+  #
+  #def_key "page_down"
+  #  page_down
+  #
+  #def_key "home"
+  #  move_home
+  #
+  #def_key "end"
+  #  move_end
+  #
+  #def_key "insert"
+  #  select_item
+  #
+  #def_key "enter"
+  #  enter_directory
+  #
+  #def_key "enter"
+  #  toggle_output
+  #
+  #def_key "enter"
+  #  run_action
+  #
+  #def_key "enter"
+  #  play_item
+  #
+  #def_key "space"
+  #  add_item_to_playlist
+  #
+  #def_key "space"
+  #  toggle_lyrics_update_on_song_change
+  #
+  #def_key "space"
+  #  toggle_visualization_type
+  #
+  #def_key "delete"
+  #  delete_playlist_items
+  #
+  #def_key "delete"
+  #  delete_browser_items
+  #
+  #def_key "delete"
+  #  delete_stored_playlist
+  #
+  #def_key "right"
+  #  next_column
+  #
+  #def_key "right"
+  #  slave_screen
+  #
+  #def_key "right"
+  #  volume_up
+  #
+  #def_key "+"
+  #  volume_up
+  #
+  #def_key "left"
+  #  previous_column
+  #
+  #def_key "left"
+  #  master_screen
+  #
+  #def_key "left"
+  #  volume_down
+  #
+  #def_key "-"
+  #  volume_down
+  #
+  #def_key ":"
+  #  execute_command
+  #
+  #def_key "tab"
+  #  next_screen
+  #
+  #def_key "shift-tab"
+  #  previous_screen
+  #
+  #def_key "f1"
+  #  show_help
+  #
+  #def_key "1"
+  #  show_playlist
+  #
+  #def_key "2"
+  #  show_browser
+  #
+  #def_key "2"
+  #  change_browse_mode
+  #
+  #def_key "3"
+  #  show_search_engine
+  #
+  #def_key "3"
+  #  reset_search_engine
+  #
+  #def_key "4"
+  #  show_media_library
+  #
+  #def_key "4"
+  #  toggle_media_library_columns_mode
+  #
+  #def_key "5"
+  #  show_playlist_editor
+  #
+  #def_key "6"
+  #  show_tag_editor
+  #
+  #def_key "7"
+  #  show_outputs
+  #
+  #def_key "8"
+  #  show_visualizer
+  #
+  #def_key "="
+  #  show_clock
+  #
+  #def_key "@"
+  #  show_server_info
+  #
+  #def_key "s"
+  #  stop
+  #
+  #def_key "p"
+  #  pause
+  #
+  #def_key ">"
+  #  next
+  #
+  #def_key "<"
+  #  previous
+  #
+  #def_key "ctrl-h"
+  #  jump_to_parent_directory
+  #
+  #def_key "ctrl-h"
+  #  replay_song
+  #
+  #def_key "backspace"
+  #  jump_to_parent_directory
+  #
+  #def_key "backspace"
+  #  replay_song
+  #
+  #def_key "f"
+  #  seek_forward
+  #
+  #def_key "b"
+  #  seek_backward
+  #
+  #def_key "r"
+  #  toggle_repeat
+  #
+  #def_key "z"
+  #  toggle_random
+  #
+  #def_key "y"
+  #  save_tag_changes
+  #
+  #def_key "y"
+  #  start_searching
+  #
+  #def_key "y"
+  #  toggle_single
+  #
+  #def_key "R"
+  #  toggle_consume
+  #
+  #def_key "Y"
+  #  toggle_replay_gain_mode
+  #
+  #def_key "T"
+  #  toggle_add_mode
+  #
+  #def_key "|"
+  #  toggle_mouse
+  #
+  #def_key "#"
+  #  toggle_bitrate_visibility
+  #
+  #def_key "Z"
+  #  shuffle
+  #
+  #def_key "x"
+  #  toggle_crossfade
+  #
+  #def_key "X"
+  #  set_crossfade
+  #
+  #def_key "u"
+  #  update_database
+  #
+  #def_key "ctrl-s"
+  #  sort_playlist
+  #
+  #def_key "ctrl-s"
+  #  toggle_browser_sort_mode
+  #
+  #def_key "ctrl-s"
+  #  toggle_media_library_sort_mode
+  #
+  #def_key "ctrl-r"
+  #  reverse_playlist
+  #
+  #def_key "ctrl-f"
+  #  apply_filter
+  #
+  #def_key "ctrl-_"
+  #  select_found_items
+  #
+  #def_key "/"
+  #  find
+  #
+  #def_key "/"
+  #  find_item_forward
+  #
+  #def_key "?"
+  #  find
+  #
+  #def_key "?"
+  #  find_item_backward
+  #
+  #def_key "."
+  #  next_found_item
+  #
+  #def_key ","
+  #  previous_found_item
+  #
+  #def_key "w"
+  #  toggle_find_mode
+  #
+  #def_key "e"
+  #  edit_song
+  #
+  #def_key "e"
+  #  edit_library_tag
+  #
+  #def_key "e"
+  #  edit_library_album
+  #
+  #def_key "e"
+  #  edit_directory_name
+  #
+  #def_key "e"
+  #  edit_playlist_name
+  #
+  #def_key "e"
+  #  edit_lyrics
+  #
+  #def_key "i"
+  #  show_song_info
+  #
+  #def_key "I"
+  #  show_artist_info
+  #
+  #def_key "g"
+  #  jump_to_position_in_song
+  #
+  #def_key "l"
+  #  show_lyrics
+  #
+  #def_key "ctrl-v"
+  #  select_range
+  #
+  #def_key "v"
+  #  reverse_selection
+  #
+  #def_key "V"
+  #  remove_selection
+  #
+  #def_key "B"
+  #  select_album
+  #
+  #def_key "a"
+  #  add_selected_items
+  #
+  #def_key "c"
+  #  clear_playlist
+  #
+  #def_key "c"
+  #  clear_main_playlist
+  #
+  #def_key "C"
+  #  crop_playlist
+  #
+  #def_key "C"
+  #  crop_main_playlist
+  #
+  #def_key "m"
+  #  move_sort_order_up
+  #
+  #def_key "m"
+  #  move_selected_items_up
+  #
+  #def_key "n"
+  #  move_sort_order_down
+  #
+  #def_key "n"
+  #  move_selected_items_down
+  #
+  #def_key "M"
+  #  move_selected_items_to
+  #
+  #def_key "A"
+  #  add
+  #
+  #def_key "S"
+  #  save_playlist
+  #
+  #def_key "o"
+  #  jump_to_playing_song
+  #
+  #def_key "G"
+  #  jump_to_browser
+  #
+  #def_key "G"
+  #  jump_to_playlist_editor
+  #
+  #def_key "~"
+  #  jump_to_media_library
+  #
+  #def_key "E"
+  #  jump_to_tag_editor
+  #
+  #def_key "U"
+  #  toggle_playing_song_centering
+  #
+  #def_key "P"
+  #  toggle_display_mode
+  #
+  #def_key "\\"
+  #  toggle_interface
+  #
+  #def_key "!"
+  #  toggle_separators_between_albums
+  #
+  #def_key "L"
+  #  toggle_lyrics_fetcher
+  #
+  #def_key "F"
+  #  fetch_lyrics_in_background
+  #
+  #def_key "alt-l"
+  #  toggle_fetching_lyrics_in_background
+  #
+  #def_key "ctrl-l"
+  #  toggle_screen_lock
+  #
+  #def_key "`"
+  #  toggle_library_tag_type
+  #
+  #def_key "`"
+  #  refetch_lyrics
+  #
+  #def_key "`"
+  #  add_random_items
+  #
+  #def_key "ctrl-p"
+  #  set_selected_items_priority
+  #
+  #def_key "q"
+  #  quit
+  #
+
+#+end_src
+** pqiv
+#+begin_src conf :tangle ~/.config/pqivrc
+  [options]
+  thumbnail-persistence=yes
+  thumbnail-size=256x256
+  hide-info-box=yes
+  browse=yes
+  auto-montage-mode=yes
+  max-depth=2
+  lazy-load=yes
+  allow-empty-window=yes
+
+  [keybindings]
+  ;; next/prev image
+  h {
+    goto_file_relative(-1);
+  }
+  l {
+    goto_file_relative(1);
+  }
+
+  ;; fuzzy search all images in folder/album
+  F {
+    jump_dialog();
+  }
+
+  f {
+    toggle_fullscreen(0);
+  }
+
+  _ {
+    flip_vertically();
+  }
+
+  | {
+    flip_horizontally();
+  }
+
+  <less> {
+    rotate_left();
+  }
+
+  <greater> {
+    rotate_right();
+  }
+
+  P {
+    animation_step(1);
+  }
+  p {
+    animation_continue();
+  }
+
+  dd {
+    command(trash $1);
+    command(notify-send "pqiv - trash" "`pwd`$1");
+  }
+  DD {
+    command(rm $1);
+    command(notify-send "pqiv - removed" "`pwd`$1");
+  }
+
+  ;; w/W: set as temp/permenant wallpaper
+  w {
+    command(feh --bg-scale $1);
+  }
+  W {
+    command(cp $1 $HOME/.config/wall.png);
+    command(feh --bg-scale $1);
+  }
+
+  ;; y/Y: copy image path/image itself to clipboard
+  y {
+    command(echo "`pwd`/$1" | xclip -selection clipboard);
+    command(notify-send "pqiv - path copied" "`pwd`$1");
+  }
+
+  Y {
+    command(xcopy $1);
+    command(notify-send "pqiv - image copied" "`pwd`$1");
+  }
+
+  ;; open image in the editor
+  e {
+    command(notify-send "pqiv - image editor" "Opening `pwd`$1 in image editor.");
+    command(jaro --method edit $1);
+  }
+
+  j {
+    nop();
+  }
+
+  k {
+    nop();
+  }
+
+
+  ;;
+  ;; Editing
+  ;;
+
+  <space> {
+    nop();
+  }
+
+  <Control><greater> {
+    command(echo $1 | xargs -I {} convert -rotate 90 "{}" "{}");
+  }
+
+  <Control><less> {
+    command(echo $1 | xargs -I {} convert -rotate -90 "{}" "{}");
+  }
+
+  <Control><bar> {
+    command(echo $1 | xargs -I {} convert -flip "{}" "{}");
+  }
+
+  <Control><underscore> {
+    command(echo $1 | xargs -I {} convert -flop "{}" "{}");
+  }
+
+  <Return> {
+    montage_mode_enter();
+  }
+
+  @MONTAGE {
+      l { montage_mode_shift_x(1); }
+      h { montage_mode_shift_x(-1); }
+      j { montage_mode_shift_y(1); }
+      k { montage_mode_shift_y(-1); }
+      f { montage_mode_follow(qwertasdfgcvb); }
+  }
+#+end_src
+* Editors
+** Emacs
+This file is just used for loading the configuration through an org file.
+
+#+begin_src elisp :tangle ~/.emacs.d/init.el
+  (org-babel-load-file "~/.emacs.d/README.org")
+#+end_src
+** Neovim
+*** Install vim-plug
+You need to install =vim-plug= to be able to install vim extensions.
+
+#+begin_src sh
+  sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
+         https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+#+end_src
+
+
+*** Configuration
+#+begin_src vimrc :tangle ~/.config/nvim/init.vim
+  " ##################################################
+  "                   (_)
+  "         __   ___ _ __ ___  _ __ ___
+  "         \ \ / / | '_ ` _ \| '__/ __|
+  "          \ V /| | | | | | | | | (__
+  "         (_)_/ |_|_| |_| |_|_|  \___|
+  " ##################################################
+
+  " linters:
+  " aurin shellcheck-static -> bash linter
+
+  " plugins {{{
+  call plug#begin('~/.local/share/nvim/plugged')
+  " aesthetics
+  Plug 'rakr/vim-one'                " i'm using this as airline theme
+  Plug 'dkasak/gruvbox'              " general theme
+  Plug 'vim-airline/vim-airline'     " powerline stuff
+  Plug 'ryanoasis/vim-devicons'      " icons
+
+  " utility
+  Plug 'terryma/vim-multiple-cursors'
+  Plug 'junegunn/fzf.vim'                      " Fuzzy finder (s. FZF)
+  Plug 'airblade/vim-gitgutter'                " Show git changes
+  Plug 'scrooloose/nerdtree'                   " tree like file manager
+  Plug 'Xuyuanp/nerdtree-git-plugin'           " git flags for nerdtree
+  Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+
+  " editing
+  Plug 'easymotion/vim-easymotion'   " (s. easymotion)
+  Plug 'tpope/vim-surround'          " (y|c)(motion)(anything-to-surround)
+  Plug 'tpope/vim-repeat'            " repat more stuff with .
+  Plug 'godlygeek/tabular'           " :Tabularize /(thing to align)
+  Plug 'milkypostman/vim-togglelist' " \q -> Toggle quicfix, \l -> Toggle list
+
+  " lint, code comp. new languages etc.
+  Plug 'w0rp/ale'                    " lint, code completion, other lsp features
+  Plug 'neovimhaskell/haskell-vim'   " for better highlighting
+  Plug 'dag/vim-fish'                " syntaxh highlighting and stuff for fish
+  Plug 'kovetskiy/sxhkd-vim'
+  Plug 'gabrielelana/vim-markdown'
+  Plug 'leafgarland/typescript-vim'
+  Plug 'ianks/vim-tsx'
+
+  Plug 'glacambre/firenvim', { 'do': { _ -> firenvim#install(0) } }
+
+  call plug#end()
+  " }}}
+
+  " theme {{{
+  colorscheme gruvbox                  " ...
+  let g:one_allow_italics = 1          " Italic comments for one theme
+  let g:gruvbox_italic=1               " Italic comments for gruvbox
+  let g:gruvbox_contrast_dark = 'hard' " ...
+  syntax on                            " enable syntax highlighting
+  " }}}
+
+  " visuals {{{
+  set background=dark                " rearranges colors for dark background
+  set colorcolumn=80                 " 80-col line
+  set termguicolors                  " true color support
+  set number relativenumber          " line numbers relative to current line ()
+  set cursorline                     " highlight current line
+  hi Normal guibg=none ctermbg=none| " transparent background
+  " }}}
+
+  " tabs and spaces {{{
+  set mouse=a               " enable mouse (helps precise resizing etc)
+  set tabstop=4             " tab-char width
+  set shiftwidth=4          " indent-level width
+  set softtabstop=4         " column count inserted by the tab key
+  set expandtab             " tabs -> spaces
+  set smartindent           " do it smart
+  filetype plugin indent on " determine indent by plugins
+  " }}}
+
+  " better defaults {{{
+  " search/completion
+  set ignorecase " ignore case while searching
+  set smartcase  " abc -> Abc and abc, Abc -> only Abc (works in combination with ^^)
+  set splitbelow
+  set splitright
+  set foldmethod=syntax " (indent, marker: fold between {{{ }}})
+  " }}}
+
+  " utility {{{
+  set showmatch             " visually indicate matching parens
+  set autoread              " update buffer if file is edited externally
+  set title                 " terminal inherits title
+  set clipboard=unnamedplus " use system clipboard
+  set inccommand=nosplit    " show effects of a command live
+  set spelllang=en_us       " default spelllang
+  set signcolumn=yes        " removes flickering caused by lang server
+  set undofile              " saves undo history to file (nvim's undodir default is OK)
+  set completeopt=menu,menuone,preview,noselect,noinsert
+  " }}}
+
+  " netrw (file browser) {{{
+  " :help netrw-quickmap
+  let g:netrw_banner = 0       " remove banner
+  let g:netrw_liststyle = 3    " tree style listing
+  let g:netrw_browse_split = 4 " ...
+  let g:netrw_altv = 1         " spawn it at left split
+  let g:netrw_usetab = 1       " use tab for expanding/shrinking folders
+  let g:netrw_winsize = 10     " occupies 10% of window
+  " }}}
+
+  " nerdtree {{{
+  " close vim if the nerdtree is the only window remaining
+  autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
+  " Use <TAB> as enter in NerdTree
+  " autocmd FileType nerdtree nmap <buffer> <CR> <TAB>
+
+  map <A-f> :NERDTreeToggle<CR>
+  " }}}
+
+  " trailing spaces {{{
+  set listchars=tab:▸\ ,trail:·       " Show trailing spaces and tabs
+  set list                            " ^^ enable it
+  autocmd BufWritePre * :%s/\s\+$//e  " remove trailing spaces on save
+  " }}}
+
+  " airline {{{
+  let g:airline_powerline_fonts = 1                " use nice-looking fonts
+  let g:airline_theme='one'                        " this is better than gruvbox
+  let g:airline#extensions#tabline#enabled = 2     " show buffers as tabs
+  let g:airline#extensions#tabline#fnamemod = ':t' " show only filename for buffer tabs
+  " }}}
+
+  " startify (the thing that pops up when vim is started) {{{
+  let g:startify_session_dir = '~/.config/nvim/sessions'
+  let g:startify_bookmarks = ['~/Workspace/projects', '~/Documents/notes']
+  let g:startify_lists = [
+      \ { 'type': 'files',     'header': ['MRU']            },
+      \ { 'type': 'sessions',  'header': ['Sessions']       },
+      \ { 'type': 'bookmarks', 'header': ['Bookmarks']      },
+      \ { 'type': 'commands',  'header': ['Commands']       },
+      \ ]
+  " }}}
+
+  " autocomplete key mappings (tab, stab to select next, prev completion from list) {{{
+  inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
+  inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+  inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
+  autocmd! CompleteDone * if pumvisible() == 0 | pclose | endif " Close preview menu when completion is done
+  " }}}
+
+  " ale {{{
+  " let g:ale_lint_on_text_changed = 'never' " only lints when file is saved
+  let g:airline#extensions#ale#enabled = 1       " ...
+  let g:ale_sign_error = '◉'                     " ...
+  let g:ale_sign_warning = '◉'                   " ...
+  let g:ale_completion_enabled = 1               " ...
+  let g:ale_linters_explicit = 1                 " only run linters named in ale_linters settings.
+
+  " ale linter config (only use with linters, see below for lang servers)
+  let g:ale_linters             = {}
+  let g:ale_linters['sh']       = ['shellcheck']
+  let g:ale_linters['fish']     = ['fish']
+  let g:ale_linters['awk']      = ['gawk']
+  let g:ale_linters['r']        = ['lintr']
+  let g:ale_linters['vim']      = ['vint']
+  let g:ale_linters['json']     = ['jq']
+  let g:ale_linters['markdown'] = ['vale']
+  " }}}
+
+  " stuff {{{
+  nmap <space> <leader>
+  inoremap jk <ESC>|         " jk escapes to normal mode
+  tnoremap jk <C-\><C-n>|    " jk escapes to normal mode (in terminal mode)
+  tnoremap <Esc> <C-\><C-n>| " esc escapes to normal mode
+  " }}}
+
+  " split mappings {{{
+  " next sections looks pretty much like my i3 config except Win key is replaced
+  " with the Alt key
+  " move between buffers with alt+hjkl
+  nnoremap <A-h> <C-w>h
+  nnoremap <A-j> <C-w>j
+  nnoremap <A-k> <C-w>k
+  nnoremap <A-l> <C-w>l
+
+  " faster resize for buffers
+  nnoremap <A-J> <C-w>+
+  nnoremap <A-K> <C-w>-
+  nnoremap <A-L> <C-w>>
+  nnoremap <A-H> <C-w><
+  tnoremap <A-J> <C-\><C-n><C-w>+
+  tnoremap <A-K> <C-\><C-n><C-w>-
+  tnoremap <A-L> <C-\><C-n><C-w>>
+  tnoremap <A-H> <C-\><C-n><C-w><
+
+  " faster split creation/deletion
+  nnoremap <silent> <A--> :split<CR>
+  nnoremap <silent> <A-\> :vsplit<CR>
+  nnoremap <silent> <A-w> :bd<CR>
+
+  " change buffers
+  nnoremap <silent> <C-l> :bn<CR>
+  nnoremap <silent> <C-h> :bp<CR>
+  " }}}
+
+  " tabs {{{
+  nnoremap <silent> <A-.> :tabnext<CR>|               " alt-.  -> next tab
+  tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>|     " alt-.  -> next tab (terminal mode)
+  nnoremap <silent> <A-,> :tabprevious<CR>|           " alt-,  -> prev tab
+  tnoremap <silent> <A-,> <C-\><C-n>:tabprevious<CR>| " alt-,  -> prev tab (terminal mode)
+  nnoremap <silent> <A-1> :1 tabn<CR>|                " alt-1  -> goes to tab 1
+  nnoremap <silent> <A-2> :2 tabn<CR>|                " ^^
+  nnoremap <silent> <A-3> :3 tabn<CR>|                " ^^
+  nnoremap <silent> <A-4> :4 tabn<CR>|                " ^^
+  nnoremap <silent> <A-5> :5 tabn<CR>|                " ^^
+  nnoremap <silent> <C-t> :tabnew<CR>|                " ctrl-t -> new tab
+  " }}}
+
+  " indention mappings {{{
+  vnoremap <Tab> >gv|     " tab indents in visual mode
+  vnoremap <S-Tab> <gv|   " s-tab de-indents in visual mode
+  inoremap <S-Tab> <C-d>| " s-tab de-indents in insert mode
+  " }}}
+
+  " easymotion {{{
+  map  <leader>w <Plug>(easymotion-bd-w)|             " \w -> jump to word
+  nmap <leader>w <Plug>(easymotion-overwin-w)prefix)| " ^^
+  nmap s <Plug>(easymotion-overwin-f)|                " jump to character
+  map <Leader>j <Plug>(easymotion-j)|                 " jump to line (downwards)
+  map <Leader>k <Plug>(easymotion-k)|                 " jump to line (upwards)
+
+  "search
+  let g:EasyMotion_smartcase = 1
+  map  / <Plug>(easymotion-sn)
+  omap / <Plug>(easymotion-tn)
+  map  n <Plug>(easymotion-next)
+  map  N <Plug>(easymotion-prev)
+  " }}}
+
+  " move visual lines (j,k works in traditional way) {{{
+  onoremap <silent> j gj
+  onoremap <silent> k gk
+  nnoremap <silent> j gj
+  nnoremap <silent> k gk
+  vnoremap <silent> j gj
+  vnoremap <silent> k gk
+  " }}}
+
+  " fzf (https://github.com/junegunn/fzf/blob/master/README-VIM.md#fzf-inside-terminal-buffer) {{{
+  let $FZF_DEFAULT_OPTS = '--layout=reverse --margin=1,4'
+  let g:fzf_layout = { 'window': 'call OpenFloatingWin()' }
+
+  function! OpenFloatingWin()
+      let height = &lines - 3
+      let width = float2nr(&columns - (&columns * 2 / 10))
+      let col = float2nr((&columns - width) / 2)
+
+      "Set the position, size, etc. of the floating window.
+      "The size configuration here may not be so flexible, and there's room for further improvement.
+      let opts = {
+                  \ 'relative': 'editor',
+                  \ 'row': height * 0.3,
+                  \ 'col': col + 30,
+                  \ 'width': width * 2 / 3,
+                  \ 'height': height / 2
+                  \ }
+
+      let buf = nvim_create_buf(v:false, v:true)
+      let win = nvim_open_win(buf, v:true, opts)
+
+      "Set Floating Window Highlighting
+      call setwinvar(win, '&winhl', 'Normal:Pmenu')
+
+      setlocal
+                  \ buftype=nofile
+                  \ nobuflisted
+                  \ bufhidden=hide
+                  \ nonumber
+                  \ norelativenumber
+                  \ signcolumn=no
+  endfunction
+
+  function! RipgrepFzf(query, fullscreen)
+      " Rg with bat preview focused on selected line
+      let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case %s || true'
+      let initial_command = printf(command_fmt, shellescape(a:query))
+      let spec = {'options': ['--layout=reverse', '--query', a:query, '--preview', 'line={}; file=${line%%:*}; linum=${${line#*:}%%:*}; range=$(($linum - $LINES / 2)); range_cmd=$([[ $range -gt -1 ]] && echo "--line-range"); range_cmd_arg=$([[ $range -gt -1 ]] && echo $range:); bat --color=always --style=header,numbers "$file" --highlight-line $linum $range_cmd $range_cmd_arg']}
+      call fzf#vim#grep(initial_command, 1, spec, a:fullscreen)
+  endfunction
+
+  let $FZF_DEFAULT_OPTS = '--layout=reverse --info=hidden'
+
+  command! -bang -nargs=?  Files call fzf#vim#files(<q-args>, {'options': ['--info=inline', '--preview', 'bat --color=always --style=header,numbers {}'], 'window': ''}, <bang>0)
+  command! -bang -nargs=?  GFiles call fzf#vim#files(<q-args>, {'options': ['--layout=reverse', '--info=inline', '--preview', 'bat --color=always --style=header,numbers {}']}, <bang>0)
+  command! -nargs=* -bang Rg call RipgrepFzf(<q-args>, <bang>0)
+  command! -bang -nargs=? GLog call fzf#vim#grep('git log --graph --color=always --format="%C(auto)%h%d %s %C(black)%C(bold)%cr"', 1, {'options': ['--ansi', '--preview', 'echo {} | grep -o "[a-f0-9]\{7\}" | head -1 | xargs -I % sh -c "git show --color=always %"']}, <bang>0)
+
+  " [Commands] --expect expression for directly executing the command
+  let g:fzf_commands_expect = 'alt-enter,ctrl-x'
+  inoremap <expr> <c-x><c-k> fzf#vim#complete('cat /usr/share/dict/words')
+
+  nnoremap <leader><space> :Commands<CR>| " \<space> -> lists all commands
+  nnoremap <leader>g :GFiles<CR>|         " \g       -> list all git files
+  nnoremap <leader>h :History<CR>|        " \h       -> list history
+  nnoremap <leader>b :Buffers<CR>|        " \b       -> list buffers
+  nnoremap <leader>f :Rg<CR>|             " \b       -> search in all lines of the project
+  " }}}
+
+  " Master Wq bindings {{{
+  command! Wq wq
+  command! W w
+  command! Q q
+  nnoremap <silent> <CR> :nohlsearch<CR><CR>| " enter -> clear search highlighting
+  nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
+  nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
+  tnoremap <silent> <C-q> <C-\><C-n>:q<CR>|   " ctrl-q -> quit (term)
+  " }}}
+
+  " Turkish keyboard mappings {{{
+  nnoremap Ş :
+  nnoremap ı i
+  nnoremap ğ [
+  nnoremap ü ]
+  nnoremap Ğ {
+  nnoremap Ü }
+  nnoremap ç .
+  nnoremap Ö <
+  nnoremap Ç >
+  vnoremap Ş :
+  vnoremap ı i
+  vnoremap ğ [
+  vnoremap ü ]
+  vnoremap Ğ {
+  vnoremap Ü }
+  vnoremap ç .
+  vnoremap Ö <
+  vnoremap Ç >
+  " }}}
+
+  " other {{{
+  vnoremap t :Tabularize/
+  " }}}
+
+  " utility commands {{{
+  command! ConfigReload so $MYVIMRC " reload vim config
+  command! ConfigEdit e $MYVIMRC    " edit vim config
+  command! Vterm vsplit|term
+  command! Term split|term
+  command! SpellCheckEn setlocal spell! spelllang=en_us
+  command! -range TabularizeHaskellData <line1>,<line2>GTabularize/[{},]\|::
+  " }}}
+
+  " autos {{{
+  autocmd BufWritePost ~/.Xresources,~/.Xdefaults !xrdb %
+  autocmd BufWritePost ~/.Xresources.d/* !xrdb ~/.Xresources
+  autocmd BufWritePost ~/.config/sxhkd/sxhkdrc !pkill -USR1 -x sxhkd
+  " }}}
+
+  " functions {{{
+  function! PreviewToggler(fn, ...)
+      " Takes a function that opens previewwindow, if the pwindow is open then
+      " closes it, if the pwindow is not open simply calls the function.
+      for nr in range(1, winnr('$'))
+          if getwinvar(nr, '&pvw') == 1
+              pclose
+              return 0
+          endif
+      endfor
+
+      let params = get(a:, 1, [])
+      :call call (function(a:fn), params)
+  endfunction
+  " }}}
+
+  " vi: foldmethod=marker
+#+end_src
+*** Minimal configuration
+#+begin_src vimrc :tangle ~/.config/nvim/minimal.vim
+  " ##################################################
+  "                   (_)
+  "         __   ___ _ __ ___  _ __ ___
+  "         \ \ / / | '_ ` _ \| '__/ __|
+  "          \ V /| | | | | | | | | (__
+  "         (_)_/ |_|_| |_| |_|_|  \___|
+  " ##################################################
+
+
+  " visuals {{{
+  set background=dark                " rearranges colors for dark background
+  set colorcolumn=80                 " 80-col line
+  set termguicolors                  " true color support
+  set number relativenumber          " line numbers relative to current line ()
+  set cursorline                     " highlight current line
+  "hi Normal guibg=none ctermbg=none| " transparent background
+  " }}}
+
+  " tabs and spaces {{{
+  set mouse=a               " enable mouse (helps precise resizing etc)
+  set tabstop=4             " tab-char width
+  set shiftwidth=4          " indent-level width
+  set softtabstop=4         " column count inserted by the tab key
+  set expandtab             " tabs -> spaces
+  set smartindent           " do it smart
+  filetype plugin indent on " determine indent by plugins
+  " }}}
+
+  " better defaults {{{
+  " search/completion
+  set ignorecase " ignore case while searching
+  set smartcase  " abc -> Abc and abc, Abc -> only Abc (works in combination with ^^)
+  set splitbelow
+  set splitright
+  set foldmethod=syntax " (indent, marker: fold between {{{ }}})
+  " }}}
+
+  " utility {{{
+  set showmatch             " visually indicate matching parens
+  set autoread              " update buffer if file is edited externally
+  set title                 " terminal inherits title
+  set clipboard=unnamedplus " use system clipboard
+  set inccommand=nosplit    " show effects of a command live
+  set spelllang=en_us       " default spelllang
+  set signcolumn=yes        " removes flickering caused by lang server
+  set undofile              " saves undo history to file (nvim's undodir default is OK)
+  set completeopt=menu,menuone,preview,noselect,noinsert
+  " }}}
+
+  " netrw (file browser) {{{
+  " :help netrw-quickmap
+  let g:netrw_banner = 0       " remove banner
+  let g:netrw_liststyle = 3    " tree style listing
+  let g:netrw_browse_split = 4 " ...
+  let g:netrw_altv = 1         " spawn it at left split
+  let g:netrw_usetab = 1       " use tab for expanding/shrinking folders
+  let g:netrw_winsize = 10     " occupies 10% of window
+  " }}}
+
+  " trailing spaces {{{
+  set listchars=tab:▸\ ,trail:·       " Show trailing spaces and tabs
+  set list                            " ^^ enable it
+  autocmd BufWritePre * :%s/\s\+$//e  " remove trailing spaces on save
+  " }}}
+
+  " autocomplete key mappings (tab, stab to select next, prev completion from list) {{{
+  inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
+  inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+  inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
+  autocmd! CompleteDone * if pumvisible() == 0 | pclose | endif " Close preview menu when completion is done
+  " }}}
+
+  " stuff {{{
+  nmap <space> <leader>
+  inoremap jk <ESC>|         " jk escapes to normal mode
+  tnoremap jk <C-\><C-n>|    " jk escapes to normal mode (in terminal mode)
+  tnoremap <Esc> <C-\><C-n>| " esc escapes to normal mode
+  " }}}
+
+  " split mappings {{{
+  " next sections looks pretty much like my i3 config except Win key is replaced
+  " with the Alt key
+  " move between buffers with alt+hjkl
+  nnoremap <A-h> <C-w>h
+  nnoremap <A-j> <C-w>j
+  nnoremap <A-k> <C-w>k
+  nnoremap <A-l> <C-w>l
+
+  " faster resize for buffers
+  nnoremap <A-J> <C-w>+
+  nnoremap <A-K> <C-w>-
+  nnoremap <A-L> <C-w>>
+  nnoremap <A-H> <C-w><
+  tnoremap <A-J> <C-\><C-n><C-w>+
+  tnoremap <A-K> <C-\><C-n><C-w>-
+  tnoremap <A-L> <C-\><C-n><C-w>>
+  tnoremap <A-H> <C-\><C-n><C-w><
+
+  " faster split creation/deletion
+  nnoremap <silent> <A--> :split<CR>
+  nnoremap <silent> <A-\> :vsplit<CR>
+  nnoremap <silent> <A-w> :bd<CR>
+
+  " change buffers
+  nnoremap <silent> <C-l> :bn<CR>
+  nnoremap <silent> <C-h> :bp<CR>
+  " }}}
+
+  " tabs {{{
+  nnoremap <silent> <A-.> :tabnext<CR>|               " alt-.  -> next tab
+  tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>|     " alt-.  -> next tab (terminal mode)
+  nnoremap <silent> <A-,> :tabprevious<CR>|           " alt-,  -> prev tab
+  tnoremap <silent> <A-,> <C-\><C-n>:tabprevious<CR>| " alt-,  -> prev tab (terminal mode)
+  nnoremap <silent> <A-1> :1 tabn<CR>|                " alt-1  -> goes to tab 1
+  nnoremap <silent> <A-2> :2 tabn<CR>|                " ^^
+  nnoremap <silent> <A-3> :3 tabn<CR>|                " ^^
+  nnoremap <silent> <A-4> :4 tabn<CR>|                " ^^
+  nnoremap <silent> <A-5> :5 tabn<CR>|                " ^^
+  nnoremap <silent> <C-t> :tabnew<CR>|                " ctrl-t -> new tab
+  " }}}
+
+  " indention mappings {{{
+  vnoremap <Tab> >gv|     " tab indents in visual mode
+  vnoremap <S-Tab> <gv|   " s-tab de-indents in visual mode
+  inoremap <S-Tab> <C-d>| " s-tab de-indents in insert mode
+  " }}}
+
+  " move visual lines (j,k works in traditional way) {{{
+  onoremap <silent> j gj
+  onoremap <silent> k gk
+  nnoremap <silent> j gj
+  nnoremap <silent> k gk
+  vnoremap <silent> j gj
+  vnoremap <silent> k gk
+  " }}}
+
+  " Master Wq bindings {{{
+  command! Wq wq
+  command! W w
+  command! Q q
+  nnoremap <silent> <CR> :nohlsearch<CR><CR>| " enter -> clear search highlighting
+  nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
+  nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
+  tnoremap <silent> <C-q> <C-\><C-n>:q<CR>|   " ctrl-q -> quit (term)
+  " }}}
+
+  " Turkish keyboard mappings {{{
+  nnoremap Ş :
+  nnoremap ı i
+  nnoremap ğ [
+  nnoremap ü ]
+  nnoremap Ğ {
+  nnoremap Ü }
+  nnoremap ç .
+  nnoremap Ö <
+  nnoremap Ç >
+  vnoremap Ş :
+  vnoremap ı i
+  vnoremap ğ [
+  vnoremap ü ]
+  vnoremap Ğ {
+  vnoremap Ü }
+  vnoremap ç .
+  vnoremap Ö <
+  vnoremap Ç >
+  " }}}
+
+  " move in insert mode {{{
+  inoremap <C-l> <right>| " ctrl-l -> move right in insert mode
+  inoremap <C-h> <left>|  " ...
+  inoremap <C-j> <down>|  " ...
+  inoremap <C-k> <up>|    " ...
+  " }}}
+
+  " utility commands {{{
+  command! ConfigReload so $MYVIMRC " reload vim config
+  command! ConfigEdit e $MYVIMRC    " edit vim config
+  command! Vterm vsplit|term
+  command! Term split|term
+  command! SpellCheckEn setlocal spell! spelllang=en_us
+  " }}}
+
+  " vi: foldmethod=marker
+#+end_src
+* Firefox
+** tridactyl
+#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
+  sanitise tridactyllocal tridactylsync
+
+  colors quake
+  set editorcmd jaro
+  set searchengine duckduckgo
+  set hintfiltermode vimperator-reflow
+  set smoothscroll true
+
+  " commands
+  command withUrl composite get_current_url |
+
+  command sync open localhost:8384
+
+  command mpv withUrl ! mpv --x11-name=youtube --geometry=853x480-20-20
+  command mpvhint hint -W ! mpv
+  command mpd withUrl ! mpd-yt play
+
+  command jaro withUrl ! jaro
+  command jarohint hint -W ! jaro
+
+  command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
+  command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
+  command copyimageurl composite hint -pipe img src | yank
+
+  " Download stuff with youtube-dl into my memes folder
+  " It asks for a file name, without any extension etc
+  command ytdlhint composite hint -W exclaim_quiet tri-ytdl
+  command ytdl withUrl exclaim_quiet tri-ytdl
+
+  " key-bindings
+  bind <A-.> tabnext
+  bind <A-,> tabprev
+  bind <A-e> editor
+  bind --mode=insert <A-e> editor
+  bind + zoom 0.1 true
+  bind - zoom -0.1 true
+  bind p pin
+  bind m jaro
+  bind M jarohint
+  bind ;i copyimage
+  bind ;d ytdlhint
+
+
+  " vim: set filetype=vim:
+#+end_src
+
+** tri-ytdl
+I use this script with tridactyl to download and save stuff that ~youtube-dl~ can handle. See ~ytdl~ command in tridactyl. It simply save selected link into =~/Documents/memes=. It asks for a file name, if you give an empty file name, it'll create it automatically.
+
+#+begin_src bash :tangle ~/.scripts/tri-ytdl
+  #!/bin/bash
+  cd ~/Documents/memes
+  notify-send "Starting the download..."
+
+  FILE_NAME=$(zenity --entry --text="Enter meme file name (without extension).\nIt will be saved under ~/Documents/memes")
+
+  if [[ -n "$FILE_NAME" ]]; then
+      youtube-dl --no-mtime --output "$FILE_NAME.%(ext)s" "$@"
+  else
+      youtube-dl --no-mtime "$@"
+  fi
+
+  echo -n "$(pwd)/$(/bin/ls -tr | tail -n 1)" | xcopy
+  notify-send "Download finished!" "File path copied to your clipboard."
+#+end_src
+
+* Some desktop files
+** .local/share/applications/shortcuts.desktop
+Some shortcuts to some folders. These stuff appears in rofi so that, for example, I can just search for =screenshots= and hit enter to open my screenshots directory in =pqiv=.
+
+#+begin_src conf :tangle ~/.local/share/applications/shortcuts.desktop
+  [Desktop Entry]
+  Type=Application
+  Name=Shortcut to
+  Terminal=false
+  Exec=term
+  Actions=walls;fkill;phonepics;screenshots;memes;floatingtermopaque;floatingterm;opqueterm
+
+  [Desktop Action walls]
+  Name=Wallpapers
+  Exec=/bin/sh -c "pqiv -t $DIR_WALLPAPERS"
+
+  [Desktop Action phonepics]
+  Name=Phone pictures
+  Exec=/bin/sh -c "pqiv -t ~/Pictures/phone/Camera"
+
+  [Desktop Action screenshots]
+  Name=Screenshots
+  Exec=/bin/sh -c "pqiv -t $DIR_SCREENSHOTS"
+
+  [Desktop Action memes]
+  Name=Memes (ayylmao)
+  Exec=/bin/sh -c "pqiv -t ~/Documents/memes"
+
+  [Desktop Action fkill]
+  Name=Fuzzy kill (fkill)
+  Exec=/bin/sh -c "term --float -g 150x20 -e fuzzy kill"
+
+  [Desktop Action opaqueterm]
+  Name=Opaque term terminal (meta + ctrl + enter)
+  Exec=/bin/sh -c "term --opaque"
+
+  [Desktop Action floatingterm]
+  Name=Floating term terminal (meta + shift + enter)
+  Exec=/bin/sh -c "term --float -g 150x30"
+
+  [Desktop Action floatingtermopaque]
+  Name=Floating term terminal (opaque)  (meta + shift + ctrl + enter)
+  Exec=/bin/sh -c "term --float --opaque -g 150x30"
+#+end_src
+** .local/share/applications/tools.desktop
+Some extra stuff that I want to be able to reach through rofi.
+
+#+begin_src conf :tangle ~/.local/share/applications/tools.desktop
+[Desktop Entry]
+Type=Application
+Name=Tools
+Terminal=false
+Exec=term
+Actions=connectheadphones
+
+[Desktop Action connectheadphones]
+Name=Connect to Bluetooth Headphones
+Exec=connect-bt-headphones
+#+end_src
+** .local/share/applications/jaro.desktop
+#+begin_src conf :tangle ~/.local/share/applications/jaro.desktop
+  [Desktop Entry]
+  Name=jaro
+  GenericName=Resource opener
+  Terminal=false
+  Exec=jaro %F
+  Type=Application
+  Categories=Utility;
+#+end_src
+** .local/share/applications/keepassxc-nopass.desktop
+#+begin_src conf :tangle ~/.local/share/applications/keepassxc-nopass.desktop
+[Desktop Entry]
+Name=KeePassXC
+GenericName=no password
+Comment=KeePassXC but no password required
+Exec=/bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $HOME/Documents/sync/passwords.kdbx"
+Icon=keepassxc
+StartupWMClass=keepassxc
+Terminal=false
+Type=Application
+Version=1.0
+Categories=Utility;Security;Qt;
+MimeType=application/x-keepass2;
+#+end_src
+** .local/share/applications/maim.desktop
+#+begin_src conf :tangle ~/.local/share/applications/maim.desktop
+[Desktop Entry]
+Type=Application
+Name=Take screenshot
+Icon=utilities-terminal
+Terminal=false
+Exec=take-ss --full
+Actions=full;area;wait-full;wait-area;clip-full;clip-area;shadow-window;
+
+[Desktop Action full]
+Name=Full
+Exec=take-ss --full
+
+[Desktop Action area]
+Name=Area
+Exec=take-ss --area
+
+[Desktop Action wait-full]
+Name=Wait 5, full
+Exec=take-ss --wait-full
+
+[Desktop Action wait-area]
+Name=Wait 5, area
+Exec=take-ss --wait-area
+
+[Desktop Action clip-full]
+Name=Clipboard full
+Exec=take-ss --clip-full
+
+[Desktop Action clip-area]
+Name=Clipboard area
+Exec=take-ss --clip-area
+
+[Desktop Action shadow-window]
+Name=Shadow window
+Exec=take-ss --shadow-window
+#+end_src
+* Scripts
+This part is almost completely untouched. Needs some revamp.
+
+** .scripts/askpass
+#+begin_src bash :tangle ~/.scripts/askpass
+  #!/bin/sh
+  zenity --password --title "Enter your password" 2> /dev/null
+#+end_src
+** .scripts/browser-watch
+#+begin_src bash :tangle ~/.scripts/browser-watch
+  #!/bin/bash
+
+  # TODO: watch a list of files
+
+  CMD=$1
+  while [[ $# -gt 0 ]]; do
+      case $1 in
+          --*)
+              TMP_ARG=${1#--}
+              TMP_ARG=${TMP_ARG%=*}
+              TMP_ARG=${TMP_ARG//-/_}
+              TMP_VAL=${1#*=}
+              declare "${TMP_ARG^^}"="$TMP_VAL"
+              ;;
+      esac
+      shift
+  done
+
+
+  if [[ "$CMD" = "--help" ]]; then
+      echo "Detect file changes and reload it in browser."
+      echo "$(basename "$0") [--browser=(firefox|chrome|vivaldi)] [--reload=(hard|normal)] --file=FILE_TO_WATCH"
+      exit 0
+  elif [[ ${MODE} = "run" ]]; then
+      echo "RELOADING..."
+
+      current_window=$(xdotool getactivewindow)
+
+      if [[ $RELOAD = "hard" ]]; then
+          RELOAD_KEYS="CTRL+SHIFT+R"
+      else
+          RELOAD_KEYS="CTRL+R"
+      fi
+
+      xdotool search --name "${BROWSER:=chrome}" windowactivate --sync
+      xdotool search --name "${BROWSER}" key --clearmodifiers "${RELOAD_KEYS}"
+
+      xdotool windowfocus --sync "${current_window}"
+      xdotool windowactivate --sync "${current_window}"
+  else
+      echo "$FILE" | entr "$0" "$@" --mode=run
+  fi
+#+end_src
+** .scripts/bspwmc
+#+begin_src bash :tangle ~/.scripts/bspwmc
+  #!/bin/bash
+
+  size=30
+
+  function focused_monitor_name {
+      bspc query --monitors --monitor focused --names
+  }
+
+  function focused_monitor_info {
+      xrandr -q | grep "^$(focused_monitor_name) connected" | tr "+x" " " | sed "s/primary //"
+  }
+
+  function focused_monitor_height {
+      focused_monitor_info | cut -d" " -f4
+  }
+
+  function focused_monitor_width {
+      focused_monitor_info | cut -d" " -f3
+  }
+
+  function focused_monitor_x_offset {
+      focused_monitor_info | cut -d" " -f5
+  }
+
+  function focused_monitor_y_offset {
+      focused_monitor_info | cut -d" " -f6
+  }
+
+  function is_floating {
+      bspc query -T -n | grep -q '"state":"floating"'
+  }
+
+  # if current node is floating, focus the newest non-floating node
+  # otherwise focus the newest floating node
+  function focus_toggle_floating {
+      if is_floating; then
+          bspc node "newest.!hidden.!floating.local.window" --focus
+      else
+          bspc node "newest.!hidden.floating.local.window" --focus
+      fi
+  }
+
+  # if current node is floating, focus $dir{west,south,north,east} floating node
+  # otherwise focus $dir{west,south,north,east} non-floating node
+  function focus {
+      local dir="$1"
+      if is_floating; then
+          bspc node --focus "$dir.!hidden.floating"
+      else
+          bspc node --focus "$dir.!hidden.!floating"
+      fi
+  }
+
+  # if current node is floating, move the node $dir{west,south,north,east} by $size px
+  # otherwise swap current node with $dir{west,south,north,east} non-floating node
+  function move {
+      local dir="$1"
+      local switch sign
+      if is_floating; then
+          case "$dir" in
+              west)  switch="-x"; sign="-" ;;
+              east)  switch="-x"; sign="+" ;;
+              north) switch="-y"; sign="-" ;;
+              ,*)     switch="-y"; sign="+" ;;
+          esac
+          xdo move ${switch} ${sign}${size}
+      else
+          bspc node --swap $dir.local.!floating
+      fi
+  }
+
+  function resize {
+      local dir="$1"
+      local size="$2"
+      if is_floating; then
+          xdo resize -$dir $size
+      else
+          case $dir in
+              w) bspc node -z right $size 0; bspc node -z left $size 0 ;;
+              h) bspc node -z bottom 0 $size; bspc node -z top 0 $size ;;
+          esac
+      fi
+  }
+
+  # normalize_size 100 1200 -> 100
+  # normalize_size 50% 1200 -> 600
+  function normalize_size {
+      local size=$1
+      local relative_to=$2
+      if [[ $size = *% ]]; then
+          local size=$(($relative_to * ${size%\%} / 100))
+      fi
+      echo $size
+  }
+
+  # a scratchpad terminal that is shared across desktops (unique for each monitor)
+  function scratchpad_top {
+      monitor_name=$(focused_monitor_name)
+      class="padtop-${monitor_name,,}"
+      id=$(xdotool search --classname --class "$class")
+      if [[ -z "$id" ]]; then
+          local top_gap=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
+          local width=$(normalize_size 100% $(focused_monitor_width))
+          local height=$(normalize_size 50% $(focused_monitor_height))
+
+          bspc rule --add "*:$class" state=floating sticky=on border=off rectangle=${width}x${height}+0+${top_gap}
+          term --class="$class" -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class"
+      else
+          bspc node $id --flag hidden
+          bspc node -f $id
+      fi
+  }
+
+  # a scratchpad terminal that is unique to current desktop
+  function scratchpad_bot {
+      desktop_id=$(($(xdotool get_desktop) + 1))
+      class="padbot${desktop_id}"
+      id=$(xdotool search --classname --class "$class")
+      if [[ -z "$id" ]]; then
+          local width=$(normalize_size 100% $(focused_monitor_width))
+          local height=$(normalize_size 50% $(focused_monitor_height))
+
+          bspc rule --add "*:$class" state=floating sticky=off border=off rectangle=${width}x${height}+0+$(($(focused_monitor_height) - height))
+          term --class="$class" -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class"
+      else
+          bspc node "$id" --flag hidden
+          bspc node -f "$id"
+      fi
+  }
+
+  # center current floating window in x-axis. if $1 is true, also centers in
+  # y-axis. rest of the arguments are passed
+  function center_floating {
+      wid=''
+
+      center_y=0
+      if [[ "$1" = "true" ]]; then
+          center_y=1
+          shift
+      fi
+
+      # wait until the window shows up and set $wid
+      if [[ -n "$1" ]]; then
+          wid=$(xdotool search --sync "$@")
+      else
+          wid=$(xdotool getactivewindow)
+      fi
+
+      SCREEN_WIDTH=$(focused_monitor_width)
+      SCREEN_HEIGHT=$(focused_monitor_height)
+      WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
+      HEIGHT=$(xwininfo -id "$wid" | grep Height | cut -d: -f2 | xargs)
+      X=$(((SCREEN_WIDTH - WIDTH) / 2 + $(focused_monitor_x_offset)))
+      Y=$(((SCREEN_HEIGHT - HEIGHT) / 2 + $(focused_monitor_y_offset)))
+
+      if [[ "$center_y" = 1 ]]; then
+          xdotool windowmove "$wid" $X $Y
+      else
+          xdotool windowmove "$wid" $X y
+      fi
+  }
+
+  function move_floating {
+      wid=''
+      position=$1
+      shift
+
+      # wait until the window shows up and set $wid
+      if [[ -n "$1" ]]; then
+          wid=$(xdotool search --sync "$@")
+      else
+          wid=$(xdotool getactivewindow)
+      fi
+
+      SCREEN_WIDTH=$(focused_monitor_width)
+      SCREEN_HEIGHT=$(focused_monitor_height)
+      WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
+      HEIGHT=$(xwininfo -id "$wid" | grep Height | cut -d: -f2 | xargs)
+      GAP=10
+      OFFSET_X=$(($(focused_monitor_x_offset) + GAP))
+      OFFSET_Y=$(($(focused_monitor_y_offset) + GAP))
+
+      case $position in
+          Q) xdotool windowmove "$wid" $OFFSET_X $((OFFSET_Y + $(xrdb-get-value bar.height))) ;;
+          W) xdotool windowmove "$wid" $((SCREEN_WIDTH + OFFSET_X - 2 * GAP - WIDTH)) $((OFFSET_Y + $(xrdb-get-value bar.height))) ;;
+          A) xdotool windowmove "$wid" $OFFSET_X $((SCREEN_HEIGHT + OFFSET_Y - 2 * GAP - HEIGHT)) ;;
+          S) xdotool windowmove "$wid" $((SCREEN_WIDTH + OFFSET_X - 2 * GAP - WIDTH)) $((SCREEN_HEIGHT + OFFSET_Y - 2* GAP - HEIGHT)) ;;
+      esac
+  }
+
+  function toggle_inactive_opacity {
+      if grep 'inactive-opacity = 0.9' ~/.config/picom.conf; then
+          sed -i 's/inactive-opacity = 0.9/inactive-opacity = 1/g; s/inactive-dim = 0.1/inactive-dim = 0/g' ~/.config/picom.conf
+      else
+          sed -i 's/inactive-opacity = 1/inactive-opacity = 0.9/g; s/inactive-dim = 0/inactive-dim = 0.1/g' ~/.config/picom.conf
+      fi
+  }
+
+
+  cmd="$1"; shift
+  "$cmd" "$@"
+#+end_src
+** .scripts/cb-save
+#+begin_src bash :tangle ~/.scripts/cb-save
+  #!/bin/bash
+
+  FILENAME=$1
+
+  if [[ -z "$FILENAME" ]]; then
+      FILENAME=$(zenity --entry --text="Enter file to save image: (like ~/image.png)")
+  fi
+
+  if [[ "$FILENAME" = "--display" ]]; then
+      file=$(mktemp "XXXXX.png")
+      if xclip -selection clipboard -t image/png -o > "$file"; then
+          feh "$file"
+          exit 0
+      fi
+  elif [[ -n "$FILENAME" ]]; then
+      if xclip -selection clipboard -t image/png -o > "$FILENAME"; then
+          notify-send "Image saved" "Clipboard image saved in $FILENAME"
+          exit 0
+      fi
+  fi
+
+  notify-send "cb-save error" "No images in clipboard or empty path"
+#+end_src
+** .scripts/chroot-galileo
+#+begin_src bash :tangle ~/.scripts/chroot-galileo
+  #!/bin/sh
+  udisksctl unmount -b /dev/mmcblk0p3
+  sudo mount --bind /dev /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/dev
+  sudo mount --bind /proc /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/proc
+  sudo mount --bind /dev/pts /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/dev/pts
+  sudo mount --bind /sys /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/sys
+  sudo mount --bind /etc/resolv.conf /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/etc/resolv.conf
+
+  sudo chroot /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f /bin/bash
+
+  sudo umount /run/media/isa/56bea387-98cc-4d93-a36a-268fbcc0213f/{dev/pts,dev,sys,proc,}
+#+end_src
+** .scripts/fuzzy
+#+begin_src bash :tangle ~/.scripts/fuzzy
+  #!/bin/bash
+  # Some sources that I used:
+  # https://bluz71.github.io/2018/11/26/fuzzy-finding-in-bash-with-fzf.html
+  # https://github.com/DanielFGray/fzf-scripts
+
+  # These are generally console-spesific stuff. For other interactive fuzzy
+  # finding stuff check out ~/.scripts/menu (it uses rofi and there are stuff
+  # for music, apps, passwords etc.).
+
+  function fzf_git_add {
+      local files=$(git "$@" ls-files --modified --others --exclude-standard | fzf --multi --ansi --preview="git $* diff --color=always {1}")
+      if [ -n "$files" ]; then
+          git "$@" add --verbose $files
+      fi
+  }
+
+  function fzf_git_files {
+      local files=$(git "$@" ls-files | fzf --multi --ansi)
+      if [ -n "$files" ]; then
+          $EDITOR $files
+      fi
+  }
+
+  # FIXME: execute
+  function fzf_git_log {
+      git "$@" log --graph --color=always --format="%C(auto)%h%d %s %C(black)%C(bold)%cr" |
+      fzf --ansi --preview "echo {} | grep -o '[a-f0-9]\{7\}' | head -1 | xargs -I % sh -c 'git $* show --color=always %'" \
+                 --bind "enter:execute:
+                    (grep -o '[a-f0-9]\{7\}' | head -1 |
+                    xargs -I % sh -c 'git show --color=always % | bat') << 'FZF-EOF'
+                    {}
+                    FZF-EOF"
+  }
+
+  function fzf_kill {
+      local pids=$( ps -u $USER -o pid:7,comm,pcpu:7,%mem:7,rss:8,cmd:500 --sort=-rss | fzf --multi --preview '' | tr -s [:blank:] | cut -d' ' -f2)
+      if [ -n "$pids" ]; then
+          echo "$pids" | xargs kill -9 "$@"
+      fi
+  }
+
+  function fzf_packages_arch {
+      local packages=$(fzf --height 100% \
+                           --ansi \
+                           --multi \
+                           --preview="$AUR_HELPER -Si {2}" \
+      < <( $AUR_HELPER -Ss "$1" |
+        gawk '{
+          getline descr;
+          sub(/ */,"", descr);
+          repo = blue "[" gensub(/\/.*/, "", 1) "]" reset;
+          name = green gensub(/.*\//, "", 1, $1) reset;
+          info = gensub(/[^ ]* /, "", 1);
+          print repo, name, info, descr;
+        }' blue="$(tput setaf 4)" green="$(tput setaf 10)" reset="$(tput sgr0)"
+      ) | cut -d' ' -f2)
+      [[ -n "$packages" ]] && $AUR_HELPER -S ${packages}
+  }
+
+  function fzf_file_contents {
+      result=$(rg --no-text --line-number --color=always --colors match:fg:white . "$@" | fzf --ansi --preview '
+      line={};
+      file=${line%%:*};
+      linum=${${line#*:}%%:*};
+      range=$(($linum - $LINES / 2));
+      range_cmd=$([[ $range -gt -1 ]] && echo "--line-range");
+      range_cmd_arg=$([[ $range -gt -1 ]] && echo $range:);
+      bat --color=always --style=header,numbers "$file" --highlight-line $linum $range_cmd $range_cmd_arg')
+      selected_files=$(echo "$result" | cut -d: -f1)
+      [[ -n $selected_files ]] && jaro --no-stdin "$selected_files"
+  }
+
+  case "$*" in
+      ,*help) echo "fuzzy [git (add|files|log)|kill|pacman|file-contents]" ;;
+      "git add"*) shift 2; fzf_git_add "$@" ;;
+      "git files"*) shift 2; fzf_git_files "$@" ;;
+      "git log"*) shift 2; fzf_git_log "$@" ;;
+      kill|fuck) shift; fzf_kill "$@" ;;
+      pac*) shift; fzf_packages_arch "$@" ;;
+      file*|contents) shift; fzf_file_contents "$@" ;;
+      "") fzf;;
+  esac
+#+end_src
+** .scripts/getpassword
+#+begin_src bash :tangle ~/.scripts/getpassword
+  #!/bin/bash
+
+  # This script gets the requested password from a keepass file.
+  # It uses gnome-keyring to get password for kdbx file.
+  # $KEYRING_ID is the name of password field for your keepass database
+  # in gnome-keyring.
+  # Save your keepass database password to keyring like this:
+  # secret-tool store --label=KeePassDbPassword name keepass
+
+  # Usage:
+  # getpassword "/path/to/password/entry"            → prints entry's password from keepass db
+  # getpassword "/path/to/password/entry" --username → prints only username
+  # getpassword "/path/to/password/entry" --dump     → prints both username and password
+  # getpassword --keepass                            → print PASSWORD_STORE's password
+  # getpass --list                                   → list PASSWORD_STORE's entries under
+  # getpass --list "Social"                          → list PASSWORD_STORE's entries under /Social
+  #
+  # $PASSWORD_STORE is defined in ~/.profile, it points to a .kdbx file
+
+
+  KEYRING_ID=keepass
+  PASSWORD_PATH="$1"
+
+  function trim {
+      local var="${*:-$(</dev/stdin)}"
+      var="${var#"${var%%[![:space:]]*}"}"
+      var="${var%"${var##*[![:space:]]}"}"
+      echo -n "$var"
+  }
+
+  if [[ "$1" == "--keepass" ]]; then
+      secret-tool lookup name "$KEYRING_ID"
+      exit
+  elif [[ "$1" == "--list" ]]; then
+      secret-tool lookup name keepass | keepassxc-cli ls "$PASSWORD_STORE" "$2"
+      exit
+  fi
+
+  password=$(secret-tool lookup name "$KEYRING_ID")
+  info=$(echo "$password" | keepassxc-cli show --show-protected --quiet "$PASSWORD_STORE" "$PASSWORD_PATH")
+  username=$(echo "$info" | grep -i "username: " | cut -d: -f2 | trim)
+  password=$(echo "$info" | grep -i "password: " | cut -d: -f2 | trim)
+
+  case "$2" in
+      "-dump-all"|"--dump-all") echo "$info" | tail -n +2 ;;
+      "-dump"|"--dump")         echo "$username"; echo "$password" ;;
+      "-username"|"--username") echo "$username" ;;
+      ,*) echo "$password" ;;
+  esac
+#+end_src
+** .scripts/init-desktops
+#+begin_src bash :tangle ~/.scripts/init-desktops
+  #!/usr/bin/env bash
+
+  # This script is responsible for creating polybar instance and configuring
+  # monitors, desktops. You can run this file if you connect a new monitor and
+  # it will rearrange everything.
+
+  # Close all instances of polybar
+  killall -q polybar
+  while pgrep -u $UID -x polybar >/dev/null; do sleep 1; done
+
+  # Check if there are more than one monitors
+  # if so, set MONITOR_MAIN and MONITOR_SECONDARY accordingly
+  monitors="$(xrandr -q | grep -w "connected" | cut -d' ' -f1)"
+  echo ">> Found monitors: $monitors"
+
+  export MONITOR_MAIN=""
+  export MONITOR_SECONDARY=""
+
+  # External monitor should be the main monitor, if exists
+  MONITOR_MAIN=$(echo "$monitors" | grep -E "^(HDMI|DP|VGA)")
+  if [[ -z "$MONITOR_MAIN" ]]; then
+      export MONITOR_MAIN=$(echo "$monitors" | cut -d' ' -f1)
+  else
+      echo ">> Making $MONITOR_MAIN main monitor."
+      xrandr --output "$MONITOR_MAIN" --primary
+  fi
+
+  echo ">> Main monitor is $MONITOR_MAIN"
+
+  polybar main &> /dev/null &
+
+  # Run secondary polybar, if there is a secondary monitor
+  MONITOR_SECONDARY=$(sed "/$MONITOR_MAIN/d" <<< $monitors)
+  echo ">> Secondary monitor is $MONITOR_SECONDARY"
+
+  # Close the secondary monitor (laptop monitor) if lid is closed
+  if cat /proc/acpi/button/lid/LID*/state | grep 'closed'; then
+      echo ">> Closing the secondary monitor: $MONITOR_SECONDARY"
+      xrandr --output "$MONITOR_SECONDARY" --off
+  else
+      polybar secondary &> /dev/null &
+  fi
+
+  echo ">> Setting background"
+  feh --bg-scale "$HOME/.config/wall.png"
+
+  echo ">> Creating 5 desktops for each monitor"
+  xrandr -q | grep -w "connected" | cut -d' ' -f1 | xargs -I {} bspc monitor "{}" --reset-desktops I II III IV V VI VII VIII IX X
+#+end_src
+** .scripts/lockscreen
+#+begin_src bash :tangle ~/.scripts/lockscreen
+  #!/bin/bash
+
+  FIREFOX_PID=$(pidof firefox | awk '{print $1}')
+  QUTEBROWSER_PID=$(pidof qutebrowser | awk '{print $1}')
+
+  [[ -n $FIREFOX_PID ]] && FIREFOX_PPID=$(ps -o ppid= "$FIREFOX_PID")
+  [[ -n $QUTEBROWSER_PID ]] && QUTEBROWSER_PPID=$(ps -o ppid= "$QUTEBROWSER_PID")
+
+  kill -STOP $FIREFOX_PPID
+  mediastuff all_pause
+
+  if [[ ! -d ~/.cache/i3lock/current/ ]] || [[ ~/.config/wall.png -nt ~/.cache/i3lock/current/wall.png ]]; then
+      notify-send "Locking" "Updating lockscreen stuff... This may take some time."
+      betterlockscreen -u ~/.config/wall.png
+  fi
+
+  betterlockscreen --text "I WANNA FUCKING KILL MYSELF" --lock blur
+
+  [[ -n $FIREFOX_PID ]] && kill -CONT "$FIREFOX_PPID"
+  [[ -n $QUTEBROWSER_PID ]] && kill -CONT "$QUTEBROWSER_PPID"
+#+end_src
+** .scripts/mailcheck
+#+begin_src python :tangle ~/.scripts/mailcheck
+  #!/usr/bin/env python
+  import sys
+  import argparse
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-u', '--user', type=str, action='append',
+                      help="You can pass multiple users/passwords/servers. Like 'mailcheck --user user1 --password password1 --server server1 --user user2 --password password2 --server server2'")
+  parser.add_argument('-p', '--password', type=str, action='append')
+  parser.add_argument('-s', '--server', type=str, action='append',
+                      help="The IMAP server address like 'imap.gmail.com'. For ProtonMail, use 'proton' or 'pm'.")
+  parser.add_argument('-S', '--separator', type=str, default="/",
+                      help="Separator string for separating unread count of different accounts. Default: '/'")
+  parser.add_argument('-d', '--dump', type=str, default="",
+                      help="Dump output to a file.")
+  parser.add_argument('-f', '--fail-on-zero', default=False, action='store_true',
+                      help="If set, exit with 1 if all mailboxes have 0 unread mail.")
+  cfg, other_cfg = parser.parse_known_args()
+
+  results = []
+  for user, password, server in zip(cfg.user, cfg.password, cfg.server):
+      try:
+          if server in ('pm', 'proton', 'protonmail'):
+              from protonmail.client import Client
+              import logging
+              logging.getLogger('twisted').propagate = False
+              for key in logging.Logger.manager.loggerDict:
+                  logging.getLogger(key).propagate = False
+                  logging.getLogger(key).setLevel(logging.CRITICAL)
+
+              client = Client(Username=user, blocking=True)
+              client.api.login(password)
+              response = client.api.conversations.count()
+              response_code = response['Code']
+              total_unread = 0
+              if response_code == 1000:
+                  for count in response['Counts']:
+                      total_unread = total_unread + count['Unread']
+              results.append(total_unread)
+          else:
+              import imaplib
+              mail = imaplib.IMAP4_SSL(server)
+              mail.login(user, password)
+              mail.select("inbox", True)
+              return_code, ids = mail.search(None, 'UnSeen')
+
+              if return_code == 'OK':
+                  count = len([x for x in ids[0].split(b' ') if x])
+                  results.append(count)
+              else:
+                  print(return_code)
+                  sys.exit(255)
+      except:
+          results.append(-1)
+
+  is_all_zero = all([x == 0 for x in results])
+  if cfg.fail_on_zero and is_all_zero:
+      sys.exit(1)
+
+  if is_all_zero:
+      output = "0"
+  else:
+      output = cfg.separator.join(map(lambda x: str(x), results))
+
+  print(output)
+
+  if cfg.dump:
+      with open(cfg.dump, "w") as f:
+          f.write(output)
+#+end_src
+
+** .scripts/mediastuff
+#+begin_src bash :tangle ~/.scripts/mediastuff
+  #!/bin/bash
+
+  # This whole script is based on the fact that I'm not that retard to
+  # listen/watch more than one audio/video streams at the same time.
+  # If I do, I'll get punished for that sin.
+
+  MPV_SOCKET=/tmp/mpvsocket
+
+  mpv_pause() {
+      echo '{ "command": ["set_property", "pause", true] }' | socat - "$MPV_SOCKET"
+  }
+
+  mpv_toggle() {
+      echo '{"command": ["cycle", "pause"]}' | socat - "$MPV_SOCKET"
+  }
+
+  mpv_seek() {
+      if [[ $1 == *% ]]; then # seek $1 percent
+          echo 'percent'
+          echo '{"command": ["seek", "'"${1%\%}"'",  "relative-percent"]}' | socat - "$MPV_SOCKET"
+      else # seek $1 seconds
+          echo '{"command": ["seek", "'"$1"'"]}' | socat - "$MPV_SOCKET"
+      fi
+  }
+
+  # TODO: somehow pause videos/audios playing in firefox/qutebrowser
+  all_pause() {
+      mpv_pause
+      mpc pause
+  }
+
+  all_toggle() {
+      # Give priority to mpv
+      if pgrep mpv; then
+          mpv_toggle
+      else
+          mpc toggle
+      fi
+  }
+
+  all_seek() {
+      if pgrep mpv; then
+          mpv_seek "$@"
+      else
+          mpc seek "$@"
+      fi
+  }
+
+  get_sink_name_from_sink_id() {
+      local ids="${1:-$(</dev/stdin)}"
+      echo "$ids" | while read -r id; do
+          echo "($id) $(pactl list sinks | grep -E "(Sink #$id)|(device.description)" | grep -A1 "Sink #$id" | sed -n "2p" | cut -d'"' -f2)"
+      done
+  }
+
+  switch_audio_channel() {
+      if [[ $1 = "--help" ]]; then
+          echo "Changes default sink to next one and moves all inputs to new default sink."
+          echo "Try to use it when something is already playing."
+      fi
+
+      readarray -t sinks <<< "$(pactl list sinks short | cut -f1)"
+      readarray -t inputs <<< "$(pactl list sink-inputs short | cut -f1)"
+      current_sink=$(pactl list sinks short | grep "RUNNING" | head -c 1)
+
+      if [[ -z $current_sink ]]; then
+          notify-send "Error while switching audio channels" "Could not detect default sink. Playing something may help."
+          exit 1
+      fi
+
+      if [[ $1 = --interactive ]]; then
+          new_sink=$(printf "%s\n" "${sinks[@]}" | get_sink_name_from_sink_id | rofi -dmenu | grep -Po "\(\K[0-9]*")
+      else
+          new_sink=${sinks[0]}
+          for sink in "${sinks[@]}"; do
+              if (( sink > current_sink )); then
+                  new_sink="$sink"
+                  break
+              fi
+          done
+      fi
+
+      [[ -z $new_sink ]] && exit;
+
+      notify-send "Switching audio channel" "New default channel is $(get_sink_name_from_sink_id $new_sink), moving all inputs to that."
+
+      # Move every input to new sink
+      for input in "${inputs[@]}"; do
+          pacmd move-sink-input "$input" "$new_sink"
+      done
+
+      # Make new sink the default
+      pactl set-default-sink "$new_sink"
+  }
+
+  connect_bt_headphones() {
+      if ! rfkill | grep "bluetooth.*unblocked"; then
+          notify-send "Bluetooth Headphones" "Activating bluetooth... Please enter your password to unlock it."
+          SUDO_ASKPASS="$HOME/.scripts/askpass" sudo rfkill unblock 0
+          sleep 2
+      fi
+
+      TAB="$(printf '\t')"
+      bluetoothctl << EOF
+  power on
+  connect BC:${TAB}
+  quit
+  EOF
+
+      notify-send "Bluetooth Headphones" "Connection will be established in just a moment..."
+  }
+
+  # Get the movie name from file/folder name and find the imdb-id
+  find_imdb_id_from_filename() {
+      MOVIE_NAME=$(echo "$@" | sed -r 's/((\w{1,}[-. ]?)*?)(\(?[0-9]{4}\)?[. -]).*/\1\3/; s/[.()-]/ /g; s/  / /g')
+      curl 'https://searx.prvcy.eu/search' \
+           --data-urlencode "q=$MOVIE_NAME" \
+           --data-urlencode 'language=en-US' \
+           --data-urlencode 'format=csv' \
+           --silent \
+          | grep -oP 'imdb.com/title/\K\w+' -m 1
+  }
+
+  mpv_subdl() {
+      MPV_SOCKET=/tmp/mpvsocket
+      file_path=$1
+      language=$2
+      sub_file_path="${file_path%.*}.srt"
+
+      # First try if there is a zip/rar file that has been downloaded in last 5 mins
+      # if so try to extract it
+      SUB_FILE=$(find ~/Downloads -cmin -5 | grep -E '(rar|zip)')
+      if [[ -n $SUB_FILE ]]; then
+          if sub-extract --no-confirm --auto "$SUB_FILE"; then
+              echo 'show-text "Subtitle EXTRACTED from ~/Downloads."' | socat - $MPV_SOCKET
+              echo "sub-add \"$sub_file_path\"" | socat - $MPV_SOCKET
+              exit
+          else
+              echo 'show-text "Failed to extract, trying to download."' | socat - $MPV_SOCKET
+              sleep 2
+          fi
+      fi
+
+      # Now try `subdl`
+      echo 'show-text "Downloading subtitle with subdl..."' | socat - $MPV_SOCKET
+      if subdl --lang="$language" "$file_path"; then
+          echo 'show-text "Subtitle downloaded."' | socat - $MPV_SOCKET
+          echo "sub-add \"$sub_file_path\"" | socat - $MPV_SOCKET
+      else
+          IMDB_ID=$(find_imdb_id_from_filename "$file_path")
+          echo "show-text \"Failed! Trying for $IMDB_ID.\"" | socat - $MPV_SOCKET
+          if subdl --lang="$language" --imdb-id="$IMDB_ID" --force-imdb --download=best-rating "$file_path"; then
+              echo 'show-text "Alternative method worked!"' | socat - $MPV_SOCKET
+              echo "sub-add \"$sub_file_path\"" | socat - $MPV_SOCKET
+              exit
+          fi
+      fi
+
+      # Try `subliminal`
+      echo 'show-text "Downloading subtitle with subliminal..."' | socat - $MPV_SOCKET
+      SUBLIMINAL_OUTPUT=$(subliminal download -l "$language")
+      if [[ -n $(echo $SUBLIMINAL_OUTPUT | sed -nr '/Downloaded [1-9] subtitle/p') ]]; then
+          # Load all srt files into mpv, subliminal does not output the srt name
+          for srt in ./*.srt; do
+              echo "sub-add \"$srt\"" | socat - $MPV_SOCKET
+          done
+
+          echo 'show-text "Subtitle downloaded with subliminal."' | socat - $MPV_SOCKET
+          exit
+      fi
+
+  }
+
+
+  opt=$1; shift
+  case "$opt" in
+      ,*help) echo "mediastuff [mpv-(subdl|toggle|pause|seek)|all-(toggle|pause|seek)|switch-audio-channel|connect-bt-headphones|find-imdb]" ;;
+      mpv*toggle)              mpv_toggle                 "$@" ;;
+      mpv*pause)               mpv_pause                  "$@" ;;
+      mpv*seek)                mpv_seek                   "$@" ;;
+      all*toggle)              all_toggle                 "$@" ;;
+      all*pause)               all_pause                  "$@" ;;
+      all*seek)                all_seek                   "$@" ;;
+      switch*audio*channel)    switch_audio_channel       "$@" ;;
+      connect*bt*headphones)   connect_bt_headphones      "$@" ;;
+      mpv*subdl)               mpv_subdl                  "$@" ;;
+      find*imdb)               find_imdb_id_from_filename "$@" ;;
+  esac
+#+end_src
+** .scripts/menu
+#+begin_src bash :tangle ~/.scripts/menu
+  #!/bin/bash
+
+  # I use API of the invidious to interact with youtube
+  # https://github.com/iv-org/invidious/wiki/API
+  INVIDIOUS_INSTANCE="https://invidious.xyz/api/v1"
+
+  all_name='[ALL]'
+
+  function trim {
+      local var="${*:-$(</dev/stdin)}"
+      var="${var#"${var%%[![:space:]]*}"}"
+      var="${var%"${var##*[![:space:]]}"}"
+      echo -n "$var"
+  }
+
+  function dmenu {
+      # TODO: use fzf inside terminal
+      rofi -dmenu -fuzzy -i "$@"
+  }
+
+  function youtube {
+      # Search given string in youtube and show results. Play selected one in mpd or mpv.
+
+      for arg; do
+          case "$arg" in
+              "--audio"|"--music") local AUDIO=1                               ;;
+              "--video")           local VIDEO=1                               ;;
+              "--playlist="*)      local PLAYLIST=${arg/*=/}                   ;;
+              "--out")             local ONLY_PRINT=1                          ;;
+              ,*)                  local SEARCH_STRING="${SEARCH_STRING} $arg" ;;
+          esac
+      done
+
+      local SEARCH_HISTORY_FILE="$HOME/.cache/menu_youtube_history"
+      if [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]]; then
+          SEARCH_STRING=$(dmenu -p "search yt" < "$SEARCH_HISTORY_FILE")
+          echo "$SEARCH_STRING" >> "$SEARCH_HISTORY_FILE"
+          local HISTORY=$(sort -u "$SEARCH_HISTORY_FILE" | uniq "$SEARCH_HISTORY_FILE" | sed '/^\s*$/d')
+          echo "$HISTORY" > "$SEARCH_HISTORY_FILE"
+      fi
+
+      [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]] && exit
+
+      if [[ -n "$PLAYLIST" ]]; then
+          # TODO: this only fetches first page of the playlist
+          # api accepts page url parameter, every page has 100 videos
+          local SEARCH_RESULTS=$(curl --silent "$INVIDIOUS_INSTANCE/playlists/$PLAYLIST" | jq '.videos')
+      else
+          local SEARCH_RESULTS=$(curl --silent -G --data-urlencode "q=$SEARCH_STRING" "$INVIDIOUS_INSTANCE/search")
+      fi
+      SEARCH_RESULTS=$(echo $SEARCH_RESULTS | sed "s/&/&amp;/g")
+
+      # Only print
+      if [[ $ONLY_PRINT = 1 ]]; then
+          echo "$SEARCH_RESULTS" \
+              | jq -r '.[] | "\(.title), [\((.viewCount // 1000) / 1000 | floor)K views, \(.lengthSeconds / 60 | floor) min], https://youtu.be/\(.videoId)"'
+          exit
+      fi
+
+      local SELECTED=$( \
+          echo "$SEARCH_RESULTS" \
+              | jq -r '.[] | "\(.title), <span foreground=\"grey\" size=\"small\">[\((.viewCount // 1000) / 1000 | floor)K views, \(.lengthSeconds / 60 | floor) min]</span>"' \
+              | nl -n 'ln' -s '. ' -w1 \
+              | dmenu -markup-rows -async-pre-read 0 \
+              | cut -d'.' -f1 \
+            )
+
+      [[ -z $SELECTED ]] && exit
+
+      local URL="https://youtube.com/watch?v=$(echo "$SEARCH_RESULTS" | jq -r ".[$((SELECTED - 1))].videoId")"
+
+      if [[ $VIDEO = 1 ]]; then
+          tsp mpv "$URL"
+      else
+          mpd-yt play "$URL"
+      fi
+  }
+
+  function files {
+      f=$( ( git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files; fd . --no-ignore-vcs --color=never --max-depth=5 ) | dmenu)
+
+      if [[ "$1" == "--open" ]] && [[ -n "$f" ]]; then
+          jaro "$f"
+      else
+          echo "$f"
+      fi
+  }
+
+  function folders {
+      f=$(fd . "$HOME" --no-ignore-vcs --color=never --type=d --max-depth=5 | dmenu)
+
+      if [[ "$1" == "--open" ]] && [[ -n "$f" ]]; then
+          jaro "$f"
+      else
+          echo "$f"
+      fi
+  }
+
+  function file_contents {
+      term --tophalf -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
+  }
+
+  # Use `menu passwords -dump` to print password info into stdout.
+  function passwords {
+      local PASSWD=$(getpassword --keepass)
+      local ENTRY=$(echo "$PASSWD" | keepassxc-cli locate "$PASSWORD_STORE" / | tail -n +2 | dmenu)
+      if [ -n "$ENTRY" ]; then
+          if [[ "$1" == "-dump" ]]; then
+              getpassword "$ENTRY" -dump
+          else
+              local passinfo=$(getpassword "$ENTRY" --dump-all)
+              local otherinfo=$(echo "$passinfo" | awk -F: '/^\[.*]:/ {print $1}')
+
+              local what=$(echo -e "Fill fields (with Tab)\nFill fields (with Enter)\nFill password\n${otherinfo}\nShow all" | dmenu)
+              local username=$(echo "$passinfo" | grep -i -m 1 "username" | cut -d: -f2- | trim)
+              local password=$(echo "$passinfo" | grep -i -m 1 "password" | cut -d: -f2- | trim)
+              case "$what" in
+                  "Fill fields (with Tab)")
+                      sleep 0.2
+                      xdotool type --delay 5 "$username"
+                      xdotool key "Tab"
+                      xdotool type --delay 5 "$password" ;;
+                  "Fill fields (with Enter)")
+                      sleep 0.2
+                      xdotool type --delay 5 "$username"
+                      xdotool key "Return"
+                      sleep 0.2
+                      xdotool type --delay 5 "$password" ;;
+                  "Fill password")
+                      sleep 0.2
+                      xdotool type --delay 5 "$password" ;;
+                  "Show all")
+                      local allinfo=$(printf "[username]: $username\\n[password]: $password\\n$passinfo" | awk -F: '/^\[.*]:/ {printf("%-40s%-70s\n",$1,$2)}' | dmenu -i | cut -d']' -f2- | trim | xclip -selection clipboard) ;;
+                  ,*)
+                      echo "$passinfo" | grep -iF -m 1 "$what" | cut -d: -f2- | trim | xclip -selection clipboard ;;
+              esac
+              notify-send --expire-time=1000 'password-menu' 'Done.'
+          fi
+      fi
+
+      # Clear clipboard after 20 secs
+      if [[ ! "$1" == "-dump" ]]; then
+          local secs=$((20))
+          while [ $secs -gt 0 ]; do
+             echo -ne "$secs\033[0K\r"
+             sleep 1
+             : $((secs--))
+          done
+
+          echo "" | xclip -selection clipboard
+      fi
+  }
+
+  function bookmarks {
+      grep -E '^*' ~/Documents/notes/bookmarks.org | grep '\[\[' | sed -E 's/\[\[(.*)\]\[(.*)\]\]/\2  <span foreground="grey" size="small">\1<\/span>/; s/\**//' | dmenu -i -markup-rows | grep -Eo 'https?://[^ ]+' | sed 's/<\/span>//' | jaro
+  }
+
+
+  cmd="$1"
+  shift
+  case $cmd in
+      ,*help) echo "menu [mpd-(artists|all|playlist)|youtube|files|folders|file-contents|passwords]";;
+      mpd-artists) mpd-artists "$@";;
+      mpd-all) mpd-all "$@";;
+      mpd-playlist) mpd-playlist "$@";;
+      youtube) youtube "$@";;
+      files) files "$@";;
+      folders) folders "$@";;
+      file*contents) file_contents "$@";;
+      passwords) passwords "$@";;
+      bookmarks) bookmarks "$@";;
+      calc*) rofi -show calc -modi calc -no-show-match -no-sort ;;
+      ,*) rofi -async-pre-read 0 -modi combi,window,run,vms:rofi_vms,calc -combi-modi window,drun,run -show combi "$@" ;;
+  esac
+#+end_src
+** .scripts/phone
+#+begin_src bash :tangle ~/.scripts/phone
+  #!/bin/sh
+
+  # - Some commands have interactive versions, they are prefixed with i.
+  #   ex. cl = icl
+
+  PORT=2222
+  MOUNT_POINT="$HOME/Workspace/phone"
+
+  adb_forward() {
+      adb devices | grep -i unauthorized && echo "Look at your phone and accept the connection request." && exit
+      adb forward tcp:2222 tcp:2222
+  }
+
+  connection_addr() {
+      # TODO: if adb devices is empty, connect trough wifi
+      adb_forward
+      printf "localhost"
+  }
+
+  run_command() {
+      ssh -p $PORT "$(connection_addr)" "$@"
+  }
+
+  contact_list_interactive() {
+      field=$1
+      search_str=$2
+      cmd=$3
+
+      output=$(run_command termux-contact-list | jq "map(select(.name | test(\"$search_str\"; \"i\")))")
+      echo "$output" | jq '.[]'
+
+      echo "=============="
+      printf "Which one? (Indexes start from 0!)\n> "
+      read nth
+      echo "=============="
+
+      export RESULT=$(echo "$output" | jq -j ".[$nth]$field")
+  }
+
+  case "$1" in
+      mount|fs)
+          mkdir -p "$MOUNT_POINT"
+          sshfs -p $PORT u0_a100@"$(connection_addr)":/storage/emulated/0 "$MOUNT_POINT"
+          ;;
+      umount|ufs)
+          fusermount -u  "$MOUNT_POINT" && rmdir "$MOUNT_POINT" ;;
+      ssh)
+          TERM=xterm run_command
+          ;;
+      run|exec)
+          shift
+          run_command "$@"
+          ;;
+      contact*search|cs|contact*list|cl)
+          shift;
+          run_command termux-contact-list | jq "map(select(.name | test(\"$1\"; \"i\")))"
+          ;;
+      icontact*search|ics|icontact*list|icl)
+          shift;
+          contact_list_interactive ".number" "$1"
+          printf "$RESULT" | xclip -selection clipboard
+          ;;
+      sms*list|sl)
+          shift;
+          run_command termux-sms-list | jq "map(select(.sender | test(\"$1\"; \"i\")))"
+          ;;
+      sms*send|ss)
+          shift;
+          run_command termux-sms-send "$@"
+          ;;
+      isms*send|iss)
+          shift;
+          contact_list_interactive ".number" "$1"
+          sms_file=$(mktemp)
+          $EDITOR "$sms_file"
+
+          run_command <<EOF
+              sms=\$(mktemp)
+              printf "$(cat "$sms_file")" > "\$sms"
+              termux-sms-send -n "$RESULT" < "\$sms"
+              rm "\$sms"
+  EOF
+          rm "$sms_file"
+          ;;
+      speak)
+          shift;
+          run_command termux-tts-speak "$@"
+          ;;
+  esac
+#+end_src
+** .scripts/rofi_vms
+#+begin_src bash :tangle ~/.scripts/rofi_vms
+  #!/bin/sh
+
+  if [[ -z "$*" ]]; then
+      # VBoxManage seems pretty slow
+      #VBoxManage list vms | awk '{ print $1 }' | sed 's/"//g'
+      find ~/Workspace/vms/ -mindepth 1 -maxdepth 1 -type d -printf "%f\n"
+  else
+      coproc VBoxManage startvm "$*"
+      exit
+  fi
+#+end_src
+** .scripts/sub-extract
+#+begin_src python :tangle ~/.scripts/sub-extract
+  #!/bin/python
+
+  import os
+  import sys
+
+  def extract_auto():
+      """ Automatically find the movie and extract SUB_ARCHIVE with proper name """
+      movies = get_movies()
+      movies_normalized = list(enumerate(map(normalize, movies)))
+      movie_index, _ = max(movies_normalized, key=lambda tup: matches(tup[1]))
+      movie_full_path = movies[movie_index]
+
+      extract(movie_full_path)
+
+  def extract_interactive():
+      import subprocess
+      selected_movie = subprocess \
+              .run(['/bin/sh', '-c', 'echo -n "' + '\n'.join(get_movies()) + '" | fzf --header="Subtitle name: '+ SUB_ARCHIVE +'" --preview=""'], stdout=subprocess.PIPE) \
+          .stdout.decode('utf-8') \
+          .strip()
+
+      if selected_movie != "":
+          extract(selected_movie)
+
+  def extract(movie_full_path):
+      """ Extract sub file from SUB_ARCHIVE """
+      srt_full_path = mk_srt_path(movie_full_path)
+      srt_archive_ext = os.path.splitext(SUB_ARCHIVE)[1]
+
+      print("Given sub file: " + SUB_ARCHIVE)
+      print("Movie: " + movie_full_path)
+      print("Sub  : " + srt_full_path)
+
+      yn = 'y' if NOCONFIRM else input("y/n? ")
+      if yn != 'y':
+          exit(1)
+
+      if srt_archive_ext == ".zip":
+          import zipfile
+          with zipfile.ZipFile(SUB_ARCHIVE) as z:
+              # Just take the first srt file
+              srt_file = list(filter(lambda f: ".srt" in f, [file_info.filename for file_info in z.filelist]))[0]
+              with open(srt_full_path, 'wb') as f:
+                  f.write(z.read(srt_file))
+      elif srt_archive_ext == ".rar":
+          import rarfile
+          with rarfile.RarFile(SUB_ARCHIVE) as z:
+              # Just take the first srt file
+              srt_file = list(filter(lambda f: ".srt" in f, z.namelist()))[0]
+              with open(srt_full_path, 'wb') as f:
+                  f.write(z.read(srt_file))
+      else:
+          print("wut? (for now)")
+
+      print("Done.")
+
+  # #############################################################################
+  # Utility functions
+  # #############################################################################
+  def get_movies():
+      movie_exts = [".mkv", ".mp4", ".avi"]
+      movies = []
+      for movie_dir in MOVIE_DIRS:
+          for root, _, fs in os.walk(movie_dir):
+              for f in fs:
+                  name, ext = os.path.splitext(os.path.basename(f))
+                  # Skip non-movie files and sample files
+                  # (and hope the movie name does not contain "sample")
+                  if ext in movie_exts and not "sample" in name.lower():
+                      movies.append(os.path.join(root, f))
+      return movies
+
+  def mk_srt_path(movie_full_path):
+      """ Replace movie extension with .srt """
+      return os.path.splitext(movie_full_path)[0] + ".srt"
+
+  def normalize(s):
+      # 1080p, 720p etc makes matching harder because sometimes the downloaded
+      # subtitle has different resolution spec
+      return s.lower() \
+              .replace("-", " ") \
+              .replace(".", " ") \
+              .replace("_", " ") \
+              .replace("1080p", "") \
+              .replace("720p", "") \
+              .replace("bdrip", "") \
+              .replace("blueray", "") \
+              .replace("x264", "")
+
+  def matches(text):
+      return sum(word in text for word in SUB_NAME)
+
+  # #############################################################################
+  # Here we go
+  # #############################################################################
+
+  SUB_ARCHIVE = sys.argv[-1]
+  SUB_NAME = normalize(SUB_ARCHIVE).split()
+  MOVIE_DIRS = [os.path.expanduser("~/Videos")]
+  NOCONFIRM = "--no-confirm" in sys.argv
+
+  if "--movie_dirs" in sys.argv:
+      arg_index = sys.argv.index("--movie_dirs")
+      MOVIE_DIRS = sys.argv[arg_index + 1].split(",")
+      MOVIE_DIRS = [os.path.expanduser(x.strip()) for x in MOVIE_DIRS]
+      for mdir in MOVIE_DIRS:
+          if not os.path.exists(mdir):
+              print("Movie directory does not exist: " + mdir)
+              exit(1)
+
+  if "--help" in sys.argv:
+      print("sub-extract [--(interactive|auto)] [--noconfirm] [--help] archive-file")
+      print("This program extracts a subtitle file from an archive file into the selected movie folder.")
+      print("")
+      print("\t--auto")
+      print("\t\tAutomatically matches the sub file with the movie using some heuristics. (Default)")
+      print("\t--interactive")
+      print("\t\tOpen fzf to find matching movie file.")
+      print("\t--no-confirm")
+      print("\t\tDo not ask for user consent and automatically copy the sub file.")
+      print("\t--movie-dirs")
+      print("\t\tA comma separated list of movie directories that you want to be searched. (Default: ~/Videos)")
+      print("\t\tExample: sub-extract --movie-dirs ~/Movies,~/Shows")
+  elif os.path.exists(SUB_ARCHIVE):
+      if "--auto" in sys.argv and "--interactive" not in sys.argv:
+          extract_auto()
+      elif "--interactive" in sys.argv and "--auto" not in sys.argv:
+          extract_interactive()
+  else:
+      print("File not found: " + SUB_ARCHIVE)
+      print("Archive path should be the last argument.")
+#+end_src
+** .scripts/switch-keyboard-layout
+#+begin_src bash :tangle ~/.scripts/switch-keyboard-layout
+  #!/bin/bash
+
+  # This script switches between layouts that are defined in ~/.profile.
+  # The variable is $KEYBOARD_LAYOUTS and you need to set a comma separated list
+  # that contains 2-char country codes. (Or anything that setxkbmap would accept.)
+  # To change your default keyboard layout, use localectl. See this:
+  # https://wiki.archlinux.org/index.php/Keyboard_configuration_in_Xorg#Using_X_configuration_files
+  # Afterwards you need to update `KEYBOARD_LAYOUTS`, first item must be your default layout.
+  # Rest are just the ones that you want to switch.
+
+  get_current_layout() {
+      setxkbmap -query | grep layout | cut -f2 -d ":" | xargs
+  }
+
+  # Switch to next layout
+  CURRENT_LAYOUT=$(get_current_layout)
+  LAYOUTS=(${KEYBOARD_LAYOUTS//,/ })
+  for i in "${!LAYOUTS[@]}"; do
+      if [[ "$CURRENT_LAYOUT" == "${LAYOUTS[i]}" ]]; then
+          if [[ ! "${LAYOUTS[i+1]}" ]]; then
+              NEW_LAYOUT=${LAYOUTS[0]}
+          else
+              NEW_LAYOUT=${LAYOUTS[i+1]}
+          fi
+      fi
+  done
+
+  setxkbmap $NEW_LAYOUT
+  [[ -f ~/.Xmodmap ]] && xmodmap ~/.Xmodmap
+
+  killall xcape && xcape -e 'Hyper_L=Escape'
+
+  notify-send --icon=keyboard "Current layout: $NEW_LAYOUT"
+#+end_src
+** .scripts/take-ss
+#+begin_src bash :tangle ~/.scripts/take-ss
+  #!/bin/bash
+
+  set -e
+  set -o pipefail
+
+  CURRENT_DATE=$(date +%F::%R:%S)
+
+  mkpath() {
+      SAVE_PATH="$DIR_SCREENSHOTS/$1-$CURRENT_DATE.png"
+      echo "$SAVE_PATH" | xclip -selection clipboard
+      echo "$SAVE_PATH"
+  }
+
+  case "$1" in
+      "--full") maim "$(mkpath full)"; ;;
+      "--area") maim -s "$(mkpath area)" ;;
+      "--wait-full") maim -d 5 "$(mkpath full)" ;;
+      "--wait-area") maim -s -d 5 "$(mkpath area)" ;;
+      "--clip-full") maim --hidecursor | xclip -selection clipboard -t image/png ;;
+      "--clip-area") maim --hidecursor -s | xclip -selection clipboard -t image/png ;;
+      "--edit-area") maim --hidecursor -s > /tmp/sssss.png; pinta /tmp/sssss.png ;;
+      "--shadow-window") maim -st 9999999 | convert - \( +clone -background black -shadow 80x3+5+5 \) +swap -background none -layers merge +repage "$(mkpath shadowed)" ;;
+  esac
+
+  notify-send "Screenshot" "Screenshot saved and path is copied to clipboard (if any)"
+#+end_src
+** .scripts/term
+#+begin_src bash :tangle ~/.scripts/term
+  #!/bin/bash
+
+  # When using st, it expects window class properties while urxvt expects
+  # window name properties for enabling floating windows. So
+  # Rule for urxvt:
+  # bspc rule --add '*:float'   state=floating
+  # Rule for st:
+  # bspc rule --add 'float'     state=floating
+
+  # st, urxvt, urxvtc, alacritty
+  RUNNER='alacritty'
+  FLOAT=''
+  OPAQUE=''
+  GEOMETRY=''
+  TITLE=''
+  OPTS=()
+
+  for arg; do
+      case "$arg" in
+          "--term="*) RUNNER=${arg#*=}; shift ;;
+          "--title="*) TITLE=${arg#*=}; shift ;;
+          "--geometry="*) GEOMETRY=${arg#*=}; shift ;;
+          "--float") FLOAT='1'; shift ;;
+          "--opaque") OPAQUE='1'; shift ;;
+          "--tophalf") TOPHALF='1'; shift ;;
+      esac
+  done
+
+  if [[ $RUNNER == 'urxvtc' ]]; then
+      if ! pgrep urxvtd; then
+          urxvtd & disown
+          sleep 0.5
+      fi
+  fi
+
+  if [[ -n "$FLOAT" ]]; then
+      case "$RUNNER" in
+          "st")        OPTS+=(-c float) ;;
+          "urxvt"*)    OPTS+=(-name float) ;;
+          "alacritty") OPTS+=(--class float) ;;
+      esac
+  fi
+
+  if [[ -n "$TOPHALF" ]]; then
+      case "$RUNNER" in
+          "st")        OPTS+=(-c tophalf) ;;
+          "urxvt"*)    OPTS+=(-name tophalf) ;;
+          "alacritty") OPTS+=(--class tophalf) ;;
+      esac
+  fi
+
+  if [[ -n "$TITLE" ]]; then
+      case "$RUNNER" in
+          "st")        OPTS+=(-t "$TITLE") ;;
+          "urxvt"*)    OPTS+=(-name "$TITLE") ;;
+          "alacritty") OPTS+=(--title "$TITLE") ;;
+      esac
+  fi
+
+  if [[ -n "$OPAQUE" ]]; then
+      case "$RUNNER" in
+          "st")        OPTS+=(-A 1) ;;
+          "urxvt"*)    OPTS+=(-bg "$(xrdb-get-value '*background')") ;;
+          "alacritty") OPTS+=(--option background_opacity=1) ;;
+      esac
+  fi
+
+  if [[ -n "$GEOMETRY" ]]; then
+      case "$RUNNER" in
+          "st"|"urxvt"*) OPTS+=(-g "$GEOMETRY") ;;
+          "alacritty")
+              echo "Not supported"
+              # TODO: Use bspwm rules for geometry
+              ;;
+      esac
+  fi
+  echo "${OPTS[@]}"
+  $RUNNER "${OPTS[@]}" "$@"
+#+end_src
+** .scripts/togif
+#+begin_src bash :tangle ~/.scripts/togif
+  #!/bin/bash
+
+  in_file="$1"
+  out_file="$2"
+  height_px=512
+  start_sec=00
+  end_sec=59
+  color_count=256
+  framerate=15
+
+  for i in "$@"; do
+  case $i in
+      -i=*|--input=*)  in_file="${i#*=}"; shift ;;
+      -o=*|--output=*) out_file="${i#*=}"; shift ;;
+      -h=*|--height=*) height_px="${i#*=}"; shift ;;
+      -s=*|--start=*)  start_sec="${i#*=}"; shift ;;
+      -e=*|--end=*)    end_sec="${i#*=}"; shift ;;
+      -c=*|--color=*)  color_count="${i#*=}"; shift ;;
+      -r=*|--framerate=*)  framerate="${i#*=}"; shift ;;
+  esac
+  done
+
+  if [ $1 = "help" ] || [ $1 = "--help" ] || [ $1 = "-h" ] || [ $1 = "" ]; then
+      echo -e "togif in_file out_file [OPTION...]\n"
+      echo -e "OPTIONS"
+      echo -e "\t-i FILE, --input=FILE\n"
+      echo -e "\t-o FILE, --output=FILE\n"
+      echo -e "\t-h HEIGHT, --height=HEIGHT"
+      echo -e "\t\tWidth will be scaled according to given HEIGHT. Default: 512\n"
+      echo -e "\t-s SEC, --start=SEC"
+      echo -e "\t\tStarts the video from given SEC. Default: 00\n"
+      echo -e "\t-e SEC, --end=SEC"
+      echo -e "\t\tEnds the video at the given SEC. Default: 59\n"
+      echo -e "\t-c COUNT, --color=COUNT"
+      echo -e "\t\tReduce the color palette to COUNT colors. (If it's lower already, does nothing.) (Only works for gif outputs) Default: 256\n"
+      echo -e "\t-r COUNT, --framerate=COUNT"
+      echo -e "\t\tReduce videos framerate to COUNT. Default: 15"
+  else
+
+      echo "=== CONVERTING ==="
+      ffmpeg \
+        -i "$in_file" \
+        -r $framerate \
+        -vf scale=$height_px:-1 \
+        -ss 00:00:$start_sec -to 00:00:$end_sec \
+        "$out_file"
+      convert_result=$?
+      echo "=== DONE ==="
+
+      # Optimize if it's a gif
+      if [[ $convert_result == 0 ]] && [[ "$out_file" == *.gif ]]; then
+          echo ""
+          echo "=== OPTIMIZING ==="
+          gifsicle -i "$out_file" --optimize=3 --colors $color_count -o "${out_file}_optimized"
+          rm "$out_file"
+          mv "${out_file}_optimized" "$out_file"
+          echo "=== DONE ==="
+      fi
+
+  fi
+#+end_src
+** .scripts/ts_onfinish
+#+begin_src bash :tangle ~/.scripts/ts_onfinish
+  #!/bin/bash
+
+  # When a job that is called with tsp finishes, this script is called.
+  # Need to set $TS_ONFINISH variable to path of this script. (See ~/.profile)
+
+  job_id="$1"
+  err="$2"
+  out_file="$3"
+  cmd="$4"
+
+  remaining_job_count=$(($(tsp | tail -n +2 | grep -cvE '^[0-9]+ +finished') - 1))
+
+  if [[ "$err" = 0 ]]; then
+      icon=terminal
+      title="finished"
+      duration=5
+  else
+      icon=error
+      title="failed"
+      duration=10
+
+      # Put cmd into clipboard
+      echo "$cmd" | xclip -selection clipboard
+  fi
+
+  notify-send \
+      -i "$icon" \
+      -t $((duration*1000))\
+      "[TSP] job $title (remaining: $remaining_job_count)" \
+      "$cmd"
+
+#+end_src
+** .scripts/unmount-sdb
+#+begin_src bash :tangle ~/.scripts/unmount-sdb
+  #!/bin/bash
+
+  udisksctl unmount -b /dev/sdb
+  udisksctl power-off -b /dev/sdb
+#+end_src
+** .scripts/xcopy
+#+begin_src bash :tangle ~/.scripts/xcopy
+  #!/bin/sh
+
+  file="$1"
+  input="$*"
+
+  if [ -f "$file" ]; then
+      xclip -selection clipboard -t "$(file -b --mime-type "$file")" -i "$file"
+  elif [ -z "$input" ]; then
+      xclip -selection clipboard <&0
+  else
+      printf "$input" | xclip -selection clipboard
+  fi
+#+end_src
+** .scripts/xrdb-get-value
+#+begin_src bash :tangle ~/.scripts/xrdb-get-value
+  #!/bin/sh
+
+  # Usage:
+  # xrdb-get-value "entry.example"
+  xrdb -query | grep "$1" | cut -d ":" -f 2 | xargs
+#+end_src
+** .scripts/xrdb-set-value
+#+begin_src bash :tangle ~/.scripts/xrdb-set-value
+  #!/bin/sh
+
+  # Usage:
+  # xrdb-set-value "st.alpha" 200
+
+  # This will not override ~/.Xresources, it will just update xrdb for this
+  # session.
+
+  echo "$1: $2" | xrdb -merge
+#+end_src
+** .scripts/xres-read-value
+#+begin_src bash :tangle ~/.scripts/xres-read-value
+  #!/bin/sh
+  grep -v "!"  "$HOME/.Xresources" | grep "$1" | cut -d ":" -f 2 | xargs
+#+end_src
+** Information utilities
+*** .scripts/mgm
+#+begin_src bash :tangle ~/.scripts/mgm
+  #!/bin/bash
+
+  API="https://servis.mgm.gov.tr/web/"
+  UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"
+  headers=('-H' "Origin: https://mgm.gov.tr" '-H' "Host: mgm.gov.tr" '-H' "User-Agent: $UA")
+
+  parse_event() {
+      event=""
+      case $1 in
+          "A") event="Açık" ;;
+          "AB") event="Az Bulutlu" ;;
+          "PB") event="Parçalı Bulutlu" ;;
+          "CB") event="Çok Bulutlu" ;;
+          "HY") event="Hafif Yağmurlu" ;;
+          "Y") event="Yağmurlu" ;;
+          "KY") event="Kuvvetli Yağmurlu" ;;
+          "KKY") event="Karla Karışık Yağmurlu" ;;
+          "HKY") event="Hafif Kar Yağışlı" ;;
+          "K") event="Kar Yağışlı" ;;
+          "YKY") event="Yoğun Kar Yağışlı" ;;
+          "HSY") event="Hafif Sağanak Yağışlı" ;;
+          "SY") event="Sağanak Yağışlı" ;;
+          "KSY") event="Kuvvetli Sağanak Yağışlı" ;;
+          "MSY") event="Mevzi Sağanak Yağışlı" ;;
+          "DY") event="Dolu" ;;
+          "GSY") event="Gökgürültülü Sağanak Yağışlı" ;;
+          "KGY") event="Kuvvetli Gökgürültülü Sağanak Yağışlı" ;;
+          "SIS") event="Sisli" ;;
+          "PUS") event="Puslu" ;;
+          "DMN") event="Dumanlı" ;;
+          "KF") event="Kum veya Toz Taşınımı" ;;
+          "R") event="Rüzgarlı" ;;
+          "GKR") event="Güneyli Kuvvetli Rüzgar" ;;
+          "KKR") event="Kuzeyli Kuvvetli Rüzgar" ;;
+          "SCK") event="Sıcak" ;;
+          "SGK") event="Soğuk" ;;
+          "HHY") event="Yağışlı" ;;
+      esac
+      echo "$event"
+  }
+
+  find_merkez() {
+      curl -Gs "${headers[@]}" "${API}merkezler" --data-urlencode "il=$IL" --data-urlencode "ilce=$ILCE" | jq '.[0]'
+  }
+
+  get() {
+      query=$(echo "$MERKEZ" | jq ".${3}")
+      curl -s  "${headers[@]}" "${API}${1}?${2}=${query}" | jq '.[0]'
+  }
+
+
+  RAW="no"
+  if [[ $1 = "--help" ]] || [[ $1 = "-h" ]]; then
+      echo "mgm IL ILCE"
+      echo "mgm --raw IL ILCE"
+      echo
+      echo "- ILCE is optional."
+      exit
+  elif [[ $1 = "--raw" ]] || [[ $1 =  "-r" ]]; then
+      shift
+      RAW=yes
+  fi
+
+  IL="$1"
+  ILCE="$2"
+
+  if [[ -z $IL ]]; then
+      INPUT=$(zenity --entry --text="İl/ilçe (İlçe zorunlu değil): ")
+      IL=$(echo "$INPUT" | cut -d'/' -f1)
+      case $INPUT in
+          ,*/*) ILCE=$(echo "$INPUT" | cut -d'/' -f2) ;;
+      esac
+  fi
+
+  MERKEZ=$(find_merkez "$IL" "$ILCE")
+
+  #get "sondurumlar" "merkezid" "merkezId"
+  #get "tahminler/saatlik" "istno" "saatlikTahminIstNo"
+  #get "tahminler/gunluk" "istno" "gunlukTahminIstNo"
+
+  sondurum=$(get "sondurumlar" "merkezid" "merkezId")
+  if [[ $RAW = "yes" ]]; then
+      echo "$sondurum"
+  else
+      humidity=$(echo "$sondurum" | jq '.nem')
+      temperature=$(echo "$sondurum" | jq '.sicaklik')
+      rainChance=$(echo "$sondurum" | jq '.yagis00Now')
+      event=$(parse_event "$(echo "$sondurum" | jq -r '.hadiseKodu')")
+
+      read -r -d '' SONDURUM << EOF
+  SONDURUM
+  ========
+  Hadise:           $event
+  Sicaklik:         $temperature
+  Nem:              $humidity
+  Yagmur olasiligi: $rainChance
+  EOF
+
+      if [[ -t 1 ]]; then
+          echo "$SONDURUM"
+      else
+          zenity --info --no-wrap --text="$SONDURUM"
+      fi
+  fi
+
+  # TODO: add peak points
+#+end_src
+*** .scripts/tdk
+#+begin_src bash :tangle ~/.scripts/tdk
+  #!/bin/bash
+
+  # Kullanim:
+  # tdk kelime - Anlamlari JSON olarak ekrana basar
+  # tdk        - Interaktif olarak kelimeyi ister ve anlamlari ekrana basar
+  # Interactive shell'den cagirilmadiginda GUI araciligiyla kelimeleri
+  # ister ve yine anlamlari GUI uzerinden siralar
+
+  get_response() {
+      curl --location --get --silent "http://sozluk.gov.tr/gts" --data-urlencode "ara=$*"
+  }
+
+  INPUT="$*"
+  if [[ -z $INPUT ]]; then
+      INPUT=$(zenity --entry --text="Kelime girin: ")
+  fi
+
+  RESULT=$(get_response $INPUT | jq '.[] | .anlamlarListe | map({tur: (try .ozelliklerListe[].tam_adi catch ""), anlam: .anlam, ornek: (try {cumle: .orneklerListe[].ornek, yazar: .orneklerListe[].yazar[].kisa_adi} catch "")})')
+
+  if [[ -t 1 ]]; then
+      echo $RESULT | jq -C '.'
+  else
+      zenity --info --no-wrap --text="$(echo "$RESULT" | jq)"
+  fi
+#+end_src
+
+** System administration
+*** .scripts/toggle-touchpad
+#+begin_src bash :tangle ~/.scripts/toggle-touchpad
+  #!/bin/bash
+
+  DEVICE_IDS=$()
+
+  xinput list | grep -iE "(touchpad|trackpoint)" | grep -ioE 'id=[0-9]+' | cut -d= -f2 | while read DEVICE_ID ; do
+      if xinput list-props $DEVICE_ID | grep "Device Enabled.*:.*1"; then
+          xinput disable $DEVICE_ID
+          notify-send --icon=touchpad-indicator "Device [id=$DEVICE_ID] disabled"
+      else
+          xinput enable $DEVICE_ID
+          notify-send --icon=touchpad-indicator "Device [id=$DEVICE_ID] enabled"
+      fi
+  done
+#+end_src
+
+*** .scripts/setbrightness
+#+begin_src bash :tangle ~/.scripts/setbrightness
+  #!/bin/bash
+
+  BFILE=/sys/class/backlight/intel_backlight/brightness
+  MFILE=/sys/class/backlight/intel_backlight/max_brightness
+
+  if [[ -n $1 ]]; then
+      case $1 in
+          max|MAX)
+              echo $(cat $MFILE) > $BFILE
+              ;;
+          med*|MED*)
+              echo $(( $(cat $MFILE) / 2 )) > $BFILE
+              ;;
+          low*|LOW*)
+              echo $(( $(cat $MFILE) / 12 )) > $BFILE
+              ;;
+          ,*)
+              echo $1 > $BFILE
+              ;;
+      esac
+  else
+      set-brightness $(echo -e "MAX\nMEDIUM\nLOW" | dmenu -i)
+  fi
+#+end_src
