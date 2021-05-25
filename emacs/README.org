@@ -1284,16 +1284,15 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 
   (use-package which-key-posframe
     :ensure t
-    :after (which-key mini-frame)
+    :after which-key mini-frame
     :diminish
     :quelpa (which-key-posframe
              :fetcher github
              :repo "yanghaoxie/which-key-posframe")
     :config
-    (custom-set-faces
-     `(which-key-posframe
-       ((t (:background-color ,(mini-frame-get-background-color)
-            :background ,(mini-frame-get-background-color))))))
+    (set-face-attribute 'which-key-posframe nil :background (mini-frame-get-background-color))
+    (set-face-attribute 'which-key-posframe-border nil :background (mini-frame-get-background-color))
+
     (setq which-key-posframe-border-width 12)
     (setq which-key-posframe-poshandler 'posframe-poshandler-frame-top-center)
     (which-key-posframe-mode))
