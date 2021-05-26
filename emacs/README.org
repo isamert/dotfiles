@@ -3059,8 +3059,6 @@ I need to rewrite these functions using [[https://github.com/isamert/marks][mark
            (selected-link (concat "[[id:" header-id "][" link-name "]]")))
       (insert selected-link)))
 
-  jk
-
   ;; TODO Removed backlinks implementation, I will implement it once
   ;; minimal functionality within "marks" is done
 #+end_src
