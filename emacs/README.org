@@ -2354,10 +2354,10 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
       (kbd "[t") #'hl-todo-previous))
 #+end_src
 
-* Media/feed
+* Media/feed/IRC
 I try to maximize my Emacs usage which brings it's own benefits and downsides which I will not go over here. Here are some packages and configurations that are not related to programming/editing.
 
-** elfeed
+** elfeed (RSS feeds)
 #+begin_src emacs-lisp
   ;; TODO: experiment with custom faces
   ;; (defface elfeed-comic
@@ -2479,7 +2479,7 @@ I try to maximize my Emacs usage which brings it's own benefits and downsides wh
       "q" 'elfeed-kill-buffer))
 #+end_src
 
-** empv
+** empv (music/media/youtube management)
 Manage media and streams through =completing-read=.
 
 #+begin_src emacs-lisp
@@ -2535,7 +2535,7 @@ Manage media and streams through =completing-read=.
         (insert))))
 #+end_src
 
-** orgmdb
+** orgmdb (movies & shows)
 #+begin_src emacs-lisp
   (use-package orgmdb
     :ensure t
@@ -2545,6 +2545,75 @@ Manage media and streams through =completing-read=.
              :repo "isamert/orgmdb.el")
     :config
     (setq orgmdb-omdb-apikey isamert/orgmdb-omdb-apikey))
+#+end_src
+** erc (IRC client)
+IRC client for Emacs.
+
+- Some shortcuts:
+  - C-c C-b :: switch between channels
+  - C-c C-j :: join channel
+
+- TODO items:
+  - Autologin
+  - Autojoin channels
+  - Notifications
+  - Add registration notes here
+  - Colors?
+
+#+begin_src elisp
+  (use-package erc
+    :ensure t
+    :config
+
+    ;; More compact and cleaner look, nicks and messages are in seperate
+    ;; column and total length for nicks are 15 cols
+    (setq erc-fill-function 'erc-fill-static)
+    (setq erc-fill-static-center 15)
+
+    ;; The rest is from https://www.emacswiki.org/emacs/ErcNickColors
+    ;; It's the Option 5
+
+    (defmacro unpack-color (color red green blue &rest body)
+      `(let ((,red   (car ,color))
+             (,green (car (cdr ,color)))
+             (,blue  (car (cdr (cdr ,color)))))
+         ,@body))
+
+    (defun rgb-to-html (color)
+      (unpack-color color red green blue
+                    (concat "#" (format "%02x%02x%02x" red green blue))))
+
+    (defun hexcolor-luminance (color)
+      (unpack-color color red green blue
+                    (floor (+ (* 0.299 red) (* 0.587 green) (* 0.114 blue)))))
+
+    (defun invert-color (color)
+      (unpack-color color red green blue
+                    `(,(- 255 red) ,(- 255 green) ,(- 255 blue))))
+
+    (defun erc-get-color-for-nick (nick dark)
+      (let* ((hash     (md5 (downcase nick)))
+             (red      (mod (string-to-number (substring hash 0 10) 16) 256))
+             (blue     (mod (string-to-number (substring hash 10 20) 16) 256))
+             (green    (mod (string-to-number (substring hash 20 30) 16) 256))
+             (color    `(,red ,green ,blue)))
+        (rgb-to-html (if (if dark (< (hexcolor-luminance color) 85)
+                           (> (hexcolor-luminance color) 170))
+                         (invert-color color)
+                       color))))
+
+    (defun erc-highlight-nicknames ()
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward "\\w+" nil t)
+          (let* ((bounds (bounds-of-thing-at-point 'symbol))
+                 (nick   (buffer-substring-no-properties (car bounds) (cdr bounds))))
+            (when (erc-get-server-user nick)
+              (put-text-property
+               (car bounds) (cdr bounds) 'face
+               (cons 'foreground-color (erc-get-color-for-nick nick 't))))))))
+
+    (add-hook 'erc-insert-modify-hook 'erc-highlight-nicknames))
 #+end_src
 * Keybindings
 Keybindings are generally set in-place, following have no context, so they are here.
