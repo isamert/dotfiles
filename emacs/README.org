@@ -1121,30 +1121,35 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 #+end_src
 
 ** org-clock
-- TODO: find a Linux equivalent
-- TODO: add an explanation
-
 #+begin_src emacs-lisp
+  ;; For Linux:
+  (defun isamert/org-clock-today-all ()
+    "Return todays all clocked hours."
+    (with-current-buffer "bullet.org"
+      (save-excursion
+        (save-restriction
+          (isamert/bullet-focus-today)
+          (let ((range (org-clock-special-range 'untilnow)))
+            (format
+             "%s %s%s"
+             (or (and (org-clocking-p) "") "")
+             (org-minutes-to-clocksum-string (org-clock-sum (car range) (cadr range)))
+             (or (and (org-clocking-p) (format " (%s)" (org-duration-from-minutes (org-clock-get-clocked-time)))) "")))))))
+
+  ;; For macOS
   ;; https://github.com/koddo/org-clock-statusbar-app
 
   (defun isamert/org-clock-statusbar-clock-in ()
     (interactive)
-    (call-process "/usr/bin/osascript"
-                  nil
-                  0
-                  nil
-                  "-e"
-                  (concat "tell application \"org-clock-statusbar\" to clock in \""
-                          (replace-regexp-in-string "\"" "\\\\\"" org-clock-current-task)
-                          "\"")))
+    (if (eq system-type 'darwin)
+        (call-process "/usr/bin/osascript" nil 0 nil "-e"
+                      (concat "tell application \"org-clock-statusbar\" to clock in \""
+                              (replace-regexp-in-string "\"" "\\\\\"" org-clock-current-task)
+                              "\""))))
 
   (defun isamert/org-clock-statusbar-clock-out ()
     (interactive)
-    (call-process "/usr/bin/osascript"
-                  nil
-                  0
-                  nil
-                  "-e"
+    (call-process "/usr/bin/osascript" nil 0 nil "-e"
                   "tell application \"org-clock-statusbar\" to clock out"))
 
   (when (eq system-type 'darwin)
