@@ -1293,7 +1293,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 
   (use-package which-key-posframe
     :ensure t
-    :after which-key mini-frame
+    :after (which-key mini-frame)
     :diminish
     :quelpa (which-key-posframe
              :fetcher github
@@ -2529,13 +2529,20 @@ Manage media and streams through =completing-read=.
 
   (defun isamert/export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."
-    (interactive "FOutput M3U file: ")
+    (interactive
+     (list
+      (read-file-name
+       "Where to save the .vcf file?"
+       "~/Documents/sync/"
+       "radiolist.m3u")))
     (with-temp-file file
       (->> isamert/radio-channels
         (--map
          (format
           "#EXTINF:0, %s\n%s"
           (car it)
+          ;; Replace http:// with icyx://, because VLC on Android can't
+          ;; retrieve song name if the stream is on http://
           (if (s-contains? "radcap.ru" (car it))
               (s-replace "http://" "icyx://" (cdr it))
             (cdr it))))
@@ -3206,15 +3213,16 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (user-error "The day already exists"))
     (widen)
     (goto-char (point-max))
-    (while (re-search-backward "^* \\[\\([0-9]+-[0-9]+-[0-9]+\\)\\( \\w+\\)?\\].*" nil t)
-      (when (time-less-p
-             (date-to-time (concat (match-string 1) "T000"))
-             (date-to-time (concat date "T000")))
-        (org-insert-heading-after-current)
-        (insert (format "[%s %s] [/]" date (format-time-string "%a")))
-        (org-narrow-to-subtree)
-        ;; FIXME Not the coolest way to break the loop
-        (user-error "Inserted the day"))))
+    (loop
+     (when (not (re-search-backward "^* \\[\\([0-9]+-[0-9]+-[0-9]+\\)\\( \\w+\\)?\\].*" nil t))
+       (return))
+     (when (time-less-p
+            (date-to-time (concat (match-string 1) "T000"))
+            (date-to-time (concat date "T000")))
+       (org-insert-heading-after-current)
+       (insert (format "[%s %s] [/]" date (format-time-string "%a")))
+       (org-narrow-to-subtree)
+       (return))))
 
   ;;
   ;; Focus a day
