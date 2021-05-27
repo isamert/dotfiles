@@ -1544,22 +1544,6 @@ See =selectrum-minibuffer-map= for full list.
         ;; ^ `consult-line' and `consult-buffer' has an unrecognizable char at the beginning of every candidate, strip them
         (t candidate))))
     (keyboard-escape-quit))
-
-  ;; https://github.com/raxod502/selectrum/wiki/Additional-Configuration#display-minibuffer-in-a-child-frame-with-mini-frame
-  ;; TODO: Remove the following when upgrading to 27.2
-  (define-advice fit-frame-to-buffer (:around (f &rest args) dont-skip-ws-for-mini-frame)
-    (cl-letf* ((orig (symbol-function #'window-text-pixel-size))
-               ((symbol-function #'window-text-pixel-size)
-                (lambda (win from to &rest args)
-                  (apply orig
-                         (append (list win from
-                                       (if (and (window-minibuffer-p win)
-                                                (frame-root-window-p win)
-                                                (eq t to))
-                                           nil
-                                         to))
-                                 args)))))
-      (apply f args)))
 #+end_src
 
 ** consult
