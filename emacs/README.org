@@ -809,7 +809,11 @@ Also (defined elsewhere):
     (dotimes (_ count) (save-excursion (evil-insert-newline-below))))
 #+end_src
 ** evil-exchange
-Change two parts of the text
+Change two parts of the text.
+- Mark some text in visual mode and do =cx=.
+- Mark some other text in visual mode and do =cx= again to exchange two parts.
+- You can use ~cx<motion>~ instead of visual mode too.
+
 #+begin_src emacs-lisp
   (use-package evil-exchange
     :ensure t
