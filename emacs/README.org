@@ -2979,6 +2979,43 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
     (well/send-text-to-my-phone (current-kill 0)))
 #+end_src
 
+** people.org - Contact management
+Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-and-syncing-them-to-your-phone-android-ios-whatever-.html][this post]] for further information.
+
+#+begin_src emacs-lisp
+  (defun isamert/build-contact-item (template-string contact-property)
+    (if-let ((stuff (org-entry-get nil contact-property)))
+        (concat (format template-string stuff) "\n")
+      ""))
+
+  (defun isamert/export-contacts-as-vcard (file-name)
+    "Create a .vcf file containing all contact information."
+    (interactive
+     (list
+      (read-file-name
+       "Where to save the .vcf file?"
+       "~/Documents/sync/"
+       "contacts.vcf")))
+    (write-region
+     (string-join
+      (org-map-entries
+       (lambda ()
+         (string-join
+          `("BEGIN:VCARD\nVERSION:2.1\n"
+            ,(isamert/build-contact-item "FN:%s" "ITEM")
+            ,(isamert/build-contact-item "TEL;CELL:%s" "PHONE")
+            ,(isamert/build-contact-item "EMAIL:%s" "EMAIL")
+            ,(isamert/build-contact-item "ORG:%s" "GROUP")
+            ,(isamert/build-contact-item "ADR;HOME:;;%s" "ADDRESS_HOME")
+            ,(isamert/build-contact-item "ADR;WORK:;;%s" "ADDRESS_WORK")
+            ,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
+            "END:VCARD")
+          ""))
+       "LEVEL=1")
+      "\n")
+     nil
+     file-name))
+#+end_src
 ** Google search
 #+begin_src emacs-lisp
   (defun isamert/google-this ()
