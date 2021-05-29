@@ -2963,8 +2963,12 @@ Hit <C-j> after these and get:
   ;; Scheme
   (use-package geiser
     :ensure t
-    :init
+    :config
     (setq geiser-default-implementation 'guile))
+
+  (use-package geiser-guile
+    :after geiser
+    :ensure t)
 #+end_src
 
 * Misc functions
