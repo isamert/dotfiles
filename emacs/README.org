@@ -1133,7 +1133,11 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (isamert/prettify-mode 'org-mode-hook
                          '(("[ ]" . "☐")
                            ("[X]" . "☑" )
-                           ("[-]" . "❍" )))
+                           ("[-]" . "❍" )
+                           ("#+begin_src" . "»" )
+                           ("#+end_src" . "«" )
+                           ("#+BEGIN_SRC" . "»" )
+                           ("#+END_SRC" . "«" )))
 #+end_src
 
 ** org-clock
