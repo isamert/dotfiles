@@ -1,7 +1,7 @@
 #+TITLE: Emacs configuration file
 #+AUTHOR: İsa Mert Gürbüz
 #+BABEL: :cache yes
-#+PROPERTY: header-args :tangle yes
+#+PROPERTY: header-args :tangle yes :noweb yes
 #+STARTUP: overview
 
 * Introduction
@@ -18,6 +18,13 @@ This is my emacs configuration. My main focus is sanity. I'm a person who get fr
 #+end_src
 
 * Usage notes
+** General notes and conventions
+- This configuration is meant to be used with /emacs daemon/, so I don't really care about the startup time etc.
+- I try to split package configurations into multiple org src blocks and unify them using ~noweb~ references under a single =use-package= directive.
+- I try to put things in way that easily copyable from the configuration. An example would be using multiple =(setq ...)= lines instead of having one =(setq ... ...)= call and setting multiple variables in one go.
+- I make use of =use-package= features quite minimally. See [[id:3d974e67-11fc-4f07-8cd4-ec6fd63152c4][here]] for more information that. This is generally related with the item above and future-proofing.
+- I use =verbatim text= and ~code text~ completely randomly.
+
 ** Updating packages
 Currently, I don't use an external package manager, =package.el= satisfies my needs. Here is how I do the updates:
 - =package-refresh-contents=
@@ -26,6 +33,7 @@ Currently, I don't use an external package manager, =package.el= satisfies my ne
 - Hit =X= to update all those packages.
 
 I do this quite infrequently. If everything is working fine as it is, I tend to not update anything.
+
 * Preparation
 ** Package repos
 Add ~melpa~ and ~org~ package archives and update them if needed.
@@ -43,7 +51,10 @@ Add ~melpa~ and ~org~ package archives and update them if needed.
     (package-refresh-contents))
 #+END_SRC
 
-** Installing packages
+** Installing packages with ~use-package~
+:PROPERTIES:
+:ID:       3d974e67-11fc-4f07-8cd4-ec6fd63152c4
+:END:
 I use =use-package= to install packages and configure them but I do absolute minimal usage of it.
 
 #+BEGIN_SRC emacs-lisp
@@ -836,29 +847,29 @@ Change two parts of the text.
   (use-package org
     :ensure org-plus-contrib
     :config
-    (setq org-src-fontify-natively t
-          ;; ^ Enable code highlighting in ~SRC~ blocks.
-          org-hierarchical-todo-statistics t
-          ;; ^ Show all children in todo statistics [1/5]
-          org-imenu-depth 7
-          ;; ^ include up to 7-depth headers in imenu search
-          org-image-actual-width nil
-          ;; ^ Disable showing inline images in full width. Now you can add `#+ATTR_*: :width 300` to resize inline images
-          org-ellipsis "..⤵"
-          ;; ^ Replace ... with ..↯ in collapsed sections
-          org-habit-show-habits-only-for-today t
-          ;; ^ If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
-          )
+    (setq org-src-fontify-natively t)
+    ;; ^ Enable code highlighting in ~SRC~ blocks.
+    (setq org-hierarchical-todo-statistics t)
+    ;; ^ Show all children in todo statistics [1/5]
+    (setq org-imenu-depth 7)
+    ;; ^ include up to 7-depth headers in imenu search
+    (setq org-image-actual-width nil)
+    ;; ^ Disable showing inline images in full width. Now you can add `#+ATTR_*: :width 300` to resize inline images
+    (setq org-ellipsis "..⤵")
+    ;; ^ Replace ... with ..↯ in collapsed sections
+    (setq org-habit-show-habits-only-for-today t)
+    ;; ^ If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
+    (setq org-log-into-drawer t)
+    ;; ^ Log into LOGBOOK drawer instead of directly loging under the heading
 
-    (defun isamert/org-set-faces ()
-      (set-face-attribute 'org-headline-done nil :strike-through t))
+    (add-to-list 'org-modules 'org-habit t)
+    ;; ^ Enable habit tracking
 
     ;; http://www.foldl.me/2012/disabling-electric-indent-mode/
     (defun isamert/disable-electric-indent ()
       (set (make-local-variable 'electric-indent-functions)
            (list (lambda (arg) 'no-indent))))
 
-    (add-hook 'org-mode-hook #'isamert/org-set-faces)
     (add-hook 'org-mode-hook #'isamert/disable-electric-indent))
 #+end_src
 
@@ -1057,7 +1068,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 ** ToDo keywords
 #+BEGIN_SRC emacs-lisp
   ;; Add this to org files if you need:
-  ;; #+TODO: TODO IN-PROGRESS WAITING DONE
+  ;; #+TODO: TODO PROG WAITING DONE
   ;; OR
   (setq org-todo-keywords
     '((sequence "TODO(t)" "PROG(p)" "WAIT(w)" "DONE(d)")))
@@ -1065,7 +1076,12 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 
   (setq org-todo-keyword-faces
         '(("WAIT" . (:foreground "yellow" :weight bold))
-          ("PROG" . (:foreground "magenta" :weight bold))))
+          ("PROG" . (:foreground "magenta" :weight bold :underline t))))
+
+  (defun isamert/org-set-faces ()
+    (set-face-attribute 'org-headline-done nil :strike-through t))
+
+  (add-hook 'org-mode-hook #'isamert/org-set-faces)
 #+END_SRC
 
 ** Presentation (org-tree-slide)
@@ -1278,6 +1294,34 @@ This mode allows you to do /undo/ /redo/ operations on window layout changes. My
     (kbd "C-w u") 'winner-undo)
 #+END_SRC
 
+** ace-window
+- =SPC ws= to swap windows.
+- Some shortcuts, after doing =SPC ww=:
+  - x - delete window
+  - m - swap windows
+  - M - move window
+  - c - copy window
+  - j - select buffer
+  - n - select the previous window
+  - u - select buffer in the other window
+  - c - split window fairly, either vertically or horizontally
+  - v - split window vertically
+  - b - split window horizontally
+  - o - maximize current window
+  - ? - show these command bindings
+
+#+begin_src emacs-lisp
+  (use-package ace-window
+    :ensure t
+    :config
+    (custom-set-faces
+     '(aw-leading-char-face
+       ((t (:foreground "deep sky blue" :bold t :height 3.0)))))
+    (evil-leader/set-key "ww" #'ace-window)
+    (evil-leader/set-key "ws" #'ace-swap-window))
+#+end_src
+
+
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options. I made a few adjustment so that it's more compact and you can see full function names (most of the time) and it shows up at the top center instead of bottom left corner. This mostly eliminates the need for creating a [[Hydra]].
 
@@ -1414,16 +1458,7 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
       "lm" 'isamert/persp-toggle-modestring)
     ;; Manually saving is probably a better idea
     ;; (add-hook 'kill-emacs-hook #'persp-state-save)
-    (persp-mode t)
-
-    ;; HACK: With the following change, consult-buffer changes perspective
-    ;; if selected buffer is in another perspective.
-    (setq consult--buffer-display #'isamert/persp-switch-to-buffer))
-
-  (defun isamert/persp-switch-to-buffer (buffer-or-name &optional norecord force-same-window)
-    "Same as `persp-switch-to-buffer'"
-    (ignore norecord force-same-window)
-    (persp-switch-to-buffer buffer-or-name))
+    (persp-mode t))
 
   (defun isamert/persp-toggle-modestring ()
     (interactive)
@@ -1453,32 +1488,6 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
       (kbd "s") 'avy-goto-word-1 ;; Go to beginning of a word
       (kbd "gl") 'avy-goto-line))
 #+END_SRC
-
-** ace-window
-- =C-u M-a= starts ace-window in *swap* mode.
-- Some shortcuts, after doing =M-a=:
-  - x - delete window
-  - m - swap windows
-  - M - move window
-  - c - copy window
-  - j - select buffer
-  - n - select the previous window
-  - u - select buffer in the other window
-  - c - split window fairly, either vertically or horizontally
-  - v - split window vertically
-  - b - split window horizontally
-  - o - maximize current window
-  - ? - show these command bindings
-
-#+begin_src emacs-lisp
-  (use-package ace-window
-    :ensure t
-    :config
-    (custom-set-faces
-     '(aw-leading-char-face
-       ((t (:foreground "deep sky blue" :bold t :height 3.0)))))
-    (global-set-key (kbd "M-a") 'ace-window))
-#+end_src
 
 ** selectrum
 A nice, fast minibuffer narrowing framework. It works well with quite a lot of package.
@@ -1560,9 +1569,11 @@ See =selectrum-minibuffer-map= for full list.
 Some key points:
 - =SPC RET= brings up =consult-buffer=.
   - Typing =SPC {p,f,b,m}= narrows the list into {project files, files, buffers, bookmarks}.
+  - Also see: [[id:90769b1b-7baf-4285-80f9-153ae07d73ab][Perspective integration for consult]]
 - =M-y= brings up =consult-yank=, where you can select from clipboard history and paste.
 - =C-f= does fuzzy search on current file lines.
 - Do =M-,= on a candidate to preview it.
+- Also don't forget to utilize =M-a= (=embark-act=) in consult windows.
 
 #+begin_src emacs-lisp
   (use-package consult
@@ -1574,18 +1585,32 @@ Some key points:
     ;; ^ When you do M-, on a candidate, it previews it
 
     (evil-leader/set-key
-      "hr"  #'isamert/consult-ripgrep-current-directory
       "hy"  #'consult-yank
       "gg"  #'consult-git-grep
       "RET" #'consult-buffer)
 
     (evil-define-key 'normal 'global
-      (kbd "?") 'consult-imenu
+      (kbd "M-i") 'consult-imenu
       (kbd "C-f") 'consult-line)
 
-    (setq consult-find-command "fd --hidden --full-path ARG OPTS"
-          consult-ripgrep-command "rg --ignore-file '.git/**' --hidden --null --line-buffered --color=always --max-columns=500 --no-heading --smart-case --line-number . -e ARG OPTS"
-          consult-project-root-function #'isamert/current-project-root))
+    <<consult-project-management>>
+    <<consult-perspective-buffers>>
+    <<consult-perspective-switch-buffers>>)
+#+end_src
+
+*** Project management
+Some functionality for project management. I do some fine-tuning for =find= and =ripgrep= commands that consult uses.
+
+#+name: consult-project-management
+#+begin_src emacs-lisp :tangle no
+  (evil-leader/set-key
+    "hr"  #'isamert/consult-ripgrep-current-directory
+    "pg" #'isamert/consult-ripgrep)
+
+  (setq
+   consult-find-command "fd --ignore-file '.git/' --hidden --full-path ARG OPTS"
+   consult-ripgrep-command "rg --ignore-file '.git' --hidden --null --line-buffered --color=always --max-columns=500 --no-heading --smart-case --line-number . -e ARG OPTS"
+   consult-project-root-function #'isamert/current-project-root)
 
   (defun isamert/consult-ripgrep (&optional path)
     "`consult-ripgrep' in current project.
@@ -1600,28 +1625,100 @@ Some key points:
     (consult-ripgrep default-directory))
 #+end_src
 
+*** Perspective integration
+:PROPERTIES:
+:ID:       90769b1b-7baf-4285-80f9-153ae07d73ab
+:END:
+I use =(consult-buffer)= function for switching between buffers/files/marks etc. Here I add two sources for =(consult-buffer)=:
+- One that only contains buffers for current perspective. This is quite useful for having a visual reference for current perspectives buffers.
+- Another that adds list of my frequently used files. This is also handy in a way that =(consult-buffer)= becomes my go-to place for switching to anything.
+
+#+name: consult-perspective-buffers
+#+begin_src emacs-lisp
+  (defvar isamert/consult-source-perspective-buffers
+    `(:name     "Perspective buffers"
+      :narrow   ?P
+      :category buffer
+      :face     consult-buffer
+      :history  buffer-name-history
+      :state    ,#'consult--buffer-state
+      :default  t
+      :items ,#'persp-current-buffer-names)
+    "Current persp buffer candidate source for `consult-buffer'.")
+
+  (defvar isamert/consult-source-files
+    `(:name     "My files"
+      :narrow   ?F
+      :category file
+      :face     consult-file
+      :history  file-name-history
+      :state    ,#'consult--file-state
+      :default  t
+      :items
+      ,(lambda ()
+         (let ((ht (consult--cached-buffer-file-hash)))
+           (mapcar #'abbreviate-file-name
+                   (seq-remove (lambda (x) (gethash x ht)) (isamert/my-files))))))
+    "My frequently accessed files source for `consult-buffer'.")
+
+  (setq
+   consult-buffer-sources
+   `(isamert/consult-source-perspective-buffers
+     consult--source-buffer
+     consult--source-file
+     isamert/consult-source-files
+     consult--source-bookmark
+     consult--source-project-buffer
+     consult--source-project-file))
+
+  (defun isamert/my-files ()
+    "Return list of all files I frequently use."
+    (mapcar
+     (lambda (file) (expand-file-name (concat org-directory "/" file)))
+     (if (file-directory-p org-directory)
+         (directory-files org-directory nil "^\\w+.*.org$")
+       '())))
+#+end_src
+
+I also change =consult--buffer-display= function so that if I select a buffer from another perspective inside =(consult-buffers)=, I automatically jump into that perspective instead of pulling that buffer into the current perspective and messing things up.
+
+#+name: consult-perspective-switch-buffers
+#+begin_src emacs-lisp :tangle no
+  (setq consult--buffer-display #'isamert/persp-switch-to-buffer)
+
+  (defun isamert/persp-switch-to-buffer (buffer-or-name &optional norecord force-same-window)
+    "Same as `persp-switch-to-buffer'"
+    (ignore norecord force-same-window)
+    (persp-switch-to-buffer buffer-or-name))
+#+end_src
+
 ** embark
 =embark.el= provides contextual command maps.
-  - =M-e= activates command mode. Next key should be command. Do =C-h= to list all commands with their keybindings.
+  - =M-a= activates command mode. Next key should be command. Do =C-h= to list all commands with their keybindings.
   - Commands are context specific, ie. the commands is based on if currently selected item is a file, folder, buffer etc.
   - It's mostly used within the minnibuffer, some example functions:
-    - =M-e w= (~embark-save~) saves the current candidate's text into kill-ring. (Although I have another solution for this, =M-y=. See [[selectrum]])
-    - =M-e i= (~embark-insert~) like the one above but instead of saving to the kill-ring, it directly inserts it to the buffer.
-    - =M-e S= (~embark-collect-snapshot~) creates a buffer containing all the candidates.
+    - =M-a w= (~embark-save~) saves the current candidate's text into kill-ring. (Although I have another solution for this, =M-y=. See [[selectrum]])
+    - =M-a i= (~embark-insert~) like the one above but instead of saving to the kill-ring, it directly inserts it to the buffer.
+    - =M-a S= (~embark-collect-snapshot~) creates a buffer containing all the candidates.
 
 #+begin_src emacs-lisp
   (use-package embark
     :ensure t
     :after selectrum
     :config
-    (evil-define-key 'normal 'global
-      (kbd "M-e") #'embark-act))
+    (bind-key (kbd "M-a") #'embark-act)
+    (setq embark-prompter #'embark-completing-read-prompter)
+    ;; ^ This directly shows the actions in a completing read window.
+    ;; By default, it is set to `embark-keymap-prompter' and you need to
+    ;; hit `C-h' to bring this menu up.
+    )
 
   (use-package embark-consult
     :ensure t
     :after (embark consult))
 #+end_src
-** project.el
+
+** ~project.el~ and project management
 I was using projectile earlier but [[consult]] functions are just more than enough for project management. I only use couple of functions from =project.el= which is already built-in to Emacs.
 
 #+begin_src emacs-lisp
@@ -1698,10 +1795,8 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
   (evil-leader/set-key
     "pp" #'isamert/switch-to-project-and-find-file
     "pP" #'isamert/switch-to-project-and-grep
-    "pg" #'isamert/consult-ripgrep
     "pf" #'isamert/find-file-in-current-project
     "pF" #'consult-find
-
     "hf" #'isamert/find-file-in-current-dir)
 #+end_src
 
@@ -1947,10 +2042,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (defun isamert/run-command-on-visible-vterm-with-history ()
     (interactive)
     (let ((cmd (isamert/run-command-on-visible-vterm
-                   (isamert/select-one-of isamert/vterm-run-history
-                                          nil
-                                          "Run new command"
-                                          #'identity))))
+                (completing-read "Run new command" isamert/vterm-run-history))))
       (when cmd
         (setq isamert/vterm-run-history (cons cmd (delete cmd isamert/vterm-run-history))))))
 
@@ -1959,12 +2051,13 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (defun isamert/select-tmux-session ()
     "Select a tmux session for other tmux commands to use."
     (interactive)
-    (--> (shell-command-to-string "tmux list-sessions")
-         (split-string it "\n")
-         (--filter (not (string-equal it "")) it)
-         (isamert/select-one-of it)
-         (car (split-string it ":"))
-         (setq isamert/tmux-session it)))
+    (->> (shell-command-to-string "tmux list-sessions")
+      (s-split "\n")
+      (--filter (not (s-blank? it)))
+      (completing-read "TMUX session: ")
+      (s-split ":")
+      (car)
+      (setq isamert/tmux-session)))
 
   (defun isamert/select-tmux-session-if-needed ()
     (interactive)
@@ -3071,31 +3164,6 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
   (evil-leader/set-key
     "/tt"   'isamert/google-translate-this-en-to-tr
     "/te"   'isamert/google-translate-this-tr-to-en)
-#+end_src
-
-** Open one of my special files
-=isamert/files= creates a list of my dotfiles and org-files and lets you select one of them.
-
-#+begin_src emacs-lisp
-  (defun isamert/org-files ()
-    "Find all of the org files in home directory."
-    (mapcar
-      (lambda (file) (concat org-directory "/" file))
-      (if (file-directory-p org-directory)
-          (directory-files org-directory nil "^\\w+.*.org$")
-           '())))
-
-  (defun isamert/dotfiles ()
-    (--> (shell-command-to-string "git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME ls-tree --full-tree -r HEAD | cut -f2")
-         (split-string it "\n" t)
-         (--map (concat "~/" it) it)))
-
-  (defun isamert/files ()
-    "Open one of my special files like my dot-files, org-files etc."
-    (interactive)
-    (find-file (completing-read "Open: " (append (isamert/org-files) (isamert/dotfiles)))))
-
-  (evil-define-key 'normal 'global (kbd "M-m") 'isamert/files)
 #+end_src
 
 ** TODO org-mode enhancements
