@@ -121,15 +121,6 @@ Some basic variable and function definitions that will be used in configuration.
       (make-directory dir))
     dir)
 
-  (defmacro isamert/prettify-mode (mode pairs)
-    "Prettify given PAIRS in given MODE.
-  Just a simple wrapper around `prettify-symbols-mode`"
-    `(add-hook ,mode (lambda ()
-                       (mapc (lambda (pair)
-                               (push pair prettify-symbols-alist))
-                             ,pairs)
-                       (prettify-symbols-mode))))
-
   (defun isamert/font-exists-p (font)
     "Check if FONT exists."
     (x-list-fonts font))
@@ -369,6 +360,35 @@ You should run =all-the-icons-install-fonts= command after this.
 #+BEGIN_SRC emacs-lisp
 (use-package all-the-icons :ensure t)
 #+END_SRC
+
+** prettify-symbols-mode
+I make use of this mode quite frequently throughout the configuration.
+
+#+begin_src emacs-lisp
+  (use-package prettify-symbols-mode
+    (setq prettify-symbols-unprettify-at-point t))
+
+  (defmacro isamert/prettify-mode (mode pairs)
+    "Prettify given PAIRS in given MODE.
+    Just a simple wrapper around `prettify-symbols-mode`"
+    `(add-hook
+      ,mode
+      (lambda ()
+        (mapc (lambda (pair)
+                (push pair prettify-symbols-alist))
+              ,pairs)
+        (prettify-symbols-mode 1))))
+#+end_src
+** fira-code-mode (font ligatures)
+This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known code symbols. This mode also saves the length of the chars, so it does not break spacing.
+- After the first install, you need to call =fira-code-mode-install-fonts= and then maybe restart Emacs etc.
+
+  #+begin_src emacs-lisp
+    (use-package fira-code-mode
+      :ensure t
+      :config
+      (global-fira-code-mode))
+  #+end_src
 
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
