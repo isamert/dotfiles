@@ -3778,13 +3778,13 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
 
 ** Misc bindings
 #+begin_src emacs-lisp
-  (defun isamert/toggle-side-well-org-buffer ()
+  (defun isamert/toggle-side-trendyol-org-buffer ()
     "Toggle `well.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
     (interactive)
-    (isamert/toggle-side-buffer-with-file "~/Documents/notes/well.org"))
+    (isamert/toggle-side-buffer-with-file "~/Documents/notes/trendyol.org"))
 
   (evil-leader/set-key
-    "tw" 'isamert/toggle-side-well-org-buffer)
+    "tw" 'isamert/toggle-side-trendyol-org-buffer)
 #+end_src
 ** Token management
 #+begin_src emacs-lisp
