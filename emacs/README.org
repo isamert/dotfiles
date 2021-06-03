@@ -3172,7 +3172,8 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
     (message
      (shell-command-to-string
       (format
-       "trans en:tr \"%s\""
+       "trans %s:%s \"%s\""
+       from to
        (read-string
         "Translating: "
         (isamert/region-or 'word))))))
