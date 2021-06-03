@@ -3297,7 +3297,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   DATE can be 'now', 'yesterday', 'two days ago' etc."
     (s-trim-right
      (shell-command-to-string
-      (concat "date --date='" date "' +'%Y-%m-%d %a'"))))
+      (concat (locate-file "date" exec-path) " --date='" date "' +'%Y-%m-%d %a'"))))
 
   ;;
   ;; Create utils
