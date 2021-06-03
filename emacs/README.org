@@ -2586,7 +2586,7 @@ I try to maximize my Emacs usage which brings it's own benefits and downsides wh
       "q" 'elfeed-kill-buffer))
 #+end_src
 
-** empv (music/media/youtube management)
+** empv (music/media/radio/youtube management)
 Manage media and streams through =completing-read=.
 
 #+begin_src emacs-lisp
@@ -2598,11 +2598,11 @@ Manage media and streams through =completing-read=.
              :repo "isamert/empv.el")
     :config
     (load "radio-channels")
-    (add-to-list 'empv-mpv-args "--ytdl-format=best")
     (setq empv-radio-channels isamert/radio-channels)
     (setq empv-base-directory "~/Music")
     (setq empv-invidious-instance "https://invidious.tube/api/v1" )
     ;; ^ alt: https://invidious.exonip.de/api/v1
+    (add-to-list 'empv-mpv-args "--ytdl-format=best")
     (evil-leader/set-key
       "erp" #'empv-play
       "ert" #'empv-toggle

@@ -37,6 +37,8 @@
     ("SomaFM // SF Police Scanner"       . "https://somafm.com/scanner.pls")
     ("SomaFM Specials"                   . "https://somafm.com/specials.pls")
 
+    ("TRT Nagme" . "https://radio-trtnagme.live.trt.com.tr/master_128.m3u8")
+
     ("radcap.ru // ambient"              . "http://79.111.119.111:8002/ambient")
     ("radcap.ru // anime"                . "http://79.111.119.111:8002/anime")
     ("radcap.ru // avantgardejazz"       . "http://79.111.119.111:8002/avantgardejazz")
