@@ -874,7 +874,6 @@ Change two parts of the text.
     ;; link stuff
     "oyy" #'org-store-link
     "oyi" #'org-copy-id
-    "oyp" #'org-insert-link
 
     ;; org-clock
     "occ" #'org-clock-in
@@ -1168,7 +1167,107 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 (use-package org-ql :ensure t)
 #+END_SRC
 
+** Inserting links and images from clipboard
+Insert links/images more intelligently,
+- if region is selected and there is a url in the clipboard, convert it to a link directly.
+- if nothing is selected and there is a link in clipboard, just insert it as a link with the link's own title.
+- if clipboard has in image in it, save that into a file that you interactively select and then insert it into the buffer.
+- otherwise call ~org-insert-link~
+
+#+begin_src emacs-lisp
+  (evil-leader/set-key "oP" #'isamert/org-insert-dwim)
+
+  (defun isamert/org-insert-dwim ()
+    "Like `org-insert-link' but improved with dwim features.
+      Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
+    (interactive)
+    (let* ((point-in-link (org-in-regexp org-link-any-re 1))
+           (clipboard-url (when (string-match-p "^http" (current-kill 0))
+                            (current-kill 0)))
+           (region-content (when (region-active-p)
+                             (buffer-substring-no-properties (region-beginning)
+                                                             (region-end)))))
+      (cond
+       ((isamert/has-clipboard-image)
+        (call-interactively 'isamert/org-attach-image-from-clipboard))
+       ((and region-content clipboard-url (not point-in-link))
+        (delete-region (region-beginning) (region-end))
+        (insert (org-make-link-string clipboard-url region-content)))
+       ((and clipboard-url (not point-in-link))
+        (insert (org-make-link-string
+                 clipboard-url
+                 (read-string "title: "
+                              (with-current-buffer (url-retrieve-synchronously clipboard-url)
+                                (dom-text (car
+                                           (dom-by-tag (libxml-parse-html-region
+                                                        (point-min)
+                                                        (point-max))
+                                                       'title))))))))
+       (t
+        (call-interactively 'org-insert-link)))))
+
+  (defun isamert/clipboard-command ()
+    "Get clipboard command for current system.
+      The returned command directly puts the image data into stdout."
+    (cond
+     ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
+     ((locate-file "pngpaste" exec-path) "pngpaste -")))
+
+  (defun isamert/org-attach-image-from-clipboard (&optional file-path)
+    "Attach the image in the clipboard into your org-buffer.
+      This function saves the image file into the FILE-PATH or
+      if it's not provided then it saves the image into ~/.cache."
+    (interactive "FSave file to (leave empty to create a temp file): ")
+    (let ((file (if (and file-path (not (string-empty-p file-path)))
+                    file-path
+                  (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
+      (if (shell-command (format "%s > %s" (isamert/clipboard-command) file))
+          (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
+        (user-error "Can't create image file from clipboard contents"))))
+
+  (defun isamert/has-clipboard-image ()
+    "Check whether the clipboard has image or not."
+    (eq (shell-command (format "%s &>/dev/null" (isamert/clipboard-command))) 0))
+#+end_src
+
 * Other packages
+** Hydra
+Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
+
+#+begin_src emacs-lisp
+  (use-package hydra
+    :ensure t
+    :config)
+
+  (use-package use-package-hydra
+    :after hydra
+    :ensure t)
+
+  (use-package pretty-hydra
+    :after hydra
+    :ensure t
+    :config
+    (pretty-hydra-define appearance
+      (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
+      ("Display"
+       (("W" writeroom-mode "Writeroom mode" :toggle t)
+        ("n" display-line-numbers-mode "Line numbers" :toggle t)
+        ("+" default-text-scale-increase "Zoom In")
+        ("-" default-text-scale-decrease "Zoom Out"))
+       "Highlighting"
+       (("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
+        ("_" global-hl-line-mode "Highlight current line" :toggle t)
+        ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
+        ("w" isamert/whitespace-mode-toggle "Whitespaces"))
+       "Miscellaneous"
+       (("l" visual-line-mode "Wrap lines" :toggle t)
+        ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
+        ("g" fci-mode "Fill column" :toggle t)
+        ("<SPC>" nil "Quit" :color blue))))
+
+    (evil-leader/set-key
+      "a" #'appearance/body))
+#+end_src
 ** dired
 It just doesn't feel like ranger, I still resort to it. This configuration just mimics ranger to a limited extend. If I need to do some complicated file-management, I just fire up ranger.
 
@@ -3468,28 +3567,6 @@ Here I define two important functions and their helpers.  The following function
   (setq-local typescript-indent-level n) ; typescript-mode
   (message "OK!"))
 #+END_SRC
-
-** Paste screenshots into org-mode buffers
-#+begin_src emacs-lisp
-  ;; TODO: save images under a predefined place on empty file-path
-  ;; instead of cache (defvar ...)
-  ;; Utilize a file-local variable that sets a default path. When I'm
-  ;; pasting into my blog, it should automatically save this file into
-  ;; docs/images
-  (defun isamert/org-attach-image-from-clipboard (file-path)
-    (interactive "sSave file to (leave empty to create a temp file): ")
-    (let ((file (if (and file-path (not (string-empty-p file-path)))
-                    file-path
-                  (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
-      (cond
-       ((locate-file "xclip" exec-path) (shell-command (format "xclip -selection clipboard -target image/png -out > %s" file)))
-       ((locate-file "pngpaste" exec-path) (shell-command (format "pngpaste %s" file)))
-       (t (message "Either install xclip (for linux) or pngpaste (for mac) to get this functionality.")))
-      (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))))
-
-  (evil-leader/set-key
-    "oP"  'isamert/org-attach-image-from-clipboard)
-#+end_src
 
 ** Current file functionality
 Sometimes I just want to delete/rename/move etc. the current file without resorting to dired or any other file manager. Here are some interactive functions to do that.
