@@ -267,7 +267,6 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
       (setq undo-tree-auto-save-history t
             undo-tree-history-directory-alist `(("." . ,undo-dir))
             undo-tree-enable-undo-in-region nil) ;; this fixes something?
-      (setq evil-undo-system 'undo-tree)
     :config
     (global-undo-tree-mode))
 #+END_SRC
@@ -361,11 +360,23 @@ You should run =all-the-icons-install-fonts= command after this.
 (use-package all-the-icons :ensure t)
 #+END_SRC
 
+** fira-code-mode (font ligatures)
+This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known code symbols. This mode also saves the length of the chars, so it does not break spacing.
+- After the first install, you need to call =fira-code-mode-install-fonts= and then maybe restart Emacs etc.
+
+  #+begin_src emacs-lisp
+    (use-package fira-code-mode
+      :ensure t
+      :config
+      (global-fira-code-mode))
+  #+end_src
+
 ** prettify-symbols-mode
 I make use of this mode quite frequently throughout the configuration.
 
 #+begin_src emacs-lisp
-  (use-package prettify-symbols-mode
+  (use-package prog-mode
+    :config
     (setq prettify-symbols-unprettify-at-point t))
 
   (defmacro isamert/prettify-mode (mode pairs)
@@ -379,17 +390,6 @@ I make use of this mode quite frequently throughout the configuration.
               ,pairs)
         (prettify-symbols-mode 1))))
 #+end_src
-** fira-code-mode (font ligatures)
-This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known code symbols. This mode also saves the length of the chars, so it does not break spacing.
-- After the first install, you need to call =fira-code-mode-install-fonts= and then maybe restart Emacs etc.
-
-  #+begin_src emacs-lisp
-    (use-package fira-code-mode
-      :ensure t
-      :config
-      (global-fira-code-mode))
-  #+end_src
-
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
 
@@ -517,52 +517,15 @@ Some small packages that enriches editing experience visually. I don't enable al
     (setq highlight-indent-guides-bitmap-function 'highlight-indent-guides--bitmap-line))
 #+end_src
 
-** Hydra
-Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
-
-#+begin_src emacs-lisp
-  (use-package hydra
-    :ensure t
-    :config)
-
-  (use-package use-package-hydra
-    :after hydra
-    :ensure t)
-
-  (use-package pretty-hydra
-    :after hydra
-    :ensure t
-    :config
-    (pretty-hydra-define appearance
-      (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
-      ("Display"
-       (("W" writeroom-mode "Writeroom mode" :toggle t)
-        ("n" display-line-numbers-mode "Line numbers" :toggle t)
-        ("+" default-text-scale-increase "Zoom In")
-        ("-" default-text-scale-decrease "Zoom Out"))
-       "Highlighting"
-       (("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
-        ("_" global-hl-line-mode "Highlight current line" :toggle t)
-        ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
-        ("w" isamert/whitespace-mode-toggle "Whitespaces"))
-       "Miscellaneous"
-       (("l" visual-line-mode "Wrap lines" :toggle t)
-        ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
-        ("g" fci-mode "Fill column" :toggle t)
-        ("<SPC>" nil "Quit" :color blue))))
-
-    (evil-leader/set-key
-      "a" #'appearance/body))
-#+end_src
 * evil-mode
 ** Basic configuration
 #+BEGIN_SRC emacs-lisp
+  ;; Disable evil bindings in insert mode. This needs to be called
+  ;; before loading evil mode
+  (setq evil-disable-insert-state-bindings t)
+
   (use-package evil
     :ensure t
-    :init
-    ;; Disable evil bindings in insert mode. This needs to be called
-    ;; before loading evil mode
-    (setq evil-disable-insert-state-bindings t)
     :config
     ;; But I want some default evil bindings in insert mode, so just
     ;; remap them
@@ -588,6 +551,9 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
 
     ;; Make horizontal movement cross lines
     (setq-default evil-cross-lines t)
+
+    ;; Use undo-tree for evil
+    (setq evil-undo-system 'undo-tree)
 
     ;; Move between visual lines instead of real lines
     (evil-define-key 'normal 'global
@@ -1344,7 +1310,6 @@ This mode allows you to do /undo/ /redo/ operations on window layout changes. My
     (evil-leader/set-key "ww" #'ace-window)
     (evil-leader/set-key "ws" #'ace-swap-window))
 #+end_src
-
 
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options. I made a few adjustment so that it's more compact and you can see full function names (most of the time) and it shows up at the top center instead of bottom left corner. This mostly eliminates the need for creating a [[Hydra]].
