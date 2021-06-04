@@ -257,16 +257,19 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
 - Also it keeps undo history as a tree instead of a linear history. ~undo-tree-visualize~ may help.
 
 #+BEGIN_SRC emacs-lisp
-  (defconst undo-dir
+  (defconst isamert/undo-dir
     (isamert/mkdir-if-not "~/.emacs.d/undo/"))
 
   (use-package undo-tree
     :diminish undo-tree-mode
     :ensure t
     :init
-      (setq undo-tree-auto-save-history t
-            undo-tree-history-directory-alist `(("." . ,undo-dir))
-            undo-tree-enable-undo-in-region nil) ;; this fixes something?
+    (setq undo-tree-auto-save-history t)
+    (setq undo-tree-history-directory-alist `(("." . ,isamert/undo-dir)))
+    (setq undo-tree-enable-undo-in-region nil) ;; this fixes something?
+    ;; Use undo-tree for evil
+    (setq evil-undo-system 'undo-tree)
+
     :config
     (global-undo-tree-mode))
 #+END_SRC
@@ -307,6 +310,7 @@ Hide menubar and toolbar and replace blinking cursor with nice static box cursor
   (scroll-bar-mode -1)             ;; Disable scrollbars
   (global-hl-line-mode t)          ;; Highlight current line
   (setq inhibit-startup-message t) ;; Close startup screen
+  (setq frame-resize-pixelwise t)  ;; Fix gap issues with tiling WMs
 #+END_SRC
 
 Disable global-hl-line-mode in eshell, ansi-term, vterm
@@ -551,9 +555,6 @@ Some small packages that enriches editing experience visually. I don't enable al
 
     ;; Make horizontal movement cross lines
     (setq-default evil-cross-lines t)
-
-    ;; Use undo-tree for evil
-    (setq evil-undo-system 'undo-tree)
 
     ;; Move between visual lines instead of real lines
     (evil-define-key 'normal 'global
@@ -841,8 +842,8 @@ Change two parts of the text.
     ;; ^ include up to 7-depth headers in imenu search
     (setq org-image-actual-width nil)
     ;; ^ Disable showing inline images in full width. Now you can add `#+ATTR_*: :width 300` to resize inline images
-    (setq org-ellipsis "..⤵")
-    ;; ^ Replace ... with ..↯ in collapsed sections
+    (setq org-ellipsis "⤵")
+    ;; ^ Replace ... with ⤵ in collapsed sections
     (setq org-habit-show-habits-only-for-today t)
     ;; ^ If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
     (setq org-log-into-drawer t)
@@ -1440,7 +1441,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
     (which-key-posframe-mode))
 #+END_SRC
 
-** magit
+** magit & forge
 *** Installation
 - Read this for some useful status mode keymaps: https://endlessparentheses.com/it-s-magit-and-you-re-the-magician.html
   - y :: Branch viewer (delete branches with ~k~)
@@ -2240,7 +2241,7 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
     :ensure t
     :after yasnippet
     :config
-    (setq yankpad-file "~/.emacs.d/yankpad.org")
+    (setq yankpad-file (concat org-directory "/snippets.org"))
     (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand)
     (evil-leader/set-key
       "sr" #'yankpad-reload
@@ -3603,7 +3604,7 @@ Sometimes I just want to delete/rename/move etc. the current file without resort
         (kill-buffer (current-buffer)))))
 #+end_src
 
-** xah-open-file-at-curser
+** xah-open-file-at-cursor
 This is better than =find-file-at-point= because it takes line numbers etc. into account.
 
 #+begin_src emacs-lisp
