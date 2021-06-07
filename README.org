@@ -1,8 +1,10 @@
+#+TITLE: Dotfiles
+#+AUTHOR: İsa Mert Gürbüz
 #+STARTUP: overview
 #+PROPERTY: header-args :mkdirp yes :noweb yes
 
 * Introduction
-This is primarily WIP. I just copied my dotfiles over here and categorized them and nothing else. Still better than my old method of managing dotfiles.
+These are my dotfiles.
 
 - TODO items ::
   - [ ] Need to convert some global variable hacks into noweb references.
@@ -10,6 +12,7 @@ This is primarily WIP. I just copied my dotfiles over here and categorized them 
   - [ ] Explain each and every config file with at east 2 sentences.
   - [ ] Find a way to make scripts exactable after tangling.
   - [ ] Searx and invidious instances global vars
+  - [ ] Add more visual material, i.e. images
 
 ** Some general information
 - ~org-babel-tangle~ to tangle all files.
@@ -70,7 +73,7 @@ Run =ipython= with some defaults.
 Install global packages to user-local.
 
 #+begin_src bash :tangle ~/.npmrc
-prefix=${HOME}/.npm-packages
+  prefix=${HOME}/.npm-packages
 #+end_src
 
 * X related
@@ -468,6 +471,18 @@ This is a supplementary script for managing bspwm where I put some helpful funct
   cmd="$1"; shift
   "$cmd" "$@"
 #+end_src
+** yabai
+This is the window manager I use in OSX. It's pretty much like BSPWM.
+
+#+begin_src sh :tangle (when-darwin "~/.config/yabai/yabairc")
+  #!/bin/bash
+
+  yabai -m config layout     bsp
+  yabai -m config window_gap 6
+
+  yabai -m rule --add app=Emacs manage=off
+#+end_src
+
 ** Polybar
 *** Global configuration
 I keep some of the polybar related variables inside the ~Xresources~ file so that I can access these values using =xrdb-get-value= command if I need to.
@@ -928,6 +943,103 @@ This is the global keybinding manager.
   XF86Audio{Prev,Next}
       mpc {prev,next}
 #+end_src
+** shkd
+This is the global keybinding manager for OSX.
+
+#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
+  # focus window
+  lcmd - h : yabai -m window --focus west
+  lcmd - l : yabai -m window --focus east
+  lcmd - j : yabai -m window --focus south
+  lcmd - k : yabai -m window --focus north
+
+  # swap managed window
+  shift + lcmd - h : yabai -m window --swap west
+  shift + lcmd - l : yabai -m window --swap east
+
+  # send window to desktop
+  shift + lcmd - 1 : yabai -m window --space 1
+  shift + lcmd - 2 : yabai -m window --space 2
+  shift + lcmd - 3 : yabai -m window --space 3
+  shift + lcmd - 4 : yabai -m window --space 4
+  shift + lcmd - 5 : yabai -m window --space 5
+
+  # focus monitor
+  lcmd - 0x2B  : yabai -m display --focus 1
+  lcmd - 0x2F  : yabai -m display --focus 2
+
+  # send window to monitor
+  shift + lcmd - 0x2B  : yabai -m window --display 1; # yabai -m display --focus 1
+  shift + lcmd - 0x2F  : yabai -m window --display 2; # yabai -m display --focus 1
+
+  # resize windows
+  lcmd + alt - l : yabai -m window --resize right:20:0
+  lcmd + alt - h : yabai -m window --resize left:-20:0
+  lcmd + alt - j : yabai -m window --resize bottom:0:20
+  lcmd + alt - k : yabai -m window --resize top:0:-20
+
+  # toggle window zoom
+  lcmd - d : yabai -m window --toggle zoom-parent
+  lcmd - f : yabai -m window --toggle zoom-fullscreen
+
+  # toggle window split type
+  # alt - e : yabai -m window --toggle split
+
+  # float / unfloat window and center on screen
+  lcmd - t : yabai -m window --toggle float;\
+            yabai -m window --grid 4:4:1:1:2:2
+
+  shift + lcmd - t : yabai -m window --toggle float;\
+                     yabai -m window --grid 1:1:1:1:1:1
+
+  # reload skhd config
+  shift + lcmd - r : skhd --reload
+
+  # run some apps
+  lcmd - return : alacritty
+  hyper - r : emacsclient -c
+
+  # move managed window
+  # shift + cmd - h : yabai -m window --warp east
+
+  # balance size of windows
+  # shift + alt - 0 : yabai -m space --balance
+
+  # make floating window fill screen
+  # shift + alt - up     : yabai -m window --grid 1:1:0:0:1:1
+
+  # make floating window fill left-half of screen
+  # shift + alt - left   : yabai -m window --grid 1:2:0:0:1:1
+
+  # create desktop, move window and follow focus - uses jq for parsing json (brew install jq)
+  # shift + cmd - n : yabai -m space --create && \
+  #                   index="$(yabai -m query --spaces --display | jq 'map(select(."native-fullscreen" == 0))[-1].index')" && \
+  #                   yabai -m window --space "${index}" && \
+  #                   yabai -m space --focus "${index}"
+
+  # fast focus desktop (doesn't work, need to disable system integrity protection)
+  # cmd + alt - x : yabai -m space --focus recent
+  # cmd - 1 : yabai -m space --focus 1
+  # cmd - 2 : yabai -m space --focus 2
+  # cmd - 3 : yabai -m space --focus 3
+  # cmd - 4 : yabai -m space --focus 4
+
+  # move floating window
+  # shift + ctrl - a : yabai -m window --move rel:-20:0
+  # shift + ctrl - s : yabai -m window --move rel:0:20
+
+  # increase window size
+  # shift + alt - a : yabai -m window --resize left:-20:0
+  # shift + alt - w : yabai -m window --resize top:0:-20
+
+  # decrease window size
+  # shift + cmd - s : yabai -m window --resize bottom:0:-20
+  # shift + cmd - w : yabai -m window --resize top:0:20
+
+  # set insertion point in focused container
+  # ctrl + alt - h : yabai -m window --insert west
+#+end_src
+
 ** Rofi
 *** Global configuration
 #+begin_src conf :tangle (when-linux "~/.Xresources")
@@ -1613,6 +1725,40 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
       alias clear='vterm_printf "51;Evterm-clear-scrollback";tput clear'
   fi
 #+end_src
+** Mac OSX configuration
+#+begin_src shell
+  # - To get the latest pip bin path: echo $(python3 -c 'import site; print(site.USER_BASE)')/bin
+  export PATH="$HOME/Library/Python/3.9/bin:/usr/local/bin:$PATH"
+
+  # Assuming you've installed GNU tools with
+  # $ brew install coreutils findutils gnu-tar gnu-sed gawk gnutls gnu-indent gnu-getopt grep
+  # - Add updated openssl (required for barriers to work) to PATH
+  # - Add pip/bin to PATH
+  # - Add barrier{c,s,} to path
+  # - Add GNU utils to path and replace with mac ones
+  export PATH="/Applications/Barrier.app/Contents/MacOS:$PATH"
+  export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
+  export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/findutils/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/gnu-indent/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/findutils/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/gnu-indent/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
+  export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
+
+  # Hunspell dict path from nix-profile, hunspell picks up this variable
+  export DICPATH=$HOME/.nix-profile/share/hunspell
+  # Without the following, hunspell in emacs for some reason
+  export DICTIONARY=en_US
+
+  # Source fzf keybindings
+  . /usr/local/opt/fzf/shell/key-bindings.zsh
+#+end_src
+
 * Utilities
 ** .tmux.conf
 #+begin_src conf :tangle ~/.tmux.conf
@@ -4265,112 +4411,6 @@ This part is almost completely untouched. Needs some revamp.
   else
       set-brightness $(echo -e "MAX\nMEDIUM\nLOW" | dmenu -i)
   fi
-#+end_src
-
-* Mac OSX
-** yabai
-#+begin_src sh :tangle (when-darwin "~/.config/yabai/yabairc")
-  #!/bin/sh
-
-  yabai -m config layout     bsp
-  yabai -m config window_gap 6
-
-  yabai -m rule --add app=Emacs manage=off
-#+end_src
-
-** shkd
-#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
-  # focus window
-  lcmd - h : yabai -m window --focus west
-  lcmd - l : yabai -m window --focus east
-  lcmd - j : yabai -m window --focus south
-  lcmd - k : yabai -m window --focus north
-
-  # swap managed window
-  shift + lcmd - h : yabai -m window --swap west
-  shift + lcmd - l : yabai -m window --swap east
-
-  # send window to desktop
-  shift + lcmd - 1 : yabai -m window --space 1
-  shift + lcmd - 2 : yabai -m window --space 2
-  shift + lcmd - 3 : yabai -m window --space 3
-  shift + lcmd - 4 : yabai -m window --space 4
-  shift + lcmd - 5 : yabai -m window --space 5
-
-  # focus monitor
-  lcmd - 0x2B  : yabai -m display --focus 1
-  lcmd - 0x2F  : yabai -m display --focus 2
-
-  # send window to monitor
-  shift + lcmd - 0x2B  : yabai -m window --display 1; # yabai -m display --focus 1
-  shift + lcmd - 0x2F  : yabai -m window --display 2; # yabai -m display --focus 1
-
-  # resize windows
-  lcmd + alt - l : yabai -m window --resize right:20:0
-  lcmd + alt - h : yabai -m window --resize left:-20:0
-  lcmd + alt - j : yabai -m window --resize bottom:0:20
-  lcmd + alt - k : yabai -m window --resize top:0:-20
-
-  # toggle window zoom
-  lcmd - d : yabai -m window --toggle zoom-parent
-  lcmd - f : yabai -m window --toggle zoom-fullscreen
-
-  # toggle window split type
-  # alt - e : yabai -m window --toggle split
-
-  # float / unfloat window and center on screen
-  lcmd - t : yabai -m window --toggle float;\
-            yabai -m window --grid 4:4:1:1:2:2
-
-  shift + lcmd - t : yabai -m window --toggle float;\
-                     yabai -m window --grid 1:1:1:1:1:1
-
-  # reload skhd config
-  shift + lcmd - r : skhd --reload
-
-  # run some apps
-  lcmd - return : alacritty
-  hyper - r : emacsclient -c
-
-  # move managed window
-  # shift + cmd - h : yabai -m window --warp east
-
-  # balance size of windows
-  # shift + alt - 0 : yabai -m space --balance
-
-  # make floating window fill screen
-  # shift + alt - up     : yabai -m window --grid 1:1:0:0:1:1
-
-  # make floating window fill left-half of screen
-  # shift + alt - left   : yabai -m window --grid 1:2:0:0:1:1
-
-  # create desktop, move window and follow focus - uses jq for parsing json (brew install jq)
-  # shift + cmd - n : yabai -m space --create && \
-  #                   index="$(yabai -m query --spaces --display | jq 'map(select(."native-fullscreen" == 0))[-1].index')" && \
-  #                   yabai -m window --space "${index}" && \
-  #                   yabai -m space --focus "${index}"
-
-  # fast focus desktop (doesn't work, need to disable system integrity protection)
-  # cmd + alt - x : yabai -m space --focus recent
-  # cmd - 1 : yabai -m space --focus 1
-  # cmd - 2 : yabai -m space --focus 2
-  # cmd - 3 : yabai -m space --focus 3
-  # cmd - 4 : yabai -m space --focus 4
-
-  # move floating window
-  # shift + ctrl - a : yabai -m window --move rel:-20:0
-  # shift + ctrl - s : yabai -m window --move rel:0:20
-
-  # increase window size
-  # shift + alt - a : yabai -m window --resize left:-20:0
-  # shift + alt - w : yabai -m window --resize top:0:-20
-
-  # decrease window size
-  # shift + cmd - s : yabai -m window --resize bottom:0:-20
-  # shift + cmd - w : yabai -m window --resize top:0:20
-
-  # set insertion point in focused container
-  # ctrl + alt - h : yabai -m window --insert west
 #+end_src
 
 * Post-amble
