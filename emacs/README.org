@@ -944,7 +944,7 @@ Change two parts of the text.
     (defconst reality-org "~/Documents/notes/reality.org")
     (defconst projects-org "~/Documents/notes/projects.org")
     (defconst people-org "~/Documents/notes/people.org")
-    (defconst work-org "~/Documents/notes/well.org")
+    (defconst work-org "~/Documents/notes/trendyol.org")
 
     ;; Put archive files under an archive/ directory
     ;; I don't want them to pollute my directory
@@ -1917,6 +1917,7 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
 - =company-box= :: Nice company front-end with icons and very nice documentation on hover thing.
 - =company-fuzzy= :: Do fuzzy search in completion, instead of prefix or initials matching. Works quite well with every other backend.
   - Seems to make things slow tho
+- =company-org-block= :: Triggers completion when '<' is typed. Also completes block arguments with ':'.
 
 #+BEGIN_SRC emacs-lisp
   (use-package company
@@ -1953,6 +1954,16 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
   ;;   (setq company-tooltip-align-annotations t)
   ;;   ;; ^ Align annotation to the right side.
   ;;   (global-company-fuzzy-mode 1))
+
+
+  (use-package company-org-block
+    :ensure t
+    :config
+    (setq company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
+    (add-hook 'org-mode-hook
+              (lambda ()
+                (add-to-list (make-local-variable 'company-backends)
+                             'company-org-block))))
 #+END_SRC
 
 ** origami-mode
@@ -2352,6 +2363,19 @@ Provides an interface to xref based on completing-read. Works well with [[select
     :config
     (evil-define-key 'normal 'global
       (kbd "M-w") #'er/expand-region))
+#+end_src
+** xmodmap-mode
+Simple mode for editing =~/.Xmodmap= file.
+- [[https://www.emacswiki.org/emacs/XModMapMode][Source]]
+
+#+begin_src emacs-lisp
+  (define-generic-mode 'xmodmap-mode
+    '(?!)
+    '("add" "clear" "keycode" "keysym" "pointer" "remove")
+    nil
+    '("[xX]modmap\\(rc\\)?\\'")
+    nil
+    "Simple mode for xmodmap files.")
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
