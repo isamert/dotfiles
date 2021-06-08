@@ -1554,6 +1554,32 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
     (if persp-show-modestring
         (persp-turn-off-modestring)
       (persp-turn-on-modestring)))
+
+  (defun isamert/initialize-perspectives ()
+    "Open my default perspectives with some buffers in them."
+    (interactive)
+    (message ">> Perspectives are opening...")
+    (progn
+      (persp-new "dotfiles")
+      (persp-switch "dotfiles")
+      (find-file "~/Workspace/projects/dotfiles/README.org")
+      (split-window-horizontally)
+      (other-window 1)
+      (find-file "~/Workspace/projects/dotfiles/emacs/README.org"))
+    (progn
+      (persp-new "planning")
+      (persp-switch "planning")
+      (find-file "~/Documents/notes/bullet.org")
+      (isamert/bullet-focus-today)
+      (split-window-horizontally)
+      (other-window 1)
+      (find-file "~/Documents/notes/life.org"))
+    (progn
+      (persp-new "notes")
+      (persp-switch "notes")
+      (find-file "~/Documents/notes/engineering.org"))
+    (persp-switch "main")
+    (message ">> Perspectives are opening... Done."))
 #+END_SRC
 
 ** avy
