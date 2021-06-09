@@ -254,14 +254,13 @@ This is my window manager.
   bspc rule --add copyq            state=floating border=off  rectangle="$RECT_TOP_HALF"
   bspc rule --add 'mpv:youtube'    state=floating focus=off
   bspc rule --add Emacs            state=tiled
-  bspc rule --add emacs            state=tiled
 
   # Don't manage some windows
   bspc rule --add Screenkey     manage=off
   bspc rule --add 'dota2'       border=off
 
-  bspc rule -a Vivaldi-stable desktop='^1' follow=on
   bspc rule -a firefox        desktop='^1' follow=on
+  bspc rule -a Emacs          desktop='^2' follow=on
 
   init-desktops
 #+end_src
@@ -1267,8 +1266,7 @@ This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really 
   alias mt="jaro --mime-type"
   alias how="howdoi --color --all"
   alias mkx="chmod +x"
-  alias yt="youtube-viewer --player=mpv"
-  alias ytm="youtube-viewer --player=mpv --no-video"
+  alias ytdl="youtube-dl"
 
   alias ctl="systemctl "
   alias ctlu="systemctl --user"
