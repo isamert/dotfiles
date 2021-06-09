@@ -24,6 +24,7 @@ This is my emacs configuration. My main focus is sanity. I'm a person who get fr
 - I try to put things in way that easily copyable from the configuration. An example would be using multiple =(setq ...)= lines instead of having one =(setq ... ...)= call and setting multiple variables in one go.
 - I make use of =use-package= features quite minimally. See [[id:3d974e67-11fc-4f07-8cd4-ec6fd63152c4][here]] for more information that. This is generally related with the item above and future-proofing.
 - I use =verbatim text= and ~code text~ completely randomly.
+- I try to prefer built-in packages or packages that enhances built-in ones where possible. I'm also trying to simplify my configuration, so another goal is to reduce the package number. Although I intend to keep packages that enhances the overall experience with no special configuration (just install and forget type of packages).
 
 ** Updating packages
 Currently, I don't use an external package manager, =package.el= satisfies my needs. Here is how I do the updates:
@@ -129,7 +130,11 @@ Some basic variable and function definitions that will be used in configuration.
     "Like `assoc` but uses `string-match (car pair) KEY` for
   comparasion and returns all the matching pairs. FN is applied to
   the keys before matching, if present."
-    (seq-filter (lambda (pair) (when (string-match (if fn (funcall fn (car pair)) (car pair)) key) pair)) list))
+    (seq-filter
+     (lambda (pair)
+       (when (string-match-p (if fn (funcall fn (car pair)) (car pair)) key)
+         pair))
+     list))
 
   (defun isamert/region-or (what)
     "Returns currently selected string or WHAT-at-point
@@ -164,19 +169,18 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 * Basics
 ** Sane defaults
 #+BEGIN_SRC emacs-lisp
-  (setq gc-cons-threshold 100000000
-        ;; ^ Better than default
-        read-process-output-max (* 1024 1024)
-        ;; ^ Better than default
-        confirm-kill-processes nil
-        ;; ^ When exitting, kill processes withouh asking
-        ring-bell-function 'ignore
-        ;; ^ This completely disables alarms
-        column-number-mode t
-        ;; ^ Show column number
-        create-lockfiles nil
-        ;; ^ These just clutter the filesystem
-        )
+  (setq gc-cons-threshold 100000000)
+  ;; ^ Better than default
+  (setq read-process-output-max (* 1024 1024))
+  ;; ^ Better than default
+  (setq confirm-kill-processes nil)
+  ;; ^ When exitting, kill processes withouh asking
+  (setq ring-bell-function 'ignore)
+  ;; ^ This completely disables alarms
+  (setq column-number-mode t)
+  ;; ^ Show column number
+  (setq create-lockfiles nil)
+  ;; ^ These just clutter the filesystem
 
   ;; Ask y/n instead of yes/no
   (fset 'yes-or-no-p 'y-or-n-p)
@@ -201,8 +205,8 @@ Save recent files. Also exclude package files that appears after installing a pa
 
 ** Save minibuffer, kill-ring, search-ring history
 #+begin_src emacs-lisp
-  (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring)
-        savehist-file "~/.emacs.d/savehist")
+  (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
+  (setq savehist-file "~/.emacs.d/savehist")
   (savehist-mode 1)
 #+end_src
 
@@ -276,8 +280,7 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
 
 ** Remove trailing space before save
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'before-save-hook
-            'delete-trailing-whitespace)
+  (add-hook 'before-save-hook 'delete-trailing-whitespace)
 #+END_SRC
 
 ** Automatically run some commands after saving specific files
@@ -287,14 +290,17 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
   (defvar isamert/run-after-save-alist
     '(("~/.\\(Xresources\\|Xdefaults\\)" . "xrdb %; notify-send 'xrdb updated'")
       ("~/.Xresources.d/.*"              . "xrdb ~/.Xresources; notify-send 'xrdb updated'")
-      ("~/.config/sxhkd/sxhkdrc"         . "pkill -USR1 -x sxhkd; notify-send 'sxhkd updated'"))
+      ("~/.config/sxhkd/sxhkdrc"         . "pkill -USR1 -x sxhkd; notify-send 'sxhkd updated'")
+      ("~/.config/skhd/skhdrc"           . "skhd --reload; osascript -e 'display notification \"skhd updated\"'"))
     "File association list with their respective command.")
 
   (add-hook 'after-save-hook #'isamert/post-save-run-command)
+  (add-hook 'org-babel-post-tangle-hook #'isamert/post-save-run-command)
+
   (defun isamert/post-save-run-command ()
     "Execute the specified command after saving specified file."
     (let* ((fname (buffer-file-name))
-           (match (isamert/assoc-regexp fname isamert/run-after-save-alist 'expand-file-name)))
+           (match (isamert/assoc-regexp fname isamert/run-after-save-alist #'expand-file-name)))
       (when match
         (mapcar (lambda (pair) (shell-command (s-replace "%" fname (cdr pair)))) match))))
 #+END_SRC
@@ -342,7 +348,7 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
                           :width 'normal
                           :height isamert/font-height))
     ;; ...and load the theme
-    (load-theme 'doom-one t))
+    (load-theme 'doom-gruvbox-light t))
 
   (defun isamert/set-font-and-theme-config-in-frame (frame)
     (with-selected-frame frame
@@ -722,13 +728,10 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 #+END_SRC
 
 ** evil-unimpaired
-Adds some useful keybindings, like:
-
+This section is inspired by the unimpaired vim package.
   - ~[<SPC>~ ~]<SPC>~ Insert newline above/below.
   - ~[b~ ~]b~ Go to prev/next buffer.
   - ~[p~, ~]p~ Paste up/down.
-
-My extensions:
   - ~[r~, ~]r~ Move line up/down.
   - ~[d~, ~]d~ Delete line above/below.
 
@@ -808,9 +811,9 @@ Also (defined elsewhere):
 #+end_src
 ** evil-exchange
 Change two parts of the text.
-- Mark some text in visual mode and do =cx=.
-- Mark some other text in visual mode and do =cx= again to exchange two parts.
-- You can use ~cx<motion>~ instead of visual mode too.
+- Mark some text in visual mode and do =gx=.
+- Mark some other text in visual mode and do =gx= again to exchange two parts.
+- You can use ~gx<motion>~ instead of visual mode too.
 
 #+begin_src emacs-lisp
   (use-package evil-exchange
@@ -1236,38 +1239,39 @@ Insert links/images more intelligently,
 Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
 
 #+begin_src emacs-lisp
-  (use-package hydra
-    :ensure t
-    :config)
+   (use-package hydra
+     :ensure t
+     :config)
 
-  (use-package use-package-hydra
-    :after hydra
-    :ensure t)
+   (use-package use-package-hydra
+     :after hydra
+     :ensure t)
 
-  (use-package pretty-hydra
-    :after hydra
-    :ensure t
-    :config
-    (pretty-hydra-define appearance
-      (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
-      ("Display"
-       (("W" writeroom-mode "Writeroom mode" :toggle t)
-        ("n" display-line-numbers-mode "Line numbers" :toggle t)
-        ("+" default-text-scale-increase "Zoom In")
-        ("-" default-text-scale-decrease "Zoom Out"))
-       "Highlighting"
-       (("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
-        ("_" global-hl-line-mode "Highlight current line" :toggle t)
-        ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
-        ("w" isamert/whitespace-mode-toggle "Whitespaces"))
-       "Miscellaneous"
-       (("l" visual-line-mode "Wrap lines" :toggle t)
-        ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
-        ("g" fci-mode "Fill column" :toggle t)
-        ("<SPC>" nil "Quit" :color blue))))
+   (use-package pretty-hydra
+     :after hydra
+     :ensure t
+     :config
+     (pretty-hydra-define appearance
+       (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
+       ("Display"
+        (("W" writeroom-mode "Writeroom mode" :toggle t)
+         ("n" display-line-numbers-mode "Line numbers" :toggle t)
+         ("+" default-text-scale-increase "Zoom In")
+         ("-" default-text-scale-decrease "Zoom Out"))
+        "Highlighting"
+        (("g" diff-hl-mode "Highlight git diff" :toggle t)
+         ("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
+         ("=" global-hl-line-mode "Highlight current line" :toggle t)
+         ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
+         ("w" isamert/whitespace-mode-toggle "Whitespaces"))
+        "Miscellaneous"
+        (("l" visual-line-mode "Wrap lines" :toggle t)
+         ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
+         ("f" fci-mode "Fill column" :toggle t)
+         ("<SPC>" nil "Quit" :color blue))))
 
-    (evil-leader/set-key
-      "a" #'appearance/body))
+     (evil-leader/set-key
+       "a" #'appearance/body))
 #+end_src
 ** dired
 It just doesn't feel like ranger, I still resort to it. This configuration just mimics ranger to a limited extend. If I need to do some complicated file-management, I just fire up ranger.
@@ -2926,13 +2930,13 @@ Keybindings are generally set in-place, following have no context, so they are h
     (interactive)
     (split-window-right)
     (other-window 1)
-    (vterm 1))
+    (vterm t))
 
   (defun isamert/split-window-below-vterm ()
     (interactive)
     (split-window-below)
     (other-window 1)
-    (vterm 1))
+    (vterm t))
 
   (defun isamert/split-window-below ()
     (interactive)
@@ -3115,7 +3119,10 @@ Hit <C-j> after these and get:
 
 ** typescript
 #+begin_src emacs-lisp
-(use-package typescript-mode :ensure t)
+  (use-package typescript-mode
+    :ensure t
+    :config
+    (add-to-list 'auto-mode-alist '("\\.tsx\\'" . typescript-mode)))
 #+end_src
 
 ** json
@@ -3203,6 +3210,15 @@ Hit <C-j> after these and get:
     :ensure t)
 #+end_src
 
+** Docker stuff
+#+begin_src emacs-lisp
+  (use-package dockerfile-mode
+    :ensure t
+    :mode "Dockerfile\\'")
+  (use-package docker-compose-mode
+    :ensure t
+    :mode "docker-compose\\'")
+#+end_src
 * Misc functions
 ** My Android phone and Emacs
 I have an Android phone that is running [[https://termux.com/][Termux]] all the time. If you install Termux through [[https://www.f-droid.org/][F-Droid]] you can also install [[https://f-droid.org/en/packages/com.termux.api/][Termux:API]] package which brings bunch of commands like =termux-clipboard-set=, =termux-sms-list= etc. Much of the commands requires to be called in foreground, so they are not very useful over SSH but you can work around that by starting a =tmux= session on the phone and executing commands on that tmux session through SSH. This way I can send arbitrary text to my phones clipboard using the commands below.
@@ -3212,15 +3228,15 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
     "mia3"
     "Hostname or local address to connect to my phone by SSH.")
 
-  (defun well/send-text-to-my-phone (text)
+  (defun company/send-text-to-my-phone (text)
     "Send TEXT to my phones clipboard."
     (interactive "sText: ")
     (shell-command-to-string (format "ssh %s \"tmux pipe-pane -t0 'echo \\\"%s\\\" | termux-clipboard-set'\"" isamert/phone-hostname text)))
 
-  (defun well/send-clipboard-to-my-phone ()
+  (defun company/send-clipboard-to-my-phone ()
     "Send current clipboard content to my phones clipboard."
     (interactive)
-    (well/send-text-to-my-phone (current-kill 0)))
+    (company/send-text-to-my-phone (current-kill 0)))
 #+end_src
 
 ** people.org - Contact management
@@ -3794,22 +3810,25 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 Company/work related stuff.
 
 #+begin_src emacs-lisp
-  ;; TODO: Maybe just check if it's a Mac or not?
-  (defun well/is-well ()
+  (defun company/is-company ()
     "Return if current computer is Well computer or not."
-    (string= (treemacs-workspace->name (treemacs-current-workspace)) "Well"))
+    (string= (treemacs-workspace->name (treemacs-current-workspace)) "seller-ads"))
 #+end_src
 
 ** Automatically insert issue numbers into commit messages
 #+begin_src emacs-lisp
-  (defun well/git-commit-message-setup ()
-    "Insert the JIRA ticket number in front of the commit message.  If it already exists (like for example when you use --amend), does not do anything."
+  ;; TODO: maybe find all changed functions/files and append them into
+  ;; the buffer as default message so that I can simply construct my
+  ;; commit message based on those
+  (defun company/git-commit-message-setup ()
+    "Insert the JIRA ticket number in front of the commit message.
+  If it already exists (like for example when you use --amend),
+  does not do anything."
     (let* ((issue-prefix (--> (magit-get-current-branch)
-                              (split-string it "-")
-                              (string-join (-take 2 it) "-")
-                              (if (string-match "/well-he-arbiter/" (projectile-project-root))
-                                  (format "[%s] " it)
-                                (format "%s - " it))))
+                           (s-chop-prefix "feature/" it)
+                           (split-string it "-")
+                           (string-join (-take 2 it) "-")
+                           (format "%s - " it)))
            (issue-prefix-exists (save-excursion
                                   (goto-char (point-min))
                                   (search-forward issue-prefix nil t))))
@@ -3817,8 +3836,8 @@ Company/work related stuff.
         (goto-char (point-min))
         (insert issue-prefix))))
 
-  (when (well/is-well)
-    (add-hook 'git-commit-setup-hook 'well/git-commit-message-setup))
+  (when (company/is-company)
+    (add-hook 'git-commit-setup-hook 'company/git-commit-message-setup))
 #+end_src
 
 ** Open MR page
@@ -3826,7 +3845,7 @@ Company/work related stuff.
   (defun isamert/git-link-my-merge-requests ()
     "Open all of my merge requests in browser for the current repository."
     (interactive)
-    (browse-url (format "%s/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=%s" (isamert/git-link-homepage) "isamert.well")))
+    (browse-url (format "%s/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=%s" (isamert/git-link-homepage) "isamert.gurbuz")))
 
   (evil-leader/set-key
     "glm" 'isamert/git-link-my-merge-requests)
@@ -3836,7 +3855,7 @@ Company/work related stuff.
 LSP does not work well with UI projects. So I use tide for UI projects and LSP for backend projects.
 
 #+begin_src emacs-lisp
-  (defun well/setup-tide-mode ()
+  (defun company/setup-tide-mode ()
     (interactive)
     (lsp-mode -1)
     (tide-setup)
@@ -3849,24 +3868,17 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
     (lsp-ui-mode +1)
     (company-mode +1))
 
-  (defun well/setup-js ()
+  (defun company/setup-js ()
     "If it's an UI project, run tide.  Otherwise run lsp."
     (interactive)
     (if (string-match "/ui/" (or (isamert/current-project-root) ""))
         (progn (isamert/setup-indent 2)
-               (well/setup-tide-mode))
+               (company/setup-tide-mode))
       (lsp)))
 
-  (when (well/is-well)
+  (when (company/is-company)
     (remove-hook 'js-mode-hook 'lsp)
-    (add-hook 'js-mode-hook 'well/setup-js))
-#+end_src
-
-** Haskell env setup
-#+begin_src emacs-lisp
-  (remove-hook 'haskell-mode-hook 'lsp)
-  ;; FIXME: following brokes some stuff in org mode, probably need to use flycheck-hook or something
-  ;; (add-hook 'haskell-mode-hook (lambda () (flycheck-select-checker 'haskell-hlint)))
+    (add-hook 'js-mode-hook 'company/setup-js))
 #+end_src
 
 ** Misc bindings
@@ -3879,77 +3891,15 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
   (evil-leader/set-key
     "tw" 'isamert/toggle-side-trendyol-org-buffer)
 #+end_src
-** Token management
-#+begin_src emacs-lisp
-  ;; Setup:
-  ;;   (well/switch-{development,integration,validation})
-  ;;   (well/set-refresh-token)
-  ;;
-  ;; Getting:
-  ;;   (well/access-token)
-  ;;   (well/auth-token)
 
-
-  ;; Customization
-
-  (defcustom well/internal-auth-util-path
-    "~/Workspace/projects/shared/awslibrary/lib/auth/InternalAuthUtil.js"
-    "Path to InternalAuthUtil.js, see: https://wellco.atlassian.net/wiki/spaces/HA/pages/1344962568/Getting+admin+tokens")
-
-  ;; State
-
-  (defvar well/token-last-update
-    nil)
-
-  ;; Code
-
-  (defun well/switch-env (env)
-    (setenv "AWS_PROFILE" env)
-    (setenv "CI_ENVIRONMENT_NAME" env)
-    (when (not (getenv "REFRESH_TOKEN"))
-      (well/set-refresh-token)))
-
-  (defun well/switch-development ()
-    (interactive)
-    (well/switch-env "development"))
-
-  (defun well/switch-integration ()
-    (interactive)
-    (well/switch-env "integration"))
-
-  (defun well/switch-validation ()
-    (interactive)
-    (well/switch-env "validation"))
-
-  (defun well/set-refresh-token ()
-    (interactive)
-    (setenv "REFRESH_TOKEN" (read-string "REFRESH_TOKEN: ")))
-
-  (defun well/refresh-tokens ()
-    (interactive)
-    (-let [tokens (shell-command-to-string (format "node %s useTokens" well/internal-auth-util-path))]
-      (setenv "ACCESS_TOKEN" (cadr (s-match "accessToken:[ \n\t]+'\\(.*\\)'" tokens)))
-      (setenv "AUTH_TOKEN" (cadr (s-match "authToken:[ \n\t]+'\\(.*\\)'" tokens)))
-      (setq well/token-last-update (string-to-number (format-time-string "%s")))))
-
-  (defun well/tokens ()
-    (interactive)
-    (when (or (not well/token-last-update)
-              (< (+ well/token-last-update 290) (string-to-number (format-time-string "%s"))))
-      (well/refresh-tokens))
-    `(,(getenv "ACCESS_TOKEN") . ,(getenv "AUTH_TOKEN")))
-
-  (defun well/access-token ()
-    (interactive)
-    (car (well/tokens)))
-
-  (defun well/auth-token ()
-    (interactive)
-    (cdr (well/tokens)))
-#+end_src
 ** Jira
+
 #+begin_src emacs-lisp
   (evil-leader/set-key "oj" #'isamert/open-jira-issue-at-point)
+
+  ;;
+  ;; Actions for JIRA items using embark
+  ;;
 
   (use-package embark
     :config
@@ -3959,27 +3909,68 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
       ("b" isamert/jira-ticket-to-branch))
     (add-to-list 'embark-keymap-alist '(isamert/jira . isamert/embark-jira-actions)))
 
+  ;;
+  ;; Install required JIRA client
+  ;;
+
+  (use-package jiralib2
+    :ensure t
+    :config
+    (setq jiralib2-url "https://jtracker.trendyol.com")
+    (setq jiralib2-auth 'basic)
+    (setq jiralib2-user-login-name "isamert.gurbuz")
+    (setq jiralib2-token nil))
+
+  ;;
+  ;; My completing-read based JIRA utilities
+  ;;
+
+  (defvar isamert/jira-projects '(("SA" . 1000))
+    "List of projects that I enrolled in JIRA.
+  CDR of each item defines which ticket number the caching should
+  start.")
+
+  (defvar isamert/jira-base-branch "master"
+    "Brach to create feature branches from.")
+
+  (defvar isamert/jira-feature-branch-prefix "feature/"
+    "Prefix to prepend feature branch names.")
+
+  ;; Internal state
+
+  (defvar isamert/jira-my-issues '()
+    "All of my issues")
+  (defvar isamert/jira-new-issues '()
+    "New jira issues")
+
+  ;; Functions
 
   (defun isamert/open-jira-issue (issue-number)
     "Open given Jira ISSUE-NUMBER."
     (interactive "sIssue: ")
-    (browse-url (format "https://wellco.atlassian.net/browse/%s" (car (s-split " " issue-number)))))
+    (browse-url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number)))))
 
   (defun isamert/open-jira-issue-at-point ()
     "Open issue at point."
     (interactive)
     (isamert/open-jira-issue (thing-at-point 'symbol)))
 
-
-  (defvar isamert/jira-my-issues "All of my issues")
-  (defvar isamert/jira-new-issues "New jira issues")
   (defun isamert/jira-refresh-issue-lists ()
     (interactive)
-    (message "Updating my issues...")
+    (message ">> Updating my issues...")
     (setq isamert/jira-my-issues (jiralib2-jql-search "assignee = currentUser()"))
-    (message "Updating new issues...")
-    (setq isamert/jira-new-issues (jiralib2-jql-search "project = \"SIR\" AND issuekey >= \"SIR-2000\""))
-    (message "Done."))
+    (message ">> Updating new issues...")
+    (setq isamert/jira-new-issues '())
+    (mapcar
+     (lambda (project)
+       (setq
+        isamert/jira-new-issues
+        (thread-last (format "project = \"%s\" AND issuekey >= \"%s-%s\""
+                             (car project) (car project) (cdr project))
+          (jiralib2-jql-search)
+          (append isamert/jira-new-issues))))
+     isamert/jira-projects)
+    (message ">> Updating new issues... Done."))
 
   (defun isamert/jira-list-issues ()
     (interactive)
@@ -3996,20 +3987,92 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
                          (s-replace "---" "-")
                          (s-replace "--" "-")
                          (s-downcase)
-                         (s-replace-regexp "^sir" "SIR")
+                         (isamert/s-upcase-until "-")
+                         (s-prepend isamert/jira-feature-branch-prefix)
                          (read-string "Branch name: "))))
       (message "Updating...")
-      (magit-branch-checkout "develop")
+      (magit-branch-checkout isamert/jira-base-branch)
       (magit-pull-from-upstream nil)
       (message "Creating branch...")
-      (magit-branch-and-checkout branch-name "develop")
+      (magit-branch-and-checkout branch-name isamert/jira-base-branch)
       (message "Currently on %s." (magit-get-current-branch))))
+
+  ;; Utility
+
+  (defun isamert/s-upcase-until (until s)
+    (let ((end (s-index-of until s)))
+      (concat
+       (s-upcase (substring s 0 end))
+       (substring s end))))
 #+end_src
 
-** logview
+** Token management
+- ~DEPRECATED~
+
 #+begin_src emacs-lisp
-  (use-package logview
-    :ensure t
-    :config
-    (setq datetime-timezone 'Europe/Istanbul))
+  ;; Setup:
+  ;;   (company/switch-{development,integration,validation})
+  ;;   (company/set-refresh-token)
+  ;;
+  ;; Getting:
+  ;;   (company/access-token)
+  ;;   (company/auth-token)
+
+
+  ;; Customization
+
+  (defcustom company/internal-auth-util-path
+    "~/Workspace/projects/shared/awslibrary/lib/auth/InternalAuthUtil.js"
+    "Path to InternalAuthUtil.js, see: https://wellco.atlassian.net/wiki/spaces/HA/pages/1344962568/Getting+admin+tokens")
+
+  ;; State
+
+  (defvar company/token-last-update
+    nil)
+
+  ;; Code
+
+  (defun company/switch-env (env)
+    (setenv "AWS_PROFILE" env)
+    (setenv "CI_ENVIRONMENT_NAME" env)
+    (when (not (getenv "REFRESH_TOKEN"))
+      (company/set-refresh-token)))
+
+  (defun company/switch-development ()
+    (interactive)
+    (company/switch-env "development"))
+
+  (defun company/switch-integration ()
+    (interactive)
+    (company/switch-env "integration"))
+
+  (defun company/switch-validation ()
+    (interactive)
+    (company/switch-env "validation"))
+
+  (defun company/set-refresh-token ()
+    (interactive)
+    (setenv "REFRESH_TOKEN" (read-string "REFRESH_TOKEN: ")))
+
+  (defun company/refresh-tokens ()
+    (interactive)
+    (-let [tokens (shell-command-to-string (format "node %s useTokens" company/internal-auth-util-path))]
+      (setenv "ACCESS_TOKEN" (cadr (s-match "accessToken:[ \n\t]+'\\(.*\\)'" tokens)))
+      (setenv "AUTH_TOKEN" (cadr (s-match "authToken:[ \n\t]+'\\(.*\\)'" tokens)))
+      (setq company/token-last-update (string-to-number (format-time-string "%s")))))
+
+  (defun company/tokens ()
+    (interactive)
+    (when (or (not company/token-last-update)
+              (< (+ company/token-last-update 290) (string-to-number (format-time-string "%s"))))
+      (company/refresh-tokens))
+    `(,(getenv "ACCESS_TOKEN") . ,(getenv "AUTH_TOKEN")))
+
+  (defun company/access-token ()
+    (interactive)
+    (car (company/tokens)))
+
+  (defun company/auth-token ()
+    (interactive)
+    (cdr (company/tokens)))
 #+end_src

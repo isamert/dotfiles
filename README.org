@@ -943,7 +943,7 @@ This is the global keybinding manager.
   XF86Audio{Prev,Next}
       mpc {prev,next}
 #+end_src
-** shkd
+** skhd
 This is the global keybinding manager for OSX.
 
 #+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
