@@ -1542,13 +1542,14 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
     ;; ^ By default the modestring is too long
 
     (evil-leader/set-key
-      "ll" 'persp-switch-last
-      "ls" 'persp-switch
-      "lk" 'persp-kill
-      "lS" 'persp-state-save
-      "lL" 'persp-state-load
-      "lr" 'persp-rename
-      "lm" 'isamert/persp-toggle-modestring)
+      "ll" #'persp-switch-last
+      "ls" #'persp-switch
+      "lk" #'persp-kill
+      "lS" #'persp-state-save
+      "lL" #'persp-state-load
+      "lr" #'persp-rename
+      "li" #'isamert/initialize-perspectives
+      "lm" #'isamert/persp-toggle-modestring)
     ;; Manually saving is probably a better idea
     ;; (add-hook 'kill-emacs-hook #'persp-state-save)
     (persp-mode t))
