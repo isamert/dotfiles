@@ -361,6 +361,17 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
        #'isamert/set-font-and-theme-config-in-frame)
     ;; Not in daemon mode, set theme etc directly
     (isamert/set-font-and-theme-config))
+
+  ;; https://www.reddit.com/r/emacs/comments/30b67j/how_can_you_reset_emacs_to_the_default_theme/cprkyl0?utm_source=share&utm_medium=web2x&context=3
+  (defun isamert/switch-theme (theme)
+    "Switch to the THEME.  Also disable already enabled themes first."
+    (interactive
+     (list
+      (intern (completing-read "Load custom theme: "
+                               (mapcar 'symbol-name
+                                       (custom-available-themes))))))
+    (mapc #'disable-theme custom-enabled-themes)
+    (load-theme theme t))
 #+END_SRC
 
 ** all-the-icons
@@ -1301,6 +1312,21 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (evil-set-initial-state 'image-mode 'normal)
   (evil-define-key 'normal image-mode-map
     "q" #'evil-delete-buffer)
+#+end_src
+
+** calendar
+#+begin_src emacs-lisp :lexical no
+  ;; Start the week from Monday
+  (setq calendar-week-start-day 1)
+
+  ;; lng and lat for my location, to get sunrise/sunset times on my
+  ;; calendar (press S)
+  (setq calendar-latitude 41.0082)
+  (setq calendar-longitude 28.9784)
+
+  ;; Use 24-hour format to display times
+  (setq calendar-time-display-form
+        '(24-hours ":" minutes (if time-zone " (") time-zone (if time-zone ")")))
 #+end_src
 
 ** tramp
