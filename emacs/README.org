@@ -1134,6 +1134,10 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
                          '(("[ ]" . "☐")
                            ("[X]" . "☑" )
                            ("[-]" . "❍" )
+                           ("#+begin:" . "»")
+                           ("#+end" . "«")
+                           ("#+BEGIN:" . "»")
+                           ("#+END" . "«")
                            ("#+begin_src" . "»" )
                            ("#+end_src" . "«" )
                            ("#+BEGIN_SRC" . "»" )
@@ -1245,6 +1249,54 @@ Insert links/images more intelligently,
     (eq (shell-command (format "%s &>/dev/null" (isamert/clipboard-command))) 0))
 #+end_src
 
+** Project management
+I'm doing all of my project management in org-mode. Here you can find some supplementary functionality that makes project management within org-mode easy.
+
+*** Do a regexp search in a project inside a org dynamic block
+Here I create a dynamic block for org-mode, named ~project-grep~. You can create a block like the following:
+
+#+begin_example
+  ,#+begin: project-grep :root "~/Workspace/projects/dotfiles" :regexp "TODO"
+  ,#+end
+#+end_example
+
+When you invoke =C-c C-c= on that block, it will automatically run given REGEXP in given ROOT and create a nicely formatted table containing all the results. Results are formatted into org-links you can easily jump into.
+
+#+begin_src emacs-lisp
+  (defun org-dblock-write:project-grep (params)
+    "Do a regular expression search in given project.
+  PARAMS may contain `:root' or `:regexp'.
+
+  `:root' - Where to run the search. If it's skipped, it's
+  `default-directory'.
+
+  `:regexp' - Regexp to grep in given folder. If it's skipped it
+  searches for TODO/FIXME items in given folder."
+    (let* ((root (or (plist-get params :root) default-directory))
+           (regexp (or (plist-get params :regexp) "(//|#|--|;)+ ?(TODO|FIXME)"))
+           (default-directory root))
+      (--map (insert (format "%s | " it)) '("" "ID" "File" "Content"))
+      (insert "\n")
+      (insert "|-|\n")
+      (--each-indexed
+          (s-split
+           "\n"
+           (shell-command-to-string (format "rg --line-number '%s'" regexp))
+           'omit-nulls)
+        (let* ((data (s-split-up-to ":" it 2))
+               (file (s-join ":" (-take 2 data)))
+               (file-link (concat "[[file:" default-directory "/" (s-replace ":" "::" file) "][" file "]]"))
+               (content (s-replace "|" " \\vert " (-last-item data))))
+          (insert "| ")
+          (insert (format "%s" it-index))
+          (insert " | ")
+          (insert file-link)
+          (insert " | ")
+          (insert content)
+          (insert " |\n"))))
+    (delete-char 1)
+    (org-table-align))
+#+end_src
 * Other packages
 ** Hydra
 Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
