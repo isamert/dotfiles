@@ -381,17 +381,6 @@ You should run =all-the-icons-install-fonts= command after this.
 (use-package all-the-icons :ensure t)
 #+END_SRC
 
-** fira-code-mode (font ligatures)
-This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known code symbols. This mode also saves the length of the chars, so it does not break spacing.
-- After the first install, you need to call =fira-code-mode-install-fonts= and then maybe restart Emacs etc.
-
-  #+begin_src emacs-lisp
-    (use-package fira-code-mode
-      :ensure t
-      :config
-      (global-fira-code-mode))
-  #+end_src
-
 ** prettify-symbols-mode
 I make use of this mode quite frequently throughout the configuration.
 
@@ -411,6 +400,19 @@ I make use of this mode quite frequently throughout the configuration.
               ,pairs)
         (prettify-symbols-mode 1))))
 #+end_src
+** fira-code-mode (font ligatures)
+This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known code symbols. This mode also saves the length of the chars, so it does not break spacing.
+- After the first install, you need to call =fira-code-mode-install-fonts= and then maybe restart Emacs etc.
+
+  #+begin_src emacs-lisp :tangle no
+    (use-package fira-code-mode
+      :ensure t
+      :config
+      (setq fira-code-mode-disabled-ligatures '(":"))
+      (add-hook 'prog-mode-hook 'fira-code-mode)
+      (add-hook 'org-mode-hook 'fira-code-mode))
+  #+end_src
+
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
 
@@ -543,9 +545,12 @@ Some small packages that enriches editing experience visually. I don't enable al
 #+BEGIN_SRC emacs-lisp
   ;; Disable evil bindings in insert mode. This needs to be called
   ;; before loading evil mode
-  (setq evil-disable-insert-state-bindings t)
 
   (use-package evil
+    :init
+    (setq evil-want-integration t)
+    (setq evil-want-keybinding nil)
+    (setq evil-disable-insert-state-bindings t)
     :ensure t
     :config
     ;; But I want some default evil bindings in insert mode, so just
@@ -560,8 +565,6 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-define-key 'normal 'global
       "Q" #'evil-quit)
 
-    (setq evil-want-integration t)
-    (setq evil-want-keybinding t)
     ;; When I paste something in visual mode, I don't want it to take
     ;; over the kill ring I also use evil-exchange, which eliminates the
     ;; need for this totally
@@ -592,6 +595,15 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-mode 1))
 #+END_SRC
 
+** evil-collection
+#+begin_src emacs-lisp :lexical no
+  (use-package evil-collection
+    :after evil
+    :ensure t
+    :config
+    (evil-collection-init 'calendar)
+    (evil-collection-init 'eww))
+#+end_src
 ** evil-leader
 Enable leader key and bind some keys.
 
@@ -1367,7 +1379,7 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 #+end_src
 
 ** calendar
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   ;; Start the week from Monday
   (setq calendar-week-start-day 1)
 
@@ -1379,6 +1391,9 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   ;; Use 24-hour format to display times
   (setq calendar-time-display-form
         '(24-hours ":" minutes (if time-zone " (") time-zone (if time-zone ")")))
+
+  ;; Show calendar at the bottom
+  (isamert/shackle-window "Calendar" 0.2)
 #+end_src
 
 ** tramp
@@ -2745,6 +2760,8 @@ I try to maximize my Emacs usage which brings it's own benefits and downsides wh
 
     ;; To apply hooks to all existing entries, use: elfeed-apply-hooks-now
 
+    (evil-leader/set-key "ee" #'elfeed)
+
     (evil-define-key 'normal elfeed-search-mode-map
       (kbd "RET") 'elfeed-search-show-entry
       (kbd "S-<return>") 'elfeed-search-browse-url
@@ -2876,7 +2893,8 @@ Manage media and streams through =completing-read=.
              :fetcher github
              :repo "isamert/orgmdb.el")
     :config
-    (setq orgmdb-omdb-apikey isamert/orgmdb-omdb-apikey))
+    (setq orgmdb-omdb-apikey isamert/orgmdb-omdb-apikey)
+    (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-rating metascore)))
 #+end_src
 ** erc (IRC client)
 IRC client for Emacs.
@@ -3502,6 +3520,10 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "Get day of week as number."
     (string-to-number (format-time-string "%u")))
 
+  (defun isamert/d ()
+    "Get day of month as number."
+    (string-to-number (format-time-string "%d")))
+
   (defun isamert/date (date)
     "Display the time described by DATE.
   DATE can be 'now', 'yesterday', 'two days ago' etc."
@@ -3602,6 +3624,51 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (widen)
     (goto-char (org-find-exact-headline-in-buffer text))
     (org-narrow-to-subtree))
+
+  ;;
+  ;; Template utils
+  ;;
+
+  ;; Source: https://gist.github.com/caiorss/49585e022d8462db5e62
+  (defmacro isamert/s-interpolated (str)
+    "Elisp string interpolation.
+  Uses #{elisp-code} syntax."
+    (let ((exprs nil))
+      (with-temp-buffer
+        (insert str)
+        (goto-char 1)
+        (while (re-search-forward "#{" nil t 1)
+          (let ((here (point))
+                (emptyp (eql (char-after) ?})))
+            (unless  emptyp (push (read (buffer-substring (point) (progn (forward-sexp 1) (point)))) exprs))
+            (delete-region (- here 2) (progn (search-forward "}") (point)))
+            (unless emptyp (insert "%s"))
+            (ignore-errors (forward-char 1))))
+        (append (list 'format (buffer-string)) (reverse exprs)))))
+
+  (defmacro isamert/when-weekday (template &rest template-args)
+    `(when (<= (isamert/u) 5)
+       (s-trim (isamert/s-interpolated ,template ,@template-args))))
+
+  (defmacro isamert/when-weekday-n (n template &rest template-args)
+    `(when (= (isamert/u) ,n)
+       (s-trim (isamert/s-interpolated ,template ,@template-args))))
+
+  (defmacro isamert/when-monthday-n (n template &rest template-args)
+    `(when (= (isamert/d) ,n)
+       (s-trim (isamert/s-interpolated ,template ,@template-args))))
+
+  (defmacro isamert/when-weekend (template &rest template-args)
+    `(when (> (isamert/u) 5)
+       (s-trim (isamert/s-interpolated ,template ,@template-args))))
+
+  (defmacro isamert/when-saturday (template &rest template-args)
+    `(when (> (isamert/u) 6)
+       (s-trim (isamert/s-interpolated ,template ,@template-args))))
+
+  (defmacro isamert/when-sunday (template &rest template-args)
+    `(when (> (isamert/u) 7)
+       (s-trim (isamert/s-interpolated ,template ,@template-args))))
 #+end_src
 
 ** Scratch/temporary buffers in side windows
