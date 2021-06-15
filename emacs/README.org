@@ -3084,12 +3084,34 @@ The following enables =CamelCase= aware editing operations.
     }"
     (interactive)
     (if (use-region-p)
-      (shell-command-on-region
-       (region-beginning)
-       (region-end)
-       "node -e 'console.log(JSON.stringify(eval(\"(\" + require(\"fs\").readFileSync(0, \"utf-8\") + \")\"), null, 2))'"
-       (current-buffer)
-       t)
+        (shell-command-on-region
+         (region-beginning)
+         (region-end)
+         "node -e 'console.log(JSON.stringify(eval(\"(\" + require(\"fs\").readFileSync(0, \"utf-8\") + \")\"), null, 2))'"
+         (current-buffer)
+         t)
+      (user-error "Select something first")))
+
+  (defun isamert/convert-json-to-js-object ()
+    "Convert selected JS object into JSON object.
+  Example:
+    {
+      \"a\": 3,
+      \"b\": 5
+    }
+  is converted into
+    {
+      a: 3,
+      b: 5,
+    }"
+    (interactive)
+    (if (use-region-p)
+        (shell-command-on-region
+         (region-beginning)
+         (region-end)
+         "node -e 'console.log(require(\"util\").inspect(JSON.parse(require(\"fs\").readFileSync(0, \"utf-8\")), false, null))'"
+         (current-buffer)
+         t)
       (user-error "Select something first")))
 #+end_src
 ** java
