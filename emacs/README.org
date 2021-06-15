@@ -596,11 +596,16 @@ Some small packages that enriches editing experience visually. I don't enable al
 #+END_SRC
 
 ** evil-collection
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (use-package evil-collection
     :after evil
     :ensure t
     :config
+    (evil-collection-init 'elfeed)
+    (evil-collection-init 'consult)
+    (evil-collection-init 'vterm)
+    (evil-collection-init 'magit)
+    (evil-collection-init 'magit-todos)
     (evil-collection-init 'calendar)
     (evil-collection-init 'eww))
 #+end_src
@@ -1405,6 +1410,14 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
         ;; ^ only try to handle git, this speeds up things a little bit
 #+end_src
 
+** eww
+#+begin_src emacs-lisp
+  (use-package eww
+    :ensure t
+    :config
+    (setq browse-url-browser-function 'eww-browse-url))
+#+end_src
+
 ** treemacs
 #+BEGIN_SRC emacs-lisp
   (use-package treemacs
@@ -1556,38 +1569,6 @@ A package that shows key combinations. (for example press C-x and wait) It also 
       (vc-refresh-state))
     (advice-add 'magit-checkout :after #'isamert/vc-refresh-state-advice)
 
-    (isamert/define-key magit-status-mode-map
-     "["  'magit-section-backward
-     "]"  'magit-section-forward
-     "("  'magit-section-backward-sibling
-     ")"  'magit-section-forward-sibling
-     "za" 'magit-section-toggle
-     "zm" 'magit-section-show-level-1
-     "zR" 'magit-section-show-level-4
-     "zA" 'magit-section-toggle-children
-     "j"  'next-line
-     "k"  'previous-line
-     "v"  'set-mark-command
-     "V"  'set-mark-command
-     "o"  'magit-diff-visit-file
-     "K"  'magit-discard)
-
-    (isamert/define-key magit-log-mode-map
-     "["  'magit-section-backward
-     "]"  'magit-section-forward
-     "("  'magit-section-backward-sibling
-     ")"  'magit-section-forward-sibling
-     "za" 'magit-section-toggle
-     "zm" 'magit-section-show-level-1
-     "zR" 'magit-section-show-level-4
-     "zA" 'magit-section-toggle-children
-     "j"  'next-line
-     "k"  'previous-line
-     "v"  'set-mark-command
-     "V"  'set-mark-command
-     "o"  'magit-diff-visit-file
-     "K"  'magit-discard)
-
     (evil-leader/set-key
       ;; magit/git
       "gs" 'magit-status
@@ -1597,6 +1578,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
       "gr" 'magit-reset
       "gcc" 'magit-checkout
       "gcf" 'magit-file-checkout
+      "gB" 'magit-blame
       "gb" 'magit-branch))
 #+END_SRC
 
@@ -1605,22 +1587,8 @@ Show TODO/FIXME etc in magit-status buffer.
 #+BEGIN_SRC emacs-lisp
   (use-package magit-todos
     :ensure t
-    :init (magit-todos-mode 1)
-    :bind
-    (:map magit-todos-section-map
-      ("["  . 'magit-section-backward)
-      ("]"  . 'magit-section-forward)
-      ("("  . 'magit-section-backward-sibling)
-      (")"  . 'magit-section-forward-sibling)
-      ("za" . 'magit-section-toggle)
-      ("zm" . 'magit-section-show-level-1)
-      ("zR" . 'magit-section-show-level-4)
-      ("zA" . 'magit-section-toggle-children)
-      ("j"  . 'next-line)
-      ("k"  . 'previous-line))
-    (:map magit-todos-item-section-map
-      ("j" . 'next-line)
-      ("k" . 'previous-line)))
+    :config
+    (magit-todos-mode 1))
 #+END_SRC
 
 ** perspective.el
@@ -2170,20 +2138,6 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (use-package vterm
     :ensure t
     :config
-    (define-key vterm-mode-map (kbd "C-u") 'vterm-send-C-u)
-    (evil-define-key 'insert vterm-mode-map
-      (kbd "C-]") 'vterm-send-escape
-      (kbd "C-w") 'vterm-send-C-w
-      (kbd "C-t") 'vterm-send-C-t
-      (kbd "C-c") 'vterm-send-C-c
-      (kbd "C-r") 'vterm-send-C-r
-      (kbd "M-\\") 'vterm-send-M-\\
-      (kbd "M--") 'vterm-send-M--)
-    (evil-define-key 'normal vterm-mode-map
-      "p"  'vterm-yank
-      "a"  'evil-emacs-state
-      "i"  'evil-emacs-state)
-
     (evil-leader/set-key
       "tt" 'isamert/vterm-toggle-dedicated
       "tj" 'isamert/jump-to-visible-vterm
@@ -2757,68 +2711,20 @@ I try to maximize my Emacs usage which brings it's own benefits and downsides wh
                                      ("python"   (programming python))
                                      ("haskell"  (programming haskell))))
 
-
     ;; To apply hooks to all existing entries, use: elfeed-apply-hooks-now
 
-    (evil-leader/set-key "ee" #'elfeed)
+    (defun isamert/elfeed-search-browse-url-in-default-browser ()
+      "Open URL in the default browser."
+      (interactive)
+      (let ((browse-url-browser-function 'browse-url-default-browser))
+        (elfeed-search-browse-url)))
 
-    (evil-define-key 'normal elfeed-search-mode-map
-      (kbd "RET") 'elfeed-search-show-entry
-      (kbd "S-<return>") 'elfeed-search-browse-url
-      "o" 'elfeed-search-browse-url
-      "y" 'elfeed-search-yank
+    ;; o -> Open link in eww
+    ;; O -> Open link in default web browser
+    (evil-define-key 'normal 'elfeed-search-mode-map
+      "O" #'isamert/elfeed-search-browse-url-in-default-browser)
 
-      ;; refresh
-      "R" 'elfeed-search-fetch
-      "r" 'elfeed-search-update--force
-
-      ;; filter
-      ;;   - examples:
-      ;;     - +tag OR -tag (unread is also a tag)
-      ;;     - #number-of-entries-limit (like #20)
-      ;;     - !inverse-regex (!x?emacs will filter out titles containing x?emacs regex)
-      ;;     - =regex (entries that contains the regex will be shown)
-      ;;     - +unread +youtube =emacs #10 @5-months-ago
-      "s" 'elfeed-search-live-filter
-      "S" 'elfeed-search-set-filter
-
-      "q" 'elfeed-search-quit-window)
-
-    (evil-define-key '(normal visual) elfeed-search-mode-map
-      "+" 'elfeed-search-tag-all
-      "-" 'elfeed-search-untag-all
-      "t" 'elfeed-search-tag-all
-      "T" 'elfeed-search-untag-all
-      "A" 'elfeed-search-tag-all-unread
-      "a" 'elfeed-search-untag-all-unread
-      "U" 'elfeed-search-tag-all-unread
-      "u" 'elfeed-search-untag-all-unread)
-
-    (evil-define-key 'normal elfeed-show-mode-map
-      (kbd "S-<return>") 'elfeed-show-visit
-      "go" 'elfeed-show-visit
-
-      (kbd "<tab>") 'elfeed-show-next-link
-
-      ;; filter
-      "s" 'elfeed-show-new-live-search
-
-      ;; +/- like the tag search syntax
-      "+" 'elfeed-show-tag
-      "-" 'elfeed-show-untag
-      "t" 'elfeed-show-tag
-      "T" 'elfeed-show-untag
-
-      "]]" 'elfeed-show-next
-      "[[" 'elfeed-show-prev
-      "gj" 'elfeed-show-next
-      "gk" 'elfeed-show-prev
-
-      ;; refresh
-      "gr" 'elfeed-show-refresh
-
-      ;; quit
-      "q" 'elfeed-kill-buffer))
+    (evil-leader/set-key "ee" #'elfeed))
 #+end_src
 
 ** empv (music/media/radio/youtube management)
