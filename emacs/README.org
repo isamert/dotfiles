@@ -466,7 +466,7 @@ Colors parentheses depending on their dept.
 
 ** Spaces instead of tabs
 #+BEGIN_SRC emacs-lisp
-  (setq-default tab-width 4)
+  (setq-default tab-width 2)
   (setq-default indent-tabs-mode nil)
 #+END_SRC
 
@@ -2159,10 +2159,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (interactive)
     (vterm-send-key "-" nil t nil))
 
-  ;; FIXME: only apply first found, dont use --map
-  ;; FIXME: return true if window found
   (defun isamert/select-window-with-buffer (buffer-name)
-    (--map (-as-> (window-buffer it) buffer
+    (--first (-as-> (window-buffer it) buffer
                   (buffer-name buffer)
                   (when (string-match buffer-name buffer)
                     (select-window it)))
@@ -2181,15 +2179,15 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 
   (defun isamert/send-selected-text-to-visible-vterm (start end)
     (interactive "r")
-    (when (use-region-p)
-      (isamert/run-command-on-visible-vterm (buffer-substring start end))))
+    (if (use-region-p)
+        (isamert/run-command-on-visible-vterm (buffer-substring-no-properties start end))
+      (isamert/run-command-on-visible-vterm (s-trim (buffer-substring-no-properties (line-beginning-position) (line-end-position))))))
 
   (defvar isamert/vterm-run-history '())
   (defvar isamert/jump-to-vterm-last-window nil)
   (defconst isamert/vterm-dedicated-buffer-name "*vterm-dedicated*")
 
-  ;; FIXME: shackle does not work, it doesnt respect the 40
-  (isamert/shackle-window isamert/vterm-dedicated-buffer-name 40)
+  (isamert/shackle-window isamert/vterm-dedicated-buffer-name 30)
 
   (defun isamert/vterm-toggle-dedicated ()
     "Open/toggle a dedicated vterm buffer."
@@ -2208,7 +2206,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 
   (defun isamert/jump-to-visible-vterm ()
     "Jump to the visible vterm window.
-  When invoked in a vterm window, return back to last window that this command is invoked from"
+  When invoked in a vterm window, return back to last window that
+  this command is invoked from."
     (interactive)
     (cond
      ((string-match ".*vterm.*" (buffer-name (window-buffer (selected-window))))
@@ -2247,12 +2246,13 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   Tmux session is infered from isamert/select-tmux-session"
     (interactive)
     (isamert/select-tmux-session-if-needed)
-    (--> (persp-name (persp-curr))
-         (format "tmux list-windows -t%s | grep %s" isamert/tmux-session it)
-         (shell-command-to-string it)
-         (car (split-string it ":"))
-         (format "tmux select-window -t%s:%s" isamert/tmux-session it)
-         (shell-command-to-string it)))
+    (->> (persp-name (persp-curr))
+      (format "tmux list-windows -t%s | grep %s" isamert/tmux-session)
+      (shell-command-to-string)
+      (s-split ":")
+      (car)
+      (format "tmux select-window -t%s:%s" isamert/tmux-session)
+      (shell-command-to-string)))
 
   (defun isamert/auto-focus-tmux-advice-after (old-function &rest arguments)
     (apply old-function arguments)
@@ -2741,8 +2741,9 @@ Manage media and streams through =completing-read=.
     (load "radio-channels")
     (setq empv-radio-channels isamert/radio-channels)
     (setq empv-base-directory "~/Music")
-    (setq empv-invidious-instance "https://invidious.tube/api/v1" )
+    (setq empv-invidious-instance "https://ytprivate.com/api/v1")
     ;; ^ alt: https://invidious.exonip.de/api/v1
+    ;; also see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
     (evil-leader/set-key
       "erp" #'empv-play
@@ -3070,6 +3071,27 @@ The following enables =CamelCase= aware editing operations.
 (add-hook 'js-mode-hook 'subword-mode)
 #+end_src
 
+*** Helper functions
+#+begin_src emacs-lisp
+  (defun isamert/convert-js-object-to-json ()
+    "Convert selected JS object into JSON object.
+  Example:
+    {a: 3, b: 5}
+  is converted into
+    {
+      \"a\": 3,
+      \"b\": 5
+    }"
+    (interactive)
+    (if (use-region-p)
+      (shell-command-on-region
+       (region-beginning)
+       (region-end)
+       "node -e 'console.log(JSON.stringify(eval(\"(\" + require(\"fs\").readFileSync(0, \"utf-8\") + \")\"), null, 2))'"
+       (current-buffer)
+       t)
+      (user-error "Select something first")))
+#+end_src
 ** java
 =lsp-java= automatically installs =eclipse.jdt.ls= to get lsp.
 #+BEGIN_SRC emacs-lisp
@@ -3669,22 +3691,33 @@ Here I define two important functions and their helpers.  The following function
 - http://blog.binchen.org/posts/easy-indentation-setup-in-emacs-for-web-development.html
 
 #+BEGIN_SRC emacs-lisp
-(defun isamert/setup-indent (n)
-  (interactive "nHow many spaces do you want? ")
-  (setq-local tab-width n)
-  ;; java/c/c++
-  (setq-local c-basic-offset n)
-  ;; web development
-  (setq-local coffee-tab-width n) ; coffeescript
-  (setq-local javascript-indent-level n) ; javascript-mode
-  (setq-local js-indent-level n) ; js-mode
-  ;;(setq-local js2-basic-offset n) ; js2-mode, in latest js2-mode, it's alias of js-indent-level
-  (setq-local web-mode-markup-indent-offset n) ; web-mode, html tag in html file
-  (setq-local web-mode-css-indent-offset n) ; web-mode, css in html file
-  (setq-local web-mode-code-indent-offset n) ; web-mode, js code in html file
-  (setq-local css-indent-offset n) ; css-mode
-  (setq-local typescript-indent-level n) ; typescript-mode
-  (message "OK!"))
+  (defun isamert/setup-indent-local (n)
+    (interactive "nHow many spaces do you want? ")
+    (setq-local tab-width n)
+    (setq-local c-basic-offset n)
+    (setq-local coffee-tab-width n) ; coffeescript
+    (setq-local javascript-indent-level n) ; javascript-mode
+    (setq-local js-indent-level n) ; js-mode
+    (setq-local web-mode-markup-indent-offset n) ; web-mode, html tag in html file
+    (setq-local web-mode-css-indent-offset n) ; web-mode, css in html file
+    (setq-local web-mode-code-indent-offset n) ; web-mode, js code in html file
+    (setq-local css-indent-offset n) ; css-mode
+    (setq-local typescript-indent-level n) ; typescript-mode
+    (message "OK!"))
+
+  (defun isamert/setup-indent-global (n)
+    (interactive "nHow many spaces do you want? ")
+    (setq tab-width n)
+    (setq c-basic-offset n)
+    (setq coffee-tab-width n) ; coffeescript
+    (setq javascript-indent-level n) ; javascript-mode
+    (setq js-indent-level n) ; js-mode
+    (setq web-mode-markup-indent-offset n) ; web-mode, html tag in html file
+    (setq web-mode-css-indent-offset n) ; web-mode, css in html file
+    (setq web-mode-code-indent-offset n) ; web-mode, js code in html file
+    (setq css-indent-offset n) ; css-mode
+    (setq typescript-indent-level n) ; typescript-mode
+    (message "OK!"))
 #+END_SRC
 
 ** Current file functionality
