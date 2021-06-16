@@ -605,6 +605,8 @@ Some small packages that enriches editing experience visually. I don't enable al
     :after evil
     :ensure t
     :config
+    (evil-collection-init 'dired)
+    (evil-collection-init 'grep)
     (evil-collection-init 'elfeed)
     (evil-collection-init 'consult)
     (evil-collection-init 'vterm)
@@ -1357,8 +1359,17 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
      (evil-leader/set-key
        "a" #'appearance/body))
 #+end_src
+** wgrep
+With this package, you can make =grep= buffers editable and your edits can be applied to the files itself. Also =embark= has a feature where you can export the current completing-read results into a grep buffer, the action is called =embark-export= and it works on =consult-ripgrep= etc.
+- Do ~C-c C-p~ (or =i=, enabled by evil-collection) on a =grep= buffer to make it editable.
+- Do ~C-j~ or ~C-k~ (enabled by evil-collection, by default you need to use =n=) to peek at next/prev instance.
+
+#+begin_src emacs-lisp :lexical no
+  (use-package wgrep
+    :ensure t)
+#+end_src
 ** dired
-It just doesn't feel like ranger, I still resort to it. This configuration just mimics ranger to a limited extend. If I need to do some complicated file-management, I just fire up ranger.
+There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
 #+begin_src emacs-lisp
   (defun isamert/dired-up-directory ()
@@ -1372,11 +1383,14 @@ It just doesn't feel like ranger, I still resort to it. This configuration just 
         ls-lisp-use-insert-directory-program nil)
   (put 'dired-find-alternate-file 'disabled nil)
 
+  ;; Other bindings are defined within evil-collection/dired
+  ;; Following gives more ranger-y feeling to dired
   (evil-define-key 'normal dired-mode-map
     "h" 'isamert/dired-up-directory
-    "l" 'dired-find-alternate-file
-    "gg" 'evil-goto-first-line
-    "G" 'evil-goto-line)
+    "l" 'dired-find-alternate-file)
+
+  ;; Add icons to dired buffers
+  (add-hook 'dired-mode-hook 'treemacs-icons-dired-mode)
 #+end_src
 ** image-mode
 I want to be able to kill image buffers with simply hitting =q=. This does that.
