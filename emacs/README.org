@@ -1450,7 +1450,10 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
       (kbd "]p") 'treemacs-next-project
       (kbd "[p") 'treemacs-previous-project
       (kbd "zm") 'treemacs-collapse-all-projects
-      (kbd "za") 'treemacs-toggle-node)
+      (kbd "za") 'treemacs-toggle-node
+      (kbd "s") 'avy-goto-word-1
+      (kbd "S") 'avy-goto-char-2
+      (kbd "gl") 'avy-goto-line)
 
     (evil-define-key 'normal 'global
       (kbd "M-f") #'treemacs))
@@ -2656,6 +2659,14 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
 I try to maximize my Emacs usage which brings it's own benefits and downsides which I will not go over here. Here are some packages and configurations that are not related to programming/editing.
 
 ** elfeed (RSS feeds)
+Feed reader.
+
+- Filter examples (after hitting ~s~)
+  - +tag OR -tag (unread is also a tag)
+  - #number-of-entries-limit (like #20)
+  - !inverse-regex (!x?emacs will filter out titles containing x?emacs regex)
+  - =regex (entries that contains the regex will be shown)
+  - +unread +youtube =emacs #10 @5-months-ago
 #+begin_src emacs-lisp
   ;; TODO: experiment with custom faces
   ;; (defface elfeed-comic
