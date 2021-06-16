@@ -151,6 +151,10 @@ Some basic variable and function definitions that will be used in configuration.
       (while k+c
         (define-key mode (car k+c) (cadr k+c))
         (setq k+c (cddr k+c)))))
+
+  (defmacro with-default-browser (&rest body)
+    `(let ((browse-url-browser-function 'browse-url-default-browser))
+       ,@body))
 #+END_SRC
 
 ** Load path
@@ -2716,12 +2720,13 @@ I try to maximize my Emacs usage which brings it's own benefits and downsides wh
     (defun isamert/elfeed-search-browse-url-in-default-browser ()
       "Open URL in the default browser."
       (interactive)
-      (let ((browse-url-browser-function 'browse-url-default-browser))
+      (with-default-browser
         (elfeed-search-browse-url)))
 
     ;; o -> Open link in eww
     ;; O -> Open link in default web browser
-    (evil-define-key 'normal 'elfeed-search-mode-map
+    (evil-define-key 'normal elfeed-search-mode-map
+      "o" #'elfeed-search-browse-url
       "O" #'isamert/elfeed-search-browse-url-in-default-browser)
 
     (evil-leader/set-key "ee" #'elfeed))
@@ -3952,7 +3957,8 @@ Company/work related stuff.
   (defun isamert/git-link-my-merge-requests ()
     "Open all of my merge requests in browser for the current repository."
     (interactive)
-    (browse-url (format "%s/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=%s" (isamert/git-link-homepage) "isamert.gurbuz")))
+    (with-default-browser
+     (browse-url (format "%s/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=%s" (isamert/git-link-homepage) "isamert.gurbuz"))))
 
   (evil-leader/set-key
     "glm" 'isamert/git-link-my-merge-requests)
@@ -4055,7 +4061,8 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
   (defun isamert/open-jira-issue (issue-number)
     "Open given Jira ISSUE-NUMBER."
     (interactive "sIssue: ")
-    (browse-url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number)))))
+    (with-default-browser
+      (browse-url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number))))))
 
   (defun isamert/open-jira-issue-at-point ()
     "Open issue at point."
