@@ -4116,70 +4116,15 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
 ** Token management
 - ~DEPRECATED~
 
-#+begin_src emacs-lisp
-  ;; Setup:
-  ;;   (company/switch-{development,integration,validation})
-  ;;   (company/set-refresh-token)
-  ;;
-  ;; Getting:
-  ;;   (company/access-token)
-  ;;   (company/auth-token)
+** Token management
+#+begin_src emacs-lisp :lexical no
+  (defvar ty/stage-token nil)
 
-
-  ;; Customization
-
-  (defcustom company/internal-auth-util-path
-    "~/Workspace/projects/shared/awslibrary/lib/auth/InternalAuthUtil.js"
-    "Path to InternalAuthUtil.js, see: https://wellco.atlassian.net/wiki/spaces/HA/pages/1344962568/Getting+admin+tokens")
-
-  ;; State
-
-  (defvar company/token-last-update
-    nil)
-
-  ;; Code
-
-  (defun company/switch-env (env)
-    (setenv "AWS_PROFILE" env)
-    (setenv "CI_ENVIRONMENT_NAME" env)
-    (when (not (getenv "REFRESH_TOKEN"))
-      (company/set-refresh-token)))
-
-  (defun company/switch-development ()
-    (interactive)
-    (company/switch-env "development"))
-
-  (defun company/switch-integration ()
-    (interactive)
-    (company/switch-env "integration"))
-
-  (defun company/switch-validation ()
-    (interactive)
-    (company/switch-env "validation"))
-
-  (defun company/set-refresh-token ()
-    (interactive)
-    (setenv "REFRESH_TOKEN" (read-string "REFRESH_TOKEN: ")))
-
-  (defun company/refresh-tokens ()
-    (interactive)
-    (-let [tokens (shell-command-to-string (format "node %s useTokens" company/internal-auth-util-path))]
-      (setenv "ACCESS_TOKEN" (cadr (s-match "accessToken:[ \n\t]+'\\(.*\\)'" tokens)))
-      (setenv "AUTH_TOKEN" (cadr (s-match "authToken:[ \n\t]+'\\(.*\\)'" tokens)))
-      (setq company/token-last-update (string-to-number (format-time-string "%s")))))
-
-  (defun company/tokens ()
-    (interactive)
-    (when (or (not company/token-last-update)
-              (< (+ company/token-last-update 290) (string-to-number (format-time-string "%s"))))
-      (company/refresh-tokens))
-    `(,(getenv "ACCESS_TOKEN") . ,(getenv "AUTH_TOKEN")))
-
-  (defun company/access-token ()
-    (interactive)
-    (car (company/tokens)))
-
-  (defun company/auth-token ()
-    (interactive)
-    (cdr (company/tokens)))
+  (defun ty/stage-token ()
+    (or
+     ty/stage-token
+     (progn
+       (let ((token (read-string "Token: ")))
+         (setq ty/stage-token token)
+         token))))
 #+end_src
