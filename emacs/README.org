@@ -566,9 +566,6 @@ Some small packages that enriches editing experience visually. I don't enable al
       (kbd "C-p") #'evil-complete-previous
       (kbd "C-o") #'evil-execute-in-normal-state)
 
-    (evil-define-key 'normal 'global
-      "Q" #'evil-quit)
-
     ;; When I paste something in visual mode, I don't want it to take
     ;; over the kill ring I also use evil-exchange, which eliminates the
     ;; need for this totally
@@ -631,8 +628,11 @@ Enable leader key and bind some keys.
       ";"   'eval-last-sexp
 
       ;; buffers
-      "bq" 'evil-quit
-      "bd" 'evil-delete-buffer))
+      "Q" #'evil-quit
+      "bq" #'evil-quit
+      "bp" #'previous-buffer
+      "bn" #'next-buffer
+      "bd" #'kill-this-buffer))
 #+END_SRC
 
 ** evil-mc
@@ -1630,10 +1630,13 @@ Although I like eyebrowse, what I really want is to have isolated workspaces bec
       "lS" #'persp-state-save
       "lL" #'persp-state-load
       "lr" #'persp-rename
+      "bb" #'persp-switch-to-buffer
+      ;; ^ This one lists all buffers of the session and switches to
+      ;; right perspective before the buffer switch
+      "lb" #'persp-switch-to-buffer*
+      ;; ^ This one only lists the buffers of the current perspective
       "li" #'isamert/initialize-perspectives
       "lm" #'isamert/persp-toggle-modestring)
-    ;; Manually saving is probably a better idea
-    ;; (add-hook 'kill-emacs-hook #'persp-state-save)
     (persp-mode t))
 
   (defun isamert/persp-toggle-modestring ()
@@ -1795,6 +1798,14 @@ Some key points:
       (kbd "M-i") 'consult-imenu
       (kbd "C-f") 'consult-line)
 
+
+    ;; Hide some buffers from consult-buffer window. Just use
+    ;; (switch-to-buffer) or (persp-switch-to-buffer) to switch to the
+    ;; hidden ones if you want
+    (add-to-list
+     'consult-buffer-filter
+     "\\`\\*\\(Help\\|Backtrace\\|Messages\\|Buffer List\\|Flycheck.*\\|scratch.*\\)\\'")
+
     <<consult-project-management>>
     <<consult-perspective-buffers>>
     <<consult-perspective-switch-buffers>>)
@@ -1845,8 +1856,24 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
       :history  buffer-name-history
       :state    ,#'consult--buffer-state
       :default  t
-      :items ,#'persp-current-buffer-names)
+      :items
+      ,(lambda ()
+         (let ((filter (consult--regexp-filter consult-buffer-filter)))
+           (seq-remove (lambda (x) (string-match-p filter x))
+                       (persp-current-buffer-names)))))
     "Current persp buffer candidate source for `consult-buffer'.")
+
+  (defcustom consult-buffer-filter
+    '("\\` "
+      "\\`\\*Completions\\*\\'"
+      "\\`\\*Flymake log\\*\\'"
+      "\\`\\*Semantic SymRef\\*\\'"
+      "\\`\\*tramp/.*\\*\\'")
+    "Filter regexps for `consult-buffer'.
+
+  The default setting is to filter ephemeral buffer names beginning with a space
+  character, the *Completions* buffer and a few log buffers."
+    :type '(repeat regexp))
 
   (defvar isamert/consult-source-files
     `(:name     "My files"
