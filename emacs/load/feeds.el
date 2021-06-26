@@ -37,6 +37,7 @@
     ("https://jao.io/blog/rss.xml" blog dev emacs)
     ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay)
     ("https://www.lesswrong.com/feed.xml?view=curated-rss" blog essay)
+    ("https://writings.stephenwolfram.com/feed/" blog essay)
     ("http://explosm.net/rss" comic)
 
     ("BlackMetalUpdates" youtube music metal black)

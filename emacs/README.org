@@ -352,7 +352,7 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
                           :width 'normal
                           :height isamert/font-height))
     ;; ...and load the theme
-    (load-theme 'doom-gruvbox-light t))
+    (load-theme 'doom-one t))
 
   (defun isamert/set-font-and-theme-config-in-frame (frame)
     (with-selected-frame frame
@@ -404,17 +404,18 @@ I make use of this mode quite frequently throughout the configuration.
               ,pairs)
         (prettify-symbols-mode 1))))
 #+end_src
+
 ** fira-code-mode (font ligatures)
 This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known code symbols. This mode also saves the length of the chars, so it does not break spacing.
 - After the first install, you need to call =fira-code-mode-install-fonts= and then maybe restart Emacs etc.
 
-  #+begin_src emacs-lisp :tangle no
+  #+begin_src emacs-lisp
     (use-package fira-code-mode
       :ensure t
       :config
-      (setq fira-code-mode-disabled-ligatures '(":"))
-      (add-hook 'prog-mode-hook 'fira-code-mode)
-      (add-hook 'org-mode-hook 'fira-code-mode))
+      (setq fira-code-mode-disabled-ligatures '(":" "x" "[]"))
+      (add-hook 'prog-mode-hook #'fira-code-mode)
+      (add-hook 'org-mode-hook  #'fira-code-mode))
   #+end_src
 
 ** Frame title
@@ -547,13 +548,15 @@ Some small packages that enriches editing experience visually. I don't enable al
 * evil-mode
 ** Basic configuration
 #+BEGIN_SRC emacs-lisp
-  ;; Disable evil bindings in insert mode. This needs to be called
-  ;; before loading evil mode
-
   (use-package evil
     :init
+    ;; Following two is required by evil-collection. It's probably wiser
+    ;; to set evil-want-keybinding to t if you will not use
+    ;; evil-collection
     (setq evil-want-integration t)
     (setq evil-want-keybinding nil)
+    ;; Disable evil bindings in insert mode. This needs to be called
+    ;; before loading evil mode
     (setq evil-disable-insert-state-bindings t)
     :ensure t
     :config
@@ -565,6 +568,8 @@ Some small packages that enriches editing experience visually. I don't enable al
       (kbd "C-n") #'evil-complete-next
       (kbd "C-p") #'evil-complete-previous
       (kbd "C-o") #'evil-execute-in-normal-state)
+
+    (evil-define-key 'normal 'global "Q" #'evil-quit)
 
     ;; When I paste something in visual mode, I don't want it to take
     ;; over the kill ring I also use evil-exchange, which eliminates the
@@ -628,14 +633,13 @@ Enable leader key and bind some keys.
       ";"   'eval-last-sexp
 
       ;; buffers
-      "Q" #'evil-quit
       "bq" #'evil-quit
       "bp" #'previous-buffer
       "bn" #'next-buffer
       "bd" #'kill-this-buffer))
 #+END_SRC
 
-** evil-mc
+** evil-mc (multiple cursors)
 Multiple cursors for evil.
 
 - Basics
@@ -871,6 +875,8 @@ Change two parts of the text.
   (use-package org
     :ensure org-plus-contrib
     :config
+    (setq org-return-follow-links t)
+    ;; ^ Open links with RET
     (setq org-src-fontify-natively t)
     ;; ^ Enable code highlighting in ~SRC~ blocks.
     (setq org-hierarchical-todo-statistics t)
@@ -952,8 +958,7 @@ Change two parts of the text.
     (kbd "M-H-h") 'org-metaleft
     (kbd "M-H-j") 'org-metadown
     (kbd "M-H-k") 'org-metaup
-    (kbd "M-H-l") 'org-metaright
-  )
+    (kbd "M-H-l") 'org-metaright)
 
   (evil-leader/set-key-for-mode 'org-mode
     "d" 'org-babel-remove-result
@@ -991,7 +996,7 @@ Change two parts of the text.
           ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
           org-agenda-files `(,life-org ,bullet-org ,projects-org ,reality-org ,work-org ,people-org))
 
-    ;; With the following, I can call functions inside this file in other org files
+    ;; With the following, I can call functions defined inside this file in other org files
     (org-babel-lob-ingest "~/Documents/notes/utils.org"))
 #+END_SRC
 
@@ -1155,8 +1160,8 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 
   (isamert/prettify-mode 'org-mode-hook
                          '(("[ ]" . "☐")
-                           ("[X]" . "☑" )
-                           ("[-]" . "❍" )
+                           ("[X]" . "☑")
+                           ("[-]" . "❍")
                            ("#+begin:" . "»")
                            ("#+end" . "«")
                            ("#+BEGIN:" . "»")
@@ -1209,6 +1214,20 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 (use-package org-ql :ensure t)
 #+END_SRC
 
+** Show links in the echo area
+I got this trick from [[https://www.reddit.com/r/emacs/comments/o68i0v/weekly_tips_tricks_c_thread/h2rizey?utm_source=share&utm_medium=web2x&context=3][this]] comment. It simply calls =C-h .= (=display-local-help=) when idle, which shows the destination of links in the echo area (and maybe displays other helpful stuff).
+
+#+begin_src emacs-lisp
+  (defun isamert/help-at-point-mode ()
+    "Show tooltips in the echo area automatically for current buffer."
+    (setq-local help-at-pt-display-when-idle t)
+    (setq-local help-at-pt-timer-delay 0)
+    (help-at-pt-cancel-timer)
+    (help-at-pt-set-timer))
+
+  (add-hook 'org-mode-hook #'isamert/help-at-point-mode)
+#+end_src
+
 ** Inserting links and images from clipboard
 Insert links/images more intelligently,
 - if region is selected and there is a url in the clipboard, convert it to a link directly.
@@ -1217,59 +1236,69 @@ Insert links/images more intelligently,
 - otherwise call ~org-insert-link~
 
 #+begin_src emacs-lisp
-  (evil-leader/set-key "oP" #'isamert/org-insert-dwim)
+    (evil-leader/set-key "oP" #'isamert/org-insert-dwim)
 
-  (defun isamert/org-insert-dwim ()
-    "Like `org-insert-link' but improved with dwim features.
-      Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
-    (interactive)
-    (let* ((point-in-link (org-in-regexp org-link-any-re 1))
-           (clipboard-url (when (string-match-p "^http" (current-kill 0))
-                            (current-kill 0)))
-           (region-content (when (region-active-p)
-                             (buffer-substring-no-properties (region-beginning)
-                                                             (region-end)))))
+    (defun isamert/org-insert-dwim ()
+      "Like `org-insert-link' but improved with dwim features.
+        Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
+      (interactive)
+      (let* ((point-in-link (org-in-regexp org-link-any-re 1))
+             (clipboard-url (when (string-match-p "^http" (current-kill 0))
+                              (current-kill 0)))
+             (region-content (when (region-active-p)
+                               (buffer-substring-no-properties (region-beginning)
+                                                               (region-end)))))
+        (cond
+         ((isamert/has-clipboard-image)
+          (call-interactively 'isamert/org-attach-image-from-clipboard))
+         ((and region-content clipboard-url (not point-in-link))
+          (delete-region (region-beginning) (region-end))
+          (insert (org-make-link-string clipboard-url region-content)))
+         ((and clipboard-url (not point-in-link))
+          (insert (org-make-link-string
+                   clipboard-url
+                   (read-string "title: "
+                                (with-current-buffer (url-retrieve-synchronously clipboard-url)
+                                  (dom-text (car
+                                             (dom-by-tag (libxml-parse-html-region
+                                                          (point-min)
+                                                          (point-max))
+                                                         'title))))))))
+         (t
+          (call-interactively 'org-insert-link)))))
+
+    (defun isamert/clipboard-command ()
+      "Get clipboard command for current system.
+        The returned command directly puts the image data into stdout."
       (cond
-       ((isamert/has-clipboard-image)
-        (call-interactively 'isamert/org-attach-image-from-clipboard))
-       ((and region-content clipboard-url (not point-in-link))
-        (delete-region (region-beginning) (region-end))
-        (insert (org-make-link-string clipboard-url region-content)))
-       ((and clipboard-url (not point-in-link))
-        (insert (org-make-link-string
-                 clipboard-url
-                 (read-string "title: "
-                              (with-current-buffer (url-retrieve-synchronously clipboard-url)
-                                (dom-text (car
-                                           (dom-by-tag (libxml-parse-html-region
-                                                        (point-min)
-                                                        (point-max))
-                                                       'title))))))))
-       (t
-        (call-interactively 'org-insert-link)))))
+       ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
+       ((locate-file "pngpaste" exec-path) "pngpaste -")))
 
-  (defun isamert/clipboard-command ()
-    "Get clipboard command for current system.
-      The returned command directly puts the image data into stdout."
-    (cond
-     ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
-     ((locate-file "pngpaste" exec-path) "pngpaste -")))
+    (defun isamert/org-attach-image-from-clipboard (&optional file-path)
+      "Attach the image in the clipboard into your org-buffer.
+        This function saves the image file into the FILE-PATH or
+        if it's not provided then it saves the image into ~/.cache."
+      (interactive "FSave file to (leave empty to create a temp file): ")
+      (let ((file (if (and file-path (not (string-empty-p file-path)))
+                      file-path
+                    (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
+        (if (shell-command (format "%s > %s" (isamert/clipboard-command) file))
+            (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
+          (user-error "Can't create image file from clipboard contents"))))
 
-  (defun isamert/org-attach-image-from-clipboard (&optional file-path)
-    "Attach the image in the clipboard into your org-buffer.
-      This function saves the image file into the FILE-PATH or
-      if it's not provided then it saves the image into ~/.cache."
-    (interactive "FSave file to (leave empty to create a temp file): ")
-    (let ((file (if (and file-path (not (string-empty-p file-path)))
-                    file-path
-                  (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
-      (if (shell-command (format "%s > %s" (isamert/clipboard-command) file))
-          (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
-        (user-error "Can't create image file from clipboard contents"))))
+    (defun isamert/has-clipboard-image ()
+      "Check whether the clipboard has image or not."
+      (case system-type
+        ('gnu/linux (s-contains? "image/" (isamert/sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS")))
+        ('darwin (eq (shell-command "pngpaste - &>/dev/null") 0))))
 
-  (defun isamert/has-clipboard-image ()
-    "Check whether the clipboard has image or not."
-    (eq (shell-command (format "%s &>/dev/null" (isamert/clipboard-command))) 0))
+    (defun isamert/sync-async-command-to-string (command &rest args)
+      "Run async command and wait until it's finished. This may seem stupid but I had to use it."
+      (with-temp-buffer
+        (let ((process (apply 'start-process `("sync-async-proc" ,(current-buffer) ,command ,@args))))
+          (while (process-live-p process)
+            (sit-for 0.1))
+          (buffer-string))))
 #+end_src
 
 ** Project management
@@ -1403,20 +1432,38 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 
 ** calendar
 #+begin_src emacs-lisp
-  ;; Start the week from Monday
-  (setq calendar-week-start-day 1)
+  (use-package calendar
+    :config
+    ;; Start the week from Monday
+    (setq calendar-week-start-day 1)
 
-  ;; lng and lat for my location, to get sunrise/sunset times on my
-  ;; calendar (press S)
-  (setq calendar-latitude 41.0082)
-  (setq calendar-longitude 28.9784)
+    ;; lng and lat for my location, to get sunrise/sunset times on my
+    ;; calendar (press S)
+    (setq calendar-latitude 41.0082)
+    (setq calendar-longitude 28.9784)
 
-  ;; Use 24-hour format to display times
-  (setq calendar-time-display-form
-        '(24-hours ":" minutes (if time-zone " (") time-zone (if time-zone ")")))
+    ;; Use 24-hour format to display times
+    (setq calendar-time-display-form
+          '(24-hours ":" minutes (if time-zone " (") time-zone (if time-zone ")")))
 
-  ;; Show calendar at the bottom
-  (isamert/shackle-window "Calendar" 0.2)
+    ;; Show calendar at the bottom
+    (isamert/shackle-window "Calendar" 0.2)
+
+    ;; https://www.emacswiki.org/emacs/CalendarWeekNumbers
+    (defun isamert/calendar-week-number-mode ()
+      "Show week numbers in M-x calendar."
+      (copy-face font-lock-constant-face 'calendar-iso-week-face)
+      (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
+      (setq
+       calendar-intermonth-text
+       '(propertize
+         (format "%2d"
+                 (car
+                  (calendar-iso-from-absolute
+                   (calendar-absolute-from-gregorian (list month day year)))))
+         'font-lock-face 'calendar-iso-week-face)))
+
+    (isamert/calendar-week-number-mode))
 #+end_src
 
 ** tramp
@@ -1433,7 +1480,16 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (use-package eww
     :ensure t
     :config
-    (setq browse-url-browser-function 'eww-browse-url))
+    (setq
+     ;; TODO defer to jaro (except for eww links)
+     ;; TODO replace with browse-url-handlers in emacs 28
+     browse-url-browser-function
+     '((".*\\(trendyol\\|gitlab\\|github\\).*" . browse-url-default-browser)
+       (".*youtube.*/watch.*" . (lambda (url &rest args) (start-process "mpv-emacs" nil "mpv" url)))
+       ("." . eww-browse-url)))
+    (evil-define-key 'normal 'eww-mode-map (kbd "Y") #'eww-copy-page-url)
+    isamert/help-at-point-mode
+    (add-hook 'eww-mode-hook #'isamert/help-at-point-mode))
 #+end_src
 
 ** treemacs
@@ -1818,6 +1874,7 @@ Some functionality for project management. I do some fine-tuning for =find= and 
 #+begin_src emacs-lisp :tangle no
   (evil-leader/set-key
     "hr"  #'isamert/consult-ripgrep-current-directory
+    "hR"  #'isamert/consult-ripgrep-in-given-directory
     "pg" #'isamert/consult-ripgrep)
 
   (setq
@@ -1836,6 +1893,10 @@ Some functionality for project management. I do some fine-tuning for =find= and 
     "Do ripgrep in `default-directory'."
     (interactive)
     (consult-ripgrep default-directory))
+
+  (defun isamert/consult-ripgrep-in-given-directory (dir)
+    (interactive "DSelect directory: ")
+    (consult-ripgrep dir))
 #+end_src
 
 *** Perspective integration
@@ -1850,44 +1911,44 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 #+begin_src emacs-lisp
   (defvar isamert/consult-source-perspective-buffers
     `(:name     "Perspective buffers"
-      :narrow   ?P
-      :category buffer
-      :face     consult-buffer
-      :history  buffer-name-history
-      :state    ,#'consult--buffer-state
-      :default  t
-      :items
-      ,(lambda ()
-         (let ((filter (consult--regexp-filter consult-buffer-filter)))
-           (seq-remove (lambda (x) (string-match-p filter x))
-                       (persp-current-buffer-names)))))
+                :narrow   ?P
+                :category buffer
+                :face     consult-buffer
+                :history  buffer-name-history
+                :state    ,#'consult--buffer-state
+                :default  t
+                :items
+                ,(lambda ()
+                   (let ((filter (consult--regexp-filter consult-buffer-filter)))
+                     (seq-remove (lambda (x) (string-match-p filter x))
+                                 (persp-current-buffer-names)))))
     "Current persp buffer candidate source for `consult-buffer'.")
 
-  (defcustom consult-buffer-filter
-    '("\\` "
-      "\\`\\*Completions\\*\\'"
-      "\\`\\*Flymake log\\*\\'"
-      "\\`\\*Semantic SymRef\\*\\'"
-      "\\`\\*tramp/.*\\*\\'")
-    "Filter regexps for `consult-buffer'.
-
-  The default setting is to filter ephemeral buffer names beginning with a space
-  character, the *Completions* buffer and a few log buffers."
-    :type '(repeat regexp))
+  (setq consult-buffer-filter
+        '("\\` "
+          "\\`\\*Completions\\*\\'"
+          "\\`\\*Flymake log\\*\\'"
+          "\\`\\*Semantic SymRef\\*\\'"
+          "\\`\\*tramp/.*\\*\\'"
+          "\\`\\*Help.*\\*\\'"
+          "\\`\\*Backtrace\\*\\'"
+          "\\`\\*scratch\\*.*\\'"
+          "\\`\\*Messages.*\\*\\'"
+          "\\`magit-?.*: .*\\'"))
 
   (defvar isamert/consult-source-files
     `(:name     "My files"
-      :narrow   ?F
-      :category file
-      :face     consult-file
-      :history  file-name-history
-      :state    ,#'consult--file-state
-      :default  t
-      :items
-      ,(lambda ()
-         (let ((ht (consult--cached-buffer-file-hash)))
-           (mapcar #'abbreviate-file-name
-                   (seq-remove (lambda (x) (gethash x ht)) (isamert/my-files))))))
+                :narrow   ?F
+                :category file
+                :face     consult-file
+                :history  file-name-history
+                :state    ,#'consult--file-state
+                :default  t
+                :items
+                ,(lambda ()
+                   (let ((ht (consult--cached-buffer-file-hash)))
+                     (mapcar #'abbreviate-file-name
+                             (seq-remove (lambda (x) (gethash x ht)) (isamert/my-files))))))
     "My frequently accessed files source for `consult-buffer'.")
 
   (setq
@@ -2037,19 +2098,31 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
   (use-package flycheck
     :diminish
     :ensure t
-    :init (global-flycheck-mode)
     :config
-    (setq flycheck-idle-change-delay 1
-          flycheck-check-syntax-automatically '(save new-line mode-enabled))
-         ;; ^ Alternatives are (save idle-change new-line mode-enabled)
+    (setq flycheck-idle-change-delay 1)
+    (setq flycheck-check-syntax-automatically '(save new-line mode-enabled))
+    ;; ^ Alternatives are (save idle-change new-line mode-enabled)
 
-    (use-package consult-flycheck
-      :ensure t)
+    (global-flycheck-mode)
 
     (evil-define-key 'normal flycheck-mode-map
-      (kbd "ge") #'consult-flycheck
+      (kbd "gE") #'isamert/show-error-list
       (kbd "]e") #'flycheck-next-error
       (kbd "[e") #'flycheck-previous-error))
+
+  (use-package consult-flycheck
+    :after flycheck
+    :ensure t
+    :config
+    (evil-define-key 'normal flycheck-mode-map
+      (kbd "ge") #'consult-flycheck))
+
+  (defun isamert/show-error-list ()
+    "Show all lsp errors or flycheck erros, depending on which is available."
+    (interactive)
+    (if (bound-and-true-p lsp-mode)
+        (lsp-treemacs-errors-list)
+      (flycheck-list-errors)))
 #+END_SRC
 
 ** company
@@ -2073,10 +2146,13 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
 
     (define-key company-active-map (kbd "<tab>") nil)
     ;; ^ Disable tab key, so yasnippet and tab-out works nicely within company mode
-    (evil-define-key 'insert 'global (kbd "C-SPC") 'company-complete)
-    ;; ^ C-SPC force triggers company completion at point
     (define-key company-active-map (kbd "<return>") 'company-complete-selection)
     ;; ^ Enter simply applies the current selection
+    (evil-define-key 'insert 'global (kbd "C-SPC") 'company-complete)
+    ;; ^ C-SPC force triggers company completion at point
+
+    (define-key company-active-map (kbd "<up>") 'company-select-previous)
+    (define-key company-active-map (kbd "<down>") 'company-select-next)
 
     (add-hook 'after-init-hook 'global-company-mode))
 
@@ -2186,6 +2262,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (use-package vterm
     :ensure t
     :config
+    (evil-define-key '(normal insert) 'global (kbd "M-t") #'isamert/vterm-toggle-dedicated)
     (evil-leader/set-key
       "tt" 'isamert/vterm-toggle-dedicated
       "tj" 'isamert/jump-to-visible-vterm
@@ -2399,7 +2476,7 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
     :config
     (setq git-link-open-in-browser t)
     (evil-leader/set-key
-      "gll" 'git-link
+      "gll" 'isamert/git-link-on-branch
       "glh" 'git-link-homepage
       "glc" 'git-commit))
 
@@ -2409,6 +2486,20 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
     (let ((git-link-open-in-browser nil))
       (call-interactively 'git-link-homepage)
       (car kill-ring)))
+
+  (defun isamert/git-link-on-branch (branch)
+    "Like `git-link' but let's you select the branch first when called interactively."
+    (interactive
+     (list
+      (completing-read
+       "Select a branch: "
+       (vc-git-branches)
+       nil nil (isamert/git-current-branch))))
+    (let ((git-link-default-branch branch))
+      (call-interactively 'git-link)))
+
+  (defun isamert/git-current-branch ()
+    (s-trim (shell-command-to-string "git rev-parse --abbrev-ref HEAD")))
 #+end_src
 
 ** bufler
@@ -2627,7 +2718,8 @@ Gives you a nice, uncluttered editing experience by removing all unneeded visual
 I try to use ~lsp-mode~ and other language-specific packages for the languages I use (see [[Language specific]]), but sometimes either they are too slow or the computer I'm currently working on requires some extra setup or I just don't want to use them for some reason. For those cases, I use a collection of packages that gives you the power of IDEs but in some dummy/restricted way.
 
 - highlight-thing :: Automatically highlights the all instances of the symbol under the cursor in the buffer. Simply use evils ~*~ and ~#~ to jump between them.
-- devdocs-lookup :: Opens the documentation of current thing in devdocs.io.
+- devdocs-browser :: Let's you browse devdocs in =eww=.
+  - ~devdocs-browser-install-doc~ to install docs. ~devdocs-browser-open~ to open a documentation.
 - dumb-jump :: Jumps to definition by using predefined-regexps, generally works fine. Use =gd=.
   - To debug why it's not working: M-x ~set-variable dumb-jump-debug t~, then go to *Messages* buffer.
 - tree-sitter :: This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting for some languages. Especially for JS/TS and Rust. See [[https://ubolonton.github.io/emacs-tree-sitter/][this page]] for more information.
@@ -2645,14 +2737,8 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
           dumb-jump-fallback-search nil)
     (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
-  (use-package devdocs-lookup
-    :ensure t
-    :diminish
-    :quelpa (devdocs-lookup
-             :fetcher github
-             :repo "skeeto/devdocs-lookup")
-    :config
-    (devdocs-setup))
+  (use-package devdocs-browser
+    :ensure t)
 
   (use-package highlight-thing
     :ensure t
@@ -3171,6 +3257,42 @@ The following enables =CamelCase= aware editing operations.
          t)
       (user-error "Select something first")))
 #+end_src
+** typescript
+#+begin_src emacs-lisp
+  (use-package typescript-mode
+    :ensure t
+    :config
+    ;; Create a tsx mode based on ts mode and make tree-sitter use tsx
+    ;; parser for that mode
+    (define-derived-mode tsx-mode typescript-mode "typescript-tsx")
+    (add-to-list 'auto-mode-alist (cons (rx ".tsx" string-end) #'tsx-mode))
+    (setf (alist-get 'tsx-mode tree-sitter-major-mode-language-alist) 'tsx))
+#+end_src
+
+** json
+#+begin_src emacs-lisp
+  (use-package json-mode
+    :ensure t)
+
+  (defun isamert/jsons-print-path-python ()
+    (interactive)
+    (let ((jsons-path-printer 'jsons-print-path-python))
+      (jsons-print-path)))
+
+  (defun isamert/jsons-print-path-javascript-js-jq ()
+    (interactive)
+    (let ((jsons-path-printer 'jsons-print-path-jq))
+      (jsons-print-path)))
+
+  ;;  Provides jsons-print-path function, it simply kills the path to the key under point
+  (use-package json-snatcher
+    :ensure t
+    :config
+    ;; Copies paths like:.definition.summary.pastGroup.trackingResults[0].trackingItemReferenceId
+    ;; I've created two functions above for the variations
+    (setq jsons-path-printer 'jsons-print-path-jq))
+#+end_src
+
 ** java
 =lsp-java= automatically installs =eclipse.jdt.ls= to get lsp.
 #+BEGIN_SRC emacs-lisp
@@ -3192,7 +3314,7 @@ Hit <C-j> after these and get:
 #+BEGIN_SRC emacs-lisp
 (use-package emmet-mode
   :ensure t
-  :hook (js-mode css-mode sgml-mode web-mode)
+  :hook (js-mode css-mode sgml-mode web-mode tsx-mode)
   :init
   (setq emmet-expand-jsx-className? t
         emmet-self-closing-tag-style " /"))
@@ -3219,38 +3341,6 @@ Hit <C-j> after these and get:
 ** yaml
 #+begin_src emacs-lisp
 (use-package yaml-mode :ensure t)
-#+end_src
-
-** typescript
-#+begin_src emacs-lisp
-  (use-package typescript-mode
-    :ensure t
-    :config
-    (add-to-list 'auto-mode-alist '("\\.tsx\\'" . typescript-mode)))
-#+end_src
-
-** json
-#+begin_src emacs-lisp
-  (use-package json-mode
-    :ensure t)
-
-  (defun isamert/jsons-print-path-python ()
-    (interactive)
-    (let ((jsons-path-printer 'jsons-print-path-python))
-      (jsons-print-path)))
-
-  (defun isamert/jsons-print-path-javascript-js-jq ()
-    (interactive)
-    (let ((jsons-path-printer 'jsons-print-path-jq))
-      (jsons-print-path)))
-
-  ;;  Provides jsons-print-path function, it simply kills the path to the key under point
-  (use-package json-snatcher
-    :ensure t
-    :config
-    ;; Copies paths like:.definition.summary.pastGroup.trackingResults[0].trackingItemReferenceId
-    ;; I've created two functions above for the variations
-    (setq jsons-path-printer 'jsons-print-path-jq))
 #+end_src
 
 ** elisp
@@ -3323,6 +3413,13 @@ Hit <C-j> after these and get:
     :ensure t
     :mode "docker-compose\\'")
 #+end_src
+** vimrc
+Mostly for editing tridactyl and sometimes real vimrc.
+
+#+begin_src emacs-lisp :lexical no
+  (use-package vimrc-mode :ensure t)
+#+end_src
+
 * Misc functions
 ** My Android phone and Emacs
 I have an Android phone that is running [[https://termux.com/][Termux]] all the time. If you install Termux through [[https://www.f-droid.org/][F-Droid]] you can also install [[https://f-droid.org/en/packages/com.termux.api/][Termux:API]] package which brings bunch of commands like =termux-clipboard-set=, =termux-sms-list= etc. Much of the commands requires to be called in foreground, so they are not very useful over SSH but you can work around that by starting a =tmux= session on the phone and executing commands on that tmux session through SSH. This way I can send arbitrary text to my phones clipboard using the commands below.
@@ -3531,6 +3628,10 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "Get day of month as number."
     (string-to-number (format-time-string "%d")))
 
+  (defun isamert/V ()
+    "Get week number."
+    (string-to-number (format-time-string "%V")))
+
   (defun isamert/date (date)
     "Display the time described by DATE.
   DATE can be 'now', 'yesterday', 'two days ago' etc."
@@ -3670,11 +3771,11 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
        (s-trim (isamert/s-interpolated ,template ,@template-args))))
 
   (defmacro isamert/when-saturday (template &rest template-args)
-    `(when (> (isamert/u) 6)
+    `(when (= (isamert/u) 6)
        (s-trim (isamert/s-interpolated ,template ,@template-args))))
 
   (defmacro isamert/when-sunday (template &rest template-args)
-    `(when (> (isamert/u) 7)
+    `(when (= (isamert/u) 7)
        (s-trim (isamert/s-interpolated ,template ,@template-args))))
 #+end_src
 
@@ -3970,10 +4071,17 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
         (format "https://eksisozluk.com/%s")
         (browse-url))))
 #+end_src
-* WELL
+** insert uuid
+#+begin_src emacs-lisp
+  (defun isamert/insert-uuid ()
+    "Insert UUID."
+    (interactive)
+    (insert (s-trim (shell-command-to-string "uuidgen"))))
+#+end_src
+* TY
 Company/work related stuff.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :lexical no
   (defun company/is-company ()
     "Return if current computer is Well computer or not."
     (string= (treemacs-workspace->name (treemacs-current-workspace)) "seller-ads"))
@@ -4015,37 +4123,6 @@ Company/work related stuff.
   (evil-leader/set-key
     "glm" 'isamert/git-link-my-merge-requests)
 #+end_src
-
-** JS env setup
-LSP does not work well with UI projects. So I use tide for UI projects and LSP for backend projects.
-
-#+begin_src emacs-lisp
-  (defun company/setup-tide-mode ()
-    (interactive)
-    (lsp-mode -1)
-    (tide-setup)
-    (flycheck-mode +1)
-    (setq flycheck-check-syntax-automatically '(save mode-enabled))
-    (flycheck-add-next-checker 'python-flake8 'python-pylint)
-    (eldoc-mode +1)
-    (highlight-thing-mode -1)
-    (tide-hl-identifier-mode +1)
-    (lsp-ui-mode +1)
-    (company-mode +1))
-
-  (defun company/setup-js ()
-    "If it's an UI project, run tide.  Otherwise run lsp."
-    (interactive)
-    (if (string-match "/ui/" (or (isamert/current-project-root) ""))
-        (progn (isamert/setup-indent 2)
-               (company/setup-tide-mode))
-      (lsp)))
-
-  (when (company/is-company)
-    (remove-hook 'js-mode-hook 'lsp)
-    (add-hook 'js-mode-hook 'company/setup-js))
-#+end_src
-
 ** Misc bindings
 #+begin_src emacs-lisp
   (defun isamert/toggle-side-trendyol-org-buffer ()
@@ -4144,7 +4221,8 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
                    ("My issues" isamert/jira-my-issues)
                    ("New issues" isamert/jira-new-issues))
       (--map (cons (format "%s - %s" (cdr (assoc 'key it)) (cdr (assoc 'summary (assoc 'fields it)))) it))
-      ((lambda (items) (consult--read items :category 'isamert/jira)))))
+      ((lambda (items) (consult--read items :category 'isamert/jira)))
+      (isamert/open-jira-issue)))
 
   (defun isamert/jira-ticket-to-branch (issue-name)
     (interactive "sIssue name: ")
@@ -4173,9 +4251,6 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
 #+end_src
 
 ** Token management
-- ~DEPRECATED~
-
-** Token management
 #+begin_src emacs-lisp :lexical no
   (defvar ty/stage-token nil)
 
@@ -4186,4 +4261,19 @@ LSP does not work well with UI projects. So I use tide for UI projects and LSP f
        (let ((token (read-string "Token: ")))
          (setq ty/stage-token token)
          token))))
+#+end_src
+
+** Utilities
+#+begin_src emacs-lisp
+  (defun ty/toggle-editor-backend-url ()
+    "Toggle between local/stage editor-bff instace."
+    (interactive)
+    (let ((fpath (expand-file-name "~/Workspace/projects/editor/src/config.ts")))
+      (if (eq 0 (shell-command (format "grep -E 'const EDITOR_BFF_STAGE_URL.*stageselleradseditorbff' '%s'" fpath)))
+          (progn
+            (shell-command (format "sed -i 's/https:\\/\\/stageselleradseditorbff.trendyol.com/http:\\/\\/localhost:3031/' '%s'" fpath))
+            (message ">> Switched to LOCALHOST"))
+        (progn
+          (shell-command (format "sed -i 's/http:\\/\\/localhost:3031/https:\\/\\/stageselleradseditorbff.trendyol.com/' '%s'" fpath))
+          (message ">> Switched to STAGE")))))
 #+end_src
