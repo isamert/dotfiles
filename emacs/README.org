@@ -3777,6 +3777,122 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   (defmacro isamert/when-sunday (template &rest template-args)
     `(when (= (isamert/u) 7)
        (s-trim (isamert/s-interpolated ,template ,@template-args))))
+
+  ;;
+  ;; Daily summary
+  ;;
+
+  ;; Implementation is a bit cumbersome but it's easy to adopt for my ad-hoc requests
+  (defun org-dblock-write:daily-summary (params)
+    "Create a daily summary for my bullet.org."
+    (let* ((items (org-map-entries
+                   (lambda nil
+                     (list
+                      :name
+                      (org-entry-get nil "ITEM")
+                      :clock
+                      (org-clock-sum-current-item)
+                      :tags
+                      (or (org-get-tags) '(empty))
+                      :level
+                      (org-current-level)
+                      :parent
+                      (save-excursion
+                        (when (org-up-heading-safe)
+                          (org-entry-get nil "ITEM")))))
+                   "LEVEL>1"))
+           (total-time (->> items
+                         (--filter (= (plist-get it :level) 2))
+                         (--map (plist-get it :clock))
+                         (-sum)
+                         (org-minutes-to-clocksum-string)))
+           (routines (--filter (s-equals? (plist-get it :parent) "Routines") items))
+           (work (--filter (-contains? (plist-get it :tags) "work") items))
+           (others (--filter (not (or
+                                   (-contains? (plist-get it :tags) "work")
+                                   (s-equals? (plist-get it :parent) "Routines")
+                                   (s-equals? (plist-get it :name) "Routines"))) items)))
+
+      (insert "| [Event] | [Duration] ||\n")
+      (insert "|-|\n")
+
+      (->> items
+        (--find (s-equals? "Routines" (plist-get it :name)))
+        (funcall (-flip #'plist-get) :clock)
+        (org-minutes-to-clocksum-string)
+        (format "|Routines|%s||\n")
+        (insert))
+
+      (->> routines
+        (--filter (-contains? '("Breakfast" "Dinner") (plist-get it :name)))
+        (--map (plist-get it :clock))
+        (-sum)
+        (org-minutes-to-clocksum-string)
+        (format "|\\-- Eating||%s|\n")
+        (insert))
+
+      (->> routines
+        (--filter (not (-contains? '("Breakfast" "Dinner") (plist-get it :name))))
+        (--map (plist-get it :clock))
+        (-sum)
+        (org-minutes-to-clocksum-string)
+        (format "|\\-- Other||%s|\n")
+        (insert))
+
+      (insert "|-|\n")
+
+      (->> work
+        (--map (plist-get it :clock))
+        (-sum)
+        (org-minutes-to-clocksum-string)
+        (format "|Work|%s||\n")
+        (insert))
+
+      (->> work
+        (--filter (-contains? (plist-get it :tags) "meeting"))
+        (--map (plist-get it :clock))
+        (-sum)
+        (org-minutes-to-clocksum-string)
+        (format "|\\-- Meetings||%s|\n")
+        (insert))
+
+      (->> work
+        (--filter (not (-contains? (plist-get it :tags) "meeting")))
+        (--map (plist-get it :clock))
+        (-sum)
+        (org-minutes-to-clocksum-string)
+        (format "|\\-- Other||%s|\n")
+        (insert))
+
+      (insert "|-|\n")
+
+      (->> others
+        (--map (plist-get it :clock))
+        (-sum)
+        (org-minutes-to-clocksum-string)
+        (format "|Other|%s||\n")
+        (insert))
+
+      (->> others
+        (--filter (-contains? (plist-get it :tags) "side"))
+        (--map (plist-get it :clock))
+        (-sum)
+        (org-minutes-to-clocksum-string)
+        (format "|\\-- Side projects||%s|\n")
+        (insert))
+
+      (->> others
+        (--filter (not (-contains? (plist-get it :tags) "side")))
+        (--map (plist-get it :clock))
+        (-sum)
+        (org-minutes-to-clocksum-string)
+        (format "|\\-- Other||%s|\n")
+        (insert))
+
+      (insert "|-|\n")
+      (insert (format "|Total|%s||\n" total-time))
+      (delete-char 1)
+      (org-table-align)))
 #+end_src
 
 ** Scratch/temporary buffers in side windows
