@@ -2016,7 +2016,7 @@ I was using projectile earlier but [[consult]] functions are just more than enou
     "Return the root path of current project."
     (interactive)
     ;; `project-current' is a function from project.el
-    (cdr (project-current)))
+    (expand-file-name (cdr (project-current))))
 #+end_src
 
 I have all my projects under =~/Workspace/projects=. Some of them are groupped under another directory. This functions loops trough all of the directories and finds the ones without =.git= folder and adds those folders to project paths. Consider this:
@@ -4078,6 +4078,53 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     (interactive)
     (insert (s-trim (shell-command-to-string "uuidgen"))))
 #+end_src
+
+** isamert/start-shell-command
+#+begin_src emacs-lisp :lexical yes
+  (cl-defun isamert/shell-command
+      (&key
+       command
+       (switch t)
+       (buffer-name (concat "*" command "*"))
+       (on-finish (lambda ()))
+       (on-fail (lambda ())))
+    "Run given shell COMMAND and redirect output to given BUFFER-NAME.
+  This is a wrapper around `start-process-shell-command' that adds
+  support for ANSI term colors and some syntactic convenience.
+
+  When called interactively, asks for a command to run (with eshell
+  completion)."
+    (interactive
+     (let ((eshell-non-interactive-p t)
+           (command))
+       (minibuffer-with-setup-hook (lambda ()
+                                     (eshell-mode)
+                                     (eshell-command-mode +1))
+         (setq command (read-from-minibuffer "Shell command: "))
+         (if (eshell-using-module 'eshell-hist)
+             (eshell-add-input-to-history command))
+         (list
+          :command command
+          :on-finish (lambda () (message ">> \"%s\" finished successfully." command))
+          :on-fail (lambda () (message ">> \"%s\" failed." command))))))
+    (let* ((proc (start-process-shell-command command buffer-name command)))
+      (set-process-sentinel
+       proc
+       (lambda (p e)
+         (if (= 0 (process-exit-status p))
+             (funcall on-finish)
+           (funcall on-fail))))
+      (set-process-filter
+       proc
+       (lambda (proc str)
+         (with-current-buffer buffer-name
+           (insert (ansi-color-apply str)))))
+      (with-current-buffer buffer-name
+        (font-lock-mode))
+      (when switch
+        (switch-to-buffer buffer-name))))
+#+end_src
+
 * TY
 Company/work related stuff.
 
@@ -4276,4 +4323,21 @@ Company/work related stuff.
         (progn
           (shell-command (format "sed -i 's/http:\\/\\/localhost:3031/https:\\/\\/stageselleradseditorbff.trendyol.com/' '%s'" fpath))
           (message ">> Switched to STAGE")))))
+
+  (defun ty/open-code-test:cov-report (run-test-before)
+    "Open code coverage report for current project.
+  With RUN-TEST-BEFORE is non-nil, then run tests before and then
+  open coverage.  You can simply call \"gf\" or
+  `xah-open-file-at-cursor' to navigate to a file shown on the
+  output."
+    (interactive "P")
+    (let ((default-directory (isamert/current-project-root))
+          (cov-file (format "file://%s/coverage/lcov-report/index.html" (isamert/current-project-root))))
+      (if run-test-before
+          (isamert/shell-command
+           :command "yarn test:cov --colors"
+           :buffer-name (format "%s-test-cov" (persp-current-name))
+           :on-finish (lambda () (browse-url-default-browser cov-file))
+           :on-fail (lambda () (user-error ">> Tests are failed!")))
+        (browse-url-default-browser cov-file))))
 #+end_src
