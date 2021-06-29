@@ -1480,15 +1480,15 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (use-package eww
     :ensure t
     :config
-    (setq
-     ;; TODO defer to jaro (except for eww links)
-     ;; TODO replace with browse-url-handlers in emacs 28
-     browse-url-browser-function
-     '((".*\\(trendyol\\|gitlab\\|github\\).*" . browse-url-default-browser)
-       (".*youtube.*/watch.*" . (lambda (url &rest args) (start-process "mpv-emacs" nil "mpv" url)))
-       ("." . eww-browse-url)))
+    (defvar isamert/url-handlers
+      '((".*\\(trendyol\\|gitlab\\|github\\).*" . browse-url-default-browser)
+        (".*youtube.*/watch.*" . (lambda (url &rest args) (start-process "mpv-emacs" nil "mpv" url)))
+        ("." . eww-browse-url)))
+    (if (>= emacs-major-version 28)
+        (setq browse-url-handlers isamert/url-handlers)
+      (setq browse-url-browser-function isamert/url-handlers))
+
     (evil-define-key 'normal 'eww-mode-map (kbd "Y") #'eww-copy-page-url)
-    isamert/help-at-point-mode
     (add-hook 'eww-mode-hook #'isamert/help-at-point-mode))
 #+end_src
 
