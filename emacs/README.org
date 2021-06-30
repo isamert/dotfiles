@@ -1495,6 +1495,13 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
     (add-hook 'eww-mode-hook #'isamert/help-at-point-mode))
 #+end_src
 
+** eshell
+#+begin_src emacs-lisp :lexical no
+  (use-package eshell
+    :config
+    (evil-define-key 'insert 'eshell-mode-map (kbd "C-r") #'consult-history))
+#+end_src
+
 ** treemacs
 #+BEGIN_SRC emacs-lisp
   (use-package treemacs
@@ -1780,7 +1787,7 @@ See =selectrum-minibuffer-map= for full list.
     :config
     (setq selectrum-extend-current-candidate-highlight t)
     (define-key selectrum-minibuffer-map (kbd "M-y") #'isamert/selectrum-kill-current-candidate)
-    (evil-leader/set-key "hh" #'selectrum-repeat)
+    (evil-leader/set-key "hl" #'selectrum-repeat)
     (selectrum-mode))
 
   (use-package selectrum-prescient
@@ -1851,6 +1858,7 @@ Some key points:
     ;; ^ When you do M-, on a candidate, it previews it
 
     (evil-leader/set-key
+      "hh"  #'consult-history
       "hy"  #'consult-yank
       "gg"  #'consult-git-grep
       "RET" #'consult-buffer)
