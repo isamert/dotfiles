@@ -607,6 +607,8 @@ Some small packages that enriches editing experience visually. I don't enable al
     :after evil
     :ensure t
     :config
+    (evil-collection-init 'eshell)
+    (evil-collection-init 'geiser)
     (evil-collection-init 'dired)
     (evil-collection-init 'grep)
     (evil-collection-init 'elfeed)
@@ -1609,6 +1611,8 @@ A package that shows key combinations. (for example press C-x and wait) It also 
     (setq which-key-min-display-lines 5)
     (setq which-key-max-display-columns 5)
     (setq which-key-max-description-length 70)
+    (setq which-key-idle-delay 0.5)
+    (setq which-key-sort-order #'which-key-description-order)
     (which-key-mode))
 
   (use-package which-key-posframe
@@ -2593,6 +2597,17 @@ Simple mode for editing =~/.Xmodmap= file.
     '("[xX]modmap\\(rc\\)?\\'")
     nil
     "Simple mode for xmodmap files.")
+#+end_src
+** define-word
+Simple dictonary.
+
+#+begin_src emacs-lisp
+  (use-package define-word
+    :ensure t
+    :config
+    (evil-leader/set-key
+      "/W" #'define-word
+      "/w" #'define-word-at-point))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
