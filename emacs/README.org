@@ -607,6 +607,7 @@ Some small packages that enriches editing experience visually. I don't enable al
     :after evil
     :ensure t
     :config
+    (evil-collection-init 'compile)
     (evil-collection-init 'eshell)
     (evil-collection-init 'geiser)
     (evil-collection-init 'dired)
