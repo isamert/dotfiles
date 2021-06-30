@@ -2021,7 +2021,8 @@ I was using projectile earlier but [[consult]] functions are just more than enou
     "Return the root path of current project."
     (interactive)
     ;; `project-current' is a function from project.el
-    (expand-file-name (cdr (project-current))))
+    (ignore-errors
+      (expand-file-name (cdr (project-current)))))
 #+end_src
 
 I have all my projects under =~/Workspace/projects=. Some of them are groupped under another directory. This functions loops trough all of the directories and finds the ones without =.git= folder and adds those folders to project paths. Consider this:
