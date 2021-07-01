@@ -3098,17 +3098,17 @@ Keybindings are generally set in-place, following have no context, so they are h
 - A-H,J,K,L shrink, enlarge split.
 
 #+BEGIN_SRC emacs-lisp
-  (defun isamert/split-window-right-vterm ()
+  (defun isamert/split-window-right-term ()
     (interactive)
     (split-window-right)
     (other-window 1)
-    (vterm t))
+    (eshell t))
 
-  (defun isamert/split-window-below-vterm ()
+  (defun isamert/split-window-below-term ()
     (interactive)
     (split-window-below)
     (other-window 1)
-    (vterm t))
+    (eshell t))
 
   (defun isamert/split-window-below ()
     (interactive)
@@ -3122,9 +3122,9 @@ Keybindings are generally set in-place, following have no context, so they are h
 
   (evil-define-key 'normal 'global
     (kbd "M-\\") 'isamert/split-window-right
-    (kbd "M-|")  'isamert/split-window-right-vterm
+    (kbd "M-|")  'isamert/split-window-right-term
     (kbd "M--")  'isamert/split-window-below
-    (kbd "M-_")  'isamert/split-window-below-vterm
+    (kbd "M-_")  'isamert/split-window-below-term
     (kbd "M-J")  'enlarge-window
     (kbd "M-K")  'shrink-window
     (kbd "M-L")  'enlarge-window-horizontally
