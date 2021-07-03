@@ -4459,7 +4459,9 @@ Company/work related stuff.
     (embark-define-keymap isamert/embark-jira-actions
       "Actions for JIRA issues."
       ("o" isamert/open-jira-issue)
-      ("b" isamert/jira-ticket-to-branch))
+      ("b" isamert/jira-ticket-to-branch)
+      ("W" isamert/jira-ticket-to-worktree))
+
     (add-to-list 'embark-keymap-alist '(isamert/jira . isamert/embark-jira-actions)))
 
   ;;
@@ -4478,13 +4480,18 @@ Company/work related stuff.
   ;; My completing-read based JIRA utilities
   ;;
 
-  (defvar isamert/jira-projects '(("SA" . 1000))
+  (defvar isamert/git-worktrees-root "~/Workspace/projects/worktrees"
+    "Directory to create worktrees in.")
+
+  (defvar isamert/jira-projects '(("SA" . 1200))
     "List of projects that I enrolled in JIRA.
   CDR of each item defines which ticket number the caching should
   start.")
 
-  (defvar isamert/jira-base-branch "master"
-    "Brach to create feature branches from.")
+  (defvar isamert/jira-base-branch "origin/master"
+    "Brach to create feature branches from.
+  Consider using origin/something to create the branch from latest
+  something.")
 
   (defvar isamert/jira-feature-branch-prefix "feature/"
     "Prefix to prepend feature branch names.")
@@ -4535,21 +4542,39 @@ Company/work related stuff.
       (isamert/open-jira-issue)))
 
   (defun isamert/jira-ticket-to-branch (issue-name)
+    "Create a new branch from given ISSUE-NAME and switch to it."
     (interactive "sIssue name: ")
-    (let ((branch-name (thread-last issue-name
-                         (s-replace-all '((" " . "-") (":" . "-") ("\"" . "") ("/" . "-") ("&" . "") ("(" . "-") (")" . "-")))
-                         (s-replace "---" "-")
-                         (s-replace "--" "-")
-                         (s-downcase)
-                         (isamert/s-upcase-until "-")
-                         (s-prepend isamert/jira-feature-branch-prefix)
-                         (read-string "Branch name: "))))
+    (let ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name)))
       (message "Updating...")
-      (magit-branch-checkout isamert/jira-base-branch)
-      (magit-pull-from-upstream nil)
+      (magit-fetch-all nil)
       (message "Creating branch...")
       (magit-branch-and-checkout branch-name isamert/jira-base-branch)
       (message "Currently on %s." (magit-get-current-branch))))
+
+  (defun isamert/jira-ticket-to-worktree (issue-name)
+    (interactive "sIssue name: ")
+    (let* ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name))
+           (worktree (expand-file-name (format "%s/%s" isamert/git-worktrees-root (s-replace "/" "-" branch-name)))))
+      (message "Updating...")
+      (magit-fetch-all nil)
+      (message "Creating worktree...")
+      (magit-worktree-branch worktree branch-name isamert/jira-base-branch)
+      (persp-add-new branch-name)
+      (persp-switch branch-name)
+      (cd worktree)
+      (isamert/find-file-in-current-project)
+      (message "Currently on %s." (magit-get-current-branch))))
+
+  (defun isamert/jira-create-branch-name-from-ticket (issue-name)
+    "Create a branch name from given Jira ISSUE-NAME"
+    (thread-last issue-name
+      (s-replace-all '((" " . "-") (":" . "-") ("\"" . "") ("/" . "-") ("&" . "") ("(" . "-") (")" . "-")))
+      (s-replace "---" "-")
+      (s-replace "--" "-")
+      (s-downcase)
+      (isamert/s-upcase-until "-")
+      (s-prepend isamert/jira-feature-branch-prefix)
+      (read-string "Branch name: ")))
 
   ;; Utility
 
