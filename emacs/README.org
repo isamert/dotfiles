@@ -1500,6 +1500,10 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (use-package eshell
     :config
     (evil-define-key 'insert 'eshell-mode-map (kbd "C-r") #'consult-history))
+
+  ;; Adds nice tab completion to eshell (completes subcommands etc.,
+  ;; eshell already completes file-paths interactively)
+  (use-package pcmpl-args :ensure t)
 #+end_src
 
 ** treemacs
@@ -1821,6 +1825,12 @@ See =selectrum-minibuffer-map= for full list.
             (width . 0.55)
             (left . 0.5))
           mini-frame-color-shift-step 15)
+
+    ;; completion-at-point sometimes causes issues with mini-frame and
+    ;; it does not really make sense to have the completion at the
+    ;; middle of the screen, default behaviour is more than fine
+    (add-to-list 'mini-frame-ignore-commands 'completion-at-point)
+    (add-to-list 'mini-frame-ignore-functions 'completion-at-point)
     (mini-frame-mode +1))
 
   (defun isamert/selectrum-kill-current-candidate ()
