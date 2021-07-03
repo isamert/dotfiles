@@ -4364,6 +4364,8 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
       (set-process-sentinel
        proc
        (lambda (p e)
+         (with-current-buffer buffer-name
+           (read-only-mode -1))
          (if (= 0 (process-exit-status p))
              (funcall on-finish)
            (funcall on-fail))))
@@ -4371,8 +4373,11 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
        proc
        (lambda (proc str)
          (with-current-buffer buffer-name
-           (insert (ansi-color-apply str)))))
+           (let ((inhibit-read-only t))
+             (goto-char (point-max))
+             (insert (ansi-color-apply str))))))
       (with-current-buffer buffer-name
+        (read-only-mode)
         (font-lock-mode))
       (when switch
         (switch-to-buffer buffer-name))))
