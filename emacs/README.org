@@ -4419,14 +4419,20 @@ Company/work related stuff.
 
 ** Open MR page
 #+begin_src emacs-lisp
-  (defun isamert/git-link-my-merge-requests ()
+  (defun isamert/git-link-my-merge-requests-for-current-project ()
     "Open all of my merge requests in browser for the current repository."
     (interactive)
-    (with-default-browser
-     (browse-url (format "%s/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=%s" (isamert/git-link-homepage) "isamert.gurbuz"))))
+    (browse-url (format "%s/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=%s" (isamert/git-link-homepage) "isamert.gurbuz")))
+
+  (defun isamert/git-link-my-merge-requests ()
+    "Open all of my merge requests in browser."
+    (interactive)
+    (browse-url "https://gitlab.trendyol.com/groups/discovery/seller-ads/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=isamert.gurbuz"))
+
 
   (evil-leader/set-key
-    "glm" 'isamert/git-link-my-merge-requests)
+    "glm" 'isamert/git-link-my-merge-requests-for-current-project
+    "glM" 'isamert/git-link-my-merge-requests)
 #+end_src
 ** Misc bindings
 #+begin_src emacs-lisp
