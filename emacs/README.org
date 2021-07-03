@@ -4501,8 +4501,7 @@ Company/work related stuff.
   (defun isamert/open-jira-issue (issue-number)
     "Open given Jira ISSUE-NUMBER."
     (interactive "sIssue: ")
-    (with-default-browser
-      (browse-url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number))))))
+    (browse-url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number)))))
 
   (defun isamert/open-jira-issue-at-point ()
     "Open issue at point."
@@ -4600,7 +4599,7 @@ Company/work related stuff.
       (if run-test-before
           (isamert/shell-command
            :command "yarn test:cov --colors"
-           :buffer-name (format "%s-test-cov" (persp-current-name))
+           :buffer-name (format "%s-test-cov" persp-last-persp-name)
            :on-finish (lambda () (browse-url-default-browser cov-file))
            :on-fail (lambda () (user-error ">> Tests are failed!")))
         (browse-url-default-browser cov-file))))
