@@ -889,6 +889,18 @@ Change two parts of the text.
     :config
     (evil-exchange-install))
 #+end_src
+
+** evil-visualstar
+With this package, you can do a visual selection and ~*~, ~#~ keys will work on them.
+
+#+begin_src emacs-lisp
+  (use-package evil-visualstar
+    :ensure t
+    :config
+    (setq evil-visualstar/persistent t)
+    (global-evil-visualstar-mode 1))
+#+end_src
+
 ** goto-chg
 - =g;= goes to the last change. (repeatable)
 - There is also =gv= which selects the last selection. Not related to this package, it's a default functionality but I wanted to mention.
