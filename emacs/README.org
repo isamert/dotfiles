@@ -4441,6 +4441,25 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
         (switch-to-buffer buffer-name))))
 #+end_src
 
+** Copy current/buffers filename into clipboard
+#+begin_src emacs-lisp :lexical no
+  (defun isamert/copy-file-name-to-clipboard (&optional uri)
+    "Copy the current buffer file name to the clipboard.
+  If the URI is non-nil, then add file:// in front of the
+  file-path."
+    (interactive "P")
+    (let* ((fname (if (equal major-mode 'dired-mode)
+                         default-directory
+                       (buffer-file-name)))
+           (filename (if (and fname uri)
+                         (concat "file://" fname)
+                       fname)))
+      (if filename
+          (progn
+            (kill-new filename)
+            (message ">> Copied buffer file name '%s' to the clipboard." filename))
+        (user-error ">> Failed to copy"))))
+#+end_src
 * TY
 Company/work related stuff.
 
