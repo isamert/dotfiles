@@ -663,6 +663,7 @@ Enable leader key and bind some keys.
       ";"   'eval-last-sexp
 
       ;; buffers
+      "bb" #'switch-to-buffer
       "bq" #'evil-quit
       "bp" #'previous-buffer
       "bn" #'next-buffer
@@ -4421,7 +4422,8 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
        proc
        (lambda (p e)
          (with-current-buffer buffer-name
-           (read-only-mode -1))
+           (read-only-mode -1)
+           (undo-tree-mode t))
          (if (= 0 (process-exit-status p))
              (funcall on-finish)
            (funcall on-fail))))
