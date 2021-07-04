@@ -197,6 +197,28 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 Some sources about the variables that I changed:
 - https://github.com/emacs-lsp/lsp-mode#performance
 
+** Overriding some defaults
+*** M-Backspace should delete, instead of killing
+#+begin_src emacs-lisp
+  ;; https://www.emacswiki.org/emacs/BackwardDeleteWord
+
+  (defun delete-word (arg)
+    "Delete characters forward until encountering the end of a word.
+  With argument, do this that many times."
+    (interactive "p")
+    (if (use-region-p)
+        (delete-region (region-beginning) (region-end))
+      (delete-region (point) (progn (forward-word arg) (point)))))
+
+  (defun backward-delete-word (arg)
+    "Delete characters backward until encountering the end of a word.
+  With argument, do this that many times."
+    (interactive "p")
+    (delete-word (- arg)))
+
+  (global-set-key (read-kbd-macro "<M-DEL>") 'backward-delete-word)
+#+end_src
+
 ** Recent files
 Save recent files. Also exclude package files that appears after installing a package or after an update from recent list.
 
@@ -212,6 +234,10 @@ Save recent files. Also exclude package files that appears after installing a pa
   (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
   (setq savehist-file "~/.emacs.d/savehist")
   (savehist-mode 1)
+
+
+  (setq save-interprogram-paste-before-kill t)
+  ;; ^ Clipboard selections are copied into the kill-ring
 #+end_src
 
 ** Better scrolling
