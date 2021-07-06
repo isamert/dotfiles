@@ -1784,6 +1784,9 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     ;; For `isamert/persp-switch-to-last'
     (add-hook 'persp-before-switch-functions
               #'isamert/persp-update-last-persp)
+    (add-hook 'persp-before-switch-functions
+              #'isamert/tmux-focus-perspective-window)
+
 
     ;; Glue for persp-el and eyebrowse
     (add-hook 'persp-before-switch-functions
@@ -2549,12 +2552,12 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (when (not isamert/tmux-session)
       (isamert/select-tmux-session)))
 
-  (defun isamert/tmux-focus-perspective-window ()
+  (defun isamert/tmux-focus-perspective-window (&optional pname &rest rest)
     "Focus to the tmux window that has the same name with current perspective.
   Tmux session is infered from isamert/select-tmux-session"
     (interactive)
     (isamert/select-tmux-session-if-needed)
-    (->> (persp-name (get-current-persp))
+    (->> (or pname (persp-name (persp-curr)))
       (format "tmux list-windows -t%s | grep %s" isamert/tmux-session)
       (shell-command-to-string)
       (s-split ":")
