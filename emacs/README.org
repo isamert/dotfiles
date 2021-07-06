@@ -26,6 +26,17 @@ This is my emacs configuration. My main focus is sanity. I'm a person who get fr
 - I use =verbatim text= and ~code text~ completely randomly.
 - I try to prefer built-in packages or packages that enhances built-in ones where possible. I'm also trying to simplify my configuration, so another goal is to reduce the package number. Although I intend to keep packages that enhances the overall experience with no special configuration (just install and forget type of packages).
 
+** Keybinding conventions
+- After leader
+  - =e= :: is reserved for independent programs, that is not related to editing/programming. For example, "ec" opens calendar, "ee" opens elfeed, "er..." controls the radio.
+  - =t= :: is reserved for toggling stuff. Toggle the terminal, toggle a frequently accessed buffer etc.
+  - =h= :: is reserved for any menu with fuzzy selection that does not fit anywhere else.
+  - =g= :: is for git related functionality.
+  - =p= :: is for project related functionality.
+  - =/= :: is for search/translate related functionality. (Generally external programs)
+  - =b= :: is for buffers.
+  - =w= :: is for windows. I also use =C-w= for this, which is default prefix for window-related functions in vim.
+  - =o= :: is for org-mode/outline mode.
 ** Updating packages
 Currently, I don't use an external package manager, =package.el= satisfies my needs. Here is how I do the updates:
 - =package-refresh-contents=
@@ -1477,6 +1488,8 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 #+begin_src emacs-lisp
   (use-package calendar
     :config
+    (evil-leader/set-key "ec" #'calendar)
+
     ;; Start the week from Monday
     (setq calendar-week-start-day 1)
 
