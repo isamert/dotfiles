@@ -668,6 +668,10 @@ Enable leader key and bind some keys.
       "bp" #'previous-buffer
       "bn" #'next-buffer
       "bd" #'kill-this-buffer))
+
+  (evil-define-key '(normal insert) 'global
+    (kbd "M-,") #'previous-buffer
+    (kbd "M-.") #'next-buffer)
 #+END_SRC
 
 ** evil-mc (multiple cursors)
