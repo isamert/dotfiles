@@ -2672,7 +2672,11 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
 
     (evil-define-key 'insert 'global
       (kbd "M-s") #'yankpad-insert
-      (kbd "M-e") #'yankpad-expand))
+      (kbd "M-e") #'yankpad-expand)
+
+    ;; Enable expanding in minibuffer
+    (add-hook 'minibuffer-setup-hook 'yas-minor-mode)
+    (define-key minibuffer-local-map (kbd "M-e") #'yankpad-expand))
 #+END_SRC
 
 ** git-link
