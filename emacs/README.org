@@ -1739,6 +1739,9 @@ Show TODO/FIXME etc in magit-status buffer.
     :ensure t
     :after magit
     :config
+
+    (evil-leader/set-key  "gt" #'git-timemachine-toggle)
+
     ;; Override completing-read function to make it use
     ;; `completing-read' no matter what
     (defun git-timemachine-completing-read-fn (&rest args)
