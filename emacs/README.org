@@ -4700,17 +4700,33 @@ Company/work related stuff.
 
 ** Utilities
 #+begin_src emacs-lisp
+  (cl-defun isamert/toggle-config-in-file (&key file val1 val2)
+    (let ((fpath (expand-file-name file))
+          (e-val1 (s-replace "/" "\\/" val1))
+          (e-val2 (s-replace "/" "\\/" val2)))
+      (if (eq 0 (shell-command (format "grep -E '%s' '%s'" e-val1 fpath)))
+          (progn
+            (shell-command (format "sed -i 's/%s/%s/' '%s'" e-val1 e-val2 fpath))
+            (message ">> Switched to %s" val2))
+        (progn
+          (shell-command (format "sed -i 's/%s/%s/' '%s'" e-val2 e-val1 fpath))
+          (message ">> Switched to %s" val1)))))
+
   (defun ty/toggle-editor-backend-url ()
     "Toggle between local/stage editor-bff instace."
     (interactive)
-    (let ((fpath (expand-file-name "~/Workspace/projects/editor/src/config.ts")))
-      (if (eq 0 (shell-command (format "grep -E 'const EDITOR_BFF_STAGE_URL.*stageselleradseditorbff' '%s'" fpath)))
-          (progn
-            (shell-command (format "sed -i 's/https:\\/\\/stageselleradseditorbff.trendyol.com/http:\\/\\/localhost:3031/' '%s'" fpath))
-            (message ">> Switched to LOCALHOST"))
-        (progn
-          (shell-command (format "sed -i 's/http:\\/\\/localhost:3031/https:\\/\\/stageselleradseditorbff.trendyol.com/' '%s'" fpath))
-          (message ">> Switched to STAGE")))))
+    (isamert/toggle-config-in-file
+     :file "~/Workspace/projects/editor/src/config.ts"
+     :val1 "https://stageselleradseditorbff.trendyol.com"
+     :val2 "http://localhost:3031"))
+
+  (defun ty/toggle-ebff-advert-statistics-url ()
+    "Toggle between local/stage advert-statistics instace."
+    (interactive)
+    (isamert/toggle-config-in-file
+     :file "~/Workspace/projects/editor-bff/config/stage.yaml"
+     :val1 "https://stageselleradsadvertstatisticapi.trendyol.com"
+     :val2 "http://localhost:8086/"))
 
   (defun ty/open-code-test:cov-report (run-test-before)
     "Open code coverage report for current project.
