@@ -1784,6 +1784,21 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     ;; TODO
     ;; "lm" #'isamert/persp-toggle-modestring)
 
+    ;; Add every newly opened buffer to current perspective
+    (setq persp-add-buffer-on-after-change-major-mode t)
+
+    ;; ...and filter the ones I don't want to be in the perspective
+    (add-hook
+     'persp-common-buffer-filter-functions
+     #'isamert/filter-buffers-for-persp-mode)
+
+    (defun isamert/filter-buffers-for-persp-mode (b)
+      (let ((bname (buffer-name b))
+            (mmode (buffer-local-value 'major-mode b)))
+        (or (s-prefix? "magit: " bname)
+            (and (s-prefix? "*" bname) (not (or (s-contains? "eshell" bname) (s-contains? "Org Src" bname))))
+            (s-equals? "dired-mode" mmode))))
+
     (add-hook 'after-init-hook #'(lambda () (persp-mode 1))))
 
 
