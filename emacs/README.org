@@ -3367,6 +3367,12 @@ Keybindings are generally set in-place, following have no context, so they are h
 #+END_SRC
 
 * Language specific
+** General
+- Use =format-all-buffer= function to format current buffer. Works for any language.
+
+#+begin_src emacs-lisp
+  (use-package format-all :ensure t)
+#+end_src
 ** markdown
 #+BEGIN_SRC emacs-lisp
 (use-package markdown-mode
@@ -3414,24 +3420,6 @@ Keybindings are generally set in-place, following have no context, so they are h
 #+END_SRC
 
 ** javascript
-*** Use ~eslint~ from ~node_modules~
-#+BEGIN_SRC emacs-lisp
-  (defun isamert/use-eslint-from-node-modules ()
-    "Set the eslint exacutable to the one that is found in node_modules and enable flycheck with eslint as the checker."
-    (interactive)
-    (--> (or (buffer-file-name) default-directory)
-         (locate-dominating-file it "node_modules")
-         (expand-file-name "node_modules/.bin/eslint" it)
-         (if (file-executable-p it)
-             (progn
-               (setq-local flycheck-javascript-eslint-executable it)
-               (flycheck-mode t)
-               (flycheck-select-checker 'javascript-eslint))
-           (message "eslint not found."))))
-
-  (add-hook 'js-mode-hook #'isamert/use-eslint-from-node-modules)
-#+END_SRC
-
 *** jsdoc.el
 This is a package I wrote for inserting JSDoc comments easily. Check out the [[https://github.com/isamert/jsdoc.el][README]].
 
@@ -3493,6 +3481,20 @@ The following enables =CamelCase= aware editing operations.
          t)
       (user-error "Select something first")))
 #+end_src
+*** Add node_modules/.bin to PATH automatically
+#+begin_src emacs-lisp
+  (defun isamert/add-node-modules-to-path ()
+    "Add node_modules/.bin to `exec-path'."
+    (interactive)
+    (-some->> (locate-dominating-file "." "node_modules")
+      (expand-file-name)
+      (format "%s/node_modules/.bin")
+      (add-to-list 'exec-path)
+      (message "%s")))
+
+  (add-hook 'js-mode-hook #'isamert/add-node-modules-to-path)
+  (add-hook 'js2-mode-hook #'isamert/add-node-modules-to-path)
+#+end_src
 ** typescript
 #+begin_src emacs-lisp
   (use-package typescript-mode
@@ -3502,7 +3504,9 @@ The following enables =CamelCase= aware editing operations.
     ;; parser for that mode
     (define-derived-mode tsx-mode typescript-mode "typescript-tsx")
     (add-to-list 'auto-mode-alist (cons (rx ".tsx" string-end) #'tsx-mode))
-    (setf (alist-get 'tsx-mode tree-sitter-major-mode-language-alist) 'tsx))
+    (setf (alist-get 'tsx-mode tree-sitter-major-mode-language-alist) 'tsx)
+    (add-hook 'typescript-mode-hook #'isamert/add-node-modules-to-path)
+    (add-hook 'tsx-mode-hook #'isamert/add-node-modules-to-path))
 #+end_src
 
 ** json
