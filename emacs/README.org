@@ -1451,7 +1451,7 @@ With this package, you can make =grep= buffers editable and your edits can be ap
 - Do ~C-c C-p~ (or =i=, enabled by evil-collection) on a =grep= buffer to make it editable.
 - Do ~C-j~ or ~C-k~ (enabled by evil-collection, by default you need to use =n=) to peek at next/prev instance.
 
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (use-package wgrep
     :ensure t)
 #+end_src
@@ -1553,7 +1553,7 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 #+end_src
 
 ** eshell
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (use-package eshell
     :config
     (evil-define-key 'insert 'eshell-mode-map (kbd "C-r") #'consult-history))
@@ -1747,7 +1747,7 @@ Show TODO/FIXME etc in magit-status buffer.
   - use =gt<SOMETHING>= to do timemachine specific operations.
   - ~C-j/k~ to go to prev/next revision of the file.
 
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (use-package git-timemachine
     :ensure t
     :after magit
@@ -3652,7 +3652,7 @@ Hit <C-j> after these and get:
 ** vimrc
 Mostly for editing tridactyl and sometimes real vimrc.
 
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (use-package vimrc-mode :ensure t)
 #+end_src
 
@@ -4484,7 +4484,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 #+end_src
 
 ** Copy current/buffers filename into clipboard
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (defun isamert/copy-file-name-to-clipboard (&optional uri)
     "Copy the current buffer file name to the clipboard.
   If the URI is non-nil, then add file:// in front of the
@@ -4505,7 +4505,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 * TY
 Company/work related stuff.
 
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (defun company/is-company ()
     "Return if current computer is Well computer or not."
     (string= (treemacs-workspace->name (treemacs-current-workspace)) "seller-ads"))
@@ -4705,7 +4705,7 @@ Company/work related stuff.
 #+end_src
 
 ** Token management
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (defvar ty/stage-token nil)
 
   (defun ty/stage-token ()
