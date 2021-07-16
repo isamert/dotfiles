@@ -164,7 +164,8 @@ Some basic variable and function definitions that will be used in configuration.
         (setq k+c (cddr k+c)))))
 
   (defmacro with-default-browser (&rest body)
-    `(let ((browse-url-browser-function 'browse-url-default-browser))
+    `(let ((browse-url-handlers nil)
+           (browse-url-browser-function 'browse-url-default-browser))
        ,@body))
 #+END_SRC
 
@@ -965,6 +966,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
 #+begin_src emacs-lisp
   (evil-leader/set-key
     "oo"  #'org-open-at-point
+    "oO"  (lambda () (interactive) (with-default-browser (call-interactively 'org-open-at-point)))
     "op"  #'org-set-property
     "oi"  #'org-toggle-inline-images
     "or"  #'org-mode-restart
@@ -1478,6 +1480,8 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
   ;; Add icons to dired buffers
   (add-hook 'dired-mode-hook 'treemacs-icons-dired-mode)
+
+  (evil-leader/set-key "ed" #'dired)
 #+end_src
 ** image-mode
 I want to be able to kill image buffers with simply hitting =q=. This does that.
@@ -3301,6 +3305,9 @@ Keybindings are generally set in-place, following have no context, so they are h
     (kbd "M-;") 'comment-dwim
     "gd" 'xref-find-definitions
     "gr" 'xref-find-references)
+
+  (evil-leader/set-key
+    "1" #'(lambda () (interactive) (call-interactively (local-key-binding (kbd "C-c C-c")))))
 #+END_SRC
 
 ** Better split management
@@ -4681,7 +4688,9 @@ Company/work related stuff.
       (message "Updating...")
       (magit-fetch-all nil)
       (message "Creating worktree...")
-      (magit-worktree-branch worktree branch-name isamert/jira-base-branch)
+      (if (-contains? (vc-git-branches) branch-name)
+          (magit-worktree-checkout worktree branch-name)
+        (magit-worktree-branch worktree branch-name isamert/jira-base-branch))
       (persp-add-new branch-name)
       (persp-switch branch-name)
       (cd worktree)
@@ -4715,10 +4724,13 @@ Company/work related stuff.
   (defun ty/stage-token ()
     (or
      ty/stage-token
-     (progn
-       (let ((token (read-string "Token: ")))
-         (setq ty/stage-token token)
-         token))))
+     (ty/set-stage-token)))
+
+  (defun ty/set-stage-token ()
+    (interactive)
+    (let ((token (read-string "Token: ")))
+      (setq ty/stage-token token)
+      token))
 #+end_src
 
 ** Utilities
@@ -4767,4 +4779,17 @@ Company/work related stuff.
            :on-finish (lambda () (browse-url-default-browser cov-file))
            :on-fail (lambda () (user-error ">> Tests are failed!")))
         (browse-url-default-browser cov-file))))
+
+  (defun ty/run-current-test-file ()
+    (interactive)
+    (let ((default-directory (isamert/current-project-root))
+          (test-file (if (s-contains? ".spec." buffer-file-name)
+                         buffer-file-name
+                       (concat
+                        (file-name-directory buffer-file-name)
+                        "__tests__/"
+                        (s-replace ".ts" ".spec.ts" (file-name-nondirectory buffer-file-name))))))
+      (isamert/shell-command
+       :command (format "yarn test --colors %s" (file-relative-name test-file  (isamert/current-project-root))))))
+
 #+end_src
