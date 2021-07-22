@@ -1135,6 +1135,23 @@ This is the global keybinding manager for OSX.
   [[ -n $QUTEBROWSER_PID ]] && kill -CONT "$QUTEBROWSER_PPID"
 #+end_src
 
+** Notifications (deadd-notification-center)
+#+begin_src conf :tangle (when-linux "~/.config/deadd/deadd.conf")
+  [notification-center]
+  hideOnMouseLeave = false
+  followMouse = true
+  useMarkup = true
+  newFirst = true
+  ignoreTransient = true
+
+  [notification-center-notification-popup]
+  followMouse = true
+
+  [buttons]
+  buttonsPerRow = 4
+  labels = "Bluetooth":"Wifi":"Logout":"Shutdown"
+  commands="blueman-tray":"nm-applet":"kill -9 -1":"shutdown now"
+#+end_src
 * Alacritty terminal
 #+begin_src yaml :tangle ~/.config/alacritty.yml
   window:
