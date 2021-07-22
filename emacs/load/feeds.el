@@ -39,6 +39,8 @@
     ("https://www.lesswrong.com/feed.xml?view=curated-rss" blog essay)
     ("https://writings.stephenwolfram.com/feed/" blog essay)
     ("http://explosm.net/rss" comic)
+    ("https://astralcodexten.substack.com/feed" blog essay) ;; Scott Alexander
+    ("https://www.theinsight.org/feed" blog essay) ;; Zeynep Tufekci
 
     ("BlackMetalUpdates" youtube music metal black)
     ("XOdiumNostrumX" youtube music metal extreme)
