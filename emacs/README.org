@@ -3677,21 +3677,160 @@ Mostly for editing tridactyl and sometimes real vimrc.
 I have an Android phone that is running [[https://termux.com/][Termux]] all the time. If you install Termux through [[https://www.f-droid.org/][F-Droid]] you can also install [[https://f-droid.org/en/packages/com.termux.api/][Termux:API]] package which brings bunch of commands like =termux-clipboard-set=, =termux-sms-list= etc. Much of the commands requires to be called in foreground, so they are not very useful over SSH but you can work around that by starting a =tmux= session on the phone and executing commands on that tmux session through SSH. This way I can send arbitrary text to my phones clipboard using the commands below.
 
 #+begin_src emacs-lisp
+  (evil-leader/set-key
+    "ept" #'isamert/send-text-to-my-phone
+    "epc" #'isamert/send-clipboard-to-my-phone)
+
   (defvar isamert/phone-hostname
     "mia3"
     "Hostname or local address to connect to my phone by SSH.")
 
-  (defun company/send-text-to-my-phone (text)
+  (defun isamert/send-termux-command (cmd)
+    "Send CMD to my phone."
+    (interactive "sText: ")
+    (shell-command-to-string (format "ssh %s \"tmux pipe-pane -t0 '%s'\"" isamert/phone-hostname cmd)))
+
+  (defun isamert/send-notification-to-my-phone (text &optional content)
+    "Send TEXT and CONTENT as notification to my phone."
+    (interactive "sText:")
+    (isamert/send-termux-command
+     (format "termux-notification --title \\\"%s\\\" --content \\\"%s\\\""
+             text
+             (or content ""))))
+
+  (cl-defun isamert/send-notification-to-my-phone
+      (&key
+       title
+       content
+       url-to-open)
+    "Send a notification to my phone."
+    (isamert/send-termux-command
+     (format "termux-notification --title \\\"%s\\\" --content \\\"%s\\\" %s"
+             title
+             (or content "")
+             (if url-to-open
+                 (format "--action \\\"termux-open %s\\\"" url-to-open)
+               ""))))
+
+  (defun isamert/send-text-to-my-phone (text)
     "Send TEXT to my phones clipboard."
     (interactive "sText: ")
     (shell-command-to-string (format "ssh %s \"tmux pipe-pane -t0 'echo \\\"%s\\\" | termux-clipboard-set'\"" isamert/phone-hostname text)))
 
-  (defun company/send-clipboard-to-my-phone ()
+  (defun isamert/send-clipboard-to-my-phone ()
     "Send current clipboard content to my phones clipboard."
     (interactive)
-    (company/send-text-to-my-phone (current-kill 0)))
+    (isamert/send-text-to-my-phone (current-kill 0)))
 #+end_src
 
+** Signal
+#+begin_src emacs-lisp
+  (require 'dbus)
+
+  (evil-leader/set-key
+    "epn" #'isamert/signal-send-note-to-myself
+    "epm" #'isamert/signal-send-message)
+
+  (defconst isamert/signal-dbus-args '(:session "org.asamk.Signal"
+                                                "/org/asamk/Signal"
+                                                "org.asamk.Signal"))
+
+  (defun isamert/signal (&rest args)
+    "Send a signal DBUS command with ARGS."
+    (apply #'dbus-call-method `(,@isamert/signal-dbus-args ,@args)))
+
+  (defun isamert/signal-async (&rest args)
+    "Send an async Signal DBUS command with ARGS."
+    (apply #'dbus-call-method-asynchronously `(,@isamert/signal-dbus-args ,@args)))
+
+  (defun isamert/signal-send-note-to-myself (note &optional attachments)
+    "Send a NOTE with attachments to my phone."
+    (interactive
+     (list
+      (if (use-region-p)
+          (buffer-substring (region-beginning) (region-end))
+        (read-string "Enter note: "))
+      (when (y-or-n-p "Want to attach something? ")
+        (list (read-file-name "Attachment: ")))))
+    (isamert/signal-async
+     "sendNoteToSelfMessage"
+     (lambda (msg) (message ">> Signal %s" msg))
+     note
+     (or (mapcar 'expand-file-name attachments)
+         '(:array))))
+
+  (defun isamert/signal-send-message (recipient content &optional attachments)
+    "Send message to RECIPIENT with CONTENT."
+    (interactive
+     (list
+      (isamert/signal-select-contact)
+      (if (use-region-p)
+          (buffer-substring (region-beginning) (region-end))
+        (read-string "Enter message: "))
+      (when (y-or-n-p "Want to attach something? ")
+        (list (read-file-name "Attachment: ")))))
+    (isamert/signal-async
+     (if (plist-get recipient :number)
+         "sendMessage"
+       "sendGroupMessage")
+     (lambda (msg) (message ">> Signal %s" msg))
+     content
+     (or (mapcar 'expand-file-name attachments)
+         '(:array))
+     (cadr recipient)))
+
+  (defun isamert/signal-select-contact ()
+    "Select a contact interactively."
+    (let* ((contacts (--map
+                      (cons (isamert/signal "getContactName" it) it)
+                      (isamert/signal "listNumbers")))
+           (groups (--map
+                    (cons (format
+                           "%s [GROUP]"
+                           (isamert/signal "getGroupName"
+                                           (dbus-string-to-byte-array (dbus-byte-array-to-string it))))
+                          it)
+                    (isamert/signal "getGroupIds")))
+           (all (append contacts groups))
+           (selected (cdr (assoc (completing-read "Send message to: " all) all))))
+      (if (stringp selected)
+          (list :number selected)
+        (list :group (dbus-string-to-byte-array (dbus-byte-array-to-string selected))))))
+
+  (defun isamert/signal-sync-message-received-handler (ts source receiver _ msg attchs)
+    (when (and (string= receiver source)
+               (string= isamert/my-phone-number source))
+       (cond
+        ((s-prefix? "run" msg)
+         (isamert/signal-send-note-to-myself
+          (shell-command-to-string (s-chop-prefix "run " msg))))
+        ((string= "help" msg)
+         (isamert/signal-send-note-to-myself
+          (concat "run <shell-command>\n"
+                  "grab <file-path>\n"
+                  "help")))
+        ((s-prefix? "grab" msg)
+         (isamert/signal-send-note-to-myself
+          "" (list (s-chop-prefix "grab " msg)))))))
+
+  (defvar isamert/signal-bot-object nil)
+
+  (defun isamert/start-signal-bot ()
+    (interactive)
+    (setq
+     isamert/signal-bot-object
+     (apply
+      #'dbus-register-signal
+      `(,@isamert/signal-dbus-args
+        ,"SyncMessageReceived"
+        ,#'isamert/signal-sync-message-received-handler))))
+
+  (defun isamert/stop-signal-bot ()
+    (interactive)
+    (dbus-unregister-object isamert/signal-bot-object))
+
+  (isamert/start-signal-bot)
+#+end_src
 ** people.org - Contact management
 Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-and-syncing-them-to-your-phone-android-ios-whatever-.html][this post]] for further information.
 
