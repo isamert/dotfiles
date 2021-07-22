@@ -185,7 +185,7 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 * Basics
 ** Sane defaults
 #+BEGIN_SRC emacs-lisp
-  (setq gc-cons-threshold 100000000)
+  (setq gc-cons-threshold (* 256 1024 1024))
   ;; ^ Better than default
   (setq read-process-output-max (* 1024 1024))
   ;; ^ Better than default
@@ -645,6 +645,7 @@ Some small packages that enriches editing experience visually. I don't enable al
     :after evil
     :ensure t
     :config
+    (evil-collection-init 'ibuffer)
     (evil-collection-init 'compile)
     (evil-collection-init 'eshell)
     (evil-collection-init 'geiser)
@@ -1560,6 +1561,11 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 #+begin_src emacs-lisp
   (use-package eshell
     :config
+    (setq eshell-hist-ignoredups t)
+    (setq eshell-history-size 1500)
+    (setq eshell-error-if-no-glob t)
+    (setq eshell-glob-case-insensitive t)
+    (setq eshell-kill-processes-on-exit t)
     (evil-define-key 'insert 'eshell-mode-map (kbd "C-r") #'consult-history))
 
   ;; Adds nice tab completion to eshell (completes subcommands etc.,
@@ -1860,16 +1866,14 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
       (persp-add-new "dotfiles")
       (persp-switch "dotfiles")
       (find-file "~/Workspace/projects/dotfiles/README.org")
-      (split-window-horizontally)
-      (other-window 1)
+      (eyebrowse-switch-to-window-config-2)
       (find-file "~/Workspace/projects/dotfiles/emacs/README.org"))
     (progn
       (persp-add-new "planning")
       (persp-switch "planning")
       (find-file "~/Documents/notes/bullet.org")
       (isamert/bullet-focus-today)
-      (split-window-horizontally)
-      (other-window 1)
+      (eyebrowse-switch-to-window-config-2)
       (find-file "~/Documents/notes/life.org"))
     (progn
       (persp-add-new "notes")
@@ -2101,7 +2105,8 @@ Some key points:
     (evil-define-key 'normal 'global
       (kbd "M-i") 'consult-imenu
       (kbd "C-f") 'consult-line)
-
+    (evil-define-key 'normal org-mode-map
+      (kbd "M-i") 'consult-org-heading)
 
     ;; Hide some buffers from consult-buffer window. Just use
     ;; (switch-to-buffer) or (persp-switch-to-buffer) to switch to the
@@ -2596,7 +2601,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   Tmux session is infered from isamert/select-tmux-session"
     (interactive)
     (isamert/select-tmux-session-if-needed)
-    (->> (or pname (persp-name (persp-curr)))
+    (->> (or pname (persp-name (get-current-persp)))
       (format "tmux list-windows -t%s | grep %s" isamert/tmux-session)
       (shell-command-to-string)
       (s-split ":")
