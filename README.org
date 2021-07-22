@@ -3314,7 +3314,9 @@ This part is almost completely untouched. Needs some revamp.
 
   # Close all instances of polybar
   killall -q polybar
-  while pgrep -u $UID -x polybar >/dev/null; do sleep 1; done
+  while pgrep -u $UID -x polybar >/dev/null; do
+      sleep 1
+  done
 
   # Check if there are more than one monitors
   # if so, set MONITOR_MAIN and MONITOR_SECONDARY accordingly
@@ -3347,6 +3349,10 @@ This part is almost completely untouched. Needs some revamp.
       xrandr --output "$MONITOR_SECONDARY" --off
   else
       polybar secondary &> /dev/null &
+
+      # Place the secondary monitor to the right of the primary
+      SECONDARY_START_POS=$(xrandr -q | grep "^$MONITOR_MAIN connected" | tr "+x" " " | cut -d' ' -f4)
+      xrandr --output "$MONITOR_SECONDARY" --pos "${SECONDARY_START_POS}x0"
   fi
 
   echo ">> Setting background"
