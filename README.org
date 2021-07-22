@@ -1601,7 +1601,7 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 
               gpg --symmetric --cipher-algo AES256 --output "$OUTPUT" "$INPUT"
               ;;
-          esac
+      esac
   }
 
   function decrypt {
@@ -1632,10 +1632,33 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 
               gpg --decrypt --output "$OUTPUT" "$INPUT"
               ;;
-          esac
+      esac
   }
 #+end_src
 
+** Git utilities
+#+begin_src bash :tangle ~/.zshrc
+  # TODO: Create an emacs wrapper which fuzzy searches through these
+  # results and opens the file on that revision using
+  # (vc-revision-other-window REV)
+  function git-file-hist-grep {
+      case "$1" in
+          -h|--help)
+              echo "Search STRING in all revisions of given FILE."
+              echo
+              echo "Usage:"
+              echo "git-file-hist-grep STRING FILE"
+              ;;
+          ,*)
+              SEARCH_STRING=$1
+              FILE_NAME=$2
+              git rev-list --all "$FILE_NAME" | while read REVISION; do
+                  git --no-pager grep -F "$SEARCH_STRING" "$REVISION" "$FILE_NAME"
+              done
+              ;;
+      esac
+  }
+#+end_src
 ** General settings
 #+begin_src bash :tangle ~/.zshrc
   FILES_TO_SOURCE=(
@@ -1775,7 +1798,33 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 #+end_src
 
 * Utilities
-** .tmux.conf
+** Tmux
+*** Keybindings
+- ~`~ is the prefix key which is =Alt-a=.
+| Key                         | Action                                                                             |
+|-----------------------------+------------------------------------------------------------------------------------|
+| `c                          | create new window                                                                  |
+| `n,p                        | go next/prev window                                                                |
+| `1-9                        | go to Nth window                                                                   |
+| `{h,j,k,l} OR Alt-{h,j,k,l} | focus/switch to split                                                              |
+| `W                          | swap windows (opens a window list, selected one will be replaced with current one) |
+| `P                          | swap panes (same as above)                                                         |
+|-----------------------------+------------------------------------------------------------------------------------|
+| `{                          | move split to left                                                                 |
+| `}                          | move split to right                                                                |
+| `-                          | split below                                                                        |
+| `\                          | split right                                                                        |
+| `a-1                        | balance windows horizontally                                                       |
+| `a-2                        | balance windows vertically                                                         |
+|-----------------------------+------------------------------------------------------------------------------------|
+| `[                          | selection/copy mode                                                                |
+| y                           | copy to clipboard (in copy mode)                                                   |
+|-----------------------------+------------------------------------------------------------------------------------|
+| `q                          | focus split using a number                                                         |
+| `w                          | list windows                                                                       |
+| `s                          | list sessions                                                                      |
+
+*** Config
 #+begin_src conf :tangle ~/.tmux.conf
   # ####################################################
   #      __                                         ____
@@ -2059,7 +2108,6 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
   contacts-autohide=true
   color=true
   partition-contacts=true
-  clipboard-keep-attachments=true
 #+end_src
 ** .inputrc
 If I ever need to resort to use bash.
@@ -2110,6 +2158,38 @@ If I ever need to resort to use bash.
 
 * Media
 ** mpv
+*** Keybindings
+| Key    | Action                     |
+|--------+----------------------------|
+| p      | pause                      |
+| f      | fullscreen                 |
+| C+l    | show playlist              |
+| <, >   | playlist prev,next         |
+| A+0-5  | change window scale        |
+|--------+----------------------------|
+| 9,0    | volume down/up             |
+| m      | mute                       |
+| a      | change/switch audio        |
+|--------+----------------------------|
+| z, Z   | subtitle delay -/+         |
+| +, -   | scale subtitle             |
+| s      | change/switch subtitle     |
+| r, R   | change sub-position        |
+| T, A-t | download subtitle (en/tr)  |
+|--------+----------------------------|
+| ctrl++ | increase audio delay       |
+| ctrl+- | decrease audio delay       |
+|--------+----------------------------|
+| [, ]   | playback speed scale       |
+| . ,    | one frame forward/backward |
+|--------+----------------------------|
+| 1-2    | contrast                   |
+| 3-4    | brightness                 |
+| 5-6    | gamma                      |
+| 7-8    | saturation                 |
+|--------+----------------------------|
+| i      | show video info            |
+| c      | show youtube comments      |
 *** Configuration
 #+begin_src bash :tangle ~/.config/mpv/mpv.conf
   input-ipc-server=/tmp/mpvsocket
@@ -2138,7 +2218,7 @@ If I ever need to resort to use bash.
   sub-filter-sdh=yes
   sub-filter-sdh-harder=yes
 #+end_src
-*** Bindings
+*** Bindings configuration
 #+begin_src bash :tangle ~/.config/mpv/input.conf
   # Show youtube comments
   # This gets the video ID from filename, as mpv sets it this way.
@@ -2329,6 +2409,7 @@ This file is just used for loading the configuration through an org file.
 #+begin_src elisp :tangle ~/.emacs.d/init.el
   (org-babel-load-file "~/.emacs.d/README.org")
 #+end_src
+
 ** Neovim
 *** Install vim-plug
 You need to install =vim-plug= to be able to install vim extensions.
@@ -2712,6 +2793,7 @@ You need to install =vim-plug= to be able to install vim extensions.
 
   " vi: foldmethod=marker
 #+end_src
+
 *** Minimal configuration
 #+begin_src vimrc :tangle ~/.config/nvim/minimal.vim
   " ##################################################
@@ -2900,6 +2982,43 @@ You need to install =vim-plug= to be able to install vim extensions.
 #+end_src
 * Firefox
 ** tridactyl
+*** Keybindings
+| Key      | Action                                   |
+|----------+------------------------------------------|
+| f/F      | open hinted url [in new tab]             |
+| H, L     | back,forward in history                  |
+| A-, A-.  | tab prev/next                            |
+| gt gT    | tab prev/next                            |
+| A-e, C-i | open in native editor                    |
+|----------+------------------------------------------|
+| +, -     | zoom out/in                              |
+| p        | pin                                      |
+| d        | kill/close tab (even if pinned)          |
+| u        | reopen closed tab                        |
+| m        | open url with jaro                       |
+|----------+------------------------------------------|
+| ;;       | focus an element                         |
+| ;p       | copy text of an elemet                   |
+| ;y       | copy link/url of an element              |
+| ;k       | delete a element from the page           |
+| ;i       | copy image to clipboard                  |
+|----------+------------------------------------------|
+| ]c [c    | increment/decrement the current URL by 1 |
+
+*** Commands
+| Command              | Action                                               |
+|----------------------+------------------------------------------------------|
+| :sync                | open syncthing page                                  |
+| :mpv, :mpvHint       | open page in mpv/open hinted link in mpv             |
+| :mpd, :mpdHint       | open page in mpd/open hinted link in mpd             |
+| :mpdAdd, :mpdAddHint | same but don't play, just enqueue                    |
+| :jaro                | open url with jaro                                   |
+| :searchImage         | search selected image in google similar image search |
+
+*** Tips
+- =:undo= has autocompletion, ie. lists all tabs that are closed.
+
+*** Configuration
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
   sanitise tridactyllocal tridactylsync
 
@@ -4433,6 +4552,13 @@ This part is almost completely untouched. Needs some revamp.
       set-brightness $(echo -e "MAX\nMEDIUM\nLOW" | dmenu -i)
   fi
 #+end_src
+
+* Tools
+** General
+- =tokei= → CLOC (count lines of code)
+- =subdl= → dowload subtitles from opensubtitles.org
+** Library
+- =socat= → needed for communicating with mpv trough unix sockets
 
 * Post-amble
 - The following thing automatically loads the code necessary when this file is opened. This basically makes use of [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html#Specifying-File-Variables][file local variables]].
