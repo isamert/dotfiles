@@ -3513,7 +3513,7 @@ This part is almost completely untouched. Needs some revamp.
 
       # Place the secondary monitor to the right of the primary
       SECONDARY_START_POS=$(xrandr -q | grep "^$MONITOR_MAIN connected" | tr "+x" " " | cut -d' ' -f4)
-      xrandr --output "$MONITOR_SECONDARY" --pos "${SECONDARY_START_POS}x0"
+      xrandr --output "$MONITOR_SECONDARY" --pos "${SECONDARY_START_POS}x0" --auto
   fi
 
   echo ">> Setting background"
