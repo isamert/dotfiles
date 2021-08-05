@@ -197,6 +197,8 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
   ;; ^ Show column number
   (setq create-lockfiles nil)
   ;; ^ These just clutter the filesystem
+  (setq switch-to-prev-buffer-skip 'visible)
+  ;; ^ (switch-to-prev-buffer) skips buffers that are visible on the screen
 
   ;; Ask y/n instead of yes/no
   (fset 'yes-or-no-p 'y-or-n-p)
@@ -678,13 +680,7 @@ Enable leader key and bind some keys.
       ;; buffers
       "bb" #'switch-to-buffer
       "bq" #'evil-quit
-      "bp" #'previous-buffer
-      "bn" #'next-buffer
       "bd" #'kill-this-buffer))
-
-  (evil-define-key '(normal insert) 'global
-    (kbd "M-,") #'previous-buffer
-    (kbd "M-.") #'next-buffer)
 #+END_SRC
 
 ** evil-mc (multiple cursors)
@@ -1002,10 +998,10 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (kbd "H-l") 'org-shiftright
 
     ;; Hyper for macos is C-M-s
-    (kbd "C-M-s-h") 'org-shiftleft
-    (kbd "C-M-s-j") 'org-shiftdown
-    (kbd "C-M-s-k") 'org-shiftup
-    (kbd "C-M-s-l") 'org-shiftright
+    (kbd "C-S-s-<left>") 'org-shiftleft
+    (kbd "C-S-s-<down>") 'org-shiftdown
+    (kbd "C-S-s-<up>") 'org-shiftup
+    (kbd "C-S-s-<right>") 'org-shiftright
 
     ;; FIXME: mac hyper already contains shift
     (kbd "M-H") 'org-shiftmetaleft
@@ -1545,10 +1541,19 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (use-package eww
     :ensure t
     :config
+
+    (setq shr-image-animate nil)
+    ;; ^ Gifs make my computer suffer, so I just disable them
+    (setq shr-use-fonts nil)
+    ;; ^ Monospace fonts are easier to read
+    (setq shr-max-image-proportion 0.6)
+    (setq shr-discard-aria-hidden t)
+
     (defvar isamert/url-handlers
       '((".*\\(trendyol\\|gitlab\\|github\\).*" . browse-url-default-browser)
         (".*youtube.*/watch.*" . (lambda (url &rest args) (start-process "mpv-emacs" nil "mpv" url)))
         ("." . eww-browse-url)))
+
     (if (>= emacs-major-version 28)
         (setq browse-url-handlers isamert/url-handlers)
       (setq browse-url-browser-function isamert/url-handlers))
@@ -2130,9 +2135,10 @@ Some functionality for project management. I do some fine-tuning for =find= and 
     "hR"  #'isamert/consult-ripgrep-in-given-directory
     "pg" #'isamert/consult-ripgrep)
 
+  ;; TODO fix search
   (setq
-   consult-find-command "fd --ignore-file '.git/' --hidden --full-path ARG OPTS"
-   consult-ripgrep-command "rg --ignore-file '.git' --hidden --null --line-buffered --color=always --max-columns=500 --no-heading --smart-case --line-number . -e ARG OPTS"
+   consult-find-command "fd  --hidden --full-path ARG OPTS"
+   consult-ripgrep-command "rg  --hidden --null --line-buffered --color=always --max-columns=500 --no-heading --smart-case --line-number . -e ARG OPTS"
    consult-project-root-function #'isamert/current-project-root)
 
   (defun isamert/consult-ripgrep (&optional path)
@@ -2276,7 +2282,7 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
   fd is already fast enough, no need for `consult-find's async approach."
     (interactive "D")
     (let ((default-directory dir))
-      (->> (shell-command-to-string "fd .")
+      (->> (shell-command-to-string "fd --exclude '.git' --hidden .")
            (s-split "\n")
            (completing-read "Open file: ")
            (find-file))))
@@ -2448,12 +2454,11 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
           lsp-enable-snippet t)
 
     (evil-define-key 'normal lsp-mode-map
-      "gr" 'lsp-ui-peek-find-references
-      "gd" 'lsp-ui-peek-find-definitions
-      "gi" 'lsp-ui-peek-find-implementation
-      "ga" 'lsp-execute-code-action))
-
-  ;; ^ Disable eldoc, popup documentation is enough.
+      "gr" #'lsp-ui-peek-find-references
+      "gd" #'lsp-ui-peek-find-definitions
+      "gi" #'lsp-ui-peek-find-implementation
+      "ga" #'lsp-execute-code-action
+      "K"  #'lsp-ui-doc-focus-frame))
 
   (use-package lsp-ui
     :ensure t
@@ -2839,6 +2844,56 @@ Simple dictonary.
       "/W" #'define-word
       "/w" #'define-word-at-point))
 #+end_src
+** slack
+#+begin_src emacs-lisp
+  ;; (slack-start)
+  ;; (slack-im-list-update)
+  ;; (slack-bot-list-update)
+  ;; (slack-group-list-update)
+  ;; (slack-select-unread-rooms)
+
+  (use-package slack
+    :config
+    (setq slack-buffer-emojify t)
+    (setq slack-prefer-current-team t)
+    ;; ^ Set current team with `slack-change-current-team'
+    (setq slack-buffer-function #'isamert/display-buffer-in-side-window)
+    ;; ^ Open slack windows on the right side of the screen
+
+    (slack-register-team
+     :name "trendyol"
+     :token ty/slack-token
+     :cookie ty/slack-cookie
+     :subscribed-channels '((seller-ads-team)))
+
+    (evil-leader/set-key
+      "es" #'slack-select-rooms
+      "eS" #'slack-select-unread-rooms)
+
+    (evil-define-key 'normal slack-mode-map
+      "q" 'kill-this-buffer
+
+      "rp" 'slack-room-pins-list
+
+      "md" 'slack-message-delete
+      "mm" 'slack-message-embed-mention
+      "mc" 'slack-message-embed-channel
+      "ml" 'slack-message-copy-link
+      "me" 'slack-message-edit
+      "mE" 'slack-message-edit-buffer
+      "mr" 'slack-message-add-reaction
+      "mR" 'slack-message-remove-reaction
+
+      "[" 'slack-buffer-goto-prev-message
+      "]" 'slack-buffer-goto-next-message))
+
+  (use-package alert
+    :config
+    (if (eq system-type 'gnu/linux)
+        (setq alert-default-style 'libnotify)
+      (setq alert-default-style 'osx-notifier)))
+#+end_src
+
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
@@ -2903,6 +2958,9 @@ Better way to correct spelling mistakes. By default it uses completing-read, so 
     :ensure t
     :config
     (require 'smartparens-config)
+    (setq sp-autoinsert-pair nil)
+    (setq sp-autodelete-pair nil)
+
     (evil-define-key 'visual sp-keymap
       "S("  #'sp-wrap-round
       "S["  #'sp-wrap-square
@@ -2921,19 +2979,13 @@ Better way to correct spelling mistakes. By default it uses completing-read, so 
     (sp-local-pair 'org-mode "=" "=" :actions :rem)
 
     (evil-define-key*
-     '(normal insert) sp-keymap
-     (kbd "M-[") #'sp-forward-barf-sexp
-     (kbd "M-]") #'sp-forward-slurp-sexp
-     (kbd "M-{") #'sp-backward-slurp-sexp
-     (kbd "M-}") #'sp-backward-barf-sexp)
+      '(normal insert) sp-keymap
+      (kbd "M-[") #'sp-forward-barf-sexp
+      (kbd "M-]") #'sp-forward-slurp-sexp
+      (kbd "M-{") #'sp-backward-slurp-sexp
+      (kbd "M-}") #'sp-backward-barf-sexp)
 
     (smartparens-global-mode))
-
-  ;; TODO: do stuff like these
-  (sp-with-modes '(php-mode)
-    (sp-local-pair "/*." ".*/" :post-handlers '(("| " "SPC")))
-    (sp-local-pair "{" nil :post-handlers '(("||\n[i]" "RET") my-php-wrap-handler))
-    (sp-local-pair "(" nil :prefix "\\(\\sw\\|\\s_\\)*"))
 
   (defun sp-wrap-quote-double () (interactive) (sp-wrap-with-pair "\""))
   (defun sp-wrap-quote-single () (interactive) (sp-wrap-with-pair "'"))
@@ -3492,6 +3544,24 @@ The following enables =CamelCase= aware editing operations.
          (current-buffer)
          t)
       (user-error "Select something first")))
+
+  (defun isamert/js-debug-log-text ()
+    "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
+  This is used in my snippets."
+    (format "%s:%s:%s" (buffer-name) (isamert/js-current-func-name) (line-number-at-pos)))
+
+  (defun isamert/js-current-func-name ()
+    "Return currently focused JS/TS function name."
+    (let ((curr-func nil)
+          (curr-node (ignore-errors
+                       (tree-sitter-node-at-point))))
+      ;; TODO Check function definitions other than 'method_definition
+      (while (and curr-node
+                  (not (equal (tsc-node-type curr-node) 'method_definition)))
+        (setq curr-node (tsc-get-parent curr-node)))
+      (if curr-node
+          (tsc-node-text (tsc-get-child-by-field curr-node :name))
+        (which-function))))
 #+end_src
 *** Add node_modules/.bin to PATH automatically
 #+begin_src emacs-lisp
@@ -3725,111 +3795,112 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
 
 ** Signal
 #+begin_src emacs-lisp
-  (require 'dbus)
+  (when (eq system-type 'gnu/linux)
+    (require 'dbus)
 
-  (evil-leader/set-key
-    "epn" #'isamert/signal-send-note-to-myself
-    "epm" #'isamert/signal-send-message)
+    (evil-leader/set-key
+      "epn" #'isamert/signal-send-note-to-myself
+      "epm" #'isamert/signal-send-message)
 
-  (defconst isamert/signal-dbus-args '(:session "org.asamk.Signal"
-                                                "/org/asamk/Signal"
-                                                "org.asamk.Signal"))
+    (defconst isamert/signal-dbus-args '(:session "org.asamk.Signal"
+                                                  "/org/asamk/Signal"
+                                                  "org.asamk.Signal"))
 
-  (defun isamert/signal (&rest args)
-    "Send a signal DBUS command with ARGS."
-    (apply #'dbus-call-method `(,@isamert/signal-dbus-args ,@args)))
+    (defun isamert/signal (&rest args)
+      "Send a signal DBUS command with ARGS."
+      (apply #'dbus-call-method `(,@isamert/signal-dbus-args ,@args)))
 
-  (defun isamert/signal-async (&rest args)
-    "Send an async Signal DBUS command with ARGS."
-    (apply #'dbus-call-method-asynchronously `(,@isamert/signal-dbus-args ,@args)))
+    (defun isamert/signal-async (&rest args)
+      "Send an async Signal DBUS command with ARGS."
+      (apply #'dbus-call-method-asynchronously `(,@isamert/signal-dbus-args ,@args)))
 
-  (defun isamert/signal-send-note-to-myself (note &optional attachments)
-    "Send a NOTE with attachments to my phone."
-    (interactive
-     (list
-      (if (use-region-p)
-          (buffer-substring (region-beginning) (region-end))
-        (read-string "Enter note: "))
-      (when (y-or-n-p "Want to attach something? ")
-        (list (read-file-name "Attachment: ")))))
-    (isamert/signal-async
-     "sendNoteToSelfMessage"
-     (lambda (msg) (message ">> Signal %s" msg))
-     note
-     (or (mapcar 'expand-file-name attachments)
-         '(:array))))
+    (defun isamert/signal-send-note-to-myself (note &optional attachments)
+      "Send a NOTE with attachments to my phone."
+      (interactive
+       (list
+        (if (use-region-p)
+            (buffer-substring (region-beginning) (region-end))
+          (read-string "Enter note: "))
+        (when (y-or-n-p "Want to attach something? ")
+          (list (read-file-name "Attachment: ")))))
+      (isamert/signal-async
+       "sendNoteToSelfMessage"
+       (lambda (msg) (message ">> Signal %s" msg))
+       note
+       (or (mapcar 'expand-file-name attachments)
+           '(:array))))
 
-  (defun isamert/signal-send-message (recipient content &optional attachments)
-    "Send message to RECIPIENT with CONTENT."
-    (interactive
-     (list
-      (isamert/signal-select-contact)
-      (if (use-region-p)
-          (buffer-substring (region-beginning) (region-end))
-        (read-string "Enter message: "))
-      (when (y-or-n-p "Want to attach something? ")
-        (list (read-file-name "Attachment: ")))))
-    (isamert/signal-async
-     (if (plist-get recipient :number)
-         "sendMessage"
-       "sendGroupMessage")
-     (lambda (msg) (message ">> Signal %s" msg))
-     content
-     (or (mapcar 'expand-file-name attachments)
-         '(:array))
-     (cadr recipient)))
+    (defun isamert/signal-send-message (recipient content &optional attachments)
+      "Send message to RECIPIENT with CONTENT."
+      (interactive
+       (list
+        (isamert/signal-select-contact)
+        (if (use-region-p)
+            (buffer-substring (region-beginning) (region-end))
+          (read-string "Enter message: "))
+        (when (y-or-n-p "Want to attach something? ")
+          (list (read-file-name "Attachment: ")))))
+      (isamert/signal-async
+       (if (plist-get recipient :number)
+           "sendMessage"
+         "sendGroupMessage")
+       (lambda (msg) (message ">> Signal %s" msg))
+       content
+       (or (mapcar 'expand-file-name attachments)
+           '(:array))
+       (cadr recipient)))
 
-  (defun isamert/signal-select-contact ()
-    "Select a contact interactively."
-    (let* ((contacts (--map
-                      (cons (isamert/signal "getContactName" it) it)
-                      (isamert/signal "listNumbers")))
-           (groups (--map
-                    (cons (format
-                           "%s [GROUP]"
-                           (isamert/signal "getGroupName"
-                                           (dbus-string-to-byte-array (dbus-byte-array-to-string it))))
-                          it)
-                    (isamert/signal "getGroupIds")))
-           (all (append contacts groups))
-           (selected (cdr (assoc (completing-read "Send message to: " all) all))))
-      (if (stringp selected)
-          (list :number selected)
-        (list :group (dbus-string-to-byte-array (dbus-byte-array-to-string selected))))))
+    (defun isamert/signal-select-contact ()
+      "Select a contact interactively."
+      (let* ((contacts (--map
+                        (cons (isamert/signal "getContactName" it) it)
+                        (isamert/signal "listNumbers")))
+             (groups (--map
+                      (cons (format
+                             "%s [GROUP]"
+                             (isamert/signal "getGroupName"
+                                             (dbus-string-to-byte-array (dbus-byte-array-to-string it))))
+                            it)
+                      (isamert/signal "getGroupIds")))
+             (all (append contacts groups))
+             (selected (cdr (assoc (completing-read "Send message to: " all) all))))
+        (if (stringp selected)
+            (list :number selected)
+          (list :group (dbus-string-to-byte-array (dbus-byte-array-to-string selected))))))
 
-  (defun isamert/signal-sync-message-received-handler (ts source receiver _ msg attchs)
-    (when (and (string= receiver source)
-               (string= isamert/my-phone-number source))
-       (cond
-        ((s-prefix? "run" msg)
-         (isamert/signal-send-note-to-myself
-          (shell-command-to-string (s-chop-prefix "run " msg))))
-        ((string= "help" msg)
-         (isamert/signal-send-note-to-myself
-          (concat "run <shell-command>\n"
-                  "grab <file-path>\n"
-                  "help")))
-        ((s-prefix? "grab" msg)
-         (isamert/signal-send-note-to-myself
-          "" (list (s-chop-prefix "grab " msg)))))))
+    (defun isamert/signal-sync-message-received-handler (ts source receiver _ msg attchs)
+      (when (and (string= receiver source)
+                 (string= isamert/my-phone-number source))
+        (cond
+         ((s-prefix? "run" msg)
+          (isamert/signal-send-note-to-myself
+           (shell-command-to-string (s-chop-prefix "run " msg))))
+         ((string= "help" msg)
+          (isamert/signal-send-note-to-myself
+           (concat "run <shell-command>\n"
+                   "grab <file-path>\n"
+                   "help")))
+         ((s-prefix? "grab" msg)
+          (isamert/signal-send-note-to-myself
+           "" (list (s-chop-prefix "grab " msg)))))))
 
-  (defvar isamert/signal-bot-object nil)
+    (defvar isamert/signal-bot-object nil)
 
-  (defun isamert/start-signal-bot ()
-    (interactive)
-    (setq
-     isamert/signal-bot-object
-     (apply
-      #'dbus-register-signal
-      `(,@isamert/signal-dbus-args
-        ,"SyncMessageReceived"
-        ,#'isamert/signal-sync-message-received-handler))))
+    (defun isamert/start-signal-bot ()
+      (interactive)
+      (setq
+       isamert/signal-bot-object
+       (apply
+        #'dbus-register-signal
+        `(,@isamert/signal-dbus-args
+          ,"SyncMessageReceived"
+          ,#'isamert/signal-sync-message-received-handler))))
 
-  (defun isamert/stop-signal-bot ()
-    (interactive)
-    (dbus-unregister-object isamert/signal-bot-object))
+    (defun isamert/stop-signal-bot ()
+      (interactive)
+      (dbus-unregister-object isamert/signal-bot-object))
 
-  (isamert/start-signal-bot)
+    (isamert/start-signal-bot))
 #+end_src
 ** people.org - Contact management
 Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-and-syncing-them-to-your-phone-android-ios-whatever-.html][this post]] for further information.
@@ -4306,11 +4377,12 @@ Here I define two important functions and their helpers.  The following function
      (select-window
       (display-buffer-in-side-window
        buffer
-       (list (cons 'side 'right)
-             (cons 'slot 0)
-             (cons 'window-width 84)
-             (cons 'window-parameters (list (cons 'no-delete-other-windows t)
-                                            (cons 'no-other-window nil))))))
+       '((side . right)
+         (slot . 0)
+         (window-width . 84)
+         (window-parameters
+          (no-delete-other-windows . t)
+          (no-other-window . nil)))))
      nil))
 
   (defun isamert/remove-window-with-buffer (the-buffer-name)
@@ -4823,6 +4895,7 @@ Company/work related stuff.
       (magit-fetch-all nil)
       (message "Creating branch...")
       (magit-branch-and-checkout branch-name isamert/jira-base-branch)
+      (vc-refresh-state)
       (message "Currently on %s." (magit-get-current-branch))))
 
   (defun isamert/jira-ticket-to-worktree (issue-name)
@@ -4839,6 +4912,7 @@ Company/work related stuff.
       (persp-switch branch-name)
       (cd worktree)
       (isamert/find-file-in-current-project)
+      (vc-refresh-state)
       (message "Currently on %s." (magit-get-current-branch))))
 
   (defun isamert/jira-create-branch-name-from-ticket (issue-name)
@@ -4896,7 +4970,7 @@ Company/work related stuff.
     (interactive)
     (isamert/toggle-config-in-file
      :file "~/Workspace/projects/editor/src/config.ts"
-     :val1 "https://stageselleradseditorbff.trendyol.com"
+     :val1 "https://stage-discovery-sellerads-editorbff-service.earth.trendyol.com"
      :val2 "http://localhost:3031"))
 
   (defun ty/toggle-ebff-advert-statistics-url ()
@@ -4924,16 +4998,38 @@ Company/work related stuff.
            :on-fail (lambda () (user-error ">> Tests are failed!")))
         (browse-url-default-browser cov-file))))
 
-  (defun ty/run-current-test-file ()
+  (defun ty/run-code-test:cov ()
+    "Run all tests and then open coverage."
     (interactive)
-    (let ((default-directory (isamert/current-project-root))
-          (test-file (if (s-contains? ".spec." buffer-file-name)
-                         buffer-file-name
-                       (concat
-                        (file-name-directory buffer-file-name)
-                        "__tests__/"
-                        (s-replace ".ts" ".spec.ts" (file-name-nondirectory buffer-file-name))))))
-      (isamert/shell-command
-       :command (format "yarn test --colors %s" (file-relative-name test-file  (isamert/current-project-root))))))
+    (ty/open-code-test:cov-report t))
 
+  (defun ty/run-current-test-file (run-only-focused-test)
+    (interactive "P")
+    (let* ((default-directory (isamert/current-project-root))
+           (test-file-of-curr-file
+            (concat
+             (file-name-directory buffer-file-name)
+             "__tests__/"
+             (s-replace ".ts" ".spec.ts" (file-name-nondirectory buffer-file-name))))
+           (test-file
+            (if (file-exists-p test-file-of-curr-file)
+                test-file-of-curr-file
+              buffer-file-name))
+           (current-test-name
+            (ignore-errors
+              (save-excursion
+                (end-of-line)
+                (re-search-backward "it(['\"]" nil t)
+                (nth 1 (s-match "it(['\"]\\(.*\\)['\"]," (substring-no-properties (thing-at-point 'line))))))))
+      (isamert/shell-command
+       :command (format "yarn test --colors %s %s"
+                        (file-relative-name test-file  (isamert/current-project-root))
+                        (if (and run-only-focused-test current-test-name)
+                            (format "-t \"%s\"" current-test-name)
+                          "")))))
+
+  (defun ty/run-current-test-only ()
+    "Run currently focused test only."
+    (interactive)
+    (ty/run-current-test-file t))
 #+end_src
