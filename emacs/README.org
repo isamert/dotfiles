@@ -1541,10 +1541,19 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (use-package eww
     :ensure t
     :config
+
+    (setq shr-image-animate nil)
+    ;; ^ Gifs make my computer suffer, so I just disable them
+    (setq shr-use-fonts nil)
+    ;; ^ Monospace fonts are easier to read
+    (setq shr-max-image-proportion 0.6)
+    (setq shr-discard-aria-hidden t)
+
     (defvar isamert/url-handlers
       '((".*\\(trendyol\\|gitlab\\|github\\).*" . browse-url-default-browser)
         (".*youtube.*/watch.*" . (lambda (url &rest args) (start-process "mpv-emacs" nil "mpv" url)))
         ("." . eww-browse-url)))
+
     (if (>= emacs-major-version 28)
         (setq browse-url-handlers isamert/url-handlers)
       (setq browse-url-browser-function isamert/url-handlers))
@@ -2949,6 +2958,9 @@ Better way to correct spelling mistakes. By default it uses completing-read, so 
     :ensure t
     :config
     (require 'smartparens-config)
+    (setq sp-autoinsert-pair nil)
+    (setq sp-autodelete-pair nil)
+
     (evil-define-key 'visual sp-keymap
       "S("  #'sp-wrap-round
       "S["  #'sp-wrap-square
@@ -2967,19 +2979,13 @@ Better way to correct spelling mistakes. By default it uses completing-read, so 
     (sp-local-pair 'org-mode "=" "=" :actions :rem)
 
     (evil-define-key*
-     '(normal insert) sp-keymap
-     (kbd "M-[") #'sp-forward-barf-sexp
-     (kbd "M-]") #'sp-forward-slurp-sexp
-     (kbd "M-{") #'sp-backward-slurp-sexp
-     (kbd "M-}") #'sp-backward-barf-sexp)
+      '(normal insert) sp-keymap
+      (kbd "M-[") #'sp-forward-barf-sexp
+      (kbd "M-]") #'sp-forward-slurp-sexp
+      (kbd "M-{") #'sp-backward-slurp-sexp
+      (kbd "M-}") #'sp-backward-barf-sexp)
 
     (smartparens-global-mode))
-
-  ;; TODO: do stuff like these
-  (sp-with-modes '(php-mode)
-    (sp-local-pair "/*." ".*/" :post-handlers '(("| " "SPC")))
-    (sp-local-pair "{" nil :post-handlers '(("||\n[i]" "RET") my-php-wrap-handler))
-    (sp-local-pair "(" nil :prefix "\\(\\sw\\|\\s_\\)*"))
 
   (defun sp-wrap-quote-double () (interactive) (sp-wrap-with-pair "\""))
   (defun sp-wrap-quote-single () (interactive) (sp-wrap-with-pair "'"))
@@ -3425,11 +3431,43 @@ Keybindings are generally set in-place, following have no context, so they are h
 #+END_SRC
 
 * Language specific
-** General
+** General/language-agnostic functionality
 - Use =format-all-buffer= function to format current buffer. Works for any language.
 
 #+begin_src emacs-lisp
   (use-package format-all :ensure t)
+#+end_src
+
+*** Get currently focused function name
+#+begin_src emacs-lisp :lexical no
+  (defun isamert/current-func-name ()
+    (or (isamert/current-func-name--tree-sitter)
+        (which-function)))
+
+  (defun isamert/current-func-name--tree-sitter ()
+    "Return currently focused function name."
+    (let ((curr-func nil)
+          (curr-node (ignore-errors
+                       (tree-sitter-node-at-point))))
+      ;; Find first function declaration or definition
+      (while (and curr-node
+                  (not (-contains? '(method_definition ;; JS
+                                     function_declaration ;; JS
+                                     arrow_function ;; JS
+                                     function_item ;; Rust
+                                     )
+                                   (tsc-node-type curr-node))))
+        (setq curr-node (tsc-get-parent curr-node)))
+
+      ;; Find first named object of the found function definition
+      (while (and curr-node
+                  (not (ignore-errors
+                         (tsc-get-child-by-field curr-node :name))))
+        (setq curr-node (tsc-get-parent curr-node)))
+
+
+      (when curr-node
+        (tsc-node-text (tsc-get-child-by-field curr-node :name)))))
 #+end_src
 ** markdown
 #+BEGIN_SRC emacs-lisp
@@ -3542,20 +3580,7 @@ The following enables =CamelCase= aware editing operations.
   (defun isamert/js-debug-log-text ()
     "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
   This is used in my snippets."
-    (format "%s:%s:%s" (buffer-name) (isamert/js-current-func-name) (line-number-at-pos)))
-
-  (defun isamert/js-current-func-name ()
-    "Return currently focused JS/TS function name."
-    (let ((curr-func nil)
-          (curr-node (ignore-errors
-                       (tree-sitter-node-at-point))))
-      ;; TODO Check function definitions other than 'method_definition
-      (while (and curr-node
-                  (not (equal (tsc-node-type curr-node) 'method_definition)))
-        (setq curr-node (tsc-get-parent curr-node)))
-      (if curr-node
-          (tsc-node-text (tsc-get-child-by-field curr-node :name))
-        (which-function))))
+    (format "%s:%s:%s" (buffer-name) (isamert/current-func-name) (line-number-at-pos)))
 #+end_src
 *** Add node_modules/.bin to PATH automatically
 #+begin_src emacs-lisp
@@ -3565,6 +3590,7 @@ The following enables =CamelCase= aware editing operations.
     (-some->> (locate-dominating-file "." "node_modules")
       (expand-file-name)
       (format "%s/node_modules/.bin")
+      ;; FIXME check if there is a buffer local exec path?
       (add-to-list 'exec-path)
       (message "%s")))
 
