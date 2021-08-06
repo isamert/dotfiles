@@ -3359,9 +3359,11 @@ Keybindings are generally set in-place, following have no context, so they are h
     (kbd "C-s") #'save-buffer)
 
   (evil-define-key 'normal prog-mode-map
-    (kbd "M-;") 'comment-dwim
     "gd" 'xref-find-definitions
     "gr" 'xref-find-references)
+
+  (evil-define-key 'normal prog-mode-map (kbd "M-;") 'comment-line)
+  (evil-define-key 'visual prog-mode-map (kbd "M-;") 'comment-dwim)
 
   (evil-leader/set-key
     "1" #'(lambda () (interactive) (call-interactively (local-key-binding (kbd "C-c C-c")))))
