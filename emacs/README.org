@@ -1411,39 +1411,40 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
 
 #+begin_src emacs-lisp
-   (use-package hydra
-     :ensure t
-     :config)
+  (use-package hydra
+    :ensure t
+    :config)
 
-   (use-package use-package-hydra
-     :after hydra
-     :ensure t)
+  (use-package use-package-hydra
+    :after hydra
+    :ensure t)
 
-   (use-package pretty-hydra
-     :after hydra
-     :ensure t
-     :config
-     (pretty-hydra-define appearance
-       (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
-       ("Display"
-        (("W" writeroom-mode "Writeroom mode" :toggle t)
-         ("n" display-line-numbers-mode "Line numbers" :toggle t)
-         ("+" default-text-scale-increase "Zoom In")
-         ("-" default-text-scale-decrease "Zoom Out"))
-        "Highlighting"
-        (("g" diff-hl-mode "Highlight git diff" :toggle t)
-         ("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
-         ("=" global-hl-line-mode "Highlight current line" :toggle t)
-         ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
-         ("w" isamert/whitespace-mode-toggle "Whitespaces"))
-        "Miscellaneous"
-        (("l" visual-line-mode "Wrap lines" :toggle t)
-         ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
-         ("f" fci-mode "Fill column" :toggle t)
-         ("<SPC>" nil "Quit" :color blue))))
+  (use-package pretty-hydra
+    :after hydra
+    :ensure t
+    :config
+    (pretty-hydra-define appearance
+      (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
+      ("Display"
+       (("W" writeroom-mode "Writeroom mode" :toggle t)
+        ("n" display-line-numbers-mode "Line numbers" :toggle t)
+        ("+" default-text-scale-increase "Zoom In")
+        ("-" default-text-scale-decrease "Zoom Out"))
+       "Highlighting"
+       (("g" diff-hl-mode "Highlight git diff" :toggle t)
+        ("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
+        ("=" global-hl-line-mode "Highlight current line" :toggle t)
+        ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
+        ("w" isamert/whitespace-mode-toggle "Whitespaces" :toggle t)
+        ("t" highlight-thing-mode "Highlight current symbol" :toggle t))
+       "Miscellaneous"
+       (("l" visual-line-mode "Wrap lines" :toggle t)
+        ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
+        ("f" fci-mode "Fill column" :toggle t)
+        ("<SPC>" nil "Quit" :color blue))))
 
-     (evil-leader/set-key
-       "a" #'appearance/body))
+    (evil-leader/set-key
+      "a" #'appearance/body))
 #+end_src
 ** wgrep
 With this package, you can make =grep= buffers editable and your edits can be applied to the files itself. Also =embark= has a feature where you can export the current completing-read results into a grep buffer, the action is called =embark-export= and it works on =consult-ripgrep= etc.
@@ -3442,12 +3443,18 @@ Keybindings are generally set in-place, following have no context, so they are h
 
 *** Get currently focused function name
 #+begin_src emacs-lisp :lexical no
-  (defun isamert/current-func-name ()
-    (or (isamert/current-func-name--tree-sitter)
-        (which-function)))
+  (defun isamert/refactor-debug-log-text ()
+    "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
+    This is used in my snippets."
+    (format "%s:%s:%s" (buffer-name) (isamert/current-func-name) (line-number-at-pos)))
 
-  (defun isamert/current-func-name--tree-sitter ()
-    "Return currently focused function name."
+  (defun isamert/current-func-name ()
+    (if-let ((fn-node (isamert/get-current-func-node)))
+        (tsc-node-text (tsc-get-child-by-field fn-node :name))
+      (which-function)))
+
+  (defun isamert/get-current-func-node ()
+    "Return currently focused function node."
     (let ((curr-func nil)
           (curr-node (ignore-errors
                        (tree-sitter-node-at-point))))
@@ -3466,10 +3473,40 @@ Keybindings are generally set in-place, following have no context, so they are h
                   (not (ignore-errors
                          (tsc-get-child-by-field curr-node :name))))
         (setq curr-node (tsc-get-parent curr-node)))
+        curr-node))
 
 
-      (when curr-node
-        (tsc-node-text (tsc-get-child-by-field curr-node :name)))))
+  (defun isamert/refactor-move-function-out ()
+    ""
+    (interactive)
+    (let ((curr-indent nil)
+          (curr-func (isamert/get-current-func-node))
+          (new-func-name (read-string "New function name: "))
+          )
+      (kill-region (region-beginning) (region-end))
+      (goto-char (tsc-node-end-position curr-func))
+      (setq curr-indent (current-indentation))
+      (insert "\n\n")
+      (insert (make-string curr-indent ? ))
+      (pcase (tsc-node-type curr-func)
+        ('method_definition (insert (format "%s ()  {\n" new-func-name))
+                            (insert (make-string curr-indent ? ))
+                            (yank)
+                            (insert (make-string curr-indent ? ))
+                            (insert "}"))
+        ('function_declaration (insert "function FUN_NAME () {\n")
+                               (insert (make-string curr-indent ? ))
+                               (yank)
+                               (insert (make-string curr-indent ? ))
+                               (insert "\n}"))
+        (t (insert "const FUN_NAME =  () => {\n")
+           (insert (make-string curr-indent ? ))
+           (insert "}"))))
+
+    (forward-line -1)
+    (message "%s"
+             (-difference (-uniq (mapcar #'tsc-node-text (jsdoc--tsc-find-descendants-with-type (isamert/get-current-func-node) 'identifier)))
+                          (--map (tsc-node-text (tsc-get-child-by-field it :name))  (jsdoc--tsc-find-descendants-with-type (isamert/get-current-func-node) 'variable_declarator)))))
 #+end_src
 ** markdown
 #+BEGIN_SRC emacs-lisp
@@ -3578,11 +3615,6 @@ The following enables =CamelCase= aware editing operations.
          (current-buffer)
          t)
       (user-error "Select something first")))
-
-  (defun isamert/js-debug-log-text ()
-    "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
-  This is used in my snippets."
-    (format "%s:%s:%s" (buffer-name) (isamert/current-func-name) (line-number-at-pos)))
 #+end_src
 *** Add node_modules/.bin to PATH automatically
 #+begin_src emacs-lisp
