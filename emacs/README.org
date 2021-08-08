@@ -3204,7 +3204,7 @@ Manage media and streams through =completing-read=.
     (empv--cmd
      'get_property 'metadata
      (when-let ((title (alist-get 'icy-title it)))
-       (shell-command (format "echo '* %s' >> ~/Documents/notes/songs.org" title))
+       (shell-command (format "echo -e '* %s\n- Radio channel :: %s' >> ~/Documents/notes/songs.org" title (car empv-current-radio-channel)))
        (message "%s" title))))
 
   (defun isamert/export-radio-channels-as-m3u (file)
