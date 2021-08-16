@@ -35,7 +35,7 @@
     ("https://beepb00p.xyz/rss.xml" blog dev)
     ("https://www.rousette.org.uk/index.xml" blog dev emacs essay)
     ("https://jao.io/blog/rss.xml" blog dev emacs)
-    ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay)
+    ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay) ;; Gwern
     ("https://www.lesswrong.com/feed.xml?view=curated-rss" blog essay)
     ("https://writings.stephenwolfram.com/feed/" blog essay)
     ("http://explosm.net/rss" comic)

@@ -53,8 +53,8 @@ Add ~melpa~ and ~org~ package archives and update them if needed.
 #+BEGIN_SRC emacs-lisp
   (require 'package)
 
+  (add-to-list 'package-archives '("nongnu" . "https://elpa.nongnu.org/nongnu/"))
   (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
-  (add-to-list 'package-archives '("nongnu" . "http://elpa.nongnu.org/nongnu/"))
 
   (package-initialize)
 
@@ -199,6 +199,9 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
   ;; ^ These just clutter the filesystem
   (setq switch-to-prev-buffer-skip 'visible)
   ;; ^ (switch-to-prev-buffer) skips buffers that are visible on the screen
+  (setq dabbrev-case-fold-search nil)
+  ;; ^ Expansions are done respecting the case
+
 
   ;; Ask y/n instead of yes/no
   (fset 'yes-or-no-p 'y-or-n-p)
@@ -833,7 +836,10 @@ Also (defined elsewhere):
     (kbd "]p") #'isamert/paste-below
 
     (kbd "[ SPC") #'isamert/insert-space-above
-    (kbd "] SPC") #'isamert/insert-space-below)
+    (kbd "] SPC") #'isamert/insert-space-below
+
+    (kbd "[b") #'evil-prev-buffer
+    (kbd "]b") #'evil-next-buffer)
 
   (defun isamert/move-line-up ()
     "Move current line up."
@@ -1411,39 +1417,40 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
 
 #+begin_src emacs-lisp
-   (use-package hydra
-     :ensure t
-     :config)
+  (use-package hydra
+    :ensure t
+    :config)
 
-   (use-package use-package-hydra
-     :after hydra
-     :ensure t)
+  (use-package use-package-hydra
+    :after hydra
+    :ensure t)
 
-   (use-package pretty-hydra
-     :after hydra
-     :ensure t
-     :config
-     (pretty-hydra-define appearance
-       (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
-       ("Display"
-        (("W" writeroom-mode "Writeroom mode" :toggle t)
-         ("n" display-line-numbers-mode "Line numbers" :toggle t)
-         ("+" default-text-scale-increase "Zoom In")
-         ("-" default-text-scale-decrease "Zoom Out"))
-        "Highlighting"
-        (("g" diff-hl-mode "Highlight git diff" :toggle t)
-         ("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
-         ("=" global-hl-line-mode "Highlight current line" :toggle t)
-         ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
-         ("w" isamert/whitespace-mode-toggle "Whitespaces"))
-        "Miscellaneous"
-        (("l" visual-line-mode "Wrap lines" :toggle t)
-         ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
-         ("f" fci-mode "Fill column" :toggle t)
-         ("<SPC>" nil "Quit" :color blue))))
+  (use-package pretty-hydra
+    :after hydra
+    :ensure t
+    :config
+    (pretty-hydra-define appearance
+      (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
+      ("Display"
+       (("W" writeroom-mode "Writeroom mode" :toggle t)
+        ("n" display-line-numbers-mode "Line numbers" :toggle t)
+        ("+" default-text-scale-increase "Zoom In")
+        ("-" default-text-scale-decrease "Zoom Out"))
+       "Highlighting"
+       (("g" diff-hl-mode "Highlight git diff" :toggle t)
+        ("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
+        ("=" global-hl-line-mode "Highlight current line" :toggle t)
+        ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
+        ("w" isamert/whitespace-mode-toggle "Whitespaces" :toggle t)
+        ("t" highlight-thing-mode "Highlight current symbol" :toggle t))
+       "Miscellaneous"
+       (("l" visual-line-mode "Wrap lines" :toggle t)
+        ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
+        ("f" fci-mode "Fill column" :toggle t)
+        ("<SPC>" nil "Quit" :color blue))))
 
-     (evil-leader/set-key
-       "a" #'appearance/body))
+    (evil-leader/set-key
+      "a" #'appearance/body))
 #+end_src
 ** wgrep
 With this package, you can make =grep= buffers editable and your edits can be applied to the files itself. Also =embark= has a feature where you can export the current completing-read results into a grep buffer, the action is called =embark-export= and it works on =consult-ripgrep= etc.
@@ -1788,6 +1795,8 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     (setq persp-nil-name "main")
     (setq persp-autokill-buffer-on-remove 'kill-weak)
     (setq persp-set-last-persp-for-new-frames nil)
+    (setq persp-set-frame-buffer-predicate nil)
+    ;; ^ This breaks {next,previous}-buffer functionality if set to t
 
     (evil-leader/set-key
       "la" #'persp-add-buffer
@@ -2103,7 +2112,7 @@ Some key points:
 
     (evil-leader/set-key
       "hh"  #'consult-history
-      "hy"  #'consult-yank
+      "hy"  #'consult-yank-replace
       "gg"  #'consult-git-grep
       "RET" #'consult-buffer)
 
@@ -2191,11 +2200,7 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
                 :history  file-name-history
                 :state    ,#'consult--file-state
                 :default  t
-                :items
-                ,(lambda ()
-                   (let ((ht (consult--cached-buffer-file-hash)))
-                     (mapcar #'abbreviate-file-name
-                             (seq-remove (lambda (x) (gethash x ht)) (isamert/my-files))))))
+                :items    isamert/my-files)
     "My frequently accessed files source for `consult-buffer'.")
 
   (setq
@@ -2338,6 +2343,7 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
     (setq flycheck-idle-change-delay 1)
     (setq flycheck-check-syntax-automatically '(save new-line mode-enabled))
     ;; ^ Alternatives are (save idle-change new-line mode-enabled)
+    (setq flycheck-display-errors-delay 0.3)
 
     (global-flycheck-mode)
 
@@ -2351,14 +2357,20 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
     :ensure t
     :config
     (evil-define-key 'normal flycheck-mode-map
-      (kbd "ge") #'consult-flycheck))
+      (kbd "ge") #'isamert/show-error-list))
 
-  (defun isamert/show-error-list ()
+  (use-package flycheck-inline
+    :after flycheck
+    :ensure t
+    :config
+    (global-flycheck-inline-mode))
+
+  (defun isamert/show-error-list (arg)
     "Show all lsp errors or flycheck erros, depending on which is available."
-    (interactive)
+    (interactive "P")
     (if (bound-and-true-p lsp-mode)
-        (lsp-treemacs-errors-list)
-      (flycheck-list-errors)))
+        (consult-lsp-diagnostics arg)
+      (consult-flycheck)))
 #+END_SRC
 
 ** company
@@ -2451,7 +2463,16 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
           lsp-before-save-edits nil
           lsp-eldoc-render-all nil
           lsp-headerline-breadcrumb-enable nil
-          lsp-enable-snippet t)
+          lsp-enable-snippet t
+          ;; lsp-ui-doc-include-signature t
+          ;; ^ Show the signature in the doc posframe. This shows the
+          ;; posframe even if there is no documentation for the function
+          ;; etc.
+          lsp-ui-sideline-show-diagnostics nil
+          ;; ^ Disable showing errors on sideline, because I use
+          ;; flycheck-inline already and it does a better job showing
+          ;; errors inline
+          )
 
     (evil-define-key 'normal lsp-mode-map
       "gr" #'lsp-ui-peek-find-references
@@ -2480,6 +2501,12 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
     :config
     (dap-mode t)
     (dap-ui-mode t))
+
+  ;; consult-lsp-diagnostics and consult-lsp-symbols
+  (use-package consult-lsp
+    :ensure t
+    (evil-define-key 'normal lsp-mode-map
+      (kbd "M-I") 'consult-lsp-symbols))
 #+END_SRC
 
 ** vterm
@@ -2717,7 +2744,7 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
     (evil-leader/set-key
       "gll" 'isamert/git-link-on-branch
       "glh" 'git-link-homepage
-      "glc" 'git-commit))
+      "glc" 'git-link-commit))
 
   (defun isamert/git-link-homepage ()
     "Like git-link-homepage itself but it does not open in browser, simply returns the address as string."
@@ -2736,9 +2763,6 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
        nil nil (isamert/git-current-branch))))
     (let ((git-link-default-branch branch))
       (call-interactively 'git-link)))
-
-  (defun isamert/git-current-branch ()
-    (s-trim (shell-command-to-string "git rev-parse --abbrev-ref HEAD")))
 #+end_src
 
 ** bufler
@@ -2894,6 +2918,26 @@ Simple dictonary.
       (setq alert-default-style 'osx-notifier)))
 #+end_src
 
+** prodigy
+#+begin_src emacs-lisp
+  (use-package prodigy
+    :ensure t
+    :diminish
+    :quelpa (prodigy
+             :fetcher github
+             :repo "rejeep/prodigy.el")
+    :config
+    (evil-define-key 'normal prodigy-mode-map
+      "m" #'prodigy-mark
+      "u" #'prodigy-unmark
+      "x" #'prodigy-stop
+      "S" #'prodigy-start
+      "r" #'prodigy-restart
+      "R" #'prodigy-refresh
+      "f" #'prodigy-jump-file-manager
+      "M" #'prodigy-jump-magit
+      (kbd "RET") #'prodigy-display-process))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
@@ -2958,8 +3002,8 @@ Better way to correct spelling mistakes. By default it uses completing-read, so 
     :ensure t
     :config
     (require 'smartparens-config)
-    (setq sp-autoinsert-pair nil)
-    (setq sp-autodelete-pair nil)
+    ;; (setq sp-autoinsert-pair nil)
+    ;; (setq sp-autodelete-pair nil)
 
     (evil-define-key 'visual sp-keymap
       "S("  #'sp-wrap-round
@@ -3359,9 +3403,11 @@ Keybindings are generally set in-place, following have no context, so they are h
     (kbd "C-s") #'save-buffer)
 
   (evil-define-key 'normal prog-mode-map
-    (kbd "M-;") 'comment-dwim
     "gd" 'xref-find-definitions
     "gr" 'xref-find-references)
+
+  (evil-define-key 'normal prog-mode-map (kbd "M-;") 'comment-line)
+  (evil-define-key 'visual prog-mode-map (kbd "M-;") 'comment-dwim)
 
   (evil-leader/set-key
     "1" #'(lambda () (interactive) (call-interactively (local-key-binding (kbd "C-c C-c")))))
@@ -3440,12 +3486,18 @@ Keybindings are generally set in-place, following have no context, so they are h
 
 *** Get currently focused function name
 #+begin_src emacs-lisp :lexical no
-  (defun isamert/current-func-name ()
-    (or (isamert/current-func-name--tree-sitter)
-        (which-function)))
+  (defun isamert/refactor-debug-log-text ()
+    "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
+    This is used in my snippets."
+    (format "%s:%s:%s" (buffer-name) (isamert/current-func-name) (line-number-at-pos)))
 
-  (defun isamert/current-func-name--tree-sitter ()
-    "Return currently focused function name."
+  (defun isamert/current-func-name ()
+    (if-let ((fn-node (isamert/get-current-func-node)))
+        (tsc-node-text (tsc-get-child-by-field fn-node :name))
+      (which-function)))
+
+  (defun isamert/get-current-func-node ()
+    "Return currently focused function node."
     (let ((curr-func nil)
           (curr-node (ignore-errors
                        (tree-sitter-node-at-point))))
@@ -3464,11 +3516,85 @@ Keybindings are generally set in-place, following have no context, so they are h
                   (not (ignore-errors
                          (tsc-get-child-by-field curr-node :name))))
         (setq curr-node (tsc-get-parent curr-node)))
+        curr-node))
 
 
-      (when curr-node
-        (tsc-node-text (tsc-get-child-by-field curr-node :name)))))
+  ;; Experimenting with tree sitter, ts-ls already provides this feature:
+
+  (defun isamert/refactor-move-function-out ()
+    ""
+    (interactive)
+    (let ((curr-indent nil)
+          (curr-func (isamert/get-current-func-node))
+          (new-func-name (read-string "New function name: ")))
+      (kill-region (region-beginning) (region-end))
+      (goto-char (tsc-node-end-position curr-func))
+      (setq curr-indent (current-indentation))
+      (insert "\n\n")
+      (insert (make-string curr-indent ? ))
+      (pcase (tsc-node-type curr-func)
+        ('method_definition (insert (format "%s ()  {\n" new-func-name))
+                            (insert (make-string curr-indent ? ))
+                            (yank)
+                            (insert (make-string curr-indent ? ))
+                            (insert "}"))
+        ('function_declaration (insert "function FUN_NAME () {\n")
+                               (insert (make-string curr-indent ? ))
+                               (yank)
+                               (insert (make-string curr-indent ? ))
+                               (insert "\n}"))
+        (t (insert "const FUN_NAME =  () => {\n")
+           (insert (make-string curr-indent ? ))
+           (insert "}"))))
+
+    (forward-line -1)
+    (message "%s"
+             (-difference (-uniq (mapcar #'tsc-node-text (jsdoc--tsc-find-descendants-with-type (isamert/get-current-func-node) 'identifier)))
+                          (--map (tsc-node-text (tsc-get-child-by-field it :name))  (jsdoc--tsc-find-descendants-with-type (isamert/get-current-func-node) 'variable_declarator)))))
 #+end_src
+*** TODO Move between functions
+#+begin_src emacs-lisp :lexical no
+  ;; (evil-define-key
+  ;;   'normal
+  ;;   (kbd "[[") #'isamert/goto-prev-function
+  ;;   (kbd "]]") #'isamert/goto-next-function)
+
+  (defun isamert/goto-next-function ()
+    "Go to next function."
+    (interactive)
+    (->>
+     (or (isamert/get-current-func-node)
+         (tree-sitter-node-at-point))
+     (tsc-get-next-sibling)
+     (tsc-node-start-position)
+     (goto-char)))
+
+  (defun isamert/goto-prev-function ()
+    "Go to previous function."
+    (interactive)
+    (let* ((curr-func (isamert/get-current-func-node))
+           (curr-func-line (ignore-errors
+                             (car (tsc-node-start-point curr-func)))))
+      (cond
+       ((eq curr-func-line (line-number-at-pos))
+        (goto-char (tsc-node-start-position (tsc-get-prev-sibling curr-func))))
+       (curr-func
+        (goto-char (tsc-node-start-position curr-func)))
+       (t
+        (goto-char
+         (->>
+          (tree-sitter-node-at-point)
+          (tsc-get-prev-sibling)
+          (tsc-node-start-position)))))))
+#+end_src
+** Refactoring
+#+begin_src emacs-lisp :lexical no
+  (use-package emr
+    :ensure t
+    :config
+    (evil-define-key 'normal prog-mode-map (kbd "gR") #'emr-show-refactor-menu))
+#+end_src
+
 ** markdown
 #+BEGIN_SRC emacs-lisp
 (use-package markdown-mode
@@ -3536,6 +3662,21 @@ The following enables =CamelCase= aware editing operations.
 
 *** Helper functions
 #+begin_src emacs-lisp
+  ;; TODO make this idempotent, it breaks absolute imports
+  ;; TODO make it work on a line instead of between quotes
+  (defun isamert/js-relative-import-to-abs ()
+    "Convert a relative import to an absolute import.
+  For example, if you are on the line:
+    import Test from '../../test'
+  This function transforms the line into:
+    import Test from 'src/a/b/test'"
+    (interactive)
+    (let ((fname (substring-no-properties (thing-at-point 'filename)))
+          (bounds (bounds-of-thing-at-point 'filename)))
+      (delete-region (car bounds) (cdr bounds))
+      (insert (s-chop-prefix (isamert/current-project-root) (expand-file-name fname)))))
+
+
   (defun isamert/convert-js-object-to-json ()
     "Convert selected JS object into JSON object.
   Example:
@@ -3576,26 +3717,49 @@ The following enables =CamelCase= aware editing operations.
          (current-buffer)
          t)
       (user-error "Select something first")))
-
-  (defun isamert/js-debug-log-text ()
-    "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
-  This is used in my snippets."
-    (format "%s:%s:%s" (buffer-name) (isamert/current-func-name) (line-number-at-pos)))
 #+end_src
 *** Add node_modules/.bin to PATH automatically
 #+begin_src emacs-lisp
   (defun isamert/add-node-modules-to-path ()
     "Add node_modules/.bin to `exec-path'."
     (interactive)
-    (-some->> (locate-dominating-file "." "node_modules")
-      (expand-file-name)
-      (format "%s/node_modules/.bin")
+    (-some--> (locate-dominating-file "." "node_modules")
+      (expand-file-name it)
+      (format "%s/node_modules/.bin" it)
       ;; FIXME check if there is a buffer local exec path?
-      (add-to-list 'exec-path)
-      (message "%s")))
+      (setq-local exec-path `(,it ,@exec-path))
+      (message "%s added to buffer-local path." it)))
 
   (add-hook 'js-mode-hook #'isamert/add-node-modules-to-path)
   (add-hook 'js2-mode-hook #'isamert/add-node-modules-to-path)
+  (add-hook 'eshell-mode-hook #'isamert/add-node-modules-to-path)
+#+end_src
+*** Debug helpers
+#+begin_src emacs-lisp
+  (defun isamert/js-insert-debug-log-for-current-variable ()
+    "Insert a `console.log' line for currently focused variable."
+    (interactive)
+    (let ((curr-indent)
+          (node (tsc-get-child-by-field
+                 (car (jsdoc--tsc-find-descendants-with-type
+                       (tsc-get-parent (tree-sitter-node-at-point))
+                       'variable_declarator))
+                 :name)))
+      (goto-char (tsc-node-end-position node))
+      (end-of-line)
+      (setq curr-indent (current-indentation))
+      (insert "\n")
+      (insert (make-string curr-indent ? ))
+      (insert
+       (format
+        "console.log(\"%s\", %s) // FIXME remove log"
+        (isamert/refactor-debug-log-text)
+        (->>
+         node
+         (tsc-node-text)
+         (s-split "\n")
+         (-map #'s-trim)
+         (s-join " "))))))
 #+end_src
 ** typescript
 #+begin_src emacs-lisp
@@ -3692,6 +3856,28 @@ Hit <C-j> after these and get:
                            ("<="     . ?≤)
                            ("defun"  . ?ƒ)
                            ("lambda" . ?λ)))
+
+  ;; https://emacs.stackexchange.com/questions/2777/how-to-get-the-function-help-without-typing
+  (defun isamert/describe-thing-in-popup ()
+    (interactive)
+    (let* ((thing (symbol-at-point))
+           (help-xref-following t)
+           (description (save-window-excursion
+                          (with-temp-buffer
+                            (help-mode)
+                            (help-xref-interned thing)
+                            (buffer-string)))))
+      (flycheck-inline-mode -1)
+      (popup-tip description
+                 :point (point)
+                 :around t
+                 :height 20
+                 :scroll-bar t
+                 :margin t))
+      (flycheck-inline-mode))
+
+  (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
+  (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
 #+end_src
 
 ** dhall
@@ -3763,6 +3949,331 @@ Mostly for editing tridactyl and sometimes real vimrc.
 #+end_src
 
 * Misc functions
+** Git and GitLab extras
+#+begin_src emacs-lisp
+  (evil-leader/set-key
+    "glmb" 'isamert/gitlab-list-current-branch-merge-requests
+    "glmm" 'isamert/gitlab-list-my-merge-requests
+    "glma" 'isamert/gitlab-list-group-merge-requests)
+
+  ;;
+  ;; Git extras
+  ;;
+
+  (defun isamert/git-current-branch ()
+    (s-trim (shell-command-to-string "git rev-parse --abbrev-ref HEAD")))
+
+
+  (defun isamert/git-get-config (conf)
+    (->>
+     (format "git config --get '%s'" conf)
+     (shell-command-to-string)
+     (s-trim)))
+
+  (defun isamert/git-remote-homepage ()
+    (let ((remote-url (isamert/git-get-config "remote.origin.url")))
+      (cond
+       ((s-contains? "@" remote-url)
+        (->> remote-url
+             (s-split "@")
+             (nth 1)
+             (s-replace ":" "/")
+             (s-chop-suffix ".git")
+             (s-prepend "https://")))
+       (t (s-chop-suffix ".git" remote-url)))))
+
+  ;;
+  ;; Gitlab
+  ;;
+
+  (defvar isamert/gitlab-token
+    nil
+    "Gitlab token.")
+
+  (defvar isamert/gitlab-host
+    nil
+    "Gitlab host.")
+
+  (defvar isamert/gitlab-group
+    nil
+    "Gitlab group.")
+
+  (defun isamert/gitlab-project-path ()
+    "Return hexified project path for current git project.
+  This is mostly used while doing an api call for the current
+  project."
+    (->>
+     (isamert/git-remote-homepage)
+     (s-chop-prefix isamert/gitlab-host)
+     (s-chop-prefix "/")
+     (s-chop-prefix "/")
+     (s-chop-prefix "/")
+     (s-trim)
+     (url-hexify-string)))
+
+  (defun isamert/gitlab-request (endpoint &rest params)
+    (let (json
+          (json-object-type 'hash-table)
+          (json-array-type #'list)
+          (json-key-type 'symbol))
+      (dolist (key '(:type))
+        (cl-remf params key))
+      (request
+        (s-replace
+         "#{project}"
+         ;; TODO Eval the following lazyly?
+         (isamert/gitlab-project-path)
+         (format "%s/api/v4/%s" isamert/gitlab-host endpoint))
+        :type (or (plist-get params :type) "GET")
+        :headers `((Authorization . ,(format "Bearer %s" isamert/gitlab-token)))
+        :parser #'json-read
+        :success (cl-function
+                  (lambda (&key data &allow-other-keys)
+                    (setq json data)))
+        :sync t
+        ;; TODO Maybe roll my own plist-to-alist function
+        :params (transient-plist-to-alist params))
+      json))
+
+  (defun isamert/gitlab-list-current-branch-merge-requests ()
+    "List all open MRs that the source branch is the current branch."
+    (interactive)
+    (isamert/gitlab--select-mr-and-apply-action
+     (isamert/gitlab-request
+      "projects/#{project}/merge_requests"
+      :scope 'all
+      :state 'opened
+      :source_branch (isamert/git-current-branch))))
+
+  (defun isamert/gitlab-list-my-merge-requests ()
+    "List all of my currently open merge requests.
+  `mine' means either it's created by me or assigned to me."
+    (interactive)
+    (isamert/gitlab--select-mr-and-apply-action
+     `(,@(isamert/gitlab-request
+          "merge_requests"
+          :scope 'created_by_me
+          :state 'opened)
+       ,@(isamert/gitlab-request
+          "merge_requests"
+          :scope 'assigned_to_me
+          :state 'opened))))
+
+
+  (defun isamert/gitlab-list-group-merge-requests ()
+    "List all open MRs that belongs to `isamert/gitlab-group'."
+    (interactive)
+    (isamert/gitlab--select-mr-and-apply-action
+     (isamert/gitlab-request
+      (format "groups/%s/merge_requests" (url-hexify-string isamert/gitlab-group))
+      :scope 'all
+      :state 'opened)))
+
+  ;; Internal
+
+  (defun isamert/gitlab--open-web-url (it)
+    (browse-url (gethash 'web_url it)))
+
+  (defun isamert/gitlab--rebase-merge-request (it)
+    (isamert/gitlab-request
+     "/projects/#{project}/merge_requests/%s/rebase" (gethash 'iid it)
+     :type "PUT"))
+
+  (defun isamert/gitlab--mr-format-title (mr)
+    (format "%s, [%s], by %s"
+            (propertize (gethash 'title it)
+                        'face 'bold)
+            (propertize
+             (->>
+              (gethash 'web_url mr)
+              (s-chop-prefix isamert/gitlab-host)
+              (s-split "/-/merge_requests/")
+              (car)
+              (s-split "/")
+              (-last-item))
+             'face '(:weight thin))
+            (propertize (gethash 'name (gethash 'author it))
+                        'face 'italic)))
+
+  (defun isamert/gitlab--select-mr-and-apply-action (mrs)
+    (let ((mr-infos (--map
+                     (cons (isamert/gitlab--mr-format-title it) it)
+                     mrs)))
+      (-->
+       (completing-read "Select MR: " mr-infos)
+       (assoc-string it mr-infos)
+       (cdr it)
+       (isamert/gitlab--merge-request-actions it))))
+
+  (defun isamert/gitlab--merge-request-actions (mr)
+    (let* ((selectrum-should-sort nil)
+           (action (completing-read
+                    "Select an action: "
+                    '("Open page"
+                      "Rebase"))))
+      (pcase action
+        ("Open page" (isamert/gitlab--open-web-url it))
+        ("Rebase" (isamert/gitlab--rebase-merge-request it)))))
+
+  ;;
+  ;; Gitlab config
+  ;;
+
+  (setq isamert/gitlab-host ty/gitlab-url)
+  (setq isamert/gitlab-token ty/gitlab-token)
+  (setq isamert/gitlab-group ty/gitlab-group)
+#+end_src
+** Jira
+#+begin_src emacs-lisp
+  (evil-leader/set-key "oj" #'isamert/open-jira-issue-at-point)
+  (evil-leader/set-key "ej" #'isamert/jira-list-issues)
+
+  ;;
+  ;; Actions for JIRA items using embark
+  ;;
+
+  ;; TODO Remove embark actions and create completing-read menu for actions
+
+  (require 'embark)
+
+  (embark-define-keymap isamert/embark-jira-actions
+    "Actions for JIRA issues."
+    ("o" isamert/open-jira-issue)
+    ("b" isamert/jira-ticket-to-branch)
+    ("W" isamert/jira-ticket-to-worktree))
+
+  (add-to-list 'embark-keymap-alist '(isamert/jira . isamert/embark-jira-actions))
+
+  ;;
+  ;; Install required JIRA client
+  ;;
+
+  (use-package jiralib2
+    :ensure t
+    :config
+    (setq jiralib2-url "https://jtracker.trendyol.com")
+    (setq jiralib2-auth 'basic)
+    (setq jiralib2-user-login-name "isamert.gurbuz")
+    (setq jiralib2-token nil))
+
+  ;;
+  ;; My completing-read based JIRA utilities
+  ;;
+
+  (defvar isamert/git-worktrees-root "~/Workspace/projects/worktrees"
+    "Directory to create worktrees in.")
+
+  (defvar isamert/jira-projects '(("SA" . 1200))
+    "List of projects that I enrolled in JIRA.
+  CDR of each item defines which ticket number the caching should
+  start.")
+
+  (defvar isamert/jira-base-branch "origin/master"
+    "Brach to create feature branches from.
+  Consider using origin/something to create the branch from latest
+  something.")
+
+  (defvar isamert/jira-feature-branch-prefix "feature/"
+    "Prefix to prepend feature branch names.")
+
+  (defvar isamert/jira-my-issues-query "Pair-programmer = currentUser() OR assignee = currentUser() ORDER BY createdDate DESC"
+    "Query to find out issues that are assigned to me.")
+
+  ;; Internal state
+
+  (defvar isamert/jira-my-issues '()
+    "All of my issues")
+  (defvar isamert/jira-new-issues '()
+    "New jira issues")
+
+  ;; Functions
+
+  (defun isamert/open-jira-issue (issue-number)
+    "Open given Jira ISSUE-NUMBER."
+    (interactive "sIssue: ")
+    (browse-url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number)))))
+
+  (defun isamert/open-jira-issue-at-point ()
+    "Open issue at point."
+    (interactive)
+    (isamert/open-jira-issue (thing-at-point 'symbol)))
+
+  (defun isamert/jira-refresh-issue-lists ()
+    (interactive)
+    (message ">> Updating my issues...")
+    (setq isamert/jira-my-issues (jiralib2-jql-search isamert/jira-my-issues-query))
+    (message ">> Updating new issues...")
+    (setq isamert/jira-new-issues '())
+    (mapcar
+     (lambda (project)
+       (setq
+        isamert/jira-new-issues
+        (thread-last (format "project = \"%s\" AND issuekey >= \"%s-%s\""
+                             (car project) (car project) (cdr project))
+          (jiralib2-jql-search)
+          (append isamert/jira-new-issues))))
+     isamert/jira-projects)
+    (message ">> Updating new issues... Done."))
+
+  (defun isamert/jira-list-issues (&optional arg)
+    (interactive "P")
+    (when arg
+      (isamert/jira-refresh-issue-lists))
+    (thread-last (pcase (completing-read "Issue list: " '("My issues" "New issues"))
+                   ("My issues" isamert/jira-my-issues)
+                   ("New issues" isamert/jira-new-issues))
+      (--map (cons (format "%s - %s" (cdr (assoc 'key it)) (cdr (assoc 'summary (assoc 'fields it)))) it))
+      ((lambda (items) (consult--read items :category 'isamert/jira)))
+      (isamert/open-jira-issue)))
+
+  (defun isamert/jira-ticket-to-branch (issue-name)
+    "Create a new branch from given ISSUE-NAME and switch to it."
+    (interactive "sIssue name: ")
+    (let ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name)))
+      (message "Updating...")
+      (magit-fetch-all nil)
+      (message "Creating branch...")
+      (magit-branch-and-checkout branch-name isamert/jira-base-branch)
+      (vc-refresh-state)
+      (message "Currently on %s." (magit-get-current-branch))))
+
+  (defun isamert/jira-ticket-to-worktree (issue-name)
+    (interactive "sIssue name: ")
+    (let* ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name))
+           (worktree (expand-file-name (format "%s/%s" isamert/git-worktrees-root (s-replace "/" "-" branch-name)))))
+      (message "Updating...")
+      (magit-fetch-all nil)
+      (message "Creating worktree...")
+      (if (-contains? (vc-git-branches) branch-name)
+          (magit-worktree-checkout worktree branch-name)
+        (magit-worktree-branch worktree branch-name isamert/jira-base-branch))
+      (persp-add-new branch-name)
+      (persp-switch branch-name)
+      (cd worktree)
+      (isamert/find-file-in-current-project)
+      (vc-refresh-state)
+      (message "Currently on %s." (magit-get-current-branch))))
+
+  (defun isamert/jira-create-branch-name-from-ticket (issue-name)
+    "Create a branch name from given Jira ISSUE-NAME"
+    (thread-last issue-name
+      (s-replace-all '((" " . "-") (":" . "-") ("\"" . "") ("/" . "-") ("&" . "") ("(" . "-") (")" . "-")))
+      (s-replace "---" "-")
+      (s-replace "--" "-")
+      (s-downcase)
+      (isamert/s-upcase-until "-")
+      (s-prepend isamert/jira-feature-branch-prefix)
+      (read-string "Branch name: ")))
+
+  ;; Utility
+
+  (defun isamert/s-upcase-until (until s)
+    (let ((end (s-index-of until s)))
+      (concat
+       (s-upcase (substring s 0 end))
+       (substring s end))))
+#+end_src
+
 ** My Android phone and Emacs
 I have an Android phone that is running [[https://termux.com/][Termux]] all the time. If you install Termux through [[https://www.f-droid.org/][F-Droid]] you can also install [[https://f-droid.org/en/packages/com.termux.api/][Termux:API]] package which brings bunch of commands like =termux-clipboard-set=, =termux-sms-list= etc. Much of the commands requires to be called in foreground, so they are not very useful over SSH but you can work around that by starting a =tmux= session on the phone and executing commands on that tmux session through SSH. This way I can send arbitrary text to my phones clipboard using the commands below.
 
@@ -4133,16 +4644,16 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (user-error "The day already exists"))
     (widen)
     (goto-char (point-max))
-    (loop
+    (cl-loop
      (when (not (re-search-backward "^* \\[\\([0-9]+-[0-9]+-[0-9]+\\)\\( \\w+\\)?\\].*" nil t))
-       (return))
+       (cl-return))
      (when (time-less-p
             (date-to-time (concat (match-string 1) "T000"))
             (date-to-time (concat date "T000")))
        (org-insert-heading-after-current)
        (insert (format "[%s %s] [/]" date (format-time-string "%a")))
        (org-narrow-to-subtree)
-       (return))))
+       (cl-return))))
 
   ;;
   ;; Focus a day
@@ -4197,11 +4708,11 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
         (let ((headers '()))
           (widen)
           (goto-char 0)
-          (loop
+          (cl-loop
            (when (not (re-search-forward "^* \\(.*\\)" nil t))
-             (return))
+             (cl-return))
            (if (s-prefix? "[" (match-string 1))
-               (return)
+               (cl-return)
              (push (match-string 1) headers)))
           headers))))
 
@@ -4423,12 +4934,17 @@ Here I define two important functions and their helpers.  The following function
          (find-file file-path)
          (current-buffer))))))
 
+  (defun isamert/toggle-side-buffer-with-name (buffer-name)
+    "Hide/show given BUFFER-NAME in a side window."
+    (interactive)
+    (if (isamert/buffer-visible-p buffer-name)
+        (isamert/remove-window-with-buffer buffer-name)
+      (isamert/display-buffer-in-side-window (get-buffer buffer-name))))
+
   (defun isamert/toggle-side-scratch-buffer ()
     "Toggle the scratch buffer in side window.  The buffer is opened in side window so it can't be accidentaly removed."
     (interactive)
-    (if (isamert/buffer-visible-p "*scratch*")
-        (isamert/remove-window-with-buffer "*scratch*")
-      (isamert/display-buffer-in-side-window (get-buffer "*scratch*"))))
+    (isamert/toggle-side-buffer-with-name "*scratch*"))
 
   (defun isamert/toggle-side-temp-org-buffer ()
     "Toggle `temp.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
@@ -4445,13 +4961,19 @@ Here I define two important functions and their helpers.  The following function
     (interactive)
     (isamert/toggle-side-buffer-with-file "~/Documents/notes/projects.org"))
 
-    ;; Toggle temproary buffers
-    (evil-leader/set-key
-      "ts" 'isamert/toggle-side-scratch-buffer
-      "to" 'isamert/toggle-side-temp-org-buffer
-      "th" 'isamert/toggle-side-bullet-org-buffer
-      "tp" 'isamert/toggle-side-projects-buffer
-      "tf" 'treemacs)
+  (defun isamert/toggle-side-messages-buffer ()
+    "Toggle `projects.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+    (interactive)
+    (isamert/toggle-side-buffer-with-name "*Messages*"))
+
+  ;; Toggle temproary buffers
+  (evil-leader/set-key
+    "ts" 'isamert/toggle-side-scratch-buffer
+    "to" 'isamert/toggle-side-temp-org-buffer
+    "th" 'isamert/toggle-side-bullet-org-buffer
+    "tp" 'isamert/toggle-side-projects-buffer
+    "tm" 'isamert/toggle-side-messages-buffer
+    "tf" 'treemacs)
 #+end_src
 
 ** org-babel extension functions
@@ -4680,11 +5202,28 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 
 ** isamert/start-shell-command
 #+begin_src emacs-lisp :lexical yes
+  (defvar-local isamert/shell-command-mode-command nil
+    "Current shell command that belongs to the buffer.")
+
+  (define-minor-mode isamert/shell-command-mode
+    "Shell command mode."
+    :lighter "iscm"
+    :keymap (make-sparse-keymap))
+
+  (evil-define-key 'normal isamert/shell-command-mode-map
+    (kbd "R") #'isamert/shell-command-mode-rerun-command)
+
+  (defun isamert/shell-command-mode-rerun-command ()
+    "Re-run the shell command."
+    (interactive)
+    (apply #'isamert/shell-command isamert/shell-command-mode-command))
+
   (cl-defun isamert/shell-command
       (&key
        command
        (switch t)
        (buffer-name (concat "*" command "*"))
+       (on-start (lambda ()))
        (on-finish (lambda ()))
        (on-fail (lambda ())))
     "Run given shell COMMAND and redirect output to given BUFFER-NAME.
@@ -4725,7 +5264,18 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
              (insert (ansi-color-apply str))))))
       (with-current-buffer buffer-name
         (read-only-mode)
-        (font-lock-mode))
+        (font-lock-mode)
+        (isamert/shell-command-mode 1)
+        (evil-normal-state)
+        (setq-local
+         isamert/shell-command-mode-command
+         (list
+          :command command
+          :buffer-name buffer-name
+          :on-start on-start
+          :on-finish on-finish
+          :on-fail on-fail))
+        (funcall on-start))
       (when switch
         (switch-to-buffer buffer-name))))
 #+end_src
@@ -4758,6 +5308,13 @@ Company/work related stuff.
     (string= (treemacs-workspace->name (treemacs-current-workspace)) "seller-ads"))
 #+end_src
 
+** Packages
+#+begin_src emacs-lisp :lexical no
+  (when (company/is-company)
+    ;; Enable org jira/confluence exporter (org-confluence-export-as-confluence)
+    (require 'ox-confluence)
+    (defalias 'org-export-as-jira-confluence-markup 'org-confluence-export-as-confluence))
+#+end_src
 ** Automatically insert issue numbers into commit messages
 #+begin_src emacs-lisp
   ;; TODO: maybe find all changed functions/files and append them into
@@ -4783,23 +5340,6 @@ Company/work related stuff.
     (add-hook 'git-commit-setup-hook 'company/git-commit-message-setup))
 #+end_src
 
-** Open MR page
-#+begin_src emacs-lisp
-  (defun isamert/git-link-my-merge-requests-for-current-project ()
-    "Open all of my merge requests in browser for the current repository."
-    (interactive)
-    (browse-url (format "%s/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=%s" (isamert/git-link-homepage) "isamert.gurbuz")))
-
-  (defun isamert/git-link-my-merge-requests ()
-    "Open all of my merge requests in browser."
-    (interactive)
-    (browse-url "https://gitlab.trendyol.com/groups/discovery/seller-ads/-/merge_requests?scope=all&utf8=✓&state=opened&author_username=isamert.gurbuz"))
-
-
-  (evil-leader/set-key
-    "glm" 'isamert/git-link-my-merge-requests-for-current-project
-    "glM" 'isamert/git-link-my-merge-requests)
-#+end_src
 ** Misc bindings
 #+begin_src emacs-lisp
   (defun isamert/toggle-side-trendyol-org-buffer ()
@@ -4811,153 +5351,9 @@ Company/work related stuff.
     "tw" 'isamert/toggle-side-trendyol-org-buffer)
 #+end_src
 
-** Jira
-
-#+begin_src emacs-lisp
-  (evil-leader/set-key "oj" #'isamert/open-jira-issue-at-point)
-
-  ;;
-  ;; Actions for JIRA items using embark
-  ;;
-
-  (use-package embark
-    :config
-    (embark-define-keymap isamert/embark-jira-actions
-      "Actions for JIRA issues."
-      ("o" isamert/open-jira-issue)
-      ("b" isamert/jira-ticket-to-branch)
-      ("W" isamert/jira-ticket-to-worktree))
-
-    (add-to-list 'embark-keymap-alist '(isamert/jira . isamert/embark-jira-actions)))
-
-  ;;
-  ;; Install required JIRA client
-  ;;
-
-  (use-package jiralib2
-    :ensure t
-    :config
-    (setq jiralib2-url "https://jtracker.trendyol.com")
-    (setq jiralib2-auth 'basic)
-    (setq jiralib2-user-login-name "isamert.gurbuz")
-    (setq jiralib2-token nil))
-
-  ;;
-  ;; My completing-read based JIRA utilities
-  ;;
-
-  (defvar isamert/git-worktrees-root "~/Workspace/projects/worktrees"
-    "Directory to create worktrees in.")
-
-  (defvar isamert/jira-projects '(("SA" . 1200))
-    "List of projects that I enrolled in JIRA.
-  CDR of each item defines which ticket number the caching should
-  start.")
-
-  (defvar isamert/jira-base-branch "origin/master"
-    "Brach to create feature branches from.
-  Consider using origin/something to create the branch from latest
-  something.")
-
-  (defvar isamert/jira-feature-branch-prefix "feature/"
-    "Prefix to prepend feature branch names.")
-
-  ;; Internal state
-
-  (defvar isamert/jira-my-issues '()
-    "All of my issues")
-  (defvar isamert/jira-new-issues '()
-    "New jira issues")
-
-  ;; Functions
-
-  (defun isamert/open-jira-issue (issue-number)
-    "Open given Jira ISSUE-NUMBER."
-    (interactive "sIssue: ")
-    (browse-url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number)))))
-
-  (defun isamert/open-jira-issue-at-point ()
-    "Open issue at point."
-    (interactive)
-    (isamert/open-jira-issue (thing-at-point 'symbol)))
-
-  (defun isamert/jira-refresh-issue-lists ()
-    (interactive)
-    (message ">> Updating my issues...")
-    (setq isamert/jira-my-issues (jiralib2-jql-search "assignee = currentUser()"))
-    (message ">> Updating new issues...")
-    (setq isamert/jira-new-issues '())
-    (mapcar
-     (lambda (project)
-       (setq
-        isamert/jira-new-issues
-        (thread-last (format "project = \"%s\" AND issuekey >= \"%s-%s\""
-                             (car project) (car project) (cdr project))
-          (jiralib2-jql-search)
-          (append isamert/jira-new-issues))))
-     isamert/jira-projects)
-    (message ">> Updating new issues... Done."))
-
-  (defun isamert/jira-list-issues ()
-    (interactive)
-    (thread-last (pcase (completing-read "Issue list: " '("My issues" "New issues"))
-                   ("My issues" isamert/jira-my-issues)
-                   ("New issues" isamert/jira-new-issues))
-      (--map (cons (format "%s - %s" (cdr (assoc 'key it)) (cdr (assoc 'summary (assoc 'fields it)))) it))
-      ((lambda (items) (consult--read items :category 'isamert/jira)))
-      (isamert/open-jira-issue)))
-
-  (defun isamert/jira-ticket-to-branch (issue-name)
-    "Create a new branch from given ISSUE-NAME and switch to it."
-    (interactive "sIssue name: ")
-    (let ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name)))
-      (message "Updating...")
-      (magit-fetch-all nil)
-      (message "Creating branch...")
-      (magit-branch-and-checkout branch-name isamert/jira-base-branch)
-      (vc-refresh-state)
-      (message "Currently on %s." (magit-get-current-branch))))
-
-  (defun isamert/jira-ticket-to-worktree (issue-name)
-    (interactive "sIssue name: ")
-    (let* ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name))
-           (worktree (expand-file-name (format "%s/%s" isamert/git-worktrees-root (s-replace "/" "-" branch-name)))))
-      (message "Updating...")
-      (magit-fetch-all nil)
-      (message "Creating worktree...")
-      (if (-contains? (vc-git-branches) branch-name)
-          (magit-worktree-checkout worktree branch-name)
-        (magit-worktree-branch worktree branch-name isamert/jira-base-branch))
-      (persp-add-new branch-name)
-      (persp-switch branch-name)
-      (cd worktree)
-      (isamert/find-file-in-current-project)
-      (vc-refresh-state)
-      (message "Currently on %s." (magit-get-current-branch))))
-
-  (defun isamert/jira-create-branch-name-from-ticket (issue-name)
-    "Create a branch name from given Jira ISSUE-NAME"
-    (thread-last issue-name
-      (s-replace-all '((" " . "-") (":" . "-") ("\"" . "") ("/" . "-") ("&" . "") ("(" . "-") (")" . "-")))
-      (s-replace "---" "-")
-      (s-replace "--" "-")
-      (s-downcase)
-      (isamert/s-upcase-until "-")
-      (s-prepend isamert/jira-feature-branch-prefix)
-      (read-string "Branch name: ")))
-
-  ;; Utility
-
-  (defun isamert/s-upcase-until (until s)
-    (let ((end (s-index-of until s)))
-      (concat
-       (s-upcase (substring s 0 end))
-       (substring s end))))
-#+end_src
-
 ** Token management
 #+begin_src emacs-lisp
-  (defvar ty/stage-token nil)
+  ;; (defvar ty/stage-token nil)
 
   (defun ty/stage-token ()
     (or
@@ -5001,7 +5397,7 @@ Company/work related stuff.
      :val1 "https://stageselleradsadvertstatisticapi.trendyol.com"
      :val2 "http://localhost:8086/"))
 
-  (defun ty/open-code-test:cov-report (run-test-before)
+  (defun ty/open-test-code-coverage-report (run-test-before)
     "Open code coverage report for current project.
   With RUN-TEST-BEFORE is non-nil, then run tests before and then
   open coverage.  You can simply call \"gf\" or
@@ -5018,10 +5414,10 @@ Company/work related stuff.
            :on-fail (lambda () (user-error ">> Tests are failed!")))
         (browse-url-default-browser cov-file))))
 
-  (defun ty/run-code-test:cov ()
+  (defun ty/run-test-code-coverage-report ()
     "Run all tests and then open coverage."
     (interactive)
-    (ty/open-code-test:cov-report t))
+    (ty/open-test-code-coverage-report t))
 
   (defun ty/run-current-test-file (run-only-focused-test)
     (interactive "P")
@@ -5052,4 +5448,57 @@ Company/work related stuff.
     "Run currently focused test only."
     (interactive)
     (ty/run-current-test-file t))
+
+  (defun ty/get-current-kafka-config ()
+    "Read kafka configuration from projects stage.yaml."
+    (let* ((kafka-config (->>
+                          (with-temp-buffer
+                            (insert-file-contents (concat (isamert/current-project-root) "/config/stage.yaml"))
+                            (buffer-string))
+                          (yaml-parse-string)
+                          (gethash 'default)
+                          (gethash 'kafka)))
+           (kafka-hosts (or (gethash 'hosts kafka-config)
+                            (gethash 'uri kafka-config)))
+           (kafka-items (->> kafka-config
+                             (hash-table-keys)
+                             (--remove (-contains? '(hosts uri) it))))
+           (kafka-topics (or (ignore-errors
+                               (hash-table-values (gethash 'topics kafka-config)))
+                             (--map (->> kafka-config
+                                         (gethash it)
+                                         (gethash 'topic))
+                                    kafka-items))))
+      (list
+       :hosts kafka-hosts
+       :topics kafka-topics)))
+#+end_src
+** Projects/services
+#+begin_src emacs-lisp
+  (prodigy-define-service
+    :name "Seller Ads - Editor"
+    :command "yarn"
+    :args '("start")
+    :cwd "~/Workspace/projects/editor/"
+    :tags '(work ui)
+    :stop-signal 'sigkill
+    :kill-process-buffer-on-stop t)
+
+  (prodigy-define-service
+    :name "Seller Ads - Editor BFF"
+    :command "yarn"
+    :args '("start")
+    :cwd "~/Workspace/projects/editor-bff/"
+    :tags '(work ui)
+    :stop-signal 'sigkill
+    :kill-process-buffer-on-stop t)
+
+  (prodigy-define-service
+    :name "Seller Ads - Advert Api"
+    :command "yarn"
+    :args '("start:dev")
+    :cwd "~/Workspace/projects/advert-api/"
+    :tags '(work ui)
+    :stop-signal 'sigkill
+    :kill-process-buffer-on-stop t)
 #+end_src
