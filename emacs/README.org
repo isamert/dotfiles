@@ -3553,12 +3553,22 @@ Keybindings are generally set in-place, following have no context, so they are h
              (-difference (-uniq (mapcar #'tsc-node-text (jsdoc--tsc-find-descendants-with-type (isamert/get-current-func-node) 'identifier)))
                           (--map (tsc-node-text (tsc-get-child-by-field it :name))  (jsdoc--tsc-find-descendants-with-type (isamert/get-current-func-node) 'variable_declarator)))))
 #+end_src
-*** TODO Move between functions
-#+begin_src emacs-lisp :lexical no
-  ;; (evil-define-key
-  ;;   'normal
-  ;;   (kbd "[[") #'isamert/goto-prev-function
-  ;;   (kbd "]]") #'isamert/goto-next-function)
+*** Move between functions mode
+This minor mode makes =[[= and =]]= move between functions, if tree sitter is enabled otherwise default evil bindings are used.
+
+#+begin_src emacs-lisp
+  (define-minor-mode isamert/jump-between-functions-mode
+    "Jum between functions."
+    :lighter "jump-fns"
+    :keymap (make-sparse-keymap))
+
+  (evil-define-key
+    '(normal motion)
+    isamert/jump-between-functions-mode-map
+    (kbd "[[") #'isamert/goto-prev-function
+    (kbd "]]") #'isamert/goto-next-function)
+
+  (add-hook 'tree-sitter-mode-hook #'isamert/jump-between-functions-mode)
 
   (defun isamert/goto-next-function ()
     "Go to next function."
