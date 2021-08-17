@@ -200,7 +200,8 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
   (setq switch-to-prev-buffer-skip 'visible)
   ;; ^ (switch-to-prev-buffer) skips buffers that are visible on the screen
   (setq dabbrev-case-fold-search nil)
-  ;; ^ Expansions are done respecting the case
+  ;; ^ Expansions are done respecting the case (Ctrl-n and Ctrl-p was
+  ;; not behaving the way I wanted before this in evil mode)
 
 
   ;; Ask y/n instead of yes/no
@@ -2392,15 +2393,26 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
     (setq company-minimum-prefix-length 1)
     ;; ^ Start completing after 1 char
 
+    (evil-define-key 'insert 'global (kbd "C-SPC") 'company-complete)
+    ;; ^ C-SPC force triggers company completion at point
     (define-key company-active-map (kbd "<tab>") nil)
     ;; ^ Disable tab key, so yasnippet and tab-out works nicely within company mode
     (define-key company-active-map (kbd "<return>") 'company-complete-selection)
     ;; ^ Enter simply applies the current selection
-    (evil-define-key 'insert 'global (kbd "C-SPC") 'company-complete)
-    ;; ^ C-SPC force triggers company completion at point
 
     (define-key company-active-map (kbd "<up>") 'company-select-previous)
     (define-key company-active-map (kbd "<down>") 'company-select-next)
+
+    (define-key company-active-map (kbd "C-u") 'company-previous-page)
+    (define-key company-active-map (kbd "C-b") 'company-previous-page)
+    (define-key company-active-map (kbd "C-d") 'company-next-page)
+
+    ;; I want to be able to use evil's C-n/C-p even when company
+    ;; suggestions are visible. I disable those bindings in company
+    ;; active map, so that evil picks them up and completes the current
+    ;; symbol.
+    (define-key company-active-map (kbd "C-p") nil)
+    (define-key company-active-map (kbd "C-n") nil)
 
     (add-hook 'after-init-hook 'global-company-mode))
 
@@ -2408,17 +2420,6 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
     :ensure t
     :after company
     :hook (company-mode . company-box-mode))
-
-  ;; (use-package company-fuzzy
-  ;;   :ensure t
-  ;;   :after company
-  ;;   :config
-  ;;   (setq company-require-match nil)
-  ;;   ;; ^ Don't require match, so you can still move your cursor as expected.
-  ;;   (setq company-tooltip-align-annotations t)
-  ;;   ;; ^ Align annotation to the right side.
-  ;;   (global-company-fuzzy-mode 1))
-
 
   (use-package company-org-block
     :ensure t
