@@ -4082,7 +4082,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
 
   (defun isamert/gitlab--mr-format-title (mr)
     (format "%s, [%s], by %s"
-            (propertize (gethash 'title it)
+            (propertize (gethash 'title mr)
                         'face 'bold)
             (propertize
              (->>
@@ -4093,7 +4093,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
               (s-split "/")
               (-last-item))
              'face '(:weight thin))
-            (propertize (gethash 'name (gethash 'author it))
+            (propertize (gethash 'name (gethash 'author mr))
                         'face 'italic)))
 
   (defun isamert/gitlab--select-mr-and-apply-action (mrs)
@@ -4113,8 +4113,8 @@ Mostly for editing tridactyl and sometimes real vimrc.
                     '("Open page"
                       "Rebase"))))
       (pcase action
-        ("Open page" (isamert/gitlab--open-web-url it))
-        ("Rebase" (isamert/gitlab--rebase-merge-request it)))))
+        ("Open page" (isamert/gitlab--open-web-url mr))
+        ("Rebase" (isamert/gitlab--rebase-merge-request mr)))))
 
   ;;
   ;; Gitlab config
