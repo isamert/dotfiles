@@ -167,6 +167,15 @@ Some basic variable and function definitions that will be used in configuration.
     `(let ((browse-url-handlers nil)
            (browse-url-browser-function 'browse-url-default-browser))
        ,@body))
+
+  (defun isamert/shell-command-to-string (cmd)
+    "Like `shell-command-to-string' but only stdout is returned."
+    (with-output-to-string
+      (with-current-buffer
+          standard-output
+        (process-file
+         shell-file-name nil '(t nil)  nil shell-command-switch
+         cmd))))
 #+END_SRC
 
 ** Load path
@@ -2506,6 +2515,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
   ;; consult-lsp-diagnostics and consult-lsp-symbols
   (use-package consult-lsp
     :ensure t
+    :config
     (evil-define-key 'normal lsp-mode-map
       (kbd "M-I") 'consult-lsp-symbols))
 #+END_SRC
@@ -3558,13 +3568,11 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
 
 #+begin_src emacs-lisp
   (define-minor-mode isamert/jump-between-functions-mode
-    "Jum between functions."
+    "Jump between functions."
     :lighter "jump-fns"
     :keymap (make-sparse-keymap))
 
-  (evil-define-key
-    '(normal motion)
-    isamert/jump-between-functions-mode-map
+  (evil-define-minor-mode-key 'normal 'isamert/jump-between-functions-mode
     (kbd "[[") #'isamert/goto-prev-function
     (kbd "]]") #'isamert/goto-next-function)
 
