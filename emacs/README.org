@@ -3899,14 +3899,13 @@ Hit <C-j> after these and get:
                             (help-mode)
                             (help-xref-interned thing)
                             (buffer-string)))))
-      (flycheck-inline-mode -1)
+      (flycheck-inline-hide-errors)
       (popup-tip description
                  :point (point)
                  :around t
-                 :height 20
+                 :height 65
                  :scroll-bar t
-                 :margin t))
-      (flycheck-inline-mode))
+                 :margin t)))
 
   (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
   (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
