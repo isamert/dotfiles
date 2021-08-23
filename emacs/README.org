@@ -2462,27 +2462,40 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
            (haskell-mode . lsp)
            (rust-mode . lsp)
            (java-mode . lsp))
-    :init
-    (setq lsp-use-native-json t
-          lsp-enable-xref t
-          lsp-enable-links t
-          lsp-enable-folding t
-          lsp-enable-symbol-highlighting t
-          lsp-enable-indentation nil
-          lsp-enable-on-type-formatting nil
-          lsp-before-save-edits nil
-          lsp-eldoc-render-all nil
-          lsp-headerline-breadcrumb-enable nil
-          lsp-enable-snippet t
-          ;; lsp-ui-doc-include-signature t
-          ;; ^ Show the signature in the doc posframe. This shows the
-          ;; posframe even if there is no documentation for the function
-          ;; etc.
-          lsp-ui-sideline-show-diagnostics nil
-          ;; ^ Disable showing errors on sideline, because I use
-          ;; flycheck-inline already and it does a better job showing
-          ;; errors inline
-          )
+    :config
+    (setq lsp-use-native-json t)
+    (setq lsp-enable-xref t)
+    (setq lsp-enable-links t)
+    (setq lsp-enable-folding t)
+    (setq lsp-enable-symbol-highlighting t)
+    (setq lsp-enable-indentation nil)
+    (setq lsp-enable-on-type-formatting nil)
+    (setq lsp-before-save-edits nil)
+    (setq lsp-eldoc-render-all nil)
+    (setq lsp-headerline-breadcrumb-enable nil)
+    (setq lsp-enable-snippet t)
+    ;; (setq lsp-ui-doc-include-signature t)
+    ;; ^ Show the signature in the doc posframe. This shows the
+    ;; posframe even if there is no documentation for the function
+    ;; etc.
+    (setq lsp-ui-sideline-show-diagnostics nil)
+    ;; ^ Disable showing errors on sideline, because I use
+    ;; flycheck-inline already and it does a better job showing
+    ;; errors inline
+
+    (setq
+     lsp-imenu-index-symbol-kinds
+     '(Module
+       File
+       Namespace
+       Package
+       Class
+       Method
+       Constructor
+       Enum
+       Interface
+       Function))
+    ;; ^ Local variables etc. pollute imenu, so just show these in imenu
 
     (evil-define-key 'normal lsp-mode-map
       "gr" #'lsp-ui-peek-find-references
