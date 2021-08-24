@@ -121,6 +121,7 @@ I use =s.el= and =dash.el= extensively. They already come as a dependency with o
 #+begin_src emacs-lisp
   (use-package dash :ensure t)
   (use-package s :ensure t)
+  (use-package yaml :ensure t)
 #+end_src
 
 ** Variables and functions
@@ -5398,8 +5399,28 @@ Company/work related stuff.
       token))
 #+end_src
 
+** TODO Couchbase
+#+begin_src emacs-lisp :lexical no
+  (cl-defun ty/cbc (cbc-command &key bucket (json t) (select "."))
+    "Run a cbc command on current projects couchbase."
+    (let ((config
+           (with-temp-buffer
+             (insert-file-contents
+              (concat (isamert/current-project-root) "config/stage.secrets.json"))
+             (json-read))))
+      (isamert/shell-command-to-string
+       (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
+               cbc-command
+               (alist-get 'COUCHBASE_URI config)
+               bucket
+               (alist-get 'COUCHBASE_USERNAME config)
+               (alist-get 'COUCHBASE_PASSWORD config)
+               select))))
+#+end_src
 ** Utilities
 #+begin_src emacs-lisp
+  (evil-leader/set-key "jt" #'ty/jump-to-test-file)
+
   (cl-defun isamert/toggle-config-in-file (&key file val1 val2)
     (let ((fpath (expand-file-name file))
           (e-val1 (s-replace "/" "\\/" val1))
@@ -5450,18 +5471,25 @@ Company/work related stuff.
     (interactive)
     (ty/open-test-code-coverage-report t))
 
+  (defun ty/find-test-file ()
+    (let ((test-file
+           (concat
+            (file-name-directory buffer-file-name)
+            "__tests__/"
+            (s-replace ".ts" ".spec.ts" (file-name-nondirectory buffer-file-name)))))
+      (if (file-exists-p test-file)
+          test-file
+        buffer-file-name)))
+
+  (defun ty/jump-to-test-file ()
+    "Jump to test file of current file."
+    (interactive)
+    (find-file (ty/find-test-file)))
+
   (defun ty/run-current-test-file (run-only-focused-test)
     (interactive "P")
     (let* ((default-directory (isamert/current-project-root))
-           (test-file-of-curr-file
-            (concat
-             (file-name-directory buffer-file-name)
-             "__tests__/"
-             (s-replace ".ts" ".spec.ts" (file-name-nondirectory buffer-file-name))))
-           (test-file
-            (if (file-exists-p test-file-of-curr-file)
-                test-file-of-curr-file
-              buffer-file-name))
+           (test-file (ty/find-test-file))
            (current-test-name
             (ignore-errors
               (save-excursion
@@ -5520,7 +5548,7 @@ Company/work related stuff.
     :command "yarn"
     :args '("start")
     :cwd "~/Workspace/projects/editor-bff/"
-    :tags '(work ui)
+    :tags '(work bff)
     :stop-signal 'sigkill
     :kill-process-buffer-on-stop t)
 
@@ -5529,7 +5557,7 @@ Company/work related stuff.
     :command "yarn"
     :args '("start:dev")
     :cwd "~/Workspace/projects/advert-api/"
-    :tags '(work ui)
+    :tags '(work api)
     :stop-signal 'sigkill
     :kill-process-buffer-on-stop t)
 #+end_src
