@@ -3510,7 +3510,7 @@ Keybindings are generally set in-place, following have no context, so they are h
 #+end_src
 
 *** Get currently focused function name
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (defun isamert/refactor-debug-log-text ()
     "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
     This is used in my snippets."
@@ -3621,7 +3621,7 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
           (tsc-node-start-position)))))))
 #+end_src
 ** Refactoring
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (use-package emr
     :ensure t
     :config
@@ -5341,7 +5341,7 @@ Company/work related stuff.
 #+end_src
 
 ** Packages
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (when (company/is-company)
     ;; Enable org jira/confluence exporter (org-confluence-export-as-confluence)
     (require 'ox-confluence)
@@ -5400,7 +5400,7 @@ Company/work related stuff.
 #+end_src
 
 ** TODO Couchbase
-#+begin_src emacs-lisp :lexical no
+#+begin_src emacs-lisp
   (cl-defun ty/cbc (cbc-command &key bucket (json t) (select "."))
     "Run a cbc command on current projects couchbase."
     (let ((config
