@@ -159,7 +159,7 @@ Some basic variable and function definitions that will be used in configuration.
     "Simple wrapper around `define-key' that let's you define-keys
   multiple times in one call."
     (let ((mode (car k+c)))
-    (setq k+c (cdr k+c))
+      (setq k+c (cdr k+c))
       (while k+c
         (define-key mode (car k+c) (cadr k+c))
         (setq k+c (cddr k+c)))))
@@ -177,6 +177,17 @@ Some basic variable and function definitions that will be used in configuration.
         (process-file
          shell-file-name nil '(t nil)  nil shell-command-switch
          cmd))))
+
+  (defun isamert/serialize-into-file (file data)
+    (with-temp-file (expand-file-name file)
+      (prin1 data (current-buffer))))
+
+  (defun isamert/deserialize-from-file (file symbol)
+    (when (boundp symbol)
+      (with-temp-buffer
+        (insert-file-contents (expand-file-name file))
+        (goto-char (point-min))
+        (set symbol (read (current-buffer))))))
 #+END_SRC
 
 ** Load path
@@ -4218,6 +4229,14 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (defvar isamert/jira-new-issues '()
     "New jira issues")
 
+  (when (file-exists-p "~/.emacs.d/.cache/isamert-jira-my-issues")
+    (isamert/deserialize-from-file
+     "~/.emacs.d/.cache/isamert-jira-my-issues"
+     'isamert/jira-my-issues)
+    (isamert/deserialize-from-file
+     "~/.emacs.d/.cache/isamert-jira-new-issues"
+     'isamert/jira-new-issues))
+
   ;; Functions
 
   (defun isamert/open-jira-issue (issue-number)
@@ -4245,7 +4264,15 @@ Mostly for editing tridactyl and sometimes real vimrc.
           (jiralib2-jql-search)
           (append isamert/jira-new-issues))))
      isamert/jira-projects)
-    (message ">> Updating new issues... Done."))
+    (message ">> Updating new issues... Done.")
+
+    ;; Persist
+    (isamert/serialize-into-file
+     "~/.emacs.d/.cache/isamert-jira-my-issues"
+     isamert/jira-my-issues)
+    (isamert/serialize-into-file
+     "~/.emacs.d/.cache/isamert-jira-new-issues"
+     isamert/jira-new-issues))
 
   (defun isamert/jira-list-issues (&optional arg)
     (interactive "P")
