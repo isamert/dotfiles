@@ -2972,6 +2972,8 @@ Simple dictonary.
       "R" #'prodigy-refresh
       "f" #'prodigy-jump-file-manager
       "M" #'prodigy-jump-magit
+      "t" #'prodigy-add-tag-filter
+      "T" #'prodigy-clear-filters
       (kbd "RET") #'prodigy-display-process))
 #+end_src
 * Editing
