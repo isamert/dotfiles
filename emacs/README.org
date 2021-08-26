@@ -4208,7 +4208,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (defvar isamert/git-worktrees-root "~/Workspace/projects/worktrees"
     "Directory to create worktrees in.")
 
-  (defvar isamert/jira-projects '(("SA" . 1200))
+  (defvar isamert/jira-projects '(("SA" . 1300))
     "List of projects that I enrolled in JIRA.
   CDR of each item defines which ticket number the caching should
   start.")
@@ -4230,6 +4230,8 @@ Mostly for editing tridactyl and sometimes real vimrc.
     "All of my issues")
   (defvar isamert/jira-new-issues '()
     "New jira issues")
+  (defvar isamert/jira-current-sprint-issues '()
+    "Current sprint issues")
 
   (when (file-exists-p "~/.emacs.d/.cache/isamert-jira-my-issues")
     (isamert/deserialize-from-file
@@ -4237,7 +4239,10 @@ Mostly for editing tridactyl and sometimes real vimrc.
      'isamert/jira-my-issues)
     (isamert/deserialize-from-file
      "~/.emacs.d/.cache/isamert-jira-new-issues"
-     'isamert/jira-new-issues))
+     'isamert/jira-new-issues)
+    (isamert/deserialize-from-file
+     "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
+     'isamert/jira-current-sprint-issues))
 
   ;; Functions
 
@@ -4255,6 +4260,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
     (interactive)
     (message ">> Updating my issues...")
     (setq isamert/jira-my-issues (jiralib2-jql-search isamert/jira-my-issues-query))
+
     (message ">> Updating new issues...")
     (setq isamert/jira-new-issues '())
     (mapcar
@@ -4266,7 +4272,20 @@ Mostly for editing tridactyl and sometimes real vimrc.
           (jiralib2-jql-search)
           (append isamert/jira-new-issues))))
      isamert/jira-projects)
-    (message ">> Updating new issues... Done.")
+
+    (message ">> Updating current sprint...")
+    (setq isamert/jira-current-sprint-issues '())
+    (mapcar
+     (lambda (project)
+       (setq
+        isamert/jira-current-sprint-issues
+        (thread-last (format "project = \"%s\" AND Sprint in openSprints()"
+                             (car project) (car project) (cdr project))
+          (jiralib2-jql-search)
+          (append isamert/jira-current-sprint-issues))))
+     isamert/jira-projects)
+
+    (message ">> DONE")
 
     ;; Persist
     (isamert/serialize-into-file
@@ -4274,16 +4293,32 @@ Mostly for editing tridactyl and sometimes real vimrc.
      isamert/jira-my-issues)
     (isamert/serialize-into-file
      "~/.emacs.d/.cache/isamert-jira-new-issues"
-     isamert/jira-new-issues))
+     isamert/jira-new-issues)
+    (isamert/serialize-into-file
+     "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
+     isamert/jira-current-sprint-issues))
+
+  (defun isamert/jira--format-ticket-name (it)
+    "Format ticket name for displaying in completing-read window."
+    (format
+     "%-7s [%-11s] %-15s - %s"
+     (propertize (cdr (assoc 'key it))
+                 'face 'bold)
+     (propertize (s-truncate 11 (cdr (assoc 'name (assoc 'status (assoc 'fields it)))))
+                 'face 'italic)
+     (propertize (s-truncate 15 (or (cdr (assoc 'name (assoc 'assignee (assoc 'fields it)))) "N/A"))
+                 'face 'italic)
+     (cdr (assoc 'summary (assoc 'fields it)))))
 
   (defun isamert/jira-list-issues (&optional arg)
     (interactive "P")
     (when arg
       (isamert/jira-refresh-issue-lists))
-    (thread-last (pcase (completing-read "Issue list: " '("My issues" "New issues"))
+    (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues"))
                    ("My issues" isamert/jira-my-issues)
-                   ("New issues" isamert/jira-new-issues))
-      (--map (cons (format "%s - %s" (cdr (assoc 'key it)) (cdr (assoc 'summary (assoc 'fields it)))) it))
+                   ("New issues" isamert/jira-new-issues)
+                   ("Current Sprint" isamert/jira-current-sprint-issues))
+      (--map (cons (isamert/jira--format-ticket-name it) it))
       ((lambda (items) (consult--read items :category 'isamert/jira)))
       (isamert/open-jira-issue)))
 
