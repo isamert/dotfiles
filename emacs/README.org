@@ -1435,6 +1435,25 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
     (org-table-align))
 #+end_src
 * Other packages
+** tabulated-list-mode
+- It's a built-in mode that shows some kind of tabulated data.
+- It is used by many major modes, like [[docker]], [[prodigy]], etc. I just add these common keybindings to have a consistent way of navigating in them.
+- I also try to bind following keys in their respective mode maps:
+  - =a= key to a function that lists all the actions that can be taken on current column.
+  - =Enter= to the default action (generally opening something etc.)
+
+#+begin_src emacs-lisp
+  (use-package tabulated-list
+    :config
+    (evil-define-key 'normal tabulated-list-mode-map
+      (kbd "{") #'tabulated-list-narrow-current-column
+      (kbd "}") #'tabulated-list-widen-current-column
+      (kbd "H") #'tabulated-list-previous-column
+      (kbd "L") #'tabulated-list-next-column
+      (kbd "s") #'tabulated-list-sort
+      (kbd "r") #'tabulated-list-revert))
+#+end_src
+
 ** Hydra
 Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
 
