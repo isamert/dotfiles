@@ -188,6 +188,21 @@ Some basic variable and function definitions that will be used in configuration.
         (insert-file-contents (expand-file-name file))
         (goto-char (point-min))
         (set symbol (read (current-buffer))))))
+
+  (defun isamert/select-window-with-buffer (buffer-name)
+    "Select the first visible window that matches given BUFFER-NAME."
+    (--first
+     (-as-> (window-buffer it) buffer
+            (buffer-name buffer)
+            (when (string-match buffer-name buffer)
+              (select-window it)))
+     (window-list)))
+
+  (defmacro isamert/with-visible-buffer (buffer-name &rest body)
+    "Evaluate BODY within the BUFFER-NAME that is currently visible."
+    `(with-selected-window (selected-window)
+       (when (isamert/select-window-with-buffer ,buffer-name)
+         ,@body)))
 #+END_SRC
 
 ** Load path
@@ -1624,6 +1639,14 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   ;; Adds nice tab completion to eshell (completes subcommands etc.,
   ;; eshell already completes file-paths interactively)
   (use-package pcmpl-args :ensure t)
+
+  (defun isamert/run-last-command-on-visible-eshell ()
+    "Run last command on the currently visible eshell window and return back to current window."
+    (interactive)
+    (isamert/with-visible-buffer ".*eshell.*"
+     (eshell-previous-input 1)
+     (eshell-send-input)
+     t))
 #+end_src
 
 ** treemacs
@@ -2583,12 +2606,17 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (evil-leader/set-key
       "tt" 'isamert/vterm-toggle-dedicated
       "tj" 'isamert/jump-to-visible-vterm
-      "tl" 'isamert/run-last-command-on-visible-vterm
+      "tl" 'isamert/run-last-command-on-visible-term
       "ty" 'isamert/send-selected-text-to-visible-vterm
       "tr" 'isamert/run-command-on-visible-vterm-with-history)
     (setq vterm-kill-buffer-on-exit t)
     (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
     (add-hook 'vterm-mode-hook #'evil-emacs-state))
+
+  (defun isamert/run-last-command-on-visible-term ()
+    (interactive)
+    (unless (isamert/run-last-command-on-visible-vterm)
+      (isamert/run-last-command-on-visible-eshell)))
 #+END_SRC
 
 *** Utility functions
@@ -2601,20 +2629,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (interactive)
     (vterm-send-key "-" nil t nil))
 
-  (defun isamert/select-window-with-buffer (buffer-name)
-    (--first (-as-> (window-buffer it) buffer
-                  (buffer-name buffer)
-                  (when (string-match buffer-name buffer)
-                    (select-window it)))
-           (window-list)))
-
-  (defmacro isamert/with-visible-vterm-window (&rest body)
-    `(with-selected-window (selected-window)
-       (when (isamert/select-window-with-buffer ".*vterm.*")
-         ,@body)))
-
   (defun isamert/run-command-on-visible-vterm (cmd)
-    (isamert/with-visible-vterm-window
+    (isamert/with-visible-buffer ".*vterm.*"
      (vterm-send-string cmd)
      (vterm-send-return)
      cmd))
@@ -2642,9 +2658,10 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (defun isamert/run-last-command-on-visible-vterm ()
     "Run last command on the currently visible vterm window and return back to current window."
     (interactive)
-    (isamert/with-visible-vterm-window
+    (isamert/with-visible-buffer ".*vterm.*"
      (vterm-send-up)
-     (vterm-send-return)))
+     (vterm-send-return)
+     t))
 
   (defun isamert/jump-to-visible-vterm ()
     "Jump to the visible vterm window.
