@@ -1621,8 +1621,27 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
         (setq browse-url-handlers isamert/url-handlers)
       (setq browse-url-browser-function isamert/url-handlers))
 
-    (evil-define-key 'normal 'eww-mode-map (kbd "Y") #'eww-copy-page-url)
+    (evil-define-key 'normal eww-mode-map
+      (kbd "Y") #'eww-copy-page-url
+      (kbd "d") #'isamert/eww-save-image)
+
     (add-hook 'eww-mode-hook #'isamert/help-at-point-mode))
+
+  (defun isamert/eww-save-image ()
+    "Save the image at point."
+    (interactive)
+    (let ((image (get-text-property (point) 'display))
+          ;; Disable all save hooks as they might damage the file
+          (before-save-hook '())
+          (after-save-hook '()))
+      (unless (and image
+                   (eq (car image) 'image))
+        (user-error "No images at point!"))
+      (with-temp-buffer
+        (setq buffer-file-name
+              (read-file-name "Save to: "  nil default-directory nil))
+        (insert (plist-get (cdr image) :data))
+        (save-buffer))))
 #+end_src
 
 ** eshell
