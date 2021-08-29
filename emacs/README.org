@@ -700,7 +700,45 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'magit-todos)
     (evil-collection-init 'git-timemachine)
     (evil-collection-init 'calendar)
-    (evil-collection-init 'eww))
+    (evil-collection-init 'eww)
+    (evil-collection-unimpaired-setup))
+#+end_src
+** evil-unimpaired
+Apparently [[evil-collection]] has an vim-unimpaired implementation already. It contains bindings like:
+  - ~[<SPC>~ ~]<SPC>~ Insert newline above/below.
+  - ~[b~ ~]b~ Go to prev/next buffer.
+  - ~[p~, ~]p~ Paste up/down.
+  - ~[e~, ~]e~ Move line up/down.
+  - ~[d~, ~]d~ Delete line above/below.
+  - ~[q~ ~]q~ Go to prev/next error.
+  - ~[Q~ ~]Q~ Go to first/last error.
+  - ~[n~ ~]n~ Go to prev/next conflict marker.
+  - ~[t~ ~]t~ Go to prev/next TODO. (This is defined in [[Dummy IDE mode]])
+
+Following are my extensions:
+
+#+begin_src emacs-lisp
+  (evil-define-key 'normal 'global
+    (kbd "[d") #'isamert/delete-line-above
+    (kbd "]d") #'isamert/delete-line-below)
+
+  (defun isamert/delete-line-above ()
+    "Delete the line above."
+    (interactive)
+    (save-excursion
+      (previous-line 1)
+      (beginning-of-line)
+      (kill-line)
+      (kill-line)))
+
+  (defun isamert/delete-line-below ()
+    "Delete the line below."
+    (interactive)
+    (save-excursion
+      (next-line 1)
+      (beginning-of-line)
+      (kill-line)
+      (kill-line)))
 #+end_src
 ** evil-leader
 Enable leader key and bind some keys.
@@ -849,91 +887,6 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
     (add-hook 'magit-mode-hook 'turn-off-evil-snipe-override-mode))
 #+END_SRC
 
-** evil-unimpaired
-This section is inspired by the unimpaired vim package.
-  - ~[<SPC>~ ~]<SPC>~ Insert newline above/below.
-  - ~[b~ ~]b~ Go to prev/next buffer.
-  - ~[p~, ~]p~ Paste up/down.
-  - ~[r~, ~]r~ Move line up/down.
-  - ~[d~, ~]d~ Delete line above/below.
-
-Also (defined elsewhere):
- - ~[e~ ~]e~ Go to prev/next error.
- - ~[t~ ~]t~ Go to prev/next TODO.
-
-#+begin_src emacs-lisp
-  (evil-define-key 'normal 'global
-    (kbd "[r") #'isamert/move-line-up
-    (kbd "]r") #'isamert/move-line-down
-
-    (kbd "[d") #'isamert/delete-line-above
-    (kbd "]d") #'isamert/delete-line-below
-
-    (kbd "[p") #'isamert/paste-above
-    (kbd "]p") #'isamert/paste-below
-
-    (kbd "[ SPC") #'isamert/insert-space-above
-    (kbd "] SPC") #'isamert/insert-space-below
-
-    (kbd "[b") #'evil-prev-buffer
-    (kbd "]b") #'evil-next-buffer)
-
-  (defun isamert/move-line-up ()
-    "Move current line up."
-    (interactive)
-    (transpose-lines 1)
-    (forward-line -2))
-
-  (defun isamert/move-line-down ()
-    "Move current line down."
-    (interactive)
-    (next-line 1)
-    (transpose-lines 1)
-    (forward-line -1))
-
-  (defun isamert/delete-line-above ()
-    "Move current line down."
-    (interactive)
-    (save-excursion
-      (previous-line 1)
-      (beginning-of-line)
-      (kill-line)
-      (kill-line)))
-
-  (defun isamert/delete-line-below ()
-    "Move current line down."
-    (interactive)
-    (save-excursion
-      (next-line 1)
-      (beginning-of-line)
-      (kill-line)
-      (kill-line)))
-
-  ;; I just copied some of the functions and changed slightly from
-  ;; https://github.com/zmaas/evil-unimpaired
-
-  (defun isamert/paste-above ()
-    "Paste text above current line."
-    (interactive)
-    (evil-insert-newline-above)
-    (evil-paste-after 1 evil-this-register))
-
-  (defun isamert/paste-below ()
-    "Paste text below current line."
-    (interactive)
-    (evil-insert-newline-below)
-    (evil-paste-after 1 evil-this-register))
-
-  (defun isamert/insert-space-above (count)
-    "Insert COUNT newlines above current line."
-    (interactive "p")
-    (dotimes (_ count) (save-excursion (evil-insert-newline-above))))
-
-  (defun isamert/insert-space-below (count)
-    "Insert COUNT newlines below current line."
-    (interactive "p")
-    (dotimes (_ count) (save-excursion (evil-insert-newline-below))))
-#+end_src
 ** evil-exchange
 Change two parts of the text.
 - Mark some text in visual mode and do =gx=.
@@ -2431,9 +2384,7 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
     (global-flycheck-mode)
 
     (evil-define-key 'normal flycheck-mode-map
-      (kbd "gE") #'isamert/show-error-list
-      (kbd "]e") #'flycheck-next-error
-      (kbd "[e") #'flycheck-previous-error))
+      (kbd "gE") #'isamert/show-error-list))
 
   (use-package consult-flycheck
     :after flycheck
