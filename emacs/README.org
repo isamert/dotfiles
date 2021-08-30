@@ -1553,11 +1553,21 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 #+end_src
 
 ** eww
+- *eww* lets you browse the web in a simple manner inside Emacs. It synergies well with [[elfeed]] etc.
+- I use ~shrface~ to make things look a bit prettier and it also makes buffer somewhat behave like an org-mode buffer, so that's good.
+
 #+begin_src emacs-lisp
+  (use-package shrface
+    :ensure t
+    :config
+    (shrface-basic)
+    (shrface-trial)
+    (setq shrface-href-versatile t))
+
   (use-package eww
     :ensure t
     :config
-
+    (add-hook 'eww-after-render-hook #'shrface-mode)
     (setq shr-image-animate nil)
     ;; ^ Gifs make my computer suffer, so I just disable them
     (setq shr-use-fonts nil)
@@ -1578,7 +1588,16 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
       (kbd "Y") #'eww-copy-page-url
       (kbd "d") #'isamert/eww-save-image)
 
-    (add-hook 'eww-mode-hook #'isamert/help-at-point-mode))
+    (add-hook 'eww-mode-hook #'isamert/help-at-point-mode)
+
+    (evil-define-key 'normal eww-mode-map
+      (kbd "<tab>") 'shrface-outline-cycle
+      (kbd "S-<tab>") 'shrface-outline-cycle-buffer
+      (kbd "C-t") 'shrface-toggle-bullets
+      (kbd "[[") 'shrface-previous-headline
+      (kbd "]]") 'shrface-next-headline
+      (kbd "M-l") 'shrface-links-consult
+      (kbd "M-h") 'shrface-headline-consult))
 
   (defun isamert/eww-save-image ()
     "Save the image at point."
