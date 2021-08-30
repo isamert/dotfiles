@@ -2296,6 +2296,10 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     ;; ^ This directly shows the actions in a completing read window.
     ;; By default, it is set to `embark-keymap-prompter' and you need to
     ;; hit `C-h' to bring this menu up.
+    (setq embark-indicators '(embark-highlight-indicator embark-isearch-highlight-indicator))
+    ;; ^ I removed embark-mixed-indicator from the list because I'm
+    ;; using embark-completing-read-prompter by default which already
+    ;; provides same functionality
     )
 
   (use-package embark-consult
@@ -2545,7 +2549,14 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
       "gd" #'lsp-ui-peek-find-definitions
       "gi" #'lsp-ui-peek-find-implementation
       "ga" #'lsp-execute-code-action
-      "K"  #'lsp-ui-doc-focus-frame))
+      "K"  #'isamert/lsp-ui-doc-focus-frame))
+
+  (defun isamert/lsp-ui-doc-focus-frame ()
+    "Show and focus to the documentation."
+    (interactive)
+    (unless lsp-ui-doc-mode
+      (lsp-ui-doc-show))
+    (lsp-ui-doc-focus-frame))
 
   (use-package lsp-ui
     :ensure t
@@ -2932,18 +2943,25 @@ Simple dictonary.
 ** slack
 #+begin_src emacs-lisp
   ;; (slack-start)
+  ;; (slack-change-current-team)
   ;; (slack-im-list-update)
   ;; (slack-bot-list-update)
   ;; (slack-group-list-update)
+  ;; (slack-room-list-update)
   ;; (slack-select-unread-rooms)
 
   (use-package slack
     :config
     (setq slack-buffer-emojify t)
+    (setq slack-render-image-p t)
+    (setq slack-image-max-height nil)
     (setq slack-prefer-current-team t)
     ;; ^ Set current team with `slack-change-current-team'
     (setq slack-buffer-function #'isamert/display-buffer-in-side-window)
     ;; ^ Open slack windows on the right side of the screen
+    (setq slack-request-timeout 100)
+    ;; ^ Seems like it helps with some of the errors I'm getting
+    (setq slack-request-worker-max-request-limit 10)
 
     (slack-register-team
      :name "trendyol"
@@ -5420,7 +5438,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
             (message ">> Copied buffer file name '%s' to the clipboard." filename))
         (user-error ">> Failed to copy"))))
 #+end_src
-* TY
+* TY (work stuff)
 Company/work related stuff.
 
 #+begin_src emacs-lisp
