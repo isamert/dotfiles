@@ -4021,6 +4021,7 @@ Hit <C-j> after these and get:
 #+end_src
 
 ** Docker stuff
+Some major modes for editing files.
 #+begin_src emacs-lisp
   (use-package dockerfile-mode
     :ensure t
@@ -4028,6 +4029,35 @@ Hit <C-j> after these and get:
   (use-package docker-compose-mode
     :ensure t
     :mode "docker-compose\\'")
+#+end_src
+
+A package for  managing docker.
+
+#+begin_src emacs-lisp
+  (use-package docker
+    :ensure t
+    :config
+    (evil-define-key 'normal docker-container-mode-map (kbd "a") #'docker-container-help)
+    (evil-define-key 'normal docker-image-mode-map     (kbd "a") #'docker-image-help)
+    (evil-define-key 'normal docker-machine-mode-map   (kbd "a") #'docker-machine-help)
+    (evil-define-key 'normal docker-network-mode-map   (kbd "a") #'docker-network-help)
+    (evil-define-key 'normal docker-volume-mode-map    (kbd "a") #'docker-volume-help))
+#+end_src
+** Kubernetes
+#+begin_src emacs-lisp
+  (use-package kubernetes
+    :ensure t
+    :config
+    (setq kubernetes-poll-frequency 3600)
+    (setq kubernetes-redraw-frequency 3600)
+
+    (evil-define-key 'normal kubernetes-overview-mode-map
+      (kbd "r") #'kubernetes-refresh
+      (kbd "a") #'kubernetes-dispatch))
+
+  (use-package kubernetes-evil
+    :ensure t
+    :after kubernetes)
 #+end_src
 ** vimrc
 Mostly for editing tridactyl and sometimes real vimrc.
