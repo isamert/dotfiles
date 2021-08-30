@@ -2916,6 +2916,15 @@ Provides an interface to xref based on completing-read. Works well with [[select
     (evil-define-key 'normal 'global
       (kbd "M-w") #'er/expand-region))
 #+end_src
+** aggressive-indent
+It keeps your indentation working all the time. Seems like a good idea but I have some concerns about it, so I just use it with elisp for the time being.
+#+begin_src emacs-lisp
+  (use-package aggressive-indent
+    :ensure t
+    :config
+    (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
+    (add-to-list 'aggressive-indent-protected-commands 'evil-undo))
+#+end_src
 ** xmodmap-mode
 Simple mode for editing =~/.Xmodmap= file.
 - [[https://www.emacswiki.org/emacs/XModMapMode][Source]]
