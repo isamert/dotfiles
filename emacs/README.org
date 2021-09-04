@@ -127,6 +127,7 @@ I use =s.el= and =dash.el= extensively. They already come as a dependency with o
 ** Variables and functions
 Some basic variable and function definitions that will be used in configuration.
 
+*** General utilities
 #+BEGIN_SRC emacs-lisp
   (defun isamert/mkdir-if-not (dir)
     "Create the DIR if it does not exist return DIR."
@@ -203,8 +204,37 @@ Some basic variable and function definitions that will be used in configuration.
     `(with-selected-window (selected-window)
        (when (isamert/select-window-with-buffer ,buffer-name)
          ,@body)))
+
+  (defun isamert/sync-async-command-to-string (command &rest args)
+    "Run async command and wait until it's finished. This may seem stupid but I had to use it."
+    (with-temp-buffer
+      (let ((process (apply 'start-process `("sync-async-proc" ,(current-buffer) ,command ,@args))))
+        (while (process-live-p process)
+          (sit-for 0.1))
+        (buffer-string))))
 #+END_SRC
 
+*** Clipboard functions
+#+begin_src emacs-lisp
+  (defun isamert/clipboard-command ()
+    "Get clipboard command for current system.
+        The returned command directly puts the image data into stdout."
+    (cond
+     ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
+     ((locate-file "pngpaste" exec-path) "pngpaste -")))
+
+  (defun isamert/has-clipboard-image ()
+    "Check whether the clipboard has image or not."
+    (pcase system-type
+      ('gnu/linux (s-contains? "image/" (isamert/sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS")))
+      ('darwin (eq (shell-command "pngpaste - &>/dev/null") 0))))
+
+  (defun isamert/save-clipboard-image-to-file (file)
+    "Save the image in clipboard (if there is any) to given FILE.
+
+    Also see `isamert/has-clipboard-image' to check if there is one."
+    (shell-command (format "%s > %s" (isamert/clipboard-command) file)))
+#+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
 
@@ -1289,69 +1319,49 @@ Insert links/images more intelligently,
 - otherwise call ~org-insert-link~
 
 #+begin_src emacs-lisp
-    (evil-leader/set-key "oP" #'isamert/org-insert-dwim)
+  (evil-leader/set-key "oP" #'isamert/org-insert-dwim)
 
-    (defun isamert/org-insert-dwim ()
-      "Like `org-insert-link' but improved with dwim features.
-        Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
-      (interactive)
-      (let* ((point-in-link (org-in-regexp org-link-any-re 1))
-             (clipboard-url (when (string-match-p "^http" (current-kill 0))
-                              (current-kill 0)))
-             (region-content (when (region-active-p)
-                               (buffer-substring-no-properties (region-beginning)
-                                                               (region-end)))))
-        (cond
-         ((isamert/has-clipboard-image)
-          (call-interactively 'isamert/org-attach-image-from-clipboard))
-         ((and region-content clipboard-url (not point-in-link))
-          (delete-region (region-beginning) (region-end))
-          (insert (org-make-link-string clipboard-url region-content)))
-         ((and clipboard-url (not point-in-link))
-          (insert (org-make-link-string
-                   clipboard-url
-                   (read-string "title: "
-                                (with-current-buffer (url-retrieve-synchronously clipboard-url)
-                                  (dom-text (car
-                                             (dom-by-tag (libxml-parse-html-region
-                                                          (point-min)
-                                                          (point-max))
-                                                         'title))))))))
-         (t
-          (call-interactively 'org-insert-link)))))
-
-    (defun isamert/clipboard-command ()
-      "Get clipboard command for current system.
-        The returned command directly puts the image data into stdout."
+  (defun isamert/org-insert-dwim ()
+    "Like `org-insert-link' but improved with dwim features.
+      Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
+    (interactive)
+    (let* ((point-in-link (org-in-regexp org-link-any-re 1))
+           (clipboard-url (when (string-match-p "^http" (current-kill 0))
+                            (current-kill 0)))
+           (region-content (when (region-active-p)
+                             (buffer-substring-no-properties (region-beginning)
+                                                             (region-end)))))
       (cond
-       ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
-       ((locate-file "pngpaste" exec-path) "pngpaste -")))
+       ((isamert/has-clipboard-image)
+        (call-interactively 'isamert/org-attach-image-from-clipboard))
+       ((and region-content clipboard-url (not point-in-link))
+        (delete-region (region-beginning) (region-end))
+        (insert (org-make-link-string clipboard-url region-content)))
+       ((and clipboard-url (not point-in-link))
+        (insert (org-make-link-string
+                 clipboard-url
+                 (read-string "title: "
+                              (with-current-buffer (url-retrieve-synchronously clipboard-url)
+                                (dom-text (car
+                                           (dom-by-tag (libxml-parse-html-region
+                                                        (point-min)
+                                                        (point-max))
+                                                       'title))))))))
+       (t
+        (call-interactively 'org-insert-link)))))
 
-    (defun isamert/org-attach-image-from-clipboard (&optional file-path)
-      "Attach the image in the clipboard into your org-buffer.
-        This function saves the image file into the FILE-PATH or
-        if it's not provided then it saves the image into ~/.cache."
-      (interactive "FSave file to (leave empty to create a temp file): ")
-      (let ((file (if (and file-path (not (string-empty-p file-path)))
-                      file-path
-                    (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
-        (if (shell-command (format "%s > %s" (isamert/clipboard-command) file))
-            (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
-          (user-error "Can't create image file from clipboard contents"))))
+  (defun isamert/org-attach-image-from-clipboard (&optional file-path)
+    "Attach the image in the clipboard into your org-buffer.
+      This function saves the image file into the FILE-PATH or
+      if it's not provided then it saves the image into ~/.cache."
+    (interactive "FSave file to (leave empty to create a temp file): ")
+    (let ((file (if (and file-path (not (string-empty-p file-path)))
+                    file-path
+                  (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
+      (if (isamert/save-clipboard-image-to-file file)
+          (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
+        (user-error "Saving file failed!"))))
 
-    (defun isamert/has-clipboard-image ()
-      "Check whether the clipboard has image or not."
-      (case system-type
-        ('gnu/linux (s-contains? "image/" (isamert/sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS")))
-        ('darwin (eq (shell-command "pngpaste - &>/dev/null") 0))))
-
-    (defun isamert/sync-async-command-to-string (command &rest args)
-      "Run async command and wait until it's finished. This may seem stupid but I had to use it."
-      (with-temp-buffer
-        (let ((process (apply 'start-process `("sync-async-proc" ,(current-buffer) ,command ,@args))))
-          (while (process-live-p process)
-            (sit-for 0.1))
-          (buffer-string))))
 #+end_src
 
 ** Project management
@@ -2444,7 +2454,7 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
     :config
     (setq company-selection-wrap-around t)
     ;; ^ Return to first completion after the last one (cycles)
-    (setq company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode markdown-mode))
+    (setq company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode markdown-mode slack-message-buffer-mode))
     ;; ^ Disable on some modes
     (setq company-minimum-prefix-length 1)
     ;; ^ Start completing after 1 char
@@ -2959,6 +2969,13 @@ Simple dictonary.
   ;; (slack-room-list-update)
   ;; (slack-select-unread-rooms)
 
+  ;; (slack-group-list-update)
+  ;; (slack-im-list-update)
+  ;; (slack-bot-list-update)
+  ;; (slack-user-list-update)
+  ;; (slack-channel-list-update)
+  ;; (slack-command-list-update)
+
   (use-package slack
     :config
     (setq slack-buffer-emojify t)
@@ -2968,42 +2985,150 @@ Simple dictonary.
     ;; ^ Set current team with `slack-change-current-team'
     (setq slack-buffer-function #'isamert/display-buffer-in-side-window)
     ;; ^ Open slack windows on the right side of the screen
-    (setq slack-request-timeout 100)
-    ;; ^ Seems like it helps with some of the errors I'm getting
-    (setq slack-request-worker-max-request-limit 10)
+
+    (setq slack-message-custom-notifier #'isamert/slack-notify)
 
     (slack-register-team
      :name "trendyol"
      :token ty/slack-token
      :cookie ty/slack-cookie
-     :subscribed-channels '((seller-ads-team)))
+     :subscribed-channels '(seller-ads-team))
 
     (evil-leader/set-key
-      "es" #'slack-select-rooms
-      "eS" #'slack-select-unread-rooms)
+      "ess" #'slack-select-rooms
+      "esS" #'isamert/slack-send-message
+      "eS" #'slack-select-unread-rooms
+      "esl" #'isamert/slack-open-last-room
+      "esc" #'isamert/slack-copy-last-message)
 
     (evil-define-key 'normal slack-mode-map
       "q" 'kill-this-buffer
 
+      "r" nil
       "rp" 'slack-room-pins-list
 
+      "@" 'slack-message-embed-mention
       "md" 'slack-message-delete
-      "mm" 'slack-message-embed-mention
       "mc" 'slack-message-embed-channel
       "ml" 'slack-message-copy-link
       "me" 'slack-message-edit
-      "mE" 'slack-message-edit-buffer
-      "mr" 'slack-message-add-reaction
-      "mR" 'slack-message-remove-reaction
+      "mt" 'slack-thread-show-or-create
 
-      "[" 'slack-buffer-goto-prev-message
-      "]" 'slack-buffer-goto-next-message))
+      "mrr" 'slack-message-add-reaction
+      "mR" 'slack-message-remove-reaction
+      "mr1" (isamert/slack-add-reaction-to-message "+1")
+      "mr2" (isamert/slack-add-reaction-to-message "ok_hand")
+      "mr3" (isamert/slack-add-reaction-to-message "ultrafastparrot")
+      ;; TODO add some quick message reactions
+
+      "[[" 'slack-buffer-goto-prev-message
+      "]]" 'slack-buffer-goto-next-message))
 
   (use-package alert
     :config
     (if (eq system-type 'gnu/linux)
         (setq alert-default-style 'libnotify)
       (setq alert-default-style 'osx-notifier)))
+
+
+  (defvar isamert/slack--last-messages '())
+
+  (defun isamert/slack-notify (message room team)
+    (when (and (not (slack-message-minep message team))
+               (or (slack-message-notify-p message room team)
+                   (slack-mpim-p room)))
+      (let* ((sender-name (slack-message-sender-name message team))
+             (room-name (slack-room-name room team))
+             (title (format "%s - %s" room-name sender-name)))
+        (add-to-list
+         'isamert/slack--last-messages
+         (list :room room
+               :team team
+               :message message
+               :sender-name sender-name
+               :room-name room-name))
+        (alert
+         (isamert/slack-stringify-message
+          (isamert/slack-last-message))
+         :title title
+         :category "slack")
+        (message "%s // %s" title message))))
+
+  (defun isamert/slack-copy-last-message ()
+    "Copy the contents of the last received message as text."
+    (interactive)
+    (kill-new
+     (isamert/slack-stringify-message
+      (isamert/slack-last-message))))
+
+  (defun isamert/slack-open-last-room ()
+    "Open last room that got new message."
+    (interactive)
+    (slack-room-display
+     (plist-get (isamert/slack-last-message) :room)
+     (plist-get (isamert/slack-last-message) :team)))
+
+  ;; TODO
+  (defun isamert/slack-last-rooms ()
+    "List and open rooms that had new messages in them recently."
+    (let ((rooms (--map (cons it)))))
+    (completing-read))
+
+  (defun isamert/slack-send-message (msg)
+    "Send given MSG or selected region as message to interactively
+  selected user."
+    (interactive
+     (list
+      (if (use-region-p)
+          (buffer-substring-no-properties (region-beginning) (region-end))
+        (read-string "Enter message: "))))
+    "Send MSG to interactively selected room."
+    (-let* (((room team) (isamert/slack-select-room)))
+      (slack-message-send-internal
+       msg room team)))
+
+  (defun isamert/slack-clipboard-image-upload ()
+    "Uploads png image from clipboard.
+
+  The default `slack-clipboard-image-upload' was not working
+  properly in MacOS."
+    (interactive)
+    (unless (isamert/has-clipboard-image)
+      (user-error "No image in clipboard."))
+    (let* ((file (make-temp-file "clip" nil ".png")))
+      (isamert/save-clipboard-image-to-file file)
+      (slack-file-upload file "png" "image.png")))
+
+  ;; Utils/internals
+
+
+  (defun isamert/slack-last-message ()
+    (car isamert/slack--last-messages))
+
+
+  (defmacro isamert/slack-add-reaction-to-message (reaction)
+    `(lambda ()
+       (interactive)
+       (slack-buffer-add-reaction-to-message
+        slack-current-buffer
+        ,reaction
+        (slack-get-ts))))
+
+  (defun isamert/slack-stringify-message (msg)
+    (slack-message-to-alert
+     (plist-get msg :message)
+     (plist-get msg :team)))
+
+  (defun isamert/slack-select-room ()
+    "Select interactively and return (room team) pair."
+    (let* ((team (slack-team-select))
+           (room (slack-room-select
+                  (cl-loop for team in (list team)
+                           append (append (slack-team-ims team)
+                                          (slack-team-groups team)
+                                          (slack-team-channels team)))
+                  team)))
+      (list room team)))
 #+end_src
 
 ** prodigy
