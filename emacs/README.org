@@ -2524,13 +2524,15 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
     (setq lsp-enable-xref t)
     (setq lsp-enable-links t)
     (setq lsp-enable-folding t)
-    (setq lsp-enable-symbol-highlighting t)
+    (setq lsp-enable-symbol-highlighting nil)
+    ;; ^ I use highlight-thing instead and it works pretty well.
     (setq lsp-enable-indentation nil)
     (setq lsp-enable-on-type-formatting nil)
     (setq lsp-before-save-edits nil)
     (setq lsp-eldoc-render-all nil)
     (setq lsp-headerline-breadcrumb-enable nil)
-    (setq lsp-enable-snippet t)
+    (setq lsp-enable-snippet nil)
+    ;; ^ I handle snippets myself with yasnippet
     ;; (setq lsp-ui-doc-include-signature t)
     ;; ^ Show the signature in the doc posframe. This shows the
     ;; posframe even if there is no documentation for the function
@@ -2928,11 +2930,13 @@ Provides an interface to xref based on completing-read. Works well with [[select
 #+end_src
 ** aggressive-indent
 It keeps your indentation working all the time. Seems like a good idea but I have some concerns about it, so I just use it with elisp for the time being.
+
 #+begin_src emacs-lisp
   (use-package aggressive-indent
     :ensure t
     :config
     (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
+    (add-hook 'typescript-mode #'aggressive-indent-mode)
     (add-to-list 'aggressive-indent-protected-commands 'evil-undo))
 #+end_src
 ** xmodmap-mode
@@ -3273,13 +3277,13 @@ Gives you a nice, uncluttered editing experience by removing all unneeded visual
 * Dummy IDE mode
 I try to use ~lsp-mode~ and other language-specific packages for the languages I use (see [[Language specific]]), but sometimes either they are too slow or the computer I'm currently working on requires some extra setup or I just don't want to use them for some reason. For those cases, I use a collection of packages that gives you the power of IDEs but in some dummy/restricted way.
 
-- highlight-thing :: Automatically highlights the all instances of the symbol under the cursor in the buffer. Simply use evils ~*~ and ~#~ to jump between them.
-- devdocs-browser :: Let's you browse devdocs in =eww=.
+- <<highlight-thing>> :: Automatically highlights the all instances of the symbol under the cursor in the buffer. Simply use evils ~*~ and ~#~ to jump between them.
+- <<devdocs-browser>> :: Let's you browse devdocs in =eww=.
   - ~devdocs-browser-install-doc~ to install docs. ~devdocs-browser-open~ to open a documentation.
-- dumb-jump :: Jumps to definition by using predefined-regexps, generally works fine. Use =gd=.
+- <<dumb-jump>> :: Jumps to definition by using predefined-regexps, generally works fine. Use =gd=.
   - To debug why it's not working: M-x ~set-variable dumb-jump-debug t~, then go to *Messages* buffer.
-- tree-sitter :: This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting for some languages. Especially for JS/TS and Rust. See [[https://ubolonton.github.io/emacs-tree-sitter/][this page]] for more information.
-- hl-todo :: Highlight TODO/FIXME etc.
+- <<tree-sitter>> :: This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting for some languages. Especially for JS/TS and Rust. See [[https://ubolonton.github.io/emacs-tree-sitter/][this page]] for more information.
+- <<hl-todo>> :: Highlight TODO/FIXME etc.
   - Use ~]t~ and ~[t~ to go next/prev TODO/FIXME item.
 
 #+begin_src emacs-lisp
@@ -3304,7 +3308,9 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
     ;; ^ highlight-thing highlights symbols, not words. # and * searches for
     ;; symbols if you set this to true, otherwise they search for words.
 
-    (set-face-attribute 'highlight-thing nil :background "dark violet" :foreground "white")
+    (add-hook
+     'highlight-thing-mode-hook
+     #'(lambda () (set-face-attribute 'highlight-thing nil :background "dark violet" :foreground "white")))
     ;; ^ Default one with my theme makes some text quite unreadable
 
     (setq highlight-thing-prefer-active-region nil
@@ -4328,7 +4334,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
 
   (defun isamert/gitlab--rebase-merge-request (it)
     (isamert/gitlab-request
-     "/projects/#{project}/merge_requests/%s/rebase" (gethash 'iid it)
+     (format "projects/#{project}/merge_requests/%s/rebase" (gethash 'iid it))
      :type "PUT"))
 
   (defun isamert/gitlab--mr-format-title (mr)
