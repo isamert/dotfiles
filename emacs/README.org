@@ -5674,25 +5674,54 @@ Company/work related stuff.
     (let ((token (read-string "Token: ")))
       (setq ty/stage-token token)
       token))
+
+  (defun ty/copy-kill-token ()
+    (interactive)
+    (kill-new ty/stage-token))
 #+end_src
 
-** TODO Couchbase
-#+begin_src emacs-lisp :lexical no
-  (cl-defun ty/cbc (cbc-command &key bucket (json t) (select "."))
-    "Run a cbc command on current projects couchbase."
+** Couchbase
+#+begin_src emacs-lisp
+  (use-package couchbase-query
+    :ensure t
+    :diminish
+    :quelpa (couchbase-query
+             :fetcher github
+             :repo "isamert/couchbase-query.el")
+    :config
+    (setq couchbase-query-command "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/cbq"))
+
+  (defun ty/get-couchbase-config ()
     (let ((config
            (with-temp-buffer
              (insert-file-contents
               (concat (isamert/current-project-root) "config/stage.secrets.json"))
              (json-read))))
+      (list :uri (alist-get 'COUCHBASE_URI config)
+            :username (alist-get 'COUCHBASE_USERNAME config)
+            :password (alist-get 'COUCHBASE_PASSWORD config))))
+
+  (cl-defun ty/cbc (cbc-command &key bucket (json t) (select "."))
+    "Run a cbc command on current projects couchbase."
+    (let ((config (ty/get-couchbase-config)))
       (isamert/shell-command-to-string
        (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
                cbc-command
-               (alist-get 'COUCHBASE_URI config)
+               (plist-get config :uri)
                bucket
-               (alist-get 'COUCHBASE_USERNAME config)
-               (alist-get 'COUCHBASE_PASSWORD config)
+               (plist-get config :username)
+               (plist-get config :password)
                select))))
+
+  (defun ty/couchbase-query ()
+    (interactive)
+    (let* ((config (ty/get-couchbase-config))
+           (couchbase-query-command-parameters
+            `("-e" ,(read-string "Address: " (car (s-split "," (plist-get config :uri))))
+              "-c" ,(read-string "username:password: " (format "%s:%s"
+                                                               (plist-get config :username)
+                                                               (plist-get config :password))))))
+      (couchbase-query)))
 #+end_src
 ** Utilities
 #+begin_src emacs-lisp
@@ -5812,7 +5841,7 @@ Company/work related stuff.
 ** Projects/services
 #+begin_src emacs-lisp
   (prodigy-define-service
-    :name "Seller Ads - Editor"
+    :name "Seller-Ads/Editor"
     :command "yarn"
     :args '("start")
     :cwd "~/Workspace/projects/editor/"
@@ -5821,7 +5850,7 @@ Company/work related stuff.
     :kill-process-buffer-on-stop t)
 
   (prodigy-define-service
-    :name "Seller Ads - Editor BFF"
+    :name "Seller-Ads/Editor BFF"
     :command "yarn"
     :args '("start")
     :cwd "~/Workspace/projects/editor-bff/"
@@ -5830,11 +5859,29 @@ Company/work related stuff.
     :kill-process-buffer-on-stop t)
 
   (prodigy-define-service
-    :name "Seller Ads - Advert Api"
+    :name "Seller-Ads/Advert Api"
     :command "yarn"
     :args '("start:dev")
     :cwd "~/Workspace/projects/advert-api/"
     :tags '(work api)
+    :stop-signal 'sigkill
+    :kill-process-buffer-on-stop t)
+
+  (prodigy-define-service
+    :name "Seller-Ads/SP/Advert Consumer"
+    :command "yarn"
+    :args '("start:dev")
+    :cwd "~/Workspace/projects/consumers/sponsored-product-advert-update-consumer/"
+    :tags '(work consumer)
+    :stop-signal 'sigkill
+    :kill-process-buffer-on-stop t)
+
+  (prodigy-define-service
+    :name "Seller-Ads/SP/DS Consumer"
+    :command "yarn"
+    :args '("start:dev")
+    :cwd "~/Workspace/projects/consumers/sponsored-product-data-science-consumer/"
+    :tags '(work consumer)
     :stop-signal 'sigkill
     :kill-process-buffer-on-stop t)
 #+end_src
