@@ -127,6 +127,7 @@ I use =s.el= and =dash.el= extensively. They already come as a dependency with o
 ** Variables and functions
 Some basic variable and function definitions that will be used in configuration.
 
+*** General utilities
 #+BEGIN_SRC emacs-lisp
   (defun isamert/mkdir-if-not (dir)
     "Create the DIR if it does not exist return DIR."
@@ -159,7 +160,7 @@ Some basic variable and function definitions that will be used in configuration.
     "Simple wrapper around `define-key' that let's you define-keys
   multiple times in one call."
     (let ((mode (car k+c)))
-    (setq k+c (cdr k+c))
+      (setq k+c (cdr k+c))
       (while k+c
         (define-key mode (car k+c) (cadr k+c))
         (setq k+c (cddr k+c)))))
@@ -177,8 +178,63 @@ Some basic variable and function definitions that will be used in configuration.
         (process-file
          shell-file-name nil '(t nil)  nil shell-command-switch
          cmd))))
+
+  (defun isamert/serialize-into-file (file data)
+    (with-temp-file (expand-file-name file)
+      (prin1 data (current-buffer))))
+
+  (defun isamert/deserialize-from-file (file symbol)
+    (when (boundp symbol)
+      (with-temp-buffer
+        (insert-file-contents (expand-file-name file))
+        (goto-char (point-min))
+        (set symbol (read (current-buffer))))))
+
+  (defun isamert/select-window-with-buffer (buffer-name)
+    "Select the first visible window that matches given BUFFER-NAME."
+    (--first
+     (-as-> (window-buffer it) buffer
+            (buffer-name buffer)
+            (when (string-match buffer-name buffer)
+              (select-window it)))
+     (window-list)))
+
+  (defmacro isamert/with-visible-buffer (buffer-name &rest body)
+    "Evaluate BODY within the BUFFER-NAME that is currently visible."
+    `(with-selected-window (selected-window)
+       (when (isamert/select-window-with-buffer ,buffer-name)
+         ,@body)))
+
+  (defun isamert/sync-async-command-to-string (command &rest args)
+    "Run async command and wait until it's finished. This may seem stupid but I had to use it."
+    (with-temp-buffer
+      (let ((process (apply 'start-process `("sync-async-proc" ,(current-buffer) ,command ,@args))))
+        (while (process-live-p process)
+          (sit-for 0.1))
+        (buffer-string))))
 #+END_SRC
 
+*** Clipboard functions
+#+begin_src emacs-lisp
+  (defun isamert/clipboard-command ()
+    "Get clipboard command for current system.
+        The returned command directly puts the image data into stdout."
+    (cond
+     ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
+     ((locate-file "pngpaste" exec-path) "pngpaste -")))
+
+  (defun isamert/has-clipboard-image ()
+    "Check whether the clipboard has image or not."
+    (pcase system-type
+      ('gnu/linux (s-contains? "image/" (isamert/sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS")))
+      ('darwin (eq (shell-command "pngpaste - &>/dev/null") 0))))
+
+  (defun isamert/save-clipboard-image-to-file (file)
+    "Save the image in clipboard (if there is any) to given FILE.
+
+    Also see `isamert/has-clipboard-image' to check if there is one."
+    (shell-command (format "%s > %s" (isamert/clipboard-command) file)))
+#+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
 
@@ -674,7 +730,45 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'magit-todos)
     (evil-collection-init 'git-timemachine)
     (evil-collection-init 'calendar)
-    (evil-collection-init 'eww))
+    (evil-collection-init 'eww)
+    (evil-collection-unimpaired-setup))
+#+end_src
+** evil-unimpaired
+Apparently [[evil-collection]] has an vim-unimpaired implementation already. It contains bindings like:
+  - ~[<SPC>~ ~]<SPC>~ Insert newline above/below.
+  - ~[b~ ~]b~ Go to prev/next buffer.
+  - ~[p~, ~]p~ Paste up/down.
+  - ~[e~, ~]e~ Move line up/down.
+  - ~[d~, ~]d~ Delete line above/below.
+  - ~[q~ ~]q~ Go to prev/next error.
+  - ~[Q~ ~]Q~ Go to first/last error.
+  - ~[n~ ~]n~ Go to prev/next conflict marker.
+  - ~[t~ ~]t~ Go to prev/next TODO. (This is defined in [[Dummy IDE mode]])
+
+Following are my extensions:
+
+#+begin_src emacs-lisp
+  (evil-define-key 'normal 'global
+    (kbd "[d") #'isamert/delete-line-above
+    (kbd "]d") #'isamert/delete-line-below)
+
+  (defun isamert/delete-line-above ()
+    "Delete the line above."
+    (interactive)
+    (save-excursion
+      (previous-line 1)
+      (beginning-of-line)
+      (kill-line)
+      (kill-line)))
+
+  (defun isamert/delete-line-below ()
+    "Delete the line below."
+    (interactive)
+    (save-excursion
+      (next-line 1)
+      (beginning-of-line)
+      (kill-line)
+      (kill-line)))
 #+end_src
 ** evil-leader
 Enable leader key and bind some keys.
@@ -823,91 +917,6 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
     (add-hook 'magit-mode-hook 'turn-off-evil-snipe-override-mode))
 #+END_SRC
 
-** evil-unimpaired
-This section is inspired by the unimpaired vim package.
-  - ~[<SPC>~ ~]<SPC>~ Insert newline above/below.
-  - ~[b~ ~]b~ Go to prev/next buffer.
-  - ~[p~, ~]p~ Paste up/down.
-  - ~[r~, ~]r~ Move line up/down.
-  - ~[d~, ~]d~ Delete line above/below.
-
-Also (defined elsewhere):
- - ~[e~ ~]e~ Go to prev/next error.
- - ~[t~ ~]t~ Go to prev/next TODO.
-
-#+begin_src emacs-lisp
-  (evil-define-key 'normal 'global
-    (kbd "[r") #'isamert/move-line-up
-    (kbd "]r") #'isamert/move-line-down
-
-    (kbd "[d") #'isamert/delete-line-above
-    (kbd "]d") #'isamert/delete-line-below
-
-    (kbd "[p") #'isamert/paste-above
-    (kbd "]p") #'isamert/paste-below
-
-    (kbd "[ SPC") #'isamert/insert-space-above
-    (kbd "] SPC") #'isamert/insert-space-below
-
-    (kbd "[b") #'evil-prev-buffer
-    (kbd "]b") #'evil-next-buffer)
-
-  (defun isamert/move-line-up ()
-    "Move current line up."
-    (interactive)
-    (transpose-lines 1)
-    (forward-line -2))
-
-  (defun isamert/move-line-down ()
-    "Move current line down."
-    (interactive)
-    (next-line 1)
-    (transpose-lines 1)
-    (forward-line -1))
-
-  (defun isamert/delete-line-above ()
-    "Move current line down."
-    (interactive)
-    (save-excursion
-      (previous-line 1)
-      (beginning-of-line)
-      (kill-line)
-      (kill-line)))
-
-  (defun isamert/delete-line-below ()
-    "Move current line down."
-    (interactive)
-    (save-excursion
-      (next-line 1)
-      (beginning-of-line)
-      (kill-line)
-      (kill-line)))
-
-  ;; I just copied some of the functions and changed slightly from
-  ;; https://github.com/zmaas/evil-unimpaired
-
-  (defun isamert/paste-above ()
-    "Paste text above current line."
-    (interactive)
-    (evil-insert-newline-above)
-    (evil-paste-after 1 evil-this-register))
-
-  (defun isamert/paste-below ()
-    "Paste text below current line."
-    (interactive)
-    (evil-insert-newline-below)
-    (evil-paste-after 1 evil-this-register))
-
-  (defun isamert/insert-space-above (count)
-    "Insert COUNT newlines above current line."
-    (interactive "p")
-    (dotimes (_ count) (save-excursion (evil-insert-newline-above))))
-
-  (defun isamert/insert-space-below (count)
-    "Insert COUNT newlines below current line."
-    (interactive "p")
-    (dotimes (_ count) (save-excursion (evil-insert-newline-below))))
-#+end_src
 ** evil-exchange
 Change two parts of the text.
 - Mark some text in visual mode and do =gx=.
@@ -1310,69 +1319,49 @@ Insert links/images more intelligently,
 - otherwise call ~org-insert-link~
 
 #+begin_src emacs-lisp
-    (evil-leader/set-key "oP" #'isamert/org-insert-dwim)
+  (evil-leader/set-key "oP" #'isamert/org-insert-dwim)
 
-    (defun isamert/org-insert-dwim ()
-      "Like `org-insert-link' but improved with dwim features.
-        Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
-      (interactive)
-      (let* ((point-in-link (org-in-regexp org-link-any-re 1))
-             (clipboard-url (when (string-match-p "^http" (current-kill 0))
-                              (current-kill 0)))
-             (region-content (when (region-active-p)
-                               (buffer-substring-no-properties (region-beginning)
-                                                               (region-end)))))
-        (cond
-         ((isamert/has-clipboard-image)
-          (call-interactively 'isamert/org-attach-image-from-clipboard))
-         ((and region-content clipboard-url (not point-in-link))
-          (delete-region (region-beginning) (region-end))
-          (insert (org-make-link-string clipboard-url region-content)))
-         ((and clipboard-url (not point-in-link))
-          (insert (org-make-link-string
-                   clipboard-url
-                   (read-string "title: "
-                                (with-current-buffer (url-retrieve-synchronously clipboard-url)
-                                  (dom-text (car
-                                             (dom-by-tag (libxml-parse-html-region
-                                                          (point-min)
-                                                          (point-max))
-                                                         'title))))))))
-         (t
-          (call-interactively 'org-insert-link)))))
-
-    (defun isamert/clipboard-command ()
-      "Get clipboard command for current system.
-        The returned command directly puts the image data into stdout."
+  (defun isamert/org-insert-dwim ()
+    "Like `org-insert-link' but improved with dwim features.
+      Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
+    (interactive)
+    (let* ((point-in-link (org-in-regexp org-link-any-re 1))
+           (clipboard-url (when (string-match-p "^http" (current-kill 0))
+                            (current-kill 0)))
+           (region-content (when (region-active-p)
+                             (buffer-substring-no-properties (region-beginning)
+                                                             (region-end)))))
       (cond
-       ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
-       ((locate-file "pngpaste" exec-path) "pngpaste -")))
+       ((isamert/has-clipboard-image)
+        (call-interactively 'isamert/org-attach-image-from-clipboard))
+       ((and region-content clipboard-url (not point-in-link))
+        (delete-region (region-beginning) (region-end))
+        (insert (org-make-link-string clipboard-url region-content)))
+       ((and clipboard-url (not point-in-link))
+        (insert (org-make-link-string
+                 clipboard-url
+                 (read-string "title: "
+                              (with-current-buffer (url-retrieve-synchronously clipboard-url)
+                                (dom-text (car
+                                           (dom-by-tag (libxml-parse-html-region
+                                                        (point-min)
+                                                        (point-max))
+                                                       'title))))))))
+       (t
+        (call-interactively 'org-insert-link)))))
 
-    (defun isamert/org-attach-image-from-clipboard (&optional file-path)
-      "Attach the image in the clipboard into your org-buffer.
-        This function saves the image file into the FILE-PATH or
-        if it's not provided then it saves the image into ~/.cache."
-      (interactive "FSave file to (leave empty to create a temp file): ")
-      (let ((file (if (and file-path (not (string-empty-p file-path)))
-                      file-path
-                    (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
-        (if (shell-command (format "%s > %s" (isamert/clipboard-command) file))
-            (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
-          (user-error "Can't create image file from clipboard contents"))))
+  (defun isamert/org-attach-image-from-clipboard (&optional file-path)
+    "Attach the image in the clipboard into your org-buffer.
+      This function saves the image file into the FILE-PATH or
+      if it's not provided then it saves the image into ~/.cache."
+    (interactive "FSave file to (leave empty to create a temp file): ")
+    (let ((file (if (and file-path (not (string-empty-p file-path)))
+                    file-path
+                  (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
+      (if (isamert/save-clipboard-image-to-file file)
+          (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
+        (user-error "Saving file failed!"))))
 
-    (defun isamert/has-clipboard-image ()
-      "Check whether the clipboard has image or not."
-      (case system-type
-        ('gnu/linux (s-contains? "image/" (isamert/sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS")))
-        ('darwin (eq (shell-command "pngpaste - &>/dev/null") 0))))
-
-    (defun isamert/sync-async-command-to-string (command &rest args)
-      "Run async command and wait until it's finished. This may seem stupid but I had to use it."
-      (with-temp-buffer
-        (let ((process (apply 'start-process `("sync-async-proc" ,(current-buffer) ,command ,@args))))
-          (while (process-live-p process)
-            (sit-for 0.1))
-          (buffer-string))))
 #+end_src
 
 ** Project management
@@ -1424,6 +1413,25 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
     (org-table-align))
 #+end_src
 * Other packages
+** tabulated-list-mode
+- It's a built-in mode that shows some kind of tabulated data.
+- It is used by many major modes, like [[docker]], [[prodigy]], etc. I just add these common keybindings to have a consistent way of navigating in them.
+- I also try to bind following keys in their respective mode maps:
+  - =a= key to a function that lists all the actions that can be taken on current column.
+  - =Enter= to the default action (generally opening something etc.)
+
+#+begin_src emacs-lisp
+  (use-package tabulated-list
+    :config
+    (evil-define-key 'normal tabulated-list-mode-map
+      (kbd "{") #'tabulated-list-narrow-current-column
+      (kbd "}") #'tabulated-list-widen-current-column
+      (kbd "H") #'tabulated-list-previous-column
+      (kbd "L") #'tabulated-list-next-column
+      (kbd "s") #'tabulated-list-sort
+      (kbd "r") #'tabulated-list-revert))
+#+end_src
+
 ** Hydra
 Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
 
@@ -1555,11 +1563,21 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 #+end_src
 
 ** eww
+- *eww* lets you browse the web in a simple manner inside Emacs. It synergies well with [[elfeed]] etc.
+- I use ~shrface~ to make things look a bit prettier and it also makes buffer somewhat behave like an org-mode buffer, so that's good.
+
 #+begin_src emacs-lisp
+  (use-package shrface
+    :ensure t
+    :config
+    (shrface-basic)
+    (shrface-trial)
+    (setq shrface-href-versatile t))
+
   (use-package eww
     :ensure t
     :config
-
+    (add-hook 'eww-after-render-hook #'shrface-mode)
     (setq shr-image-animate nil)
     ;; ^ Gifs make my computer suffer, so I just disable them
     (setq shr-use-fonts nil)
@@ -1576,8 +1594,36 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
         (setq browse-url-handlers isamert/url-handlers)
       (setq browse-url-browser-function isamert/url-handlers))
 
-    (evil-define-key 'normal 'eww-mode-map (kbd "Y") #'eww-copy-page-url)
-    (add-hook 'eww-mode-hook #'isamert/help-at-point-mode))
+    (evil-define-key 'normal eww-mode-map
+      (kbd "Y") #'eww-copy-page-url
+      (kbd "d") #'isamert/eww-save-image)
+
+    (add-hook 'eww-mode-hook #'isamert/help-at-point-mode)
+
+    (evil-define-key 'normal eww-mode-map
+      (kbd "<tab>") 'shrface-outline-cycle
+      (kbd "S-<tab>") 'shrface-outline-cycle-buffer
+      (kbd "C-t") 'shrface-toggle-bullets
+      (kbd "[[") 'shrface-previous-headline
+      (kbd "]]") 'shrface-next-headline
+      (kbd "M-l") 'shrface-links-consult
+      (kbd "M-h") 'shrface-headline-consult))
+
+  (defun isamert/eww-save-image ()
+    "Save the image at point."
+    (interactive)
+    (let ((image (get-text-property (point) 'display))
+          ;; Disable all save hooks as they might damage the file
+          (before-save-hook '())
+          (after-save-hook '()))
+      (unless (and image
+                   (eq (car image) 'image))
+        (user-error "No images at point!"))
+      (with-temp-buffer
+        (setq buffer-file-name
+              (read-file-name "Save to: "  nil default-directory nil))
+        (insert (plist-get (cdr image) :data))
+        (save-buffer))))
 #+end_src
 
 ** eshell
@@ -1594,6 +1640,14 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   ;; Adds nice tab completion to eshell (completes subcommands etc.,
   ;; eshell already completes file-paths interactively)
   (use-package pcmpl-args :ensure t)
+
+  (defun isamert/run-last-command-on-visible-eshell ()
+    "Run last command on the currently visible eshell window and return back to current window."
+    (interactive)
+    (isamert/with-visible-buffer ".*eshell.*"
+     (eshell-previous-input 1)
+     (eshell-send-input)
+     t))
 #+end_src
 
 ** treemacs
@@ -2252,6 +2306,10 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     ;; ^ This directly shows the actions in a completing read window.
     ;; By default, it is set to `embark-keymap-prompter' and you need to
     ;; hit `C-h' to bring this menu up.
+    (setq embark-indicators '(embark-highlight-indicator embark-isearch-highlight-indicator))
+    ;; ^ I removed embark-mixed-indicator from the list because I'm
+    ;; using embark-completing-read-prompter by default which already
+    ;; provides same functionality
     )
 
   (use-package embark-consult
@@ -2359,9 +2417,7 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
     (global-flycheck-mode)
 
     (evil-define-key 'normal flycheck-mode-map
-      (kbd "gE") #'isamert/show-error-list
-      (kbd "]e") #'flycheck-next-error
-      (kbd "[e") #'flycheck-previous-error))
+      (kbd "gE") #'isamert/show-error-list))
 
   (use-package consult-flycheck
     :after flycheck
@@ -2398,7 +2454,7 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
     :config
     (setq company-selection-wrap-around t)
     ;; ^ Return to first completion after the last one (cycles)
-    (setq company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode markdown-mode))
+    (setq company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode markdown-mode slack-message-buffer-mode))
     ;; ^ Disable on some modes
     (setq company-minimum-prefix-length 1)
     ;; ^ Start completing after 1 char
@@ -2468,13 +2524,15 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
     (setq lsp-enable-xref t)
     (setq lsp-enable-links t)
     (setq lsp-enable-folding t)
-    (setq lsp-enable-symbol-highlighting t)
+    (setq lsp-enable-symbol-highlighting nil)
+    ;; ^ I use highlight-thing instead and it works pretty well.
     (setq lsp-enable-indentation nil)
     (setq lsp-enable-on-type-formatting nil)
     (setq lsp-before-save-edits nil)
     (setq lsp-eldoc-render-all nil)
     (setq lsp-headerline-breadcrumb-enable nil)
-    (setq lsp-enable-snippet t)
+    (setq lsp-enable-snippet nil)
+    ;; ^ I handle snippets myself with yasnippet
     ;; (setq lsp-ui-doc-include-signature t)
     ;; ^ Show the signature in the doc posframe. This shows the
     ;; posframe even if there is no documentation for the function
@@ -2503,7 +2561,14 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
       "gd" #'lsp-ui-peek-find-definitions
       "gi" #'lsp-ui-peek-find-implementation
       "ga" #'lsp-execute-code-action
-      "K"  #'lsp-ui-doc-focus-frame))
+      "K"  #'isamert/lsp-ui-doc-focus-frame))
+
+  (defun isamert/lsp-ui-doc-focus-frame ()
+    "Show and focus to the documentation."
+    (interactive)
+    (unless lsp-ui-doc-mode
+      (lsp-ui-doc-show))
+    (lsp-ui-doc-focus-frame))
 
   (use-package lsp-ui
     :ensure t
@@ -2553,12 +2618,17 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (evil-leader/set-key
       "tt" 'isamert/vterm-toggle-dedicated
       "tj" 'isamert/jump-to-visible-vterm
-      "tl" 'isamert/run-last-command-on-visible-vterm
+      "tl" 'isamert/run-last-command-on-visible-term
       "ty" 'isamert/send-selected-text-to-visible-vterm
       "tr" 'isamert/run-command-on-visible-vterm-with-history)
     (setq vterm-kill-buffer-on-exit t)
     (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
     (add-hook 'vterm-mode-hook #'evil-emacs-state))
+
+  (defun isamert/run-last-command-on-visible-term ()
+    (interactive)
+    (unless (isamert/run-last-command-on-visible-vterm)
+      (isamert/run-last-command-on-visible-eshell)))
 #+END_SRC
 
 *** Utility functions
@@ -2571,20 +2641,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (interactive)
     (vterm-send-key "-" nil t nil))
 
-  (defun isamert/select-window-with-buffer (buffer-name)
-    (--first (-as-> (window-buffer it) buffer
-                  (buffer-name buffer)
-                  (when (string-match buffer-name buffer)
-                    (select-window it)))
-           (window-list)))
-
-  (defmacro isamert/with-visible-vterm-window (&rest body)
-    `(with-selected-window (selected-window)
-       (when (isamert/select-window-with-buffer ".*vterm.*")
-         ,@body)))
-
   (defun isamert/run-command-on-visible-vterm (cmd)
-    (isamert/with-visible-vterm-window
+    (isamert/with-visible-buffer ".*vterm.*"
      (vterm-send-string cmd)
      (vterm-send-return)
      cmd))
@@ -2612,9 +2670,10 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (defun isamert/run-last-command-on-visible-vterm ()
     "Run last command on the currently visible vterm window and return back to current window."
     (interactive)
-    (isamert/with-visible-vterm-window
+    (isamert/with-visible-buffer ".*vterm.*"
      (vterm-send-up)
-     (vterm-send-return)))
+     (vterm-send-return)
+     t))
 
   (defun isamert/jump-to-visible-vterm ()
     "Jump to the visible vterm window.
@@ -2869,6 +2928,17 @@ Provides an interface to xref based on completing-read. Works well with [[select
     (evil-define-key 'normal 'global
       (kbd "M-w") #'er/expand-region))
 #+end_src
+** aggressive-indent
+It keeps your indentation working all the time. Seems like a good idea but I have some concerns about it, so I just use it with elisp for the time being.
+
+#+begin_src emacs-lisp
+  (use-package aggressive-indent
+    :ensure t
+    :config
+    (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
+    (add-hook 'typescript-mode #'aggressive-indent-mode)
+    (add-to-list 'aggressive-indent-protected-commands 'evil-undo))
+#+end_src
 ** xmodmap-mode
 Simple mode for editing =~/.Xmodmap= file.
 - [[https://www.emacswiki.org/emacs/XModMapMode][Source]]
@@ -2896,51 +2966,173 @@ Simple dictonary.
 ** slack
 #+begin_src emacs-lisp
   ;; (slack-start)
+  ;; (slack-change-current-team)
   ;; (slack-im-list-update)
   ;; (slack-bot-list-update)
   ;; (slack-group-list-update)
+  ;; (slack-room-list-update)
   ;; (slack-select-unread-rooms)
+
+  ;; (slack-group-list-update)
+  ;; (slack-im-list-update)
+  ;; (slack-bot-list-update)
+  ;; (slack-user-list-update)
+  ;; (slack-channel-list-update)
+  ;; (slack-command-list-update)
 
   (use-package slack
     :config
     (setq slack-buffer-emojify t)
+    (setq slack-render-image-p t)
+    (setq slack-image-max-height nil)
     (setq slack-prefer-current-team t)
     ;; ^ Set current team with `slack-change-current-team'
     (setq slack-buffer-function #'isamert/display-buffer-in-side-window)
     ;; ^ Open slack windows on the right side of the screen
 
+    (setq slack-message-custom-notifier #'isamert/slack-notify)
+
     (slack-register-team
      :name "trendyol"
      :token ty/slack-token
      :cookie ty/slack-cookie
-     :subscribed-channels '((seller-ads-team)))
+     :subscribed-channels '(seller-ads-team))
 
     (evil-leader/set-key
-      "es" #'slack-select-rooms
-      "eS" #'slack-select-unread-rooms)
+      "ess" #'slack-select-rooms
+      "esS" #'isamert/slack-send-message
+      "eS" #'slack-select-unread-rooms
+      "esl" #'isamert/slack-open-last-room
+      "esc" #'isamert/slack-copy-last-message)
 
     (evil-define-key 'normal slack-mode-map
       "q" 'kill-this-buffer
 
+      "r" nil
       "rp" 'slack-room-pins-list
 
+      "@" 'slack-message-embed-mention
       "md" 'slack-message-delete
-      "mm" 'slack-message-embed-mention
       "mc" 'slack-message-embed-channel
       "ml" 'slack-message-copy-link
       "me" 'slack-message-edit
-      "mE" 'slack-message-edit-buffer
-      "mr" 'slack-message-add-reaction
-      "mR" 'slack-message-remove-reaction
+      "mt" 'slack-thread-show-or-create
 
-      "[" 'slack-buffer-goto-prev-message
-      "]" 'slack-buffer-goto-next-message))
+      "mrr" 'slack-message-add-reaction
+      "mR" 'slack-message-remove-reaction
+      "mr1" (isamert/slack-add-reaction-to-message "+1")
+      "mr2" (isamert/slack-add-reaction-to-message "ok_hand")
+      "mr3" (isamert/slack-add-reaction-to-message "ultrafastparrot")
+      ;; TODO add some quick message reactions
+
+      "[[" 'slack-buffer-goto-prev-message
+      "]]" 'slack-buffer-goto-next-message))
 
   (use-package alert
     :config
     (if (eq system-type 'gnu/linux)
         (setq alert-default-style 'libnotify)
       (setq alert-default-style 'osx-notifier)))
+
+
+  (defvar isamert/slack--last-messages '())
+
+  (defun isamert/slack-notify (message room team)
+    (when (and (not (slack-message-minep message team))
+               (or (slack-message-notify-p message room team)
+                   (slack-mpim-p room)))
+      (let* ((sender-name (slack-message-sender-name message team))
+             (room-name (slack-room-name room team))
+             (title (format "%s - %s" room-name sender-name)))
+        (add-to-list
+         'isamert/slack--last-messages
+         (list :room room
+               :team team
+               :message message
+               :sender-name sender-name
+               :room-name room-name))
+        (alert
+         (isamert/slack-stringify-message
+          (isamert/slack-last-message))
+         :title title
+         :category "slack")
+        (message "%s // %s" title message))))
+
+  (defun isamert/slack-copy-last-message ()
+    "Copy the contents of the last received message as text."
+    (interactive)
+    (kill-new
+     (isamert/slack-stringify-message
+      (isamert/slack-last-message))))
+
+  (defun isamert/slack-open-last-room ()
+    "Open last room that got new message."
+    (interactive)
+    (slack-room-display
+     (plist-get (isamert/slack-last-message) :room)
+     (plist-get (isamert/slack-last-message) :team)))
+
+  ;; TODO
+  (defun isamert/slack-last-rooms ()
+    "List and open rooms that had new messages in them recently."
+    (let ((rooms (--map (cons it)))))
+    (completing-read))
+
+  (defun isamert/slack-send-message (msg)
+    "Send given MSG or selected region as message to interactively
+  selected user."
+    (interactive
+     (list
+      (if (use-region-p)
+          (buffer-substring-no-properties (region-beginning) (region-end))
+        (read-string "Enter message: "))))
+    "Send MSG to interactively selected room."
+    (-let* (((room team) (isamert/slack-select-room)))
+      (slack-message-send-internal
+       msg room team)))
+
+  (defun isamert/slack-clipboard-image-upload ()
+    "Uploads png image from clipboard.
+
+  The default `slack-clipboard-image-upload' was not working
+  properly in MacOS."
+    (interactive)
+    (unless (isamert/has-clipboard-image)
+      (user-error "No image in clipboard."))
+    (let* ((file (make-temp-file "clip" nil ".png")))
+      (isamert/save-clipboard-image-to-file file)
+      (slack-file-upload file "png" "image.png")))
+
+  ;; Utils/internals
+
+
+  (defun isamert/slack-last-message ()
+    (car isamert/slack--last-messages))
+
+
+  (defmacro isamert/slack-add-reaction-to-message (reaction)
+    `(lambda ()
+       (interactive)
+       (slack-buffer-add-reaction-to-message
+        slack-current-buffer
+        ,reaction
+        (slack-get-ts))))
+
+  (defun isamert/slack-stringify-message (msg)
+    (slack-message-to-alert
+     (plist-get msg :message)
+     (plist-get msg :team)))
+
+  (defun isamert/slack-select-room ()
+    "Select interactively and return (room team) pair."
+    (let* ((team (slack-team-select))
+           (room (slack-room-select
+                  (cl-loop for team in (list team)
+                           append (append (slack-team-ims team)
+                                          (slack-team-groups team)
+                                          (slack-team-channels team)))
+                  team)))
+      (list room team)))
 #+end_src
 
 ** prodigy
@@ -2961,6 +3153,8 @@ Simple dictonary.
       "R" #'prodigy-refresh
       "f" #'prodigy-jump-file-manager
       "M" #'prodigy-jump-magit
+      "t" #'prodigy-add-tag-filter
+      "T" #'prodigy-clear-filters
       (kbd "RET") #'prodigy-display-process))
 #+end_src
 * Editing
@@ -3083,13 +3277,13 @@ Gives you a nice, uncluttered editing experience by removing all unneeded visual
 * Dummy IDE mode
 I try to use ~lsp-mode~ and other language-specific packages for the languages I use (see [[Language specific]]), but sometimes either they are too slow or the computer I'm currently working on requires some extra setup or I just don't want to use them for some reason. For those cases, I use a collection of packages that gives you the power of IDEs but in some dummy/restricted way.
 
-- highlight-thing :: Automatically highlights the all instances of the symbol under the cursor in the buffer. Simply use evils ~*~ and ~#~ to jump between them.
-- devdocs-browser :: Let's you browse devdocs in =eww=.
+- <<highlight-thing>> :: Automatically highlights the all instances of the symbol under the cursor in the buffer. Simply use evils ~*~ and ~#~ to jump between them.
+- <<devdocs-browser>> :: Let's you browse devdocs in =eww=.
   - ~devdocs-browser-install-doc~ to install docs. ~devdocs-browser-open~ to open a documentation.
-- dumb-jump :: Jumps to definition by using predefined-regexps, generally works fine. Use =gd=.
+- <<dumb-jump>> :: Jumps to definition by using predefined-regexps, generally works fine. Use =gd=.
   - To debug why it's not working: M-x ~set-variable dumb-jump-debug t~, then go to *Messages* buffer.
-- tree-sitter :: This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting for some languages. Especially for JS/TS and Rust. See [[https://ubolonton.github.io/emacs-tree-sitter/][this page]] for more information.
-- hl-todo :: Highlight TODO/FIXME etc.
+- <<tree-sitter>> :: This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting for some languages. Especially for JS/TS and Rust. See [[https://ubolonton.github.io/emacs-tree-sitter/][this page]] for more information.
+- <<hl-todo>> :: Highlight TODO/FIXME etc.
   - Use ~]t~ and ~[t~ to go next/prev TODO/FIXME item.
 
 #+begin_src emacs-lisp
@@ -3114,7 +3308,9 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
     ;; ^ highlight-thing highlights symbols, not words. # and * searches for
     ;; symbols if you set this to true, otherwise they search for words.
 
-    (set-face-attribute 'highlight-thing nil :background "dark violet" :foreground "white")
+    (add-hook
+     'highlight-thing-mode-hook
+     #'(lambda () (set-face-attribute 'highlight-thing nil :background "dark violet" :foreground "white")))
     ;; ^ Default one with my theme makes some text quite unreadable
 
     (setq highlight-thing-prefer-active-region nil
@@ -3965,6 +4161,7 @@ Hit <C-j> after these and get:
 #+end_src
 
 ** Docker stuff
+Some major modes for editing files.
 #+begin_src emacs-lisp
   (use-package dockerfile-mode
     :ensure t
@@ -3972,6 +4169,35 @@ Hit <C-j> after these and get:
   (use-package docker-compose-mode
     :ensure t
     :mode "docker-compose\\'")
+#+end_src
+
+A package for  managing docker.
+
+#+begin_src emacs-lisp
+  (use-package docker
+    :ensure t
+    :config
+    (evil-define-key 'normal docker-container-mode-map (kbd "a") #'docker-container-help)
+    (evil-define-key 'normal docker-image-mode-map     (kbd "a") #'docker-image-help)
+    (evil-define-key 'normal docker-machine-mode-map   (kbd "a") #'docker-machine-help)
+    (evil-define-key 'normal docker-network-mode-map   (kbd "a") #'docker-network-help)
+    (evil-define-key 'normal docker-volume-mode-map    (kbd "a") #'docker-volume-help))
+#+end_src
+** Kubernetes
+#+begin_src emacs-lisp
+  (use-package kubernetes
+    :ensure t
+    :config
+    (setq kubernetes-poll-frequency 3600)
+    (setq kubernetes-redraw-frequency 3600)
+
+    (evil-define-key 'normal kubernetes-overview-mode-map
+      (kbd "r") #'kubernetes-refresh
+      (kbd "a") #'kubernetes-dispatch))
+
+  (use-package kubernetes-evil
+    :ensure t
+    :after kubernetes)
 #+end_src
 ** vimrc
 Mostly for editing tridactyl and sometimes real vimrc.
@@ -4108,7 +4334,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
 
   (defun isamert/gitlab--rebase-merge-request (it)
     (isamert/gitlab-request
-     "/projects/#{project}/merge_requests/%s/rebase" (gethash 'iid it)
+     (format "projects/#{project}/merge_requests/%s/rebase" (gethash 'iid it))
      :type "PUT"))
 
   (defun isamert/gitlab--mr-format-title (mr)
@@ -4195,7 +4421,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (defvar isamert/git-worktrees-root "~/Workspace/projects/worktrees"
     "Directory to create worktrees in.")
 
-  (defvar isamert/jira-projects '(("SA" . 1200))
+  (defvar isamert/jira-projects '(("SA" . 1300))
     "List of projects that I enrolled in JIRA.
   CDR of each item defines which ticket number the caching should
   start.")
@@ -4217,6 +4443,19 @@ Mostly for editing tridactyl and sometimes real vimrc.
     "All of my issues")
   (defvar isamert/jira-new-issues '()
     "New jira issues")
+  (defvar isamert/jira-current-sprint-issues '()
+    "Current sprint issues")
+
+  (when (file-exists-p "~/.emacs.d/.cache/isamert-jira-my-issues")
+    (isamert/deserialize-from-file
+     "~/.emacs.d/.cache/isamert-jira-my-issues"
+     'isamert/jira-my-issues)
+    (isamert/deserialize-from-file
+     "~/.emacs.d/.cache/isamert-jira-new-issues"
+     'isamert/jira-new-issues)
+    (isamert/deserialize-from-file
+     "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
+     'isamert/jira-current-sprint-issues))
 
   ;; Functions
 
@@ -4234,6 +4473,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
     (interactive)
     (message ">> Updating my issues...")
     (setq isamert/jira-my-issues (jiralib2-jql-search isamert/jira-my-issues-query))
+
     (message ">> Updating new issues...")
     (setq isamert/jira-new-issues '())
     (mapcar
@@ -4245,16 +4485,53 @@ Mostly for editing tridactyl and sometimes real vimrc.
           (jiralib2-jql-search)
           (append isamert/jira-new-issues))))
      isamert/jira-projects)
-    (message ">> Updating new issues... Done."))
+
+    (message ">> Updating current sprint...")
+    (setq isamert/jira-current-sprint-issues '())
+    (mapcar
+     (lambda (project)
+       (setq
+        isamert/jira-current-sprint-issues
+        (thread-last (format "project = \"%s\" AND Sprint in openSprints()"
+                             (car project) (car project) (cdr project))
+          (jiralib2-jql-search)
+          (append isamert/jira-current-sprint-issues))))
+     isamert/jira-projects)
+
+    (message ">> DONE")
+
+    ;; Persist
+    (isamert/serialize-into-file
+     "~/.emacs.d/.cache/isamert-jira-my-issues"
+     isamert/jira-my-issues)
+    (isamert/serialize-into-file
+     "~/.emacs.d/.cache/isamert-jira-new-issues"
+     isamert/jira-new-issues)
+    (isamert/serialize-into-file
+     "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
+     isamert/jira-current-sprint-issues))
+
+  (defun isamert/jira--format-ticket-name (it)
+    "Format ticket name for displaying in completing-read window."
+    (format
+     "%-7s [%-11s] %-15s - %s"
+     (propertize (cdr (assoc 'key it))
+                 'face 'bold)
+     (propertize (s-truncate 11 (cdr (assoc 'name (assoc 'status (assoc 'fields it)))))
+                 'face 'italic)
+     (propertize (s-truncate 15 (or (cdr (assoc 'name (assoc 'assignee (assoc 'fields it)))) "N/A"))
+                 'face 'italic)
+     (cdr (assoc 'summary (assoc 'fields it)))))
 
   (defun isamert/jira-list-issues (&optional arg)
     (interactive "P")
     (when arg
       (isamert/jira-refresh-issue-lists))
-    (thread-last (pcase (completing-read "Issue list: " '("My issues" "New issues"))
+    (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues"))
                    ("My issues" isamert/jira-my-issues)
-                   ("New issues" isamert/jira-new-issues))
-      (--map (cons (format "%s - %s" (cdr (assoc 'key it)) (cdr (assoc 'summary (assoc 'fields it)))) it))
+                   ("New issues" isamert/jira-new-issues)
+                   ("Current Sprint" isamert/jira-current-sprint-issues))
+      (--map (cons (isamert/jira--format-ticket-name it) it))
       ((lambda (items) (consult--read items :category 'isamert/jira)))
       (isamert/open-jira-issue)))
 
@@ -5331,7 +5608,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
             (message ">> Copied buffer file name '%s' to the clipboard." filename))
         (user-error ">> Failed to copy"))))
 #+end_src
-* TY
+* TY (work stuff)
 Company/work related stuff.
 
 #+begin_src emacs-lisp
@@ -5397,25 +5674,54 @@ Company/work related stuff.
     (let ((token (read-string "Token: ")))
       (setq ty/stage-token token)
       token))
+
+  (defun ty/copy-kill-token ()
+    (interactive)
+    (kill-new ty/stage-token))
 #+end_src
 
-** TODO Couchbase
+** Couchbase
 #+begin_src emacs-lisp
-  (cl-defun ty/cbc (cbc-command &key bucket (json t) (select "."))
-    "Run a cbc command on current projects couchbase."
+  (use-package couchbase-query
+    :ensure t
+    :diminish
+    :quelpa (couchbase-query
+             :fetcher github
+             :repo "isamert/couchbase-query.el")
+    :config
+    (setq couchbase-query-command "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/cbq"))
+
+  (defun ty/get-couchbase-config ()
     (let ((config
            (with-temp-buffer
              (insert-file-contents
               (concat (isamert/current-project-root) "config/stage.secrets.json"))
              (json-read))))
+      (list :uri (alist-get 'COUCHBASE_URI config)
+            :username (alist-get 'COUCHBASE_USERNAME config)
+            :password (alist-get 'COUCHBASE_PASSWORD config))))
+
+  (cl-defun ty/cbc (cbc-command &key bucket (json t) (select "."))
+    "Run a cbc command on current projects couchbase."
+    (let ((config (ty/get-couchbase-config)))
       (isamert/shell-command-to-string
        (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
                cbc-command
-               (alist-get 'COUCHBASE_URI config)
+               (plist-get config :uri)
                bucket
-               (alist-get 'COUCHBASE_USERNAME config)
-               (alist-get 'COUCHBASE_PASSWORD config)
+               (plist-get config :username)
+               (plist-get config :password)
                select))))
+
+  (defun ty/couchbase-query ()
+    (interactive)
+    (let* ((config (ty/get-couchbase-config))
+           (couchbase-query-command-parameters
+            `("-e" ,(read-string "Address: " (car (s-split "," (plist-get config :uri))))
+              "-c" ,(read-string "username:password: " (format "%s:%s"
+                                                               (plist-get config :username)
+                                                               (plist-get config :password))))))
+      (couchbase-query)))
 #+end_src
 ** Utilities
 #+begin_src emacs-lisp
@@ -5535,7 +5841,7 @@ Company/work related stuff.
 ** Projects/services
 #+begin_src emacs-lisp
   (prodigy-define-service
-    :name "Seller Ads - Editor"
+    :name "Seller-Ads/Editor"
     :command "yarn"
     :args '("start")
     :cwd "~/Workspace/projects/editor/"
@@ -5544,7 +5850,7 @@ Company/work related stuff.
     :kill-process-buffer-on-stop t)
 
   (prodigy-define-service
-    :name "Seller Ads - Editor BFF"
+    :name "Seller-Ads/Editor BFF"
     :command "yarn"
     :args '("start")
     :cwd "~/Workspace/projects/editor-bff/"
@@ -5553,11 +5859,29 @@ Company/work related stuff.
     :kill-process-buffer-on-stop t)
 
   (prodigy-define-service
-    :name "Seller Ads - Advert Api"
+    :name "Seller-Ads/Advert Api"
     :command "yarn"
     :args '("start:dev")
     :cwd "~/Workspace/projects/advert-api/"
     :tags '(work api)
+    :stop-signal 'sigkill
+    :kill-process-buffer-on-stop t)
+
+  (prodigy-define-service
+    :name "Seller-Ads/SP/Advert Consumer"
+    :command "yarn"
+    :args '("start:dev")
+    :cwd "~/Workspace/projects/consumers/sponsored-product-advert-update-consumer/"
+    :tags '(work consumer)
+    :stop-signal 'sigkill
+    :kill-process-buffer-on-stop t)
+
+  (prodigy-define-service
+    :name "Seller-Ads/SP/DS Consumer"
+    :command "yarn"
+    :args '("start:dev")
+    :cwd "~/Workspace/projects/consumers/sponsored-product-data-science-consumer/"
+    :tags '(work consumer)
     :stop-signal 'sigkill
     :kill-process-buffer-on-stop t)
 #+end_src
