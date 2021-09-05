@@ -41,6 +41,7 @@
     ("http://explosm.net/rss" comic)
     ("https://astralcodexten.substack.com/feed" blog essay) ;; Scott Alexander
     ("https://www.theinsight.org/feed" blog essay) ;; Zeynep Tufekci
+    ("https://jabberwocking.com/feed/" blog essay) ;; Kevin Drum
 
     ("BlackMetalUpdates" youtube music metal black)
     ("XOdiumNostrumX" youtube music metal extreme)

@@ -852,8 +852,11 @@ Return back to normal mode using ~jk~ from anywhere. It does not play well with 
     :after evil
     :ensure t
     :config
-    (setq evil-escape-key-sequence "jk"
-          evil-escape-delay 0.2)
+    (setq evil-escape-key-sequence "jk")
+    (setq evil-escape-delay 0.2)
+    (add-to-list 'evil-escape-excluded-major-modes 'magit-status-mode)
+    (add-to-list 'evil-escape-excluded-major-modes 'magit-log-mode)
+    (add-to-list 'evil-escape-excluded-major-modes 'magit-diff-mode)
     (evil-escape-mode 1))
 #+END_SRC
 
@@ -3105,10 +3108,8 @@ Simple dictonary.
 
   ;; Utils/internals
 
-
   (defun isamert/slack-last-message ()
     (car isamert/slack--last-messages))
-
 
   (defmacro isamert/slack-add-reaction-to-message (reaction)
     `(lambda ()
@@ -5513,7 +5514,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     :keymap (make-sparse-keymap))
 
   (evil-define-key 'normal isamert/shell-command-mode-map
-    (kbd "R") #'isamert/shell-command-mode-rerun-command)
+    (kbd "gr") #'isamert/shell-command-mode-rerun-command)
 
   (defun isamert/shell-command-mode-rerun-command ()
     "Re-run the shell command."
@@ -5626,17 +5627,14 @@ Company/work related stuff.
     "Insert the JIRA ticket number in front of the commit message.
   If it already exists (like for example when you use --amend),
   does not do anything."
-    (let* ((issue-prefix (--> (magit-get-current-branch)
-                           (s-chop-prefix "feature/" it)
-                           (split-string it "-")
-                           (string-join (-take 2 it) "-")
-                           (format "%s - " it)))
-           (issue-prefix-exists (save-excursion
-                                  (goto-char (point-min))
-                                  (search-forward issue-prefix nil t))))
-      (when (not issue-prefix-exists)
-        (goto-char (point-min))
-        (insert issue-prefix))))
+    (when-let (ticket-no (s-match "\\w+-[0-9]+" (magit-get-current-branch)))
+      (let* ((issue-prefix (format "%s - " (car ticket-no)))
+             (issue-prefix-exists (save-excursion
+                                    (goto-char (point-min))
+                                    (search-forward issue-prefix nil t))))
+        (when (not issue-prefix-exists)
+          (goto-char (point-min))
+          (insert issue-prefix)))))
 
   (when (company/is-company)
     (add-hook 'git-commit-setup-hook 'company/git-commit-message-setup))
