@@ -3445,6 +3445,7 @@ Manage media and streams through =completing-read=.
     :config
     (load "radio-channels")
     (setq empv-radio-channels isamert/radio-channels)
+    (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music")
     (setq empv-invidious-instance "https://ytprivate.com/api/v1")
     ;; ^ alt: https://invidious.exonip.de/api/v1
@@ -3458,19 +3459,10 @@ Manage media and streams through =completing-read=.
       "erv" #'empv-toggle-video
       "ery" #'consult-empv-youtube
       "erk" #'empv-display-current
-      "erl" #'isamert/empv-log-current-radio-song-name
+      "erl" #'empv-log-current-radio-song-name
       "era" #'empv-play-audio
       "erA" #'empv-play-audio-multiple
       "ers" #'empv-exit))
-
-  (defun isamert/empv-log-current-radio-song-name ()
-    "Log current radio song name to songs.org."
-    (interactive)
-    (empv--cmd
-     'get_property 'metadata
-     (when-let ((title (alist-get 'icy-title it)))
-       (shell-command (format "echo -e '* %s\n- Radio channel :: %s' >> ~/Documents/notes/songs.org" title (car empv-current-radio-channel)))
-       (message "%s" title))))
 
   (defun isamert/export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."
@@ -3481,19 +3473,20 @@ Manage media and streams through =completing-read=.
        "~/Documents/sync/"
        "radiolist.m3u")))
     (with-temp-file file
-      (->> isamert/radio-channels
-        (--map
-         (format
-          "#EXTINF:0, %s\n%s"
-          (car it)
-          ;; Replace http:// with icyx://, because VLC on Android can't
-          ;; retrieve song name if the stream is on http://
-          (if (s-contains? "radcap.ru" (car it))
-              (s-replace "http://" "icyx://" (cdr it))
-            (cdr it))))
-        (--reduce (format "%s\n%s" acc it))
-        (s-prepend "#EXTM3U\n")
-        (insert))))
+      (->>
+       isamert/radio-channels
+       (--map
+        (format
+         "#EXTINF:0, %s\n%s"
+         (car it)
+         ;; Replace http:// with icyx://, because VLC on Android can't
+         ;; retrieve song name if the stream is on http://
+         (if (s-contains? "radcap.ru" (car it))
+             (s-replace "http://" "icyx://" (cdr it))
+           (cdr it))))
+       (--reduce (format "%s\n%s" acc it))
+       (s-prepend "#EXTM3U\n")
+       (insert))))
 #+end_src
 
 ** orgmdb (movies & shows)
