@@ -2554,10 +2554,16 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
        Class
        Method
        Constructor
+       Property
        Enum
+       Struct
+       Field
        Interface
        Function))
     ;; ^ Local variables etc. pollute imenu, so just show these in imenu
+    ;; Following are the what's left out: Variable Constant String
+    ;; Number Boolean Array Object Key Null Struct Event Operator
+    ;; TypeParameter
 
     (evil-define-key 'normal lsp-mode-map
       "gr" #'lsp-ui-peek-find-references
@@ -3004,17 +3010,17 @@ Simple dictonary.
     (evil-leader/set-key
       "ess" #'slack-select-rooms
       "esS" #'isamert/slack-send-message
-      "eS" #'slack-select-unread-rooms
+      "eS" #'isamert/slack-last-rooms
       "esl" #'isamert/slack-open-last-room
       "esc" #'isamert/slack-copy-last-message)
 
     (evil-define-key 'normal slack-mode-map
       "q" 'kill-this-buffer
 
-      "r" nil
       "rp" 'slack-room-pins-list
 
       "@" 'slack-message-embed-mention
+      "mm" 'slack-message-write-another-buffer
       "md" 'slack-message-delete
       "mc" 'slack-message-embed-channel
       "ml" 'slack-message-copy-link
