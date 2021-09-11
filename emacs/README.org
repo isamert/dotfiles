@@ -4317,17 +4317,49 @@ Mostly for editing tridactyl and sometimes real vimrc.
           :scope 'assigned_to_me
           :state 'opened))))
 
-
   (defun isamert/gitlab-list-group-merge-requests ()
     "List all open MRs that belongs to `isamert/gitlab-group'."
     (interactive)
     (isamert/gitlab--select-mr-and-apply-action
      (isamert/gitlab-request
-      (format "groups/%s/merge_requests" (url-hexify-string isamert/gitlab-group))
+      "groups/#{group}/merge_requests"
       :scope 'all
       :state 'opened)))
 
+  (defun isamert/gitlab-create-merge-request ()
+    "Create an MR interactively."
+    (interactive)
+    (isamert/gitlab-request
+     "projects/#{project}/merge_requests"
+     :req-type "POST"
+     :req-data (list :source_branch (completing-read
+                                     "Source branch: "
+                                     (vc-git-branches)
+                                     nil nil (isamert/git-current-branch))
+                     :target_branch (completing-read
+                                     "Target branch: "
+                                     (vc-git-branches)
+                                     nil nil "master")
+                     :title (read-string "MR Title: "
+                                         (s-trim (shell-command-to-string "git log -1 --pretty=%B")))
+                     ;; TODO Get description (and maybe title) from a
+                     ;; dedicated buffer like how magit commit asks
+                     ;; input from a user
+                     :description (read-string "Description: " "Closes ...")
+                     :remove_source_branch t)))
+
+  (defun isamert/gitlab-select-project ()
+    (interactive)
+    (isamert/gitlab--select-project-and-apply-action
+     (isamert/gitlab-request
+      "groups/#{group}/projects"
+      :with_shared 'false
+      :include_subgroups 'true
+      :per_page 100)))
+
+  ;;
   ;; Internal
+  ;;
 
   (defun isamert/gitlab--open-web-url (it)
     (browse-url (gethash 'web_url it)))
@@ -4364,14 +4396,25 @@ Mostly for editing tridactyl and sometimes real vimrc.
        (isamert/gitlab--merge-request-actions it))))
 
   (defun isamert/gitlab--merge-request-actions (mr)
-    (let* ((selectrum-should-sort nil)
-           (action (completing-read
+    (with-completing-read-exact-order
+     (let ((action (completing-read
                     "Select an action: "
                     '("Open page"
                       "Rebase"))))
-      (pcase action
-        ("Open page" (isamert/gitlab--open-web-url mr))
-        ("Rebase" (isamert/gitlab--rebase-merge-request mr)))))
+       (pcase action
+         ("Open page" (isamert/gitlab--open-web-url mr))
+         ("Rebase" (isamert/gitlab--rebase-merge-request mr))))))
+
+  ;; TODO actions
+  (defun isamert/gitlab--select-project-and-apply-action (projects)
+    (let ((project-alist (--map
+                          (cons (gethash 'name_with_namespace it) it)
+                          projects)))
+      (completing-read
+       "Project: "
+       (--map
+        (gethash 'name_with_namespace it)
+        projects))))
 
   ;;
   ;; Gitlab config
@@ -4381,6 +4424,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (setq isamert/gitlab-token ty/gitlab-token)
   (setq isamert/gitlab-group ty/gitlab-group)
 #+end_src
+
 ** Jira
 #+begin_src emacs-lisp
   (evil-leader/set-key "oj" #'isamert/open-jira-issue-at-point)
@@ -4996,9 +5040,12 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "Focus todays header.
   If it does not exists, create it."
     (interactive)
-    (let ((today (format-time-string "%Y-%m-%d")))
+    (let ((today (if (<= (string-to-number (format-time-string "%H")) 3)
+                     (isamert/date "yesterday")
+                   (format-time-string "%Y-%m-%d"))))
       (when (not (isamert/bullet-focus-a-day today))
         (isamert/bullet-create-a-day today))))
+
 
   (defun isamert/bullet-focus-yesterday ()
     "Focus yesterdays header."
@@ -5009,52 +5056,21 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   ;; Focus non-day
   ;;
 
-  (defun isamert/bullet-get-all-non-day-headers ()
-    "Return all non-day header names.
-  This function assumes all the non-day headers are at the top."
-    (save-excursion
-      (save-match-data
-        (let ((headers '()))
-          (widen)
-          (goto-char 0)
-          (cl-loop
-           (when (not (re-search-forward "^* \\(.*\\)" nil t))
-             (cl-return))
-           (if (s-prefix? "[" (match-string 1))
-               (cl-return)
-             (push (match-string 1) headers)))
-          headers))))
-
-  (defun isamert/bullet-focus-non-day-header (text)
+  (defun isamert/bullet-focus-non-day-header ()
     "Interactively select and focus a non-day header."
-    (interactive
-     (thread-last (isamert/bullet-get-all-non-day-headers)
-       (completing-read "Select header: ")
-       (list)))
-    (widen)
-    (goto-char (org-find-exact-headline-in-buffer text))
-    (org-narrow-to-subtree))
+    (interactive)
+    (save-match-data
+      (widen)
+      (goto-char 0)
+      (re-search-forward "^\\*+ \\[[0-9]+-" nil t)
+      (narrow-to-region (point-min) (point-at-bol))
+      (consult-org-heading)
+      (widen)
+      (org-toggle-narrow-to-subtree)))
 
   ;;
   ;; Template utils
   ;;
-
-  ;; Source: https://gist.github.com/caiorss/49585e022d8462db5e62
-  (defmacro isamert/s-interpolated (str)
-    "Elisp string interpolation.
-  Uses #{elisp-code} syntax."
-    (let ((exprs nil))
-      (with-temp-buffer
-        (insert str)
-        (goto-char 1)
-        (while (re-search-forward "#{" nil t 1)
-          (let ((here (point))
-                (emptyp (eql (char-after) ?})))
-            (unless  emptyp (push (read (buffer-substring (point) (progn (forward-sexp 1) (point)))) exprs))
-            (delete-region (- here 2) (progn (search-forward "}") (point)))
-            (unless emptyp (insert "%s"))
-            (ignore-errors (forward-char 1))))
-        (append (list 'format (buffer-string)) (reverse exprs)))))
 
   (defmacro isamert/when-weekday (template &rest template-args)
     `(when (<= (isamert/u) 5)
@@ -5196,6 +5212,9 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (delete-char 1)
       (org-table-align)))
 #+end_src
+
+#+RESULTS:
+: org-dblock-write:daily-summary
 
 ** Scratch/temporary buffers in side windows
 Here I define two important functions and their helpers.  The following functions are pretty useful for quick note taking or evaluating elisp. Having these buffers in a side window makes them immune to some window commands which is what I want.
@@ -5489,17 +5508,17 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   (defun isamert/eksi-gundem-sirali ()
     "Eksi gundemini entry sayisina gore sirala ve `completing-read' yap."
     (interactive)
-    (let* ((selectrum-should-sort nil)
-           (results (->> (shell-command-to-string "curl --silent https://eksisozluk.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq")
-                      (s-split "\n")
-                      (--map (s-split "|||" it))
-                      (--map `(,(car it) . ,(cadr it))))))
-      (->> results
-        (completing-read "Baslik: ")
-        (funcall (-flip 'assoc-string) results)
-        (cdr)
-        (format "https://eksisozluk.com/%s")
-        (browse-url))))
+    (with-completing-read-exact-order
+     (let ((results (->> (shell-command-to-string "curl --silent https://eksisozluk.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq")
+                         (s-split "\n")
+                         (--map (s-split "|||" it))
+                         (--map `(,(car it) . ,(cadr it))))))
+       (->> results
+            (completing-read "Baslik: ")
+            (funcall (-flip 'assoc-string) results)
+            (cdr)
+            (format "https://eksisozluk.com/%s")
+            (browse-url)))))
 #+end_src
 ** insert uuid
 #+begin_src emacs-lisp
