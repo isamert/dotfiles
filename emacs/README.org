@@ -2017,9 +2017,6 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     ;; For `isamert/persp-switch-to-last'
     (add-hook 'persp-before-switch-functions
               #'isamert/persp-update-last-persp)
-    (add-hook 'persp-before-switch-functions
-              #'isamert/tmux-focus-perspective-window)
-
 
     ;; Glue for persp-el and eyebrowse
     (add-hook 'persp-before-switch-functions
@@ -2814,55 +2811,6 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
                 (completing-read "Run new command" isamert/vterm-run-history))))
       (when cmd
         (setq isamert/vterm-run-history (cons cmd (delete cmd isamert/vterm-run-history))))))
-
-  (defvar isamert/auto-focus-tmux-window t)
-  (defvar isamert/tmux-session nil)
-  (defun isamert/select-tmux-session ()
-    "Select a tmux session for other tmux commands to use."
-    (interactive)
-    (->> (shell-command-to-string "tmux list-sessions")
-      (s-split "\n")
-      (--filter (not (s-blank? it)))
-      (completing-read "TMUX session: ")
-      (s-split ":")
-      (car)
-      (setq isamert/tmux-session)))
-
-  (defun isamert/select-tmux-session-if-needed ()
-    (interactive)
-    (when (not isamert/tmux-session)
-      (isamert/select-tmux-session)))
-
-  (defun isamert/tmux-focus-perspective-window (&optional pname &rest rest)
-    "Focus to the tmux window that has the same name with current perspective.
-  Tmux session is infered from isamert/select-tmux-session"
-    (interactive)
-    (isamert/select-tmux-session-if-needed)
-    (->> (or pname (persp-name (get-current-persp)))
-      (format "tmux list-windows -t%s | grep %s" isamert/tmux-session)
-      (shell-command-to-string)
-      (s-split ":")
-      (car)
-      (format "tmux select-window -t%s:%s" isamert/tmux-session)
-      (shell-command-to-string)))
-
-  (defun isamert/auto-focus-tmux-advice-after (old-function &rest arguments)
-    (apply old-function arguments)
-    (when isamert/auto-focus-tmux-window
-      (isamert/tmux-focus-perspective-window)))
-
-  (defun isamert/auto-focus-tmux-advice-before (old-function &rest arguments)
-    (when isamert/auto-focus-tmux-window
-      (isamert/tmux-focus-perspective-window))
-    (apply old-function arguments))
-
-  ;; Focus to perspectives tmux pane before
-  (advice-add 'isamert/vterm-toggle-dedicated
-              :around #'isamert/auto-focus-tmux-advice-after)
-  (advice-add 'isamert/run-last-command-on-visible-vterm
-              :around #'isamert/auto-focus-tmux-advice-before)
-  (advice-add 'isamert/run-command-on-visible-vterm-with-history
-              :around #'isamert/auto-focus-tmux-advice-before)
 #+end_src
 
 ** moodline modeline
@@ -4353,6 +4301,84 @@ Mostly for editing tridactyl and sometimes real vimrc.
 #+end_src
 
 * Misc functions
+** tmux integration
+This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generally use Emacs commands instead of command line tools and if I ever need to do something in terminal I just use eshell. Besides this, I also like to use have a tmux instance working, for non-ephemeral stuff. I generally use a dropdown terminal (which may or may not be inside Emacs) to access the tmux instance. Here is how the integration goes:
+
+- I tend to name my perspectives in the following format: =<namespace>/<stuff>=.
+- Whenever I change to a different perspective, the code below changes the tmux session to session named =<namespace>= and tmux window to the window named =<stuff>=.
+
+#+begin_src emacs-lisp
+  (defcustom isamert/auto-focus-tmux-window t)
+
+  (defvar isamert/tmux-session nil)
+
+  (defun isamert/select-tmux-session ()
+    "Select a tmux session for other tmux commands to use."
+    (interactive)
+    (->>
+     (shell-command-to-string "tmux list-sessions")
+     (s-split "\n")
+     (--filter (not (s-blank? it)))
+     (completing-read "TMUX session: ")
+     (s-split ":")
+     (car)
+     (setq isamert/tmux-session)))
+
+  (defun isamert/select-tmux-session-if-needed ()
+    (interactive)
+    (when (not isamert/tmux-session)
+      (isamert/select-tmux-session)))
+
+  (defun isamert/tmux-focus-window (window-name)
+    "Focus given WINDOW-NAME in `isamert/tmux-session'."
+    (interactive)
+    (isamert/select-tmux-session-if-needed)
+    (shell-command-to-string (format "tmux switch -t%s" isamert/tmux-session))
+    (->>
+     window-name
+     (format "tmux list-windows -t%s | grep %s" isamert/tmux-session)
+     (shell-command-to-string)
+     (s-split ":")
+     (car)
+     (format "tmux select-window -t%s:%s" isamert/tmux-session)
+     (shell-command-to-string)))
+
+  (defun isamert/tmux-focus-perspective-window (&optional pname &rest rest)
+    "Focus to the tmux window that has the same name with current perspective.
+  Tmux session is infered from isamert/select-tmux-session"
+    (interactive)
+    (setq pname (or pname (persp-name (get-current-persp))))
+    (when isamert/auto-focus-tmux-window
+      (cond
+       ((s-contains? "/" pname)
+        (let* ((data (s-split "/" pname))
+               (isamert/tmux-session (car data))
+               (window-name (nth 2 data)))
+          (isamert/tmux-focus-window (cadr (s-split "/" pname)))))
+       (t
+        (isamert/tmux-focus-window pname)))))
+
+  (defun isamert/auto-focus-tmux-advice-after (old-function &rest arguments)
+    (apply old-function arguments)
+    (when isamert/auto-focus-tmux-window
+      (isamert/tmux-focus-perspective-window)))
+
+  (defun isamert/auto-focus-tmux-advice-before (old-function &rest arguments)
+    (when isamert/auto-focus-tmux-window
+      (isamert/tmux-focus-perspective-window))
+    (apply old-function arguments))
+
+  ;; Required hooks and advices
+
+  (add-hook 'persp-before-switch-functions
+            #'isamert/tmux-focus-perspective-window)
+  (advice-add 'isamert/vterm-toggle-dedicated
+              :around #'isamert/auto-focus-tmux-advice-after)
+  (advice-add 'isamert/run-last-command-on-visible-vterm
+              :around #'isamert/auto-focus-tmux-advice-before)
+  (advice-add 'isamert/run-command-on-visible-vterm-with-history
+              :around #'isamert/auto-focus-tmux-advice-before)
+#+end_src
 ** Git and GitLab extras
 #+begin_src emacs-lisp
   (evil-leader/set-key
