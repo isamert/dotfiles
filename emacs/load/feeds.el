@@ -49,6 +49,7 @@
     ("UCUIIM9pPaSdRg7xquOX7s-w" youtube music metal power) ;; Unknown Power Metal YT
     ("UCzCWehBejA23yEz3zp7jlcg" youtube music metal black) ;; Black Metal Promotion
     ("UCZQHDXu4JvsmptR86XDyaRQ" youtube music metal heavy classic) ;; Rare & Obsucre Metal Archives
+    ("BangerTV" youtube music review)
 
     ("commandline" reddit linux cli)
     ("orgmode" reddit emacs)

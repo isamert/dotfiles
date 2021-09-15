@@ -682,6 +682,7 @@ Make some temproary windows appear at bottom. This makes buffer management so mu
   (isamert/shackle-window "\\*Org-Babel Error Output\\*" 0.4)
   (isamert/shackle-window "\\*curl error\\*" 0.4)
   (isamert/shackle-window "\\*helpful.*\\*" 0.4)
+  (isamert/shackle-window "\\*Org Select\\*" 0.4)
 #+END_SRC
 
 ** Miscellaneous packages
@@ -1141,6 +1142,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (defconst reality-org "~/Documents/notes/reality.org")
     (defconst projects-org "~/Documents/notes/projects.org")
     (defconst people-org "~/Documents/notes/people.org")
+    (defconst diary-org "~/Documents/notes/diary.org")
     (defconst work-org "~/Documents/notes/trendyol.org")
 
     ;; Put archive files under an archive/ directory
@@ -2710,6 +2712,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 
   (defun isamert/run-last-command-on-visible-term ()
     (interactive)
+    (save-buffer)
     (unless (isamert/run-last-command-on-visible-vterm)
       (isamert/run-last-command-on-visible-eshell)))
 #+END_SRC
@@ -3090,7 +3093,7 @@ Simple dictonary.
      :name "trendyol"
      :token ty/slack-token
      :cookie ty/slack-cookie
-     :subscribed-channels '(seller-ads-team))
+     :subscribed-channels '(seller-ads-team seller-ads-alert))
 
     (evil-leader/set-key
       "ess" #'slack-select-rooms
@@ -3099,6 +3102,7 @@ Simple dictonary.
       "esl" #'isamert/slack-open-last-room
       "esc" #'isamert/slack-copy-last-message)
 
+    (evil-set-initial-state 'slack-mode-map 'normal)
     (evil-define-key 'normal slack-mode-map
       "q" 'kill-this-buffer
 
@@ -3114,9 +3118,9 @@ Simple dictonary.
 
       "mrr" 'slack-message-add-reaction
       "mR" 'slack-message-remove-reaction
-      "mr1" (isamert/slack-add-reaction-to-message "+1")
-      "mr2" (isamert/slack-add-reaction-to-message "ok_hand")
-      "mr3" (isamert/slack-add-reaction-to-message "ultrafastparrot")
+      "mr1" (isamert/slack--add-reaction-to-message "+1")
+      "mr2" (isamert/slack--add-reaction-to-message "ok_hand")
+      "mr3" (isamert/slack--add-reaction-to-message "ultrafastparrot")
       ;; TODO add some quick message reactions
 
       "[[" 'slack-buffer-goto-prev-message
@@ -3550,18 +3554,20 @@ Manage media and streams through =completing-read=.
       "erR" #'empv-play-random-channel
       "erv" #'empv-toggle-video
       "ery" #'consult-empv-youtube
+      "erY" #'consult-empv-youtube-tabulated
       "erk" #'empv-display-current
       "erl" #'empv-log-current-radio-song-name
       "era" #'empv-play-audio
       "erA" #'empv-play-audio-multiple
       "ers" #'empv-exit))
+  ;; (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
 
   (defun isamert/export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."
     (interactive
      (list
       (read-file-name
-       "Where to save the .vcf file?"
+       "Where to save the .m3u file?"
        "~/Documents/sync/"
        "radiolist.m3u")))
     (with-temp-file file
@@ -4295,9 +4301,9 @@ Mostly for editing tridactyl and sometimes real vimrc.
 ** Git and GitLab extras
 #+begin_src emacs-lisp
   (evil-leader/set-key
-    "glmb" 'isamert/gitlab-list-current-branch-merge-requests
-    "glmm" 'isamert/gitlab-list-my-merge-requests
-    "glma" 'isamert/gitlab-list-group-merge-requests)
+    "gmb" 'isamert/gitlab-list-current-branch-merge-requests
+    "gmm" 'isamert/gitlab-list-my-merge-requests
+    "gma" 'isamert/gitlab-list-group-merge-requests)
 
   ;;
   ;; Git extras
@@ -4305,7 +4311,6 @@ Mostly for editing tridactyl and sometimes real vimrc.
 
   (defun isamert/git-current-branch ()
     (s-trim (shell-command-to-string "git rev-parse --abbrev-ref HEAD")))
-
 
   (defun isamert/git-get-config (conf)
     (->>
