@@ -3176,59 +3176,76 @@ Simple dictonary.
                    (slack-mpim-p room)))
       (let* ((sender-name (slack-message-sender-name message team))
              (room-name (slack-room-name room team))
-             (title (format "%s - %s" room-name sender-name)))
-        (add-to-list
-         'isamert/slack--last-messages
+             (title (format "%s - %s" room-name sender-name))
+             (msg-str (isamert/slack--stringify-message
+                       (list :message message :team team))))
+        (push
          (list :room room
                :team team
                :message message
                :sender-name sender-name
-               :room-name room-name))
+               :room-name room-name
+               :title title
+               :message-string msg-str)
+         isamert/slack--last-messages)
         (alert
-         (isamert/slack-stringify-message
-          (isamert/slack-last-message))
+         msg-str
          :title title
          :category "slack")
-        (message "%s // %s" title message))))
+        (message
+         "%s // %s"
+         title
+         msg-str))))
 
   (defun isamert/slack-copy-last-message ()
     "Copy the contents of the last received message as text."
     (interactive)
     (kill-new
-     (isamert/slack-stringify-message
-      (isamert/slack-last-message))))
+     (isamert/slack--stringify-message
+      (isamert/slack--last-message))))
 
   (defun isamert/slack-open-last-room ()
     "Open last room that got new message."
     (interactive)
     (slack-room-display
-     (plist-get (isamert/slack-last-message) :room)
-     (plist-get (isamert/slack-last-message) :team)))
+     (plist-get (isamert/slack--last-message) :room)
+     (plist-get (isamert/slack--last-message) :team)))
 
-  ;; TODO
   (defun isamert/slack-last-rooms ()
     "List and open rooms that had new messages in them recently."
-    (let ((rooms (--map (cons it)))))
-    (completing-read))
+    (interactive)
+    (with-completing-read-exact-order
+     (let* ((rooms
+             (-uniq
+              (--map
+               (cons (plist-get it :room-name)
+                     (list :room (plist-get it :room)
+                           :team (plist-get it :team)))
+               isamert/slack--last-messages)))
+            (selected (completing-read "Select room: " rooms))
+            (selected-room (cdr (assoc-string selected rooms))))
+       (slack-room-display
+        (plist-get selected-room :room)
+        (plist-get selected-room :team)))))
 
   (defun isamert/slack-send-message (msg)
     "Send given MSG or selected region as message to interactively
-  selected user."
+    selected user."
     (interactive
      (list
       (if (use-region-p)
           (buffer-substring-no-properties (region-beginning) (region-end))
         (read-string "Enter message: "))))
     "Send MSG to interactively selected room."
-    (-let* (((room team) (isamert/slack-select-room)))
+    (-let* (((room team) (isamert/slack--select-room)))
       (slack-message-send-internal
        msg room team)))
 
   (defun isamert/slack-clipboard-image-upload ()
     "Uploads png image from clipboard.
 
-  The default `slack-clipboard-image-upload' was not working
-  properly in MacOS."
+    The default `slack-clipboard-image-upload' was not working
+    properly in MacOS."
     (interactive)
     (unless (isamert/has-clipboard-image)
       (user-error "No image in clipboard."))
@@ -3236,25 +3253,28 @@ Simple dictonary.
       (isamert/save-clipboard-image-to-file file)
       (slack-file-upload file "png" "image.png")))
 
+  ;;
   ;; Utils/internals
+  ;;
 
-  (defun isamert/slack-last-message ()
+  (defun isamert/slack--last-message ()
     (car isamert/slack--last-messages))
 
-  (defmacro isamert/slack-add-reaction-to-message (reaction)
-    `(lambda ()
-       (interactive)
-       (slack-buffer-add-reaction-to-message
-        slack-current-buffer
-        ,reaction
-        (slack-get-ts))))
+  (defun isamert/slack--add-reaction-to-message (reaction)
+    (defalias (intern (concat "react-" reaction))
+      `(lambda ()
+         (interactive)
+         (slack-buffer-add-reaction-to-message
+          slack-current-buffer
+          ,reaction
+          (slack-get-ts)))))
 
-  (defun isamert/slack-stringify-message (msg)
-    (slack-message-to-alert
-     (plist-get msg :message)
-     (plist-get msg :team)))
+  (defun isamert/slack--stringify-message (msg)
+    (let ((message (plist-get msg :message))
+          (team (plist-get msg :team)))
+      (slack-message-to-alert message team)))
 
-  (defun isamert/slack-select-room ()
+  (defun isamert/slack--select-room ()
     "Select interactively and return (room team) pair."
     (let* ((team (slack-team-select))
            (room (slack-room-select
