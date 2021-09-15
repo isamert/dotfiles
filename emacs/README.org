@@ -170,6 +170,11 @@ Some basic variable and function definitions that will be used in configuration.
            (browse-url-browser-function 'browse-url-default-browser))
        ,@body))
 
+  (defmacro with-completing-read-exact-order (&rest body)
+    "Disable any kind of sorting in completing read."
+    `(let ((selectrum-should-sort nil))
+       ,@body))
+
   (defun isamert/shell-command-to-string (cmd)
     "Like `shell-command-to-string' but only stdout is returned."
     (with-output-to-string
@@ -234,6 +239,70 @@ Some basic variable and function definitions that will be used in configuration.
 
     Also see `isamert/has-clipboard-image' to check if there is one."
     (shell-command (format "%s > %s" (isamert/clipboard-command) file)))
+#+end_src
+*** User input
+#+begin_src emacs-lisp :lexical yes
+  (cl-defun isamert/get-input (&key (mode #'org-mode)
+                                    (init "")
+                                    on-accept
+                                    on-reject
+                                    pre-process)
+    "Display a buffer to user to enter some input."
+    (let* ((buffer (get-buffer-create "*isamert-input*"))
+           (success-handler (lambda ()
+                              (interactive)
+                              (let ((pre-proc-result (when pre-process
+                                                       (with-current-buffer buffer
+                                                         (funcall pre-process))))
+                                    (result (substring-no-properties (buffer-string))))
+                                (kill-buffer buffer)
+                                (if pre-process
+                                    (funcall on-accept result pre-proc-result)
+                                  (funcall on-accept result)))))
+           (reject-handler (lambda ()
+                             (interactive)
+                             (kill-buffer buffer)
+                             (when on-reject
+                               (funcall on-reject)))))
+      (switch-to-buffer buffer)
+      (with-current-buffer buffer
+        (funcall mode)
+        (use-local-map (copy-keymap (current-local-map)))
+        (local-set-key (kbd "C-c C-c") success-handler)
+        (local-set-key (kbd "C-c C-k") reject-handler)
+        (setq header-line-format "Hit `C-c C-c' to save `C-c C-k' to reject.")
+        (insert init))))
+#+end_src
+
+#+RESULTS:
+: isamert/jira--select-issue-type
+
+*** String utils
+#+begin_src emacs-lisp
+  ;; Source: https://gist.github.com/jordonbiondo/c4e22b4289be130bc59b
+  (defmacro isamert/s-interpolated (str)
+    "Elisp string interpolation.
+  Uses #{elisp-code} syntax."
+    (let ((exprs nil))
+      (with-temp-buffer
+        (insert str)
+        (goto-char 1)
+        (while (re-search-forward "#{" nil t 1)
+          (let ((here (point))
+                (emptyp (eql (char-after) ?})))
+            (unless  emptyp (push (read (buffer-substring (point) (progn (forward-sexp 1) (point)))) exprs))
+            (delete-region (- here 2) (progn (search-forward "}") (point)))
+            (unless emptyp (insert "%s"))
+            (ignore-errors (forward-char 1))))
+        (append (list 'format (buffer-string)) (reverse exprs)))))
+
+  (defun isamert/s-upcase-until (until s)
+    "Make prefix of a string S uppercase until given char UNTIL.
+  `(isamert/s-upcase-until \"-\" \"aha-hehe\")' -> \"AHA-hehe\""
+    (let ((end (s-index-of until s)))
+      (concat
+       (s-upcase (substring s 0 end))
+       (substring s end))))
 #+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
@@ -2347,6 +2416,11 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
 #+begin_src emacs-lisp
   (defconst isamert/projects-root "~/Workspace/projects")
 
+  (defun isamert/project-cd-root ()
+    "CD into current project's root."
+    (interactive)
+    (cd (isamert/current-project-root)))
+
   (defun isamert/project-paths ()
     "Find every project dir under `isamert/projects-root'.
   Every folder without a \".git\" folder is considered to be a project group folder."
@@ -2835,6 +2909,7 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
     :config
     (setq git-link-open-in-browser t)
     (evil-leader/set-key
+      "glm" 'isamert/git-link-merge-requests
       "gll" 'isamert/git-link-on-branch
       "glh" 'git-link-homepage
       "glc" 'git-link-commit))
@@ -2856,6 +2931,16 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
        nil nil (isamert/git-current-branch))))
     (let ((git-link-default-branch branch))
       (call-interactively 'git-link)))
+
+  (defun isamert/git-link-merge-requests ()
+    "Open MR page."
+    (interactive)
+    (browse-url
+     (let ((homepage (isamert/git-link-homepage)))
+       (cond
+        ((s-contains? "gitlab" homepage) (concat homepage "/-/merge_requests"))
+        ((s-contains? "github" homepage) (concat homepage "/pulls"))
+        (t (user-error "Forge undefined."))))))
 #+end_src
 
 ** bufler
@@ -4269,26 +4354,32 @@ Mostly for editing tridactyl and sometimes real vimrc.
      (s-trim)
      (url-hexify-string)))
 
-  (defun isamert/gitlab-request (endpoint &rest params)
+  (cl-defun isamert/gitlab-request
+      (endpoint
+       &rest params
+       &key (req-type "GET") (req-headers '()) (req-data nil)
+       &allow-other-keys)
     (let (json
           (json-object-type 'hash-table)
           (json-array-type #'list)
           (json-key-type 'symbol))
-      (dolist (key '(:type))
+
+      ;; Remove request related items from params list
+      (dolist (key '(:req-type :req-headers :req-data))
         (cl-remf params key))
+
       (request
-        (s-replace
-         "#{project}"
-         ;; TODO Eval the following lazyly?
-         (isamert/gitlab-project-path)
-         (format "%s/api/v4/%s" isamert/gitlab-host endpoint))
-        :type (or (plist-get params :type) "GET")
-        :headers `((Authorization . ,(format "Bearer %s" isamert/gitlab-token)))
+        (thread-last (format "%s/api/v4/%s" isamert/gitlab-host endpoint)
+          (s-replace "#{group}" (url-hexify-string isamert/gitlab-group))
+          (s-replace "#{project}" (isamert/gitlab-project-path)))
+        :type req-type
+        :headers `((Authorization . ,(format "Bearer %s" isamert/gitlab-token)) ,@req-headers)
         :parser #'json-read
         :success (cl-function
                   (lambda (&key data &allow-other-keys)
                     (setq json data)))
         :sync t
+        :data (transient-plist-to-alist req-data)
         ;; TODO Maybe roll my own plist-to-alist function
         :params (transient-plist-to-alist params))
       json))
@@ -4329,24 +4420,25 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (defun isamert/gitlab-create-merge-request ()
     "Create an MR interactively."
     (interactive)
-    (isamert/gitlab-request
-     "projects/#{project}/merge_requests"
-     :req-type "POST"
-     :req-data (list :source_branch (completing-read
-                                     "Source branch: "
-                                     (vc-git-branches)
-                                     nil nil (isamert/git-current-branch))
-                     :target_branch (completing-read
-                                     "Target branch: "
-                                     (vc-git-branches)
-                                     nil nil "master")
-                     :title (read-string "MR Title: "
-                                         (s-trim (shell-command-to-string "git log -1 --pretty=%B")))
-                     ;; TODO Get description (and maybe title) from a
-                     ;; dedicated buffer like how magit commit asks
-                     ;; input from a user
-                     :description (read-string "Description: " "Closes ...")
-                     :remove_source_branch t)))
+    (isamert/gitlab--open-web-url
+     (isamert/gitlab-request
+      "projects/#{project}/merge_requests"
+      :req-type "POST"
+      :req-data (list :source_branch (completing-read
+                                      "Source branch: "
+                                      (vc-git-branches)
+                                      nil nil (isamert/git-current-branch))
+                      :target_branch (completing-read
+                                      "Target branch: "
+                                      (vc-git-branches)
+                                      nil nil "master")
+                      :title (read-string "MR Title: "
+                                          (s-trim (shell-command-to-string "git log -1 --pretty=%B")))
+                      ;; TODO Get description (and maybe title) from a
+                      ;; dedicated buffer like how magit commit asks
+                      ;; input from a user
+                      :description (read-string "Description: " (format "Closes %s" (isamert/git-current-branch)))
+                      :remove_source_branch t))))
 
   (defun isamert/gitlab-select-project ()
     (interactive)
@@ -4367,7 +4459,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (defun isamert/gitlab--rebase-merge-request (it)
     (isamert/gitlab-request
      (format "projects/#{project}/merge_requests/%s/rebase" (gethash 'iid it))
-     :type "PUT"))
+     :req-type "PUT"))
 
   (defun isamert/gitlab--mr-format-title (mr)
     (format "%s, [%s], by %s"
