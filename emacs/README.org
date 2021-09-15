@@ -4578,25 +4578,9 @@ Mostly for editing tridactyl and sometimes real vimrc.
 #+end_src
 
 ** Jira
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :lexical yes
   (evil-leader/set-key "oj" #'isamert/open-jira-issue-at-point)
   (evil-leader/set-key "ej" #'isamert/jira-list-issues)
-
-  ;;
-  ;; Actions for JIRA items using embark
-  ;;
-
-  ;; TODO Remove embark actions and create completing-read menu for actions
-
-  (require 'embark)
-
-  (embark-define-keymap isamert/embark-jira-actions
-    "Actions for JIRA issues."
-    ("o" isamert/open-jira-issue)
-    ("b" isamert/jira-ticket-to-branch)
-    ("W" isamert/jira-ticket-to-worktree))
-
-  (add-to-list 'embark-keymap-alist '(isamert/jira . isamert/embark-jira-actions))
 
   ;;
   ;; Install required JIRA client
@@ -4707,18 +4691,6 @@ Mostly for editing tridactyl and sometimes real vimrc.
      "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
      isamert/jira-current-sprint-issues))
 
-  (defun isamert/jira--format-ticket-name (it)
-    "Format ticket name for displaying in completing-read window."
-    (format
-     "%-7s [%-11s] %-15s - %s"
-     (propertize (cdr (assoc 'key it))
-                 'face 'bold)
-     (propertize (s-truncate 11 (cdr (assoc 'name (assoc 'status (assoc 'fields it)))))
-                 'face 'italic)
-     (propertize (s-truncate 15 (or (cdr (assoc 'name (assoc 'assignee (assoc 'fields it)))) "N/A"))
-                 'face 'italic)
-     (cdr (assoc 'summary (assoc 'fields it)))))
-
   (defun isamert/jira-list-issues (&optional arg)
     (interactive "P")
     (when arg
@@ -4729,12 +4701,12 @@ Mostly for editing tridactyl and sometimes real vimrc.
                    ("Current Sprint" isamert/jira-current-sprint-issues))
       (--map (cons (isamert/jira--format-ticket-name it) it))
       ((lambda (items) (consult--read items :category 'isamert/jira)))
-      (isamert/open-jira-issue)))
+      (isamert/jira--issue-actions)))
 
   (defun isamert/jira-ticket-to-branch (issue-name)
     "Create a new branch from given ISSUE-NAME and switch to it."
     (interactive "sIssue name: ")
-    (let ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name)))
+    (let ((branch-name (isamert/jira--create-branch-name-from-ticket issue-name)))
       (message "Updating...")
       (magit-fetch-all nil)
       (message "Creating branch...")
@@ -4744,7 +4716,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
 
   (defun isamert/jira-ticket-to-worktree (issue-name)
     (interactive "sIssue name: ")
-    (let* ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name))
+    (let* ((branch-name (isamert/jira--create-branch-name-from-ticket issue-name))
            (worktree (expand-file-name (format "%s/%s" isamert/git-worktrees-root (s-replace "/" "-" branch-name)))))
       (message "Updating...")
       (magit-fetch-all nil)
@@ -4759,7 +4731,46 @@ Mostly for editing tridactyl and sometimes real vimrc.
       (vc-refresh-state)
       (message "Currently on %s." (magit-get-current-branch))))
 
-  (defun isamert/jira-create-branch-name-from-ticket (issue-name)
+  (defun isamert/jira-create-ticket ()
+    (interactive)
+    (let ((project (isamert/jira--select-project))
+          (issue-type (isamert/jira--select-issue-type))
+          (summary (read-string "Issue summary: ")))
+      (isamert/get-input
+       :init (format "* %s\n:PROPERTIES:\n:PROJECT-ID: %s\n:ISSUE_TYPE: %s\n:END:\n" summary project issue-type)
+       :pre-process (lambda ()
+                      (goto-char (point-min))
+                      (list
+                       :summary (org-entry-get nil "ITEM")
+                       :project-id (org-entry-get nil "PROJECT-ID")
+                       :type (org-entry-get nil "ISSUE_TYPE")
+                       :props (org-entry-properties nil 'standard)))
+       :on-accept (lambda (description props)
+                    (setq description (org-export-string-as description 'confluence t))
+                    (thread-last
+                        (apply #'jiralib2-create-issue
+                               (plist-get props :project-id)
+                               (plist-get props :type)
+                               (plist-get props :summary)
+                               description
+                               props)
+                      (alist-get 'key)
+                      (isamert/open-jira-issue))))))
+
+  ;;
+  ;; Utility
+  ;;
+
+  (defun isamert/jira--select-project ()
+    "Interactively select one of enrolled projects."
+    (if (eq (length isamert/jira-projects) 1)
+        (caar isamert/jira-projects)
+      (completing-read "Select project: " isamert/jira-projects)))
+
+  (defun isamert/jira--select-issue-type ()
+    (completing-read "Issue type: " '("Story" "Bug")))
+
+  (defun isamert/jira--create-branch-name-from-ticket (issue-name)
     "Create a branch name from given Jira ISSUE-NAME"
     (thread-last issue-name
       (s-replace-all '((" " . "-") (":" . "-") ("\"" . "") ("/" . "-") ("&" . "") ("(" . "-") (")" . "-")))
@@ -4770,13 +4781,27 @@ Mostly for editing tridactyl and sometimes real vimrc.
       (s-prepend isamert/jira-feature-branch-prefix)
       (read-string "Branch name: ")))
 
-  ;; Utility
+  (defun isamert/jira--format-ticket-name (it)
+    "Format ticket name for displaying in completing-read window."
+    (message "%s" it)
+    (format
+     "%-7s [%-11s] %-15s - %s"
+     (propertize (cdr (assoc 'key it))
+                 'face 'bold)
+     (propertize (s-truncate 11 (cdr (assoc 'name (assoc 'status (assoc 'fields it)))))
+                 'face 'italic)
+     (propertize (s-truncate 15 (or (cdr (assoc 'name (assoc 'assignee (assoc 'fields it)))) "N/A"))
+                 'face 'italic)
+     (cdr (assoc 'summary (assoc 'fields it)))))
 
-  (defun isamert/s-upcase-until (until s)
-    (let ((end (s-index-of until s)))
-      (concat
-       (s-upcase (substring s 0 end))
-       (substring s end))))
+  ;; TODO act on object instead of issue name
+  (defun isamert/jira--issue-actions (issue)
+    (with-completing-read-exact-order
+     (let ((action (completing-read (format "Act on %s: " issue) '("Open" "To branch" "To worktree"))))
+       (pcase action
+         ("Open" (isamert/open-jira-issue issue))
+         ("To branch" (isamert/jira-ticket-to-branch issue))
+         ("To worktree" (isamert/jira-ticket-to-worktree issue))))))
 #+end_src
 
 ** My Android phone and Emacs
