@@ -1269,6 +1269,41 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (add-hook 'org-mode-hook #'isamert/org-set-faces)
 #+END_SRC
 
+** org-capture
+See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this page]] for more detail on template elements.
+
+#+begin_src emacs-lisp
+  (evil-leader/set-key "og" #'org-capture)
+
+  (setq
+   org-capture-templates
+   '(("n" "Quick note" item
+      (file+function bullet-org isamert/org-capture--find-daily-notes)
+      "%a. %?"
+      :prepend t)
+     ("s" "Journal" entry
+      (file+function bullet-org isamert/org-capture--find-daily-summary)
+      "%T ")
+     ("d" "Diary" entry
+      (file diary-org)
+      "* %u\n"
+      :prepend t)
+     ("d" "Diary" entry
+      (file diary-org)
+      "* %{}\n"
+      )
+     ("m" "Meeting note" item
+      (clock)
+      "")))
+
+  (defun isamert/org-capture--find-daily-notes ()
+    (isamert/bullet-focus-today)
+    (re-search-forward "^** Notes" nil t))
+
+  (defun isamert/org-capture--find-daily-summary ()
+    (isamert/bullet-focus-today)
+    (re-search-forward "^** Summary" nil t))
+#+end_src
 ** Presentation (org-tree-slide)
 - =C->= → next heading
 - =C-<= → prev heading
