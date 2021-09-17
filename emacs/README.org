@@ -272,10 +272,13 @@ Some basic variable and function definitions that will be used in configuration.
         (local-set-key (kbd "C-c C-k") reject-handler)
         (setq header-line-format "Hit `C-c C-c' to save `C-c C-k' to reject.")
         (insert init))))
-#+end_src
 
-#+RESULTS:
-: isamert/jira--select-issue-type
+  (defun isamert/alist-completing-read (prompt alist)
+    "Like `completing-read' but returns value of the selected key in given ALIST."
+    (alist-get
+     (completing-read prompt alist)
+     alist nil nil #'equal))
+#+end_src
 
 *** String utils
 #+begin_src emacs-lisp
@@ -1191,7 +1194,8 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (shell . t)
      (R . t)
      (typescript . t)
-     (http . t)))
+     (http . t)
+     (dot . t)))
 
   ;; Don't ask permissions for evaluating code blocks
   (setq org-confirm-babel-evaluate nil)
@@ -2048,21 +2052,21 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     (interactive)
     (message ">> Perspectives are opening...")
     (progn
-      (persp-add-new "dotfiles")
-      (persp-switch "dotfiles")
+      (persp-add-new "personal/dotfiles")
+      (persp-switch "personal/dotfiles")
       (find-file "~/Workspace/projects/dotfiles/README.org")
       (eyebrowse-switch-to-window-config-2)
       (find-file "~/Workspace/projects/dotfiles/emacs/README.org"))
     (progn
-      (persp-add-new "planning")
-      (persp-switch "planning")
+      (persp-add-new "personal/planning")
+      (persp-switch "personal/planning")
       (find-file "~/Documents/notes/bullet.org")
       (isamert/bullet-focus-today)
       (eyebrowse-switch-to-window-config-2)
       (find-file "~/Documents/notes/life.org"))
     (progn
-      (persp-add-new "notes")
-      (persp-switch "notes")
+      (persp-add-new "personal/notes")
+      (persp-switch "personal/notes")
       (find-file "~/Documents/notes/engineering.org"))
     (persp-switch "main")
     (message ">> Perspectives are opening... Done."))
@@ -3085,6 +3089,16 @@ Simple dictonary.
       "esl" #'isamert/slack-open-last-room
       "esc" #'isamert/slack-copy-last-message)
 
+
+    (defun isamert/slack--add-reaction-to-message (reaction)
+      (defalias (intern (concat "react-" reaction))
+        `(lambda ()
+           (interactive)
+           (slack-buffer-add-reaction-to-message
+            slack-current-buffer
+            ,reaction
+            (slack-get-ts)))))
+
     (evil-set-initial-state 'slack-mode-map 'normal)
     (evil-define-key 'normal slack-mode-map
       "q" 'kill-this-buffer
@@ -3104,7 +3118,6 @@ Simple dictonary.
       "mr1" (isamert/slack--add-reaction-to-message "+1")
       "mr2" (isamert/slack--add-reaction-to-message "ok_hand")
       "mr3" (isamert/slack--add-reaction-to-message "ultrafastparrot")
-      ;; TODO add some quick message reactions
 
       "[[" 'slack-buffer-goto-prev-message
       "]]" 'slack-buffer-goto-next-message))
@@ -3207,15 +3220,6 @@ Simple dictonary.
 
   (defun isamert/slack--last-message ()
     (car isamert/slack--last-messages))
-
-  (defun isamert/slack--add-reaction-to-message (reaction)
-    (defalias (intern (concat "react-" reaction))
-      `(lambda ()
-         (interactive)
-         (slack-buffer-add-reaction-to-message
-          slack-current-buffer
-          ,reaction
-          (slack-get-ts)))))
 
   (defun isamert/slack--stringify-message (msg)
     (let ((message (plist-get msg :message))
@@ -4308,7 +4312,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 - Whenever I change to a different perspective, the code below changes the tmux session to session named =<namespace>= and tmux window to the window named =<stuff>=.
 
 #+begin_src emacs-lisp
-  (defcustom isamert/auto-focus-tmux-window t)
+  (defcustom isamert/auto-focus-tmux-window t
+    "Should automatically sync Emacs and Tmux?")
 
   (defvar isamert/tmux-session nil)
 
@@ -4661,7 +4666,10 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
      'isamert/jira-new-issues)
     (isamert/deserialize-from-file
      "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
-     'isamert/jira-current-sprint-issues))
+     'isamert/jira-current-sprint-issues)
+    (isamert/deserialize-from-file
+     "~/.emacs.d/.cache/isamert-jira--users"
+     'isamert/jira--users))
 
   ;; Functions
 
@@ -4726,7 +4734,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                    ("New issues" isamert/jira-new-issues)
                    ("Current Sprint" isamert/jira-current-sprint-issues))
       (--map (cons (isamert/jira--format-ticket-name it) it))
-      ((lambda (items) (consult--read items :category 'isamert/jira)))
+      (isamert/alist-completing-read "Select ticket: ")
       (isamert/jira--issue-actions)))
 
   (defun isamert/jira-ticket-to-branch (issue-name)
@@ -4763,29 +4771,51 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
           (issue-type (isamert/jira--select-issue-type))
           (summary (read-string "Issue summary: ")))
       (isamert/get-input
-       :init (format "* %s\n:PROPERTIES:\n:PROJECT-ID: %s\n:ISSUE_TYPE: %s\n:END:\n" summary project issue-type)
+       :init (format "* %s\n:PROPERTIES:\n:PROJECT-ID: %s\n:ISSUE-TYPE: %s\n:END:\n" summary project issue-type)
        :pre-process (lambda ()
                       (goto-char (point-min))
-                      (list
-                       :summary (org-entry-get nil "ITEM")
-                       :project-id (org-entry-get nil "PROJECT-ID")
-                       :type (org-entry-get nil "ISSUE_TYPE")
-                       :props (org-entry-properties nil 'standard)))
+                      (let* ((all (org-entry-properties nil 'standard))
+                             (rest (--remove (-contains? '("CATEGORY" "ISSUE-TYPE" "PROJECT-ID") (car it)) all)))
+                        (list
+                         :summary (org-entry-get nil "ITEM")
+                         :project-id (org-entry-get nil "PROJECT-ID")
+                         :type (org-entry-get nil "ISSUE-TYPE")
+                         :rest rest)))
        :on-accept (lambda (description props)
                     (setq description (org-export-string-as description 'confluence t))
+                    (message "%s" props)
                     (thread-last
                         (apply #'jiralib2-create-issue
-                               (plist-get props :project-id)
-                               (plist-get props :type)
-                               (plist-get props :summary)
-                               description
-                               props)
-                      (alist-get 'key)
-                      (isamert/open-jira-issue))))))
+                               `(,(plist-get props :project-id)
+                                 ,(plist-get props :type)
+                                 ,(plist-get props :summary)
+                                 ,description
+                                 ,@(plist-get props :rest)))
+                      (isamert/jira--issue-actions))))))
 
   ;;
   ;; Utility
   ;;
+
+  (defun isamert/jira--get-users ()
+    (unless isamert/jira--users
+      (setq
+       isamert/jira--users
+       (mapcar
+        (lambda (project) (cons project (jiralib2-get-users project)))
+        (mapcar #'car isamert/jira-projects)))
+
+      (isamert/serialize-into-file
+       "~/.emacs.d/.cache/isamert-jira--users"
+       isamert/jira--users))
+    isamert/jira--users)
+
+
+  (defun isamert/jira--select-user (project)
+    (thread-last (isamert/jira--get-users)
+      (alist-get (isamert/jira--select-project))
+      (--map (cons (alist-get 'name it) it))
+      (isamert/alist-completing-read "Select a user: ")))
 
   (defun isamert/jira--select-project ()
     "Interactively select one of enrolled projects."
@@ -4809,25 +4839,45 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
   (defun isamert/jira--format-ticket-name (it)
     "Format ticket name for displaying in completing-read window."
-    (message "%s" it)
-    (format
-     "%-7s [%-11s] %-15s - %s"
-     (propertize (cdr (assoc 'key it))
-                 'face 'bold)
-     (propertize (s-truncate 11 (cdr (assoc 'name (assoc 'status (assoc 'fields it)))))
-                 'face 'italic)
-     (propertize (s-truncate 15 (or (cdr (assoc 'name (assoc 'assignee (assoc 'fields it)))) "N/A"))
-                 'face 'italic)
-     (cdr (assoc 'summary (assoc 'fields it)))))
+    (let-alist it
+      (format
+       "%-7s [%-11s] %-15s - %s"
+       (propertize .key
+                   'face 'bold)
+       (propertize (s-truncate 11 .fields.status.name)
+                   'face 'italic)
+       (propertize (s-truncate 15 (or .fields.assignee.name "N/A"))
+                   'face 'italic)
+       .fields.summary)))
+
+  (defun isamert/jira-assign-ticket-to (issue arg2)
+    (jiralib2-assign-issue issue ))
 
   ;; TODO act on object instead of issue name
   (defun isamert/jira--issue-actions (issue)
-    (with-completing-read-exact-order
-     (let ((action (completing-read (format "Act on %s: " issue) '("Open" "To branch" "To worktree"))))
-       (pcase action
-         ("Open" (isamert/open-jira-issue issue))
-         ("To branch" (isamert/jira-ticket-to-branch issue))
-         ("To worktree" (isamert/jira-ticket-to-worktree issue))))))
+    (cl-loop
+     (with-completing-read-exact-order
+      (let-alist issue
+        (let* ((action
+                (completing-read
+                 (format "Act on %s: " (s-truncate 20 .fields.summary))
+                 '("Open" "To branch" "To worktree" "Assign to..." "[Cancel]"))))
+          (pcase action
+            ("Open"
+             (isamert/open-jira-issue .key)
+             (cl-return))
+            ("To branch"
+             (isamert/jira-ticket-to-branch (concat .key "-" .fields.summary))
+             (cl-return))
+            ("To worktree"
+             (isamert/jira-ticket-to-worktree (concat .key "-" .fields.summary))
+             (cl-return))
+            ("Assign to..."
+             (jiralib2-assign-issue
+              .key
+              (alist-get 'name (isamert/jira--select-user (isamert/jira--select-project)))))
+            ("[Cancel]"
+             (cl-return))))))))
 #+end_src
 
 ** My Android phone and Emacs
@@ -5920,7 +5970,7 @@ Company/work related stuff.
             :username (alist-get 'COUCHBASE_USERNAME config)
             :password (alist-get 'COUCHBASE_PASSWORD config))))
 
-  (cl-defun ty/cbc (cbc-command &key bucket (json t) (select "."))
+  (cl-defun ty/cbc (cbc-command &key bucket (select "."))
     "Run a cbc command on current projects couchbase."
     (let ((config (ty/get-couchbase-config)))
       (isamert/shell-command-to-string
@@ -5932,11 +5982,23 @@ Company/work related stuff.
                (plist-get config :password)
                select))))
 
+  (cl-defun ty/cbq (query &key (select "."))
+    "Run a couchbase query and return the result."
+    (let ((config (ty/get-couchbase-config)))
+      (isamert/shell-command-to-string
+       (format "cbq -q -e %s -c %s -script '%s' | jq '%s'"
+               (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri))))
+               (format "%s:%s"
+                       (plist-get config :username)
+                       (plist-get config :password))
+               query
+               select))))
+
   (defun ty/couchbase-query ()
     (interactive)
     (let* ((config (ty/get-couchbase-config))
            (couchbase-query-command-parameters
-            `("-e" ,(read-string "Address: " (car (s-split "," (plist-get config :uri))))
+            `("-e" ,(read-string "Address: " (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri)))))
               "-c" ,(read-string "username:password: " (format "%s:%s"
                                                                (plist-get config :username)
                                                                (plist-get config :password))))))
@@ -6100,6 +6162,15 @@ Company/work related stuff.
     :command "yarn"
     :args '("start:dev")
     :cwd "~/Workspace/projects/consumers/sponsored-product-data-science-consumer/"
+    :tags '(work consumer)
+    :stop-signal 'sigkill
+    :kill-process-buffer-on-stop t)
+
+  (prodigy-define-service
+    :name "Seller-Ads/SP/Content Invalidation Consumer"
+    :command "yarn"
+    :args '("start:dev")
+    :cwd "~/Workspace/projects/consumers/sponsored-product-content-invalidation-consumer/"
     :tags '(work consumer)
     :stop-signal 'sigkill
     :kill-process-buffer-on-stop t)
