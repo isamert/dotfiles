@@ -170,6 +170,11 @@ Some basic variable and function definitions that will be used in configuration.
            (browse-url-browser-function 'browse-url-default-browser))
        ,@body))
 
+  (defmacro with-completing-read-exact-order (&rest body)
+    "Disable any kind of sorting in completing read."
+    `(let ((selectrum-should-sort nil))
+       ,@body))
+
   (defun isamert/shell-command-to-string (cmd)
     "Like `shell-command-to-string' but only stdout is returned."
     (with-output-to-string
@@ -234,6 +239,73 @@ Some basic variable and function definitions that will be used in configuration.
 
     Also see `isamert/has-clipboard-image' to check if there is one."
     (shell-command (format "%s > %s" (isamert/clipboard-command) file)))
+#+end_src
+*** User input
+#+begin_src emacs-lisp :lexical yes
+  (cl-defun isamert/get-input (&key (mode #'org-mode)
+                                    (init "")
+                                    on-accept
+                                    on-reject
+                                    pre-process)
+    "Display a buffer to user to enter some input."
+    (let* ((buffer (get-buffer-create "*isamert-input*"))
+           (success-handler (lambda ()
+                              (interactive)
+                              (let ((pre-proc-result (when pre-process
+                                                       (with-current-buffer buffer
+                                                         (funcall pre-process))))
+                                    (result (substring-no-properties (buffer-string))))
+                                (kill-buffer buffer)
+                                (if pre-process
+                                    (funcall on-accept result pre-proc-result)
+                                  (funcall on-accept result)))))
+           (reject-handler (lambda ()
+                             (interactive)
+                             (kill-buffer buffer)
+                             (when on-reject
+                               (funcall on-reject)))))
+      (switch-to-buffer buffer)
+      (with-current-buffer buffer
+        (funcall mode)
+        (use-local-map (copy-keymap (current-local-map)))
+        (local-set-key (kbd "C-c C-c") success-handler)
+        (local-set-key (kbd "C-c C-k") reject-handler)
+        (setq header-line-format "Hit `C-c C-c' to save `C-c C-k' to reject.")
+        (insert init))))
+
+  (defun isamert/alist-completing-read (prompt alist)
+    "Like `completing-read' but returns value of the selected key in given ALIST."
+    (alist-get
+     (completing-read prompt alist)
+     alist nil nil #'equal))
+#+end_src
+
+*** String utils
+#+begin_src emacs-lisp
+  ;; Source: https://gist.github.com/jordonbiondo/c4e22b4289be130bc59b
+  (defmacro isamert/s-interpolated (str)
+    "Elisp string interpolation.
+  Uses #{elisp-code} syntax."
+    (let ((exprs nil))
+      (with-temp-buffer
+        (insert str)
+        (goto-char 1)
+        (while (re-search-forward "#{" nil t 1)
+          (let ((here (point))
+                (emptyp (eql (char-after) ?})))
+            (unless  emptyp (push (read (buffer-substring (point) (progn (forward-sexp 1) (point)))) exprs))
+            (delete-region (- here 2) (progn (search-forward "}") (point)))
+            (unless emptyp (insert "%s"))
+            (ignore-errors (forward-char 1))))
+        (append (list 'format (buffer-string)) (reverse exprs)))))
+
+  (defun isamert/s-upcase-until (until s)
+    "Make prefix of a string S uppercase until given char UNTIL.
+  `(isamert/s-upcase-until \"-\" \"aha-hehe\")' -> \"AHA-hehe\""
+    (let ((end (s-index-of until s)))
+      (concat
+       (s-upcase (substring s 0 end))
+       (substring s end))))
 #+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
@@ -613,6 +685,7 @@ Make some temproary windows appear at bottom. This makes buffer management so mu
   (isamert/shackle-window "\\*Org-Babel Error Output\\*" 0.4)
   (isamert/shackle-window "\\*curl error\\*" 0.4)
   (isamert/shackle-window "\\*helpful.*\\*" 0.4)
+  (isamert/shackle-window "\\*Org Select\\*" 0.4)
 #+END_SRC
 
 ** Miscellaneous packages
@@ -852,8 +925,11 @@ Return back to normal mode using ~jk~ from anywhere. It does not play well with 
     :after evil
     :ensure t
     :config
-    (setq evil-escape-key-sequence "jk"
-          evil-escape-delay 0.2)
+    (setq evil-escape-key-sequence "jk")
+    (setq evil-escape-delay 0.2)
+    (add-to-list 'evil-escape-excluded-major-modes 'magit-status-mode)
+    (add-to-list 'evil-escape-excluded-major-modes 'magit-log-mode)
+    (add-to-list 'evil-escape-excluded-major-modes 'magit-diff-mode)
     (evil-escape-mode 1))
 #+END_SRC
 
@@ -1069,6 +1145,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (defconst reality-org "~/Documents/notes/reality.org")
     (defconst projects-org "~/Documents/notes/projects.org")
     (defconst people-org "~/Documents/notes/people.org")
+    (defconst diary-org "~/Documents/notes/diary.org")
     (defconst work-org "~/Documents/notes/trendyol.org")
 
     ;; Put archive files under an archive/ directory
@@ -1117,7 +1194,8 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (shell . t)
      (R . t)
      (typescript . t)
-     (http . t)))
+     (http . t)
+     (dot . t)))
 
   ;; Don't ask permissions for evaluating code blocks
   (setq org-confirm-babel-evaluate nil)
@@ -1195,6 +1273,41 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (add-hook 'org-mode-hook #'isamert/org-set-faces)
 #+END_SRC
 
+** org-capture
+See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this page]] for more detail on template elements.
+
+#+begin_src emacs-lisp
+  (evil-leader/set-key "og" #'org-capture)
+
+  (setq
+   org-capture-templates
+   '(("n" "Quick note" item
+      (file+function bullet-org isamert/org-capture--find-daily-notes)
+      "%a. %?"
+      :prepend t)
+     ("s" "Journal" entry
+      (file+function bullet-org isamert/org-capture--find-daily-summary)
+      "%T ")
+     ("d" "Diary" entry
+      (file diary-org)
+      "* %u\n"
+      :prepend t)
+     ("d" "Diary" entry
+      (file diary-org)
+      "* %{}\n"
+      )
+     ("m" "Meeting note" item
+      (clock)
+      "")))
+
+  (defun isamert/org-capture--find-daily-notes ()
+    (isamert/bullet-focus-today)
+    (re-search-forward "^** Notes" nil t))
+
+  (defun isamert/org-capture--find-daily-summary ()
+    (isamert/bullet-focus-today)
+    (re-search-forward "^** Summary" nil t))
+#+end_src
 ** Presentation (org-tree-slide)
 - =C->= → next heading
 - =C-<= → prev heading
@@ -1908,9 +2021,6 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     ;; For `isamert/persp-switch-to-last'
     (add-hook 'persp-before-switch-functions
               #'isamert/persp-update-last-persp)
-    (add-hook 'persp-before-switch-functions
-              #'isamert/tmux-focus-perspective-window)
-
 
     ;; Glue for persp-el and eyebrowse
     (add-hook 'persp-before-switch-functions
@@ -1942,21 +2052,21 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     (interactive)
     (message ">> Perspectives are opening...")
     (progn
-      (persp-add-new "dotfiles")
-      (persp-switch "dotfiles")
+      (persp-add-new "personal/dotfiles")
+      (persp-switch "personal/dotfiles")
       (find-file "~/Workspace/projects/dotfiles/README.org")
       (eyebrowse-switch-to-window-config-2)
       (find-file "~/Workspace/projects/dotfiles/emacs/README.org"))
     (progn
-      (persp-add-new "planning")
-      (persp-switch "planning")
+      (persp-add-new "personal/planning")
+      (persp-switch "personal/planning")
       (find-file "~/Documents/notes/bullet.org")
       (isamert/bullet-focus-today)
       (eyebrowse-switch-to-window-config-2)
       (find-file "~/Documents/notes/life.org"))
     (progn
-      (persp-add-new "notes")
-      (persp-switch "notes")
+      (persp-add-new "personal/notes")
+      (persp-switch "personal/notes")
       (find-file "~/Documents/notes/engineering.org"))
     (persp-switch "main")
     (message ">> Perspectives are opening... Done."))
@@ -2344,6 +2454,11 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
 #+begin_src emacs-lisp
   (defconst isamert/projects-root "~/Workspace/projects")
 
+  (defun isamert/project-cd-root ()
+    "CD into current project's root."
+    (interactive)
+    (cd (isamert/current-project-root)))
+
   (defun isamert/project-paths ()
     "Find every project dir under `isamert/projects-root'.
   Every folder without a \".git\" folder is considered to be a project group folder."
@@ -2551,10 +2666,16 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
        Class
        Method
        Constructor
+       Property
        Enum
+       Struct
+       Field
        Interface
        Function))
     ;; ^ Local variables etc. pollute imenu, so just show these in imenu
+    ;; Following are the what's left out: Variable Constant String
+    ;; Number Boolean Array Object Key Null Struct Event Operator
+    ;; TypeParameter
 
     (evil-define-key 'normal lsp-mode-map
       "gr" #'lsp-ui-peek-find-references
@@ -2627,6 +2748,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 
   (defun isamert/run-last-command-on-visible-term ()
     (interactive)
+    (save-buffer)
     (unless (isamert/run-last-command-on-visible-vterm)
       (isamert/run-last-command-on-visible-eshell)))
 #+END_SRC
@@ -2693,55 +2815,6 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
                 (completing-read "Run new command" isamert/vterm-run-history))))
       (when cmd
         (setq isamert/vterm-run-history (cons cmd (delete cmd isamert/vterm-run-history))))))
-
-  (defvar isamert/auto-focus-tmux-window t)
-  (defvar isamert/tmux-session nil)
-  (defun isamert/select-tmux-session ()
-    "Select a tmux session for other tmux commands to use."
-    (interactive)
-    (->> (shell-command-to-string "tmux list-sessions")
-      (s-split "\n")
-      (--filter (not (s-blank? it)))
-      (completing-read "TMUX session: ")
-      (s-split ":")
-      (car)
-      (setq isamert/tmux-session)))
-
-  (defun isamert/select-tmux-session-if-needed ()
-    (interactive)
-    (when (not isamert/tmux-session)
-      (isamert/select-tmux-session)))
-
-  (defun isamert/tmux-focus-perspective-window (&optional pname &rest rest)
-    "Focus to the tmux window that has the same name with current perspective.
-  Tmux session is infered from isamert/select-tmux-session"
-    (interactive)
-    (isamert/select-tmux-session-if-needed)
-    (->> (or pname (persp-name (get-current-persp)))
-      (format "tmux list-windows -t%s | grep %s" isamert/tmux-session)
-      (shell-command-to-string)
-      (s-split ":")
-      (car)
-      (format "tmux select-window -t%s:%s" isamert/tmux-session)
-      (shell-command-to-string)))
-
-  (defun isamert/auto-focus-tmux-advice-after (old-function &rest arguments)
-    (apply old-function arguments)
-    (when isamert/auto-focus-tmux-window
-      (isamert/tmux-focus-perspective-window)))
-
-  (defun isamert/auto-focus-tmux-advice-before (old-function &rest arguments)
-    (when isamert/auto-focus-tmux-window
-      (isamert/tmux-focus-perspective-window))
-    (apply old-function arguments))
-
-  ;; Focus to perspectives tmux pane before
-  (advice-add 'isamert/vterm-toggle-dedicated
-              :around #'isamert/auto-focus-tmux-advice-after)
-  (advice-add 'isamert/run-last-command-on-visible-vterm
-              :around #'isamert/auto-focus-tmux-advice-before)
-  (advice-add 'isamert/run-command-on-visible-vterm-with-history
-              :around #'isamert/auto-focus-tmux-advice-before)
 #+end_src
 
 ** moodline modeline
@@ -2826,6 +2899,7 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
     :config
     (setq git-link-open-in-browser t)
     (evil-leader/set-key
+      "glm" 'isamert/git-link-merge-requests
       "gll" 'isamert/git-link-on-branch
       "glh" 'git-link-homepage
       "glc" 'git-link-commit))
@@ -2847,6 +2921,16 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
        nil nil (isamert/git-current-branch))))
     (let ((git-link-default-branch branch))
       (call-interactively 'git-link)))
+
+  (defun isamert/git-link-merge-requests ()
+    "Open MR page."
+    (interactive)
+    (browse-url
+     (let ((homepage (isamert/git-link-homepage)))
+       (cond
+        ((s-contains? "gitlab" homepage) (concat homepage "/-/merge_requests"))
+        ((s-contains? "github" homepage) (concat homepage "/pulls"))
+        (t (user-error "Forge undefined."))))))
 #+end_src
 
 ** bufler
@@ -2996,22 +3080,33 @@ Simple dictonary.
      :name "trendyol"
      :token ty/slack-token
      :cookie ty/slack-cookie
-     :subscribed-channels '(seller-ads-team))
+     :subscribed-channels '(seller-ads-team seller-ads-alert))
 
     (evil-leader/set-key
       "ess" #'slack-select-rooms
       "esS" #'isamert/slack-send-message
-      "eS" #'slack-select-unread-rooms
+      "eS" #'isamert/slack-last-rooms
       "esl" #'isamert/slack-open-last-room
       "esc" #'isamert/slack-copy-last-message)
 
+
+    (defun isamert/slack--add-reaction-to-message (reaction)
+      (defalias (intern (concat "react-" reaction))
+        `(lambda ()
+           (interactive)
+           (slack-buffer-add-reaction-to-message
+            slack-current-buffer
+            ,reaction
+            (slack-get-ts)))))
+
+    (evil-set-initial-state 'slack-mode-map 'normal)
     (evil-define-key 'normal slack-mode-map
       "q" 'kill-this-buffer
 
-      "r" nil
       "rp" 'slack-room-pins-list
 
       "@" 'slack-message-embed-mention
+      "mm" 'slack-message-write-another-buffer
       "md" 'slack-message-delete
       "mc" 'slack-message-embed-channel
       "ml" 'slack-message-copy-link
@@ -3020,10 +3115,9 @@ Simple dictonary.
 
       "mrr" 'slack-message-add-reaction
       "mR" 'slack-message-remove-reaction
-      "mr1" (isamert/slack-add-reaction-to-message "+1")
-      "mr2" (isamert/slack-add-reaction-to-message "ok_hand")
-      "mr3" (isamert/slack-add-reaction-to-message "ultrafastparrot")
-      ;; TODO add some quick message reactions
+      "mr1" (isamert/slack--add-reaction-to-message "+1")
+      "mr2" (isamert/slack--add-reaction-to-message "ok_hand")
+      "mr3" (isamert/slack--add-reaction-to-message "ultrafastparrot")
 
       "[[" 'slack-buffer-goto-prev-message
       "]]" 'slack-buffer-goto-next-message))
@@ -3043,59 +3137,76 @@ Simple dictonary.
                    (slack-mpim-p room)))
       (let* ((sender-name (slack-message-sender-name message team))
              (room-name (slack-room-name room team))
-             (title (format "%s - %s" room-name sender-name)))
-        (add-to-list
-         'isamert/slack--last-messages
+             (title (format "%s - %s" room-name sender-name))
+             (msg-str (isamert/slack--stringify-message
+                       (list :message message :team team))))
+        (push
          (list :room room
                :team team
                :message message
                :sender-name sender-name
-               :room-name room-name))
+               :room-name room-name
+               :title title
+               :message-string msg-str)
+         isamert/slack--last-messages)
         (alert
-         (isamert/slack-stringify-message
-          (isamert/slack-last-message))
+         msg-str
          :title title
          :category "slack")
-        (message "%s // %s" title message))))
+        (message
+         "%s // %s"
+         title
+         msg-str))))
 
   (defun isamert/slack-copy-last-message ()
     "Copy the contents of the last received message as text."
     (interactive)
     (kill-new
-     (isamert/slack-stringify-message
-      (isamert/slack-last-message))))
+     (isamert/slack--stringify-message
+      (isamert/slack--last-message))))
 
   (defun isamert/slack-open-last-room ()
     "Open last room that got new message."
     (interactive)
     (slack-room-display
-     (plist-get (isamert/slack-last-message) :room)
-     (plist-get (isamert/slack-last-message) :team)))
+     (plist-get (isamert/slack--last-message) :room)
+     (plist-get (isamert/slack--last-message) :team)))
 
-  ;; TODO
   (defun isamert/slack-last-rooms ()
     "List and open rooms that had new messages in them recently."
-    (let ((rooms (--map (cons it)))))
-    (completing-read))
+    (interactive)
+    (with-completing-read-exact-order
+     (let* ((rooms
+             (-uniq
+              (--map
+               (cons (plist-get it :room-name)
+                     (list :room (plist-get it :room)
+                           :team (plist-get it :team)))
+               isamert/slack--last-messages)))
+            (selected (completing-read "Select room: " rooms))
+            (selected-room (cdr (assoc-string selected rooms))))
+       (slack-room-display
+        (plist-get selected-room :room)
+        (plist-get selected-room :team)))))
 
   (defun isamert/slack-send-message (msg)
     "Send given MSG or selected region as message to interactively
-  selected user."
+    selected user."
     (interactive
      (list
       (if (use-region-p)
           (buffer-substring-no-properties (region-beginning) (region-end))
         (read-string "Enter message: "))))
     "Send MSG to interactively selected room."
-    (-let* (((room team) (isamert/slack-select-room)))
+    (-let* (((room team) (isamert/slack--select-room)))
       (slack-message-send-internal
        msg room team)))
 
   (defun isamert/slack-clipboard-image-upload ()
     "Uploads png image from clipboard.
 
-  The default `slack-clipboard-image-upload' was not working
-  properly in MacOS."
+    The default `slack-clipboard-image-upload' was not working
+    properly in MacOS."
     (interactive)
     (unless (isamert/has-clipboard-image)
       (user-error "No image in clipboard."))
@@ -3103,27 +3214,19 @@ Simple dictonary.
       (isamert/save-clipboard-image-to-file file)
       (slack-file-upload file "png" "image.png")))
 
+  ;;
   ;; Utils/internals
+  ;;
 
-
-  (defun isamert/slack-last-message ()
+  (defun isamert/slack--last-message ()
     (car isamert/slack--last-messages))
 
+  (defun isamert/slack--stringify-message (msg)
+    (let ((message (plist-get msg :message))
+          (team (plist-get msg :team)))
+      (slack-message-to-alert message team)))
 
-  (defmacro isamert/slack-add-reaction-to-message (reaction)
-    `(lambda ()
-       (interactive)
-       (slack-buffer-add-reaction-to-message
-        slack-current-buffer
-        ,reaction
-        (slack-get-ts))))
-
-  (defun isamert/slack-stringify-message (msg)
-    (slack-message-to-alert
-     (plist-get msg :message)
-     (plist-get msg :team)))
-
-  (defun isamert/slack-select-room ()
+  (defun isamert/slack--select-room ()
     "Select interactively and return (room team) pair."
     (let* ((team (slack-team-select))
            (room (slack-room-select
@@ -3445,6 +3548,7 @@ Manage media and streams through =completing-read=.
     :config
     (load "radio-channels")
     (setq empv-radio-channels isamert/radio-channels)
+    (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music")
     (setq empv-invidious-instance "https://ytprivate.com/api/v1")
     ;; ^ alt: https://invidious.exonip.de/api/v1
@@ -3457,43 +3561,37 @@ Manage media and streams through =completing-read=.
       "erR" #'empv-play-random-channel
       "erv" #'empv-toggle-video
       "ery" #'consult-empv-youtube
+      "erY" #'consult-empv-youtube-tabulated
       "erk" #'empv-display-current
-      "erl" #'isamert/empv-log-current-radio-song-name
+      "erl" #'empv-log-current-radio-song-name
       "era" #'empv-play-audio
       "erA" #'empv-play-audio-multiple
       "ers" #'empv-exit))
-
-  (defun isamert/empv-log-current-radio-song-name ()
-    "Log current radio song name to songs.org."
-    (interactive)
-    (empv--cmd
-     'get_property 'metadata
-     (when-let ((title (alist-get 'icy-title it)))
-       (shell-command (format "echo -e '* %s\n- Radio channel :: %s' >> ~/Documents/notes/songs.org" title (car empv-current-radio-channel)))
-       (message "%s" title))))
+  ;; (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
 
   (defun isamert/export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."
     (interactive
      (list
       (read-file-name
-       "Where to save the .vcf file?"
+       "Where to save the .m3u file?"
        "~/Documents/sync/"
        "radiolist.m3u")))
     (with-temp-file file
-      (->> isamert/radio-channels
-        (--map
-         (format
-          "#EXTINF:0, %s\n%s"
-          (car it)
-          ;; Replace http:// with icyx://, because VLC on Android can't
-          ;; retrieve song name if the stream is on http://
-          (if (s-contains? "radcap.ru" (car it))
-              (s-replace "http://" "icyx://" (cdr it))
-            (cdr it))))
-        (--reduce (format "%s\n%s" acc it))
-        (s-prepend "#EXTM3U\n")
-        (insert))))
+      (->>
+       isamert/radio-channels
+       (--map
+        (format
+         "#EXTINF:0, %s\n%s"
+         (car it)
+         ;; Replace http:// with icyx://, because VLC on Android can't
+         ;; retrieve song name if the stream is on http://
+         (if (s-contains? "radcap.ru" (car it))
+             (s-replace "http://" "icyx://" (cdr it))
+           (cdr it))))
+       (--reduce (format "%s\n%s" acc it))
+       (s-prepend "#EXTM3U\n")
+       (insert))))
 #+end_src
 
 ** orgmdb (movies & shows)
@@ -4207,12 +4305,91 @@ Mostly for editing tridactyl and sometimes real vimrc.
 #+end_src
 
 * Misc functions
+** tmux integration
+This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generally use Emacs commands instead of command line tools and if I ever need to do something in terminal I just use eshell. Besides this, I also like to use have a tmux instance working, for non-ephemeral stuff. I generally use a dropdown terminal (which may or may not be inside Emacs) to access the tmux instance. Here is how the integration goes:
+
+- I tend to name my perspectives in the following format: =<namespace>/<stuff>=.
+- Whenever I change to a different perspective, the code below changes the tmux session to session named =<namespace>= and tmux window to the window named =<stuff>=.
+
+#+begin_src emacs-lisp
+  (defcustom isamert/auto-focus-tmux-window t
+    "Should automatically sync Emacs and Tmux?")
+
+  (defvar isamert/tmux-session nil)
+
+  (defun isamert/select-tmux-session ()
+    "Select a tmux session for other tmux commands to use."
+    (interactive)
+    (->>
+     (shell-command-to-string "tmux list-sessions")
+     (s-split "\n")
+     (--filter (not (s-blank? it)))
+     (completing-read "TMUX session: ")
+     (s-split ":")
+     (car)
+     (setq isamert/tmux-session)))
+
+  (defun isamert/select-tmux-session-if-needed ()
+    (interactive)
+    (when (not isamert/tmux-session)
+      (isamert/select-tmux-session)))
+
+  (defun isamert/tmux-focus-window (window-name)
+    "Focus given WINDOW-NAME in `isamert/tmux-session'."
+    (interactive)
+    (isamert/select-tmux-session-if-needed)
+    (shell-command-to-string (format "tmux switch -t%s" isamert/tmux-session))
+    (->>
+     window-name
+     (format "tmux list-windows -t%s | grep %s" isamert/tmux-session)
+     (shell-command-to-string)
+     (s-split ":")
+     (car)
+     (format "tmux select-window -t%s:%s" isamert/tmux-session)
+     (shell-command-to-string)))
+
+  (defun isamert/tmux-focus-perspective-window (&optional pname &rest rest)
+    "Focus to the tmux window that has the same name with current perspective.
+  Tmux session is infered from isamert/select-tmux-session"
+    (interactive)
+    (setq pname (or pname (persp-name (get-current-persp))))
+    (when isamert/auto-focus-tmux-window
+      (cond
+       ((s-contains? "/" pname)
+        (let* ((data (s-split "/" pname))
+               (isamert/tmux-session (car data))
+               (window-name (nth 2 data)))
+          (isamert/tmux-focus-window (cadr (s-split "/" pname)))))
+       (t
+        (isamert/tmux-focus-window pname)))))
+
+  (defun isamert/auto-focus-tmux-advice-after (old-function &rest arguments)
+    (apply old-function arguments)
+    (when isamert/auto-focus-tmux-window
+      (isamert/tmux-focus-perspective-window)))
+
+  (defun isamert/auto-focus-tmux-advice-before (old-function &rest arguments)
+    (when isamert/auto-focus-tmux-window
+      (isamert/tmux-focus-perspective-window))
+    (apply old-function arguments))
+
+  ;; Required hooks and advices
+
+  (add-hook 'persp-before-switch-functions
+            #'isamert/tmux-focus-perspective-window)
+  (advice-add 'isamert/vterm-toggle-dedicated
+              :around #'isamert/auto-focus-tmux-advice-after)
+  (advice-add 'isamert/run-last-command-on-visible-vterm
+              :around #'isamert/auto-focus-tmux-advice-before)
+  (advice-add 'isamert/run-command-on-visible-vterm-with-history
+              :around #'isamert/auto-focus-tmux-advice-before)
+#+end_src
 ** Git and GitLab extras
 #+begin_src emacs-lisp
   (evil-leader/set-key
-    "glmb" 'isamert/gitlab-list-current-branch-merge-requests
-    "glmm" 'isamert/gitlab-list-my-merge-requests
-    "glma" 'isamert/gitlab-list-group-merge-requests)
+    "gmb" 'isamert/gitlab-list-current-branch-merge-requests
+    "gmm" 'isamert/gitlab-list-my-merge-requests
+    "gma" 'isamert/gitlab-list-group-merge-requests)
 
   ;;
   ;; Git extras
@@ -4220,7 +4397,6 @@ Mostly for editing tridactyl and sometimes real vimrc.
 
   (defun isamert/git-current-branch ()
     (s-trim (shell-command-to-string "git rev-parse --abbrev-ref HEAD")))
-
 
   (defun isamert/git-get-config (conf)
     (->>
@@ -4269,26 +4445,32 @@ Mostly for editing tridactyl and sometimes real vimrc.
      (s-trim)
      (url-hexify-string)))
 
-  (defun isamert/gitlab-request (endpoint &rest params)
+  (cl-defun isamert/gitlab-request
+      (endpoint
+       &rest params
+       &key (req-type "GET") (req-headers '()) (req-data nil)
+       &allow-other-keys)
     (let (json
           (json-object-type 'hash-table)
           (json-array-type #'list)
           (json-key-type 'symbol))
-      (dolist (key '(:type))
+
+      ;; Remove request related items from params list
+      (dolist (key '(:req-type :req-headers :req-data))
         (cl-remf params key))
+
       (request
-        (s-replace
-         "#{project}"
-         ;; TODO Eval the following lazyly?
-         (isamert/gitlab-project-path)
-         (format "%s/api/v4/%s" isamert/gitlab-host endpoint))
-        :type (or (plist-get params :type) "GET")
-        :headers `((Authorization . ,(format "Bearer %s" isamert/gitlab-token)))
+        (thread-last (format "%s/api/v4/%s" isamert/gitlab-host endpoint)
+          (s-replace "#{group}" (url-hexify-string isamert/gitlab-group))
+          (s-replace "#{project}" (isamert/gitlab-project-path)))
+        :type req-type
+        :headers `((Authorization . ,(format "Bearer %s" isamert/gitlab-token)) ,@req-headers)
         :parser #'json-read
         :success (cl-function
                   (lambda (&key data &allow-other-keys)
                     (setq json data)))
         :sync t
+        :data (transient-plist-to-alist req-data)
         ;; TODO Maybe roll my own plist-to-alist function
         :params (transient-plist-to-alist params))
       json))
@@ -4317,17 +4499,50 @@ Mostly for editing tridactyl and sometimes real vimrc.
           :scope 'assigned_to_me
           :state 'opened))))
 
-
   (defun isamert/gitlab-list-group-merge-requests ()
     "List all open MRs that belongs to `isamert/gitlab-group'."
     (interactive)
     (isamert/gitlab--select-mr-and-apply-action
      (isamert/gitlab-request
-      (format "groups/%s/merge_requests" (url-hexify-string isamert/gitlab-group))
+      "groups/#{group}/merge_requests"
       :scope 'all
       :state 'opened)))
 
+  (defun isamert/gitlab-create-merge-request ()
+    "Create an MR interactively."
+    (interactive)
+    (isamert/gitlab--open-web-url
+     (isamert/gitlab-request
+      "projects/#{project}/merge_requests"
+      :req-type "POST"
+      :req-data (list :source_branch (completing-read
+                                      "Source branch: "
+                                      (vc-git-branches)
+                                      nil nil (isamert/git-current-branch))
+                      :target_branch (completing-read
+                                      "Target branch: "
+                                      (vc-git-branches)
+                                      nil nil "master")
+                      :title (read-string "MR Title: "
+                                          (s-trim (shell-command-to-string "git log -1 --pretty=%B")))
+                      ;; TODO Get description (and maybe title) from a
+                      ;; dedicated buffer like how magit commit asks
+                      ;; input from a user
+                      :description (read-string "Description: " (format "Closes %s" (isamert/git-current-branch)))
+                      :remove_source_branch t))))
+
+  (defun isamert/gitlab-select-project ()
+    (interactive)
+    (isamert/gitlab--select-project-and-apply-action
+     (isamert/gitlab-request
+      "groups/#{group}/projects"
+      :with_shared 'false
+      :include_subgroups 'true
+      :per_page 100)))
+
+  ;;
   ;; Internal
+  ;;
 
   (defun isamert/gitlab--open-web-url (it)
     (browse-url (gethash 'web_url it)))
@@ -4335,7 +4550,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (defun isamert/gitlab--rebase-merge-request (it)
     (isamert/gitlab-request
      (format "projects/#{project}/merge_requests/%s/rebase" (gethash 'iid it))
-     :type "PUT"))
+     :req-type "PUT"))
 
   (defun isamert/gitlab--mr-format-title (mr)
     (format "%s, [%s], by %s"
@@ -4364,14 +4579,25 @@ Mostly for editing tridactyl and sometimes real vimrc.
        (isamert/gitlab--merge-request-actions it))))
 
   (defun isamert/gitlab--merge-request-actions (mr)
-    (let* ((selectrum-should-sort nil)
-           (action (completing-read
+    (with-completing-read-exact-order
+     (let ((action (completing-read
                     "Select an action: "
                     '("Open page"
                       "Rebase"))))
-      (pcase action
-        ("Open page" (isamert/gitlab--open-web-url mr))
-        ("Rebase" (isamert/gitlab--rebase-merge-request mr)))))
+       (pcase action
+         ("Open page" (isamert/gitlab--open-web-url mr))
+         ("Rebase" (isamert/gitlab--rebase-merge-request mr))))))
+
+  ;; TODO actions
+  (defun isamert/gitlab--select-project-and-apply-action (projects)
+    (let ((project-alist (--map
+                          (cons (gethash 'name_with_namespace it) it)
+                          projects)))
+      (completing-read
+       "Project: "
+       (--map
+        (gethash 'name_with_namespace it)
+        projects))))
 
   ;;
   ;; Gitlab config
@@ -4381,26 +4607,11 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (setq isamert/gitlab-token ty/gitlab-token)
   (setq isamert/gitlab-group ty/gitlab-group)
 #+end_src
+
 ** Jira
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :lexical yes
   (evil-leader/set-key "oj" #'isamert/open-jira-issue-at-point)
   (evil-leader/set-key "ej" #'isamert/jira-list-issues)
-
-  ;;
-  ;; Actions for JIRA items using embark
-  ;;
-
-  ;; TODO Remove embark actions and create completing-read menu for actions
-
-  (require 'embark)
-
-  (embark-define-keymap isamert/embark-jira-actions
-    "Actions for JIRA issues."
-    ("o" isamert/open-jira-issue)
-    ("b" isamert/jira-ticket-to-branch)
-    ("W" isamert/jira-ticket-to-worktree))
-
-  (add-to-list 'embark-keymap-alist '(isamert/jira . isamert/embark-jira-actions))
 
   ;;
   ;; Install required JIRA client
@@ -4455,7 +4666,10 @@ Mostly for editing tridactyl and sometimes real vimrc.
      'isamert/jira-new-issues)
     (isamert/deserialize-from-file
      "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
-     'isamert/jira-current-sprint-issues))
+     'isamert/jira-current-sprint-issues)
+    (isamert/deserialize-from-file
+     "~/.emacs.d/.cache/isamert-jira--users"
+     'isamert/jira--users))
 
   ;; Functions
 
@@ -4511,18 +4725,6 @@ Mostly for editing tridactyl and sometimes real vimrc.
      "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
      isamert/jira-current-sprint-issues))
 
-  (defun isamert/jira--format-ticket-name (it)
-    "Format ticket name for displaying in completing-read window."
-    (format
-     "%-7s [%-11s] %-15s - %s"
-     (propertize (cdr (assoc 'key it))
-                 'face 'bold)
-     (propertize (s-truncate 11 (cdr (assoc 'name (assoc 'status (assoc 'fields it)))))
-                 'face 'italic)
-     (propertize (s-truncate 15 (or (cdr (assoc 'name (assoc 'assignee (assoc 'fields it)))) "N/A"))
-                 'face 'italic)
-     (cdr (assoc 'summary (assoc 'fields it)))))
-
   (defun isamert/jira-list-issues (&optional arg)
     (interactive "P")
     (when arg
@@ -4532,13 +4734,13 @@ Mostly for editing tridactyl and sometimes real vimrc.
                    ("New issues" isamert/jira-new-issues)
                    ("Current Sprint" isamert/jira-current-sprint-issues))
       (--map (cons (isamert/jira--format-ticket-name it) it))
-      ((lambda (items) (consult--read items :category 'isamert/jira)))
-      (isamert/open-jira-issue)))
+      (isamert/alist-completing-read "Select ticket: ")
+      (isamert/jira--issue-actions)))
 
   (defun isamert/jira-ticket-to-branch (issue-name)
     "Create a new branch from given ISSUE-NAME and switch to it."
     (interactive "sIssue name: ")
-    (let ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name)))
+    (let ((branch-name (isamert/jira--create-branch-name-from-ticket issue-name)))
       (message "Updating...")
       (magit-fetch-all nil)
       (message "Creating branch...")
@@ -4548,7 +4750,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
 
   (defun isamert/jira-ticket-to-worktree (issue-name)
     (interactive "sIssue name: ")
-    (let* ((branch-name (isamert/jira-create-branch-name-from-ticket issue-name))
+    (let* ((branch-name (isamert/jira--create-branch-name-from-ticket issue-name))
            (worktree (expand-file-name (format "%s/%s" isamert/git-worktrees-root (s-replace "/" "-" branch-name)))))
       (message "Updating...")
       (magit-fetch-all nil)
@@ -4563,7 +4765,68 @@ Mostly for editing tridactyl and sometimes real vimrc.
       (vc-refresh-state)
       (message "Currently on %s." (magit-get-current-branch))))
 
-  (defun isamert/jira-create-branch-name-from-ticket (issue-name)
+  (defun isamert/jira-create-ticket ()
+    (interactive)
+    (let ((project (isamert/jira--select-project))
+          (issue-type (isamert/jira--select-issue-type))
+          (summary (read-string "Issue summary: ")))
+      (isamert/get-input
+       :init (format "* %s\n:PROPERTIES:\n:PROJECT-ID: %s\n:ISSUE-TYPE: %s\n:END:\n" summary project issue-type)
+       :pre-process (lambda ()
+                      (goto-char (point-min))
+                      (let* ((all (org-entry-properties nil 'standard))
+                             (rest (--remove (-contains? '("CATEGORY" "ISSUE-TYPE" "PROJECT-ID") (car it)) all)))
+                        (list
+                         :summary (org-entry-get nil "ITEM")
+                         :project-id (org-entry-get nil "PROJECT-ID")
+                         :type (org-entry-get nil "ISSUE-TYPE")
+                         :rest rest)))
+       :on-accept (lambda (description props)
+                    (setq description (org-export-string-as description 'confluence t))
+                    (message "%s" props)
+                    (thread-last
+                        (apply #'jiralib2-create-issue
+                               `(,(plist-get props :project-id)
+                                 ,(plist-get props :type)
+                                 ,(plist-get props :summary)
+                                 ,description
+                                 ,@(plist-get props :rest)))
+                      (isamert/jira--issue-actions))))))
+
+  ;;
+  ;; Utility
+  ;;
+
+  (defun isamert/jira--get-users ()
+    (unless isamert/jira--users
+      (setq
+       isamert/jira--users
+       (mapcar
+        (lambda (project) (cons project (jiralib2-get-users project)))
+        (mapcar #'car isamert/jira-projects)))
+
+      (isamert/serialize-into-file
+       "~/.emacs.d/.cache/isamert-jira--users"
+       isamert/jira--users))
+    isamert/jira--users)
+
+
+  (defun isamert/jira--select-user (project)
+    (thread-last (isamert/jira--get-users)
+      (alist-get (isamert/jira--select-project))
+      (--map (cons (alist-get 'name it) it))
+      (isamert/alist-completing-read "Select a user: ")))
+
+  (defun isamert/jira--select-project ()
+    "Interactively select one of enrolled projects."
+    (if (eq (length isamert/jira-projects) 1)
+        (caar isamert/jira-projects)
+      (completing-read "Select project: " isamert/jira-projects)))
+
+  (defun isamert/jira--select-issue-type ()
+    (completing-read "Issue type: " '("Story" "Bug")))
+
+  (defun isamert/jira--create-branch-name-from-ticket (issue-name)
     "Create a branch name from given Jira ISSUE-NAME"
     (thread-last issue-name
       (s-replace-all '((" " . "-") (":" . "-") ("\"" . "") ("/" . "-") ("&" . "") ("(" . "-") (")" . "-")))
@@ -4574,13 +4837,47 @@ Mostly for editing tridactyl and sometimes real vimrc.
       (s-prepend isamert/jira-feature-branch-prefix)
       (read-string "Branch name: ")))
 
-  ;; Utility
+  (defun isamert/jira--format-ticket-name (it)
+    "Format ticket name for displaying in completing-read window."
+    (let-alist it
+      (format
+       "%-7s [%-11s] %-15s - %s"
+       (propertize .key
+                   'face 'bold)
+       (propertize (s-truncate 11 .fields.status.name)
+                   'face 'italic)
+       (propertize (s-truncate 15 (or .fields.assignee.name "N/A"))
+                   'face 'italic)
+       .fields.summary)))
 
-  (defun isamert/s-upcase-until (until s)
-    (let ((end (s-index-of until s)))
-      (concat
-       (s-upcase (substring s 0 end))
-       (substring s end))))
+  (defun isamert/jira-assign-ticket-to (issue arg2)
+    (jiralib2-assign-issue issue ))
+
+  ;; TODO act on object instead of issue name
+  (defun isamert/jira--issue-actions (issue)
+    (cl-loop
+     (with-completing-read-exact-order
+      (let-alist issue
+        (let* ((action
+                (completing-read
+                 (format "Act on %s: " (s-truncate 20 .fields.summary))
+                 '("Open" "To branch" "To worktree" "Assign to..." "[Cancel]"))))
+          (pcase action
+            ("Open"
+             (isamert/open-jira-issue .key)
+             (cl-return))
+            ("To branch"
+             (isamert/jira-ticket-to-branch (concat .key "-" .fields.summary))
+             (cl-return))
+            ("To worktree"
+             (isamert/jira-ticket-to-worktree (concat .key "-" .fields.summary))
+             (cl-return))
+            ("Assign to..."
+             (jiralib2-assign-issue
+              .key
+              (alist-get 'name (isamert/jira--select-user (isamert/jira--select-project)))))
+            ("[Cancel]"
+             (cl-return))))))))
 #+end_src
 
 ** My Android phone and Emacs
@@ -4996,9 +5293,12 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "Focus todays header.
   If it does not exists, create it."
     (interactive)
-    (let ((today (format-time-string "%Y-%m-%d")))
+    (let ((today (if (<= (string-to-number (format-time-string "%H")) 3)
+                     (isamert/date "yesterday")
+                   (format-time-string "%Y-%m-%d"))))
       (when (not (isamert/bullet-focus-a-day today))
         (isamert/bullet-create-a-day today))))
+
 
   (defun isamert/bullet-focus-yesterday ()
     "Focus yesterdays header."
@@ -5009,52 +5309,21 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   ;; Focus non-day
   ;;
 
-  (defun isamert/bullet-get-all-non-day-headers ()
-    "Return all non-day header names.
-  This function assumes all the non-day headers are at the top."
-    (save-excursion
-      (save-match-data
-        (let ((headers '()))
-          (widen)
-          (goto-char 0)
-          (cl-loop
-           (when (not (re-search-forward "^* \\(.*\\)" nil t))
-             (cl-return))
-           (if (s-prefix? "[" (match-string 1))
-               (cl-return)
-             (push (match-string 1) headers)))
-          headers))))
-
-  (defun isamert/bullet-focus-non-day-header (text)
+  (defun isamert/bullet-focus-non-day-header ()
     "Interactively select and focus a non-day header."
-    (interactive
-     (thread-last (isamert/bullet-get-all-non-day-headers)
-       (completing-read "Select header: ")
-       (list)))
-    (widen)
-    (goto-char (org-find-exact-headline-in-buffer text))
-    (org-narrow-to-subtree))
+    (interactive)
+    (save-match-data
+      (widen)
+      (goto-char 0)
+      (re-search-forward "^\\*+ \\[[0-9]+-" nil t)
+      (narrow-to-region (point-min) (point-at-bol))
+      (consult-org-heading)
+      (widen)
+      (org-toggle-narrow-to-subtree)))
 
   ;;
   ;; Template utils
   ;;
-
-  ;; Source: https://gist.github.com/caiorss/49585e022d8462db5e62
-  (defmacro isamert/s-interpolated (str)
-    "Elisp string interpolation.
-  Uses #{elisp-code} syntax."
-    (let ((exprs nil))
-      (with-temp-buffer
-        (insert str)
-        (goto-char 1)
-        (while (re-search-forward "#{" nil t 1)
-          (let ((here (point))
-                (emptyp (eql (char-after) ?})))
-            (unless  emptyp (push (read (buffer-substring (point) (progn (forward-sexp 1) (point)))) exprs))
-            (delete-region (- here 2) (progn (search-forward "}") (point)))
-            (unless emptyp (insert "%s"))
-            (ignore-errors (forward-char 1))))
-        (append (list 'format (buffer-string)) (reverse exprs)))))
 
   (defmacro isamert/when-weekday (template &rest template-args)
     `(when (<= (isamert/u) 5)
@@ -5196,6 +5465,9 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (delete-char 1)
       (org-table-align)))
 #+end_src
+
+#+RESULTS:
+: org-dblock-write:daily-summary
 
 ** Scratch/temporary buffers in side windows
 Here I define two important functions and their helpers.  The following functions are pretty useful for quick note taking or evaluating elisp. Having these buffers in a side window makes them immune to some window commands which is what I want.
@@ -5489,17 +5761,17 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   (defun isamert/eksi-gundem-sirali ()
     "Eksi gundemini entry sayisina gore sirala ve `completing-read' yap."
     (interactive)
-    (let* ((selectrum-should-sort nil)
-           (results (->> (shell-command-to-string "curl --silent https://eksisozluk.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq")
-                      (s-split "\n")
-                      (--map (s-split "|||" it))
-                      (--map `(,(car it) . ,(cadr it))))))
-      (->> results
-        (completing-read "Baslik: ")
-        (funcall (-flip 'assoc-string) results)
-        (cdr)
-        (format "https://eksisozluk.com/%s")
-        (browse-url))))
+    (with-completing-read-exact-order
+     (let ((results (->> (shell-command-to-string "curl --silent https://eksisozluk.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq")
+                         (s-split "\n")
+                         (--map (s-split "|||" it))
+                         (--map `(,(car it) . ,(cadr it))))))
+       (->> results
+            (completing-read "Baslik: ")
+            (funcall (-flip 'assoc-string) results)
+            (cdr)
+            (format "https://eksisozluk.com/%s")
+            (browse-url)))))
 #+end_src
 ** insert uuid
 #+begin_src emacs-lisp
@@ -5520,7 +5792,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     :keymap (make-sparse-keymap))
 
   (evil-define-key 'normal isamert/shell-command-mode-map
-    (kbd "R") #'isamert/shell-command-mode-rerun-command)
+    (kbd "gr") #'isamert/shell-command-mode-rerun-command)
 
   (defun isamert/shell-command-mode-rerun-command ()
     "Re-run the shell command."
@@ -5633,17 +5905,14 @@ Company/work related stuff.
     "Insert the JIRA ticket number in front of the commit message.
   If it already exists (like for example when you use --amend),
   does not do anything."
-    (let* ((issue-prefix (--> (magit-get-current-branch)
-                           (s-chop-prefix "feature/" it)
-                           (split-string it "-")
-                           (string-join (-take 2 it) "-")
-                           (format "%s - " it)))
-           (issue-prefix-exists (save-excursion
-                                  (goto-char (point-min))
-                                  (search-forward issue-prefix nil t))))
-      (when (not issue-prefix-exists)
-        (goto-char (point-min))
-        (insert issue-prefix))))
+    (when-let (ticket-no (s-match "\\w+-[0-9]+" (magit-get-current-branch)))
+      (let* ((issue-prefix (format "%s - " (car ticket-no)))
+             (issue-prefix-exists (save-excursion
+                                    (goto-char (point-min))
+                                    (search-forward issue-prefix nil t))))
+        (when (not issue-prefix-exists)
+          (goto-char (point-min))
+          (insert issue-prefix)))))
 
   (when (company/is-company)
     (add-hook 'git-commit-setup-hook 'company/git-commit-message-setup))
@@ -5701,7 +5970,7 @@ Company/work related stuff.
             :username (alist-get 'COUCHBASE_USERNAME config)
             :password (alist-get 'COUCHBASE_PASSWORD config))))
 
-  (cl-defun ty/cbc (cbc-command &key bucket (json t) (select "."))
+  (cl-defun ty/cbc (cbc-command &key bucket (select "."))
     "Run a cbc command on current projects couchbase."
     (let ((config (ty/get-couchbase-config)))
       (isamert/shell-command-to-string
@@ -5713,11 +5982,23 @@ Company/work related stuff.
                (plist-get config :password)
                select))))
 
+  (cl-defun ty/cbq (query &key (select "."))
+    "Run a couchbase query and return the result."
+    (let ((config (ty/get-couchbase-config)))
+      (isamert/shell-command-to-string
+       (format "cbq -q -e %s -c %s -script '%s' | jq '%s'"
+               (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri))))
+               (format "%s:%s"
+                       (plist-get config :username)
+                       (plist-get config :password))
+               query
+               select))))
+
   (defun ty/couchbase-query ()
     (interactive)
     (let* ((config (ty/get-couchbase-config))
            (couchbase-query-command-parameters
-            `("-e" ,(read-string "Address: " (car (s-split "," (plist-get config :uri))))
+            `("-e" ,(read-string "Address: " (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri)))))
               "-c" ,(read-string "username:password: " (format "%s:%s"
                                                                (plist-get config :username)
                                                                (plist-get config :password))))))
@@ -5881,6 +6162,15 @@ Company/work related stuff.
     :command "yarn"
     :args '("start:dev")
     :cwd "~/Workspace/projects/consumers/sponsored-product-data-science-consumer/"
+    :tags '(work consumer)
+    :stop-signal 'sigkill
+    :kill-process-buffer-on-stop t)
+
+  (prodigy-define-service
+    :name "Seller-Ads/SP/Content Invalidation Consumer"
+    :command "yarn"
+    :args '("start:dev")
+    :cwd "~/Workspace/projects/consumers/sponsored-product-content-invalidation-consumer/"
     :tags '(work consumer)
     :stop-signal 'sigkill
     :kill-process-buffer-on-stop t)
