@@ -1477,6 +1477,37 @@ Insert links/images more intelligently,
 
 #+end_src
 
+** Renaming files under cursor
+#+begin_src emacs-lisp
+  (defun isamert/org-rename-file-at-point ()
+    "Interactively rename the file under cursor and update the link."
+    (interactive)
+    (let* ((link (org-element-context))
+           (type (org-element-property :type link))
+           (path (org-element-property :path link))
+           (begin (org-element-property :begin link))
+           (end (org-element-property :end link))
+           (cbegin (org-element-property :contents-begin link))
+           (cend (org-element-property :contents-end link))
+           content)
+      (unless (equal type "file")
+        (user-error "Link is not a file"))
+      (when (and cbegin cend)
+        (setq content (format "[%s]" (buffer-substring-no-properties cbegin cend))))
+      (let ((use-relative? (not (file-name-absolute-p path)))
+            (fname (read-file-name "New name: "
+                                   (expand-file-name
+                                    (file-name-directory path)))))
+        (when use-relative?
+          (setq fname (concat "./" (file-relative-name fname))))
+        (save-excursion
+          (rename-file path fname)
+          (delete-region begin end)
+          (insert (format "[[file:%s]%s]"
+                          fname
+                          (or content "")))))))
+#+end_src
+
 ** Project management
 I'm doing all of my project management in org-mode. Here you can find some supplementary functionality that makes project management within org-mode easy.
 
