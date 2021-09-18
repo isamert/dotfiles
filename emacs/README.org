@@ -3,6 +3,7 @@
 #+BABEL: :cache yes
 #+PROPERTY: header-args :tangle yes :noweb yes
 #+STARTUP: overview
+#+OPTIONS: toc:3
 
 * Introduction
 This is my emacs configuration. My main focus is sanity. I'm a person who get frustrated pretty easily. So instead of optimizing the time spent on doing things, I try to find ways of doing things that does not make me frustrated. Most of the time you get speed boost as a byproduct.
@@ -1147,6 +1148,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (defconst projects-org "~/Documents/notes/projects.org")
     (defconst people-org "~/Documents/notes/people.org")
     (defconst diary-org "~/Documents/notes/diary.org")
+    (defconst snippets-org "~/Documents/notes/snippets.org")
     (defconst work-org "~/Documents/notes/trendyol.org")
 
     ;; Put archive files under an archive/ directory
@@ -1297,20 +1299,20 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
       (file+function bullet-org isamert/org-capture--find-daily-notes)
       "%a. %?"
       :prepend t)
-     ("s" "Journal" entry
+     ("j" "Journal" entry
       (file+function bullet-org isamert/org-capture--find-daily-summary)
       "%T ")
      ("d" "Diary" entry
       (file diary-org)
       "* %u\n"
       :prepend t)
-     ("d" "Diary" entry
-      (file diary-org)
-      "* %{}\n"
-      )
      ("m" "Meeting note" item
-      (clock)
-      "")))
+      (clock))
+     ("s" "Snippets")
+     ("ss" "Snippet" entry
+      (file+function snippets-org isamert/org-capture--find-snippet))
+     ("so" "One liner snippet" item
+      (file+function snippets-org isamert/org-capture--find-snippet-one-liner))))
 
   (defun isamert/org-capture--find-daily-notes ()
     (isamert/bullet-focus-today)
@@ -1319,6 +1321,23 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
   (defun isamert/org-capture--find-daily-summary ()
     (isamert/bullet-focus-today)
     (re-search-forward "^** Summary" nil t))
+
+  (defun isamert/org-capture--find-snippet ()
+    (let* ((mode-name (with-current-buffer (org-capture-get :original-buffer)
+                        (symbol-name major-mode)))
+           (result (org-find-exact-headline-in-buffer mode-name)))
+      (if result
+          (goto-char result)
+        (goto-char (point-min))
+        (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
+        (forward-line -1)
+        (insert (format "\n* %s" mode-name)))))
+
+  (defun isamert/org-capture--find-snippet-one-liner ()
+    (isamert/org-capture--find-snippet)
+    (unless (re-search-forward "\\*\\* One-liners" nil t)
+      (end-of-line)
+      (insert "\n** One-liners")))
 #+end_src
 ** Presentation (org-tree-slide)
 - =C->= → next heading
@@ -2917,7 +2936,7 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
     :ensure t
     :after yasnippet
     :config
-    (setq yankpad-file (concat org-directory "/snippets.org"))
+    (setq yankpad-file snippets-org)
     (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand)
     (evil-leader/set-key
       "sr" #'yankpad-reload
