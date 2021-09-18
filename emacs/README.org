@@ -1068,6 +1068,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     "oO"  (lambda () (interactive) (with-default-browser (call-interactively 'org-open-at-point)))
     "op"  #'org-set-property
     "oi"  #'org-toggle-inline-images
+    "oI"  #'org-redisplay-inline-images
     "or"  #'org-mode-restart
     "os"  #'org-schedule
     "oa"  #'org-agenda
@@ -1202,21 +1203,32 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 
   ;; Make certain files exacutable when tangled
   ;; Source: https://lists.gnu.org/archive/html/emacs-orgmode/2011-02/msg00465.html
-  (defun isamert/make-tangled-files-executable ()
-    (when (or (string-match-p  "\\.\\(sh\\|py\\)$" (buffer-file-name))
-              (string-match-p  "\\(python\\|sh\\)$" (symbol-name major-mode)))
-      (set-file-modes (buffer-file-name) #o755)))
-  (add-hook 'org-babel-post-tangle-hook 'isamert/make-tangled-files-executable)
+  (add-hook 'org-babel-post-tangle-hook #'isamert/make-tangled-files-executable)
+
+  ;; Some codeblocks produce image files as it's result (like dot
+  ;; language). Re-executing these blocks removes the image
+  ;; overlay. With this hook images are automatically updated after
+  ;; code-block execution and not removed from screen.
+  (add-hook 'org-babel-after-execute-hook #'isamert/org-redisplay-images-if-enabled)
+
+  (evil-leader/set-key
+    "ot" 'isamert/org-babel-tangle-current-block)
 
   (defun isamert/org-babel-tangle-current-block ()
     (interactive)
     (let ((current-prefix-arg '(16)))
-    ;;     ^ '(4) only tangles current file, '(16) tangles all code
-    ;;     blocks related to current tangle file target
+      ;;     ^ '(4) only tangles current file, '(16) tangles all code
+      ;;     blocks related to current tangle file target
       (call-interactively 'org-babel-tangle)))
 
-  (evil-leader/set-key
-    "ot" 'isamert/org-babel-tangle-current-block)
+  (defun isamert/make-tangled-files-executable ()
+    (when (or (string-match-p  "\\.\\(sh\\|py\\)$" (buffer-file-name))
+              (string-match-p  "\\(python\\|sh\\)$" (symbol-name major-mode)))
+      (set-file-modes (buffer-file-name) #o755)))
+
+  (defun isamert/org-redisplay-images-if-enabled ()
+    (when org-inline-image-overlays
+      (org-redisplay-inline-images)))
 #+end_src
 
 ** Exporting
@@ -4335,6 +4347,10 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (use-package vimrc-mode :ensure t)
 #+end_src
 
+** Graphviz/dot
+#+begin_src emacs-lisp
+  (use-package graphviz-dot-mode :ensure t)
+#+end_src
 * Misc functions
 ** tmux integration
 This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generally use Emacs commands instead of command line tools and if I ever need to do something in terminal I just use eshell. Besides this, I also like to use have a tmux instance working, for non-ephemeral stuff. I generally use a dropdown terminal (which may or may not be inside Emacs) to access the tmux instance. Here is how the integration goes:
