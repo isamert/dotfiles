@@ -884,16 +884,11 @@ This is the global keybinding manager.
   hyper + apostrophe
       feh --bg-scale $(find "$DIR_WALLPAPERS" | shuf -n 1)
 
-  # Take screenshot
-  {Print, hyper + s, shift + Print, control + Print, control + shift + Print}
-      take-ss --{full,clip-area,area,wait-full,wait-area}
-
-  # Take screenshot and edit it
-  hyper + S
-      take-ss --edit-area
+  hyper + s
+      flameshot gui
 
   # Save clipboard image as file
-  hyper + alt + s
+  hyper + S
       cb-save
 
   # Toggle notification center
@@ -1344,7 +1339,7 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   export R_LIBS_USER="$HOME/.rlibs"
 
   # The PATH
-  export PATH=$HOME/.nix-profile/bin:$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin:$HOME/.cargo/bin:$PATH
+  export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin:$HOME/.cargo/bin:$PATH
   # The nix path will be re-added by `/etc/profile.d/nix.sh` when
   # it gets sourced when .zprofile is sourced but I need it before that for
   # some programs to work over ssh correctly.
@@ -1373,6 +1368,9 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   export DIR_WALLPAPERS=$HOME/Pictures/wallpapers
   export DIR_SCREENSHOTS=$HOME/Pictures/screenshots
   export DIR_NOTES=$HOME/Documents/notes
+
+  source $HOME/.nix-profile/etc/profile.d/nix.sh
+  source $HOME/.nix-profile/etc/profile.d/nix-daemon.sh
 
   # vi: foldmethod=marker
 #+end_src
@@ -1763,6 +1761,12 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
       alias clear='vterm_printf "51;Evterm-clear-scrollback";tput clear'
   fi
 #+end_src
+** Nix configuration
+
+#+begin_src bash :tangle ~/.zshrc
+  source $HOME/.nix-profile/etc/profile.d/nix.sh
+  source $HOME/.nix-profile/etc/profile.d/nix-daemon.sh
+#+end_src
 ** Mac OSX configuration
 #+begin_src shell
   # - To get the latest pip bin path: echo $(python3 -c 'import site; print(site.USER_BASE)')/bin
@@ -1930,10 +1934,10 @@ In this file I define some file associations. Please refer to [[https://github.c
   ;;
 
   (define (screen-width)
-    (string->number (string-trim-both (read-sys-out "bspwmc focused_monitor_width"))))
+    (string->number (string-trim-both (car (read-sys-out "bspwmc focused_monitor_width")))))
 
   (define (screen-height)
-    (string->number (string-trim-both (read-sys-out "bspwmc focused_monitor_height"))))
+    (string->number (string-trim-both (car (read-sys-out "bspwmc focused_monitor_height")))))
 
   ;;
   ;; Associations
@@ -1998,7 +2002,7 @@ In this file I define some file associations. Please refer to [[https://github.c
                "^https?://giant.gfycat.com/.+"
                "https?://v.redd.it/.+"
                "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
-   #:program (lambda (file mimetype)
+   #:program (lambda (file mimetype _)
                (system*
                 "tsp"
                 "mpv"
@@ -4138,11 +4142,9 @@ This part is almost completely untouched. Needs some revamp.
       fi
   done
 
-  setxkbmap $NEW_LAYOUT
-  [[ -f ~/.Xmodmap ]] && xmodmap ~/.Xmodmap
-
+  setxkbmap "$NEW_LAYOUT"
+  [[ -f $HOME/.Xmodmap ]] && xmodmap "$HOME/.Xmodmap"
   killall xcape && xcape -e 'Hyper_L=Escape'
-
   notify-send --icon=keyboard "Current layout: $NEW_LAYOUT"
 #+end_src
 ** .scripts/take-ss
