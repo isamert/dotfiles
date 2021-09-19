@@ -1898,19 +1898,6 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (use-package treemacs-magit
     :after treemacs magit
     :ensure t)
-
-  (defun aorst/treemacs-setup-title ()
-    (let ((bg (face-attribute 'default :background))
-          (fg (face-attribute 'default :foreground)))
-      (face-remap-add-relative 'header-line
-                               :background bg :foreground fg
-                               :box `(:line-width ,(/ (line-pixel-height) 2) :color ,bg)))
-    (setq header-line-format
-          '((:eval
-             (let* ((text (treemacs-workspace->name (treemacs-current-workspace)))
-                    (extra-align (+ (/ (length text) 2) 1))
-                    (width (- (/ (window-width) 2) extra-align)))
-               (concat (make-string width ?\s) text))))))
 #+END_SRC
 
 ** winner-mode
@@ -3103,7 +3090,7 @@ It keeps your indentation working all the time. Seems like a good idea but I hav
     :ensure t
     :config
     (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
-    (add-hook 'typescript-mode #'aggressive-indent-mode)
+    (add-hook 'typescript-mode-hook #'aggressive-indent-mode)
     (add-to-list 'aggressive-indent-protected-commands 'evil-undo))
 #+end_src
 ** xmodmap-mode
@@ -3120,7 +3107,7 @@ Simple mode for editing =~/.Xmodmap= file.
     "Simple mode for xmodmap files.")
 #+end_src
 ** define-word
-Simple dictonary.
+Simple dictionary.
 
 #+begin_src emacs-lisp
   (use-package define-word
