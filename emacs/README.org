@@ -1295,24 +1295,45 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 
   (setq
    org-capture-templates
-   '(("n" "Quick note" item
+   '(("g" "General todo/note")
+     ("gi" "Study later" item
+      (file+olp bullet-org "Life backlog" "Investigate")
+      "- [ ] %a. %?"
+      :prepend t)
+     ("gt" "Life todo" entry
+      (file+headline bullet-org "Life backlog"))
+     ("gc" "Computer todo" entry
+      (file+headline bullet-org "Computer backlog"))
+     ("gw" "Work todo" entry
+      (file+headline bullet-org "Work backlog"))
+
+     ("d" "Daily todo/summary/note")
+     ("dt" "Daily TODO" entry
+      (file+function bullet-org isamert/bullet-focus-today)
+      "** [#B] %?\n%a. "
+      :prepend t)
+     ("ds" "Daily summary" entry
+      (file+function bullet-org isamert/org-capture--find-daily-summary)
+      "%T ")
+     ("dn" "Daily note" item
       (file+function bullet-org isamert/org-capture--find-daily-notes)
       "%a. %?"
       :prepend t)
-     ("j" "Journal" entry
-      (file+function bullet-org isamert/org-capture--find-daily-summary)
-      "%T ")
-     ("d" "Diary" entry
+
+     ("s" "Snippets")
+     ("ss" "Snippet" entry
+      (file+function snippets-org isamert/org-capture--find-snippet)
+      "** ")
+     ("so" "One liner snippet" item
+      (file+function snippets-org isamert/org-capture--find-snippet-one-liner)
+      "- %? :: ")
+
+     ("D" "Diary" entry
       (file diary-org)
       "* %u\n"
       :prepend t)
-     ("m" "Meeting note" item
-      (clock))
-     ("s" "Snippets")
-     ("ss" "Snippet" entry
-      (file+function snippets-org isamert/org-capture--find-snippet))
-     ("so" "One liner snippet" item
-      (file+function snippets-org isamert/org-capture--find-snippet-one-liner))))
+     ("m" "Meeting/clock note" item
+      (clock))))
 
   (defun isamert/org-capture--find-daily-notes ()
     (isamert/bullet-focus-today)
