@@ -279,6 +279,23 @@ Some basic variable and function definitions that will be used in configuration.
     (alist-get
      (completing-read prompt alist)
      alist nil nil #'equal))
+
+  (defun isamert/dmenu (items)
+    "Like `completing-read' but instead use dmenu.
+  Useful for system-wide scripts.  If ITEMS is an alist, then
+  returns the value instead of selected key."
+    (let* ((alist? (listp (car items)))
+           (str (--reduce-from
+                 (format "%s\n%s" acc (if alist? (car it) it))
+                 ""
+                 items))
+           (dmenu (case system-type
+                    ('gnu/linux "rofi -dmenu -fuzzy -i")
+                    ('darwin "choose")))
+           (result (shell-command-to-string (format "echo '%s' | %s" str dmenu))))
+      (if alist?
+          (alist-get result items nil nil #'equal)
+        result)))
 #+end_src
 
 *** String utils
@@ -5955,6 +5972,56 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
             (kill-new filename)
             (message ">> Copied buffer file name '%s' to the clipboard." filename))
         (user-error ">> Failed to copy"))))
+#+end_src
+** Password manager
+#+begin_src emacs-lisp
+  ;; TODO Better matching algorithm Check if full string matches any,
+  ;; then check if host matches. Return full string match only if it
+  ;; exists. Also check if toplevel domain matches, if it does not match
+  ;; fully
+
+  (defun isamert/find-password-for (url)
+    "Return matching accounts for given URL."
+    (interactive)
+    (setq url (url-host (url-generic-parse-url url)))
+    (with-current-buffer "passwords.org"
+      (let* ((candidates
+              (seq-filter
+               #'identity
+               (org-map-entries
+                (lambda  ()
+                  (let ((links (split-string (or (org-entry-get nil "URLS") "") "|" t " "))
+                        (header-link (save-excursion
+                                       (forward-char 5)
+                                       (org-element-context)))
+                        (title (org-entry-get nil "ITEM")))
+                    (when (eq (org-element-type header-link) 'link)
+                      (push (org-element-property :raw-link header-link) links)
+                      (save-excursion
+                        (setq title
+                              (buffer-substring-no-properties
+                               (org-element-property :contents-begin header-link)
+                               (org-element-property :contents-end header-link)))))
+                    (when (--any (s-contains? url it) links)
+                      `(("ITEM" . ,title) ,@(org-entry-properties)))))))))
+        (-flatten-n
+         1
+         (-map (lambda (info)
+                 (let ((unames (s-split " " (cdr (assoc-string "USERNAME" info))))
+                       (pwds (s-split " " (cdr (assoc-string "PASSWORD" info)))))
+                   (-zip  (--map (format "%s - %s" (cdr (assoc-string "ITEM" info)) it) unames)
+                          (--map (list :info info :acc it)
+                                 (-zip unames pwds)))))
+               candidates)))))
+
+  (defun isamert/qutebrowser-pass (url fifo)
+    (let* ((result (plist-get (isamert/dmenu (isamert/find-password-for url)) :acc))
+           (username (car result))
+           (password (cdr result)))
+      (write-region "mode-enter insert\n" nil fifo 'append)
+      (write-region (format "fake-key %s\n" username) nil fifo 'append)
+      (write-region "fake-key <Tab>\n" nil fifo 'append)
+      (write-region (format "fake-key %s\n" password) nil fifo 'append)))
 #+end_src
 * TY (work stuff)
 Company/work related stuff.
