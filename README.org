@@ -3092,10 +3092,10 @@ I use this script with tridactyl to download and save stuff that ~youtube-dl~ ca
 #+end_src
 
 ** Qutebrowser
-#+begin_src python
+*** Main configuration
+#+begin_src python :tangle (when-on :linux "~/.config/qutebrowser/config.py" :darwin "~/.qutebrowser/config.py")
   c.content.blocking.adblock.lists = ['https://easylist.to/easylist/easylist.txt', 'https://easylist.to/easylist/easyprivacy.txt']
   c.content.blocking.enabled = True
-  # c.content.blocking.whitelist = []
   c.content.pdfjs = True
   c.fonts.default_family = ['Iosevka Nerd Font']
   c.fonts.default_size = '14pt'
@@ -3104,33 +3104,65 @@ I use this script with tridactyl to download and save stuff that ~youtube-dl~ ca
   c.hints.uppercase = True
   c.input.insert_mode.auto_load = True
   c.input.mouse.rocker_gestures = True
-  # c.spellcheck.languages = ['tr-TR', 'en-US']
   c.statusbar.position = 'top'
   c.statusbar.show = 'never'
   c.completion.shrink = True
-  # c.url.default_page = 'https://start.duckduckgo.com/'
+  c.url.default_page = 'https://start.duckduckgo.com/'
   c.url.searchengines = {
       'DEFAULT': 'https://google.com/search?q={}',
       'yt': 'https://www.youtube.com/results?search_query={}'
   }
-  # c.url.start_pages = ['https://start.duckduckgo.com']
   c.url.yank_ignored_parameters = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
   c.editor.command = ['emacsclient', '-c', '{}']
+  c.fonts.hints = 'normal 16pt Helvetica'
 
   config.bind('t', 'set-cmd-text -s :open -t')
   config.bind('T', 'set-cmd-text :open -t -r {url:pretty}')
   config.bind('O', 'set-cmd-text :open {url:pretty}')
+
   config.bind('b', 'set-cmd-text -sr :tab-focus')
   config.bind('B', 'set-cmd-text -s :quickmark-load -t')
+
   config.bind('j', 'scroll-px 0 200')
   config.bind('k', 'scroll-px 0 -200')
   config.bind('J', 'tab-prev')
   config.bind('K', 'tab-next')
+  config.bind('<Alt-J>', 'tab-move -')
+  config.bind('<Alt-K>', 'tab-move +')
+
   config.bind('<Alt-x>', 'set-cmd-text :')
+
   config.bind(',m', 'spawn mpv {url}')
   config.bind(',M', 'hint links spawn mpv {hint-url}')
 
+  config.bind(';i', 'hint images tab')
+  config.bind(';I', 'hint images yank')
+
+  config.unbind('<Ctrl-E>', mode='insert')
+  config.bind('<Alt-E>', 'edit-text', mode='insert')
+
   config.load_autoconfig(False)
+
+  c.content.blocking.whitelist = ['https://*.trendyol.com']
+
+  # TODO move these
+  config.bind('P', 'spawn --userscript org-pass')
+  c.aliases = {
+      'w': 'session-save',
+      'q': 'close',
+      'qa': 'quit',
+      'wq': 'quit --save',
+      'wqa': 'quit --save',
+      'ty-set-token': 'jseval localStorage.setItem("authToken", prompt("TOKEN:"))',
+      'ty-get-token': 'jseval --world=main (async () => {try {alert((await getToken()).accessToken); alert("OK!");} catch (ex) {alert("SAD :(")}})()'
+  }
+#+end_src
+*** User scripts
+**** org-pass
+#+begin_src shell :tangle (when-on :linux "~/.config/qutebrowser/userscripts/org-pass" :darwin "~/.qutebrowser/userscripts/org-pass")
+  #!/bin/bash
+
+  emacsclient --eval "(isamert/qutebrowser-pass \"$QUTE_URL\" \"$QUTE_FIFO\")"
 #+end_src
 * Some desktop files
 ** .local/share/applications/shortcuts.desktop
