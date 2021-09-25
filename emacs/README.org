@@ -1089,6 +1089,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     "oI"  #'org-redisplay-inline-images
     "or"  #'org-mode-restart
     "os"  #'org-schedule
+    "od"  #'org-deadline
     "oa"  #'org-agenda
     "on"  #'org-toggle-narrow-to-subtree
     "ow"  #'widen
@@ -2069,9 +2070,11 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
       "lk" #'persp-remove-by-name
       "lr" #'persp-rename
       "li" #'isamert/initialize-perspectives
-      "ll" #'isamert/persp-switch-to-last)
-    ;; TODO
-    ;; "lm" #'isamert/persp-toggle-modestring)
+      "ll" #'isamert/persp-switch-to-last
+      "l1" (lambda () (interactive) (persp-switch "personal/planning"))
+      "l2" (lambda () (interactive) (persp-switch "personal/notes"))
+      "l3" (lambda () (interactive) (persp-switch "personal/dotfiles"))
+      "le" #'isamert/persp-show-current-persp-name)
 
     ;; Add every newly opened buffer to current perspective
     (setq persp-add-buffer-on-after-change-major-mode t)
@@ -2138,25 +2141,31 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     "Open my default perspectives with some buffers in them."
     (interactive)
     (message ">> Perspectives are opening...")
-    (progn
-      (persp-add-new "personal/dotfiles")
-      (persp-switch "personal/dotfiles")
-      (find-file "~/Workspace/projects/dotfiles/README.org")
-      (eyebrowse-switch-to-window-config-2)
-      (find-file "~/Workspace/projects/dotfiles/emacs/README.org"))
-    (progn
-      (persp-add-new "personal/planning")
-      (persp-switch "personal/planning")
-      (find-file "~/Documents/notes/bullet.org")
-      (isamert/bullet-focus-today)
-      (eyebrowse-switch-to-window-config-2)
-      (find-file "~/Documents/notes/life.org"))
-    (progn
-      (persp-add-new "personal/notes")
-      (persp-switch "personal/notes")
-      (find-file "~/Documents/notes/engineering.org"))
-    (persp-switch "main")
-    (message ">> Perspectives are opening... Done."))
+    (let ((enable-local-variables :all))
+      (progn
+        (persp-add-new "personal/dotfiles")
+        (persp-switch "personal/dotfiles")
+        (find-file "~/Workspace/projects/dotfiles/README.org")
+        (eyebrowse-switch-to-window-config-2)
+        (find-file "~/Workspace/projects/dotfiles/emacs/README.org"))
+      (progn
+        (persp-add-new "personal/planning")
+        (persp-switch "personal/planning")
+        (find-file "~/Documents/notes/bullet.org")
+        (isamert/bullet-focus-today)
+        (eyebrowse-switch-to-window-config-2)
+        (find-file "~/Documents/notes/life.org"))
+      (progn
+        (persp-add-new "personal/notes")
+        (persp-switch "personal/notes")
+        (find-file "~/Documents/notes/engineering.org"))
+      (persp-switch "main")
+      (message ">> Perspectives are opening... Done.")))
+
+  (defun isamert/persp-show-current-persp-name ()
+    "Display current persp name and `default-directory' on echo area."
+    (interactive)
+    (message ">> %s (%s)" (persp-name (get-current-persp)) default-directory))
 
   ;;
   ;; persp-el & eyebrowse glue code
@@ -3151,7 +3160,12 @@ Simple dictionary.
   ;; (slack-channel-list-update)
   ;; (slack-command-list-update)
 
+
   (use-package slack
+    :ensure t
+    :quelpa (slack
+             :fetcher github
+             :repo "isamert/emacs-slack")
     :config
     (setq slack-buffer-emojify t)
     (setq slack-render-image-p t)
@@ -4723,6 +4737,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defvar isamert/git-worktrees-root "~/Workspace/projects/worktrees"
     "Directory to create worktrees in.")
 
+  (defvar isamert/git-main-branch "master"
+    "Main branch name.")
+
   (defvar isamert/jira-projects '(("SA" . 1300))
     "List of projects that I enrolled in JIRA.
   CDR of each item defines which ticket number the caching should
@@ -4834,6 +4851,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     "Create a new branch from given ISSUE-NAME and switch to it."
     (interactive "sIssue name: ")
     (let ((branch-name (isamert/jira--create-branch-name-from-ticket issue-name)))
+      (unless (equal isamert/git-main-branch (isamert/git-current-branch))
+        (user-error "Please switch to `%s' branch first." isamert/git-main-branch))
       (message "Updating...")
       (magit-fetch-all nil)
       (message "Creating branch...")
@@ -4942,9 +4961,6 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
        (propertize (s-truncate 15 (or .fields.assignee.name "N/A"))
                    'face 'italic)
        .fields.summary)))
-
-  (defun isamert/jira-assign-ticket-to (issue arg2)
-    (jiralib2-assign-issue issue ))
 
   ;; TODO act on object instead of issue name
   (defun isamert/jira--issue-actions (issue)
