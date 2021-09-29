@@ -1202,7 +1202,11 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (use-package ob-http :ensure t)
 
   (defun isamert/curl-to-org-http (curl-str)
-    "Convert CURL-STR into an ob-http block."
+    "Convert CURL-STR into an ob-http block.
+  More concretely this function converts given curl command (that
+  is copied from Chrome/Firefox dev tools, using the `Copy as curl'
+  option) into an ob-http block to be able to use all the goodies
+  that is provided by ob-http."
     (interactive
      (list
       (if (use-region-p)
