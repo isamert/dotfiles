@@ -179,8 +179,7 @@ Some basic variable and function definitions that will be used in configuration.
   (defun isamert/shell-command-to-string (cmd)
     "Like `shell-command-to-string' but only stdout is returned."
     (with-output-to-string
-      (with-current-buffer
-          standard-output
+      (with-current-buffer standard-output
         (process-file
          shell-file-name nil '(t nil)  nil shell-command-switch
          cmd))))
@@ -875,6 +874,7 @@ Enable leader key and bind some keys.
     (evil-leader/set-key
       ;; generic
       ";"   'eval-last-sexp
+      ","   'eval-defun
 
       ;; buffers
       "bb" #'switch-to-buffer
@@ -2087,7 +2087,7 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     (defun isamert/filter-buffers-for-persp-mode (b)
       (let ((bname (buffer-name b))
             (mmode (buffer-local-value 'major-mode b)))
-        (or (s-prefix? "magit: " bname)
+        (or (s-prefix? "magit" bname)
             (and (s-prefix? "*" bname) (not (or (s-contains? "eshell" bname) (s-contains? "Org Src" bname))))
             (s-equals? "dired-mode" mmode))))
 
@@ -2105,6 +2105,8 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     (evil-define-key '(normal insert) 'global (kbd "M-3") #'eyebrowse-switch-to-window-config-3)
     (evil-define-key '(normal insert) 'global (kbd "M-4") #'eyebrowse-switch-to-window-config-4)
     (evil-define-key '(normal insert) 'global (kbd "M-5") #'eyebrowse-switch-to-window-config-5)
+    (evil-define-key '(normal insert) 'global (kbd "M-,") #'eyebrowse-prev-window-config)
+    (evil-define-key '(normal insert) 'global (kbd "M-.") #'eyebrowse-next-window-config)
 
     (eyebrowse-mode)
 
@@ -3117,7 +3119,8 @@ It keeps your indentation working all the time. Seems like a good idea but I hav
     :config
     (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
     (add-hook 'typescript-mode-hook #'aggressive-indent-mode)
-    (add-to-list 'aggressive-indent-protected-commands 'evil-undo))
+    (add-to-list 'aggressive-indent-protected-commands 'evil-undo)
+    (add-to-list 'aggressive-indent-protected-commands 'format-all-buffer))
 #+end_src
 ** xmodmap-mode
 Simple mode for editing =~/.Xmodmap= file.
@@ -4030,7 +4033,8 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
   :mode
   (("README\\.md\\'" . gfm-mode)
    ("\\.md\\'" . markdown-mode)
-   ("\\.markdown\\'" . markdown-mode))
+   ("\\.markdown\\'" . markdown-mode)
+   ("qutebrowser-editor-" . markdown-mode))
   :init
   (setq markdown-command "multimarkdown")
   :config
@@ -6133,25 +6137,27 @@ Company/work related stuff.
     "Run a cbc command on current projects couchbase."
     (let ((config (ty/get-couchbase-config)))
       (isamert/shell-command-to-string
-       (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
-               cbc-command
-               (plist-get config :uri)
-               bucket
-               (plist-get config :username)
-               (plist-get config :password)
-               select))))
+       (message
+        (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
+                cbc-command
+                (plist-get config :uri)
+                bucket
+                (plist-get config :username)
+                (plist-get config :password)
+                select)))))
 
   (cl-defun ty/cbq (query &key (select "."))
     "Run a couchbase query and return the result."
     (let ((config (ty/get-couchbase-config)))
       (isamert/shell-command-to-string
-       (format "cbq -q -e %s -c %s -script '%s' | jq '%s'"
-               (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri))))
-               (format "%s:%s"
-                       (plist-get config :username)
-                       (plist-get config :password))
-               query
-               select))))
+       (message
+        (format "cbq -q -e %s -c %s -script '%s' | jq '%s'"
+                (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri))))
+                (format "%s:%s"
+                        (plist-get config :username)
+                        (plist-get config :password))
+                query
+                select)))))
 
   (defun ty/couchbase-query ()
     (interactive)
