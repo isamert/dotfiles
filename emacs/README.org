@@ -6078,6 +6078,72 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
       (write-region "fake-key <Tab>\n" nil fifo 'append)
       (write-region (format "fake-key %s\n" password) nil fifo 'append)))
 #+end_src
+** Kubernetes
+My main use case is drop into a shell of a pod. The code below makes it quite easy. Use ~isamert/kube-select-pod~ to select a pod and do some actions on it.
+
+#+begin_src emacs-lisp
+  (defun isamert/kube--current-context ()
+    (s-trim (shell-command-to-string "kubectl config current-context")))
+
+  (defun isamert/kube-use-context ()
+    (with-completing-read-exact-order
+     (thread-last (shell-command-to-string "kubectl config get-contexts --output=name")
+       (s-split "\n")
+       (-drop 1)
+       (completing-read (format "Select context (current=%s): " (isamert/kube--current-context)))
+       (format "kubectl config use-context '%s'")
+       (shell-command-to-string))))
+
+  (defun isamert/kube-select-pod (&optional switch-context)
+    "Select a pod and act on it.
+  If SWITCH-CONTEXT is non nil, switch to another context before
+  selecting a pod."
+    (interactive "P")
+    (with-completing-read-exact-order
+     (when switch-context
+       (isamert/kube-use-context))
+     (thread-last
+         (shell-command-to-string "kubectl get pods --all-namespaces")
+       (s-split "\n")
+       (-drop 1)
+       (completing-read
+        (format "Select a pod from '%s': " (isamert/kube--current-context)))
+       ((lambda (it) (s-split " " it t)))
+       ((lambda (it) (list :name (nth 1 it) :namespace (nth 0 it))))
+       (isamert/kube-pod--act))))
+
+  (defun isamert/kube-pod--act (pod)
+    (with-completing-read-exact-order
+     (let ((namespace (plist-get pod :namespace))
+           (name (plist-get pod :name)))
+       (pcase (completing-read (format "Act on '%s'" name) '("Exec into default container" "Exec into container" "Logs" "Remove"))
+         ("Exec into default container"
+          (with-current-buffer (vterm (format "pod: %s" name))
+            (vterm-insert (format "kubectl exec --namespace='%s' -i -t '%s' -- bash"
+                                  namespace
+                                  name))))
+         ("Exec into container"
+          (let ((container (isamert/kube-pod--select-container pod)))
+            (with-current-buffer (vterm (format "pod: %s" name))
+              (vterm-insert (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' -- bash"
+                                    namespace
+                                    container
+                                    name)))))
+         ("Logs" (user-error "Not implemented"))
+         ("Remove" (user-error "Not implemented"))))))
+
+  (defun isamert/kube-pod--select-container (pod)
+    (with-completing-read-exact-order
+     (completing-read
+      (format "Container for %s: " (plist-get pod :name))
+      (s-split
+       " "
+       (shell-command-to-string
+        (format
+         "kubectl get pods '%s' --namespace='%s' -o jsonpath='{.spec.containers[*].name}'"
+         (plist-get pod :name)
+         (plist-get pod :namespace)))))))
+#+end_src
 * TY (work stuff)
 Company/work related stuff.
 
