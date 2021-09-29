@@ -1194,12 +1194,47 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 #+END_SRC
 
 ** Babel
+*** ob-http
 #+begin_src emacs-lisp
   ;; Http request in org-mode babel.
   ;; You can get the generated curl command after executing the code
   ;; block, from *curl command history* buffer
   (use-package ob-http :ensure t)
 
+  (defun isamert/curl-to-org-http (curl-str)
+    "Convert CURL-STR into an ob-http block."
+    (interactive
+     (list
+      (if (use-region-p)
+          (buffer-substring-no-properties (region-beginning) (region-end))
+        (read-string "Curl string: "))))
+    (let* ((curl (s-trim curl-str))
+           (url (cadr (s-match "'\\(http.*?\\)'" curl)))
+           (headers (--map (format "%s: %s" (s-titleize (nth 1 it)) (nth 2 it))
+                           (s-match-strings-all "-H '\\(.*?\\): \\(.*?\\)'" curl)))
+           (body (car (s-match "--data-binary '\\(.*?\\)'" curl)))
+           (result (format
+                    "  %s %s\n  %s%s"
+                    (if body "POST" "GET")
+                    url
+                    (--reduce (format "%s\n  %s" acc it) headers)
+                    ;; TODO if json, format it
+                    (if body
+                        (format "\n\n  %s" body)
+                      ""))))
+      (when (use-region-p)
+        (delete-region (region-beginning) (region-end)))
+      (unless (save-excursion
+                (goto-char (region-beginning))
+                (forward-line -1)
+                (s-contains? "begin_src" (thing-at-point 'line t)))
+        (insert "#+begin_src http :pretty :wrap src json\n\n#+end_src")
+        (forward-line -1))
+      (insert result)))
+#+end_src
+
+*** General configuration
+#+begin_src emacs-lisp
   ;; Typescript
   (use-package ob-typescript :ensure t)
 
