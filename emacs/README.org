@@ -352,8 +352,6 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
   ;; ^ Show column number
   (setq create-lockfiles nil)
   ;; ^ These just clutter the filesystem
-  (setq switch-to-prev-buffer-skip 'visible)
-  ;; ^ (switch-to-prev-buffer) skips buffers that are visible on the screen
   (setq dabbrev-case-fold-search nil)
   ;; ^ Expansions are done respecting the case (Ctrl-n and Ctrl-p was
   ;; not behaving the way I wanted before this in evil mode)
@@ -1081,31 +1079,36 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
 
 ** Keybindings
 #+begin_src emacs-lisp
-  (evil-leader/set-key
-    "oo"  #'org-open-at-point
-    "oO"  (lambda () (interactive) (with-default-browser (call-interactively 'org-open-at-point)))
+  (evil-leader/set-key-for-mode 'org-mode
+    "d" 'org-babel-remove-result
+    "D" 'isamert/org-babel-remove-all-results
+
     "op"  #'org-set-property
     "oi"  #'org-toggle-inline-images
     "oI"  #'org-redisplay-inline-images
     "or"  #'org-mode-restart
     "os"  #'org-schedule
     "od"  #'org-deadline
-    "oa"  #'org-agenda
     "on"  #'org-toggle-narrow-to-subtree
-    "ow"  #'widen
 
     ;; link stuff
     "oyy" #'org-store-link
     "oyi" #'org-copy-id
+    "o#" #'org-insert-structure-template)
+
+  (evil-leader/set-key
+    "oo"  #'org-open-at-point
+    "oO"  (lambda () (interactive) (with-default-browser (call-interactively 'org-open-at-point)))
+
+    "oa"  #'org-agenda
+    "ow"  #'widen
 
     ;; org-clock
     "occ" #'org-clock-in
     "ocC" #'org-clock-cancel
     "ocl" #'org-clock-in-last
     "oco" #'org-clock-out
-    "ocg" #'org-clock-goto
-
-    "o#" #'org-insert-structure-template)
+    "ocg" #'org-clock-goto)
 
   (evil-define-key 'normal org-mode-map
     "[[" #'outline-previous-visible-heading
@@ -1139,10 +1142,6 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (kbd "M-H-k") 'org-metaup
     (kbd "M-H-l") 'org-metaright)
 
-  (evil-leader/set-key-for-mode 'org-mode
-    "d" 'org-babel-remove-result
-    "D" 'isamert/org-babel-remove-all-results)
-
   (defun isamert/outline-up-level-then-forward ()
     "Up one level and then go to next header with same level."
     (interactive)
@@ -1168,6 +1167,8 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (defconst diary-org "~/Documents/notes/diary.org")
     (defconst snippets-org "~/Documents/notes/snippets.org")
     (defconst work-org "~/Documents/notes/trendyol.org")
+    (defconst temp-org "~/Documents/notes/temp.org")
+    (defconst engineering-org "~/Documents/notes/engineering.org")
 
     ;; Put archive files under an archive/ directory
     ;; I don't want them to pollute my directory
@@ -2011,21 +2012,23 @@ A package that shows key combinations. (for example press C-x and wait) It also 
     (setq which-key-sort-order #'which-key-description-order)
     (which-key-mode))
 
-  (use-package which-key-posframe
-    :ensure t
-    :after (which-key mini-frame)
-    :diminish
-    :quelpa (which-key-posframe
-             :fetcher github
-             :repo "yanghaoxie/which-key-posframe")
-    :config
-    (set-face-attribute 'which-key-posframe nil :background "#373b43")
-    (set-face-attribute 'which-key-posframe-border nil :background "#373b43")
-    ;; Obtained the "#373b43" by calling `(mini-frame-get-background-color)'
+  (unless (eq system-type 'darwin)
+    ;; It causes some annoyances on darwin
+    (use-package which-key-posframe
+      :ensure t
+      :after (which-key mini-frame)
+      :diminish
+      :quelpa (which-key-posframe
+               :fetcher github
+               :repo "yanghaoxie/which-key-posframe")
+      :config
+      (set-face-attribute 'which-key-posframe nil :background "#373b43")
+      (set-face-attribute 'which-key-posframe-border nil :background "#373b43")
+      ;; Obtained the "#373b43" by calling `(mini-frame-get-background-color)'
 
-    (setq which-key-posframe-border-width 12)
-    (setq which-key-posframe-poshandler 'posframe-poshandler-frame-top-center)
-    (which-key-posframe-mode))
+      (setq which-key-posframe-border-width 12)
+      (setq which-key-posframe-poshandler 'posframe-poshandler-frame-top-center)
+      (which-key-posframe-mode)))
 #+END_SRC
 
 ** magit & forge
@@ -2192,14 +2195,14 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
       (progn
         (persp-add-new "personal/planning")
         (persp-switch "personal/planning")
-        (find-file "~/Documents/notes/bullet.org")
+        (find-file bullet-org)
         (isamert/bullet-focus-today)
         (eyebrowse-switch-to-window-config-2)
-        (find-file "~/Documents/notes/life.org"))
+        (find-file life-org))
       (progn
         (persp-add-new "personal/notes")
         (persp-switch "personal/notes")
-        (find-file "~/Documents/notes/engineering.org"))
+        (find-file engineering-org))
       (persp-switch "main")
       (message ">> Perspectives are opening... Done.")))
 
@@ -4067,20 +4070,23 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
 
 ** markdown
 #+BEGIN_SRC emacs-lisp
-(use-package markdown-mode
-  :ensure t
-  :mode
-  (("README\\.md\\'" . gfm-mode)
-   ("\\.md\\'" . markdown-mode)
-   ("\\.markdown\\'" . markdown-mode)
-   ("qutebrowser-editor-" . markdown-mode))
-  :init
-  (setq markdown-command "multimarkdown")
-  :config
-  (evil-define-key 'normal markdown-mode-map
-    (kbd "TAB") 'markdown-cycle
-    (kbd "]]") 'markdown-outline-next
-    (kbd "[[") 'markdown-outline-previous))
+  (use-package markdown-mode
+    :ensure t
+    :mode
+    (("README\\.md\\'" . gfm-mode)
+     ("\\.md\\'" . markdown-mode)
+     ("\\.markdown\\'" . markdown-mode)
+     ("qutebrowser-editor-" . markdown-mode))
+    :init
+    (setq markdown-command "multimarkdown")
+    :config
+    (evil-leader/set-key-for-mode 'markdown-mode
+      "oi" #'markdown-toggle-inline-images)
+
+    (evil-define-key 'normal markdown-mode-map
+      (kbd "TAB") 'markdown-cycle
+      (kbd "]]") 'markdown-outline-next
+      (kbd "[[") 'markdown-outline-previous))
 #+END_SRC
 
 ** haskell
@@ -5682,17 +5688,17 @@ Here I define two important functions and their helpers.  The following function
   (defun isamert/toggle-side-temp-org-buffer ()
     "Toggle `temp.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
     (interactive)
-    (isamert/toggle-side-buffer-with-file "~/Documents/notes/temp.org"))
+    (isamert/toggle-side-buffer-with-file temp-org))
 
   (defun isamert/toggle-side-bullet-org-buffer ()
     "Toggle `bullet.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
     (interactive)
-    (isamert/toggle-side-buffer-with-file "~/Documents/notes/bullet.org"))
+    (isamert/toggle-side-buffer-with-file bullet-org))
 
   (defun isamert/toggle-side-projects-buffer ()
     "Toggle `projects.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
     (interactive)
-    (isamert/toggle-side-buffer-with-file "~/Documents/notes/projects.org"))
+    (isamert/toggle-side-buffer-with-file projects-org))
 
   (defun isamert/toggle-side-messages-buffer ()
     "Toggle `projects.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
