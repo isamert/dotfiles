@@ -4586,7 +4586,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (evil-leader/set-key
     "gmb" 'isamert/gitlab-list-current-branch-merge-requests
     "gmm" 'isamert/gitlab-list-my-merge-requests
-    "gma" 'isamert/gitlab-list-group-merge-requests)
+    "gma" 'isamert/gitlab-list-group-merge-requests
+    "gmc" 'isamert/gitlab-create-merge-request)
 
   ;;
   ;; Git extras
