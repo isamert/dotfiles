@@ -295,6 +295,31 @@ Some basic variable and function definitions that will be used in configuration.
       (if alist?
           (alist-get result items nil nil #'equal)
         result)))
+
+  (cl-defmacro isamert/output-select
+      (&key cmd prompt keep-order (split "\n") (drop 0) (filter t) (map 'it) do)
+    "Run given CMD and do a `completing-read' on it.
+  This macro is intended to quicken up the process of running a
+  shell command and doing a completing-read on it and then using
+  the result in another context, possibly on another shell
+  command."
+    (let* ((body `(completing-read
+                   ,prompt
+                   (seq-map-indexed
+                    (lambda (it idx) ,map)
+                    (seq-filter
+                     (lambda (it) ,filter)
+                     (seq-drop
+                      (s-split
+                       ,split
+                       (shell-command-to-string ,cmd)
+                       t)
+                      ,drop)))))
+           (result (if keep-order
+                       `(with-completing-read-exact-order
+                         ,body)
+                     body)))
+      `((lambda (it) ,do) ,result)))
 #+end_src
 
 *** String utils
@@ -323,6 +348,24 @@ Some basic variable and function definitions that will be used in configuration.
       (concat
        (s-upcase (substring s 0 end))
        (substring s end))))
+#+end_src
+*** Quick table
+#+begin_src emacs-lisp
+  (cl-defun isamert/output-to-tabulated-list (str &key buffer (sep " "))
+    (with-current-buffer buffer
+      (let* ((lines (s-split "\n" str t))
+             (header-items (s-split sep (car lines) t))
+             (header (coerce (--map (list it (/ 100 (length header-items)) nil) header-items) 'vector))
+             (rows (thread-last lines
+                     (-drop 1)
+                     (--map-indexed (list (number-to-string it-index) (coerce (s-split sep it t) 'vector))))))
+        (tabulated-list-mode)
+        (setq tabulated-list-format header)
+        (setq tabulated-list-entries rows)
+        (setq tabulated-list-padding 4)
+        (tabulated-list-init-header)
+        (tabulated-list-print t))
+      (switch-to-buffer buffer)))
 #+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
@@ -6096,31 +6139,27 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
     (s-trim (shell-command-to-string "kubectl config current-context")))
 
   (defun isamert/kube-use-context ()
-    (with-completing-read-exact-order
-     (thread-last (shell-command-to-string "kubectl config get-contexts --output=name")
-       (s-split "\n")
-       (-drop 1)
-       (completing-read (format "Select context (current=%s): " (isamert/kube--current-context)))
-       (format "kubectl config use-context '%s'")
-       (shell-command-to-string))))
+    (isamert/output-select
+     :cmd "kubectl config get-contexts --output=name"
+     :drop 1
+     :keep-order t
+     :prompt (format "Select context (current=%s): " (isamert/kube--current-context))
+     :do (shell-command-to-string (format "kubectl config use-context '%s'" it))))
 
   (defun isamert/kube-select-pod (&optional switch-context)
     "Select a pod and act on it.
   If SWITCH-CONTEXT is non nil, switch to another context before
   selecting a pod."
     (interactive "P")
-    (with-completing-read-exact-order
-     (when switch-context
-       (isamert/kube-use-context))
-     (thread-last
-         (shell-command-to-string "kubectl get pods --all-namespaces")
-       (s-split "\n")
-       (-drop 1)
-       (completing-read
-        (format "Select a pod from '%s': " (isamert/kube--current-context)))
-       ((lambda (it) (s-split " " it t)))
-       ((lambda (it) (list :name (nth 1 it) :namespace (nth 0 it))))
-       (isamert/kube-pod--act))))
+    (when switch-context
+      (isamert/kube-use-context))
+    (isamert/output-select
+     :cmd "kubectl get pods --all-namespaces"
+     :drop 1
+     :prompt (format "Select a pod from '%s': " (isamert/kube--current-context))
+     :keep-order t
+     :do (let ((info (s-split " " it t)))
+           (isamert/kube-pod--act (list :name (nth 1 info) :namespace (nth 0 info))))))
 
   (defun isamert/kube-pod--act (pod)
     (with-completing-read-exact-order
@@ -6143,16 +6182,28 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
          ("Remove" (user-error "Not implemented"))))))
 
   (defun isamert/kube-pod--select-container (pod)
-    (with-completing-read-exact-order
-     (completing-read
-      (format "Container for %s: " (plist-get pod :name))
-      (s-split
-       " "
-       (shell-command-to-string
-        (format
-         "kubectl get pods '%s' --namespace='%s' -o jsonpath='{.spec.containers[*].name}'"
-         (plist-get pod :name)
-         (plist-get pod :namespace)))))))
+    (isamert/output-select
+     :cmd (format
+           "kubectl get pods '%s' --namespace='%s' -o jsonpath='{.spec.containers[*].name}'"
+           (plist-get pod :name)
+           (plist-get pod :namespace))
+     :prompt (format "Container for %s: " (plist-get pod :name))
+     :split " "))
+#+end_src
+** Kafka
+#+begin_src emacs-lisp
+  (defun isamert/kafka-describe-consumer-group ()
+    (interactive)
+    ;; `isamert/select-kafka-consumers' is a private function that
+    ;; returns a kafka server list
+    (let ((servers (isamert/select-kafka-consumers)))
+      (isamert/output-select
+       :cmd (format "kafka-consumer-groups.sh --list --bootstrap-server %s" servers)
+       :prompt "Select a consumer group: "
+       :do (isamert/output-to-tabulated-list
+            (shell-command-to-string
+             (format "kafka-consumer-groups.sh --describe --group %s --bootstrap-server %s" it servers))
+            :buffer (get-buffer-create "*kafka-describe:%s*" it)))))
 #+end_src
 * TY (work stuff)
 Company/work related stuff.
