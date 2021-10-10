@@ -35,7 +35,7 @@ These are my dotfiles. Please see [[file:./.emacs.d/README.org]] for my Emacs co
     (cl-defun when-on (&key linux darwin)
       (case system-type
         ('darwin darwin)
-        ('linux linux)))
+        ('gnu/linux linux)))
   #+end_src
 
 - Here is the code that puts them together, this block is executed during the startup of this file. See [[Post-amble]] (at the end of this) file where this code-block is called for execution.
@@ -3928,7 +3928,7 @@ This part is almost completely untouched. Needs some revamp.
   # External monitor should be the main monitor, if exists
   MONITOR_MAIN=$(echo "$monitors" | grep -E "^(HDMI|DP|VGA)")
   if [[ -z "$MONITOR_MAIN" ]]; then
-      export MONITOR_MAIN=$(echo "$monitors" | cut -d' ' -f1)
+      export MONITOR_MAIN=$(echo "$monitors" | grep -E "^(HDMI|DP|VGA)" | cut -d' ' -f1)
   else
       echo ">> Making $MONITOR_MAIN main monitor."
       xrandr --output "$MONITOR_MAIN" --primary
