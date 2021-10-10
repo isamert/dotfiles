@@ -279,7 +279,7 @@ Some basic variable and function definitions that will be used in configuration.
      (completing-read prompt alist)
      alist nil nil #'equal))
 
-  (defun isamert/dmenu (items)
+  (defun isamert/dmenu (prompt items)
     "Like `completing-read' but instead use dmenu.
   Useful for system-wide scripts.  If ITEMS is an alist, then
   returns the value instead of selected key."
@@ -290,12 +290,10 @@ Some basic variable and function definitions that will be used in configuration.
                   ""
                   items)))
            (dmenu (case system-type
-                    ('gnu/linux "rofi -dmenu -fuzzy -i")
+                    ('gnu/linux (format "rofi -dmenu -fuzzy -i -p '%s'" prompt))
                     ('darwin "choose")))
            (result (string-trim (shell-command-to-string (format "echo '%s' | %s" str dmenu)))))
-      (if alist?
-          (alist-get result items nil nil #'equal)
-        result)))
+      result))
 
   (cl-defmacro isamert/output-select
       (&key cmd prompt keep-order (split "\n") (drop 0) (filter t) (map 'it) do)
@@ -6125,7 +6123,8 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
                candidates)))))
 
   (defun isamert/qutebrowser-pass (url fifo)
-    (let* ((result (plist-get (isamert/dmenu (isamert/find-password-for url)) :acc))
+    (let* ((candidates (isamert/find-password-for url))
+           (result (plist-get (alist-get (isamert/dmenu "Select account: " candidates) candidates nil nil #'equal) :acc))
            (username (car result))
            (password (cdr result)))
       (write-region "mode-enter insert\n" nil fifo 'append)
@@ -6206,6 +6205,47 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
             (shell-command-to-string
              (format "kafka-consumer-groups.sh --describe --group %s --bootstrap-server %s" it servers))
             :buffer (get-buffer-create "*kafka-describe:%s*" it)))))
+#+end_src
+** Global snippets
+The code below let's you select your yankpad snippets outside of the Emacs using ~dmenu~.
+
+#+begin_src emacs-lisp
+  (define-derived-mode desktop-snippets-mode nil "desktop-snippets-mode"
+    "A dummy mode for expanding desktop snippets. Add
+    desktop-specific (non-Emacs) snippets under
+    `desktop-snippets-mode' header in the yankpad file.")
+
+  (defun isamert/desktop-yankpad (&optional select-category)
+    "Select a snippet from yankpad snippets using `isamert/dmenu'.
+  If SELECT-CATEGORY is non-nil, then prompts for a category first
+  and then let's you select a snippet.  Put the snippet into the
+  clipboard.
+
+  This command is meant to be used externally (from outside of
+  Emacs)."
+    (interactive)
+    (let ((text
+           (with-temp-buffer
+             (desktop-snippets-mode)
+             ;; Activate yas snippet on the temp buffer
+             (let ((yas-dont-activate-functions '()))
+               (yas-minor-mode-on))
+             (when select-category
+               ;; Same as `yankpad-set-category' but uses `isamert/dmenu' instead of
+               ;; `completing-read'
+               (let ((categories (yankpad--categories)))
+                 (setq yankpad-category (isamert/dmenu "Category: " categories))
+                 (run-hooks 'yankpad-switched-category-hook)))
+             (unless yankpad-category
+               (yankpad-local-category-to-major-mode))
+             (let* ((snippets (yankpad-active-snippets))
+                    (snippet-name (isamert/dmenu "Snippet: " snippets)))
+               (if-let ((snippet (assoc snippet-name snippets)))
+                   (yankpad--run-snippet snippet)
+                 ;; TODO Show this message as a notification
+                 (message (concat "No snippet named " snippet-name))))
+             (buffer-substring-no-properties (point-min) (point-max)))))
+      (kill-new text)))
 #+end_src
 * TY (work stuff)
 Company/work related stuff.
