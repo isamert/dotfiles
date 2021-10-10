@@ -2,19 +2,12 @@
 #+AUTHOR: İsa Mert Gürbüz
 #+STARTUP: overview
 #+PROPERTY: header-args :mkdirp yes :noweb yes
+#+OPTIONS: toc:3
 
 * Introduction
-These are my dotfiles.
+These are my dotfiles. Please see [[file:./.emacs.d/README.org]] for my Emacs configuration, this file contains non-Emacs stuff.
 
-- TODO items ::
-  - [ ] Need to convert some global variable hacks into noweb references.
-  - [ ] Create a bash library for my scripts, using noweb references.
-  - [ ] Explain each and every config file with at east 2 sentences.
-  - [ ] Find a way to make scripts exactable after tangling.
-  - [ ] Searx and invidious instances global vars
-  - [ ] Add more visual material, i.e. images
-
-** Some general information
+** General information about this file
 - ~org-babel-tangle~ to tangle all files.
 - ~C-u org-babel-tangle~ to only tangle current file.
 
@@ -38,9 +31,14 @@ These are my dotfiles.
     (defun when-linux (file-path)
       (when (eq system-type 'gnu/linux)
         file-path))
+
+    (cl-defun when-on (&key linux darwin)
+      (case system-type
+        ('darwin darwin)
+        ('linux linux)))
   #+end_src
 
-- Here is the code that puts them together, this block is executed during the startup of this file:
+- Here is the code that puts them together, this block is executed during the startup of this file. See [[Post-amble]] (at the end of this) file where this code-block is called for execution.
   #+name: startup
   #+begin_src elisp
   <<executable_hook>>
@@ -214,6 +212,403 @@ keysym dead_acute = apostrophe quotedbl
   ! LightGrey + White
   ,*color7:  #a89984
   ,*color15: #ebdbb2
+#+end_src
+** Karabiner config
+#+begin_src json :tangle (when-darwin "~/.config/karabiner/karabiner.json")􆎦
+  {
+    "global": {
+      "check_for_updates_on_startup": true,
+      "show_in_menu_bar": true,
+      "show_profile_name_in_menu_bar": false
+    },
+    "profiles": [
+      {
+        "complex_modifications": {
+          "parameters": {
+            "basic.simultaneous_threshold_milliseconds": 50,
+            "basic.to_delayed_action_delay_milliseconds": 500,
+            "basic.to_if_alone_timeout_milliseconds": 1000,
+            "basic.to_if_held_down_threshold_milliseconds": 500,
+            "mouse_motion_to_scroll.speed": 100
+          },
+          "rules": [
+            {
+              "description": "CapsLock to Hyper/Escape",
+              "manipulators": [
+                {
+                  "from": {
+                    "key_code": "caps_lock",
+                    "modifiers": {
+                      "optional": [
+                        "any"
+                      ]
+                    }
+                  },
+                  "to": [
+                    {
+                      "key_code": "right_shift",
+                      "modifiers": [
+                        "right_command",
+                        "right_control",
+                        "right_option"
+                      ]
+                    }
+                  ],
+                  "to_if_alone": [
+                    {
+                      "key_code": "escape"
+                    }
+                  ],
+                  "type": "basic"
+                }
+              ]
+            },
+            {
+              "description": "Right alt + hjkl to arrow keys Vim",
+              "manipulators": [
+                {
+                  "from": {
+                    "key_code": "h",
+                    "modifiers": {
+                      "mandatory": [
+                        "right_alt"
+                      ],
+                      "optional": [
+                        "any"
+                      ]
+                    }
+                  },
+                  "to": [
+                    {
+                      "key_code": "left_arrow"
+                    }
+                  ],
+                  "type": "basic"
+                },
+                {
+                  "from": {
+                    "key_code": "j",
+                    "modifiers": {
+                      "mandatory": [
+                        "right_alt"
+                      ],
+                      "optional": [
+                        "any"
+                      ]
+                    }
+                  },
+                  "to": [
+                    {
+                      "key_code": "down_arrow"
+                    }
+                  ],
+                  "type": "basic"
+                },
+                {
+                  "from": {
+                    "key_code": "k",
+                    "modifiers": {
+                      "mandatory": [
+                        "right_alt"
+                      ],
+                      "optional": [
+                        "any"
+                      ]
+                    }
+                  },
+                  "to": [
+                    {
+                      "key_code": "up_arrow"
+                    }
+                  ],
+                  "type": "basic"
+                },
+                {
+                  "from": {
+                    "key_code": "l",
+                    "modifiers": {
+                      "mandatory": [
+                        "right_alt"
+                      ],
+                      "optional": [
+                        "any"
+                      ]
+                    }
+                  },
+                  "to": [
+                    {
+                      "key_code": "right_arrow"
+                    }
+                  ],
+                  "type": "basic"
+                }
+              ]
+            },
+            {
+              "description": "Map AltGr + [,] to (,)",
+              "manipulators": [
+                {
+                  "from": {
+                    "key_code": "open_bracket",
+                    "modifiers": {
+                      "mandatory": [
+                        "right_alt"
+                      ],
+                      "optional": [
+                        "any"
+                      ]
+                    }
+                  },
+                  "to": [
+                    {
+                      "key_code": "9",
+                      "modifiers": [
+                        "left_shift"
+                      ]
+                    }
+                  ],
+                  "type": "basic"
+                },
+                {
+                  "from": {
+                    "key_code": "close_bracket",
+                    "modifiers": {
+                      "mandatory": [
+                        "right_alt"
+                      ],
+                      "optional": [
+                        "any"
+                      ]
+                    }
+                  },
+                  "to": [
+                    {
+                      "key_code": "0",
+                      "modifiers": [
+                        "left_shift"
+                      ]
+                    }
+                  ],
+                  "type": "basic"
+                }
+              ]
+            }
+          ]
+        },
+        "devices": [
+          {
+            "disable_built_in_keyboard_if_exists": false,
+            "fn_function_keys": [],
+            "identifiers": {
+              "is_keyboard": true,
+              "is_pointing_device": false,
+              "product_id": 832,
+              "vendor_id": 1452
+            },
+            "ignore": false,
+            "manipulate_caps_lock_led": true,
+            "simple_modifications": [
+              {
+                "from": {
+                  "key_code": "fn"
+                },
+                "to": [
+                  {
+                    "key_code": "left_control"
+                  }
+                ]
+              },
+              {
+                "from": {
+                  "key_code": "left_command"
+                },
+                "to": [
+                  {
+                    "key_code": "left_option"
+                  }
+                ]
+              },
+              {
+                "from": {
+                  "key_code": "left_option"
+                },
+                "to": [
+                  {
+                    "key_code": "left_command"
+                  }
+                ]
+              },
+              {
+                "from": {
+                  "key_code": "right_command"
+                },
+                "to": [
+                  {
+                    "key_code": "right_option"
+                  }
+                ]
+              },
+              {
+                "from": {
+                  "key_code": "right_option"
+                },
+                "to": [
+                  {
+                    "key_code": "right_command"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "fn_function_keys": [
+          {
+            "from": {
+              "key_code": "f1"
+            },
+            "to": [
+              {
+                "consumer_key_code": "display_brightness_decrement"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f2"
+            },
+            "to": [
+              {
+                "consumer_key_code": "display_brightness_increment"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f3"
+            },
+            "to": [
+              {
+                "apple_vendor_keyboard_key_code": "mission_control"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f4"
+            },
+            "to": [
+              {
+                "apple_vendor_keyboard_key_code": "spotlight"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f5"
+            },
+            "to": [
+              {
+                "consumer_key_code": "dictation"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f6"
+            },
+            "to": [
+              {
+                "key_code": "f6"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f7"
+            },
+            "to": [
+              {
+                "consumer_key_code": "rewind"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f8"
+            },
+            "to": [
+              {
+                "consumer_key_code": "play_or_pause"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f9"
+            },
+            "to": [
+              {
+                "consumer_key_code": "fast_forward"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f10"
+            },
+            "to": [
+              {
+                "consumer_key_code": "mute"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f11"
+            },
+            "to": [
+              {
+                "consumer_key_code": "volume_decrement"
+              }
+            ]
+          },
+          {
+            "from": {
+              "key_code": "f12"
+            },
+            "to": [
+              {
+                "consumer_key_code": "volume_increment"
+              }
+            ]
+          }
+        ],
+        "name": "Default profile",
+        "parameters": {
+          "delay_milliseconds_before_open_device": 1000
+        },
+        "selected": true,
+        "simple_modifications": [
+          {
+            "from": {
+              "key_code": "grave_accent_and_tilde"
+            },
+            "to": [
+              {
+                "key_code": "non_us_backslash"
+              }
+            ]
+          }
+        ],
+        "virtual_hid_keyboard": {
+          "country_code": 0,
+          "indicate_sticky_modifier_keys_state": true,
+          "mouse_key_xy_scale": 100
+        }
+      }
+    ]
+  }
+
 #+end_src
 * Window management/DE
 ** BSPWM
@@ -479,7 +874,13 @@ This is the window manager I use in OSX. It's pretty much like BSPWM.
   yabai -m config layout     bsp
   yabai -m config window_gap 6
 
-  yabai -m rule --add app=Emacs manage=off
+  yabai -m rule --add app=Qutebrowser space=^1
+  yabai -m rule --add app=Calendar    space=^3
+  yabai -m rule --add app=Mail        space=^3
+  yabai -m rule --add app=Zoom.us     space=^4
+
+  yabai -m rule --add app=Emacs  manage=off
+  yabai -m rule --add app=choose manage=off
 #+end_src
 
 ** Polybar
@@ -959,8 +1360,9 @@ This is the global keybinding manager for OSX.
   shift + lcmd - 5 : yabai -m window --space 5
 
   # focus monitor
-  lcmd - 0x2B  : yabai -m display --focus 1
-  lcmd - 0x2F  : yabai -m display --focus 2
+  # lcmd + , and lcmd + .
+  # lcmd - 0x2B  : yabai -m display --focus 1
+  # lcmd - 0x2F  : yabai -m display --focus 2
 
   # send window to monitor
   shift + lcmd - 0x2B  : yabai -m window --display 1; # yabai -m display --focus 1
@@ -3139,14 +3541,14 @@ I use this script with tridactyl to download and save stuff that ~youtube-dl~ ca
   config.bind(';I', 'hint images yank')
 
   config.unbind('<Ctrl-E>', mode='insert')
-  config.bind('<Alt-E>', 'edit-text', mode='insert')
+  config.bind('<Alt-A>', 'edit-text', mode='insert')
 
   config.load_autoconfig(False)
 
   c.content.blocking.whitelist = ['https://*.trendyol.com']
 
-  # TODO move these
   config.bind('P', 'spawn --userscript org-pass')
+
   c.aliases = {
       'w': 'session-save',
       'q': 'close',
@@ -4635,6 +5037,34 @@ This part is almost completely untouched. Needs some revamp.
 - =subdl= → dowload subtitles from opensubtitles.org
 ** Library
 - =socat= → needed for communicating with mpv trough unix sockets
+
+* Work stuff
+** Barrier
+To be able to access my personal computer while I'm on my work computer (or vice-versa) without needing to physically switch keyboards, I use barrier.
+
+#+begin_src conf :tangle ~/.local/share/barrier/.barrier.conf
+  section: screens
+    trendyol:
+    x220:
+  end
+
+  section: aliases
+  end
+
+  section: links
+    trendyol:
+      left = x220
+    x220:
+      right = trendyol
+  end
+
+  section: options
+    screenSaverSync = true
+    clipboardSharing = true
+    keystroke(alt+comma) = switchToScreen(x220)
+    keystroke(alt+.) = switchToScreen(trendyol)
+  end
+#+end_src
 
 * Post-amble
 - The following thing automatically loads the code necessary when this file is opened. This basically makes use of [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html#Specifying-File-Variables][file local variables]].
