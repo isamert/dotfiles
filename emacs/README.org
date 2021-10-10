@@ -4818,9 +4818,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (use-package jiralib2
     :ensure t
     :config
-    (setq jiralib2-url "https://jtracker.trendyol.com")
+    (setq jiralib2-url ty/jira-url)
     (setq jiralib2-auth 'basic)
-    (setq jiralib2-user-login-name "isamert.gurbuz")
+    (setq jiralib2-user-login-name ty/jira-login)
     (setq jiralib2-token nil))
 
   ;;
