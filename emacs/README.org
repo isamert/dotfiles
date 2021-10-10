@@ -241,7 +241,7 @@ Some basic variable and function definitions that will be used in configuration.
     (shell-command (format "%s > %s" (isamert/clipboard-command) file)))
 #+end_src
 *** User input
-#+begin_src emacs-lisp :lexical yes
+#+begin_src emacs-lisp
   (cl-defun isamert/get-input (&key (mode #'org-mode)
                                     (init "")
                                     on-accept
@@ -284,14 +284,15 @@ Some basic variable and function definitions that will be used in configuration.
   Useful for system-wide scripts.  If ITEMS is an alist, then
   returns the value instead of selected key."
     (let* ((alist? (listp (car items)))
-           (str (--reduce-from
-                 (format "%s\n%s" acc (if alist? (car it) it))
-                 ""
-                 items))
+           (str (string-trim-left
+                 (--reduce-from
+                  (format "%s\n%s" acc (if alist? (car it) it))
+                  ""
+                  items)))
            (dmenu (case system-type
                     ('gnu/linux "rofi -dmenu -fuzzy -i")
                     ('darwin "choose")))
-           (result (shell-command-to-string (format "echo '%s' | %s" str dmenu))))
+           (result (string-trim (shell-command-to-string (format "echo '%s' | %s" str dmenu)))))
       (if alist?
           (alist-get result items nil nil #'equal)
         result)))
