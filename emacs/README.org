@@ -1134,11 +1134,11 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     "on"  #'org-toggle-narrow-to-subtree
 
     ;; link stuff
-    "oyy" #'org-store-link
     "oyi" #'org-copy-id
     "o#" #'org-insert-structure-template)
 
   (evil-leader/set-key
+    "oyy" #'org-store-link
     "oo"  #'org-open-at-point
     "oO"  (lambda () (interactive) (with-default-browser (call-interactively 'org-open-at-point)))
 
@@ -1244,6 +1244,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   ;; block, from *curl command history* buffer
   (use-package ob-http :ensure t)
 
+  ;; TODO Handle --data-urlencode, -X {POST,GET,etc...}, -L, --data-raw
   (defun isamert/curl-to-org-http (curl-str)
     "Convert CURL-STR into an ob-http block.
   More concretely this function converts given curl command (that
@@ -1256,7 +1257,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
           (buffer-substring-no-properties (region-beginning) (region-end))
         (read-string "Curl string: "))))
     (let* ((curl (s-trim curl-str))
-           (url (cadr (s-match "'\\(http.*?\\)'" curl)))
+           (url (cadr (s-match "['\"]\\(http.*?\\)['\"]" curl)))
            (headers (--map (format "%s: %s" (s-titleize (nth 1 it)) (nth 2 it))
                            (s-match-strings-all "-H '\\(.*?\\): \\(.*?\\)'" curl)))
            (body (car (s-match "--data-binary '\\(.*?\\)'" curl)))
@@ -1294,11 +1295,8 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (haskell . t)
      (js . t)
      (sql . t)
-     (shell . t)
-     (R . t)
-     (typescript . t)
      (http . t)
-     (dot . t)))
+     (plantuml . t)))
 
   ;; Don't ask permissions for evaluating code blocks
   (setq org-confirm-babel-evaluate nil)
@@ -1649,7 +1647,8 @@ Insert links/images more intelligently,
       (let ((use-relative? (not (file-name-absolute-p path)))
             (fname (read-file-name "New name: "
                                    (expand-file-name
-                                    (file-name-directory path)))))
+                                    (file-name-directory path))
+                                   path)))
         (when use-relative?
           (setq fname (concat "./" (file-relative-name fname))))
         (save-excursion
@@ -1708,6 +1707,7 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
     (delete-char 1)
     (org-table-align))
 #+end_src
+
 * Other packages
 ** tabulated-list-mode
 - It's a built-in mode that shows some kind of tabulated data.
@@ -2814,6 +2814,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
            (typescript-mode . lsp)
            (dhall-mode . lsp)
            (haskell-mode . lsp)
+           (kotlin-mode . lsp)
            (rust-mode . lsp)
            (java-mode . lsp))
     :config
@@ -3448,6 +3449,16 @@ Simple dictionary.
       "T" #'prodigy-clear-filters
       (kbd "RET") #'prodigy-display-process))
 #+end_src
+** poporg
+Pop current comment section into an org (or markdown, as it's more widely used for comments) buffer and edit it there. Pretty useful for writing long comments. Use ~poporg-dwim~ on a comment/comment block.
+
+#+begin_src emacs-lisp
+  (use-package poporg
+    :ensure t
+    :config
+    (remove-hook 'poporg-edit-hook 'org-mode)
+    (add-hook 'poporg-edit-hook 'markdown-mode))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
@@ -3988,7 +3999,15 @@ Keybindings are generally set in-place, following have no context, so they are h
 - Use =format-all-buffer= function to format current buffer. Works for any language.
 
 #+begin_src emacs-lisp
+  ;; Automatically format file with `format-all-buffer'. It recognizes
+  ;; most language formatters/linters.
   (use-package format-all :ensure t)
+
+  ;; Pick up .editorconfig settings for current project automatically
+  (use-package editorconfig
+    :ensure t
+    :config
+    (editorconfig-mode 1))
 #+end_src
 
 *** Get currently focused function name
@@ -4119,9 +4138,10 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
      ("\\.md\\'" . markdown-mode)
      ("\\.markdown\\'" . markdown-mode)
      ("qutebrowser-editor-" . markdown-mode))
-    :init
-    (setq markdown-command "multimarkdown")
     :config
+    (setq markdown-command "multimarkdown")
+    (setq markdown-fontify-code-blocks-natively t)
+
     (evil-leader/set-key-for-mode 'markdown-mode
       "oi" #'markdown-toggle-inline-images)
 
@@ -4500,6 +4520,14 @@ Mostly for editing tridactyl and sometimes real vimrc.
 #+begin_src emacs-lisp
   (use-package graphviz-dot-mode :ensure t)
 #+end_src
+** PlantUML
+#+begin_src emacs-lisp
+  (use-package plantuml-mode
+    :ensure t
+    :config
+    (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
+    (setq org-plantuml-jar-path "/nix/store/q0v5nv70zc23fx4hjgghnqf7lvydr6fq-plantuml-1.2021.3/lib/plantuml.jar"))
+#+end_src
 * Misc functions
 ** tmux integration
 This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generally use Emacs commands instead of command line tools and if I ever need to do something in terminal I just use eshell. Besides this, I also like to use have a tmux instance working, for non-ephemeral stuff. I generally use a dropdown terminal (which may or may not be inside Emacs) to access the tmux instance. Here is how the integration goes:
@@ -4600,6 +4628,13 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
      (format "git config --get '%s'" conf)
      (shell-command-to-string)
      (s-trim)))
+
+  (defun isamert/git-user-name ()
+    "Return user name."
+    (thread-last
+        (isamert/git-get-config "user.email")
+      (s-split "@")
+      (car)))
 
   (defun isamert/git-remote-homepage ()
     (let ((remote-url (isamert/git-get-config "remote.origin.url")))
@@ -5519,8 +5554,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (re-search-forward "^\\*+ \\[[0-9]+-" nil t)
       (narrow-to-region (point-min) (point-at-bol))
       (consult-org-heading)
-      (widen)
-      (org-toggle-narrow-to-subtree)))
+      (org-narrow-to-subtree)))
 
   ;;
   ;; Template utils
@@ -5976,10 +6010,14 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 #+end_src
 ** insert uuid
 #+begin_src emacs-lisp
+  (defun isamert/uuid ()
+    "Generate a UUID."
+    (s-trim (shell-command-to-string "uuidgen")))
+
   (defun isamert/insert-uuid ()
     "Insert UUID."
     (interactive)
-    (insert (s-trim (shell-command-to-string "uuidgen"))))
+    (insert (isamert/uuid)))
 #+end_src
 
 ** isamert/start-shell-command
@@ -6247,6 +6285,7 @@ The code below let's you select your yankpad snippets outside of the Emacs using
              (buffer-substring-no-properties (point-min) (point-max)))))
       (kill-new text)))
 #+end_src
+
 * TY (work stuff)
 Company/work related stuff.
 
@@ -6339,29 +6378,29 @@ Company/work related stuff.
 
   (cl-defun ty/cbc (cbc-command &key bucket (select "."))
     "Run a cbc command on current projects couchbase."
-    (let ((config (ty/get-couchbase-config)))
-      (isamert/shell-command-to-string
-       (message
-        (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
-                cbc-command
-                (plist-get config :uri)
-                bucket
-                (plist-get config :username)
-                (plist-get config :password)
-                select)))))
+    (let* ((config (ty/get-couchbase-config))
+           (cmd (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
+                        cbc-command
+                        (plist-get config :uri)
+                        bucket
+                        (plist-get config :username)
+                        (plist-get config :password)
+                        select)))
+      (message "ty/cbc :: %s" cmd)
+      (isamert/shell-command-to-string cmd)))
 
   (cl-defun ty/cbq (query &key (select "."))
     "Run a couchbase query and return the result."
-    (let ((config (ty/get-couchbase-config)))
-      (isamert/shell-command-to-string
-       (message
-        (format "cbq -q -e %s -c %s -script '%s' | jq '%s'"
-                (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri))))
-                (format "%s:%s"
-                        (plist-get config :username)
-                        (plist-get config :password))
-                query
-                select)))))
+    (let* ((config (ty/get-couchbase-config))
+           (cmd (format "cbq -q -e %s -c %s -script '%s' | jq '%s'"
+                        (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri))))
+                        (format "%s:%s"
+                                (plist-get config :username)
+                                (plist-get config :password))
+                        query
+                        select)))
+      (message "ty/cbq :: %s" cmd)
+      (isamert/shell-command-to-string cmd)))
 
   (defun ty/couchbase-query ()
     (interactive)
