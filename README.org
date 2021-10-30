@@ -1450,8 +1450,11 @@ This is the global keybinding manager for OSX.
 *** Theme
 #+begin_src js :tangle (when-linux "~/.config/rofi/andrea.rasi")
   configuration {
-      /* modi: "drun,window,windowcd"; */
-      /* combi-modi: "drun,window,windowcd"; */
+      /* You can switch between modes below by using Alt+{comma,period} */
+      modi: "combi,run,window,vms:rofi_vms,calc";
+      /* This represents which candidates are shown in combi mode by given order. */
+      combi-modi: "window,drun,run";
+      async-pre-read: 0;
       /* font: "Inter Regular 14"; */
       fixed-num-lines: true;
       show-icons: true;
@@ -1473,7 +1476,7 @@ This is the global keybinding manager for OSX.
       /* kb-move-end: "Control+e"; */
       kb-clear-line: "";
       kb-remove-word-back: "Control+w";
-      /* kb-mode-next: "alt+period"; */
+      kb-mode-next: "alt+period";
       kb-mode-previous: "alt+comma";
   }
 
@@ -4402,7 +4405,7 @@ This part is almost completely untouched. Needs some revamp.
       passwords) passwords "$@";;
       bookmarks) bookmarks "$@";;
       calc*) rofi -show calc -modi calc -no-show-match -no-sort ;;
-      ,*) rofi -async-pre-read 0 -modi combi,window,run,vms:rofi_vms,calc -combi-modi window,drun,run -show combi "$@" ;;
+      ,*) rofi -show combi "$@" ;;
   esac
 #+end_src
 ** .scripts/rofi_vms
