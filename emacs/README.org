@@ -4883,6 +4883,11 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defvar isamert/jira-my-issues-query "Pair-programmer = currentUser() OR assignee = currentUser() ORDER BY createdDate DESC"
     "Query to find out issues that are assigned to me.")
 
+  (defvar isamert/jira-kanban-board-query
+    "project = SA AND (fixVersion in unreleasedVersions() OR fixVersion is EMPTY) AND createdDate >= -2w ORDER BY Rank ASC"
+    "Query to get kanban board issues.")
+
+
   ;; Internal state
 
   (defvar isamert/jira-my-issues '()
@@ -4891,6 +4896,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     "New jira issues")
   (defvar isamert/jira-current-sprint-issues '()
     "Current sprint issues")
+  (defvar isamert/jira-kanban-issues '()
+    "Kanban issues")
   (defvar isamert/jira--users '()
     "Users list")
 
@@ -4906,7 +4913,10 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
      'isamert/jira-current-sprint-issues)
     (isamert/deserialize-from-file
      "~/.emacs.d/.cache/isamert-jira--users"
-     'isamert/jira--users))
+     'isamert/jira--users)
+    (isamert/deserialize-from-file
+     "~/.emacs.d/.cache/isamert-jira-kanban-issues"
+     'isamert/jira-kanban-issues))
 
   ;; Functions
 
@@ -4922,8 +4932,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
   (defun isamert/jira-refresh-issue-lists ()
     (interactive)
-    (message ">> Updating my issues...")
-    (setq isamert/jira-my-issues (jiralib2-jql-search isamert/jira-my-issues-query))
+    (when isamert/jira-my-issues
+      (message ">> Updating my issues...")
+      (setq isamert/jira-my-issues (jiralib2-jql-search isamert/jira-my-issues-query)))
 
     (message ">> Updating new issues...")
     (setq isamert/jira-new-issues '())
@@ -4949,6 +4960,10 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
           (append isamert/jira-current-sprint-issues))))
      isamert/jira-projects)
 
+    (when isamert/jira-kanban-board-query
+      (message ">> Updating kanban issues...")
+      (setq isamert/jira-kanban-issues (jiralib2-jql-search isamert/jira-kanban-board-query)))
+
     (message ">> DONE")
 
     ;; Persist
@@ -4960,16 +4975,20 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
      isamert/jira-new-issues)
     (isamert/serialize-into-file
      "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
-     isamert/jira-current-sprint-issues))
+     isamert/jira-current-sprint-issues)
+    (isamert/serialize-into-file
+     "~/.emacs.d/.cache/isamert-jira-kanban-issues"
+     isamert/jira-kanban-issues))
 
   (defun isamert/jira-list-issues (&optional arg)
     (interactive "P")
     (when arg
       (isamert/jira-refresh-issue-lists))
-    (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues"))
+    (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban"))
                    ("My issues" isamert/jira-my-issues)
                    ("New issues" isamert/jira-new-issues)
-                   ("Current Sprint" isamert/jira-current-sprint-issues))
+                   ("Current Sprint" isamert/jira-current-sprint-issues)
+                   ("Kanban" isamert/jira-kanban-issues))
       (--map (cons (isamert/jira--format-ticket-name it) it))
       (isamert/alist-completing-read "Select ticket: ")
       (isamert/jira--issue-actions)))
@@ -5022,7 +5041,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                          :rest rest)))
        :on-accept (lambda (description props)
                     (setq description (org-export-string-as description 'confluence t))
-                    (message "%s" props)
+                    (message ">> (isamert/jira-create-ticket %s :description %s)" props description)
                     (thread-last
                         (apply #'jiralib2-create-issue
                                `(,(plist-get props :project-id)
@@ -5043,7 +5062,6 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
        (mapcar
         (lambda (project) (cons project (jiralib2-get-users project)))
         (mapcar #'car isamert/jira-projects)))
-
       (isamert/serialize-into-file
        "~/.emacs.d/.cache/isamert-jira--users"
        isamert/jira--users))
@@ -5063,7 +5081,11 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (completing-read "Select project: " isamert/jira-projects)))
 
   (defun isamert/jira--select-issue-type ()
-    (completing-read "Issue type: " '("Story" "Bug")))
+    (completing-read
+     "Issue type: "
+     (--map
+      (let-alist it (cons .name .id))
+      (jiralib2-get-issuetypes))))
 
   (defun isamert/jira--create-branch-name-from-ticket (issue-name)
     "Create a branch name from given Jira ISSUE-NAME"
