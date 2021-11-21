@@ -397,6 +397,8 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
   (setq dabbrev-case-fold-search nil)
   ;; ^ Expansions are done respecting the case (Ctrl-n and Ctrl-p was
   ;; not behaving the way I wanted before this in evil mode)
+  (setq vc-follow-symlinks nil)
+  ;; ^ Don't ask about following symlinks
 
 
   ;; Ask y/n instead of yes/no
@@ -448,7 +450,6 @@ Save recent files. Also exclude package files that appears after installing a pa
   (setq savehist-file "~/.emacs.d/savehist")
   (savehist-mode 1)
 
-
   (setq save-interprogram-paste-before-kill t)
   ;; ^ Clipboard selections are copied into the kill-ring
 #+end_src
@@ -482,7 +483,7 @@ If the cursor is at the end of the file, when you scroll emacs does a strange ju
 Instead of having a file that ends with ~ or '# files in same directory, save all backup files in =~/.emacs.d/backups=.
 
 #+BEGIN_SRC emacs-lisp
-  (defconst backup-dir (isamert/mkdir-if-not"~/.emacs.d/backups/"))
+  (defconst backup-dir (isamert/mkdir-if-not "~/.emacs.d/backups/"))
 
   (setq backup-directory-alist `((".*" . ,backup-dir)))
   (setq auto-save-file-name-transforms `((".*" ,backup-dir t)))
@@ -497,28 +498,6 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
   ;; ^ How many of the newest versions to keep
   (setq kept-old-versions 5)
   ;; ^ How many of the old versions to keep
-#+END_SRC
-
-** Undo tree (Persistent undo and stuff)
-- ~undo-tree~ gives a persistent undo.
-- Also it keeps undo history as a tree instead of a linear history. ~undo-tree-visualize~ may help.
-
-#+BEGIN_SRC emacs-lisp
-  (defconst isamert/undo-dir
-    (isamert/mkdir-if-not "~/.emacs.d/undo/"))
-
-  (use-package undo-tree
-    :diminish undo-tree-mode
-    :ensure t
-    :init
-    (setq undo-tree-auto-save-history t)
-    (setq undo-tree-history-directory-alist `(("." . ,isamert/undo-dir)))
-    (setq undo-tree-enable-undo-in-region nil) ;; this fixes something?
-    ;; Use undo-tree for evil
-    (setq evil-undo-system 'undo-tree)
-
-    :config
-    (global-undo-tree-mode))
 #+END_SRC
 
 ** Remove trailing space before save
@@ -621,7 +600,7 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
 You should run =all-the-icons-install-fonts= command after this.
 
 #+BEGIN_SRC emacs-lisp
-(use-package all-the-icons :ensure t)
+  (use-package all-the-icons :ensure t)
 #+END_SRC
 
 ** prettify-symbols-mode
@@ -648,14 +627,14 @@ I make use of this mode quite frequently throughout the configuration.
 This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known code symbols. This mode also saves the length of the chars, so it does not break spacing.
 - After the first install, you need to call =fira-code-mode-install-fonts= and then maybe restart Emacs etc.
 
-  #+begin_src emacs-lisp
-    (use-package fira-code-mode
-      :ensure t
-      :config
-      (setq fira-code-mode-disabled-ligatures '(":" "x" "[]"))
-      (add-hook 'prog-mode-hook #'fira-code-mode)
-      (add-hook 'org-mode-hook  #'fira-code-mode))
-  #+end_src
+#+begin_src emacs-lisp
+  (use-package fira-code-mode
+    :ensure t
+    :config
+    (setq fira-code-mode-disabled-ligatures '(":" "x" "[]"))
+    (add-hook 'prog-mode-hook #'fira-code-mode)
+    (add-hook 'org-mode-hook  #'fira-code-mode))
+#+end_src
 
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
@@ -798,6 +777,7 @@ Some small packages that enriches editing experience visually. I don't enable al
     ;; Disable evil bindings in insert mode. This needs to be called
     ;; before loading evil mode
     (setq evil-disable-insert-state-bindings t)
+    (setq evil-undo-system 'undo-redo)
     :ensure t
     :config
     ;; But I want some default evil bindings in insert mode, so just
@@ -985,9 +965,7 @@ Return back to normal mode using ~jk~ from anywhere. It does not play well with 
     :config
     (setq evil-escape-key-sequence "jk")
     (setq evil-escape-delay 0.2)
-    (add-to-list 'evil-escape-excluded-major-modes 'magit-status-mode)
-    (add-to-list 'evil-escape-excluded-major-modes 'magit-log-mode)
-    (add-to-list 'evil-escape-excluded-major-modes 'magit-diff-mode)
+    (setq evil-escape-excluded-major-modes '(magit-status-mode magit-log-mode magit-diff-mode))
     (evil-escape-mode 1))
 #+END_SRC
 
@@ -1215,10 +1193,10 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     ;; Put archive files under an archive/ directory
     ;; I don't want them to pollute my directory
     (setq org-archive-location "archive/%s_archive::")
-    (setq org-directory "~/Documents/notes"
-          org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id
-          ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
-          org-agenda-files `(,life-org ,bullet-org ,projects-org ,reality-org ,work-org ,people-org))
+    (setq org-directory "~/Documents/notes")
+    (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
+    ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
+    (setq org-agenda-files `(,life-org ,bullet-org ,projects-org ,work-org ,people-org))
 
     ;; With the following, I can call functions defined inside this file in other org files
     (org-babel-lob-ingest "~/Documents/notes/utils.org"))
@@ -1334,37 +1312,53 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 ** Exporting
 *** HTML
 #+BEGIN_SRC emacs-lisp
-(use-package htmlize :ensure t)
+  (use-package htmlize :ensure t)
 #+END_SRC
 
 *** iCalendar settings
 #+BEGIN_SRC emacs-lisp
-(setq org-icalendar-store-UID t
-      org-icalendar-alarm-time 15
-      org-icalendar-use-scheduled '(todo-start event-if-todo)
-      org-icalendar-use-deadline '(todo-due event-if-todo))
+  (setq org-icalendar-store-UID t)
+  (setq org-icalendar-alarm-time 15)
+  (setq org-icalendar-use-scheduled '(todo-start event-if-todo))
+  (setq org-icalendar-use-deadline '(todo-due event-if-todo))
 #+END_SRC
 
 ** Agenda
-#+BEGIN_SRC emacs-lisp
-  (when (fboundp 'life-org)
-    (setq org-agenda-use-time-grid t
-          org-agenda-time-grid '((today remove-match)
-                                 (800 900 1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100 2200 2300 2400) "......" "----------------")))
+Some general settings.
 
-    (evil-set-initial-state 'org-agenda-mode 'normal)
-    (evil-define-key 'normal org-agenda-mode-map
-      (kbd "<RET>") 'org-agenda-switch-to
-      (kbd "\t") 'org-agenda-goto
-      "s" 'org-agenda-schedule
-      "w" 'org-agenda-week-view
-      "d" 'org-agenda-day-view
-      "t" 'org-agenda-todo
-      "L" 'org-agenda-log-mode
-      "q" 'org-agenda-quit
-      "R" 'org-agenda-clockreport-mode
-      "r" 'org-agenda-redo)
+#+BEGIN_SRC emacs-lisp
+  (evil-set-initial-state 'org-agenda-mode 'normal)
+  (evil-define-key 'normal org-agenda-mode-map
+    (kbd "<RET>") 'org-agenda-switch-to
+    (kbd "\t") 'org-agenda-goto
+    "s" 'org-agenda-schedule
+    "w" 'org-agenda-week-view
+    "d" 'org-agenda-day-view
+    "t" 'org-agenda-todo
+    "L" 'org-agenda-log-mode
+    "q" 'org-agenda-quit
+    "R" 'org-agenda-clockreport-mode
+    "r" 'org-agenda-redo)
+
+  (setq org-agenda-use-time-grid t)
+  (setq org-agenda-time-grid
+        '((today remove-match)
+          (800 900 1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100 2200 2300 2400)
+          "......"
+          "----------------"))
 #+END_SRC
+
+*** Making agenda buffer open faster
+Here are the resources:
+- https://orgmode.org/manual/Speeding-Up-Your-Agendas.html
+- https://orgmode.org/worg/agenda-optimization.html
+
+#+begin_src emacs-lisp
+  (setq org-agenda-dim-blocked-tasks nil)
+  (setq org-agenda-inhibit-startup t)
+  (setq org-agenda-use-tag-inheritance nil)
+  (setq org-agenda-ignore-drawer-properties '(effort appt category))
+#+end_src
 
 ** ToDo keywords
 #+BEGIN_SRC emacs-lisp
@@ -1458,17 +1452,6 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
       (end-of-line)
       (insert "\n** One-liners")))
 #+end_src
-** Presentation (org-tree-slide)
-- =C->= → next heading
-- =C-<= → prev heading
-
-#+BEGIN_SRC emacs-lisp
-  (use-package org-tree-slide
-    :ensure t
-    :config
-    (add-hook 'org-tree-slide-mode-hook (lambda () (beacon-mode -1))))
-#+END_SRC
-
 ** Fancy/pretty stuff
 #+begin_src emacs-lisp
   (setq org-tags-column 0)
@@ -1557,7 +1540,7 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 
 ** org-ql
 #+BEGIN_SRC emacs-lisp
-(use-package org-ql :ensure t)
+  (use-package org-ql :ensure t)
 #+END_SRC
 
 ** Show links in the echo area
@@ -1851,11 +1834,11 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 
 ** tramp
 #+begin_src emacs-lisp
-  (setq tramp-default-method "ssh"
-        tramp-verbose 2
-        ;; ^ only show errors and warnings
-        vc-handled-backends '(Git))
-        ;; ^ only try to handle git, this speeds up things a little bit
+  (setq tramp-default-method "ssh")
+  (setq tramp-verbose 2)
+  ;; ^ Only show errors and warnings
+  (setq vc-handled-backends '(Git))
+  ;; ^ Only try to handle git, this speeds up things a little bit
 #+end_src
 
 ** eww
@@ -2036,7 +2019,11 @@ This mode allows you to do /undo/ /redo/ operations on window layout changes. My
      '(aw-leading-char-face
        ((t (:foreground "deep sky blue" :bold t :height 3.0)))))
     (evil-leader/set-key "ww" #'ace-window)
-    (evil-leader/set-key "ws" #'ace-swap-window))
+    (evil-leader/set-key "ws" #'ace-swap-window)
+    (evil-leader/set-key "wl" #'evil-window-move-far-right)
+    (evil-leader/set-key "wh" #'evil-window-move-far-left)
+    (evil-leader/set-key "wj" #'evil-window-move-very-bottom)
+    (evil-leader/set-key "wk" #'evil-window-move-very-top))
 #+end_src
 
 ** which-key
@@ -2713,14 +2700,14 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
 
     (global-flycheck-mode)
 
-    (evil-define-key 'normal flycheck-mode-map
+    (evil-define-minor-mode-key 'normal flycheck-mode
       (kbd "gE") #'isamert/show-error-list))
 
   (use-package consult-flycheck
     :after flycheck
     :ensure t
     :config
-    (evil-define-key 'normal flycheck-mode-map
+    (evil-define-minor-mode-key 'normal flycheck-mode
       (kbd "ge") #'isamert/show-error-list))
 
   (use-package flycheck-inline
@@ -2816,6 +2803,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
            (haskell-mode . lsp)
            (kotlin-mode . lsp)
            (rust-mode . lsp)
+           (go-mode . lsp)
            (java-mode . lsp))
     :config
     (setq lsp-use-native-json t)
@@ -3038,8 +3026,11 @@ When you search for something, it opens the results in an org-mode buffer. Resul
   (use-package howdoyou
     :ensure t
     :config
-    (setq howdoyou-switch-to-answer-buffer t
-          howdoyou-number-of-answers 5)
+    (setq howdoyou-switch-to-answer-buffer t)
+    (setq howdoyou-number-of-answers 5)
+    (evil-define-key '(normal motion) howdoyou-mode-map
+      "gn" #'howdoyou-next-link
+      "gp" #'howdoyou-prev-link)
     (evil-leader/set-key
       "hs" 'howdoyou-query))
 #+END_SRC
@@ -3758,7 +3749,8 @@ Manage media and streams through =completing-read=.
       "ert" #'empv-toggle
       "err" #'empv-play-radio
       "erR" #'empv-play-random-channel
-      "erv" #'empv-toggle-video
+      "erV" #'empv-toggle-video
+      "erv" #'empv-set-volume
       "ery" #'consult-empv-youtube
       "erY" #'consult-empv-youtube-tabulated
       "erk" #'empv-display-current
@@ -4867,7 +4859,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defvar isamert/git-main-branch "master"
     "Main branch name.")
 
-  (defvar isamert/jira-projects '(("SA" . 1300))
+  (defvar isamert/jira-projects '(("SA" . 1500))
     "List of projects that I enrolled in JIRA.
   CDR of each item defines which ticket number the caching should
   start.")
@@ -5322,6 +5314,7 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
           `("BEGIN:VCARD\nVERSION:2.1\n"
             ,(isamert/build-contact-item "FN:%s" "ITEM")
             ,(isamert/build-contact-item "TEL;CELL:%s" "PHONE")
+            ,(isamert/build-contact-item "TEL;WORK:%s" "PHONE_WORK")
             ,(isamert/build-contact-item "EMAIL:%s" "EMAIL")
             ,(isamert/build-contact-item "ORG:%s" "GROUP")
             ,(isamert/build-contact-item "ADR;HOME:;;%s" "ADDRESS_HOME")
@@ -5467,7 +5460,10 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "oby" 'isamert/bullet-focus-yesterday
     "obt" 'isamert/bullet-focus-today
     "obf" 'isamert/bullet-focus-given-day
-    "obr" 'isamert/bullet-focus-recurring)
+    "obr" 'isamert/bullet-focus-recurring
+    "obw" 'isamert/bullet-focus-work
+    "obl" 'isamert/bullet-focus-life
+    "obc" 'isamert/bullet-focus-computer)
 
   ;;
   ;; Date utils
@@ -5563,6 +5559,32 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (interactive)
     (isamert/bullet-focus-a-day (isamert/date "yesterday")))
 
+  (defun isamert/bullet-focus-heading (heading)
+    "Focus yesterdays header."
+    (interactive)
+    (widen)
+    (goto-char (point-min))
+    (when (re-search-forward (format "^*+ %s" heading))
+      (beginning-of-line)
+      (org-narrow-to-subtree)
+      t))
+
+  (defun isamert/bullet-focus-recurring ()
+    (interactive)
+    (isamert/bullet-focus-heading "Recurring"))
+
+  (defun isamert/bullet-focus-work ()
+    (interactive)
+    (isamert/bullet-focus-heading "Work backlog"))
+
+  (defun isamert/bullet-focus-life ()
+    (interactive)
+    (isamert/bullet-focus-heading "Life backlog"))
+
+  (defun isamert/bullet-focus-computer ()
+    (interactive)
+    (isamert/bullet-focus-heading "Computer backlog"))
+
   ;;
   ;; Focus non-day
   ;;
@@ -5581,6 +5603,18 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   ;;
   ;; Template utils
   ;;
+
+  (defun isamert/bullet-current-date ()
+    "Return current date."
+    (save-excursion
+      (re-search-backward "^* \\[")
+      (thread-last
+          (org-get-heading t t t t)
+        (s-match "\\[.*?\\]")
+        (car)
+        (substring-no-properties)
+        (s-chop-prefix "[")
+        (s-chop-suffix "]"))))
 
   (defmacro isamert/when-weekday (template &rest template-args)
     `(when (<= (isamert/u) 5)
@@ -5630,10 +5664,10 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
                           (org-entry-get nil "ITEM")))))
                    "LEVEL>1"))
            (total-time (->> items
-                         (--filter (= (plist-get it :level) 2))
-                         (--map (plist-get it :clock))
-                         (-sum)
-                         (org-minutes-to-clocksum-string)))
+                            (--filter (= (plist-get it :level) 2))
+                            (--map (plist-get it :clock))
+                            (-sum)
+                            (org-minutes-to-clocksum-string)))
            (routines (--filter (s-equals? (plist-get it :parent) "Routines") items))
            (work (--filter (-contains? (plist-get it :tags) "work") items))
            (others (--filter (not (or
@@ -5645,77 +5679,77 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (insert "|-|\n")
 
       (->> items
-        (--find (s-equals? "Routines" (plist-get it :name)))
-        (funcall (-flip #'plist-get) :clock)
-        (org-minutes-to-clocksum-string)
-        (format "|Routines|%s||\n")
-        (insert))
+           (--find (s-equals? "Routines" (plist-get it :name)))
+           (funcall (-flip #'plist-get) :clock)
+           (org-minutes-to-clocksum-string)
+           (format "|Routines|%s||\n")
+           (insert))
 
       (->> routines
-        (--filter (-contains? '("Breakfast" "Dinner") (plist-get it :name)))
-        (--map (plist-get it :clock))
-        (-sum)
-        (org-minutes-to-clocksum-string)
-        (format "|\\-- Eating||%s|\n")
-        (insert))
+           (--filter (-contains? '("Breakfast" "Dinner") (plist-get it :name)))
+           (--map (plist-get it :clock))
+           (-sum)
+           (org-minutes-to-clocksum-string)
+           (format "|\\-- Eating||%s|\n")
+           (insert))
 
       (->> routines
-        (--filter (not (-contains? '("Breakfast" "Dinner") (plist-get it :name))))
-        (--map (plist-get it :clock))
-        (-sum)
-        (org-minutes-to-clocksum-string)
-        (format "|\\-- Other||%s|\n")
-        (insert))
+           (--filter (not (-contains? '("Breakfast" "Dinner") (plist-get it :name))))
+           (--map (plist-get it :clock))
+           (-sum)
+           (org-minutes-to-clocksum-string)
+           (format "|\\-- Other||%s|\n")
+           (insert))
 
       (insert "|-|\n")
 
       (->> work
-        (--map (plist-get it :clock))
-        (-sum)
-        (org-minutes-to-clocksum-string)
-        (format "|Work|%s||\n")
-        (insert))
+           (--map (plist-get it :clock))
+           (-sum)
+           (org-minutes-to-clocksum-string)
+           (format "|Work|%s||\n")
+           (insert))
 
       (->> work
-        (--filter (-contains? (plist-get it :tags) "meeting"))
-        (--map (plist-get it :clock))
-        (-sum)
-        (org-minutes-to-clocksum-string)
-        (format "|\\-- Meetings||%s|\n")
-        (insert))
+           (--filter (-contains? (plist-get it :tags) "meeting"))
+           (--map (plist-get it :clock))
+           (-sum)
+           (org-minutes-to-clocksum-string)
+           (format "|\\-- Meetings||%s|\n")
+           (insert))
 
       (->> work
-        (--filter (not (-contains? (plist-get it :tags) "meeting")))
-        (--map (plist-get it :clock))
-        (-sum)
-        (org-minutes-to-clocksum-string)
-        (format "|\\-- Other||%s|\n")
-        (insert))
+           (--filter (not (-contains? (plist-get it :tags) "meeting")))
+           (--map (plist-get it :clock))
+           (-sum)
+           (org-minutes-to-clocksum-string)
+           (format "|\\-- Other||%s|\n")
+           (insert))
 
       (insert "|-|\n")
 
       (->> others
-        (--map (plist-get it :clock))
-        (-sum)
-        (org-minutes-to-clocksum-string)
-        (format "|Other|%s||\n")
-        (insert))
+           (--map (plist-get it :clock))
+           (-sum)
+           (org-minutes-to-clocksum-string)
+           (format "|Other|%s||\n")
+           (insert))
 
       (->> others
-        (--filter (-contains? (plist-get it :tags) "side"))
-        (--map (plist-get it :clock))
-        (-sum)
-        (org-minutes-to-clocksum-string)
-        (format "|\\-- Side projects||%s|\n")
-        (insert))
+           (--filter (-contains? (plist-get it :tags) "side"))
+           (--map (plist-get it :clock))
+           (-sum)
+           (org-minutes-to-clocksum-string)
+           (format "|\\-- Side projects||%s|\n")
+           (insert))
 
       (->> others
-        (--filter (not (-contains? (plist-get it :tags) "side")))
-        (--map (plist-get it :clock))
-        (-sum)
-        (org-minutes-to-clocksum-string)
-        (format "|\\-- Other||%s|\n")
-        (insert))
+           (--filter (not (-contains? (plist-get it :tags) "side")))
+           (--map (plist-get it :clock))
+           (-sum)
+           (org-minutes-to-clocksum-string)
+           (format "|\\-- Other||%s|\n")
+           (insert))
 
       (insert "|-|\n")
       (insert (format "|Total|%s||\n" total-time))
