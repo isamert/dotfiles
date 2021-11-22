@@ -3469,6 +3469,123 @@ You need to install =vim-plug= to be able to install vim extensions.
   " vim: set filetype=vim:
 #+end_src
 
+** Qutebrowser
+*** Main configuration
+#+begin_src python :tangle (when-on :linux "~/.config/qutebrowser/config.py" :darwin "~/.qutebrowser/config.py")
+  c.content.blocking.adblock.lists = ['https://easylist.to/easylist/easylist.txt', 'https://easylist.to/easylist/easyprivacy.txt']
+  c.content.blocking.method = 'both'
+  c.content.blocking.enabled = True
+  c.content.pdfjs = True
+  c.fonts.default_family = ['Iosevka Nerd Font']
+  c.fonts.default_size = '14pt'
+  c.hints.chars = 'asdfghjklqweuio'
+  c.fonts.hints = 'normal 16pt Helvetica'
+  c.hints.uppercase = True
+  c.input.insert_mode.auto_load = True
+  c.input.mouse.rocker_gestures = True
+  c.statusbar.position = 'top'
+  c.statusbar.show = 'never'
+  c.completion.shrink = True
+  c.url.default_page = 'https://start.duckduckgo.com/'
+  c.url.searchengines = {
+      'DEFAULT': 'https://google.com/search?q={}',
+      'yt': 'https://www.youtube.com/results?search_query={}'
+  }
+  c.url.yank_ignored_parameters = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+  c.editor.command = ['emacsclient', '-c', '{}']
+  c.fonts.hints = 'normal 16pt Helvetica'
+
+  config.bind('t', 'set-cmd-text -s :open -t')
+  config.bind('T', 'set-cmd-text :open -t -r {url:pretty}')
+  config.bind('O', 'set-cmd-text :open {url:pretty}')
+
+  config.bind('b', 'set-cmd-text -sr :tab-focus')
+  config.bind('B', 'set-cmd-text -s :quickmark-load -t')
+
+  config.bind('j', 'scroll-px 0 200')
+  config.bind('k', 'scroll-px 0 -200')
+  config.bind('J', 'tab-prev')
+  config.bind('K', 'tab-next')
+  config.bind('<Alt-J>', 'tab-move -')
+  config.bind('<Alt-K>', 'tab-move +')
+
+  config.bind('<Alt-x>', 'set-cmd-text :')
+
+  config.bind(',m', 'spawn mpv {url}')
+  config.bind(',M', 'hint links spawn mpv {hint-url}')
+
+  config.bind(';i', 'hint images tab')
+  config.bind(';I', 'hint images yank')
+
+  config.unbind('<Ctrl-E>', mode='insert')
+  config.bind('<Alt-A>', 'edit-text', mode='insert')
+
+  config.load_autoconfig(False)
+
+  c.content.blocking.whitelist = ['https://*.trendyol.com']
+
+  config.bind('P', 'spawn --userscript org-pass')
+
+  c.aliases = {
+      'w': 'session-save',
+      'q': 'close',
+      'qa': 'quit',
+      'wq': 'quit --save',
+      'wqa': 'quit --save',
+      'ty-set-token': 'jseval localStorage.setItem("authToken", prompt("TOKEN:"))',
+      'ty-get-token': 'jseval --world=main (async () => {try {alert((await getToken()).accessToken); alert("OK!");} catch (ex) {alert("SAD :(")}})()'
+  }
+#+end_src
+*** User scripts
+**** org-pass
+#+begin_src shell :tangle (when-on :linux "~/.config/qutebrowser/userscripts/org-pass" :darwin "~/.qutebrowser/userscripts/org-pass")
+  #!/bin/bash
+
+  emacsclient --eval "(isamert/qutebrowser-pass \"$QUTE_URL\" \"$QUTE_FIFO\")"
+#+end_src
+
+*** Cosmetic block list
+The following file contains some cosmetic filters that I want to apply, in ABP style block list. Qutebrowser does not support these, so I use a tool called [[https://gitlab.com/jgkamat/jhide][jhide]] to generate /greasemonkey/ scripts based on these rules. To generate the scripts, use the following command:
+
+#+begin_src sh
+  # cd into jhide directory
+  ./jhide.sh ~/.config/qutebrowser/blocklist -o ~/.config/qutebrowser/greasemonkey/jhide.js
+  # or this if you are on mac
+  ./jhide.sh ~/.qutebrowser/blocklist -o ~/.qutebrowser/greasemonkey/jhide.js
+#+end_src
+
+#+begin_src text :tangle (when-on :linux "~/.config/qutebrowser/blocklist" :darwin "~/.qutebrowser/blocklist")
+  ! https://eksisozluk.com
+  eksisozluk.com###partial-index
+  eksisozluk.com###aside
+
+  ! https://yabancidizi.pw
+  yabancidizi.pw##.rek1
+  yabancidizi.pw##.rek2
+  yabancidizi.pw##.rek1
+
+  ! https://www.youtube.com
+  www.youtube.com###primary > .ytd-two-column-browse-results-renderer.style-scope
+  www.youtube.com##ytd-watch-next-secondary-results-renderer.ytd-watch-flexy.style-scope > .ytd-watch-next-secondary-results-renderer.style-scope
+
+  ! https://stackoverflow.com
+  stackoverflow.com##.show-votes
+  stackoverflow.com##.js-sticky-leftnav.left-sidebar--sticky-container
+
+  ! https://www.reddit.com
+  www.reddit.com##._2L5G9B5yaoqW3IegiYN-FL
+  www.reddit.com##._1tvThPWQpORoc2taKebHxs._3Kd8DQpBIbsr5E1JcrMFTY
+  www.reddit.com##._2vkeRJojnV7cb9pMlPHy7d
+  www.reddit.com##.cx1ohrUAq6ARaXTX2u8YN._2GyPfdsi-MbQFyHRECo9GO._1tvdSTbdxaK-BnUbzUIqIY
+  www.reddit.com##.q4a8asWOWdfdniAbgNhMh
+#+end_src
+
+*** Domain block list
+Following urls will be blocked in qutebrowser.
+
+#+begin_src text :tangle (when-on :linux "~/.config/qutebrowser/blocked-hosts" :darwin "~/.qutebrowser/blocked-hosts")
+  www.ensonhaber.com
+#+end_src
 * Some desktop files
 ** .local/share/applications/shortcuts.desktop
 Some shortcuts to some folders. These stuff appears in rofi so that, for example, I can just search for =screenshots= and hit enter to open my screenshots directory in =pqiv=.
