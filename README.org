@@ -1364,12 +1364,12 @@ This is the global keybinding manager for OSX.
 
   # focus monitor
   # lcmd + , and lcmd + .
-  # lcmd - 0x2B  : yabai -m display --focus 1
-  # lcmd - 0x2F  : yabai -m display --focus 2
+  lcmd - 0x2F  : yabai -m display --focus 1
+  lcmd - 0x2B  : yabai -m display --focus 2
 
   # send window to monitor
-  shift + lcmd - 0x2B  : yabai -m window --display 1; # yabai -m display --focus 1
-  shift + lcmd - 0x2F  : yabai -m window --display 2; # yabai -m display --focus 1
+  shift + lcmd - 0x2F  : yabai -m window --display 1; # yabai -m display --focus 1
+  shift + lcmd - 0x2B  : yabai -m window --display 2; # yabai -m display --focus 1
 
   # resize windows
   lcmd + alt - l : yabai -m window --resize right:20:0
@@ -1388,9 +1388,6 @@ This is the global keybinding manager for OSX.
   lcmd - t : yabai -m window --toggle float;\
             yabai -m window --grid 4:4:1:1:2:2
 
-  shift + lcmd - t : yabai -m window --toggle float;\
-                     yabai -m window --grid 1:1:1:1:1:1
-
   # reload skhd config
   shift + lcmd - r : skhd --reload
 
@@ -1398,7 +1395,7 @@ This is the global keybinding manager for OSX.
   lcmd - return : alacritty
   hyper - r : emacsclient -c
   hyper - i : emacsclient --eval "(isamert/desktop-yankpad)"
-  hyper - I : emacsclient --eval "(isamert/desktop-yankpad t)"
+  hyper - o : emacsclient --eval "(isamert/desktop-yankpad t)"
 
   # move managed window
   # shift + cmd - h : yabai -m window --warp east
@@ -1749,7 +1746,7 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   export R_LIBS_USER="$HOME/.rlibs"
 
   # The PATH
-  export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/.go/bin:$HOME/.cargo/bin:$PATH
+  export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/bin:$HOME/.cargo/bin:$PATH
   # The nix path will be re-added by `/etc/profile.d/nix.sh` when
   # it gets sourced when .zprofile is sourced but I need it before that for
   # some programs to work over ssh correctly.
@@ -1833,6 +1830,9 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 
 ** Installing plugins
 #+begin_src bash :tangle ~/.zshrc
+  # Disable auto-escape-on-insert functionality
+  DISABLE_MAGIC_FUNCTIONS=true
+
   # Required some plugins (like fzf-tab) to work
   autoload -Uz compinit; compinit
   ANTIGEN_FILE=$HOME/.local/bin/antigen.zsh
@@ -5040,15 +5040,18 @@ This part is almost completely untouched. Needs some revamp.
 #+end_src
 
 * Tools
-** General
-- =tokei= → CLOC (count lines of code)
-- =subdl= → dowload subtitles from opensubtitles.org
-** Library
-- =socat= → needed for communicating with mpv trough unix sockets
+- =tokei= :: CLOC (count lines of code)
+- =subdl= :: dowload subtitles from opensubtitles.org
+- =socat= :: needed for communicating with mpv trough unix sockets
+- =entr= :: Listen/subscribe to file changes. (linux)
+- =fswatch= :: Listen/subscribe to file changes. (cross-platform)
+  - fswatch -o src/main | xargs -n1 ./mvnw compile
+    - =-o= one per batch
 
 * Work stuff
 ** Barrier
 To be able to access my personal computer while I'm on my work computer (or vice-versa) without needing to physically switch keyboards, I use barrier.
+See [[https://github.com/symless/synergy-core/wiki/Text-Config][here]] for detailed configuration documentation.
 
 #+begin_src conf :tangle ~/.local/share/barrier/.barrier.conf
   section: screens
@@ -5069,8 +5072,8 @@ To be able to access my personal computer while I'm on my work computer (or vice
   section: options
     screenSaverSync = true
     clipboardSharing = true
-    keystroke(alt+comma) = switchToScreen(x220)
-    keystroke(alt+.) = switchToScreen(trendyol)
+    keystroke(alt+BracketL) = switchToScreen(x220)
+    keystroke(alt+BracketR) = switchToScreen(trendyol)
   end
 #+end_src
 
