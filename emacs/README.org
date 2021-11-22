@@ -1791,7 +1791,8 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 #+begin_src emacs-lisp
   (evil-set-initial-state 'image-mode 'normal)
   (evil-define-key 'normal image-mode-map
-    "q" #'evil-delete-buffer)
+    "q" #'evil-delete-buffer
+    "r" #'image-rotate)
 #+end_src
 
 ** calendar
