@@ -41,8 +41,8 @@ These are my dotfiles. Please see [[file:./.emacs.d/README.org]] for my Emacs co
 - Here is the code that puts them together, this block is executed during the startup of this file. See [[Post-amble]] (at the end of this) file where this code-block is called for execution.
   #+name: startup
   #+begin_src elisp
-  <<executable_hook>>
-  <<conditions>>
+  <<<executable_hook>>>
+  <<<conditions>>>
   #+end_src
 
 * Programming languages
@@ -123,64 +123,64 @@ Install global packages to user-local.
 This file contains some mappings for my keyboard. I can simply change how a key (or some simple key combinations) behave in  X level which  has little to none performance implications. Also see [[https://isamert.net/2020/05/30/better-keyboard-experience-in-linux.html][this post]] for further details.
 
 #+begin_src xmodmap :tangle (when-linux "~/.Xmodmap")
-!! Map CapsLock to Hyper key
-!! Unmap capslock
-clear Lock
-keycode 66 = Hyper_L
-!! Leave mod4 as windows key _only_
-remove mod4 = Hyper_L
+  !! Map CapsLock to Hyper key
+  !! Unmap capslock
+  clear Lock
+  keycode 66 = Hyper_L
+  !! Leave mod4 as windows key _only_
+  remove mod4 = Hyper_L
 
-!! Set mod3 to capslock
-add mod3 = Hyper_L
+  !! Set mod3 to capslock
+  add mod3 = Hyper_L
 
-!! Fix my bluetooth keyboard:
-!! My bluetooth keyboard does not have ESC key, in it's place
-!! it has the Backwards key. So I'm simply rebinding it to ESC.
-!! (Unfortunately XF86Backwards key gets overridden by ESC in my thinkpad)
-keycode 166 = Escape NoSymbol Escape NoSymbol Escape Escape
-keycode 166 = Escape
-keycode 248 = Super_L
+  !! Fix my bluetooth keyboard:
+  !! My bluetooth keyboard does not have ESC key, in it's place
+  !! it has the Backwards key. So I'm simply rebinding it to ESC.
+  !! (Unfortunately XF86Backwards key gets overridden by ESC in my thinkpad)
+  keycode 166 = Escape NoSymbol Escape NoSymbol Escape Escape
+  keycode 166 = Escape
+  keycode 248 = Super_L
 
-!! Quick access for some unicode chars
-!! altgr + b → λ  | altgr + a → →
-!! altgr + x → ❌ | altgr + f → ∀
-!! altgr + n → ¬  | altgr + d → ⇒
-!! altgr + , → ≤  | altgr + . → ≥
-!! altgr + = → ≠  | altgr + shift + = → ≔
-!! altgr + / → ÷  | altgr + ; → ∷
-!! altgr + 8 → ×  | altgr + t -> ✓
-keysym b = b B b B U03BB
-keysym a = a A a A U2192
-keysym x = x X x X U274C
-keysym f = f F f F U2200
-keysym n = n N n N U00AC
-keysym d = d D d D U21D2
-keysym t = t T t T U2713
-keysym 8 = 8 asterisk 8 asterisk multiply
-keysym comma = comma less comma less U2264
-keysym period = period greater period greater U2265
-keysym equal = equal plus equal plus U2260 U2254
-keysym question = slash question slash question division
-keysym semicolon = semicolon colon semicolon colon U2237
+  !! Quick access for some unicode chars
+  !! altgr + b → λ  | altgr + a → →
+  !! altgr + x → ❌ | altgr + f → ∀
+  !! altgr + n → ¬  | altgr + d → ⇒
+  !! altgr + , → ≤  | altgr + . → ≥
+  !! altgr + = → ≠  | altgr + shift + = → ≔
+  !! altgr + / → ÷  | altgr + ; → ∷
+  !! altgr + 8 → ×  | altgr + t -> ✓
+  keysym b = b B b B U03BB
+  keysym a = a A a A U2192
+  keysym x = x X x X U274C
+  keysym f = f F f F U2200
+  keysym n = n N n N U00AC
+  keysym d = d D d D U21D2
+  keysym t = t T t T U2713
+  keysym 8 = 8 asterisk 8 asterisk multiply
+  keysym comma = comma less comma less U2264
+  keysym period = period greater period greater U2265
+  keysym equal = equal plus equal plus U2260 U2254
+  keysym question = slash question slash question division
+  keysym semicolon = semicolon colon semicolon colon U2237
 
-!! A comfy way to use h,j,k,l as directional keys.
-!! With this configuration I'm able to use these keys as arrow key by simply pressing
-!! them with AltGr.
-keysym h = h H h H Left Home
-keysym j = j J j J Down Prior
-keysym k = k K k K Up Next
-keysym l = l L l L Right End
+  !! A comfy way to use h,j,k,l as directional keys.
+  !! With this configuration I'm able to use these keys as arrow key by simply pressing
+  !! them with AltGr.
+  keysym h = h H h H Left Home
+  keysym j = j J j J Down Prior
+  keysym k = k K k K Up Next
+  keysym l = l L l L Right End
 
-!! AltGr+[ -> (, AltGr+] -> )
-keysym bracketleft = bracketleft braceleft bracketleft braceleft parenleft
-keysym bracketright = bracketright braceright bracketright braceright parenright
+  !! AltGr+[ -> (, AltGr+] -> )
+  keysym bracketleft = bracketleft braceleft bracketleft braceleft parenleft
+  keysym bracketright = bracketright braceright bracketright braceright parenright
 
-!! Fix us(intl)
-!! I'm using us(intl) to be able to use ISO_Shift_Level3 as AltGr, other
-!! keyboards does not permit usage of it AFAIK. But I don't want to use dead_*
-!! keys. So I map them to their original bindings.
-keysym dead_grave = grave asciitilde
-keysym dead_acute = apostrophe quotedbl
+  !! Fix us(intl)
+  !! I'm using us(intl) to be able to use ISO_Shift_Level3 as AltGr, other
+  !! keyboards does not permit usage of it AFAIK. But I don't want to use dead_*
+  !! keys. So I map them to their original bindings.
+  keysym dead_grave = grave asciitilde
+  keysym dead_acute = apostrophe quotedbl
 #+end_src
 ** .Xresources
 #+begin_src conf :tangle (when-linux "~/.Xresources")
@@ -935,7 +935,7 @@ I keep some of the polybar related variables inside the ~Xresources~ file so tha
 
   modules-left = bspwm xwindowlong
   modules-center = date
-  modules-right = org-clock-total pacman xkeyboard volume memory cpu temperature battery
+  modules-right = pacman xkeyboard volume memory cpu temperature battery
 
   tray-position = right
   tray-padding = 2
@@ -970,13 +970,6 @@ I keep some of the polybar related variables inside the ~Xresources~ file so tha
   modules-left = bspwm xwindowlong
   modules-right = xbacklight
   cursor-click = pointer
-
-  [module/org-clock-total]
-  type = custom/script
-  exec = emacsclient --eval "(isamert/org-clock-today-all)" | tr -d '"'
-  interval = 30
-
-  format-underline = ${xrdb:color9}
 
   [module/optimus]
   type = custom/script
@@ -1016,7 +1009,7 @@ I keep some of the polybar related variables inside the ~Xresources~ file so tha
 
   [module/xwindowlong]
   type = internal/xwindow
-  label = %title:0:150:...%
+  label = %title:0:55:...%
 
   [module/xkeyboard]
   type = internal/xkeyboard
@@ -3459,11 +3452,6 @@ You need to install =vim-plug= to be able to install vim extensions.
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
 
-  " Download stuff with youtube-dl into my memes folder
-  " It asks for a file name, without any extension etc
-  command ytdlhint composite hint -W exclaim_quiet tri-ytdl
-  command ytdl withUrl exclaim_quiet tri-ytdl
-
   " key-bindings
   bind <A-.> tabnext
   bind <A-,> tabprev
@@ -3481,99 +3469,6 @@ You need to install =vim-plug= to be able to install vim extensions.
   " vim: set filetype=vim:
 #+end_src
 
-*** tri-ytdl
-I use this script with tridactyl to download and save stuff that ~youtube-dl~ can handle. See ~ytdl~ command in tridactyl. It simply save selected link into =~/Documents/memes=. It asks for a file name, if you give an empty file name, it'll create it automatically.
-
-#+begin_src bash :tangle ~/.scripts/tri-ytdl
-  #!/bin/bash
-  cd ~/Documents/memes
-  notify-send "Starting the download..."
-
-  FILE_NAME=$(zenity --entry --text="Enter meme file name (without extension).\nIt will be saved under ~/Documents/memes")
-
-  if [[ -n "$FILE_NAME" ]]; then
-      youtube-dl --no-mtime --output "$FILE_NAME.%(ext)s" "$@"
-  else
-      youtube-dl --no-mtime "$@"
-  fi
-
-  echo -n "$(pwd)/$(/bin/ls -tr | tail -n 1)" | xcopy
-  notify-send "Download finished!" "File path copied to your clipboard."
-#+end_src
-
-** Qutebrowser
-*** Main configuration
-#+begin_src python :tangle (when-on :linux "~/.config/qutebrowser/config.py" :darwin "~/.qutebrowser/config.py")
-  c.content.blocking.adblock.lists = ['https://easylist.to/easylist/easylist.txt', 'https://easylist.to/easylist/easyprivacy.txt']
-  c.content.blocking.enabled = True
-  c.content.pdfjs = True
-  c.fonts.default_family = ['Iosevka Nerd Font']
-  c.fonts.default_size = '14pt'
-  c.hints.chars = 'asdfghjklqweuio'
-  c.fonts.hints = 'normal 16pt Helvetica'
-  c.hints.uppercase = True
-  c.input.insert_mode.auto_load = True
-  c.input.mouse.rocker_gestures = True
-  c.statusbar.position = 'top'
-  c.statusbar.show = 'never'
-  c.completion.shrink = True
-  c.url.default_page = 'https://start.duckduckgo.com/'
-  c.url.searchengines = {
-      'DEFAULT': 'https://google.com/search?q={}',
-      'yt': 'https://www.youtube.com/results?search_query={}'
-  }
-  c.url.yank_ignored_parameters = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
-  c.editor.command = ['emacsclient', '-c', '{}']
-  c.fonts.hints = 'normal 16pt Helvetica'
-
-  config.bind('t', 'set-cmd-text -s :open -t')
-  config.bind('T', 'set-cmd-text :open -t -r {url:pretty}')
-  config.bind('O', 'set-cmd-text :open {url:pretty}')
-
-  config.bind('b', 'set-cmd-text -sr :tab-focus')
-  config.bind('B', 'set-cmd-text -s :quickmark-load -t')
-
-  config.bind('j', 'scroll-px 0 200')
-  config.bind('k', 'scroll-px 0 -200')
-  config.bind('J', 'tab-prev')
-  config.bind('K', 'tab-next')
-  config.bind('<Alt-J>', 'tab-move -')
-  config.bind('<Alt-K>', 'tab-move +')
-
-  config.bind('<Alt-x>', 'set-cmd-text :')
-
-  config.bind(',m', 'spawn mpv {url}')
-  config.bind(',M', 'hint links spawn mpv {hint-url}')
-
-  config.bind(';i', 'hint images tab')
-  config.bind(';I', 'hint images yank')
-
-  config.unbind('<Ctrl-E>', mode='insert')
-  config.bind('<Alt-A>', 'edit-text', mode='insert')
-
-  config.load_autoconfig(False)
-
-  c.content.blocking.whitelist = ['https://*.trendyol.com']
-
-  config.bind('P', 'spawn --userscript org-pass')
-
-  c.aliases = {
-      'w': 'session-save',
-      'q': 'close',
-      'qa': 'quit',
-      'wq': 'quit --save',
-      'wqa': 'quit --save',
-      'ty-set-token': 'jseval localStorage.setItem("authToken", prompt("TOKEN:"))',
-      'ty-get-token': 'jseval --world=main (async () => {try {alert((await getToken()).accessToken); alert("OK!");} catch (ex) {alert("SAD :(")}})()'
-  }
-#+end_src
-*** User scripts
-**** org-pass
-#+begin_src shell :tangle (when-on :linux "~/.config/qutebrowser/userscripts/org-pass" :darwin "~/.qutebrowser/userscripts/org-pass")
-  #!/bin/bash
-
-  emacsclient --eval "(isamert/qutebrowser-pass \"$QUTE_URL\" \"$QUTE_FIFO\")"
-#+end_src
 * Some desktop files
 ** .local/share/applications/shortcuts.desktop
 Some shortcuts to some folders. These stuff appears in rofi so that, for example, I can just search for =screenshots= and hit enter to open my screenshots directory in =pqiv=.
@@ -3699,18 +3594,12 @@ Some extra stuff that I want to be able to reach through rofi.
 * Scripts
 This part is almost completely untouched. Needs some revamp.
 
-** .scripts/askpass
-#+begin_src bash :tangle ~/.scripts/askpass
-  #!/bin/sh
-  zenity --password --title "Enter your password" 2> /dev/null
-#+end_src
-** .scripts/browser-watch
-#+begin_src bash :tangle ~/.scripts/browser-watch
-  #!/bin/bash
+** Bash Library
+*** Convert command line arguments to variables automatically
+Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are converted into underscores before doing the assignment. As an example, if your script is called like ~./script --param1=value --param-2=value2~ then you'll have ~PARAM1~ variable set to ~value~ and ~PARAM_2~ variable set to ~VALUE2~ inside your script.
 
-  # TODO: watch a list of files
-
-  CMD=$1
+#+name: bash-initialize-variables
+#+begin_src bash
   while [[ $# -gt 0 ]]; do
       case $1 in
           --*)
@@ -3723,7 +3612,21 @@ This part is almost completely untouched. Needs some revamp.
       esac
       shift
   done
+#+end_src
 
+** .scripts/askpass
+#+begin_src bash :tangle ~/.scripts/askpass
+  #!/bin/sh
+  zenity --password --title "Enter your password" 2> /dev/null
+#+end_src
+** .scripts/browser-watch
+#+begin_src bash :tangle ~/.scripts/browser-watch
+  #!/bin/bash
+
+  # TODO: watch a list of files
+
+  CMD=$1
+  <<<bash-initialize-variables>>>
 
   if [[ "$CMD" = "--help" ]]; then
       echo "Detect file changes and reload it in browser."
@@ -3968,78 +3871,6 @@ This part is almost completely untouched. Needs some revamp.
   echo ">> Creating 5 desktops for each monitor"
   xrandr -q | grep -w "connected" | cut -d' ' -f1 | xargs -I {} bspc monitor "{}" --reset-desktops I II III IV V VI VII VIII IX X
 #+end_src
-** .scripts/mailcheck
-#+begin_src python :tangle ~/.scripts/mailcheck
-  #!/usr/bin/env python
-  import sys
-  import argparse
-
-  parser = argparse.ArgumentParser()
-  parser.add_argument('-u', '--user', type=str, action='append',
-                      help="You can pass multiple users/passwords/servers. Like 'mailcheck --user user1 --password password1 --server server1 --user user2 --password password2 --server server2'")
-  parser.add_argument('-p', '--password', type=str, action='append')
-  parser.add_argument('-s', '--server', type=str, action='append',
-                      help="The IMAP server address like 'imap.gmail.com'. For ProtonMail, use 'proton' or 'pm'.")
-  parser.add_argument('-S', '--separator', type=str, default="/",
-                      help="Separator string for separating unread count of different accounts. Default: '/'")
-  parser.add_argument('-d', '--dump', type=str, default="",
-                      help="Dump output to a file.")
-  parser.add_argument('-f', '--fail-on-zero', default=False, action='store_true',
-                      help="If set, exit with 1 if all mailboxes have 0 unread mail.")
-  cfg, other_cfg = parser.parse_known_args()
-
-  results = []
-  for user, password, server in zip(cfg.user, cfg.password, cfg.server):
-      try:
-          if server in ('pm', 'proton', 'protonmail'):
-              from protonmail.client import Client
-              import logging
-              logging.getLogger('twisted').propagate = False
-              for key in logging.Logger.manager.loggerDict:
-                  logging.getLogger(key).propagate = False
-                  logging.getLogger(key).setLevel(logging.CRITICAL)
-
-              client = Client(Username=user, blocking=True)
-              client.api.login(password)
-              response = client.api.conversations.count()
-              response_code = response['Code']
-              total_unread = 0
-              if response_code == 1000:
-                  for count in response['Counts']:
-                      total_unread = total_unread + count['Unread']
-              results.append(total_unread)
-          else:
-              import imaplib
-              mail = imaplib.IMAP4_SSL(server)
-              mail.login(user, password)
-              mail.select("inbox", True)
-              return_code, ids = mail.search(None, 'UnSeen')
-
-              if return_code == 'OK':
-                  count = len([x for x in ids[0].split(b' ') if x])
-                  results.append(count)
-              else:
-                  print(return_code)
-                  sys.exit(255)
-      except:
-          results.append(-1)
-
-  is_all_zero = all([x == 0 for x in results])
-  if cfg.fail_on_zero and is_all_zero:
-      sys.exit(1)
-
-  if is_all_zero:
-      output = "0"
-  else:
-      output = cfg.separator.join(map(lambda x: str(x), results))
-
-  print(output)
-
-  if cfg.dump:
-      with open(cfg.dump, "w") as f:
-          f.write(output)
-#+end_src
-
 ** .scripts/mediastuff
 #+begin_src bash :tangle ~/.scripts/mediastuff
   #!/bin/bash
@@ -4856,6 +4687,30 @@ This part is almost completely untouched. Needs some revamp.
   #!/bin/sh
   grep -v "!"  "$HOME/.Xresources" | grep "$1" | cut -d ":" -f 2 | xargs
 #+end_src
+** .scripts/media-downloader
+Downloads given file in given folder with given name. Useful for adding keybindings in browsers etc.
+
+#+begin_src bash :tangle ~/.scripts/media-downloader
+  #!/bin/bash
+
+  <<<bash-initialize-variables>>>
+
+  URL=${URL-$(zenity --entry --text="Enter url to download:")}
+  FILE_NAME=${FILE_NAME-$(zenity --entry --text="Enter file name (without extension).")}
+  SAVE_PATH=${SAVE_PATH-$(zenity --entry --text="Where to save?" --entry-text="${HOME}/")}
+
+  cd "${SAVE_PATH}" || exit
+
+  if [[ -n "$FILE_NAME" ]]; then
+      youtube-dl --no-mtime --output "$FILE_NAME.%(ext)s" "$URL"
+  else
+      youtube-dl --no-mtime "$URL"
+  fi
+
+  echo -n "$(pwd)/$(/bin/ls -tr | tail -n 1)" | xcopy
+  notify-send "Download finished!" "File path copied to your clipboard."
+#+end_src
+
 ** Information utilities
 *** .scripts/mgm
 #+begin_src bash :tangle ~/.scripts/mgm
@@ -5013,6 +4868,18 @@ This part is almost completely untouched. Needs some revamp.
 #+end_src
 
 *** .scripts/setbrightness
+
+Following rule is needed for being able to write into brightness file:
+
+#+begin_src conf :tangle /sudo::/etc/udev/rules.d/90-backlight.rules
+SUBSYSTEM=="backlight", ACTION=="add",
+RUN+="/bin/chgrp video /sys/class/backlight/intel_backlight/brightness",
+RUN+="/bin/chmod o+w /sys/class/backlight/intel_backlight/brightness"
+#+end_src
+
+Refresh the rules after tangling the file: ~sudo udevadm trigger~
+
+
 #+begin_src bash :tangle (when-linux "~/.scripts/setbrightness")
   #!/bin/bash
 
@@ -5035,7 +4902,7 @@ This part is almost completely untouched. Needs some revamp.
               ;;
       esac
   else
-      set-brightness $(echo -e "MAX\nMEDIUM\nLOW" | dmenu -i)
+      setbrightness $(echo -e "MAX\nMEDIUM\nLOW" | dmenu -i)
   fi
 #+end_src
 
@@ -5078,8 +4945,12 @@ See [[https://github.com/symless/synergy-core/wiki/Text-Config][here]] for detai
 #+end_src
 
 * Post-amble
-- The following thing automatically loads the code necessary when this file is opened. This basically makes use of [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html#Specifying-File-Variables][file local variables]].
+- The following thing automatically loads the code necessary when this file is opened.
+- This basically makes use of [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html#Specifying-File-Variables][file local variables]].
+- It also changes ~org-babel-noweb-wrap-{start,end}~ variables so that when noweb references are used inside sh/bash blocks, it does not mess up the code highlighting. You need to use ~<<<ref>>>~ instead of ~<<ref>>~ to include noweb references inside code blocks.
 
 # Local Variables:
+# org-babel-noweb-wrap-start: "<<<"
+# org-babel-noweb-wrap-end: ">>>"
 # eval: (progn (save-excursion (org-babel-goto-named-src-block "startup") (let ((code (org-babel-expand-noweb-references))) (with-temp-buffer (insert code) (eval-buffer)))))
 # End:
