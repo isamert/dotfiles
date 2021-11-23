@@ -1354,6 +1354,9 @@ This is the global keybinding manager for OSX.
   shift + lcmd - 3 : yabai -m window --space 3
   shift + lcmd - 4 : yabai -m window --space 4
   shift + lcmd - 5 : yabai -m window --space 5
+  shift + lcmd - 6 : yabai -m window --space 6
+  shift + lcmd - 7 : yabai -m window --space 7
+  shift + lcmd - 8 : yabai -m window --space 8
 
   # focus monitor
   # lcmd + , and lcmd + .
@@ -5048,16 +5051,16 @@ See [[https://github.com/symless/synergy-core/wiki/Text-Config][here]] for detai
 
   section: links
     trendyol:
-      left = x220
+      right = x220
     x220:
-      right = trendyol
+      left = trendyol
   end
 
   section: options
     screenSaverSync = true
     clipboardSharing = true
-    keystroke(alt+BracketL) = switchToScreen(x220)
-    keystroke(alt+BracketR) = switchToScreen(trendyol)
+    keystroke(alt+BracketL) = switchToScreen(trendyol)
+    keystroke(alt+BracketR) = switchToScreen(x220)
   end
 #+end_src
 
