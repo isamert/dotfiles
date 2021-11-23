@@ -6249,26 +6249,31 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   (defun isamert/find-password-for (url)
     "Return matching accounts for given URL."
     (interactive)
-    (setq url (url-host (url-generic-parse-url url)))
+    (let ((urlobj (url-generic-parse-url url)))
+      (setq url (url-host urlobj))
+      (when-let ((port (url-port-if-non-default urlobj)))
+        (setq url (format "%s:%s" url port))))
     (with-current-buffer "passwords.org"
       (let* ((candidates
               (seq-filter
                #'identity
                (org-map-entries
                 (lambda  ()
-                  (let ((links (split-string (or (org-entry-get nil "URLS") "") "|" t " "))
+                  (let ((link "")
+                        (match (org-entry-get nil "MATCH"))
                         (header-link (save-excursion
                                        (forward-char 5)
                                        (org-element-context)))
                         (title (org-entry-get nil "ITEM")))
                     (when (eq (org-element-type header-link) 'link)
-                      (push (org-element-property :raw-link header-link) links)
+                      (setq link (org-element-property :raw-link header-link))
                       (save-excursion
                         (setq title
                               (buffer-substring-no-properties
                                (org-element-property :contents-begin header-link)
                                (org-element-property :contents-end header-link)))))
-                    (when (--any (s-contains? url it) links)
+                    (when (or (ignore-errors (s-match match url))
+                              (s-contains? url link))
                       `(("ITEM" . ,title) ,@(org-entry-properties)))))))))
         (-flatten-n
          1
@@ -6285,10 +6290,11 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
            (result (plist-get (alist-get (isamert/dmenu "Select account: " candidates) candidates nil nil #'equal) :acc))
            (username (car result))
            (password (cdr result)))
-      (write-region "mode-enter insert\n" nil fifo 'append)
-      (write-region (format "fake-key %s\n" username) nil fifo 'append)
-      (write-region "fake-key <Tab>\n" nil fifo 'append)
-      (write-region (format "fake-key %s\n" password) nil fifo 'append)))
+      (when (and username password)
+        (write-region "mode-enter insert\n" nil fifo 'append)
+        (write-region (format "fake-key %s\n" username) nil fifo 'append)
+        (write-region "fake-key <Tab>\n" nil fifo 'append)
+        (write-region (format "fake-key %s\n" password) nil fifo 'append))))
 #+end_src
 ** Kubernetes
 My main use case is drop into a shell of a pod. The code below makes it quite easy. Use ~isamert/kube-select-pod~ to select a pod and do some actions on it.
