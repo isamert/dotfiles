@@ -1743,6 +1743,7 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
         ("t" highlight-thing-mode "Highlight current symbol" :toggle t))
        "Miscellaneous"
        (("l" visual-line-mode "Wrap lines" :toggle t)
+        ("T" toggle-truncate-lines "Truncate lines" :toggle t)
         ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
         ("f" fci-mode "Fill column" :toggle t)
         ("<SPC>" nil "Quit" :color blue))))
