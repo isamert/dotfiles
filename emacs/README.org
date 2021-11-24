@@ -570,7 +570,7 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
                           :width 'normal
                           :height isamert/font-height))
     ;; ...and load the theme
-    (load-theme 'doom-one t))
+    (load-theme 'doom-dark+ t))
 
   (defun isamert/set-font-and-theme-config-in-frame (frame)
     (with-selected-frame frame
@@ -775,12 +775,12 @@ Some small packages that enriches editing experience visually. I don't enable al
     (setq evil-want-integration t)
     (setq evil-want-keybinding nil)
     ;; Disable evil bindings in insert mode. This needs to be called
-    ;; before loading evil mode
+    ;; before loading evil mode...
     (setq evil-disable-insert-state-bindings t)
     (setq evil-undo-system 'undo-redo)
     :ensure t
     :config
-    ;; But I want some default evil bindings in insert mode, so just
+    ;; ...but I want some default evil bindings in insert mode, so just
     ;; remap them
     (evil-define-key 'insert 'global
       (kbd "C-d") #'evil-shift-left-line
@@ -801,6 +801,11 @@ Some small packages that enriches editing experience visually. I don't enable al
 
     ;; Make horizontal movement cross lines
     (setq-default evil-cross-lines t)
+
+    ;; Open ex-mode with `<`> text instead of '<'> by default while
+    ;; visual mode is active. This way commands will work on selected
+    ;; char range instead of selected line range.
+    (setq evil-ex-visual-char-range t)
 
     ;; Move between visual lines instead of real lines
     (evil-define-key 'normal 'global
@@ -1743,7 +1748,7 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
         ("t" highlight-thing-mode "Highlight current symbol" :toggle t))
        "Miscellaneous"
        (("l" visual-line-mode "Wrap lines" :toggle t)
-        ("T" toggle-truncate-lines "Truncate lines" :toggle t)
+        ("T" toggle-truncate-lines "Truncate lines")
         ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
         ("f" fci-mode "Fill column" :toggle t)
         ("<SPC>" nil "Quit" :color blue))))
