@@ -3451,6 +3451,16 @@ Pop current comment section into an org (or markdown, as it's more widely used f
     (remove-hook 'poporg-edit-hook 'org-mode)
     (add-hook 'poporg-edit-hook 'markdown-mode))
 #+end_src
+** ctrlf
+- Better search. It overrides ~C-s~ (normal search) and ~C-M-s~ (regexp search). I wasn't able to replace default evil bindings with this (as in mapping ~/~, ~n~, ~p~ functionality to ctrlf) but it works well with the default bindings it provides.
+- Nice thing about this package is that it shows how many matches there are and which match are you currently on. It is also nice that you can alternate between normal and regexp searches fairly easily.
+
+#+begin_src emacs-lisp
+  (use-package ctrlf
+    :ensure t
+    :config
+    (ctrlf-mode +1))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
@@ -3972,9 +3982,6 @@ Keybindings are generally set in-place, following have no context, so they are h
 
 #+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-
-  (evil-define-key 'normal 'global
-    (kbd "C-s") #'save-buffer)
 
   (evil-define-key 'normal prog-mode-map
     "gd" 'xref-find-definitions
