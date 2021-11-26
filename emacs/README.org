@@ -5588,7 +5588,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
             (date-to-time (concat (match-string 1) "T000"))
             (date-to-time (concat date "T000")))
        (org-insert-heading-after-current)
-       (insert (format "[%s %s] [/]" date (format-time-string "%a")))
+       (insert (format "[%s %s] [/]" date (format-time-string "%a" (date-to-time (concat date "T000")))))
        (org-narrow-to-subtree)
        (cl-return))))
 
