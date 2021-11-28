@@ -4597,6 +4597,82 @@ Mostly for editing tridactyl and sometimes real vimrc.
     (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
     (setq org-plantuml-jar-path "/nix/store/q0v5nv70zc23fx4hjgghnqf7lvydr6fq-plantuml-1.2021.3/lib/plantuml.jar"))
 #+end_src
+** Couchbase
+Install couchbase-query package for running interactive queries inside emacs.
+#+begin_src emacs-lisp
+  (use-package couchbase-query
+    :ensure t
+    :diminish
+    :quelpa (couchbase-query
+             :fetcher github
+             :repo "isamert/couchbase-query.el")
+    :config
+    (setq couchbase-query-command "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/cbq"))
+#+end_src
+
+Create a mode for n1ql and make n1ql code blocks inside org-mode runnable.
+
+#+begin_src emacs-lisp
+  ;; Create a dummy derived mode based on sql-mode for n1ql, so that we
+  ;; get some syntax highlighting for free
+  (define-derived-mode n1ql-mode sql-mode "n1ql-mode")
+  (add-to-list 'auto-mode-alist (cons (rx ".n1ql" string-end) #'n1ql-mode))
+
+  ;; Add a function to execute n1ql code blocks in org-mode. It works
+  ;; just like how sql-mode code blocks is executed
+  (defun org-babel-execute:n1ql (body params)
+    (isamert/cbq
+     body
+     :host (alist-get :host params)
+     :username (alist-get :username params)
+     :password (alist-get :password params)
+     :select (or (alist-get :select params) ".")))
+
+
+  (cl-defun isamert/cbq (query &key host username password (select "."))
+    "Run a couchbase query and return the result."
+    (let* ((cmd (format "cbq -q -e %s -c %s -script '%s' | jq '%s'"
+                        (s-chop-suffix ":8091" host)
+                        (format "%s:%s" username password)
+                        query
+                        select)))
+      (message "ty/cbq :: %s" cmd)
+      (isamert/shell-command-to-string cmd)))
+#+end_src
+
+Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs. cbc is not able to read commands from a file, so it does not really makes sense to create a mode for it but I do this to be able to create code blocks in org mode for cbc commands so that I can save some commands in an org file and re-run them whenever I want.
+
+#+begin_src emacs-lisp
+  (define-generic-mode 'cbc-mode
+    '(?!)
+    '("help" "version" "cat" "create" "create" "cp" "incr" "decr" "touch" "rm" "hash" "stats" "observe" "view" "lock" "unlock" "admin" "bucket" "bucket" "bucket" "role" "user" "user" "user" "connstr" "query" "write" "strerror" "ping" "watch" "keygen")
+    nil
+    '("cbc\\'")
+    nil
+    "Simple mode for couchbase cbc commandline utility.")
+
+  (defun org-babel-execute:cbc (body params)
+    (isamert/cbc
+     body
+     :host (alist-get :host params)
+     :username (alist-get :username params)
+     :password (alist-get :password params)
+     :bucket (alist-get :bucket params)
+     :select (or (alist-get :select params) ".")))
+
+  (cl-defun isamert/cbc (cbc-command &key host username password bucket (select "."))
+    "Run given cbc command."
+    (let* ((cmd (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
+                        cbc-command
+                        host
+                        bucket
+                        username
+                        password
+                        select)))
+      (message "isamert/cbc :: %s" cmd)
+      (isamert/shell-command-to-string cmd)))
+#+end_src
+
 * Misc functions
 ** tmux integration
 This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generally use Emacs commands instead of command line tools and if I ever need to do something in terminal I just use eshell. Besides this, I also like to use have a tmux instance working, for non-ephemeral stuff. I generally use a dropdown terminal (which may or may not be inside Emacs) to access the tmux instance. Here is how the integration goes:
@@ -6494,63 +6570,6 @@ Company/work related stuff.
     (kill-new ty/stage-token))
 #+end_src
 
-** Couchbase
-#+begin_src emacs-lisp
-  (use-package couchbase-query
-    :ensure t
-    :diminish
-    :quelpa (couchbase-query
-             :fetcher github
-             :repo "isamert/couchbase-query.el")
-    :config
-    (setq couchbase-query-command "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/cbq"))
-
-  (defun ty/get-couchbase-config ()
-    (let ((config
-           (with-temp-buffer
-             (insert-file-contents
-              (concat (isamert/current-project-root) "config/stage.secrets.json"))
-             (json-read))))
-      (list :uri (alist-get 'COUCHBASE_URI config)
-            :username (alist-get 'COUCHBASE_USERNAME config)
-            :password (alist-get 'COUCHBASE_PASSWORD config))))
-
-  (cl-defun ty/cbc (cbc-command &key bucket (select "."))
-    "Run a cbc command on current projects couchbase."
-    (let* ((config (ty/get-couchbase-config))
-           (cmd (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
-                        cbc-command
-                        (plist-get config :uri)
-                        bucket
-                        (plist-get config :username)
-                        (plist-get config :password)
-                        select)))
-      (message "ty/cbc :: %s" cmd)
-      (isamert/shell-command-to-string cmd)))
-
-  (cl-defun ty/cbq (query &key (select "."))
-    "Run a couchbase query and return the result."
-    (let* ((config (ty/get-couchbase-config))
-           (cmd (format "cbq -q -e %s -c %s -script '%s' | jq '%s'"
-                        (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri))))
-                        (format "%s:%s"
-                                (plist-get config :username)
-                                (plist-get config :password))
-                        query
-                        select)))
-      (message "ty/cbq :: %s" cmd)
-      (isamert/shell-command-to-string cmd)))
-
-  (defun ty/couchbase-query ()
-    (interactive)
-    (let* ((config (ty/get-couchbase-config))
-           (couchbase-query-command-parameters
-            `("-e" ,(read-string "Address: " (s-chop-suffix ":8091" (car (s-split "," (plist-get config :uri)))))
-              "-c" ,(read-string "username:password: " (format "%s:%s"
-                                                               (plist-get config :username)
-                                                               (plist-get config :password))))))
-      (couchbase-query)))
-#+end_src
 ** Utilities
 #+begin_src emacs-lisp
   (evil-leader/set-key "jt" #'ty/jump-to-test-file)
