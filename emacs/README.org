@@ -1389,6 +1389,7 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 
 #+begin_src emacs-lisp
   (evil-leader/set-key "og" #'org-capture)
+  (evil-leader/set-key "oG" #'org-capture-goto-last-stored)
 
   (setq
    org-capture-templates
@@ -3763,6 +3764,8 @@ Manage media and streams through =completing-read=.
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
     (evil-leader/set-key
       "erp" #'empv-play
+      "erP" #'empv-playlist-select
+      "ere" #'empv-enqueue
       "ert" #'empv-toggle
       "err" #'empv-play-radio
       "erR" #'empv-play-random-channel
@@ -3774,8 +3777,8 @@ Manage media and streams through =completing-read=.
       "erl" #'empv-log-current-radio-song-name
       "era" #'empv-play-audio
       "erA" #'empv-play-audio-multiple
-      "ers" #'empv-exit))
-  ;; (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
+      "ers" #'empv-exit)
+    (evil-make-overriding-map empv-youtube-results-mode-map 'normal))
 
   (defun isamert/export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."
