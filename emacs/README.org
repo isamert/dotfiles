@@ -4634,10 +4634,13 @@ Create a mode for n1ql and make n1ql code blocks inside org-mode runnable.
 
   (cl-defun isamert/cbq (query &key host username password (select "."))
     "Run a couchbase query and return the result."
-    (let* ((cmd (format "cbq -q -e %s -c %s -script '%s' | jq '%s'"
+    (let* ((cmd (format "cbq -q -e %s -c '%s' -script \"%s\" | jq '%s'"
                         (s-chop-suffix ":8091" host)
                         (format "%s:%s" username password)
-                        query
+                        (thread-last query
+                          (s-replace "\n" " ")
+                          (s-replace "`" "\\`")
+                          (s-replace "\"" "\\\""))
                         select)))
       (message "ty/cbq :: %s" cmd)
       (isamert/shell-command-to-string cmd)))
