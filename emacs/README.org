@@ -1546,7 +1546,12 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 
 ** org-ql
 #+BEGIN_SRC emacs-lisp
-  (use-package org-ql :ensure t)
+  (use-package org-ql
+    :ensure t
+    :config
+    ;; Load org-ql-search prematurely to be able to use org-ql blocks in
+    ;; org-mode
+    (require 'org-ql-search))
 #+END_SRC
 
 ** Show links in the echo area
