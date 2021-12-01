@@ -2545,7 +2545,7 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
                 :items
                 ,(lambda ()
                    (let ((filter (consult--regexp-filter consult-buffer-filter)))
-                     (seq-remove (lambda (x) (string-match-p filter x))
+                     (seq-remove (lambda (x) (or (not x) (string-match-p filter x)))
                                  (ignore-errors (mapcar #'buffer-name (persp-buffers (get-current-persp))))))))
     "Current persp buffer candidate source for `consult-buffer'.")
 
