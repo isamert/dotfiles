@@ -4413,6 +4413,23 @@ The following enables =CamelCase= aware editing operations.
     ;; Copies paths like:.definition.summary.pastGroup.trackingResults[0].trackingItemReferenceId
     ;; I've created two functions above for the variations
     (setq jsons-path-printer 'jsons-print-path-jq))
+
+  ;; Add execution ability to json blocks inside org-mode. Either add
+  ;; `:jq some-jq-query' or `:node it.accessor' to code block's header
+  ;; to filter the json
+  (defun org-babel-execute:json (body params)
+    (let ((jq (cdr (assoc :jq params)))
+          (node (cdr (assoc :node params))))
+      (cond
+       (jq (with-temp-buffer
+             (insert body)
+             (shell-command-on-region (point-min) (point-max) (format "jq -r \"%s\"" jq) nil 't)
+             (buffer-string)))
+       (node (shell-command-to-string
+              (format
+               "node -p \"const it = require('%s'); %s\""
+               (make-temp-file "foo" nil ".json" body)
+               node))))))
 #+end_src
 
 ** java
