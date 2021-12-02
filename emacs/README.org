@@ -366,6 +366,64 @@ Some basic variable and function definitions that will be used in configuration.
         (tabulated-list-print t))
       (switch-to-buffer buffer)))
 #+end_src
+*** API call
+This function is for doing easy REST calls and it uses plists for everything because it's more readable and easier to type than alists (but you can still use alists if you want or need to). I use this to quickly prototype stuff in elisp.
+
+#+begin_src emacs-lisp
+  (cl-defun isamert/rest
+      (endpoint
+       &rest params
+       &key (-type "GET") (-headers) (-data) (-params)
+       &allow-other-keys)
+    "Do a basic API call and return the result. Some examples:
+
+      (isamert/rest \"some/endpoint\")
+
+  With url parameters:
+
+      (isamert/rest \"...\" :query \"test\" :page 3 :page_size 15)
+
+  If you wan't to pass an alist as url params:
+
+      (isamert/rest \"...\" :-params '((query . \"test\") (page . 3) (page_size . 15)))
+
+  POST with json body:
+
+      (isamert/rest \"...\" :-type 'POST :-data '(:key1 1 :key2 2))
+
+  With some HTTP headers:
+
+      (isamert/rest \"...\" :-headers '(:Authorization \"Bearer e21ewqfasdwtkl\"))
+  "
+    (let (json
+          (json-object-type 'alist)
+          (json-array-type #'list)
+          (json-key-type 'symbol))
+
+      ;; Remove request related items from params list
+      (dolist (key '(:-type :-headers :-data :-params))
+        (cl-remf params key))
+
+      (request
+        endpoint
+        :type -type
+        ;; TODO Maybe roll my own plist-to-alist function
+        :headers (if (and -headers (json-alist-p -headers))
+                     -headers
+                   (transient-plist-to-alist -headers))
+        :parser #'json-read
+        :success (cl-function
+                  (lambda (&key data &allow-other-keys)
+                    (setq json data)))
+        :sync t
+        :data (if (and -data (json-alist-p -data))
+                  data
+                (transient-plist-to-alist -data))
+        :params (if (and -params (json-alist-p -params))
+                    -params
+                  params))
+      json))
+#+end_src
 *** Other
 #+begin_src emacs-lisp
   (defun isamert/kill-this-buffer ()
