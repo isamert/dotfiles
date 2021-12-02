@@ -2627,12 +2627,23 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 I was using projectile earlier but [[consult]] functions are just more than enough for project management. I only use couple of functions from =project.el= which is already built-in to Emacs.
 
 #+begin_src emacs-lisp
+  (defconst isamert/projects-root "~/Workspace/projects")
+
   (defun isamert/current-project-root ()
     "Return the root path of current project."
     (interactive)
     ;; `project-current' is a function from project.el
     (ignore-errors
       (expand-file-name (cdr (project-current)))))
+
+  (defun isamert/current-project-name ()
+    "Return current projects name."
+    (when-let ((proot (isamert/current-project-root)))
+      (string-trim
+       (string-remove-prefix
+        (expand-file-name isamert/projects-root)
+        proot)
+       "/" "/")))
 #+end_src
 
 I have all my projects under =~/Workspace/projects=. Some of them are groupped under another directory. This functions loops trough all of the directories and finds the ones without =.git= folder and adds those folders to project paths. Consider this:
@@ -2648,8 +2659,6 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
 #+end_src
 
 #+begin_src emacs-lisp
-  (defconst isamert/projects-root "~/Workspace/projects")
-
   (defun isamert/project-cd-root ()
     "CD into current project's root."
     (interactive)
@@ -3090,7 +3099,14 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
 
     ;; Enable expanding in minibuffer
     (add-hook 'minibuffer-setup-hook 'yas-minor-mode)
-    (define-key minibuffer-local-map (kbd "M-e") #'yankpad-expand))
+    (define-key minibuffer-local-map (kbd "M-e") #'yankpad-expand)
+
+    ;; Categories returned by the following functions will be used to
+    ;; expand snippets
+    (setq
+     yankpad-auto-category-functions
+     '(yankpad-major-mode-category isamert/current-project-name)))
+
 #+END_SRC
 
 ** git-link
