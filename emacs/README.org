@@ -2736,14 +2736,14 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
 
     (global-flycheck-mode)
 
-    (evil-define-minor-mode-key 'normal flycheck-mode
+    (evil-define-minor-mode-key 'normal 'flycheck-mode
       (kbd "gE") #'isamert/show-error-list))
 
   (use-package consult-flycheck
     :after flycheck
     :ensure t
     :config
-    (evil-define-minor-mode-key 'normal flycheck-mode
+    (evil-define-minor-mode-key 'normal 'flycheck-mode
       (kbd "ge") #'isamert/show-error-list))
 
   (use-package flycheck-inline
