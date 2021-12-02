@@ -366,6 +366,15 @@ Some basic variable and function definitions that will be used in configuration.
         (tabulated-list-print t))
       (switch-to-buffer buffer)))
 #+end_src
+*** Other
+#+begin_src emacs-lisp
+  (defun isamert/kill-this-buffer ()
+    "Kill current buffer.
+  Function `kill-this-buffer' does not work reliably.  See
+  documentation of it."
+    (interactive)
+    (kill-buffer (current-buffer)))
+#+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
 
@@ -904,7 +913,7 @@ Enable leader key and bind some keys.
       ;; buffers
       "bb" #'switch-to-buffer
       "bq" #'evil-quit
-      "bd" #'kill-this-buffer))
+      "bd" #'isamert/kill-this-buffer))
 #+END_SRC
 
 ** evil-mc (multiple cursors)
@@ -3294,7 +3303,7 @@ Simple dictionary.
 
     (evil-set-initial-state 'slack-mode-map 'normal)
     (evil-define-key 'normal slack-mode-map
-      "q" 'kill-this-buffer
+      "q" 'isamert/kill-this-buffer
 
       "rp" 'slack-room-pins-list
 
