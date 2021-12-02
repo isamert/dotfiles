@@ -2473,6 +2473,11 @@ Some key points:
     :config
     (advice-add #'register-preview :override #'consult-register-window)
 
+
+    ;; Disable mini-frame on consult-line because it makes harder to
+    ;; peek/preview the results
+    (add-to-list 'mini-frame-ignore-commands 'consult-line)
+
     (setq consult-preview-key (kbd "M-,"))
     ;; ^ When you do M-, on a candidate, it previews it
 
@@ -3480,7 +3485,8 @@ Pop current comment section into an org (or markdown, as it's more widely used f
   (use-package ctrlf
     :ensure t
     :config
-    (ctrlf-mode +1))
+    (ctrlf-mode +1)
+    (add-to-list 'mini-frame-ignore-commands 'ctrlf-forward-default))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
