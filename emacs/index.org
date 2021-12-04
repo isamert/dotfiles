@@ -2298,9 +2298,9 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
       (progn
         (persp-add-new "personal/dotfiles")
         (persp-switch "personal/dotfiles")
-        (find-file "~/Workspace/projects/dotfiles/README.org")
+        (find-file "~/Workspace/projects/dotfiles/index.org")
         (eyebrowse-switch-to-window-config-2)
-        (find-file "~/Workspace/projects/dotfiles/emacs/README.org"))
+        (find-file "~/Workspace/projects/dotfiles/emacs/index.org"))
       (progn
         (persp-add-new "personal/planning")
         (persp-switch "personal/planning")

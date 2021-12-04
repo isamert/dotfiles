@@ -5,12 +5,13 @@
 #+OPTIONS: toc:3
 
 * Introduction
-These are my dotfiles. Please see [[file:./.emacs.d/README.org]] for my Emacs configuration, this file contains non-Emacs stuff.
+These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs configuration, this file contains non-Emacs stuff.
 
 ** General information about this file
 - ~org-babel-tangle~ to tangle all files.
 - ~C-u org-babel-tangle~ to only tangle current file.
 
+- This file uses ~<<<this>>>~ syntax in source code blocks to embed noweb code instead of ~<<that>>~ syntax. This allows me to use noweb inside bash blocks without interfering with its syntax highlighter. See [[Postamble]].
 - You'll want to make sure some of the files should tangle with executable permission. For that:
   #+name: exacutable_hook
   #+begin_src elisp
@@ -38,7 +39,7 @@ These are my dotfiles. Please see [[file:./.emacs.d/README.org]] for my Emacs co
         ('gnu/linux linux)))
   #+end_src
 
-- Here is the code that puts them together, this block is executed during the startup of this file. See [[Post-amble]] (at the end of this) file where this code-block is called for execution.
+- Here is the code that puts them together, this block is executed during the startup of this file. See [[Postamble]] (at the end of this) file where this code-block is called for execution.
   #+name: startup
   #+begin_src elisp
   <<<executable_hook>>>
@@ -2817,7 +2818,8 @@ If I ever need to resort to use bash.
 This file is just used for loading the configuration through an org file.
 
 #+begin_src elisp :tangle ~/.emacs.d/init.el
-  (org-babel-load-file "~/.emacs.d/README.org")
+  (let ((enable-local-variables :all))
+    (org-babel-load-file "~/.emacs.d/index.org"))
 #+end_src
 
 ** Neovim
@@ -5064,7 +5066,7 @@ See [[https://github.com/symless/synergy-core/wiki/Text-Config][here]] for detai
   end
 #+end_src
 
-* Post-amble
+* Postamble
 - The following thing automatically loads the code necessary when this file is opened.
 - This basically makes use of [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html#Specifying-File-Variables][file local variables]].
 - It also changes ~org-babel-noweb-wrap-{start,end}~ variables so that when noweb references are used inside sh/bash blocks, it does not mess up the code highlighting. You need to use ~<<<ref>>>~ instead of ~<<ref>>~ to include noweb references inside code blocks.

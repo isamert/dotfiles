@@ -5,7 +5,7 @@ set -euo pipefail
 case $1 in
     -f|--force)
         echo "=> Cleaning old files..."
-        rm ~/.emacs.d/README.org
+        rm ~/.emacs.d/index.org
         for file in ${PWD}/emacs/load/*.el; do
             rm "${HOME}/.emacs.d/load/$(basename "${file}")"
         done
@@ -13,7 +13,7 @@ case $1 in
 esac
 
 echo "=> Installing Emacs configuration..."
-ln -s "${PWD}/emacs/README.org" ~/.emacs.d/README.org
+ln -s "${PWD}/emacs/index.org" ~/.emacs.d/index.org
 
 mkdir -p ~/.emacs/load/
 for file in ${PWD}/emacs/load/*.el; do
@@ -26,8 +26,21 @@ read -r -d '' EMACS_INSTALL_POST_TANGLE_HOOK <<EOF
 (add-hook
  'org-babel-post-tangle-hook
  '(lambda () (when (or (string-match-p "\\\\.\\\\(py\\\\|sh\\\\)$" (buffer-file-name))
-                       (string-match-p "\\\\(python\\\\|sh\\\\)" (symbol-name major-mode)))
+                       (string-match-p "\\\\(python\\\\|sh\\\\)-mode" (symbol-name major-mode)))
                (set-file-modes (buffer-file-name) #o755))))
+
+(defun when-darwin (file-path)
+  (when (eq system-type 'darwin)
+    file-path))
+
+(defun when-linux (file-path)
+  (when (eq system-type 'gnu/linux)
+    file-path))
+
+(cl-defun when-on (&key linux darwin)
+  (case system-type
+    ('darwin darwin)
+    ('gnu/linux linux)))
 EOF
 
 echo "=> Installing dotfiles..."
@@ -35,4 +48,4 @@ emacs -Q \
       --batch \
       --eval "(require 'org)" \
       --eval "$EMACS_INSTALL_POST_TANGLE_HOOK" \
-      --eval '(org-babel-tangle-file "./README.org")'
+      --eval '(org-babel-tangle-file "./index.org")'
