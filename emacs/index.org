@@ -2456,6 +2456,11 @@ See =selectrum-minibuffer-map= for full list.
   (use-package selectrum
     :ensure t
     :config
+
+    ;; See bottom of this code block
+    (define-key selectrum-minibuffer-map (kbd "M-[") 'selectrum-previous-group)
+    (define-key selectrum-minibuffer-map (kbd "M-]") 'selectrum-next-group)
+
     (setq selectrum-extend-current-candidate-highlight t)
     (define-key selectrum-minibuffer-map (kbd "M-y") #'isamert/selectrum-kill-current-candidate)
     (evil-leader/set-key "hl" #'selectrum-repeat)
@@ -2493,11 +2498,17 @@ See =selectrum-minibuffer-map= for full list.
             (left . 0.5))
           mini-frame-color-shift-step 15)
 
-    ;; completion-at-point sometimes causes issues with mini-frame and
-    ;; it does not really make sense to have the completion at the
-    ;; middle of the screen, default behaviour is more than fine
-    (add-to-list 'mini-frame-ignore-commands 'completion-at-point)
-    (add-to-list 'mini-frame-ignore-functions 'completion-at-point)
+    ;; Disable mini-frame while using some functions either that does
+    ;; not work well with mini-frame or it doesn't make sense to use it
+    ;; with mini-frame
+    (setq mini-frame-ignore-commands
+          '(completion-at-point
+            completion-at-point
+            ctrlf-forward-default
+            consult-line
+            consult-ripgrep
+            isamert/consult-line
+            isamert/consult-ripgrep))
     (mini-frame-mode +1))
 
   (defun isamert/selectrum-kill-current-candidate ()
@@ -2513,6 +2524,46 @@ See =selectrum-minibuffer-map= for full list.
         ;; ^ `consult-line' and `consult-buffer' has an unrecognizable char at the beginning of every candidate, strip them
         (t candidate))))
     (keyboard-escape-quit))
+
+
+  ;;
+  ;; See this issue for source and reason: https://github.com/raxod502/selectrum/issues/554
+  ;;
+
+  (defun completion--metadata-group-name (cand)
+    (let* ((metadata (completion-metadata (minibuffer-contents)
+                                          minibuffer-completion-table
+                                          minibuffer-completion-predicate))
+           (groupfun (completion-metadata-get metadata 'group-function)))
+      (when groupfun
+        (funcall groupfun cand nil))))
+
+  (defun selectrum-next-group ()
+    (interactive)
+    (let ((group (completion--metadata-group-name (selectrum-get-current-candidate)))
+          (total (length (selectrum-get-current-candidates)))
+          (loop t))
+      (while (and group loop)
+        (if (= selectrum--current-candidate-index (1- total))
+            (progn
+              (selectrum-goto-beginning)
+              (setq loop nil))
+          (selectrum-next-candidate)
+          (unless (string= group (completion--metadata-group-name (selectrum-get-current-candidate)))
+            (setq loop nil))))))
+
+  (defun selectrum-previous-group ()
+    (interactive)
+    (let ((group (completion--metadata-group-name (selectrum-get-current-candidate)))
+          (loop t))
+      (while (and group loop)
+        (if (zerop selectrum--current-candidate-index)
+            (progn
+              (selectrum-goto-end)
+              (setq loop nil))
+          (selectrum-previous-candidate)
+          (unless (string= group (completion--metadata-group-name (selectrum-get-current-candidate)))
+            (setq loop nil))))))
 #+end_src
 
 ** consult
@@ -2524,17 +2575,13 @@ Some key points:
 - =C-f= does fuzzy search on current file lines.
 - Do =M-,= on a candidate to preview it.
 - Also don't forget to utilize =M-a= (=embark-act=) in consult windows.
+- Use =M-n= (future-history) to insert current symbol after running a consult command. Normally you would use =M-{p,n}= to cycle between history items but when you open minibuffer, typing =M-n= directly tries to guess what the user input would be.
 
 #+begin_src emacs-lisp
   (use-package consult
     :ensure t
     :config
     (advice-add #'register-preview :override #'consult-register-window)
-
-
-    ;; Disable mini-frame on consult-line because it makes harder to
-    ;; peek/preview the results
-    (add-to-list 'mini-frame-ignore-commands 'consult-line)
 
     (setq consult-preview-key (kbd "M-,"))
     ;; ^ When you do M-, on a candidate, it previews it
@@ -2547,7 +2594,7 @@ Some key points:
 
     (evil-define-key 'normal 'global
       (kbd "M-i") 'consult-imenu
-      (kbd "C-f") 'consult-line)
+      (kbd "C-f") 'isamert/consult-line)
     (evil-define-key 'normal org-mode-map
       (kbd "M-i") 'consult-org-heading)
 
@@ -2651,6 +2698,34 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
        '())))
 #+end_src
 
+*** Faster ~consult-line~
+~consult-line~ is quite slow on big files. I tried setting ~consult-fontify-max-size~ to a lower number as per [[https://github.com/minad/consult/issues/329][this thread]] but the improvement was not satisfactory. Try setting that first and check if it works for you.
+
+#+begin_src emacs-lisp
+  (defun isamert/consult-line ()
+    "Like `consult-line' but if the buffer is too big then it calls
+  `isamert/consult-ripgrep-buffer'."
+    (interactive)
+    (if (> (buffer-size) 300000)
+        (isamert/consult-ripgrep-buffer)
+      (consult-line)))
+
+  (defun isamert/consult-ripgrep-buffer ()
+    "Like `consult-ripgrep' but only for the current buffer."
+    (interactive)
+    (let ((consult-ripgrep-args
+           (concat "rg "
+                   "--null "
+                   "--line-buffered "
+                   "--color=never "
+                   "--max-columns=1000 "
+                   "--smart-case "
+                   "--no-heading "
+                   "--line-number "
+                   "--with-filename "
+                   (shell-quote-argument buffer-file-name))))
+      (consult-ripgrep)))
+#+end_src
 ** embark
 =embark.el= provides contextual command maps.
   - =M-a= activates command mode. Next key should be command. Do =C-h= to list all commands with their keybindings.
@@ -3559,8 +3634,7 @@ Pop current comment section into an org (or markdown, as it's more widely used f
   (use-package ctrlf
     :ensure t
     :config
-    (ctrlf-mode +1)
-    (add-to-list 'mini-frame-ignore-commands 'ctrlf-forward-default))
+    (ctrlf-mode +1))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
@@ -4085,6 +4159,8 @@ Keybindings are generally set in-place, following have no context, so they are h
 
 #+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+  (global-set-key (kbd "C-x <escape>") 'keyboard-escape-quit)
+  (global-set-key (kbd "C-c <escape>") 'keyboard-escape-quit)
 
   (evil-define-key 'normal prog-mode-map
     "gd" 'xref-find-definitions
