@@ -289,7 +289,7 @@ Some basic variable and function definitions that will be used in configuration.
                   (format "%s\n%s" acc (if alist? (car it) it))
                   ""
                   items)))
-           (dmenu (case system-type
+           (dmenu (pcase system-type
                     ('gnu/linux (format "rofi -dmenu -fuzzy -i -p '%s'" prompt))
                     ('darwin "choose")))
            (result (string-trim (shell-command-to-string (format "echo '%s' | %s" str dmenu)))))
@@ -1251,7 +1251,9 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
 ** Some vars
 #+BEGIN_SRC emacs-lisp
   (when (file-directory-p "~/Documents/notes")
-    (defconst life-org "~/Documents/notes/life.org")
+    (defconst watchlist-org "~/Documents/notes/watchlist.org")
+    (defconst readinglist-org "~/Documents/notes/readinglist.org")
+    (defconst courses-org "~/Documents/notes/courses.org")
     (defconst bullet-org "~/Documents/notes/bullet.org")
     (defconst reality-org "~/Documents/notes/reality.org")
     (defconst projects-org "~/Documents/notes/projects.org")
@@ -1260,6 +1262,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (defconst snippets-org "~/Documents/notes/snippets.org")
     (defconst work-org "~/Documents/notes/trendyol.org")
     (defconst temp-org "~/Documents/notes/temp.org")
+    (defconst passwords-org "~/Documents/notes/passwords.org")
     (defconst engineering-org "~/Documents/notes/engineering.org")
 
     ;; Put archive files under an archive/ directory
@@ -1268,7 +1271,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (setq org-directory "~/Documents/notes")
     (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
     ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
-    (setq org-agenda-files `(,life-org ,bullet-org ,projects-org ,work-org ,people-org))
+    (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org))
 
     ;; With the following, I can call functions defined inside this file in other org files
     (org-babel-lob-ingest "~/Documents/notes/utils.org"))
@@ -2223,8 +2226,8 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
       "li" #'isamert/initialize-perspectives
       "ll" #'isamert/persp-switch-to-last
       "l1" (lambda () (interactive) (persp-switch "personal/planning"))
-      "l2" (lambda () (interactive) (persp-switch "personal/notes"))
-      "l3" (lambda () (interactive) (persp-switch "personal/dotfiles"))
+      "l2" (lambda () (interactive) (persp-switch "personal/dotfiles"))
+      "l3" (lambda () (interactive) (persp-switch "work/scratch"))
       "le" #'isamert/persp-show-current-persp-name)
 
     ;; Add every newly opened buffer to current perspective
@@ -2307,11 +2310,17 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
         (find-file bullet-org)
         (isamert/bullet-focus-today)
         (eyebrowse-switch-to-window-config-2)
-        (find-file life-org))
+        (find-file engineering-org)
+        (eyebrowse-switch-to-window-config-3)
+        (find-file snippets-org)
+        (eyebrowse-switch-to-window-config-4)
+        (find-file projects-org)
+        (eyebrowse-switch-to-window-config-5)
+        (find-file passwords-org))
       (progn
-        (persp-add-new "personal/notes")
-        (persp-switch "personal/notes")
-        (find-file engineering-org))
+        (persp-add-new "work/scratch")
+        (persp-switch "work/scratch")
+        (find-file work-org))
       (persp-switch "main")
       (message ">> Perspectives are opening... Done.")))
 
