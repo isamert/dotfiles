@@ -2,50 +2,65 @@
 
 set -euo pipefail
 
-case $1 in
+case ${1:-""} in
     -f|--force)
         echo "=> Cleaning old files..."
         rm ~/.emacs.d/index.org
         for file in ${PWD}/emacs/load/*.el; do
-            rm "${HOME}/.emacs.d/load/$(basename "${file}")"
+            [[ ! $file = *secrets* ]] && rm "${HOME}/.emacs.d/load/$(basename "${file}")"
         done
         ;;
 esac
 
 echo "=> Installing Emacs configuration..."
 ln -s "${PWD}/emacs/index.org" ~/.emacs.d/index.org
+ln -s "${PWD}/emacs/index.el" ~/.emacs.d/index.el
 
 mkdir -p ~/.emacs/load/
 for file in ${PWD}/emacs/load/*.el; do
     ln -s "${file}" "$HOME/.emacs.d/load/$(basename ${file})"
 done
 
-# This hook is required to make script files exacutable while they are
-# being exported
-read -r -d '' EMACS_INSTALL_POST_TANGLE_HOOK <<EOF
-(add-hook
- 'org-babel-post-tangle-hook
- '(lambda () (when (or (string-match-p "\\\\.\\\\(py\\\\|sh\\\\)$" (buffer-file-name))
-                       (string-match-p "\\\\(python\\\\|sh\\\\)-mode" (symbol-name major-mode)))
-               (set-file-modes (buffer-file-name) #o755))))
+set +e
+read -rd '' EMACS_EVAL <<EOF
+(progn
+  (require 'org)
 
-(defun when-darwin (file-path)
-  (when (eq system-type 'darwin)
-    file-path))
+  (add-hook
+   'org-babel-post-tangle-hook
+   '(lambda () (when (or (string-match-p "\\\\.\\\\(py\\\\|sh\\\\)$" (buffer-file-name))
+                         (string-match-p "\\\\(python\\\\|sh\\\\)-mode" (symbol-name major-mode)))
+                 (set-file-modes (buffer-file-name) #o755))))
 
-(defun when-linux (file-path)
-  (when (eq system-type 'gnu/linux)
-    file-path))
+  (defun when-darwin (file-path)
+    (if (eq system-type 'darwin)
+      (progn
+        (message ":: Tangling %s" file-path)
+        file-path)
+      "no"))
 
-(cl-defun when-on (&key linux darwin)
-  (case system-type
-    ('darwin darwin)
-    ('gnu/linux linux)))
+  (defun when-linux (file-path)
+
+    (if (eq system-type 'gnu/linux)
+      (progn
+        (message ":: Tangling %s" file-path)
+        file-path)
+      "no"))
+
+  (cl-defun when-on (&key linux darwin)
+    (pcase system-type
+      ('darwin
+        (message ":: Tangling %s" darwin)
+        darwin)
+      ('gnu/linux
+        (message ":: Tangling %s" linux)
+        linux)))
+
+  (org-babel-tangle-file "./index.org"))
 EOF
+set -e
 
 echo "=> Installing dotfiles..."
 emacs -Q \
       --batch \
-      --eval "(require 'org)" \
-      --eval "$EMACS_INSTALL_POST_TANGLE_HOOK" \
-      --eval '(org-babel-tangle-file "./index.org")'
+      --eval "$EMACS_EVAL" \

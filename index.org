@@ -2818,7 +2818,8 @@ If I ever need to resort to use bash.
 This file is just used for loading the configuration through an org file.
 
 #+begin_src elisp :tangle ~/.emacs.d/init.el
-  (let ((enable-local-variables :all))
+  (let ((enable-local-variables :all)
+        (vc-follow-symlinks t))
     (org-babel-load-file "~/.emacs.d/index.org"))
 #+end_src
 
@@ -4993,10 +4994,10 @@ Downloads given file in given folder with given name. Useful for adding keybindi
 
 Following rule is needed for being able to write into brightness file:
 
-#+begin_src conf :tangle /sudo::/etc/udev/rules.d/90-backlight.rules
-SUBSYSTEM=="backlight", ACTION=="add",
-RUN+="/bin/chgrp video /sys/class/backlight/intel_backlight/brightness",
-RUN+="/bin/chmod o+w /sys/class/backlight/intel_backlight/brightness"
+#+begin_src conf :tangle (when-linux "/sudo::/etc/udev/rules.d/90-backlight.rules")
+  SUBSYSTEM=="backlight", ACTION=="add",
+  RUN+="/bin/chgrp video /sys/class/backlight/intel_backlight/brightness",
+  RUN+="/bin/chmod o+w /sys/class/backlight/intel_backlight/brightness"
 #+end_src
 
 Refresh the rules after tangling the file: ~sudo udevadm trigger~
