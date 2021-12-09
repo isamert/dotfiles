@@ -2256,10 +2256,6 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   set -g @prefix_highlight_show_sync_mode 'on'
   set -g @prefix_highlight_sync_mode_attr 'fg=black,bg=green' # default is 'fg=default,bg=yellow'
 
-  # St stuff
-  set -g default-terminal "st-256color"
-  set -g terminal-overrides ',st-256color:Tc'
-
   set -g default-shell $PREFIX/bin/zsh
   set -g mouse on
   set -g base-index 1 # Window indexes starts from 1
