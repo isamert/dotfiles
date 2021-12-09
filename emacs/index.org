@@ -90,7 +90,6 @@ I use =quelpa= for this.
 
 #+BEGIN_SRC emacs-lisp
   (use-package quelpa-use-package
-    :ensure t
     :init (setq quelpa-update-melpa-p nil)
     :config (quelpa-use-package-activate-advice))
 #+END_SRC
@@ -99,7 +98,6 @@ Here is an example that shows you how to install a package from Github:
 
 #+BEGIN_SRC emacs-lisp :tangle no
   (use-package PACKAGE-NAME
-    :ensure t
     :diminish
     :quelpa (PACKAGE-NAME
              :fetcher github
@@ -111,7 +109,7 @@ Here is an example that shows you how to install a package from Github:
 ~diminish.el~ provides a way to hide mode indicators from mode line. Either pass ~:diminish t~ to use-package while installing or just call ~(diminish 'x-mode)~.
 
 #+BEGIN_SRC emacs-lisp
-  (use-package diminish :ensure t)
+  (use-package diminish)
 #+END_SRC
 
 Currently I use [[mini-modeline]] as my modeline and it already hides minor mode indicators from the modeline. So this package is not needed but better have it as I might change my modeline in the future.
@@ -120,9 +118,9 @@ Currently I use [[mini-modeline]] as my modeline and it already hides minor mode
 I use =s.el= and =dash.el= extensively. They already come as a dependency with other packages but I may use them before loading any package, so:
 
 #+begin_src emacs-lisp
-  (use-package dash :ensure t)
-  (use-package s :ensure t)
-  (use-package yaml :ensure t)
+  (use-package dash)
+  (use-package s)
+  (use-package yaml)
 #+end_src
 
 ** Variables and functions
@@ -189,11 +187,13 @@ Some basic variable and function definitions that will be used in configuration.
       (prin1 data (current-buffer))))
 
   (defun isamert/deserialize-from-file (file symbol)
-    (when (boundp symbol)
-      (with-temp-buffer
-        (insert-file-contents (expand-file-name file))
-        (goto-char (point-min))
-        (set symbol (read (current-buffer))))))
+    (let ((fpath (expand-file-name file)))
+      (if (and (file-exists-p fpath) (boundp symbol))
+          (with-temp-buffer
+            (insert-file-contents fpath)
+            (goto-char (point-min))
+            (set symbol (read (current-buffer))))
+        (message ">> isamert/deserialize-from-file failed. file-exists-p: %s, boundp: %s" (file-exists-p fpath) (boundp symbol)))))
 
   (defun isamert/select-window-with-buffer (buffer-name)
     "Select the first visible window that matches given BUFFER-NAME."
@@ -217,6 +217,12 @@ Some basic variable and function definitions that will be used in configuration.
         (while (process-live-p process)
           (sit-for 0.1))
         (buffer-string))))
+
+  (defmacro let-plist (plist &rest form)
+    "Like `let-alist' but for plists."
+    (declare (indent 1))
+    `(let-alist (transient-plist-to-alist ,plist)
+       ,@form))
 #+END_SRC
 
 *** Clipboard functions
@@ -619,10 +625,9 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
 ** Fonts and theme
 #+BEGIN_SRC emacs-lisp
   (use-package doom-themes
-    :ensure t
     :defer t)
 
-  (defconst isamert/font-height 120)
+  (defconst isamert/font-height 160)
   (defconst isamert/fonts '("Iosevka Nerd Font"))
 
   (defun isamert/set-font-and-theme-config ()
@@ -667,7 +672,7 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
 You should run =all-the-icons-install-fonts= command after this.
 
 #+BEGIN_SRC emacs-lisp
-  (use-package all-the-icons :ensure t)
+  (use-package all-the-icons)
 #+END_SRC
 
 ** prettify-symbols-mode
@@ -696,7 +701,6 @@ This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known 
 
 #+begin_src emacs-lisp
   (use-package fira-code-mode
-    :ensure t
     :config
     (setq fira-code-mode-disabled-ligatures '(":" "x" "[]"))
     (add-hook 'prog-mode-hook #'fira-code-mode)
@@ -724,7 +728,6 @@ Colors parentheses depending on their dept.
 
 #+BEGIN_SRC emacs-lisp
   (use-package rainbow-delimiters
-    :ensure t
     :hook (prog-mode . rainbow-delimiters-mode))
 #+END_SRC
 
@@ -733,7 +736,6 @@ Colors parentheses depending on their dept.
 
 #+BEGIN_SRC emacs-lisp
   (use-package whitespace
-    :ensure t
     :diminish global-whitespace-mode
     :config
     (setq whitespace-style '(face empty tabs trailing))
@@ -796,24 +798,20 @@ Some small packages that enriches editing experience visually. I don't enable al
 
 #+begin_src emacs-lisp
   ;; Show column guidelines
-  (use-package fill-column-indicator
-    :ensure t)
+  (use-package fill-column-indicator)
 
   ;; By default Emacs scales fonts with text-scale-{increase,decrease}
   ;; per buffer. This scales fonts with
   ;; default-text-scale-{increase,decrease} globally.
-  (use-package default-text-scale
-    :ensure t)
+  (use-package default-text-scale)
 
   ;; Highlights changed lines in git. You need to save the buffer to see
   ;; the changes.
-  (use-package diff-hl
-    :ensure t)
+  (use-package diff-hl)
 
   ;; It helps you to find your cursor when you change buffers/windows
   ;; etc with a little animation.
   (use-package beacon
-    :ensure t
     :config
     (beacon-mode 1)
     (setq beacon-blink-duration 0.5
@@ -822,7 +820,6 @@ Some small packages that enriches editing experience visually. I don't enable al
 
   ;; This shows some indent guides and it's highly configurable.
   (use-package highlight-indent-guides
-    :ensure t
     :config
     (set-face-background 'highlight-indent-guides-odd-face "darkgray")
     (set-face-background 'highlight-indent-guides-even-face "dimgray")
@@ -841,11 +838,12 @@ Some small packages that enriches editing experience visually. I don't enable al
     ;; evil-collection
     (setq evil-want-integration t)
     (setq evil-want-keybinding nil)
+    ;; C-i interferes with TAB key, so disable it
+    (setq evil-want-C-i-jump nil)
     ;; Disable evil bindings in insert mode. This needs to be called
     ;; before loading evil mode...
     (setq evil-disable-insert-state-bindings t)
     (setq evil-undo-system 'undo-redo)
-    :ensure t
     :config
     ;; ...but I want some default evil bindings in insert mode, so just
     ;; remap them
@@ -897,7 +895,6 @@ Some small packages that enriches editing experience visually. I don't enable al
 #+begin_src emacs-lisp
   (use-package evil-collection
     :after evil
-    :ensure t
     :config
     (evil-collection-init 'ibuffer)
     (evil-collection-init 'compile)
@@ -957,7 +954,6 @@ Enable leader key and bind some keys.
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-leader
-    :ensure t
     :after evil
     :config
     (global-evil-leader-mode)
@@ -969,7 +965,6 @@ Enable leader key and bind some keys.
       ","   'eval-defun
 
       ;; buffers
-      "bb" #'switch-to-buffer
       "bq" #'evil-quit
       "bd" #'isamert/kill-this-buffer))
 #+END_SRC
@@ -989,7 +984,6 @@ Multiple cursors for evil.
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-mc
-    :ensure t
     :after evil
     :diminish evil-mc-mode
     :config
@@ -1020,7 +1014,6 @@ Change surroundings. Do =cs"'= to turn ="Hello world!"= into ='Hello world!'=.
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-surround
-    :ensure t
     :after evil
     :init
     (global-evil-surround-mode 1))
@@ -1033,7 +1026,6 @@ Return back to normal mode using ~jk~ from anywhere. It does not play well with 
   (use-package evil-escape
     :diminish
     :after evil
-    :ensure t
     :config
     (setq evil-escape-key-sequence "jk")
     (setq evil-escape-delay 0.2)
@@ -1048,7 +1040,6 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
   (use-package evil-matchit
     :diminish
     :after evil
-    :ensure t
     :config
     (global-evil-matchit-mode 1))
 #+END_SRC
@@ -1058,7 +1049,6 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-goggles
-    :ensure t
     :after evil
     :diminish
     :config
@@ -1089,7 +1079,6 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-snipe
-    :ensure t
     :after evil
     :diminish evil-snipe-local-mode
     :config
@@ -1109,7 +1098,6 @@ Change two parts of the text.
 
 #+begin_src emacs-lisp
   (use-package evil-exchange
-    :ensure t
     :config
     (evil-exchange-install))
 #+end_src
@@ -1119,7 +1107,6 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
 
 #+begin_src emacs-lisp
   (use-package evil-visualstar
-    :ensure t
     :config
     (setq evil-visualstar/persistent t)
     (global-evil-visualstar-mode 1))
@@ -1131,15 +1118,15 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
 
 #+BEGIN_SRC emacs-lisp
   (use-package goto-chg
-    :after evil
-    :ensure t)
+    :after evil)
 #+END_SRC
 
 * org-mode
 ** org-plus-contrib
 #+begin_src emacs-lisp
+  (use-package org-contrib)
+
   (use-package org
-    :ensure org-plus-contrib
     :config
     (setq org-return-follow-links t)
     ;; ^ Open links with RET
@@ -1295,7 +1282,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   ;; Http request in org-mode babel.
   ;; You can get the generated curl command after executing the code
   ;; block, from *curl command history* buffer
-  (use-package ob-http :ensure t)
+  (use-package ob-http)
 
   ;; TODO Handle --data-urlencode, -X {POST,GET,etc...}, -L, --data-raw
   (defun isamert/curl-to-org-http (curl-str)
@@ -1337,7 +1324,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 *** General configuration
 #+begin_src emacs-lisp
   ;; Typescript
-  (use-package ob-typescript :ensure t)
+  (use-package ob-typescript)
 
   ;; Allow these languages to run in code blocks
   (org-babel-do-load-languages
@@ -1387,7 +1374,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 ** Exporting
 *** HTML
 #+BEGIN_SRC emacs-lisp
-  (use-package htmlize :ensure t)
+  (use-package htmlize)
 #+END_SRC
 
 *** iCalendar settings
@@ -1537,12 +1524,10 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
   ;; Make headings look better with nice bullets.
   ;; It also adjusts the size of headings according to their level.
   (use-package org-bullets
-    :ensure t
     :hook (org-mode . org-bullets-mode))
 
   (use-package org-fancy-priorities
     :diminish
-    :ensure t
     :hook (org-mode . org-fancy-priorities-mode)
     :config
     (setq org-fancy-priorities-list '("🅰" "🅱" "🅲" "🅳" "🅴")))
@@ -1550,7 +1535,6 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
   ;; Pretty nice website to find unicode stuff: unicode-table.com
   (use-package org-pretty-tags
     :diminish org-pretty-tags-mode
-    :ensure t
     :config
     (setq org-pretty-tags-surrogate-strings
           '(("work"  . "⚒")
@@ -1617,7 +1601,6 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 ** org-ql
 #+BEGIN_SRC emacs-lisp
   (use-package org-ql
-    :ensure t
     :config
     ;; Load org-ql-search prematurely to be able to use org-ql blocks in
     ;; org-mode
@@ -1797,16 +1780,13 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
 
 #+begin_src emacs-lisp
   (use-package hydra
-    :ensure t
     :config)
 
   (use-package use-package-hydra
-    :after hydra
-    :ensure t)
+    :after hydra)
 
   (use-package pretty-hydra
     :after hydra
-    :ensure t
     :config
     (pretty-hydra-define appearance
       (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
@@ -1838,8 +1818,7 @@ With this package, you can make =grep= buffers editable and your edits can be ap
 - Do ~C-j~ or ~C-k~ (enabled by evil-collection, by default you need to use =n=) to peek at next/prev instance.
 
 #+begin_src emacs-lisp
-  (use-package wgrep
-    :ensure t)
+  (use-package wgrep)
 #+end_src
 ** dired
 There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
@@ -1887,7 +1866,7 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
     (setq calendar-week-start-day 1)
 
     ;; lng and lat for my location, to get sunrise/sunset times on my
-    ;; calendar (press S)
+    ;; calendar (press gs)
     (setq calendar-latitude 41.0082)
     (setq calendar-longitude 28.9784)
 
@@ -1930,14 +1909,12 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 
 #+begin_src emacs-lisp
   (use-package shrface
-    :ensure t
     :config
     (shrface-basic)
     (shrface-trial)
     (setq shrface-href-versatile t))
 
   (use-package eww
-    :ensure t
     :config
     (add-hook 'eww-after-render-hook #'shrface-mode)
     (setq shr-image-animate nil)
@@ -2001,7 +1978,7 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 
   ;; Adds nice tab completion to eshell (completes subcommands etc.,
   ;; eshell already completes file-paths interactively)
-  (use-package pcmpl-args :ensure t)
+  (use-package pcmpl-args)
 
   (defun isamert/run-last-command-on-visible-eshell ()
     "Run last command on the currently visible eshell window and return back to current window."
@@ -2015,7 +1992,6 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 ** treemacs
 #+BEGIN_SRC emacs-lisp
   (use-package treemacs
-    :ensure t
     :defer t
     :config
     (setq treemacs-show-hidden-files nil
@@ -2049,21 +2025,17 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
       (kbd "M-f") #'treemacs))
 
   (use-package treemacs-evil
-    :after treemacs evil
-    :ensure t)
+    :after treemacs evil)
 
   (use-package treemacs-projectile
-    :after treemacs projectile
-    :ensure t)
+    :after treemacs projectile)
 
   (use-package treemacs-icons-dired
     :after treemacs dired
-    :ensure t
     :config (treemacs-icons-dired-mode -1))
 
   (use-package treemacs-magit
-    :after treemacs magit
-    :ensure t)
+    :after treemacs magit)
 #+END_SRC
 
 ** winner-mode
@@ -2096,7 +2068,6 @@ This mode allows you to do /undo/ /redo/ operations on window layout changes. My
 
 #+begin_src emacs-lisp
   (use-package ace-window
-    :ensure t
     :config
     (custom-set-faces
      '(aw-leading-char-face
@@ -2114,7 +2085,6 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 
 #+BEGIN_SRC emacs-lisp
   (use-package which-key
-    :ensure t
     :diminish which-key-mode
     :config
     (setq which-key-min-display-lines 5)
@@ -2127,7 +2097,6 @@ A package that shows key combinations. (for example press C-x and wait) It also 
   (unless (eq system-type 'darwin)
     ;; It causes some annoyances on darwin
     (use-package which-key-posframe
-      :ensure t
       :after (which-key mini-frame)
       :diminish
       :quelpa (which-key-posframe
@@ -2153,7 +2122,6 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 
 #+BEGIN_SRC emacs-lisp
   (use-package magit
-    :ensure t
     :config
     ;; Following snippet is needed to update modeline after a checkout happens
     (defun isamert/vc-refresh-state-advice (a &optional b)
@@ -2178,7 +2146,6 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 Show TODO/FIXME etc in magit-status buffer.
 #+BEGIN_SRC emacs-lisp
   (use-package magit-todos
-    :ensure t
     :config
     (magit-todos-mode 1))
 #+END_SRC
@@ -2191,7 +2158,6 @@ Show TODO/FIXME etc in magit-status buffer.
 
 #+begin_src emacs-lisp
   (use-package git-timemachine
-    :ensure t
     :after magit
     :config
 
@@ -2209,7 +2175,6 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
 
 #+BEGIN_SRC emacs-lisp
   (use-package persp-mode
-    :ensure t
     :config
     (setq persp-nil-hidden nil)
     (setq persp-nil-name "main")
@@ -2233,6 +2198,9 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     ;; Add every newly opened buffer to current perspective
     (setq persp-add-buffer-on-after-change-major-mode t)
 
+    ;; Don't open saved perspectives automatically
+    (setq persp-auto-resume-time -1)
+
     ;; ...and filter the ones I don't want to be in the perspective
     (add-hook
      'persp-common-buffer-filter-functions
@@ -2249,7 +2217,6 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
 
 
   (use-package eyebrowse
-    :ensure t
     :config
     (setq eyebrowse-new-workspace t)
     (setq eyebrowse-mode-line-style 'current)
@@ -2428,7 +2395,6 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
 
 #+BEGIN_SRC emacs-lisp
   (use-package avy
-    :ensure t
     :config
     (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)
           ;; ^ Only use these for jumping.
@@ -2463,7 +2429,6 @@ See =selectrum-minibuffer-map= for full list.
 
 #+begin_src emacs-lisp
   (use-package selectrum
-    :ensure t
     :config
 
     ;; See bottom of this code block
@@ -2476,14 +2441,12 @@ See =selectrum-minibuffer-map= for full list.
     (selectrum-mode))
 
   (use-package selectrum-prescient
-    :ensure t
     :after selectrum
     :config
     (prescient-persist-mode +1)
     (selectrum-prescient-mode +1))
 
   (use-package marginalia
-    :ensure t
     :after selectrum
     :bind (:map minibuffer-local-map
                 ("C-M-a" . marginalia-cycle))
@@ -2499,7 +2462,6 @@ See =selectrum-minibuffer-map= for full list.
          (selectrum-exhibit)))))
 
   (use-package mini-frame
-    :ensure t
     :config
     (setq mini-frame-show-parameters
           '((top . 0.15)
@@ -2588,7 +2550,6 @@ Some key points:
 
 #+begin_src emacs-lisp
   (use-package consult
-    :ensure t
     :config
     (advice-add #'register-preview :override #'consult-register-window)
 
@@ -2746,7 +2707,6 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 
 #+begin_src emacs-lisp
   (use-package embark
-    :ensure t
     :after selectrum
     :config
     (bind-key (kbd "M-a") #'embark-act)
@@ -2761,7 +2721,6 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     )
 
   (use-package embark-consult
-    :ensure t
     :after (embark consult))
 #+end_src
 
@@ -2869,7 +2828,6 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
 #+BEGIN_SRC emacs-lisp
   (use-package flycheck
     :diminish
-    :ensure t
     :config
     (setq flycheck-idle-change-delay 1)
     (setq flycheck-check-syntax-automatically '(save new-line mode-enabled))
@@ -2883,14 +2841,12 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
 
   (use-package consult-flycheck
     :after flycheck
-    :ensure t
     :config
     (evil-define-minor-mode-key 'normal 'flycheck-mode
       (kbd "ge") #'isamert/show-error-list))
 
   (use-package flycheck-inline
     :after flycheck
-    :ensure t
     :config
     (global-flycheck-inline-mode))
 
@@ -2911,7 +2867,6 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
 
 #+BEGIN_SRC emacs-lisp
   (use-package company
-    :ensure t
     :init
     :config
     (setq company-selection-wrap-around t)
@@ -2945,12 +2900,10 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
     (add-hook 'after-init-hook 'global-company-mode))
 
   (use-package company-box
-    :ensure t
     :after company
     :hook (company-mode . company-box-mode))
 
   (use-package company-org-block
-    :ensure t
     :config
     (setq company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
     (add-hook 'org-mode-hook
@@ -2964,7 +2917,6 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
 
 #+BEGIN_SRC emacs-lisp
 (use-package origami
-  :ensure t
   :hook ((web-mode js-mode yaml-mode) . origami-mode))
 #+END_SRC
 
@@ -3041,29 +2993,26 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
     (lsp-ui-doc-focus-frame))
 
   (use-package lsp-ui
-    :ensure t
     :after (lsp-mode)
     :commands lsp-ui-mode
     :config
     (setq lsp-ui-sideline-show-code-actions nil))
 
   (use-package lsp-treemacs
-    :ensure t
     :after (lsp-mode)
     :commands lsp-treemacs
     :config
     (lsp-treemacs-sync-mode 1))
 
-  (use-package dap-mode
-    :ensure t
-    :after (lsp-mode)
-    :config
-    (dap-mode t)
-    (dap-ui-mode t))
+  ;; I don't really use this, but it may come handy later
+  ;; (use-package dap-mode
+  ;;   :after (lsp-mode)
+  ;;   :config
+  ;;   (dap-mode t)
+  ;;   (dap-ui-mode t))
 
   ;; consult-lsp-diagnostics and consult-lsp-symbols
   (use-package consult-lsp
-    :ensure t
     :config
     (evil-define-key 'normal lsp-mode-map
       (kbd "M-I") 'consult-lsp-symbols))
@@ -3082,7 +3031,6 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (setq-local evil-move-cursor-back nil))
 
   (use-package vterm
-    :ensure t
     :config
     (evil-define-key '(normal insert) 'global (kbd "M-t") #'isamert/vterm-toggle-dedicated)
     (evil-leader/set-key
@@ -3171,7 +3119,6 @@ Light weight and nice modeline.
 
 #+begin_src emacs-lisp
   (use-package mood-line
-    :ensure t
     :diminish
     :quelpa (mood-line
              :fetcher gitlab
@@ -3202,7 +3149,6 @@ When you search for something, it opens the results in an org-mode buffer. Resul
 
 #+BEGIN_SRC emacs-lisp
   (use-package howdoyou
-    :ensure t
     :config
     (setq howdoyou-switch-to-answer-buffer t)
     (setq howdoyou-number-of-answers 5)
@@ -3218,12 +3164,10 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
 
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet
-    :ensure t
     :config
     (yas-global-mode))
 
   (use-package yankpad
-    :ensure t
     :after yasnippet
     :config
     (setq yankpad-file snippets-org)
@@ -3254,7 +3198,6 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
 ** git-link
 #+begin_src emacs-lisp
   (use-package git-link
-    :ensure
     :config
     (setq git-link-open-in-browser t)
     (evil-leader/set-key
@@ -3295,13 +3238,16 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
 ** bufler
 #+begin_src emacs-lisp
   (use-package bufler
-    :ensure t
     :config
     (evil-define-key 'normal bufler-list-mode-map
       (kbd "K") 'bufler-list-buffer-kill
       (kbd "<return>") 'bufler-list-buffer-switch
       (kbd "q") 'quit-window
-      (kbd "p") 'bufler-list-buffer-peek))
+      (kbd "M-,") 'bufler-list-buffer-peek
+      (kbd "p") 'bufler-list-buffer-peek)
+
+    (evil-leader/set-key
+      "bb" #'bufler))
 #+end_src
 
 ** tab-out
@@ -3309,7 +3255,6 @@ When you press tab, jump out from the current enclosing parens/quotes etc. When 
 
 #+begin_src emacs-lisp
   (use-package tab-jump-out
-    :ensure t
     :diminish
     :quelpa (tab-jump-out
              :fetcher github
@@ -3329,7 +3274,6 @@ Provides an interface to xref based on completing-read. Works well with [[select
 
 #+begin_src emacs-lisp
   (use-package completing-read-xref
-    :ensure t
     :diminish
     :quelpa (completing-read-xref
              :fetcher github
@@ -3345,7 +3289,6 @@ Provides an interface to xref based on completing-read. Works well with [[select
 
 #+begin_src emacs-lisp
   (use-package helpful
-    :ensure t
     :config
     ;; Override default help bindings
     (global-set-key (kbd "C-h f") #'helpful-callable)
@@ -3357,7 +3300,6 @@ Provides an interface to xref based on completing-read. Works well with [[select
           "q" 'evil-delete-buffer))
 
   (use-package elisp-demos
-    :ensure t
     :after helpful
     :config
     (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
@@ -3366,7 +3308,6 @@ Provides an interface to xref based on completing-read. Works well with [[select
 ** expand-region
 #+begin_src emacs-lisp
   (use-package expand-region
-    :ensure t
     :config
     (evil-define-key 'normal 'global
       (kbd "M-w") #'er/expand-region))
@@ -3376,7 +3317,6 @@ It keeps your indentation working all the time. Seems like a good idea but I hav
 
 #+begin_src emacs-lisp
   (use-package aggressive-indent
-    :ensure t
     :config
     (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
     (add-hook 'typescript-mode-hook #'aggressive-indent-mode)
@@ -3396,17 +3336,6 @@ Simple mode for editing =~/.Xmodmap= file.
     nil
     "Simple mode for xmodmap files.")
 #+end_src
-** define-word
-Simple dictionary.
-
-#+begin_src emacs-lisp
-  (use-package define-word
-    :ensure t
-    :config
-    (evil-leader/set-key
-      "/W" #'define-word
-      "/w" #'define-word-at-point))
-#+end_src
 ** slack
 #+begin_src emacs-lisp
   ;; (slack-start)
@@ -3424,9 +3353,7 @@ Simple dictionary.
   ;; (slack-channel-list-update)
   ;; (slack-command-list-update)
 
-
   (use-package slack
-    :ensure t
     :quelpa (slack
              :fetcher github
              :repo "isamert/emacs-slack")
@@ -3445,14 +3372,14 @@ Simple dictionary.
      :name "trendyol"
      :token ty/slack-token
      :cookie ty/slack-cookie
-     :subscribed-channels '(seller-ads-team seller-ads-alert))
+     :subscribed-channels '(seller-ads-team seller-ads-alert ty-ads-team))
 
     (evil-leader/set-key
       "ess" #'slack-select-rooms
-      "esS" #'isamert/slack-send-message
-      "eS" #'isamert/slack-last-rooms
-      "esl" #'isamert/slack-open-last-room
-      "esc" #'isamert/slack-copy-last-message)
+      "esm" #'isamert/slack-send-message
+      "esr" #'isamert/slack-recent-rooms
+      "esl" #'isamert/slack-open-last-message
+      "esy" #'isamert/slack-yank-last-message)
 
 
     (defun isamert/slack--add-reaction-to-message (reaction)
@@ -3465,27 +3392,34 @@ Simple dictionary.
             (slack-get-ts)))))
 
     (evil-set-initial-state 'slack-mode-map 'normal)
-    (evil-define-key 'normal slack-mode-map
-      "q" 'isamert/kill-this-buffer
 
-      "rp" 'slack-room-pins-list
+    (dolist (mode-map (list slack-message-buffer-mode-map slack-thread-message-buffer-mode-map))
+      (evil-define-key 'normal mode-map
+        "q" #'delete-window
 
-      "@" 'slack-message-embed-mention
-      "mm" 'slack-message-write-another-buffer
-      "md" 'slack-message-delete
-      "mc" 'slack-message-embed-channel
-      "ml" 'slack-message-copy-link
-      "me" 'slack-message-edit
-      "mt" 'slack-thread-show-or-create
+        "@" 'slack-message-embed-mention
+        "mc" 'slack-message-embed-channel ;
+        "mm" 'slack-message-write-another-buffer
+        "md" 'slack-message-delete
+        "ml" 'slack-message-copy-link
+        "me" 'slack-message-edit
+        "mt" 'slack-thread-show-or-create
 
-      "mrr" 'slack-message-add-reaction
-      "mR" 'slack-message-remove-reaction
-      "mr1" (isamert/slack--add-reaction-to-message "+1")
-      "mr2" (isamert/slack--add-reaction-to-message "ok_hand")
-      "mr3" (isamert/slack--add-reaction-to-message "ultrafastparrot")
+        "mrr" 'slack-message-add-reaction
+        "mR" 'slack-message-remove-reaction
+        "mr1" (isamert/slack--add-reaction-to-message "+1")
+        "mr2" (isamert/slack--add-reaction-to-message "ok_hand")
+        "mr3" (isamert/slack--add-reaction-to-message "eyes")
+        "mr4" (isamert/slack--add-reaction-to-message "ultrafastparrot")
+        "mr5" (isamert/slack--add-reaction-to-message "pepedance")
 
-      "[[" 'slack-buffer-goto-prev-message
-      "]]" 'slack-buffer-goto-next-message))
+        "[[" 'slack-buffer-goto-prev-message
+        "]]" 'slack-buffer-goto-next-message))
+
+    (evil-define-key 'normal slack-message-compose-buffer-mode-map
+      "@"  #'slack-message-embed-mention
+      "mc" #'slack-message-embed-channel
+      "ml" #'markdown-insert-link))
 
   (use-package alert
     :config
@@ -3497,9 +3431,9 @@ Simple dictionary.
   (defvar isamert/slack--last-messages '())
 
   (defun isamert/slack-notify (message room team)
-    (when (and (not (slack-message-minep message team))
-               (or (slack-message-notify-p message room team)
-                   (slack-mpim-p room)))
+    (when (or
+           (slack-message-minep message team)
+           (slack-message-notify-p message room team))
       (let* ((sender-name (slack-message-sender-name message team))
              (room-name (slack-room-name room team))
              (title (format "%s - %s" room-name sender-name))
@@ -3514,28 +3448,34 @@ Simple dictionary.
                :title title
                :message-string msg-str)
          isamert/slack--last-messages)
-        (alert
-         msg-str
-         :title title
-         :category "slack")
-        (message
-         "%s // %s"
-         title
-         msg-str))))
+        (unless (slack-message-minep message team)
+          (alert
+           msg-str
+           :title title
+           :category "slack")
+          (message
+           ">> Slack: %s // %s"
+           title
+           msg-str)))))
 
-  (defun isamert/slack-copy-last-message ()
-    "Copy the contents of the last received message as text."
+  (defun isamert/slack-yank-last-message ()
+    "Yank the contents of the last received message as text."
     (interactive)
     (kill-new
      (isamert/slack--stringify-message
       (isamert/slack--last-message))))
 
-  (defun isamert/slack-open-last-room ()
+  (defun isamert/slack-open-last-message ()
     "Open last room that got new message."
     (interactive)
-    (slack-room-display
-     (plist-get (isamert/slack--last-message) :room)
-     (plist-get (isamert/slack--last-message) :team)))
+    (let-plist (isamert/slack--last-message)
+      (if (ignore-errors (slack-thread-message-p .message))
+          (slack-thread-show-messages .message .room .team)
+        (slack-room-display
+         .room
+         .team))))
+
+  (defalias 'isamert/slack-recent-rooms #'isamert/slack-last-rooms)
 
   (defun isamert/slack-last-rooms ()
     "List and open rooms that had new messages in them recently."
@@ -3606,7 +3546,6 @@ Simple dictionary.
 ** prodigy
 #+begin_src emacs-lisp
   (use-package prodigy
-    :ensure t
     :diminish
     :quelpa (prodigy
              :fetcher github
@@ -3630,20 +3569,9 @@ Pop current comment section into an org (or markdown, as it's more widely used f
 
 #+begin_src emacs-lisp
   (use-package poporg
-    :ensure t
     :config
     (remove-hook 'poporg-edit-hook 'org-mode)
     (add-hook 'poporg-edit-hook 'markdown-mode))
-#+end_src
-** ctrlf
-- Better search. It overrides ~C-s~ (normal search) and ~C-M-s~ (regexp search). I wasn't able to replace default evil bindings with this (as in mapping ~/~, ~n~, ~p~ functionality to ctrlf) but it works well with the default bindings it provides.
-- Nice thing about this package is that it shows how many matches there are and which match are you currently on. It is also nice that you can alternate between normal and regexp searches fairly easily.
-
-#+begin_src emacs-lisp
-  (use-package ctrlf
-    :ensure t
-    :config
-    (ctrlf-mode +1))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
@@ -3680,7 +3608,6 @@ See [[https://isamert.net/2021/01/31/emacs-te-turkce-imla-denetimi.html][this]] 
 Better way to correct spelling mistakes. By default it uses completing-read, so it's compatible with selectrum. This also makes it easy to save words into personal dictonary or silence warnings for session because it shows these options in the correction menu.
 #+begin_src emacs-lisp
   (use-package flyspell-correct
-    :ensure t
     :config
     ;; Rebind default evil ispell keys to flyspell-correct ones
     (evil-define-key 'normal 'global
@@ -3698,7 +3625,6 @@ Better way to correct spelling mistakes. By default it uses completing-read, so 
 
 #+begin_src emacs-lisp
   (use-package string-inflection
-    :ensure t
     :config
     (evil-define-key 'normal 'global (kbd "M-c") #'string-inflection-all-cycle))
 #+end_src
@@ -3706,7 +3632,6 @@ Better way to correct spelling mistakes. By default it uses completing-read, so 
 ** smartparens
 #+begin_src emacs-lisp
   (use-package smartparens
-    :ensure t
     :config
     (require 'smartparens-config)
     ;; (setq sp-autoinsert-pair nil)
@@ -3755,7 +3680,6 @@ Gives you a nice, uncluttered editing experience by removing all unneeded visual
 
 #+begin_src emacs-lisp
   (use-package writeroom-mode
-    :ensure t
     :config
     (setq writeroom-width 150) ;; Better for org-mode
     (evil-leader/set-key
@@ -3776,7 +3700,6 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
 
 #+begin_src emacs-lisp
   (use-package dumb-jump
-    :ensure t
     :config
     ;; https://github.com/jacktasia/dumb-jump/issues/376
     ;; (setq dumb-jump-prefer-searcher 'rg)
@@ -3785,11 +3708,9 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
           dumb-jump-fallback-search nil)
     (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
-  (use-package devdocs-browser
-    :ensure t)
+  (use-package devdocs-browser)
 
   (use-package highlight-thing
-    :ensure t
     :after evil
     :config
     (setq-default evil-symbol-word-search t)
@@ -3807,17 +3728,14 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
     (add-hook 'prog-mode-hook 'highlight-thing-mode))
 
   (use-package tree-sitter
-    :ensure t
     :config
     (global-tree-sitter-mode)
     (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
 
   (use-package tree-sitter-langs
-    :after tree-sitter
-    :ensure t)
+    :after tree-sitter)
 
   (use-package hl-todo
-    :ensure t
     :hook (prog-mode . hl-todo-mode)
     :config
     (setq hl-todo-keyword-faces
@@ -3889,7 +3807,6 @@ Feed reader.
        (listing))))
 
   (use-package elfeed
-    :ensure t
     :config
     ;; When adding tags, don't add any hierarchical tags like (blog blog-software), or (metal metal-black)
     ;; Just use something like: (blog software) and (metal black)
@@ -3925,7 +3842,6 @@ Manage media and streams through =completing-read=.
 
 #+begin_src emacs-lisp
   (use-package empv
-    :ensure t
     :diminish
     :quelpa (empv
              :fetcher github
@@ -3987,7 +3903,6 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
 
 #+begin_src emacs-lisp
   (use-package orgmdb
-    :ensure t
     :diminish
     :quelpa (orgmdb
              :fetcher github
@@ -4073,7 +3988,6 @@ IRC client for Emacs.
 
 #+begin_src elisp
   (use-package erc
-    :ensure t
     :config
 
     ;; More compact and cleaner look, nicks and messages are in seperate
@@ -4252,11 +4166,10 @@ Keybindings are generally set in-place, following have no context, so they are h
 #+begin_src emacs-lisp
   ;; Automatically format file with `format-all-buffer'. It recognizes
   ;; most language formatters/linters.
-  (use-package format-all :ensure t)
+  (use-package format-all)
 
   ;; Pick up .editorconfig settings for current project automatically
   (use-package editorconfig
-    :ensure t
     :config
     (editorconfig-mode 1))
 #+end_src
@@ -4375,7 +4288,6 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
 ** Refactoring
 #+begin_src emacs-lisp
   (use-package emr
-    :ensure t
     :config
     (evil-define-key 'normal prog-mode-map (kbd "gR") #'emr-show-refactor-menu))
 #+end_src
@@ -4383,7 +4295,6 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
 ** markdown
 #+BEGIN_SRC emacs-lisp
   (use-package markdown-mode
-    :ensure t
     :mode
     (("README\\.md\\'" . gfm-mode)
      ("\\.md\\'" . markdown-mode)
@@ -4404,17 +4315,14 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
 
 ** haskell
 #+BEGIN_SRC emacs-lisp
-  (use-package haskell-mode
-    :ensure t)
+  (use-package haskell-mode)
 
   (use-package lsp-haskell
-    :ensure t
     :config
     (setq lsp-haskell-process-path-hie "ghcide"
           lsp-haskell-process-args-hie '()))
 
   (use-package ormolu
-    :ensure t
     :hook (haskell-mode . ormolu-format-on-save-mode)
     :bind
     (:map haskell-mode-map
@@ -4424,7 +4332,6 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
 ** rust
 #+BEGIN_SRC emacs-lisp
 (use-package rust-mode
-  :ensure t
   :after (lsp-mode)
   (setq lsp-rust-server 'rust-analyzer
         lsp-rust-clippy-preference 'on))
@@ -4437,7 +4344,6 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
 
 #+begin_src emacs-lisp
   (use-package jsdoc
-    :ensure t
     :diminish
     :quelpa ((jsdoc
              :fetcher github
@@ -4554,7 +4460,6 @@ The following enables =CamelCase= aware editing operations.
 ** typescript
 #+begin_src emacs-lisp
   (use-package typescript-mode
-    :ensure t
     :config
     ;; Create a tsx mode based on ts mode and make tree-sitter use tsx
     ;; parser for that mode
@@ -4567,8 +4472,7 @@ The following enables =CamelCase= aware editing operations.
 
 ** json
 #+begin_src emacs-lisp
-  (use-package json-mode
-    :ensure t)
+  (use-package json-mode)
 
   (defun isamert/jsons-print-path-python ()
     (interactive)
@@ -4582,7 +4486,6 @@ The following enables =CamelCase= aware editing operations.
 
   ;;  Provides jsons-print-path function, it simply kills the path to the key under point
   (use-package json-snatcher
-    :ensure t
     :config
     ;; Copies paths like:.definition.summary.pastGroup.trackingResults[0].trackingItemReferenceId
     ;; I've created two functions above for the variations
@@ -4609,7 +4512,7 @@ The following enables =CamelCase= aware editing operations.
 ** java
 =lsp-java= automatically installs =eclipse.jdt.ls= to get lsp.
 #+BEGIN_SRC emacs-lisp
-(use-package lsp-java :ensure t :after lsp
+(use-package lsp-java :after lsp
   :config (add-hook 'java-mode-hook 'lsp))
 
 (use-package dap-java :after (lsp-java))
@@ -4626,7 +4529,6 @@ Hit <C-j> after these and get:
 - =b*3= ~<b></b><b></b><b></b>~
 #+BEGIN_SRC emacs-lisp
 (use-package emmet-mode
-  :ensure t
   :hook (js-mode css-mode sgml-mode web-mode tsx-mode)
   :init
   (setq emmet-expand-jsx-className? t
@@ -4635,25 +4537,24 @@ Hit <C-j> after these and get:
 
 ** r
 #+BEGIN_SRC emacs-lisp
-(use-package ess :ensure t)
+(use-package ess)
 #+END_SRC
 
 ** kotlin
 #+BEGIN_SRC emacs-lisp
-(use-package kotlin-mode :ensure t)
+(use-package kotlin-mode)
 #+END_SRC
 
 ** gradle/groovy
 #+BEGIN_SRC emacs-lisp
 (use-package groovy-mode
-  :ensure t
   :config
   (add-to-list 'auto-mode-alist '("\\.gradle\\'" . groovy-mode)))
 #+END_SRC
 
 ** yaml
 #+begin_src emacs-lisp
-(use-package yaml-mode :ensure t)
+(use-package yaml-mode)
 #+end_src
 
 ** elisp
@@ -4689,7 +4590,6 @@ Hit <C-j> after these and get:
 ** dhall
 #+begin_src emacs-lisp
   (use-package dhall-mode
-    :ensure t
     :diminish dhall-format-on-save-mode
     :mode "\\.dhall\\'"
     :config
@@ -4700,7 +4600,6 @@ Hit <C-j> after these and get:
 ** nix
 #+begin_src emacs-lisp
   (use-package nix-mode
-    :ensure t
     :mode "\\.nix\\'")
 
   (defun isamert/import-env-from-nix-shell ()
@@ -4721,31 +4620,26 @@ Hit <C-j> after these and get:
 
 ** swift
 #+begin_src emacs-lisp
-  (use-package swift-mode
-    :ensure t)
+  (use-package swift-mode)
 #+end_src
 
 ** scheme
 #+begin_src emacs-lisp
   ;; Scheme
   (use-package geiser
-    :ensure t
     :config
     (setq geiser-default-implementation 'guile))
 
   (use-package geiser-guile
-    :after geiser
-    :ensure t)
+    :after geiser)
 #+end_src
 
 ** Docker stuff
 Some major modes for editing files.
 #+begin_src emacs-lisp
   (use-package dockerfile-mode
-    :ensure t
     :mode "Dockerfile\\'")
   (use-package docker-compose-mode
-    :ensure t
     :mode "docker-compose\\'")
 #+end_src
 
@@ -4753,7 +4647,6 @@ A package for  managing docker.
 
 #+begin_src emacs-lisp
   (use-package docker
-    :ensure t
     :config
     (evil-define-key 'normal docker-container-mode-map (kbd "a") #'docker-container-help)
     (evil-define-key 'normal docker-image-mode-map     (kbd "a") #'docker-image-help)
@@ -4764,7 +4657,6 @@ A package for  managing docker.
 ** Kubernetes
 #+begin_src emacs-lisp
   (use-package kubernetes
-    :ensure t
     :config
     (setq kubernetes-poll-frequency 3600)
     (setq kubernetes-redraw-frequency 3600)
@@ -4774,24 +4666,22 @@ A package for  managing docker.
       (kbd "a") #'kubernetes-dispatch))
 
   (use-package kubernetes-evil
-    :ensure t
     :after kubernetes)
 #+end_src
 ** vimrc
 Mostly for editing tridactyl and sometimes real vimrc.
 
 #+begin_src emacs-lisp
-  (use-package vimrc-mode :ensure t)
+  (use-package vimrc-mode)
 #+end_src
 
 ** Graphviz/dot
 #+begin_src emacs-lisp
-  (use-package graphviz-dot-mode :ensure t)
+  (use-package graphviz-dot-mode)
 #+end_src
 ** PlantUML
 #+begin_src emacs-lisp
   (use-package plantuml-mode
-    :ensure t
     :config
     (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
     (setq org-plantuml-jar-path "/nix/store/q0v5nv70zc23fx4hjgghnqf7lvydr6fq-plantuml-1.2021.3/lib/plantuml.jar"))
@@ -4800,7 +4690,6 @@ Mostly for editing tridactyl and sometimes real vimrc.
 Install couchbase-query package for running interactive queries inside emacs.
 #+begin_src emacs-lisp
   (use-package couchbase-query
-    :ensure t
     :diminish
     :quelpa (couchbase-query
              :fetcher github
@@ -5128,7 +5017,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
   (defun isamert/gitlab--rebase-merge-request (it)
     (isamert/gitlab-request
-     (format "projects/#{project}/merge_requests/%s/rebase" (gethash 'iid it))
+     (format "projects/%s/merge_requests/%s/rebase" (gethash 'project_id it) (gethash 'iid it))
      :req-type "PUT"))
 
   (defun isamert/gitlab--mr-format-title (mr)
@@ -5197,7 +5086,6 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   ;;
 
   (use-package jiralib2
-    :ensure t
     :config
     (setq jiralib2-url ty/jira-url)
     (setq jiralib2-auth 'basic)
@@ -5214,7 +5102,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defvar isamert/git-main-branch "master"
     "Main branch name.")
 
-  (defvar isamert/jira-projects '(("SA" . 1500))
+  (defvar isamert/jira-projects '(("SAT" . 1))
     "List of projects that I enrolled in JIRA.
   CDR of each item defines which ticket number the caching should
   start.")
@@ -5231,7 +5119,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     "Query to find out issues that are assigned to me.")
 
   (defvar isamert/jira-kanban-board-query
-    "project = SA AND (fixVersion in unreleasedVersions() OR fixVersion is EMPTY) AND createdDate >= -2w ORDER BY Rank ASC"
+    "project = SAT AND (fixVersion in unreleasedVersions() OR fixVersion is EMPTY) AND createdDate >= -2w ORDER BY Rank ASC"
     "Query to get kanban board issues.")
 
 
@@ -5536,113 +5424,112 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
 #+end_src
 
 ** Signal
-#+begin_src emacs-lisp
-  (when (eq system-type 'gnu/linux)
-    (require 'dbus)
+#+begin_src emacs-lisp :tangle (if (eq system-type 'gnu/linux) "yes" "no")
+  (require 'dbus)
 
-    (evil-leader/set-key
-      "epn" #'isamert/signal-send-note-to-myself
-      "epm" #'isamert/signal-send-message)
+  (evil-leader/set-key
+    "epn" #'isamert/signal-send-note-to-myself
+    "epm" #'isamert/signal-send-message)
 
-    (defconst isamert/signal-dbus-args '(:session "org.asamk.Signal"
-                                                  "/org/asamk/Signal"
-                                                  "org.asamk.Signal"))
+  (defconst isamert/signal-dbus-args '(:session "org.asamk.Signal"
+                                                "/org/asamk/Signal"
+                                                "org.asamk.Signal"))
 
-    (defun isamert/signal (&rest args)
-      "Send a signal DBUS command with ARGS."
-      (apply #'dbus-call-method `(,@isamert/signal-dbus-args ,@args)))
+  (defun isamert/signal (&rest args)
+    "Send a signal DBUS command with ARGS."
+    (apply #'dbus-call-method `(,@isamert/signal-dbus-args ,@args)))
 
-    (defun isamert/signal-async (&rest args)
-      "Send an async Signal DBUS command with ARGS."
-      (apply #'dbus-call-method-asynchronously `(,@isamert/signal-dbus-args ,@args)))
+  (defun isamert/signal-async (&rest args)
+    "Send an async Signal DBUS command with ARGS."
+    (apply #'dbus-call-method-asynchronously `(,@isamert/signal-dbus-args ,@args)))
 
-    (defun isamert/signal-send-note-to-myself (note &optional attachments)
-      "Send a NOTE with attachments to my phone."
-      (interactive
-       (list
-        (if (use-region-p)
-            (buffer-substring (region-beginning) (region-end))
-          (read-string "Enter note: "))
-        (when (y-or-n-p "Want to attach something? ")
-          (list (read-file-name "Attachment: ")))))
-      (isamert/signal-async
-       "sendNoteToSelfMessage"
-       (lambda (msg) (message ">> Signal %s" msg))
-       note
-       (or (mapcar 'expand-file-name attachments)
-           '(:array))))
+  (defun isamert/signal-send-note-to-myself (note &optional attachments)
+    "Send a NOTE with attachments to my phone."
+    (interactive
+     (list
+      (if (use-region-p)
+          (buffer-substring (region-beginning) (region-end))
+        (read-string "Enter note: "))
+      (when (y-or-n-p "Want to attach something? ")
+        (list (read-file-name "Attachment: ")))))
+    (isamert/signal-async
+     "sendNoteToSelfMessage"
+     (lambda (msg) (message ">> Signal %s" msg))
+     note
+     (or (mapcar 'expand-file-name attachments)
+         '(:array))))
 
-    (defun isamert/signal-send-message (recipient content &optional attachments)
-      "Send message to RECIPIENT with CONTENT."
-      (interactive
-       (list
-        (isamert/signal-select-contact)
-        (if (use-region-p)
-            (buffer-substring (region-beginning) (region-end))
-          (read-string "Enter message: "))
-        (when (y-or-n-p "Want to attach something? ")
-          (list (read-file-name "Attachment: ")))))
-      (isamert/signal-async
-       (if (plist-get recipient :number)
-           "sendMessage"
-         "sendGroupMessage")
-       (lambda (msg) (message ">> Signal %s" msg))
-       content
-       (or (mapcar 'expand-file-name attachments)
-           '(:array))
-       (cadr recipient)))
+  (defun isamert/signal-send-message (recipient content &optional attachments)
+    "Send message to RECIPIENT with CONTENT."
+    (interactive
+     (list
+      (isamert/signal-select-contact)
+      (if (use-region-p)
+          (buffer-substring (region-beginning) (region-end))
+        (read-string "Enter message: "))
+      (when (y-or-n-p "Want to attach something? ")
+        (list (read-file-name "Attachment: ")))))
+    (isamert/signal-async
+     (if (plist-get recipient :number)
+         "sendMessage"
+       "sendGroupMessage")
+     (lambda (msg) (message ">> Signal %s" msg))
+     content
+     (or (mapcar 'expand-file-name attachments)
+         '(:array))
+     (cadr recipient)))
 
-    (defun isamert/signal-select-contact ()
-      "Select a contact interactively."
-      (let* ((contacts (--map
-                        (cons (isamert/signal "getContactName" it) it)
-                        (isamert/signal "listNumbers")))
-             (groups (--map
-                      (cons (format
-                             "%s [GROUP]"
-                             (isamert/signal "getGroupName"
-                                             (dbus-string-to-byte-array (dbus-byte-array-to-string it))))
-                            it)
-                      (isamert/signal "getGroupIds")))
-             (all (append contacts groups))
-             (selected (cdr (assoc (completing-read "Send message to: " all) all))))
-        (if (stringp selected)
-            (list :number selected)
-          (list :group (dbus-string-to-byte-array (dbus-byte-array-to-string selected))))))
+  (defun isamert/signal-select-contact ()
+    "Select a contact interactively."
+    (let* ((contacts (--map
+                      (cons (isamert/signal "getContactName" it) it)
+                      (isamert/signal "listNumbers")))
+           (groups (--map
+                    (cons (format
+                           "%s [GROUP]"
+                           (isamert/signal "getGroupName"
+                                           (dbus-string-to-byte-array (dbus-byte-array-to-string it))))
+                          it)
+                    (isamert/signal "getGroupIds")))
+           (all (append contacts groups))
+           (selected (cdr (assoc (completing-read "Send message to: " all) all))))
+      (if (stringp selected)
+          (list :number selected)
+        (list :group (dbus-string-to-byte-array (dbus-byte-array-to-string selected))))))
 
-    (defun isamert/signal-sync-message-received-handler (ts source receiver _ msg attchs)
-      (when (and (string= receiver source)
-                 (string= isamert/my-phone-number source))
-        (cond
-         ((s-prefix? "run" msg)
-          (isamert/signal-send-note-to-myself
-           (shell-command-to-string (s-chop-prefix "run " msg))))
-         ((string= "help" msg)
-          (isamert/signal-send-note-to-myself
-           (concat "run <shell-command>\n"
-                   "grab <file-path>\n"
-                   "help")))
-         ((s-prefix? "grab" msg)
-          (isamert/signal-send-note-to-myself
-           "" (list (s-chop-prefix "grab " msg)))))))
+  (defun isamert/signal-sync-message-received-handler (ts source receiver _ msg attchs)
+    (when (and (string= receiver source)
+               (string= isamert/my-phone-number source))
+      (cond
+       ((s-prefix? "run" msg)
+        (isamert/signal-send-note-to-myself
+         (shell-command-to-string (s-chop-prefix "run " msg))))
+       ((string= "help" msg)
+        (isamert/signal-send-note-to-myself
+         (concat "run <shell-command>\n"
+                 "grab <file-path>\n"
+                 "help")))
+       ((s-prefix? "grab" msg)
+        (isamert/signal-send-note-to-myself
+         "" (list (s-chop-prefix "grab " msg)))))))
 
-    (defvar isamert/signal-bot-object nil)
+  (defvar isamert/signal-bot-object nil)
 
-    (defun isamert/start-signal-bot ()
-      (interactive)
-      (setq
-       isamert/signal-bot-object
-       (apply
-        #'dbus-register-signal
-        `(,@isamert/signal-dbus-args
-          ,"SyncMessageReceived"
-          ,#'isamert/signal-sync-message-received-handler))))
+  (defun isamert/start-signal-bot ()
+    (interactive)
+    (setq
+     isamert/signal-bot-object
+     (apply
+      #'dbus-register-signal
+      `(,@isamert/signal-dbus-args
+        ,"SyncMessageReceived"
+        ,#'isamert/signal-sync-message-received-handler))))
 
-    (defun isamert/stop-signal-bot ()
-      (interactive)
-      (dbus-unregister-object isamert/signal-bot-object))
+  (defun isamert/stop-signal-bot ()
+    (interactive)
+    (dbus-unregister-object isamert/signal-bot-object))
 
-    (isamert/start-signal-bot))
+  (isamert/start-signal-bot)
 #+end_src
 ** people.org - Contact management
 Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-and-syncing-them-to-your-phone-android-ios-whatever-.html][this post]] for further information.

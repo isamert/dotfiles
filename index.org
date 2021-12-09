@@ -2819,6 +2819,8 @@ This file is just used for loading the configuration through an org file.
 
 #+begin_src elisp :tangle ~/.emacs.d/init.el
   (let ((enable-local-variables :all)
+        ;; Enable if you are doing a first time install
+        ;; (use-package-always-ensure t)
         (vc-follow-symlinks t))
     (org-babel-load-file "~/.emacs.d/index.org"))
 #+end_src
