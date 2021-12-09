@@ -1894,6 +1894,32 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
     (isamert/calendar-week-number-mode))
 #+end_src
 
+*** Automatically syncing with remote calendars
+I'm experimenting with using default Emacs calendar as my work calendar. To do so, I import the remote calendar into my diary using the following function. Set ~isamert/calendar-remote-ics-file~ to the url of ICS file beforehand.
+
+#+begin_src emacs-lisp
+  (defun isamert/update-calendar ()
+    "Sync emacs calendar/diary with my remote calendar."
+    (interactive)
+    (message ">> Updating the calender...")
+    (url-retrieve
+     isamert/calendar-remote-ics-file
+     (lambda (status)
+       (delete-region (point-min) url-http-end-of-headers)
+       ;; Following is required because some diary entries may contain
+       ;; Turkish characters and url-retrieve does not set
+       ;; buffer-multibyte to t automatically
+       (set-buffer-multibyte t)
+       (icalendar-import-buffer diary-file t)
+       (message ">> Updating the calendar... DONE"))))
+#+end_src
+
+To sync it automatically:
+
+#+begin_src emacs-lisp
+  (run-with-timer 60 (* 30 60) #'isamert/update-calendar)
+#+end_src
+
 ** tramp
 #+begin_src emacs-lisp
   (setq tramp-default-method "ssh")
