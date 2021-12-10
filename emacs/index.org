@@ -3403,7 +3403,7 @@ Simple mode for editing =~/.Xmodmap= file.
     (evil-leader/set-key
       "ess" #'slack-select-rooms
       "esm" #'isamert/slack-send-message
-      "esr" #'isamert/slack-recent-rooms
+      "esr" #'isamert/slack-recent-messages
       "esl" #'isamert/slack-open-last-message
       "esy" #'isamert/slack-yank-last-message)
 
@@ -3494,31 +3494,42 @@ Simple mode for editing =~/.Xmodmap= file.
   (defun isamert/slack-open-last-message ()
     "Open last room that got new message."
     (interactive)
-    (let-plist (isamert/slack--last-message)
+    (isamert/slack--open-message-or-thread (isamert/slack--last-message)))
+
+  (defun isamert/slack--open-message-or-thread (msg)
+    (let-plist msg
       (if (ignore-errors (slack-thread-message-p .message))
           (slack-thread-show-messages .message .room .team)
         (slack-room-display
          .room
-         .team))))
+         .team))
+      ;; Focus the message on buffer
+      (run-with-timer
+       1.3 nil
+       (lambda ()
+         (goto-char (point-max))
+         (goto-char
+          (slack-buffer-prev-point
+           (point-max)
+           (point-min)
+           (slack-ts .message)))))))
 
-  (defalias 'isamert/slack-recent-rooms #'isamert/slack-last-rooms)
+  (defalias 'isamert/slack-recent-messages #'isamert/slack-last-messages)
 
-  (defun isamert/slack-last-rooms ()
+  (defun isamert/slack-last-messages ()
     "List and open rooms that had new messages in them recently."
     (interactive)
     (with-completing-read-exact-order
      (let* ((rooms
              (-uniq
               (--map
-               (cons (plist-get it :room-name)
-                     (list :room (plist-get it :room)
-                           :team (plist-get it :team)))
+               (cons
+                (let-plist it
+                  (format "%s (%s: %s)" .room-name .sender-name .message-string))
+                it)
                isamert/slack--last-messages)))
-            (selected (completing-read "Select room: " rooms))
-            (selected-room (cdr (assoc-string selected rooms))))
-       (slack-room-display
-        (plist-get selected-room :room)
-        (plist-get selected-room :team)))))
+            (selected (isamert/alist-completing-read "Select message: " rooms)))
+       (isamert/slack--open-message-or-thread selected))))
 
   (defun isamert/slack-send-message (msg)
     "Send given MSG or selected region as message to interactively
