@@ -3398,7 +3398,7 @@ Simple mode for editing =~/.Xmodmap= file.
      :name "trendyol"
      :token ty/slack-token
      :cookie ty/slack-cookie
-     :subscribed-channels '(seller-ads-team seller-ads-alert ty-ads-team))
+     :subscribed-channels ty/slack-channels)
 
     (evil-leader/set-key
       "ess" #'slack-select-rooms
