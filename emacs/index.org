@@ -1910,7 +1910,21 @@ I'm experimenting with using default Emacs calendar as my work calendar. To do s
        ;; Turkish characters and url-retrieve does not set
        ;; buffer-multibyte to t automatically
        (set-buffer-multibyte t)
-       (icalendar-import-buffer diary-file t)
+       ;; First completely remove the file then import it so that
+       ;; importing does not create duplicates
+       (mapc
+        (lambda (buf)
+          (when-let* ((buffile (buffer-file-name buf))
+                      (is-open (string-equal (expand-file-name buffile) isamert/work-diary-path)))
+            (kill-buffer buf)))
+        (buffer-list))
+       (--filter it
+                 (mapcar
+                  (lambda (buf)
+                    (buffer-file-name buf))
+                  (buffer-list)))
+       (delete-file isamert/work-diary-path)
+       (icalendar-import-buffer isamert/work-diary-path t)
        (message ">> Updating the calendar... DONE"))))
 #+end_src
 
