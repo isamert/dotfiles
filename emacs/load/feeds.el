@@ -85,12 +85,13 @@
     ("MrDanielmac" youtube movie)
     ("CineFix" youtube movie fun)
     ("hotbananastud" youtube fun skit) ;; Brandon Rogers
-    ("ilkercanikligil" youtube fun turkce) ;; Flu TV
+    ("ilkercanikligil" youtube fun turkish) ;; Flu TV
     ("199sokak" youtube fun turkish skit) ;; Kamusal Mizah
     ("UC3Xu0FQeizzXhUtthFjFs8g" youtube fun skit vlog) ;; Deniz Bagdas
     ("codyko69" youtube fun commentary)
-    ("conmech" youtube fun turkce) ;; Efe Aydal
-    ("tvMisha" youtube fun turkce vlog)
+    ("conmech" youtube fun turkish) ;; Efe Aydal
+    ("tvMisha" youtube fun turkish vlog)
+    ("KALTChannel" youtube fun turkish)
 
     ("UCWXCrItCF6ZgXrdozUS-Idw" youtube fun animation) ; ExplosmEntertainment
     ))
