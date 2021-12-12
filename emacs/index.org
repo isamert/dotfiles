@@ -1856,7 +1856,7 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
     "r" #'image-rotate)
 #+end_src
 
-** calendar
+** calendar & diary
 #+begin_src emacs-lisp
   (use-package calendar
     :config
@@ -1873,6 +1873,12 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
     ;; Use 24-hour format to display times
     (setq calendar-time-display-form
           '(24-hours ":" minutes (if time-zone " (") time-zone (if time-zone ")")))
+
+    ;; Enable including other diary entries using the #include "..." syntax
+    ;; I use this to separate my work and normal diary
+    (add-hook 'diary-list-entries-hook #'diary-include-other-diary-files)
+    (add-hook 'diary-list-entries-hook #'diary-sort-entries t)
+    (setq diary-display-function #'diary-fancy-display)
 
     ;; Show calendar at the bottom
     (isamert/shackle-window "Calendar" 0.2)
@@ -1898,6 +1904,8 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 I'm experimenting with using default Emacs calendar as my work calendar. To do so, I import the remote calendar into my diary using the following function. Set ~isamert/calendar-remote-ics-file~ to the url of ICS file beforehand.
 
 #+begin_src emacs-lisp
+  (defconst isamert/work-diary-path (expand-file-name "~/.emacs.d/.cache/work-diary"))
+
   (defun isamert/update-calendar ()
     "Sync emacs calendar/diary with my remote calendar."
     (interactive)
@@ -3902,10 +3910,12 @@ Manage media and streams through =completing-read=.
     (setq empv-radio-channels isamert/radio-channels)
     (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music")
+    (setq empv-allow-insecure-connections t)
     (setq empv-invidious-instance "https://ytprivate.com/api/v1")
     ;; ^ alt: https://invidious.exonip.de/api/v1
     ;; also see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
+
     (evil-leader/set-key
       "erp" #'empv-play
       "erP" #'empv-playlist-select
