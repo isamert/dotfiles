@@ -1144,6 +1144,10 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     ;; ^ If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
     (setq org-log-into-drawer t)
     ;; ^ Log into LOGBOOK drawer instead of directly loging under the heading
+    (setq org-extend-today-until 3)
+    ;; ^ Consider the current day to end at 3AM
+    (setq org-use-effective-time t)
+    ;; ^ Make timestamp processing functions aware of the previous config
 
     (add-to-list 'org-modules 'org-habit t)
     ;; ^ Enable habit tracking
