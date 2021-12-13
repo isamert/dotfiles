@@ -2472,58 +2472,61 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
       (kbd "gl") 'avy-goto-line))
 #+END_SRC
 
-** selectrum
+** vertico
 A nice, fast minibuffer narrowing framework. It works well with quite a lot of package.
-- =prescient.el= brings history and more intelligent filtering to selectrum.
-- =marginalia.el= brings annotations to selectrum, ie. it adds current keybinding of a command, summary of command to M-x.
-  - =C-M-a= cycles the detail level.
-- =miniframe.el= shows all selectrum prompts in a nice mini popup frame.
-- [[embark]]
+- =marginalia.el= brings annotations to completing-read, ie. it adds current keybinding of a command, summary of command to M-x.
+- =miniframe.el= shows all completing-read prompts in a nice mini popup frame.
+- Also see [[embark]].
 
 Keybindings:
-- =SPC hh= to repeat/open last selectrum window you closed.
+- =SPC hl= to repeat/open last vertico window you closed.
 
-Some shortcuts you can use on any selectrum window:
-- =M-y= kill current candidates text. (=isamert/selectrum-kill-current-candidate=)
-- =M-q= changes display style. (=selectrum-cycle-display-style=)
-- =M-m= shows chars in each line (like [[avy]]), hitting on that chars selects the candidate. (=selectrum-quick-select=)
+Some shortcuts you can use on any vertico window:
 - =M-{n,p}= goes {back,forward} in minibuffer history.
+- =M-{[,]}= goes {previous,next} group.
+- =M-m= cycles the marginalia detail level.
+- =M-a= brings up embark-act menu. See [[embark]].
 - =TAB= inserts the current candidate (into minibuffer).
-See =selectrum-minibuffer-map= for full list.
 
 #+begin_src emacs-lisp
-  (use-package selectrum
+  (use-package vertico
     :config
+    (evil-leader/set-key "hl" #'vertico-repeat)
 
-    ;; See bottom of this code block
-    (define-key selectrum-minibuffer-map (kbd "M-[") 'selectrum-previous-group)
-    (define-key selectrum-minibuffer-map (kbd "M-]") 'selectrum-next-group)
+    ;; Grow and shrink the Vertico minibuffer
+    ;; (setq vertico-resize t)
 
-    (setq selectrum-extend-current-candidate-highlight t)
-    (define-key selectrum-minibuffer-map (kbd "M-y") #'isamert/selectrum-kill-current-candidate)
-    (evil-leader/set-key "hl" #'selectrum-repeat)
-    (selectrum-mode))
+    ;; Show more candidates
+    (setq vertico-count 15)
+    ;; Enable cycling for `vertico-next' and `vertico-previous'.
+    (setq vertico-cycle t)
+    ;; Hide commands in M-x which do not work in the current mode.
+    (setq read-extended-command-predicate #'command-completion-default-include-p)
 
-  (use-package selectrum-prescient
-    :after selectrum
+    ;; Add prompt indicator to `completing-read-multiple'.
+    (defun crm-indicator (args)
+      (cons (concat "[CRM] " (car args)) (cdr args)))
+    (advice-add #'completing-read-multiple :filter-args #'crm-indicator)
+
+    ;; Do not allow the cursor in the minibuffer prompt
+    (setq minibuffer-prompt-properties '(read-only t cursor-intangible t face minibuffer-prompt))
+    (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+
+    ;; Enable recursive minibuffers
+    (setq enable-recursive-minibuffers t)
+    (define-key vertico-map (kbd "M-[") #'vertico-previous-group)
+    (define-key vertico-map (kbd "M-]") #'vertico-next-group))
+
+  (use-package orderless
     :config
-    (prescient-persist-mode +1)
-    (selectrum-prescient-mode +1))
+    (setq completion-styles '(orderless))
+    (setq completion-category-defaults nil)
+    (setq completion-category-overrides '((file (styles partial-completion)))))
 
   (use-package marginalia
-    :after selectrum
-    :bind (:map minibuffer-local-map
-                ("C-M-a" . marginalia-cycle))
-
-    :init
-    (marginalia-mode)
-    ;; Refresh selectrum when `marginalia-cycle' is called.
-    (advice-add
-     #'marginalia-cycle
-     :after
-     (lambda ()
-       (when (bound-and-true-p selectrum-mode)
-         (selectrum-exhibit)))))
+    :config
+    (define-key minibuffer-local-map (kbd "M-m") #'marginalia-cycle)
+    (marginalia-mode))
 
   (use-package mini-frame
     :config
@@ -2545,62 +2548,7 @@ See =selectrum-minibuffer-map= for full list.
             isamert/consult-line
             isamert/consult-ripgrep))
     (mini-frame-mode +1))
-
-  (defun isamert/selectrum-kill-current-candidate ()
-    "Kill current candidates text in selectrum minibuffer and close it."
-    (interactive)
-    (let ((candidate (selectrum-get-current-candidate))
-          (prompt (minibuffer-prompt)))
-      (kill-new
-       (cond
-        ((s-contains? "grep" prompt) (s-join ":" (-drop 2 (s-split ":" candidate))))
-        ;; ^ Strip `filename:line-number:` from the text
-        ((s-matches? "\\(Go to line\\|Switch to\\)" prompt) (substring candidate 1))
-        ;; ^ `consult-line' and `consult-buffer' has an unrecognizable char at the beginning of every candidate, strip them
-        (t candidate))))
-    (keyboard-escape-quit))
-
-
-  ;;
-  ;; See this issue for source and reason: https://github.com/raxod502/selectrum/issues/554
-  ;;
-
-  (defun completion--metadata-group-name (cand)
-    (let* ((metadata (completion-metadata (minibuffer-contents)
-                                          minibuffer-completion-table
-                                          minibuffer-completion-predicate))
-           (groupfun (completion-metadata-get metadata 'group-function)))
-      (when groupfun
-        (funcall groupfun cand nil))))
-
-  (defun selectrum-next-group ()
-    (interactive)
-    (let ((group (completion--metadata-group-name (selectrum-get-current-candidate)))
-          (total (length (selectrum-get-current-candidates)))
-          (loop t))
-      (while (and group loop)
-        (if (= selectrum--current-candidate-index (1- total))
-            (progn
-              (selectrum-goto-beginning)
-              (setq loop nil))
-          (selectrum-next-candidate)
-          (unless (string= group (completion--metadata-group-name (selectrum-get-current-candidate)))
-            (setq loop nil))))))
-
-  (defun selectrum-previous-group ()
-    (interactive)
-    (let ((group (completion--metadata-group-name (selectrum-get-current-candidate)))
-          (loop t))
-      (while (and group loop)
-        (if (zerop selectrum--current-candidate-index)
-            (progn
-              (selectrum-goto-end)
-              (setq loop nil))
-          (selectrum-previous-candidate)
-          (unless (string= group (completion--metadata-group-name (selectrum-get-current-candidate)))
-            (setq loop nil))))))
 #+end_src
-
 ** consult
 Some key points:
 - =SPC RET= brings up =consult-buffer=.
@@ -2765,13 +2713,12 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
   - =M-a= activates command mode. Next key should be command. Do =C-h= to list all commands with their keybindings.
   - Commands are context specific, ie. the commands is based on if currently selected item is a file, folder, buffer etc.
   - It's mostly used within the minnibuffer, some example functions:
-    - =M-a w= (~embark-save~) saves the current candidate's text into kill-ring. (Although I have another solution for this, =M-y=. See [[selectrum]])
+    - =M-a w= (~embark-save~) saves the current candidate's text into kill-ring.
     - =M-a i= (~embark-insert~) like the one above but instead of saving to the kill-ring, it directly inserts it to the buffer.
     - =M-a S= (~embark-collect-snapshot~) creates a buffer containing all the candidates.
 
 #+begin_src emacs-lisp
   (use-package embark
-    :after selectrum
     :config
     (bind-key (kbd "M-a") #'embark-act)
     (setq embark-prompter #'embark-completing-read-prompter)
@@ -3334,7 +3281,7 @@ When you press tab, jump out from the current enclosing parens/quotes etc. When 
 #+end_src
 
 ** completing-read-xref
-Provides an interface to xref based on completing-read. Works well with [[selectrum]].
+Provides an interface to xref based on completing-read.
 
 #+begin_src emacs-lisp
   (use-package completing-read-xref
@@ -3343,7 +3290,7 @@ Provides an interface to xref based on completing-read. Works well with [[select
              :fetcher github
              :repo "travitch/completing-read-xref.el")
     :config
-    (setq xref-show-definitions-function 'completing-read-xref-show-defs))
+    (setq xref-show-definitions-function #'completing-read-xref-show-defs))
 #+end_src
 ** helpful and elisp-demos
 - helpful :: Better help dialogs with syntax highlighting, references, source etc.
@@ -3680,7 +3627,7 @@ See [[https://isamert.net/2021/01/31/emacs-te-turkce-imla-denetimi.html][this]] 
 #+END_SRC
 
 *** flyspell-correct
-Better way to correct spelling mistakes. By default it uses completing-read, so it's compatible with selectrum. This also makes it easy to save words into personal dictonary or silence warnings for session because it shows these options in the correction menu.
+Better way to correct spelling mistakes. By default it uses completing-read. This also makes it easy to save words into personal dictonary or silence warnings for session because it shows these options in the correction menu.
 #+begin_src emacs-lisp
   (use-package flyspell-correct
     :config
@@ -5423,7 +5370,6 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                    'face 'italic)
        .fields.summary)))
 
-  ;; TODO act on object instead of issue name
   (defun isamert/jira--issue-actions (issue)
     (cl-loop
      (with-completing-read-exact-order
@@ -5431,7 +5377,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
         (let* ((action
                 (completing-read
                  (format "Act on %s: " (s-truncate 20 .fields.summary))
-                 '("Open" "To branch" "To worktree" "Assign to..." "[Cancel]"))))
+                 '("Open" "To branch" "To worktree" "Assign to..." "Insert as task" "[Cancel]"))))
           (pcase action
             ("Open"
              (isamert/open-jira-issue .key)
@@ -5446,6 +5392,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
              (jiralib2-assign-issue
               .key
               (alist-get 'name (isamert/jira--select-user (isamert/jira--select-project)))))
+            ("Insert as task"
+             (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
             ("[Cancel]"
              (cl-return))))))))
 #+end_src
@@ -5459,21 +5407,13 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
     "epc" #'isamert/send-clipboard-to-my-phone)
 
   (defvar isamert/phone-hostname
-    "mia3"
+    "f3"
     "Hostname or local address to connect to my phone by SSH.")
 
   (defun isamert/send-termux-command (cmd)
     "Send CMD to my phone."
     (interactive "sText: ")
     (shell-command-to-string (format "ssh %s \"tmux pipe-pane -t0 '%s'\"" isamert/phone-hostname cmd)))
-
-  (defun isamert/send-notification-to-my-phone (text &optional content)
-    "Send TEXT and CONTENT as notification to my phone."
-    (interactive "sText:")
-    (isamert/send-termux-command
-     (format "termux-notification --title \\\"%s\\\" --content \\\"%s\\\""
-             text
-             (or content ""))))
 
   (cl-defun isamert/send-notification-to-my-phone
       (&key
