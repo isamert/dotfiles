@@ -1149,6 +1149,9 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (setq org-use-effective-time t)
     ;; ^ Make timestamp processing functions aware of the previous config
 
+    (add-to-list 'org-link-abbrev-alist '("imdb" . "https://www.imdb.com/title/%s"))
+    ;; ^ More info: https://orgmode.org/manual/Link-Abbreviations.html
+
     (add-to-list 'org-modules 'org-habit t)
     ;; ^ Enable habit tracking
 
@@ -1239,7 +1242,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
       (error (outline-backward-same-level 1))))
 #+end_src
 
-** Some vars
+** Personal files
 #+BEGIN_SRC emacs-lisp
   (when (file-directory-p "~/Documents/notes")
     (defconst watchlist-org "~/Documents/notes/watchlist.org")
@@ -1357,6 +1360,8 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 
   (evil-leader/set-key
     "ot" 'isamert/org-babel-tangle-current-block)
+
+  (defalias 'isamert/org-babel-split-code-block #'org-babel-demarcate-block)
 
   (defun isamert/org-babel-tangle-current-block ()
     (interactive)
@@ -1942,8 +1947,7 @@ I'm experimenting with using default Emacs calendar as my work calendar. To do s
         (lambda (buf)
           (when-let* ((buffile (buffer-file-name buf))
                       (is-open (string-equal (expand-file-name buffile) isamert/work-diary-path)))
-            (let ((kill-buffer-hook '()))
-              (kill-buffer buf))))
+            (kill-buffer buf)))
         (buffer-list))
        (--filter it
                  (mapcar
@@ -2261,7 +2265,7 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     :config
     (setq persp-nil-hidden nil)
     (setq persp-nil-name "main")
-    (setq persp-autokill-buffer-on-remove 'kill-weak)
+    (setq persp-autokill-buffer-on-remove t)
     (setq persp-set-last-persp-for-new-frames nil)
     (setq persp-set-frame-buffer-predicate nil)
     ;; ^ This breaks {next,previous}-buffer functionality if set to t
