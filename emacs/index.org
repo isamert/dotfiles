@@ -3419,6 +3419,7 @@ Simple mode for editing =~/.Xmodmap= file.
         "ml" 'slack-message-copy-link
         "me" 'slack-message-edit
         "mt" 'slack-thread-show-or-create
+        "mq" 'isamert/slack-quote-message
 
         "mrr" 'slack-message-add-reaction
         "mR" 'slack-message-remove-reaction
@@ -3544,6 +3545,29 @@ Simple mode for editing =~/.Xmodmap= file.
     (let* ((file (make-temp-file "clip" nil ".png")))
       (isamert/save-clipboard-image-to-file file)
       (slack-file-upload file "png" "image.png")))
+
+  ;; TODO multiple message quote
+  (defun isamert/slack-quote-message ()
+    (interactive)
+    (let ((quote-text (->>
+                       (isamert/slack-current-message-content)
+                       (substring-no-properties)
+                       (s-trim)
+                       (s-split "\n")
+                       (-drop 1)
+                       (--map (concat "> " it))
+                       (s-join "\n")
+                       (s-append "\n"))))
+      (slack-message-write-another-buffer)
+      (insert quote-text)))
+
+  (defun isamert/slack-current-message-content ()
+    (slack-if-let* ((buf slack-current-buffer)
+                    (team (slack-buffer-team buf))
+                    (room (slack-buffer-room buf))
+                    (message (slack-room-find-message room (slack-get-ts))))
+        (slack-buffer-message-text buf message nil)))
+
 
   ;;
   ;; Utils/internals
