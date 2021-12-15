@@ -1611,8 +1611,23 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     (require 'org-ql-search))
 #+END_SRC
 
-** Show links in the echo area
-I got this trick from [[https://www.reddit.com/r/emacs/comments/o68i0v/weekly_tips_tricks_c_thread/h2rizey?utm_source=share&utm_medium=web2x&context=3][this]] comment. It simply calls =C-h .= (=display-local-help=) when idle, which shows the destination of links in the echo area (and maybe displays other helpful stuff).
+** Linking improvements
+Org does not provide an easy way to copy link at point. Here is a fix for that:
+
+#+begin_src emacs-lisp
+  ;; Source: https://emacs.stackexchange.com/a/60555
+  (defun isamert/org-link-copy (&optional arg)
+    "Extract URL from org-mode link and add it to kill ring."
+    (interactive "P")
+    (let* ((link (org-element-lineage (org-element-context) '(link) t))
+           (type (org-element-property :type link))
+           (url (org-element-property :path link))
+           (url (concat type ":" url)))
+      (kill-new url)
+      (message (concat "Copied URL: " url))))
+#+end_src
+
+This following trick (got it from [[https://www.reddit.com/r/emacs/comments/o68i0v/weekly_tips_tricks_c_thread/h2rizey?utm_source=share&utm_medium=web2x&context=3][this]] comment) simply calls =C-h .= (=display-local-help=) when idle, which shows the destination of links in the echo area (and maybe displays other helpful stuff).
 
 #+begin_src emacs-lisp
   (defun isamert/help-at-point-mode ()
@@ -1625,7 +1640,6 @@ I got this trick from [[https://www.reddit.com/r/emacs/comments/o68i0v/weekly_ti
   (add-hook 'org-mode-hook #'isamert/help-at-point-mode)
 #+end_src
 
-** Inserting links and images from clipboard
 Insert links/images more intelligently,
 - if region is selected and there is a url in the clipboard, convert it to a link directly.
 - if nothing is selected and there is a link in clipboard, just insert it as a link with the link's own title.
