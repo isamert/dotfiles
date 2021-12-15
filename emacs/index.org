@@ -1928,7 +1928,8 @@ I'm experimenting with using default Emacs calendar as my work calendar. To do s
         (lambda (buf)
           (when-let* ((buffile (buffer-file-name buf))
                       (is-open (string-equal (expand-file-name buffile) isamert/work-diary-path)))
-            (kill-buffer buf)))
+            (let ((kill-buffer-hook '()))
+              (kill-buffer buf))))
         (buffer-list))
        (--filter it
                  (mapcar
@@ -3566,7 +3567,7 @@ Simple mode for editing =~/.Xmodmap= file.
                     (team (slack-buffer-team buf))
                     (room (slack-buffer-room buf))
                     (message (slack-room-find-message room (slack-get-ts))))
-        (slack-buffer-message-text buf message nil)))
+        (slack-message-to-string message team)))
 
 
   ;;
