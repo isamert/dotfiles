@@ -171,7 +171,8 @@ Some basic variable and function definitions that will be used in configuration.
 
   (defmacro with-completing-read-exact-order (&rest body)
     "Disable any kind of sorting in completing read."
-    `(let ((selectrum-should-sort nil))
+    `(let ((selectrum-should-sort nil)
+           (vertico-sort-function nil))
        ,@body))
 
   (defun isamert/shell-command-to-string (cmd)
@@ -223,7 +224,11 @@ Some basic variable and function definitions that will be used in configuration.
     (declare (indent 1))
     `(let-alist (transient-plist-to-alist ,plist)
        ,@form))
-#+END_SRC
+
+  (defun isamert/mimetype (path)
+    "Return mimetype of given file at PATH."
+    (string-trim (shell-command-to-string (format "file --brief --mime-type '%s'" path))))
+#+end_src
 
 *** Clipboard functions
 #+begin_src emacs-lisp
@@ -405,7 +410,6 @@ This function is for doing easy REST calls and it uses plists for everything bec
           (json-object-type 'alist)
           (json-array-type #'list)
           (json-key-type 'symbol))
-
       ;; Remove request related items from params list
       (dolist (key '(:-type :-headers :-data :-params))
         (cl-remf params key))
@@ -414,20 +418,26 @@ This function is for doing easy REST calls and it uses plists for everything bec
         endpoint
         :type -type
         ;; TODO Maybe roll my own plist-to-alist function
-        :headers (if (and -headers (json-alist-p -headers))
-                     -headers
-                   (transient-plist-to-alist -headers))
+        :headers (cond
+                  ((and -headers (json-alist-p -headers)) -headers)
+                  ((and -headers (json-plist-p -headers)) (transient-plist-to-alist -headers))
+                  (t nil))
         :parser #'json-read
         :success (cl-function
                   (lambda (&key data &allow-other-keys)
                     (setq json data)))
+        :error (cl-function
+                (lambda (&key status data &allow-other-keys)
+                  (user-error "STATUS: %s, DATA: %s," status data)))
         :sync t
-        :data (if (and -data (json-alist-p -data))
-                  data
-                (transient-plist-to-alist -data))
+        :data (cond
+               ((and -data (json-alist-p -data)) -data)
+               ((and -data (json-plist-p -data)) (transient-plist-to-alist -data))
+               ((stringp -data) -data)
+               (t nil))
         :params (if (and -params (json-alist-p -params))
                     -params
-                  params))
+                  (transient-plist-to-alist params)))
       json))
 #+end_src
 *** Other
@@ -669,7 +679,7 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
 #+END_SRC
 
 ** all-the-icons
-You should run =all-the-icons-install-fonts= command after this.
+You should run =all-the-icons-install-fonts= command after this. Also run =fc-cache -f -v= afterwards (=all-the-icons-install-fonts= already does that but it may fail).
 
 #+BEGIN_SRC emacs-lisp
   (use-package all-the-icons)
@@ -780,9 +790,6 @@ Make some temproary windows appear at bottom. This makes buffer management so mu
   (isamert/shackle-window "\\*Warnings*\\*" 0.2)
   (isamert/shackle-window "\\*Backtrace*\\*" 0.4)
   (isamert/shackle-window "\\*Flycheck.*" 0.4)
-  (isamert/shackle-window "\\*Org Src.*\\*" 0.4)
-  (isamert/shackle-window "\\*Agenda Commands\\*" 0.4)
-  (isamert/shackle-window "\\*Org Agenda\\*" 0.4)
   (isamert/shackle-window "\\*Org Select\\*" 0.4)
   (isamert/shackle-window "CAPTURE-*" 0.4)
   (isamert/shackle-window "magit.*" 0.7)
@@ -791,6 +798,15 @@ Make some temproary windows appear at bottom. This makes buffer management so mu
   (isamert/shackle-window "\\*curl error\\*" 0.4)
   (isamert/shackle-window "\\*helpful.*\\*" 0.4)
   (isamert/shackle-window "\\*Org Select\\*" 0.4)
+
+
+  (defun isamert/clear-side-windows ()
+    "Clear all side windows.
+  This is sometimes required to get around the error: `Cannot make
+  side window the only window'"
+    (interactive)
+    (when (window-with-parameter 'window-side)
+      (window-toggle-side-windows)))
 #+END_SRC
 
 ** Miscellaneous packages
@@ -1361,7 +1377,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (evil-leader/set-key
     "ot" 'isamert/org-babel-tangle-current-block)
 
-  (defalias 'isamert/org-babel-split-code-block #'org-babel-demarcate-block)
+  (defalias 'isamert/org-babel-split-or-wrap-code-block #'org-babel-demarcate-block)
 
   (defun isamert/org-babel-tangle-current-block ()
     (interactive)
@@ -1476,13 +1492,18 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
       (file+function bullet-org isamert/bullet-focus-today)
       "** [#B] %?\n%a. "
       :prepend t)
-     ("ds" "Daily summary" entry
+     ("ds" "Daily summary" item
       (file+function bullet-org isamert/org-capture--find-daily-summary)
-      "%T ")
+      "%U ")
      ("dn" "Daily note" item
       (file+function bullet-org isamert/org-capture--find-daily-notes)
       "%a. %?"
       :prepend t)
+     ("dN" "Daily note (for capturing from Signal)" item
+      (file+function bullet-org isamert/org-capture--find-daily-notes)
+      "%U %c"
+      :prepend t
+      :immediate-finish t)
 
      ("s" "Snippets")
      ("ss" "Snippet" entry
@@ -1828,6 +1849,7 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
        "Miscellaneous"
        (("l" visual-line-mode "Wrap lines" :toggle t)
         ("T" toggle-truncate-lines "Truncate lines")
+        ("v" visual-fill-column-mode "Wrap lines at 72th col" :toggle t)
         ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
         ("f" fci-mode "Fill column" :toggle t)
         ("<SPC>" nil "Quit" :color blue))))
@@ -1843,31 +1865,40 @@ With this package, you can make =grep= buffers editable and your edits can be ap
 #+begin_src emacs-lisp
   (use-package wgrep)
 #+end_src
-** dired
+** dired/dirvish
 There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
 #+begin_src emacs-lisp
-  (defun isamert/dired-up-directory ()
-    "Like `dired-up-directory' but it does not create a new frame.
-    Uses the existing one."
-    (interactive)
-    (find-alternate-file ".."))
+  (use-package dired
+    :config
+    (setq dired-dwim-target t)
+    (setq ls-lisp-dirs-first t)
+    (setq ls-lisp-use-insert-directory-program nil)
+    (setq dired-kill-when-opening-new-dired-buffer t)
+    (setq dired-clean-confirm-killing-deleted-buffers nil)
+    (setq dired-recursive-copies 'always)
+    (setq dired-recursive-deletes 'always)
+    (setq dired-dwim-target t)
+    (put 'dired-find-alternate-file 'disabled nil))
 
-  (setq dired-dwim-target t
-        ls-lisp-dirs-first t
-        ls-lisp-use-insert-directory-program nil)
-  (put 'dired-find-alternate-file 'disabled nil)
+  (use-package dirvish
+    :quelpa (dirvish
+             :fetcher github
+             :repo "alexluigit/dirvish")
+    :config
+    (setq dirvish-use-large-header nil)
+    (setq dirvish-body-fontsize-increment nil)
+    (setq dirvish-icon-monochrome t)
 
-  ;; Other bindings are defined within evil-collection/dired
-  ;; Following gives more ranger-y feeling to dired
-  (evil-define-key 'normal dired-mode-map
-    "h" 'isamert/dired-up-directory
-    "l" 'dired-find-alternate-file)
+    ;; Other keybindings comes from dired-mode (which comes from
+    ;; evil-collection)
+    (evil-define-key 'normal dirvish-mode-map
+      "h" #'dirvish-up-directory
+      "l" #'dired-find-alternate-file)
 
-  ;; Add icons to dired buffers
-  (add-hook 'dired-mode-hook 'treemacs-icons-dired-mode)
-
-  (evil-leader/set-key "ed" #'dired)
+    ;; Re-direct direct-jump calls to dirvish
+    (dirvish-override-dired-jump)
+    (evil-leader/set-key "ed" #'dirvish-dired))
 #+end_src
 ** image-mode
 I want to be able to kill image buffers with simply hitting =q=. This does that.
@@ -2011,14 +2042,10 @@ Opening a zoom link first redirects you to a browser and then opens the zoom app
     (setq shr-max-image-proportion 0.6)
     (setq shr-discard-aria-hidden t)
 
-    (defvar isamert/url-handlers
-      '((".*\\(trendyol\\|gitlab\\|github\\).*" . browse-url-default-browser)
-        (".*youtube.*/watch.*" . (lambda (url &rest args) (start-process "mpv-emacs" nil "mpv" url)))
-        ("." . eww-browse-url)))
-
-    (if (>= emacs-major-version 28)
-        (setq browse-url-handlers isamert/url-handlers)
-      (setq browse-url-browser-function isamert/url-handlers))
+    (setq browse-url-handlers
+          '((".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . browse-url-default-browser)
+            (".*youtube.*/watch.*" . (lambda (url &rest args) (empv-play url)))
+            ("." . browse-url-default-browser)))
 
     (evil-define-key 'normal eww-mode-map
       (kbd "Y") #'eww-copy-page-url
@@ -2116,10 +2143,6 @@ Opening a zoom link first redirects you to a browser and then opens the zoom app
 
   (use-package treemacs-projectile
     :after treemacs projectile)
-
-  (use-package treemacs-icons-dired
-    :after treemacs dired
-    :config (treemacs-icons-dired-mode -1))
 
   (use-package treemacs-magit
     :after treemacs magit)
@@ -2265,14 +2288,15 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     :config
     (setq persp-nil-hidden nil)
     (setq persp-nil-name "main")
-    (setq persp-autokill-buffer-on-remove t)
+    (setq persp-autokill-buffer-on-remove 'kill-weak)
+    (setq persp-kill-foreign-buffer-behaviour 'kill)
     (setq persp-set-last-persp-for-new-frames nil)
     (setq persp-set-frame-buffer-predicate nil)
     ;; ^ This breaks {next,previous}-buffer functionality if set to t
 
     (evil-leader/set-key
       "la" #'persp-add-buffer
-      "ls" #'persp-switch
+      "ls" #'isamert/persp-switch-to-project
       "lk" #'persp-remove-by-name
       "lr" #'persp-rename
       "li" #'isamert/initialize-perspectives
@@ -2302,6 +2326,25 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
 
     (add-hook 'after-init-hook #'(lambda () (persp-mode 1))))
 
+  (defun isamert/persp-switch-to-project ()
+    "Like `persp-switch' but tries to guess and open project by the
+  perspective name if the perspective is a freshly created one."
+    (interactive)
+    (funcall-interactively #'persp-switch nil)
+    (unless (persp-buffers (get-current-persp))
+      (let* ((pname
+              (nth 1 (s-split "/" (persp-name (get-current-persp)))))
+             (candidates
+              (->>
+               (isamert/all-project-roots)
+               (--filter (s-matches? pname (f-base it))))))
+        (cond
+         ((length= candidates 1)
+          (isamert/open-project (car candidates)))
+         ((length> candidates 1)
+          (isamert/open-project (completing-read "Select project: " candidates)))
+         (t
+          (isamert/open-project (isamert/switch-to-project)))))))
 
   (use-package eyebrowse
     :config
@@ -2538,7 +2581,12 @@ Some shortcuts you can use on any vertico window:
     ;; Enable recursive minibuffers
     (setq enable-recursive-minibuffers t)
     (define-key vertico-map (kbd "M-[") #'vertico-previous-group)
-    (define-key vertico-map (kbd "M-]") #'vertico-next-group))
+    (define-key vertico-map (kbd "M-]") #'vertico-next-group)
+
+    ;; Use `consult-completion-in-region' which works with vertico
+    (setq completion-in-region-function #'consult-completion-in-region)
+
+    (vertico-mode))
 
   (use-package orderless
     :config
@@ -2564,8 +2612,8 @@ Some shortcuts you can use on any vertico window:
     ;; with mini-frame
     (setq mini-frame-ignore-commands
           '(completion-at-point
-            completion-at-point
             ctrlf-forward-default
+            tab-jump-out
             consult-line
             consult-ripgrep
             isamert/consult-line
@@ -2752,7 +2800,9 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     ;; ^ I removed embark-mixed-indicator from the list because I'm
     ;; using embark-completing-read-prompter by default which already
     ;; provides same functionality
-    )
+
+    ;; Replace describe-symbol with helpful-symbol
+    (define-key embark-symbol-map "h" #'helpful-symbol))
 
   (use-package embark-consult
     :after (embark consult))
@@ -2799,12 +2849,21 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
     (interactive)
     (cd (isamert/current-project-root)))
 
-  (defun isamert/project-paths ()
+  (defun isamert/is-git-dir (dir)
+    (file-directory-p (concat dir "/.git")))
+
+  (defun isamert/all-project-roots ()
     "Find every project dir under `isamert/projects-root'.
   Every folder without a \".git\" folder is considered to be a project group folder."
-    (append `(,isamert/projects-root)
-            (-flatten (-map (lambda (dir) (if (file-directory-p (concat dir "/.git")) '() `(,dir)))
-                            (directory-files isamert/projects-root t "^[^.]")))))
+    (let ((home (expand-file-name "~")))
+      (->>
+       (f-directories isamert/projects-root)
+       (cons isamert/projects-root)
+       (--filter (not (isamert/is-git-dir it)))
+       (--map (f-directories it))
+       (-flatten)
+       (--filter (isamert/is-git-dir it))
+       (--map (s-replace home "~" it)))))
 
   (defun isamert/find-file-in (dir)
     "Find file in DIR.
@@ -2812,6 +2871,7 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
     (interactive "D")
     (let ((default-directory dir))
       (->> (shell-command-to-string "fd --exclude '.git' --hidden .")
+           (s-trim)
            (s-split "\n")
            (completing-read "Open file: ")
            (find-file))))
@@ -2831,13 +2891,13 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
 
   (defun isamert/switch-to-project ()
     "List all projects found under `isamert/project-paths' and switch to selected."
-    "Switch to project: "
-    (->> (isamert/project-paths)
-         (--map (shell-command-to-string (format "fd --exact-depth 1 --type d . %s" it)))
-         (-reduce #'concat)
-         (s-split "\n")
-         (--map (s-replace (expand-file-name "~") "~" it))
+    (->> (isamert/all-project-roots)
          (completing-read "Switch to project: ")))
+
+  (defun isamert/open-project (path)
+    "Open given project"
+    (interactive "DSelect project dir: ")
+    (isamert/find-file-in path))
 
   (defun isamert/switch-to-project-and-find-file ()
     (interactive)
@@ -2910,6 +2970,7 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
     (setq company-minimum-prefix-length 1)
     ;; ^ Start completing after 1 char
 
+
     (evil-define-key 'insert 'global (kbd "C-SPC") 'company-complete)
     ;; ^ C-SPC force triggers company completion at point
     (define-key company-active-map (kbd "<tab>") nil)
@@ -2944,6 +3005,13 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
               (lambda ()
                 (add-to-list (make-local-variable 'company-backends)
                              'company-org-block))))
+
+
+  ;; For intelligent sorting of company results
+  (use-package company-prescient
+    :config
+    (company-prescient-mode t)
+    (prescient-persist-mode))
 #+END_SRC
 
 ** origami-mode
@@ -3275,6 +3343,7 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
     :config
     (evil-define-key 'normal bufler-list-mode-map
       (kbd "K") 'bufler-list-buffer-kill
+      (kbd "x") 'bufler-list-buffer-kill
       (kbd "<return>") 'bufler-list-buffer-switch
       (kbd "q") 'quit-window
       (kbd "M-,") 'bufler-list-buffer-peek
@@ -3402,19 +3471,12 @@ Simple mode for editing =~/.Xmodmap= file.
 
     (setq slack-message-custom-notifier #'isamert/slack-notify)
 
-    (slack-register-team
-     :name "trendyol"
-     :token ty/slack-token
-     :cookie ty/slack-cookie
-     :subscribed-channels ty/slack-channels)
-
     (evil-leader/set-key
       "ess" #'slack-select-rooms
       "esm" #'isamert/slack-send-message
       "esr" #'isamert/slack-recent-messages
       "esl" #'isamert/slack-open-last-message
       "esy" #'isamert/slack-yank-last-message)
-
 
     (defun isamert/slack--add-reaction-to-message (reaction)
       (defalias (intern (concat "react-" reaction))
@@ -3455,6 +3517,17 @@ Simple mode for editing =~/.Xmodmap= file.
       "@"  #'slack-message-embed-mention
       "mc" #'slack-message-embed-channel
       "ml" #'markdown-insert-link))
+
+  (defun isamert/slack-initialize ()
+    (interactive)
+    (ignore-errors (slack-ws-close))
+    (ignore-errors (slack-team-delete))
+    (slack-register-team
+     :name "trendyol"
+     :token ty/slack-token
+     :cookie ty/slack-cookie
+     :subscribed-channels ty/slack-channels)
+    (slack-start))
 
   (use-package alert
     :config
@@ -4589,6 +4662,11 @@ The following enables =CamelCase= aware editing operations.
 (use-package dap-java :after (lsp-java))
 #+END_SRC
 
+** clojure
+#+begin_src emacs-lisp
+  (use-package cider
+    :ensure t)
+#+end_src
 ** emmet-mode
 Hit <C-j> after these and get:
 - =a= ~<a href="|">|</a>~
@@ -5457,10 +5535,19 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
     "f3"
     "Hostname or local address to connect to my phone by SSH.")
 
-  (defun isamert/send-termux-command (cmd)
+  (defun isamert/send-termux-command (cmd &rest args)
     "Send CMD to my phone."
     (interactive "sText: ")
-    (shell-command-to-string (format "ssh %s \"tmux pipe-pane -t0 '%s'\"" isamert/phone-hostname cmd)))
+    (with-temp-buffer
+      (insert cmd " ")
+      (--each args
+        (insert "\"" (s-replace "\"" "\\\"" it) "\"" " "))
+      (shell-command-on-region
+       (point-min)
+       (point-max)
+       (format "ssh -T %s" isamert/phone-hostname)
+       t t)
+      (buffer-string)))
 
   (cl-defun isamert/send-notification-to-my-phone
       (&key
@@ -5469,26 +5556,39 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
        url-to-open)
     "Send a notification to my phone."
     (isamert/send-termux-command
-     (format "termux-notification --title \\\"%s\\\" --content \\\"%s\\\" %s"
-             title
-             (or content "")
-             (if url-to-open
-                 (format "--action \\\"termux-open %s\\\"" url-to-open)
-               ""))))
+     "termux-notification"
+     "--title"
+     title
+     "--content"
+     (or content "")
+     "--action"
+     (format "termux-open %s" url-to-open)))
 
   (defun isamert/send-text-to-my-phone (text)
-    "Send TEXT to my phones clipboard."
+    "Send TEXT to my phones clipboard. This only works if the phone
+  is already open."
     (interactive "sText: ")
-    (shell-command-to-string (format "ssh %s \"tmux pipe-pane -t0 'echo \\\"%s\\\" | termux-clipboard-set'\"" isamert/phone-hostname text)))
+    (isamert/send-termux-command "termux-clipboard-set" text))
 
   (defun isamert/send-clipboard-to-my-phone ()
-    "Send current clipboard content to my phones clipboard."
+    "Send current clipboard content to my phones clipboard. This only
+  works if the phone is already open."
     (interactive)
     (isamert/send-text-to-my-phone (current-kill 0)))
+
+  (defun isamert/list-phone-text-messages ()
+    "List messages from my phone."
+    (interactive)
+    (completing-read
+     "Messages: "
+     (seq-map
+      (lambda (msg) (let-alist msg (format "%s :: %s" .number .body)))
+      (json-read-from-string
+       (isamert/send-termux-command "termux-sms-list")))))
 #+end_src
 
 ** Signal
-#+begin_src emacs-lisp :tangle (if (eq system-type 'gnu/linux) "yes" "no")
+#+begin_src emacs-lisp
   (require 'dbus)
 
   (evil-leader/set-key
@@ -5562,6 +5662,7 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
         (list :group (dbus-string-to-byte-array (dbus-byte-array-to-string selected))))))
 
   (defun isamert/signal-sync-message-received-handler (ts source receiver _ msg attchs)
+    (message ">> [signal] sender=%s, msg=%s attach=%s" source msg attchs)
     (when (and (string= receiver source)
                (string= isamert/my-phone-number source))
       (cond
@@ -5572,28 +5673,50 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
         (isamert/signal-send-note-to-myself
          (concat "run <shell-command>\n"
                  "grab <file-path>\n"
+                 "note <note-details>\n"
                  "help")))
        ((s-prefix? "grab" msg)
         (isamert/signal-send-note-to-myself
-         "" (list (s-chop-prefix "grab " msg)))))))
+         "" (list (s-chop-prefix "grab " msg))))
+       ((s-prefix? "note" msg)
+        (kill-new (s-chop-prefix "note " msg))
+        (isamert/clear-side-windows)
+        (org-capture nil "dN")
+        (isamert/signal-send-note-to-myself (format ">> Noted: %s" msg)))
+       ((s-prefix? "http" msg)
+        (message ">> [signal] Copied to clipboard: %s" msg)
+        (kill-new msg))
+       ((s-equals? "clip" msg)
+        (isamert/signal-send-note-to-myself (car kill-ring)))
+       (attchs
+        (--each attchs
+          (let ((mime (isamert/mimetype it)))
+            (cond
+             ((s-prefix? "image/" mime)
+              (message "TODO: Handle self images %s" it))
+             ((s-prefix "audio/" mime)
+              (message "TODO: Handle self sound %s" it)))))))))
 
   (defvar isamert/signal-bot-object nil)
 
   (defun isamert/start-signal-bot ()
     (interactive)
-    (setq
-     isamert/signal-bot-object
-     (apply
-      #'dbus-register-signal
-      `(,@isamert/signal-dbus-args
-        ,"SyncMessageReceived"
-        ,#'isamert/signal-sync-message-received-handler))))
+    (unless isamert/signal-bot-object
+      (message ">> signal-bot is starting...")
+      (setq
+       isamert/signal-bot-object
+       (apply
+        #'dbus-register-signal
+        `(,@isamert/signal-dbus-args
+          ,"SyncMessageReceived"
+          ,#'isamert/signal-sync-message-received-handler)))))
 
   (defun isamert/stop-signal-bot ()
     (interactive)
-    (dbus-unregister-object isamert/signal-bot-object))
+    (dbus-unregister-object isamert/signal-bot-object)
+    (setq isamert/signal-bot-object nil))
 
-  (isamert/start-signal-bot)
+  (run-with-timer 60 nil #'isamert/start-signal-bot)
 #+end_src
 ** people.org - Contact management
 Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-and-syncing-them-to-your-phone-android-ios-whatever-.html][this post]] for further information.
@@ -6533,10 +6656,18 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
            (username (car result))
            (password (cdr result)))
       (when (and username password)
-        (write-region "mode-enter insert\n" nil fifo 'append)
-        (write-region (format "fake-key %s\n" username) nil fifo 'append)
-        (write-region "fake-key <Tab>\n" nil fifo 'append)
-        (write-region (format "fake-key %s\n" password) nil fifo 'append))))
+        (pcase (isamert/dmenu "Method: " '("Fill all with TAB" "Fill username" "Fill password"))
+          ("Fill all with TAB"
+           (write-region "mode-enter insert\n" nil fifo 'append)
+           (write-region (format "fake-key %s\n" username) nil fifo 'append)
+           (write-region "fake-key <Tab>\n" nil fifo 'append)
+           (write-region (format "fake-key %s\n" password) nil fifo 'append))
+          ("Fill username"
+           (write-region "mode-enter insert\n" nil fifo 'append)
+           (write-region (format "fake-key %s\n" username) nil fifo 'append))
+          ("Fill password"
+           (write-region "mode-enter insert\n" nil fifo 'append)
+           (write-region (format "fake-key %s\n" password) nil fifo 'append))))))
 #+end_src
 ** Kubernetes
 My main use case is drop into a shell of a pod. The code below makes it quite easy. Use ~isamert/kube-select-pod~ to select a pod and do some actions on it.
