@@ -2010,17 +2010,18 @@ To sync it automatically:
 Opening a zoom link first redirects you to a browser and then opens the zoom app, but if you just use the ~zoommtg://~ schema to open a zoom meeting, it directly opens the app which is quite nice.
 
 #+begin_src emacs-lisp
-  (defun isamert/open-zoom-meeting-dwim (link)
+  (defun isamert/open-zoom-meeting-dwim ()
     "Open the zoom meeting at point or the one in the kill-ring."
     (interactive)
-    (when-let (zoom (s-match
-                     "https://.*zoom\\.us/j/\\(\\w+\\)\\?pwd=\\(\\w+\\)"
-                     (or (thing-at-point 'url) (car kill-ring))))
-      (message "Opening zoom...")
-      (shell-command
-       "open 'zoommtg://zoom.us/join?confno=%s&pwd=%s'"
-       (nth 1 zoom)
-       (nth 2 zoom))))
+    (when-let* ((zoom (s-match
+                       "https://.*zoom\\.us/j/\\(\\w+\\)\\?pwd=\\(\\w+\\)"
+                       (or (thing-at-point 'url) (car kill-ring))))
+                (cmd (format
+                      "open 'zoommtg://zoom.us/join?confno=%s&pwd=%s'"
+                      (nth 1 zoom)
+                      (nth 2 zoom))))
+      (message ">> Running %s" cmd)
+      (shell-command cmd)))
 #+end_src
 ** tramp
 #+begin_src emacs-lisp
