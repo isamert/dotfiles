@@ -1800,6 +1800,16 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 #+end_src
 
 * Other packages
+** process-menu-mode
+#+begin_src emacs-lisp
+  (evil-define-key 'normal process-menu-mode
+    "x" #'process-menu-delete-process)
+#+end_src
+** timer-list-mode
+#+begin_src emacs-lisp
+  (evil-define-key 'normal timer-list-mode-map
+    "x" #'timer-list-cancel)
+#+end_src
 ** tabulated-list-mode
 - It's a built-in mode that shows some kind of tabulated data.
 - It is used by many major modes, like [[docker]], [[prodigy]], etc. I just add these common keybindings to have a consistent way of navigating in them.
