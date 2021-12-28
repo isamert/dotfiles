@@ -1962,6 +1962,47 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
          'font-lock-face 'calendar-iso-week-face)))
 
     (isamert/calendar-week-number-mode))
+
+
+  (defun isamert/diary-entry-meeting-link ()
+    "Get meeting/zoom link of current diary entry."
+    (let ((entry-details (isamert/diary-entry-description)))
+      (with-temp-buffer
+        (insert entry-details)
+        (goto-char (point-min))
+        (re-search-forward "https://.*zoom")
+        (thing-at-point 'url))))
+
+  (defun isamert/diary-entry-description ()
+    "Get details/description of current diary entry."
+    (interactive)
+    (save-window-excursion
+      (push-button)
+      (let ((beg (save-excursion
+                   (re-search-backward "^[^ \n].+")
+                   (forward-line)
+                   (point)))
+            (end (save-excursion
+                   (re-search-forward "^[^ \n].+")
+                   (beginning-of-line)
+                   (point))))
+        (kill-new (buffer-substring beg end))
+        (buffer-substring beg end))))
+
+  (defun isamert/diary-kill-entry-as-bullet-task (&optional include-description)
+    "Copy current diary entry as a bullet.org task."
+    (interactive "P")
+    (-as->
+     (thing-at-point 'line) it
+     (s-match "\\([0-9]+:[0-9]+-[0-9]+:[0-9]+\\) \\(.*\\)" it)
+     (format
+      "** TODO [#A] [[%s][%s]] :work:\nSCHEDULED: <%s %s>\n%s"
+      (isamert/diary-entry-meeting-link)
+      (nth 2 it)
+      (isamert/today)
+      (nth 1 it)
+      (if include-description (isamert/diary-entry-description) ""))
+     (kill-new it)))
 #+end_src
 
 *** Automatically syncing with remote calendars
