@@ -2392,11 +2392,11 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
                (--filter (s-matches? pname (f-base it))))))
         (cond
          ((length= candidates 1)
-          (isamert/open-project (car candidates)))
+          (project-switch-project (car candidates)))
          ((length> candidates 1)
-          (isamert/open-project (completing-read "Select project: " candidates)))
+          (project-switch-project (completing-read "Select project: " candidates)))
          (t
-          (isamert/open-project (isamert/switch-to-project)))))))
+          (call-interactively #'project-switch-project))))))
 
   (use-package eyebrowse
     :config
@@ -2715,14 +2715,15 @@ Some key points:
     <<consult-perspective-switch-buffers>>)
 #+end_src
 
-*** Project management
+*** Project & file management
 Some functionality for project management. I do some fine-tuning for =find= and =ripgrep= commands that consult uses.
 
 #+name: consult-project-management
 #+begin_src emacs-lisp :tangle no
   (evil-leader/set-key
-    "hr"  #'isamert/consult-ripgrep-current-directory
+    "hf"  #'isamert/find-file-in
     "hR"  #'isamert/consult-ripgrep-in-given-directory
+    "hr"  #'isamert/consult-ripgrep-current-directory
     "pg" #'isamert/consult-ripgrep)
 
   ;; TODO fix search
@@ -2746,6 +2747,19 @@ Some functionality for project management. I do some fine-tuning for =find= and 
   (defun isamert/consult-ripgrep-in-given-directory (dir)
     (interactive "DSelect directory: ")
     (consult-ripgrep dir))
+
+  (defun isamert/find-file-in (dir)
+    "Find file in DIR. `fd' is already fast enough, no need for
+  `consult-find's async approach."
+    (interactive "DFind files in: ")
+    (let ((default-directory dir))
+      (thread-last
+        "fd --exclude '.git' --hidden ."
+        (shell-command-to-string)
+        (s-trim)
+        (s-split "\n")
+        (completing-read "Open file: ")
+        (find-file))))
 #+end_src
 
 *** Perspective integration
@@ -2861,7 +2875,49 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 #+end_src
 
 ** ~project.el~ and project management
-I was using projectile earlier but [[consult]] functions are just more than enough for project management. I only use couple of functions from =project.el= which is already built-in to Emacs.
+- project.el offers ~C-x p~ keymap with very useful bindings. I also keep my project related bindings under ~SPC p~.
+- After doing ~project-switch-project~, you are expected to hit a key to trigger a project action, like finding a file in the project or doing a project grep. You need to add these actions into ~project-switch-commands~ list and you need to define a key in ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by given key.
+
+#+begin_src emacs-lisp
+  (evil-leader/set-key
+    "pp" #'project-switch-project
+    "pf" #'project-find-file)
+
+  (setq project-switch-commands
+        '((project-find-file "Find file")
+          (project-find-dir "Find directory")
+          (project-eshell "Eshell")))
+
+  (define-key project-prefix-map "g" #'isamert/consult-ripgrep)
+  (add-to-list 'project-switch-commands `(isamert/consult-ripgrep "Grep"))
+
+  (define-key project-prefix-map "D" #'dired-jump)
+  (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
+
+  (define-key project-prefix-map "m" #'magit-status)
+  (add-to-list 'project-switch-commands `(magit-status "Magit"))
+
+  (define-key project-prefix-map "!" #'isamert/project-shell-command)
+  (add-to-list 'project-switch-commands `(isamert/project-shell-command "Run shell command"))
+
+  (define-key project-prefix-map "v" #'isamert/project-vterm)
+  (add-to-list 'project-switch-commands `(isamert/project-vterm "vterm"))
+
+  (defun isamert/project-shell-command ()
+    "Run `async-shell-command' in the current project's root directory."
+    (interactive)
+    (let ((default-directory (project-root (project-current t))))
+      (call-interactively #'isamert/shell-command)))
+
+  (defun isamert/project-vterm ()
+    "Run `async-shell-command' in the current project's root directory."
+    (interactive)
+    (let ((default-directory (project-root (project-current t))))
+      (vterm t)))
+#+end_src
+
+~(project-remember-projects-under isamert/projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
+
 
 #+begin_src emacs-lisp
   (defconst isamert/projects-root "~/Workspace/projects")
@@ -2881,25 +2937,6 @@ I was using projectile earlier but [[consult]] functions are just more than enou
         (expand-file-name isamert/projects-root)
         proot)
        "/" "/")))
-#+end_src
-
-I have all my projects under =~/Workspace/projects=. Some of them are groupped under another directory. This functions loops trough all of the directories and finds the ones without =.git= folder and adds those folders to project paths. Consider this:
-#+begin_src
-~/Workspace/projects
- ├── groupped_projects
- ├   ├── project3
- ├   └── project4
- ├── project1
- ├   └── .git
- └── project2
-     └── .git
-#+end_src
-
-#+begin_src emacs-lisp
-  (defun isamert/project-cd-root ()
-    "CD into current project's root."
-    (interactive)
-    (cd (isamert/current-project-root)))
 
   (defun isamert/is-git-dir (dir)
     (file-directory-p (concat dir "/.git")))
@@ -2915,56 +2952,13 @@ I have all my projects under =~/Workspace/projects=. Some of them are groupped u
        (--map (f-directories it))
        (-flatten)
        (--filter (isamert/is-git-dir it))
-       (--map (s-replace home "~" it)))))
+       (--map (s-replace home "~" (f-full it))))))
 
-  (defun isamert/find-file-in (dir)
-    "Find file in DIR.
-  fd is already fast enough, no need for `consult-find's async approach."
-    (interactive "D")
-    (let ((default-directory dir))
-      (->> (shell-command-to-string "fd --exclude '.git' --hidden .")
-           (s-trim)
-           (s-split "\n")
-           (completing-read "Open file: ")
-           (find-file))))
-
-  (defun isamert/find-file-in-current-dir ()
-    "Find file in current directory."
-    (interactive)
-    (isamert/find-file-in default-directory))
-
-  (defun isamert/find-file-in-current-project ()
-    "Find file in current project.
-  If currently not in a project, switch to a project first and then
-  find file."
-    (interactive)
-    (isamert/find-file-in
-     (or (isamert/current-project-root) (isamert/switch-to-project))))
-
-  (defun isamert/switch-to-project ()
-    "List all projects found under `isamert/project-paths' and switch to selected."
-    (->> (isamert/all-project-roots)
-         (completing-read "Switch to project: ")))
-
-  (defun isamert/open-project (path)
-    "Open given project"
-    (interactive "DSelect project dir: ")
-    (isamert/find-file-in path))
-
-  (defun isamert/switch-to-project-and-find-file ()
-    (interactive)
-    (isamert/find-file-in (isamert/switch-to-project)))
-
-  (defun isamert/switch-to-project-and-grep ()
-    (interactive)
-    (isamert/consult-ripgrep (isamert/switch-to-project)))
-
-  (evil-leader/set-key
-    "pp" #'isamert/switch-to-project-and-find-file
-    "pP" #'isamert/switch-to-project-and-grep
-    "pf" #'isamert/find-file-in-current-project
-    "pF" #'consult-find
-    "hf" #'isamert/find-file-in-current-dir)
+  ;; Ensure all projects are known by project.el
+  ;; The following does not recurse as I like it to be
+  ;; (project-remember-projects-under isamert/projects-root t)
+  (--each (--map (cons 'vc it) (isamert/all-project-roots))
+    (project-remember-project it t))
 #+end_src
 
 ** flycheck
@@ -5464,7 +5458,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (persp-add-new branch-name)
       (persp-switch branch-name)
       (cd worktree)
-      (isamert/find-file-in-current-project)
+      (project-find-file)
       (vc-refresh-state)
       (message "Currently on %s." (magit-get-current-branch))))
 
