@@ -3767,6 +3767,15 @@ Pop current comment section into an org (or markdown, as it's more widely used f
     (remove-hook 'poporg-edit-hook 'org-mode)
     (add-hook 'poporg-edit-hook 'markdown-mode))
 #+end_src
+** undohist
+Adds persistent undo feature to Emacs' undo-redo functionality.
+
+#+begin_src emacs-lisp
+  (use-package undohist
+    :ensure t
+    :config
+    (undohist-initialize))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
@@ -6607,8 +6616,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
        proc
        (lambda (p e)
          (with-current-buffer buffer-name
-           (read-only-mode -1)
-           (undo-tree-mode t))
+           (read-only-mode -1))
          (if (= 0 (process-exit-status p))
              (funcall on-finish)
            (funcall on-fail))))
