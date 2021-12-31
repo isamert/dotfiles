@@ -177,11 +177,12 @@ Some basic variable and function definitions that will be used in configuration.
 
   (defun isamert/shell-command-to-string (cmd)
     "Like `shell-command-to-string' but only stdout is returned."
-    (with-output-to-string
-      (with-current-buffer standard-output
-        (process-file
-         shell-file-name nil '(t nil)  nil shell-command-switch
-         cmd))))
+    (string-trim
+     (with-output-to-string
+       (with-current-buffer standard-output
+         (process-file
+          shell-file-name nil '(t nil)  nil shell-command-switch
+          cmd)))))
 
   (defun isamert/serialize-into-file (file data)
     (with-temp-file (expand-file-name file)
@@ -786,19 +787,10 @@ Make some temproary windows appear at bottom. This makes buffer management so mu
                    (inhibit-same-window . t)
                    (window-height . ,size))))
 
-  (isamert/shackle-window "\\*Help\\*" 0.4)
-  (isamert/shackle-window "\\*Warnings*\\*" 0.2)
-  (isamert/shackle-window "\\*Backtrace*\\*" 0.4)
-  (isamert/shackle-window "\\*Flycheck.*" 0.4)
   (isamert/shackle-window "\\*Org Select\\*" 0.4)
-  (isamert/shackle-window "CAPTURE-*" 0.4)
   (isamert/shackle-window "magit.*" 0.7)
   (isamert/shackle-window "\\*xref\\*" 0.4)
-  (isamert/shackle-window "\\*Org-Babel Error Output\\*" 0.4)
-  (isamert/shackle-window "\\*curl error\\*" 0.4)
-  (isamert/shackle-window "\\*helpful.*\\*" 0.4)
   (isamert/shackle-window "\\*Org Select\\*" 0.4)
-
 
   (defun isamert/clear-side-windows ()
     "Clear all side windows.
@@ -1922,47 +1914,46 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 
 ** calendar & diary
 #+begin_src emacs-lisp
-  (use-package calendar
-    :config
-    (evil-leader/set-key "ec" #'calendar)
+  (evil-leader/set-key "ec" #'calendar)
+  (evil-define-key 'normal diary-fancy-display-mode-map
+    "q" #'evil-delete-buffer)
 
-    ;; Start the week from Monday
-    (setq calendar-week-start-day 1)
+  ;; Start the week from Monday
+  (setq calendar-week-start-day 1)
 
-    ;; lng and lat for my location, to get sunrise/sunset times on my
-    ;; calendar (press gs)
-    (setq calendar-latitude 41.0082)
-    (setq calendar-longitude 28.9784)
+  ;; lng and lat for my location, to get sunrise/sunset times on my
+  ;; calendar (press gs)
+  (setq calendar-latitude 41.0082)
+  (setq calendar-longitude 28.9784)
 
-    ;; Use 24-hour format to display times
-    (setq calendar-time-display-form
-          '(24-hours ":" minutes (if time-zone " (") time-zone (if time-zone ")")))
+  ;; Use 24-hour format to display times
+  (setq calendar-time-display-form
+        '(24-hours ":" minutes (if time-zone " (") time-zone (if time-zone ")")))
 
-    ;; Enable including other diary entries using the #include "..." syntax
-    ;; I use this to separate my work and normal diary
-    (add-hook 'diary-list-entries-hook #'diary-include-other-diary-files)
-    (add-hook 'diary-list-entries-hook #'diary-sort-entries t)
-    (setq diary-display-function #'diary-fancy-display)
+  ;; Enable including other diary entries using the #include "..." syntax
+  ;; I use this to separate my work and normal diary
+  (add-hook 'diary-list-entries-hook #'diary-include-other-diary-files)
+  (add-hook 'diary-list-entries-hook #'diary-sort-entries t)
+  (setq diary-display-function #'diary-fancy-display)
 
-    ;; Show calendar at the bottom
-    (isamert/shackle-window "Calendar" 0.2)
+  ;; Show calendar at the bottom
+  (isamert/shackle-window "Calendar" 0.2)
 
-    ;; https://www.emacswiki.org/emacs/CalendarWeekNumbers
-    (defun isamert/calendar-week-number-mode ()
-      "Show week numbers in M-x calendar."
-      (copy-face font-lock-constant-face 'calendar-iso-week-face)
-      (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
-      (setq
-       calendar-intermonth-text
-       '(propertize
-         (format "%2d"
-                 (car
-                  (calendar-iso-from-absolute
-                   (calendar-absolute-from-gregorian (list month day year)))))
-         'font-lock-face 'calendar-iso-week-face)))
+  ;; https://www.emacswiki.org/emacs/CalendarWeekNumbers
+  (defun isamert/calendar-week-number-mode ()
+    "Show week numbers in M-x calendar."
+    (copy-face font-lock-constant-face 'calendar-iso-week-face)
+    (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
+    (setq
+     calendar-intermonth-text
+     '(propertize
+       (format "%2d"
+               (car
+                (calendar-iso-from-absolute
+                 (calendar-absolute-from-gregorian (list month day year)))))
+       'font-lock-face 'calendar-iso-week-face)))
 
-    (isamert/calendar-week-number-mode))
-
+  (isamert/calendar-week-number-mode)
 
   (defun isamert/diary-entry-meeting-link ()
     "Get meeting/zoom link of current diary entry."
@@ -1996,9 +1987,10 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
      (thing-at-point 'line) it
      (s-match "\\([0-9]+:[0-9]+-[0-9]+:[0-9]+\\) \\(.*\\)" it)
      (format
-      "** TODO [#A] [[%s][%s]] :work:\nSCHEDULED: <%s %s>\n%s"
-      (isamert/diary-entry-meeting-link)
-      (nth 2 it)
+      "** TODO [#A] %s :work:\nSCHEDULED: <%s %s>\n%s"
+      (if-let ((link (ignore-errors (isamert/diary-entry-meeting-link))))
+          (format "[[%s][%s]]" link (nth 2 it))
+        (nth 2 it))
       (isamert/today)
       (nth 1 it)
       (if include-description (isamert/diary-entry-description) ""))
@@ -3535,34 +3527,12 @@ Simple mode for editing =~/.Xmodmap= file.
 
     (evil-set-initial-state 'slack-mode-map 'normal)
 
-    (dolist (mode-map (list slack-message-buffer-mode-map slack-thread-message-buffer-mode-map))
-      (evil-define-key 'normal mode-map
-        "q" #'delete-window
-
-        "@" 'slack-message-embed-mention
-        "mc" 'slack-message-embed-channel ;
-        "mm" 'slack-message-write-another-buffer
-        "md" 'slack-message-delete
-        "ml" 'slack-message-copy-link
-        "me" 'slack-message-edit
-        "mt" 'slack-thread-show-or-create
-        "mq" 'isamert/slack-quote-message
-
-        "mrr" 'slack-message-add-reaction
-        "mR" 'slack-message-remove-reaction
-        "mr1" (isamert/slack--add-reaction-to-message "+1")
-        "mr2" (isamert/slack--add-reaction-to-message "ok_hand")
-        "mr3" (isamert/slack--add-reaction-to-message "eyes")
-        "mr4" (isamert/slack--add-reaction-to-message "ultrafastparrot")
-        "mr5" (isamert/slack--add-reaction-to-message "pepedance")
-
-        "[[" 'slack-buffer-goto-prev-message
-        "]]" 'slack-buffer-goto-next-message))
-
     (evil-define-key 'normal slack-message-compose-buffer-mode-map
       "@"  #'slack-message-embed-mention
       "mc" #'slack-message-embed-channel
-      "ml" #'markdown-insert-link))
+      "ml" #'markdown-insert-link)
+
+    (define-key slack-message-compose-buffer-mode-map (kbd "C-c C-l") #'markdown-insert-link))
 
   (defun isamert/slack-initialize ()
     (interactive)
@@ -3573,7 +3543,9 @@ Simple mode for editing =~/.Xmodmap= file.
      :token ty/slack-token
      :cookie ty/slack-cookie
      :subscribed-channels ty/slack-channels)
-    (slack-start))
+    (slack-start)
+    (slack-change-current-team)
+    (isamert/slack--initialize-keymaps))
 
   (use-package alert
     :config
@@ -3729,6 +3701,31 @@ Simple mode for editing =~/.Xmodmap= file.
                                           (slack-team-channels team)))
                   team)))
       (list room team)))
+
+  (defun isamert/slack--initialize-keymaps ()
+    (dolist (mode-map (list slack-message-buffer-mode-map slack-thread-message-buffer-mode-map))
+      (evil-define-key 'normal mode-map
+        "q" #'delete-window
+
+        "@" 'slack-message-embed-mention
+        "mc" 'slack-message-embed-channel ;
+        "mm" 'slack-message-write-another-buffer
+        "md" 'slack-message-delete
+        "ml" 'slack-message-copy-link
+        "me" 'slack-message-edit
+        "mt" 'slack-thread-show-or-create
+        "mq" 'isamert/slack-quote-message
+
+        "mrr" 'slack-message-add-reaction
+        "mR" 'slack-message-remove-reaction
+        "mr1" (isamert/slack--add-reaction-to-message "+1")
+        "mr2" (isamert/slack--add-reaction-to-message "ok_hand")
+        "mr3" (isamert/slack--add-reaction-to-message "eyes")
+        "mr4" (isamert/slack--add-reaction-to-message "ultrafastparrot")
+        "mr5" (isamert/slack--add-reaction-to-message "pepedance")
+
+        "[[" 'slack-buffer-goto-prev-message
+        "]]" 'slack-buffer-goto-next-message)))
 #+end_src
 
 ** prodigy
@@ -3847,6 +3844,7 @@ Better way to correct spelling mistakes. By default it uses completing-read. Thi
       "S*"  #'sp-wrap-star
       "S+"  #'sp-wrap-plus
       "S#"  #'sp-wrap-star
+      "S_"  #'sp-wrap-underscore
       "S~"  #'sp-wrap-tilda)
 
     (sp-local-pair 'org-mode "=" "=" :actions :rem)
@@ -3869,6 +3867,7 @@ Better way to correct spelling mistakes. By default it uses completing-read. Thi
   (defun sp-wrap-slash () (interactive) (sp-wrap-with-pair "/"))
   (defun sp-wrap-star () (interactive) (sp-wrap-with-pair "*"))
   (defun sp-wrap-plus () (interactive) (sp-wrap-with-pair "+"))
+  (defun sp-wrap-underscore () (interactive) (sp-wrap-with-pair "_"))
 #+end_src
 
 ** writeroom-mode
@@ -4955,14 +4954,15 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
      :bucket (alist-get :bucket params)
      :select (or (alist-get :select params) ".")))
 
-  (cl-defun isamert/cbc (cbc-command &key host username password bucket (select "."))
+  (cl-defun isamert/cbc (cbc-command &key host username password bucket raw (select "."))
     "Run given cbc command."
-    (let* ((cmd (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq '%s'"
+    (let* ((cmd (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq %s '%s'"
                         cbc-command
                         host
                         bucket
                         username
                         password
+                        (if raw "-r" "")
                         select)))
       (message "isamert/cbc :: %s" cmd)
       (isamert/shell-command-to-string cmd)))
@@ -6951,7 +6951,7 @@ Company/work related stuff.
           (cov-file (format "file://%s/coverage/lcov-report/index.html" (isamert/current-project-root))))
       (if run-test-before
           (isamert/shell-command
-           :command "yarn test:cov --colors"
+           :command "yarn jest --coverage --colors"
            :buffer-name (format "%s-test-cov" persp-last-persp-name)
            :on-finish (lambda () (browse-url-default-browser cov-file))
            :on-fail (lambda () (user-error ">> Tests are failed!")))
@@ -6988,7 +6988,7 @@ Company/work related stuff.
                 (re-search-backward "it(['\"]" nil t)
                 (nth 1 (s-match "it(['\"]\\(.*\\)['\"]," (substring-no-properties (thing-at-point 'line))))))))
       (isamert/shell-command
-       :command (format "yarn test --colors %s %s"
+       :command (format "yarn jest --colors --runTestsByPath %s %s"
                         (file-relative-name test-file  (isamert/current-project-root))
                         (if (and run-only-focused-test current-test-name)
                             (format "-t \"%s\"" current-test-name)
