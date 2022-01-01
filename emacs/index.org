@@ -2375,13 +2375,14 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
   perspective name if the perspective is a freshly created one."
     (interactive)
     (funcall-interactively #'persp-switch nil)
+    ;; Try to detect the project only if it's a fresh perspective
     (unless (persp-buffers (get-current-persp))
       (let* ((pname
               (nth 1 (s-split "/" (persp-name (get-current-persp)))))
              (candidates
-              (->>
-               (isamert/all-project-roots)
-               (--filter (s-matches? pname (f-base it))))))
+              (--filter
+               (s-matches? pname (f-base it))
+               (isamert/all-project-roots))))
         (cond
          ((length= candidates 1)
           (project-switch-project (car candidates)))

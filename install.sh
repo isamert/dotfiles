@@ -5,9 +5,10 @@ set -euo pipefail
 case ${1:-""} in
     -f|--force)
         echo "=> Cleaning old files..."
-        rm ~/.emacs.d/index.org
+        rm -f ~/.emacs.d/index.org
+        rm -f ~/.emacs.d/index.el
         for file in ${PWD}/emacs/load/*.el; do
-            [[ ! $file = *secrets* ]] && rm "${HOME}/.emacs.d/load/$(basename "${file}")"
+            [[ ! $file = *secrets* ]] && rm -f "${HOME}/.emacs.d/load/$(basename "${file}")"
         done
         ;;
 esac
@@ -20,6 +21,10 @@ mkdir -p ~/.emacs/load/
 for file in ${PWD}/emacs/load/*.el; do
     ln -s "${file}" "$HOME/.emacs.d/load/$(basename ${file})"
 done
+
+if [[ $EMACS_ONLY = 1 ]]; then
+    exit 0;
+fi
 
 set +e
 read -rd '' EMACS_EVAL <<EOF
