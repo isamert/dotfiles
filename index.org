@@ -75,6 +75,14 @@ Install global packages to user-local.
   prefix=${HOME}/.npm-packages
 #+end_src
 
+* Linux
+** SystemD journal files
+Journal files starts to take a lot of disk space. I put a simple limit to that here.
+
+#+begin_src conf :tangle (when-linux "/sudo::/etc/systemd/journald.conf.d/max-journal-size.conf")
+  [Journal]
+  SystemMaxUse=50M
+#+end_src
 * X related
 ** .xinitrc
 #+begin_src sh :tangle (when-linux "~/.xinitrc")
@@ -696,6 +704,13 @@ This is a supplementary script for managing bspwm where I put some helpful funct
       bspc query -T -n | grep -q '"state":"floating"'
   }
 
+  function recalculate_for_curr_monitor {
+      export TOP_GAP=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
+      export SCREEN_WIDTH=$(bspwmc focused_monitor_width)
+      export SCREEN_HEIGHT=$(bspwmc focused_monitor_height)
+      export RECT_TOP_HALF=${SCREEN_WIDTH}x$((SCREEN_HEIGHT / 2))+0+${TOP_GAP}
+  }
+
   # if current node is floating, focus the newest non-floating node
   # otherwise focus the newest floating node
   function focus_toggle_floating {
@@ -759,38 +774,18 @@ This is a supplementary script for managing bspwm where I put some helpful funct
       echo $size
   }
 
-  # a scratchpad terminal that is shared across desktops (unique for each monitor)
+  # a scratchpad terminal that is shared across desktops
   function scratchpad_top {
-      monitor_name=$(focused_monitor_name)
-      class="padtop-${monitor_name,,}"
-      id=$(xdotool search --classname --class "$class")
-      if [[ -z "$id" ]]; then
-          local top_gap=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
-          local width=$(normalize_size 100% $(focused_monitor_width))
-          local height=$(normalize_size 50% $(focused_monitor_height))
+      recalculate_for_curr_monitor
 
-          bspc rule --add "*:$class" state=floating sticky=on border=off rectangle=${width}x${height}+0+${top_gap}
-          term --class="$class" -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class"
+      CLASS="padtop"
+      id=$(xdotool search --classname --class "$CLASS")
+      if [[ -z "$id" ]]; then
+          bspc rule --add "*:$CLASS" state=floating sticky=on border=off rectangle="$RECT_TOP_HALF"
+          term --class="$CLASS" -e /bin/sh -c "tmux attach-session || tmux new-session -spersonal"
       else
           bspc node $id --flag hidden
           bspc node -f $id
-      fi
-  }
-
-  # a scratchpad terminal that is unique to current desktop
-  function scratchpad_bot {
-      desktop_id=$(($(xdotool get_desktop) + 1))
-      class="padbot${desktop_id}"
-      id=$(xdotool search --classname --class "$class")
-      if [[ -z "$id" ]]; then
-          local width=$(normalize_size 100% $(focused_monitor_width))
-          local height=$(normalize_size 50% $(focused_monitor_height))
-
-          bspc rule --add "*:$class" state=floating sticky=off border=off rectangle=${width}x${height}+0+$(($(focused_monitor_height) - height))
-          term --class="$class" -e /bin/sh -c "tmux attach-session -t$class || tmux new-session -s$class"
-      else
-          bspc node "$id" --flag hidden
-          bspc node -f "$id"
       fi
   }
 
@@ -4992,7 +4987,6 @@ Downloads given file in given folder with given name. Useful for adding keybindi
 #+end_src
 
 *** .scripts/setbrightness
-
 Following rule is needed for being able to write into brightness file:
 
 #+begin_src conf :tangle (when-linux "/sudo::/etc/udev/rules.d/90-backlight.rules")
@@ -5002,7 +4996,6 @@ Following rule is needed for being able to write into brightness file:
 #+end_src
 
 Refresh the rules after tangling the file: ~sudo udevadm trigger~
-
 
 #+begin_src bash :tangle (when-linux "~/.scripts/setbrightness")
   #!/bin/bash
