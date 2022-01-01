@@ -1844,6 +1844,7 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   antigen bundle kutsan/zsh-system-clipboard
   antigen theme agnoster
   antigen bundle Aloxaf/fzf-tab
+  antigen bundle per-directory-history
   antigen apply
 #+end_src
 
