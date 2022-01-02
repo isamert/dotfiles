@@ -2445,7 +2445,7 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
               (nth 1 (s-split "/" (persp-name (get-current-persp)))))
              (candidates
               (--filter
-               (s-matches? pname (f-base it))
+               (s-matches? pname (f-filename it))
                (isamert/all-project-roots))))
         (cond
          ((length= candidates 1)
