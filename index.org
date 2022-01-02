@@ -3492,7 +3492,9 @@ You need to install =vim-plug= to be able to install vim extensions.
       'g': 'https://google.com/search?q={}',
       'd': 'https://duckduckgo.com/?q={}',
       'yt': 'https://www.youtube.com/results?search_query={}',
-      'nix': 'https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query={}'
+      'r': 'https://reddit.com/r/{}',
+      'a': 'https://web.archive.org/web/{}',
+      'nix': 'https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query={}',
   }
   c.url.yank_ignored_parameters = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
   c.editor.command = ['emacsclient', '-c', '{}']
