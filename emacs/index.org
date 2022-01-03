@@ -4986,16 +4986,18 @@ Create a mode for n1ql and make n1ql code blocks inside org-mode runnable.
 
   (cl-defun isamert/cbq (query &key host username password (select "."))
     "Run a couchbase query and return the result."
-    (let* ((cmd (format "cbq -q -e %s -c '%s' -script \"%s\" | jq '%s'"
-                        (s-chop-suffix ":8091" host)
-                        (format "%s:%s" username password)
-                        (thread-last query
-                          (s-replace "\n" " ")
-                          (s-replace "`" "\\`")
-                          (s-replace "\"" "\\\""))
-                        select)))
-      (message "ty/cbq :: %s" cmd)
-      (isamert/shell-command-to-string cmd)))
+    (with-temp-buffer
+      (insert query)
+      (shell-command-on-region
+       (point-min)
+       (point-max)
+       (format "cbq -quiet -engine %s -credentials '%s'"
+               host
+               (format "%s:%s" username password))
+       nil t)
+      (replace-regexp-in-region "^cbq> " "" (point-min) (point-max))
+      (shell-command-on-region (point-min) (point-max) (format "jq -r %s" select) nil t)
+      (buffer-string)))
 #+end_src
 
 Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs. cbc is not able to read commands from a file, so it does not really makes sense to create a mode for it but I do this to be able to create code blocks in org mode for cbc commands so that I can save some commands in an org file and re-run them whenever I want.
