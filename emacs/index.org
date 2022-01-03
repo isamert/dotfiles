@@ -2041,6 +2041,9 @@ To sync it automatically:
                   (t nil))
      :category 'appt
      :id appt-msg))
+
+  (save-window-excursion
+    (appt-activate 1))
 #+end_src
 
 *** Open zoom meetings easily
