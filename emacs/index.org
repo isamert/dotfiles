@@ -1821,6 +1821,19 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
       (kbd "r") #'tabulated-list-revert))
 #+end_src
 
+** alert
+Several packages are using this package to show system-level notifications. Here I set some defaults/fallback values.
+
+#+begin_src emacs-lisp
+  (use-package alert
+    :config
+    (setq alert-fade-time 15)
+    (setq alert-default-style (pcase system-type
+                                ('gnu/linux 'libnotify)
+                                ('darwin 'osx-notifier)
+                                (_ 'message))))
+#+end_src
+
 ** Hydra
 Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
 
@@ -3601,13 +3614,6 @@ Simple mode for editing =~/.Xmodmap= file.
     (slack-start)
     (slack-change-current-team)
     (isamert/slack--initialize-keymaps))
-
-  (use-package alert
-    :config
-    (if (eq system-type 'gnu/linux)
-        (setq alert-default-style 'libnotify)
-      (setq alert-default-style 'osx-notifier)))
-
 
   (defvar isamert/slack--last-messages '())
 
