@@ -1839,6 +1839,13 @@ Several packages are using this package to show system-level notifications. Here
                                 ('gnu/linux 'libnotify)
                                 ('darwin 'osx-notifier)
                                 (_ 'message))))
+
+  (define-advice alert (:after (msg &rest args) send-to-my-phone-if-urgent)
+    "Send the notification to my phone if it's marked as urgent/high."
+    (pcase (plist-get args :severity)
+      ((or 'urgent 'high) (isamert/send-notification-to-my-phone
+                           :title (or (plist-get args :title) "Emacs")
+                           :content msg))))
 #+end_src
 
 ** Hydra
