@@ -331,6 +331,13 @@ Some basic variable and function definitions that will be used in configuration.
                          ,body)
                      body)))
       `((lambda (it) ,do) ,result)))
+
+  (defun isamert/read-string (prompt &rest rest)
+    "Like `read-string' but returns `nil' on empty input."
+    (let ((result (string-trim (apply #'read-string prompt rest))))
+      (if (string-equal result "")
+          nil
+        result)))
 #+end_src
 
 *** String utils
@@ -5675,6 +5682,10 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
        title
        content
        url-to-open)
+    (interactive
+     (list :title (isamert/read-string "Title: ")
+           :content (isamert/read-string "Content: ")
+           :url-to-open (isamert/read-string "URL(?): ")))
     "Send a notification to my phone."
     (isamert/send-termux-command
      "termux-notification"
