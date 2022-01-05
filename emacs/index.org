@@ -4936,6 +4936,10 @@ A package for  managing docker.
     (evil-define-key 'normal docker-volume-mode-map    (kbd "a") #'docker-volume-help))
 #+end_src
 ** Kubernetes
+- Use ~kubernetes-overview~ to get an overview.
+- Use ~kubernetes-contexts-use-context~ to switch between contexts.
+- Use ~kubernetes-set-namespace~ to set a namespace.
+
 #+begin_src emacs-lisp
   (use-package kubernetes
     :config
