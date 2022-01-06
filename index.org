@@ -15,11 +15,7 @@ These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs con
 - You'll want to make sure some of the files should tangle with executable permission. For that:
   #+name: exacutable_hook
   #+begin_src elisp
-    (defun isamert/make-tangled-files-executable ()
-      (when (or (string-match-p  "\\.\\(sh\\|py\\)$" (buffer-file-name))
-                (string-match-p  "\\(python\\|sh\\)-mode$" (symbol-name major-mode)))
-        (set-file-modes (buffer-file-name) #o755)))
-    (add-hook 'org-babel-post-tangle-hook 'isamert/make-tangled-files-executable)
+    (add-hook 'org-babel-post-tangle-hook 'executable-make-buffer-file-executable-if-script-p)
   #+end_src
 
 - Also some configuration files are tangled based on a condition. Here are the convenience condition functions:
@@ -114,14 +110,14 @@ Journal files starts to take a lot of disk space. I put a simple limit to that h
   xsetroot -cursor_name left_ptr
 
   deadd-notification-center &
-  picom -b
-  xcape -e 'Hyper_L=Escape'
+  picom -b &
+  xcape -e 'Hyper_L=Escape' &
   sxhkd &
   unclutter &
   redshift -l 39:35 &
   udiskie --smart-tray --notify &
   copyq &
-  emacs --daemon
+  emacs --daemon &
   crow &
   syncthing -no-browser -no-restart -logflags=0 &
 
@@ -624,7 +620,6 @@ This file contains some mappings for my keyboard. I can simply change how a key 
 This is my window manager.
 
 *** Main configuration
-
 #+begin_src bash :tangle (when-linux "~/.config/bspwm/bspwmrc")
   #!/bin/bash
 
@@ -640,31 +635,21 @@ This is my window manager.
   bspc config border_width          2
   bspc config split_ratio           0.52
 
-
-  TOP_GAP=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
-  SCREEN_WIDTH=$(bspwmc focused_monitor_width)
-  SCREEN_HEIGHT=$(bspwmc focused_monitor_height)
-  RECT_TOP_HALF=${SCREEN_WIDTH}x$((SCREEN_HEIGHT / 2))+0+${TOP_GAP}
-  RECT_TOP_POPUP="$((SCREEN_WIDTH / 3 + 100))x400+$((SCREEN_WIDTH / 2 - (SCREEN_WIDTH / 3 + 100) / 2 ))+${TOP_GAP}"
-
   bspc rule --add '*:float'   state=floating
-  bspc rule --add '*:tophalf' state=floating sticky=on border=off rectangle="$RECT_TOP_HALF"
 
-  bspc rule --add 'Crow Translate' state=floating rectangle="$RECT_TOP_POPUP"
-  bspc rule --add Pinta            state=floating
-  bspc rule --add Sxiv             state=floating
+  bspc rule --add 'Crow Translate' state=floating
   bspc rule --add Zenity           state=floating
   bspc rule --add feh              state=floating
-  bspc rule --add copyq            state=floating border=off  rectangle="$RECT_TOP_HALF"
-  bspc rule --add 'mpv:youtube'    state=floating focus=off
+  bspc rule --add copyq            state=floating
   bspc rule --add Emacs            state=tiled
+
+  bspc rule -a qutebrowser    desktop='^1' follow=on
+  bspc rule -a firefox        desktop='^1' follow=on
+  bspc rule -a Emacs          desktop='^2' follow=on
 
   # Don't manage some windows
   bspc rule --add Screenkey     manage=off
   bspc rule --add 'dota2'       border=off
-
-  bspc rule -a firefox        desktop='^1' follow=on
-  bspc rule -a Emacs          desktop='^2' follow=on
 
   init-desktops
 #+end_src
@@ -763,17 +748,6 @@ This is a supplementary script for managing bspwm where I put some helpful funct
       fi
   }
 
-  # normalize_size 100 1200 -> 100
-  # normalize_size 50% 1200 -> 600
-  function normalize_size {
-      local size=$1
-      local relative_to=$2
-      if [[ $size = *% ]]; then
-          local size=$(($relative_to * ${size%\%} / 100))
-      fi
-      echo $size
-  }
-
   # a scratchpad terminal that is shared across desktops
   function scratchpad_top {
       recalculate_for_curr_monitor
@@ -848,15 +822,6 @@ This is a supplementary script for managing bspwm where I put some helpful funct
           S) xdotool windowmove "$wid" $((SCREEN_WIDTH + OFFSET_X - 2 * GAP - WIDTH)) $((SCREEN_HEIGHT + OFFSET_Y - 2* GAP - HEIGHT)) ;;
       esac
   }
-
-  function toggle_inactive_opacity {
-      if grep 'inactive-opacity = 0.9' ~/.config/picom.conf; then
-          sed -i 's/inactive-opacity = 0.9/inactive-opacity = 1/g; s/inactive-dim = 0.1/inactive-dim = 0/g' ~/.config/picom.conf
-      else
-          sed -i 's/inactive-opacity = 1/inactive-opacity = 0.9/g; s/inactive-dim = 0/inactive-dim = 0.1/g' ~/.config/picom.conf
-      fi
-  }
-
 
   cmd="$1"; shift
   "$cmd" "$@"
@@ -966,6 +931,9 @@ I keep some of the polybar related variables inside the ~Xresources~ file so tha
   modules-left = bspwm xwindowlong
   modules-right = xbacklight
   cursor-click = pointer
+
+  tray-position = right
+  tray-padding = 2
 
   [module/optimus]
   type = custom/script
@@ -1258,7 +1226,7 @@ This is the global keybinding manager.
       {firefox, qbittorrent, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
 
   hyper + r; p; {s, p, w}
-      pqiv {~/Pictures/screenshots/, ~/Pictures/phone/Camera, ~/Pictures/wallpapers/}
+      nsxiv {~/Pictures/screenshots/, ~/Pictures/phone/Camera, ~/Pictures/wallpapers/}
 
   # menus (an escape hatch if hyper key does not work for some reason)
   super + a
@@ -2414,15 +2382,15 @@ In this file I define some file associations. Please refer to [[https://github.c
 
   (assoc
    #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
-   #:program "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && pqiv $TMP_IMG"
+   #:program "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && nsxiv $TMP_IMG"
    #:on-error "feh --start-at %f"
    #:view #t
    #:edit "pinta %f")
 
-  ;; Open all images in a folder starting with given image in pqiv
+  ;; Open all images in a folder starting with given image innsxiv
   (assoc
    #:pattern "^image/.*$"
-   #:program "pqiv --browse --lazy-load --max-depth=3 %f"
+   #:program "nsxiv --browse --lazy-load --max-depth=3 %f"
    #:on-error "feh --start-at %f"
    #:view #t
    #:edit "pinta %f")
@@ -2512,53 +2480,6 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
   color=true
   partition-contacts=true
 #+end_src
-** .inputrc
-If I ever need to resort to use bash.
-
-#+begin_src bash :tangle ~/.inputrc
-  $include /etc/inputrc
-
-  # Fixes del key
-  set enable-keypad on
-  # Obvious
-  set completion-ignore-case on
-  # Treat - and _ as same while completing
-  set completion-map-case on
-  # Make Alt key work
-  set meta-flag on
-  set input-meta on
-  set convert-meta on
-  set output-meta on
-  # TAB once
-  set show-all-if-ambiguous on
-  set show-all-if-unmodified on
-  # COLORS
-  # Color files by types
-  set colored-stats on
-  # Append char to indicate type
-  set visible-stats on
-  # Mark symlinked directories
-  set mark-symlinked-directories on
-  # Color the common prefix
-  set colored-completion-prefix on
-  # Color the common prefix in menu-complete
-  set menu-complete-display-prefix on
-
-  #
-  # Vi mode settings
-  #
-  set editing-mode vi
-  set show-mode-in-prompt on
-  # use | cursor in insert mode, block cursor in normal mode
-  set vi-ins-mode-string \1\e[6 q\2
-  set vi-cmd-mode-string \1\e[2 q\2
-  # Search history using what is currently on screen (before cursor)
-
-  # Cycle (tab and shift-tab)
-  TAB: menu-complete
-  "\e[Z": menu-complete-backward
-#+end_src
-
 * Media
 ** mpv
 *** Keybindings
@@ -2672,138 +2593,29 @@ If I ever need to resort to use bash.
   Shift+j no-osd seek  5 exact
   Shift+k no-osd seek -5 exact
 #+end_src
-** pqiv
-#+begin_src conf :tangle (when-linux "~/.config/pqivrc")
-  [options]
-  thumbnail-persistence=yes
-  thumbnail-size=256x256
-  hide-info-box=yes
-  browse=yes
-  auto-montage-mode=yes
-  max-depth=2
-  lazy-load=yes
-  allow-empty-window=yes
-
-  [keybindings]
-  ;; next/prev image
-  h {
-    goto_file_relative(-1);
-  }
-  l {
-    goto_file_relative(1);
-  }
-
-  ;; fuzzy search all images in folder/album
-  F {
-    jump_dialog();
-  }
-
-  f {
-    toggle_fullscreen(0);
-  }
-
-  _ {
-    flip_vertically();
-  }
-
-  | {
-    flip_horizontally();
-  }
-
-  <less> {
-    rotate_left();
-  }
-
-  <greater> {
-    rotate_right();
-  }
-
-  P {
-    animation_step(1);
-  }
-  p {
-    animation_continue();
-  }
-
-  dd {
-    command(trash $1);
-    command(notify-send "pqiv - trash" "`pwd`$1");
-  }
-  DD {
-    command(rm $1);
-    command(notify-send "pqiv - removed" "`pwd`$1");
-  }
-
-  ;; w/W: set as temp/permenant wallpaper
-  w {
-    command(feh --bg-scale $1);
-  }
-  W {
-    command(cp $1 $HOME/.config/wall.png);
-    command(feh --bg-scale $1);
-  }
-
-  ;; y/Y: copy image path/image itself to clipboard
-  y {
-    command(echo "`pwd`/$1" | xclip -selection clipboard);
-    command(notify-send "pqiv - path copied" "`pwd`$1");
-  }
-
-  Y {
-    command(xcopy $1);
-    command(notify-send "pqiv - image copied" "`pwd`$1");
-  }
-
-  ;; open image in the editor
-  e {
-    command(notify-send "pqiv - image editor" "Opening `pwd`$1 in image editor.");
-    command(jaro --method edit $1);
-  }
-
-  j {
-    nop();
-  }
-
-  k {
-    nop();
-  }
-
-
-  ;;
-  ;; Editing
-  ;;
-
-  <space> {
-    nop();
-  }
-
-  <Control><greater> {
-    command(echo $1 | xargs -I {} convert -rotate 90 "{}" "{}");
-  }
-
-  <Control><less> {
-    command(echo $1 | xargs -I {} convert -rotate -90 "{}" "{}");
-  }
-
-  <Control><bar> {
-    command(echo $1 | xargs -I {} convert -flip "{}" "{}");
-  }
-
-  <Control><underscore> {
-    command(echo $1 | xargs -I {} convert -flop "{}" "{}");
-  }
-
-  <Return> {
-    montage_mode_enter();
-  }
-
-  @MONTAGE {
-      l { montage_mode_shift_x(1); }
-      h { montage_mode_shift_x(-1); }
-      j { montage_mode_shift_y(1); }
-      k { montage_mode_shift_y(-1); }
-      f { montage_mode_follow(qwertasdfgcvb); }
-  }
+** nsxiv
+#+begin_src sh :tangle (when-linux "~/.config/nsxiv/exec/key-handler")
+  #!/bin/bash
+  while read -r file; do
+      case "$1" in
+          "d")
+              trash "$file" ;;
+          "D")
+              rm "$file" ;;
+          "greater")
+              convert -rotate 90 "$file" "$file" ;;
+          "less")
+              convert -rotate '-90' "$file" "$file" ;;
+          "y")
+              echo -n "$file" | xclip -selection clipboard ;;
+          "w")
+              feh --bg-scale "$file" ;;
+          "W")
+              rm ~/.config/wall.png
+              cp "$file" ~/.config/wall.png
+              feh --bg-scale "$file" ;;
+      esac
+  done
 #+end_src
 * Editors
 ** Emacs
@@ -3605,23 +3417,23 @@ Some shortcuts to some folders. These stuff appears in rofi so that, for example
 
   [Desktop Action walls]
   Name=Wallpapers
-  Exec=/bin/sh -c "pqiv -t $DIR_WALLPAPERS"
+  Exec=/bin/sh -c "nsxiv -t $DIR_WALLPAPERS"
 
   [Desktop Action phonepics]
   Name=Phone pictures
-  Exec=/bin/sh -c "pqiv -t ~/Pictures/phone/Camera"
+  Exec=/bin/sh -c "nsxiv -t ~/Pictures/phone/Camera"
 
   [Desktop Action screenshots]
   Name=Screenshots
-  Exec=/bin/sh -c "pqiv -t $DIR_SCREENSHOTS"
+  Exec=/bin/sh -c "nsxiv -t $DIR_SCREENSHOTS"
 
   [Desktop Action memes]
   Name=Memes (ayylmao)
-  Exec=/bin/sh -c "pqiv -t ~/Documents/memes"
+  Exec=/bin/sh -c "nsxiv -t ~/Documents/memes"
 
   [Desktop Action fkill]
   Name=Fuzzy kill (fkill)
-  Exec=/bin/sh -c "term --float -g 150x20 -e fuzzy kill"
+  Exec=/bin/sh -c "term --float -e fuzzy kill"
 
   [Desktop Action opaqueterm]
   Name=Opaque term terminal (meta + ctrl + enter)
@@ -3629,26 +3441,11 @@ Some shortcuts to some folders. These stuff appears in rofi so that, for example
 
   [Desktop Action floatingterm]
   Name=Floating term terminal (meta + shift + enter)
-  Exec=/bin/sh -c "term --float -g 150x30"
+  Exec=/bin/sh -c "term --float"
 
   [Desktop Action floatingtermopaque]
   Name=Floating term terminal (opaque)  (meta + shift + ctrl + enter)
-  Exec=/bin/sh -c "term --float --opaque -g 150x30"
-#+end_src
-** .local/share/applications/tools.desktop
-Some extra stuff that I want to be able to reach through rofi.
-
-#+begin_src conf :tangle (when-linux "~/.local/share/applications/tools.desktop")
-  [Desktop Entry]
-  Type=Application
-  Name=Tools
-  Terminal=false
-  Exec=term
-  Actions=connectheadphones
-
-  [Desktop Action connectheadphones]
-  Name=Connect to Bluetooth Headphones
-  Exec=connect-bt-headphones
+  Exec=/bin/sh -c "term --float --opaque"
 #+end_src
 ** .local/share/applications/jaro.desktop
 #+begin_src conf :tangle (when-linux "~/.local/share/applications/jaro.desktop")
@@ -3674,44 +3471,6 @@ Some extra stuff that I want to be able to reach through rofi.
   Version=1.0
   Categories=Utility;Security;Qt;
   MimeType=application/x-keepass2;
-#+end_src
-** .local/share/applications/maim.desktop
-#+begin_src conf :tangle (when-linux "~/.local/share/applications/maim.desktop")
-  [Desktop Entry]
-  Type=Application
-  Name=Take screenshot
-  Icon=utilities-terminal
-  Terminal=false
-  Exec=take-ss --full
-  Actions=full;area;wait-full;wait-area;clip-full;clip-area;shadow-window;
-
-  [Desktop Action full]
-  Name=Full
-  Exec=take-ss --full
-
-  [Desktop Action area]
-  Name=Area
-  Exec=take-ss --area
-
-  [Desktop Action wait-full]
-  Name=Wait 5, full
-  Exec=take-ss --wait-full
-
-  [Desktop Action wait-area]
-  Name=Wait 5, area
-  Exec=take-ss --wait-area
-
-  [Desktop Action clip-full]
-  Name=Clipboard full
-  Exec=take-ss --clip-full
-
-  [Desktop Action clip-area]
-  Name=Clipboard area
-  Exec=take-ss --clip-area
-
-  [Desktop Action shadow-window]
-  Name=Shadow window
-  Exec=take-ss --shadow-window
 #+end_src
 * Scripts
 This part is almost completely untouched. Needs some revamp.
@@ -4088,23 +3847,6 @@ Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are conv
 
       # Make new sink the default
       pactl set-default-sink "$new_sink"
-  }
-
-  connect_bt_headphones() {
-      if ! rfkill | grep "bluetooth.*unblocked"; then
-          notify-send "Bluetooth Headphones" "Activating bluetooth... Please enter your password to unlock it."
-          SUDO_ASKPASS="$HOME/.scripts/askpass" sudo rfkill unblock 0
-          sleep 2
-      fi
-
-      TAB="$(printf '\t')"
-      bluetoothctl << EOF
-  power on
-  connect BC:${TAB}
-  quit
-  EOF
-
-      notify-send "Bluetooth Headphones" "Connection will be established in just a moment..."
   }
 
   # Get the movie name from file/folder name and find the imdb-id
@@ -4541,34 +4283,6 @@ Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are conv
   [[ -f $HOME/.Xmodmap ]] && xmodmap "$HOME/.Xmodmap"
   killall xcape && xcape -e 'Hyper_L=Escape'
   notify-send --icon=keyboard "Current layout: $NEW_LAYOUT"
-#+end_src
-** .scripts/take-ss
-#+begin_src bash :tangle ~/.scripts/take-ss
-  #!/bin/bash
-
-  set -e
-  set -o pipefail
-
-  CURRENT_DATE=$(date +%F::%R:%S)
-
-  mkpath() {
-      SAVE_PATH="$DIR_SCREENSHOTS/$1-$CURRENT_DATE.png"
-      echo "$SAVE_PATH" | xclip -selection clipboard
-      echo "$SAVE_PATH"
-  }
-
-  case "$1" in
-      "--full") maim "$(mkpath full)"; ;;
-      "--area") maim -s "$(mkpath area)" ;;
-      "--wait-full") maim -d 5 "$(mkpath full)" ;;
-      "--wait-area") maim -s -d 5 "$(mkpath area)" ;;
-      "--clip-full") maim --hidecursor | xclip -selection clipboard -t image/png ;;
-      "--clip-area") maim --hidecursor -s | xclip -selection clipboard -t image/png ;;
-      "--edit-area") maim --hidecursor -s > /tmp/sssss.png; pinta /tmp/sssss.png ;;
-      "--shadow-window") maim -st 9999999 | convert - \( +clone -background black -shadow 80x3+5+5 \) +swap -background none -layers merge +repage "$(mkpath shadowed)" ;;
-  esac
-
-  notify-send "Screenshot" "Screenshot saved and path is copied to clipboard (if any)"
 #+end_src
 ** .scripts/term
 #+begin_src bash :tangle ~/.scripts/term

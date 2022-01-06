@@ -31,11 +31,7 @@ read -rd '' EMACS_EVAL <<EOF
 (progn
   (require 'org)
 
-  (add-hook
-   'org-babel-post-tangle-hook
-   '(lambda () (when (or (string-match-p "\\\\.\\\\(py\\\\|sh\\\\)$" (buffer-file-name))
-                         (string-match-p "\\\\(python\\\\|sh\\\\)-mode" (symbol-name major-mode)))
-                 (set-file-modes (buffer-file-name) #o755))))
+  (add-hook 'org-babel-post-tangle-hook 'executable-make-buffer-file-executable-if-script-p)
 
   (defun when-darwin (file-path)
     (if (eq system-type 'darwin)
