@@ -2021,7 +2021,7 @@ To sync it automatically:
   ;; Use my notification function for appt notifications
   (setq appt-disp-window-function #'isamert/appt-notify)
   (setq appt-message-warning-time 12)
-  (setq appt-display-interval 3)
+  (setq appt-display-interval 2)
 
   ;; Automatically update `appt-time-msg-list' after editing an
   ;; org-agenda file
@@ -2032,7 +2032,7 @@ To sync it automatically:
      'after-save-hook
      (lambda ()
        (when (-contains? (org-agenda-files 'unrestricted) (buffer-file-name))
-         (org-agenda-to-appt t)
+         (org-agenda-to-appt)
          (appt-check)
          (message ">> appt updated.")))
      nil t))
@@ -3630,7 +3630,7 @@ Simple mode for editing =~/.Xmodmap= file.
      :subscribed-channels ty/slack-channels)
     (slack-start)
     (slack-change-current-team)
-    (isamert/slack--initialize-keymaps))
+    (isamert/slack-initialize-keymaps))
 
   (defvar isamert/slack--last-messages '())
 
@@ -3780,7 +3780,8 @@ Simple mode for editing =~/.Xmodmap= file.
                   team)))
       (list room team)))
 
-  (defun isamert/slack--initialize-keymaps ()
+  (defun isamert/slack-initialize-keymaps ()
+    (interactive)
     (dolist (mode-map (list slack-message-buffer-mode-map slack-thread-message-buffer-mode-map))
       (evil-define-key 'normal mode-map
         "q" #'delete-window
@@ -4697,8 +4698,7 @@ The following enables =CamelCase= aware editing operations.
     (interactive)
     (-some--> (locate-dominating-file "." "node_modules")
       (expand-file-name it)
-      (format "%s/node_modules/.bin" it)
-      ;; FIXME check if there is a buffer local exec path?
+      (f-join it "node_modules/.bin")
       (setq-local exec-path `(,it ,@exec-path))
       (message "%s added to buffer-local path." it)))
 
@@ -6796,7 +6796,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     (let* ((candidates (isamert/find-password-for url))
            (result (plist-get (alist-get (isamert/dmenu "Select account: " candidates) candidates nil nil #'equal) :acc))
            (username (car result))
-           (password (cdr result)))
+           (password (-some->> (cdr result)
+                       (s-replace "\"" "\\\"")
+                       (s-replace "'" "\\'"))))
       (when (and username password)
         (pcase (isamert/dmenu "Method: " '("Fill all with TAB" "Fill username" "Fill password"))
           ("Fill all with TAB"
