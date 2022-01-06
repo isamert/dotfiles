@@ -596,6 +596,11 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
   (add-hook 'before-save-hook 'delete-trailing-whitespace)
 #+END_SRC
 
+** Make script files executable automatically
+#+begin_src emacs-lisp
+  (add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p)
+#+end_src
+
 ** Automatically run some commands after saving specific files
 This is like =autocmd BufWritePost= of vim. When a particular file is edited, I want to make sure a command runs after the save.
 
