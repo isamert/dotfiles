@@ -15,6 +15,7 @@
     ("https://www.archlinux.org/feeds/news/" update linux)
     ("https://blog.tecosaur.com/tmio/rss.xml" update emacs)
 
+    ("https://karl-voit.at/feeds/lazyblorg-all.atom_1.0.links-only.xml" blog pim emacs)
     ("http://aecepoglu.com/posts/index.xml" blog dev turkish soostone)
     ("http://nullprogram.com/feed/" blog dev)
     ("http://xenodium.com/rss.xml" blog dev)

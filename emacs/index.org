@@ -4132,9 +4132,8 @@ Manage media and streams through =completing-read=.
     (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music")
     (setq empv-allow-insecure-connections t)
-    (setq empv-invidious-instance "https://ytprivate.com/api/v1")
-    ;; ^ alt: https://invidious.exonip.de/api/v1
-    ;; also see https://api.invidious.io/
+    (setq empv-invidious-instance "https://vid.mint.lgbt/api/v1")
+    ;; see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
 
     (evil-leader/set-key
@@ -4877,6 +4876,13 @@ Hit <C-j> after these and get:
 
   (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
   (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
+#+end_src
+
+For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
+
+#+begin_src emacs-lisp
+  (use-package package-lint)
+  (use-package flycheck-package)
 #+end_src
 
 ** dhall
