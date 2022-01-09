@@ -3282,6 +3282,13 @@ You need to install =vim-plug= to be able to install vim extensions.
 #+end_src
 
 ** Qutebrowser
+- Use =Alt-a= to bring up Emacs to edit a text in the text-area.
+- Some useful keybindings that I added:
+  - ~,m~ opens the url in MPV, ~,M~ opens hint in MPV.
+  - ~;i~ to open hinted image in a new tab.
+  - ~;I~ to yank hinted image url.
+- Use ~:session-save <SESSION-NAME=default>~ to save a named session and restore a named session by ~:session-load <SESSION-NAME>~. Sessions are saved under =~/.local/share/qutebrowser/sessions/=.
+
 *** Main configuration
 #+begin_src python :tangle (when-on :linux "~/.config/qutebrowser/config.py" :darwin "~/.qutebrowser/config.py")
   c.content.blocking.adblock.lists = ['https://easylist.to/easylist/easylist.txt', 'https://easylist.to/easylist/easyprivacy.txt']
@@ -3334,10 +3341,11 @@ You need to install =vim-plug= to be able to install vim extensions.
   config.bind(';i', 'hint images tab')
   config.bind(';I', 'hint images yank')
 
+  # Ctrl-E is the go-to EOL binding and I don't want qutebrowser to
+  # override it
   config.unbind('<Ctrl-E>', mode='insert')
   config.bind('<Alt-A>', 'edit-text', mode='insert')
-
-  config.load_autoconfig(False)
+  config.bind('<Alt-E>', 'edit-text', mode='insert')
 
   c.content.blocking.whitelist = ['https://*.trendyol.com']
 
@@ -3349,11 +3357,41 @@ You need to install =vim-plug= to be able to install vim extensions.
       'qa': 'quit',
       'wq': 'quit --save',
       'wqa': 'quit --save',
-      'ty-set-token': 'jseval localStorage.setItem("authToken", prompt("TOKEN:"))',
-      'ty-get-token': 'jseval --world=main (async () => {try {alert((await getToken()).accessToken); alert("OK!");} catch (ex) {alert("SAD :(")}})()'
   }
+
+  config.load_autoconfig(False)
 #+end_src
-*** User scripts
+*** User scripts & Greasemonkey scripts
+**** youtube-autoskip
+#+begin_src js :tangle (when-on :linux "~/.config/qutebrowser/greasemonkey/youtube-autskip.user.js" :darwin "~/.qutebrowser/greasemonkey/youtube-autskip.user.js")
+  // ==UserScript==
+  // @name         Auto Skip YouTube Ads
+  // @version      1.0.2
+  // @description  Speed up and skip YouTube ads automatically
+  // @author       codiac-killer
+  // @match        *://*.youtube.com/*
+  // @exclude      *://*.youtube.com/subscribe_embed?*
+  // ==/UserScript==
+
+  let main = new MutationObserver(() => {
+    // Get skip button and click it
+    let btn = document.getElementsByClassName("ytp-ad-skip-button ytp-button").item(0)
+    if (btn) {
+      btn.click()
+    }
+
+    // (unskipable ads) If skip button didn't exist / was not clicked speed up video
+    const ad = [...document.querySelectorAll('.ad-showing')][0];
+    if (ad) {
+      // Speed up and mute
+      document.querySelector('video').playbackRate = 16;
+      document.querySelector('video').muted = true;
+    }
+  })
+
+  main.observe(document.getElementsByClassName("video-ads ytp-ad-module").item(0), {attributes: true, characterData: true, childList: true})
+#+end_src
+
 **** org-pass
 #+begin_src shell :tangle (when-on :linux "~/.config/qutebrowser/userscripts/org-pass" :darwin "~/.qutebrowser/userscripts/org-pass")
   #!/bin/bash
