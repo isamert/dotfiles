@@ -1357,6 +1357,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((emacs-lisp . t)
+     (shell . t)
      (scheme . t)
      (python . t)
      (haskell . t)
@@ -4133,7 +4134,7 @@ Manage media and streams through =completing-read=.
     (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music")
     (setq empv-allow-insecure-connections t)
-    (setq empv-invidious-instance "https://vid.mint.lgbt/api/v1")
+    (setq empv-invidious-instance "https://invidio.xamh.de/api/v1")
     ;; see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
 
@@ -5058,16 +5059,22 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
 
   (cl-defun isamert/cbc (cbc-command &key host username password bucket raw (select "."))
     "Run given cbc command."
-    (let* ((cmd (format "cbc %s --spec=%s/%s --username=%s --password=%s | jq %s '%s'"
+    (let* ((cmd (format "cbc %s --spec=%s/%s --username=%s --password=%s"
                         cbc-command
                         host
                         bucket
                         username
-                        password
-                        (if raw "-r" "")
-                        select)))
+                        password)))
       (message "isamert/cbc :: %s" cmd)
-      (isamert/shell-command-to-string cmd)))
+      (with-temp-buffer
+        (insert (isamert/shell-command-to-string cmd))
+        (shell-command-on-region
+         (point-min)
+         (point-max)
+         (format "jq %s '%s'" (if raw "-r" "") select)
+         nil
+         t)
+        (buffer-string))))
 #+end_src
 
 * Misc functions
