@@ -1643,6 +1643,18 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     (require 'org-ql-search))
 #+END_SRC
 
+** org-board (archiving web pages)
+A very nice archiving tool. An org entry with ~URL~ property is considered a bookmark. When you are on a bookmark, you can do:
+- `org-board-archive' archives the current entry, creating a unique ID and directory via `org-attach' if necessary.
+- `org-board-new' prompts for a URL to add to the current entry's properties, then archives the entry immediately.
+- `org-board-delete-all' deletes all the archives for this entry by deleting the `org-attach' directory.
+
+It has a lot of other customization but haven't find a use case for them, I'm simply using this to archive web pages.
+
+#+begin_src emacs-lisp
+  (use-package org-board)
+#+end_src
+
 ** Linking improvements
 Org does not provide an easy way to copy link at point. Here is a fix for that:
 
