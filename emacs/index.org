@@ -1667,6 +1667,24 @@ It has a lot of other customization but haven't find a use case for them, I'm si
   (use-package org-board)
 #+end_src
 
+Here is a capture template for capturing links and automatically archiving them:
+
+#+begin_src emacs-lisp
+  (add-to-list
+   'org-capture-templates
+   `("b" "Bookmark" entry
+     (file+headline ,bookmarks-org "Unsorted")
+     "* %?%:description\n:PROPERTIES:\n:URL: %:link\n:CREATED: %U\n:END:\n\n"))
+
+  (defun isamert/archive-bookmark ()
+    "Archive given link after capturing it."
+    (when (equal (buffer-name)
+                 (concat "CAPTURE-" (f-filename bookmarks-org)))
+      (org-board-archive)))
+
+  (add-hook 'org-capture-before-finalize-hook #'isamert/archive-bookmark)
+#+end_src
+
 ** Linking improvements
 Org does not provide an easy way to copy link at point. Here is a fix for that:
 
