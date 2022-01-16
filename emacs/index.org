@@ -240,7 +240,7 @@ Some basic variable and function definitions that will be used in configuration.
      ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
      ((locate-file "pngpaste" exec-path) "pngpaste -")))
 
-  (defun isamert/has-clipboard-image ()
+  (defun isamert/clipboard-contains-image-p ()
     "Check whether the clipboard has image or not."
     (pcase system-type
       ('gnu/linux (s-contains? "image/" (isamert/sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS")))
@@ -249,7 +249,7 @@ Some basic variable and function definitions that will be used in configuration.
   (defun isamert/save-clipboard-image-to-file (file)
     "Save the image in clipboard (if there is any) to given FILE.
 
-    Also see `isamert/has-clipboard-image' to check if there is one."
+    Also see `isamert/clipboard-contains-image-p' to check if there is one."
     (shell-command (format "%s > %s" (isamert/clipboard-command) file)))
 #+end_src
 *** User input
@@ -1704,21 +1704,13 @@ Insert links/images more intelligently,
                              (buffer-substring-no-properties (region-beginning)
                                                              (region-end)))))
       (cond
-       ((isamert/has-clipboard-image)
+       ((isamert/clipboard-contains-image-p)
         (call-interactively 'isamert/org-attach-image-from-clipboard))
        ((and region-content clipboard-url (not point-in-link))
         (delete-region (region-beginning) (region-end))
         (insert (org-make-link-string clipboard-url region-content)))
        ((and clipboard-url (not point-in-link))
-        (insert (org-make-link-string
-                 clipboard-url
-                 (read-string "title: "
-                              (with-current-buffer (url-retrieve-synchronously clipboard-url)
-                                (dom-text (car
-                                           (dom-by-tag (libxml-parse-html-region
-                                                        (point-min)
-                                                        (point-max))
-                                                       'title))))))))
+        (insert (isamert/org-make-link-string clipboard-url)))
        (t
         (call-interactively 'org-insert-link)))))
 
@@ -1734,6 +1726,19 @@ Insert links/images more intelligently,
           (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
         (user-error "Saving file failed!"))))
 
+
+  (defun isamert/org-make-link-string (url)
+    "Like `org-make-link-string' but fetches URL and extracts the
+  title automatically."
+    (org-make-link-string
+     url
+     (read-string "Title: "
+                  (with-current-buffer (url-retrieve-synchronously url)
+                    (dom-text (car
+                               (dom-by-tag (libxml-parse-html-region
+                                            (point-min)
+                                            (point-max))
+                                           'title)))))))
 #+end_src
 
 ** Renaming files under cursor
@@ -3759,7 +3764,7 @@ Simple mode for editing =~/.Xmodmap= file.
     The default `slack-clipboard-image-upload' was not working
     properly in MacOS."
     (interactive)
-    (unless (isamert/has-clipboard-image)
+    (unless (isamert/clipboard-contains-image-p)
       (user-error "No image in clipboard."))
     (let* ((file (make-temp-file "clip" nil ".png")))
       (isamert/save-clipboard-image-to-file file)
