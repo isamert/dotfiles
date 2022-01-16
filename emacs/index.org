@@ -1488,26 +1488,28 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
    '(("g" "General todo/note")
      ("gi" "Study later" item
       (file+olp bullet-org "Life backlog" "Investigate")
-      "- [ ] %a. %?"
+      "- [ ] %(isamert/org-make-link-string (read-string \"URL: \"))"
       :prepend t)
      ("gt" "Life todo" entry
-      (file+headline bullet-org "Life backlog"))
+      (file+headline bullet-org "Life backlog")
+      "** TODO [#B] %?")
      ("gc" "Computer todo" entry
-      (file+headline bullet-org "Computer backlog"))
+      (file+headline bullet-org "Computer backlog")
+      "** TODO [#B] %?")
      ("gw" "Work todo" entry
-      (file+headline bullet-org "Work backlog"))
+      (file+headline bullet-org "Work backlog")
+      "** TODO [#B] %?")
 
      ("d" "Daily todo/summary/note")
-     ("dt" "Daily TODO" entry
-      (file+function bullet-org isamert/bullet-focus-today)
-      "** [#B] %?\n%a. "
-      :prepend t)
+     ("dt" "Daily TODO" plain
+      (file+function bullet-org isamert/org-capture--find-daily-last-entry)
+      "** TODO [#B] %?")
      ("ds" "Daily summary" item
       (file+function bullet-org isamert/org-capture--find-daily-summary)
-      "%U ")
+      "- %U %?")
      ("dn" "Daily note" item
       (file+function bullet-org isamert/org-capture--find-daily-notes)
-      "%a. %?"
+      "- %?"
       :prepend t)
      ("dN" "Daily note (for capturing from Signal)" item
       (file+function bullet-org isamert/org-capture--find-daily-notes)
@@ -1533,6 +1535,12 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
   (defun isamert/org-capture--find-daily-notes ()
     (isamert/bullet-focus-today)
     (re-search-forward "^** Notes" nil t))
+
+  (defun isamert/org-capture--find-daily-last-entry ()
+    (isamert/bullet-focus-today)
+    (re-search-forward "^** Notes" nil t)
+    (forward-line -1)
+    (end-of-line))
 
   (defun isamert/org-capture--find-daily-summary ()
     (isamert/bullet-focus-today)
