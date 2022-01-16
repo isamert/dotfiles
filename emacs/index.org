@@ -1818,6 +1818,17 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 #+end_src
 
 * Other packages
+** bookmark.el
+You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult-bookmark~ and calling ~embark-act~ on them to view/delete/edit given bookmark might be easier.
+
+#+begin_src emacs-lisp
+  (setq bookmark-save-flag 1)
+  ;; ^ Save bookmarks automatically
+
+  (evil-leader/set-key
+    "bs" #'bookmark-set
+    "bm" #'consult-bookmark)
+#+end_src
 ** process-menu-mode
 #+begin_src emacs-lisp
   (evil-define-key 'normal process-menu-mode
@@ -2764,6 +2775,7 @@ Some shortcuts you can use on any vertico window:
             tab-jump-out
             consult-line
             consult-ripgrep
+            consult-bookmark
             isamert/consult-line
             isamert/consult-ripgrep))
     (mini-frame-mode +1))
