@@ -1202,7 +1202,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     "o#" #'org-insert-structure-template)
 
   (evil-leader/set-key
-    "oyy" #'org-store-link
+    "oyy" #'isamert/org-store-link-dwim
     "oo"  #'org-open-at-point
     "oO"  (lambda () (interactive) (with-default-browser (call-interactively 'org-open-at-point)))
 
@@ -1660,15 +1660,23 @@ Org does not provide an easy way to copy link at point. Here is a fix for that:
 
 #+begin_src emacs-lisp
   ;; Source: https://emacs.stackexchange.com/a/60555
-  (defun isamert/org-link-copy (&optional arg)
+  (defun isamert/org-link-copy ()
     "Extract URL from org-mode link and add it to kill ring."
-    (interactive "P")
+    (interactive)
     (let* ((link (org-element-lineage (org-element-context) '(link) t))
            (type (org-element-property :type link))
            (url (org-element-property :path link))
            (url (concat type ":" url)))
       (kill-new url)
       (message (concat "Copied URL: " url))))
+
+  (defun isamert/org-store-link-dwim ()
+    "Like `org-store-link' but if point is on an org-link, just copy
+    it to clipboard. Otherwise call `org-store-link'."
+    (interactive)
+    (if (org-in-regexp org-link-any-re 1)
+        (isamert/org-link-copy)
+      (org-store-link nil t)))
 #+end_src
 
 This following trick (got it from [[https://www.reddit.com/r/emacs/comments/o68i0v/weekly_tips_tricks_c_thread/h2rizey?utm_source=share&utm_medium=web2x&context=3][this]] comment) simply calls =C-h .= (=display-local-help=) when idle, which shows the destination of links in the echo area (and maybe displays other helpful stuff).
