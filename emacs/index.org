@@ -1274,6 +1274,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (defconst people-org "~/Documents/notes/people.org")
     (defconst diary-org "~/Documents/notes/diary.org")
     (defconst snippets-org "~/Documents/notes/snippets.org")
+    (defconst bookmarks-org "~/Documents/notes/bookmarks.org")
     (defconst work-org "~/Documents/notes/trendyol.org")
     (defconst temp-org "~/Documents/notes/temp.org")
     (defconst passwords-org "~/Documents/notes/passwords.org")
@@ -1473,6 +1474,9 @@ Here are the resources:
 #+END_SRC
 
 ** org-capture
+:PROPERTIES:
+:ID:       4e8609e8-8485-4868-a942-35b2571d46ae
+:END:
 See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this page]] for more detail on template elements.
 
 #+begin_src emacs-lisp
@@ -4171,7 +4175,7 @@ Manage media and streams through =completing-read=.
     (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music")
     (setq empv-allow-insecure-connections t)
-    (setq empv-invidious-instance "https://invidio.xamh.de/api/v1")
+    (setq empv-invidious-instance "https://vid.puffyan.us/api/v1")
     ;; see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
 
