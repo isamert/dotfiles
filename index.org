@@ -895,8 +895,8 @@ I keep some of the polybar related variables inside the ~Xresources~ file so tha
   module-margin-right = 1
 
   modules-left = bspwm xwindowlong
-  modules-center = date
-  modules-right = pacman xkeyboard volume memory cpu temperature battery
+  modules-center = orgclock
+  modules-right = pacman xkeyboard volume memory cpu temperature battery date
 
   tray-position = right
   tray-padding = 2
@@ -929,11 +929,20 @@ I keep some of the polybar related variables inside the ~Xresources~ file so tha
   module-margin-right = 2
 
   modules-left = bspwm xwindowlong
+  modules-center = date
   modules-right = xbacklight
   cursor-click = pointer
 
   tray-position = right
   tray-padding = 2
+
+  [module/orgclock]
+  type = custom/script
+  exec-if = emacsclient --eval "t"
+  exec = emacsclient --eval "(isamert/format-polybar-clock-string)" | tr -d '"'
+  interval = 5
+
+  format-underline = ${xrdb:color2}
 
   [module/optimus]
   type = custom/script
