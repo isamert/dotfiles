@@ -598,7 +598,8 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
 
 ** Make script files executable automatically
 #+begin_src emacs-lisp
-  (add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p)
+  (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
+  (add-hook 'org-babel-post-tangle-hook #'executable-make-buffer-file-executable-if-script-p)
 #+end_src
 
 ** Automatically run some commands after saving specific files
@@ -891,6 +892,13 @@ Some small packages that enriches editing experience visually. I don't enable al
     ;; visual mode is active. This way commands will work on selected
     ;; char range instead of selected line range.
     (setq evil-ex-visual-char-range t)
+
+
+    ;; This is needed for being able to use *-eval-last-sexp kind of
+    ;; functions in normal mode. Elisp-related ones works out of the box
+    ;; but other ones (like for Racket, Clojure etc.) are not patched by
+    ;; default.
+    (setq evil-move-beyond-eol t)
 
     ;; Move between visual lines instead of real lines
     (evil-define-key 'normal 'global
@@ -1610,40 +1618,15 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 #+end_src
 
 ** org-clock
+This prints the text that is used by polybar to show what I am clocking right now. See my [[../index.org::* Polybar][Polybar]] config where I utilize this function.
+
 #+begin_src emacs-lisp
-  ;; For Linux:
-  (defun isamert/org-clock-today-all ()
-    "Return todays all clocked hours."
-    (with-current-buffer "bullet.org"
-      (save-excursion
-        (save-restriction
-          (isamert/bullet-focus-today)
-          (let ((range (org-clock-special-range 'untilnow)))
-            (format
-             "%s %s%s"
-             (or (and (org-clocking-p) "") "")
-             (org-minutes-to-clocksum-string (org-clock-sum (car range) (cadr range)))
-             (or (and (org-clocking-p) (format " (%s)" (org-duration-from-minutes (org-clock-get-clocked-time)))) "")))))))
-
-  ;; For macOS
-  ;; https://github.com/koddo/org-clock-statusbar-app
-
-  (defun isamert/org-clock-statusbar-clock-in ()
-    (interactive)
-    (if (eq system-type 'darwin)
-        (call-process "/usr/bin/osascript" nil 0 nil "-e"
-                      (concat "tell application \"org-clock-statusbar\" to clock in \""
-                              (replace-regexp-in-string "\"" "\\\\\"" org-clock-current-task)
-                              "\""))))
-
-  (defun isamert/org-clock-statusbar-clock-out ()
-    (interactive)
-    (call-process "/usr/bin/osascript" nil 0 nil "-e"
-                  "tell application \"org-clock-statusbar\" to clock out"))
-
-  (when (eq system-type 'darwin)
-    (add-hook 'org-clock-in-hook #'isamert/org-clock-statusbar-clock-in)
-    (add-hook 'org-clock-out-hook #'isamert/org-clock-statusbar-clock-out))
+  (defun isamert/format-polybar-clock-string ()
+    (if (org-clocking-p)
+        (format "  [%s] %s "
+                (org-duration-from-minutes (org-clock-get-clocked-time))
+                org-clock-heading)
+      ""))
 #+end_src
 
 ** org-ql
@@ -1654,6 +1637,25 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     ;; org-mode
     (require 'org-ql-search))
 #+END_SRC
+
+Here are some utility functions that I use in org-ql dynamic blocks:
+
+#+begin_src emacs-lisp
+  (defun sort-by-num-prop (prop x y)
+    (< (string-to-number (org-element-property prop y))
+       (string-to-number (org-element-property prop x))))
+
+  (defun sort-by-prop (prop x y)
+    (string< (org-element-property prop y)
+             (org-element-property prop x)))
+#+end_src
+
+You have to use ~:sort (lambda ...)~ syntax in org-ql dynamic blocks if you want to supply a function for the ~:sort~ parameter. You can't use a function that returns a lambda, hence the functions defined above should be used like this:
+
+#+begin_example
+  ,#+begin: org-ql :query ... :sort (lambda (x y) (sort-by-num-prop :RATING x y))
+  ,#+end
+#+end_example
 
 ** org-board (archiving web pages)
 A very nice archiving tool. An org entry with ~URL~ property is considered a bookmark. When you are on a bookmark, you can do:
@@ -4954,6 +4956,14 @@ For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
   (use-package flycheck-package)
 #+end_src
 
+** Racket
+#+begin_src emacs-lisp
+  (use-package racket-mode
+    :config
+    (evil-leader/set-key-for-mode 'racket-mode
+      ";" #'racket-eval-last-sexp
+      "," #'racket-send-definition))
+#+end_src
 ** dhall
 #+begin_src emacs-lisp
   (use-package dhall-mode
