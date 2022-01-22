@@ -80,6 +80,24 @@ Journal files starts to take a lot of disk space. I put a simple limit to that h
   SystemMaxUse=50M
 #+end_src
 * X related
+** Startup programs
+#+name: startup_programs
+#+begin_src bash
+  deadd-notification-center &
+  xcape -e 'Hyper_L=Escape' &
+  sxhkd &
+  unclutter &
+  udiskie --smart-tray --notify &
+  nm-applet &
+  pasystray &
+
+  # Apps
+  pgrep emacs || emacs --daemon &
+  pgrep syncthing || syncthing -no-browser -no-restart -logflags=0 &
+  pgrep copyq || copyq &
+  pgrep crow || crow &
+#+end_src
+
 ** .xinitrc
 #+begin_src sh :tangle (when-linux "~/.xinitrc")
   #!/bin/sh
@@ -109,17 +127,7 @@ Journal files starts to take a lot of disk space. I put a simple limit to that h
   xmodmap $HOME/.Xmodmap
   xsetroot -cursor_name left_ptr
 
-  deadd-notification-center &
-  picom -b &
-  xcape -e 'Hyper_L=Escape' &
-  sxhkd &
-  unclutter &
-  redshift -l 39:35 &
-  udiskie --smart-tray --notify &
-  copyq &
-  emacs --daemon &
-  crow &
-  syncthing -no-browser -no-restart -logflags=0 &
+  <<<startup_programs>>>
 
   exec bspwm
 #+end_src
