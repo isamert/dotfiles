@@ -3751,62 +3751,147 @@ Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are conv
   esac
 #+end_src
 ** .scripts/init-desktops
-#+begin_src bash :tangle (when-linux "~/.scripts/init-desktops")
-  #!/usr/bin/env bash
+This script initializes my monitor setup, bspwm desktop setup and wacom tablet setup in the way I want.
+For monitors and bspwm:
+- If there is only one monitor, makes it primary monitor and enables it.
+- If there are two monitors, puts the laptop monitor to the left and the makes the external one primary and puts it on the right of the laptop monitor.
+- If there are three monitors, does the same with what it does to two monitors and puts the third monitor on the right of the primary monitor.
+- Primary monitor is always selected as the biggest one by real-world size, not in pixels.
+- Monitors are enabled with their /preferred/ modes.
+- Polybar for primary and secondary monitors gets started after monitor arrangement.
+- 5 virtual desktops are created for each monitor.
 
-  # This script is responsible for creating polybar instance and configuring
-  # monitors, desktops. You can run this file if you connect a new monitor and
-  # it will rearrange everything.
+For the wacom tablet:
+- Maps it to the primary monitor.
+- Rotates it, because I like the tablet's cable to go other way and not touch my keyboard.
+- Calculates the usable tablet area according to the primary monitors proportions (and of course does this by keeping in mind that the tablet is rotated).
 
-  # Close all instances of polybar
-  killall -q polybar
-  while pgrep -u $UID -x polybar >/dev/null; do
-      sleep 1
-  done
+#+begin_src racket :tangle (when-linux "~/.scripts/init-desktops")
+  #!/usr/bin/env racket
+  #lang at-exp racket
 
-  # Check if there are more than one monitors
-  # if so, set MONITOR_MAIN and MONITOR_SECONDARY accordingly
-  monitors="$(xrandr -q | grep -w "connected" | cut -d' ' -f1)"
-  echo ">> Found monitors: $monitors"
+  (require threading)
+  (require racket/port)
+  (require racket/system)
+  (require racket/string)
+  (require racket/list)
+  (require racket/pretty)
+  (require racket/struct)
+  (require racket/match)
 
-  export MONITOR_MAIN=""
-  export MONITOR_SECONDARY=""
+  (define-syntax-rule (string-append! str1 str2)
+    (set! str1 (string-append str1 str2)))
 
-  # External monitor should be the main monitor, if exists
-  MONITOR_MAIN=$(echo "$monitors" | grep -E "^(HDMI|DP|VGA)")
-  if [[ -z "$MONITOR_MAIN" ]]; then
-      export MONITOR_MAIN=$(echo "$monitors" | grep -E "^(HDMI|DP|VGA)" | cut -d' ' -f1)
-  else
-      echo ">> Making $MONITOR_MAIN main monitor."
-      xrandr --output "$MONITOR_MAIN" --primary
-  fi
+  (define (first-safe lst)
+    (cond
+      [(null? lst) #f]
+      [else (car lst)]))
 
-  echo ">> Main monitor is $MONITOR_MAIN"
+  (define-syntax-rule (cmd c ...)
+    (string-trim
+     (with-output-to-string
+       (λ () (system (format c ...))))))
 
-  polybar main &> /dev/null &
+  (define px pregexp)
 
-  # Run secondary polybar, if there is a secondary monitor
-  MONITOR_SECONDARY=$(sed "/$MONITOR_MAIN/d" <<< $monitors)
-  echo ">> Secondary monitor is $MONITOR_SECONDARY"
+  (struct screen
+    (name primary? width-px height-px x-offset y-offset width-mm height-mm)
+    #:transparent)
 
-  # Close the secondary monitor (laptop monitor) if lid is closed
-  if cat /proc/acpi/button/lid/LID*/state | grep 'closed'; then
-      echo ">> Closing the secondary monitor: $MONITOR_SECONDARY"
-      xrandr --output "$MONITOR_SECONDARY" --off
-  else
-      polybar secondary &> /dev/null &
+  (define (screen-full-dimensions screen)
+    (format
+     "~ax~a+~a+~a"
+     (screen-width-px screen)
+     (screen-height-px screen)
+     (screen-x-offset screen)
+     (screen-y-offset screen)))
 
-      # Place the secondary monitor to the right of the primary
-      SECONDARY_START_POS=$(xrandr -q | grep "^$MONITOR_MAIN connected" | tr "+x" " " | cut -d' ' -f4)
-      xrandr --output "$MONITOR_SECONDARY" --pos "${SECONDARY_START_POS}x0" --auto
-  fi
+  (define rx-xrandr-connected
+    @px{^(\w+) connected ?(primary)? (\d+)x(\d+)\+(\d+)\+(\d+).*?(\d+)mm x (\d+)mm})
 
-  echo ">> Setting background"
-  feh --bg-scale "$HOME/.config/wall.png"
+  (define rx-laptop-screen
+    @px{(eDP1|LVDS1)})
 
-  echo ">> Creating 5 desktops for each monitor"
-  xrandr -q | grep -w "connected" | cut -d' ' -f1 | xargs -I {} bspc monitor "{}" --reset-desktops I II III IV V VI VII VIII IX X
+  (define (get-screen-info)
+    (system "xrandr --auto")
+    (define connected-screens
+      (~>
+       (cmd "xrandr -q")
+       (string-split "\n")
+       (filter-map (λ (it) (regexp-match rx-xrandr-connected it)) _)
+       (map (λ (it) (apply screen `(,@(drop (take it 3) 1) ,@(map string->number (drop it 3))))) _)))
+    (define primary-screen
+      (argmax screen-width-mm connected-screens))
+    (define secondary-screen
+      (findf
+       (λ (it) (regexp-match? rx-laptop-screen (screen-name it)))
+       connected-screens))
+    (define tetriary-screen
+      (first-safe
+       (remf* (λ (it) (or (equal? it secondary-screen)
+                          (equal? it primary-screen)))
+              connected-screens)))
+    (list primary-screen secondary-screen tetriary-screen))
+
+  (define (initialize-screens)
+    (match-let
+        ([(list primary-screen secondary-screen tetriary-screen) (get-screen-info)]
+         [xrandr-command "xrandr"])
+      (when secondary-screen
+        (string-append!
+         xrandr-command
+         (format " --output ~a --rotate normal --preferred --pos 0x0"
+                 (screen-name secondary-screen))))
+      ;; Primary screen
+      (string-append!
+       xrandr-command
+       (format " --output ~a --primary --rotate normal --preferred ~a"
+               (screen-name primary-screen)
+               (if secondary-screen (format "--right-of ~a" (screen-name secondary-screen)) 0)))
+      (when tetriary-screen
+        (string-append!
+         xrandr-command
+         (format " --output ~a --rotate normal --preferred --right-of ~a"
+                 (screen-name tetriary-screen)
+                 (screen-name primary-screen))))
+      ;; Arrange monitors
+      (display (format ">>> Running: ~a\n" xrandr-command))
+      (system xrandr-command)
+      ;; Create desktops for each screen
+      (system "xrandr -q | grep -w 'connected' | cut -d' ' -f1 | xargs -I {} bspc monitor '{}' --reset-desktops I II III IV V VI VII VIII IX X")
+      ;; Set background
+      (system "feh --bg-scale \"$HOME/.config/wall.png\"")
+      ;; Setup polybar
+      (system "killall -q polybar")
+      (when primary-screen
+        (putenv "MONITOR_MAIN" (screen-name primary-screen))
+        (system "setsid -f polybar main"))
+      (when secondary-screen
+        (putenv "MONITOR_SECONDARY" (screen-name secondary-screen))
+        (system "setsid -f polybar secondary"))))
+
+  (define (initialize-wacom-tablet)
+    (match-let*
+        ([(list primary-screen secondary-screen tetriary-screen) (get-screen-info)]
+         [device-id (~>
+                     (cmd "xsetwacom --list devices")
+                     (regexp-match @px{.*stylus.*?id: (\d+).*?} _)
+                     (cadr))]
+         [(list _skip x-offset y-offset width height)
+          (regexp-match @px{(\d+) (\d+) (\d+) (\d+)}
+                        (cmd "xsetwacom get ~a Area" device-id))]
+         [real-y-offset (- (string->number height)
+                           (* (string->number width)
+                              (/ (screen-height-px primary-screen)
+                                 (screen-width-px primary-screen))))])
+      (system @~a{xsetwacom set @device-id Rotate half})
+      (system @~a{xsetwacom set @device-id MapToOutput @(screen-full-dimensions primary-screen)})
+      (system @~a{xsetwacom set @device-id Area 0 @real-y-offset @width @height})))
+
+  (initialize-screens)
+  (initialize-wacom-tablet)
 #+end_src
+
 ** .scripts/mediastuff
 #+begin_src bash :tangle ~/.scripts/mediastuff
   #!/bin/bash
