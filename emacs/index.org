@@ -693,10 +693,15 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
 #+END_SRC
 
 ** all-the-icons
-You should run =all-the-icons-install-fonts= command after this. Also run =fc-cache -f -v= afterwards (=all-the-icons-install-fonts= already does that but it may fail).
+- You should run =all-the-icons-install-fonts= command after this. Also run =fc-cache -f -v= afterwards (=all-the-icons-install-fonts= already does that but it may fail).
+- =all-the-icons-completion= gives you icons in completion UI, like in =completing-read= etc.
 
 #+BEGIN_SRC emacs-lisp
   (use-package all-the-icons)
+  (use-package all-the-icons-completion
+    :after (all-the-icons)
+    :config
+    (all-the-icons-completion-mode))
 #+END_SRC
 
 ** prettify-symbols-mode
