@@ -5097,6 +5097,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
   (use-package plantuml-mode
     :config
     (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
+    (setq plantuml-default-exec-mode 'jar)
     (setq org-plantuml-jar-path "/nix/store/q0v5nv70zc23fx4hjgghnqf7lvydr6fq-plantuml-1.2021.3/lib/plantuml.jar"))
 #+end_src
 ** Couchbase
