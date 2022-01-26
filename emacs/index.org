@@ -1923,9 +1923,19 @@ Several packages are using this package to show system-level notifications. Here
   (define-advice alert (:after (msg &rest args) send-to-my-phone-if-urgent)
     "Send the notification to my phone if it's marked as urgent/high."
     (pcase (plist-get args :severity)
-      ((or 'urgent 'high) (isamert/send-notification-to-my-phone
-                           :title (or (plist-get args :title) "Emacs")
-                           :content msg))))
+      ((or 'urgent 'high)
+       ;; Only send notification to phone if Emacs is idle for 120 secs
+       (when (and (current-idle-time)
+                  (>= (time-to-seconds (current-idle-time)) 120))
+         (when isamert/signal-bot-object
+           (isamert/signal-send-message
+            (list :number isamert/my-phone-number)
+            (format "%s\n%s"
+                    (or (plist-get args :title) "Emacs")
+                    msg)))
+         (isamert/send-notification-to-my-phone
+          :title (or (plist-get args :title) "Emacs")
+          :content msg)))))
 #+end_src
 
 ** Hydra
@@ -2100,7 +2110,7 @@ To sync it automatically:
 
   ;; Use my notification function for appt notifications
   (setq appt-disp-window-function #'isamert/appt-notify)
-  (setq appt-message-warning-time 12)
+  (setq appt-message-warning-time 10)
   (setq appt-display-interval 2)
 
   ;; Automatically update `appt-time-msg-list' after editing an
