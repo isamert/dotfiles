@@ -3823,9 +3823,10 @@ For the wacom tablet:
     (define primary-screen
       (argmax screen-width-mm connected-screens))
     (define secondary-screen
-      (findf
-       (λ (it) (regexp-match? rx-laptop-screen (screen-name it)))
-       connected-screens))
+      (~>>
+       connected-screens
+       (remf* (λ (it) (equal? it primary-screen)))
+       (findf (λ (it) (regexp-match? rx-laptop-screen (screen-name it))))))
     (define tetriary-screen
       (first-safe
        (remf* (λ (it) (or (equal? it secondary-screen)
@@ -3847,7 +3848,7 @@ For the wacom tablet:
        xrandr-command
        (format " --output ~a --primary --rotate normal --preferred ~a"
                (screen-name primary-screen)
-               (if secondary-screen (format "--right-of ~a" (screen-name secondary-screen)) 0)))
+               (if secondary-screen (format "--right-of ~a" (screen-name secondary-screen)) "")))
       (when tetriary-screen
         (string-append!
          xrandr-command
