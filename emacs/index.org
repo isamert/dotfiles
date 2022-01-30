@@ -6018,6 +6018,7 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
        (lambda ()
          (string-join
           `("BEGIN:VCARD\nVERSION:2.1\n"
+            ,(format "UID:urn:uuid:%s\n" (org-id-get nil t))
             ,(isamert/build-contact-item "FN:%s" "ITEM")
             ,(isamert/build-contact-item "TEL;CELL:%s" "PHONE")
             ,(isamert/build-contact-item "TEL;WORK:%s" "PHONE_WORK")
