@@ -5034,7 +5034,10 @@ For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
   ;; Scheme
   (use-package geiser
     :config
-    (setq geiser-default-implementation 'guile))
+    (setq geiser-default-implementation 'guile)
+    (evil-leader/set-key-for-mode 'scheme-mode
+      ";" #'geiser-eval-last-sexp
+      "," #'geiser-eval-definition))
 
   (use-package geiser-guile
     :after geiser)
