@@ -2517,6 +2517,7 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     (evil-leader/set-key
       "la" #'persp-add-buffer
       "ls" #'isamert/persp-switch-to-project
+      "lS" #'isamert/new-persp-with-project
       "lk" #'persp-remove-by-name
       "lr" #'persp-rename
       "li" #'isamert/initialize-perspectives
@@ -2566,6 +2567,17 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
           (project-switch-project (completing-read "Select project: " candidates)))
          (t
           (call-interactively #'project-switch-project))))))
+
+  (defun isamert/new-persp-with-project ()
+    (interactive)
+    (let ((project-dir (project-prompt-project-dir)))
+      (->>
+       project-dir
+       (f-filename)
+       (s-prepend (concat (isamert/select-tmux-session) "/"))
+       (persp-switch))
+      (project-switch-project project-dir)
+      (shell-command-to-string (format "tmux new-window -n %s" (f-filename project-dir)))))
 
   (use-package eyebrowse
     :config
@@ -5185,16 +5197,16 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defvar isamert/tmux-session nil)
 
   (defun isamert/select-tmux-session ()
-    "Select a tmux session for other tmux commands to use."
+    "Select (or create) a tmux session for other tmux commands to use."
     (interactive)
-    (->>
-     (shell-command-to-string "tmux list-sessions")
-     (s-split "\n")
-     (--filter (not (s-blank? it)))
-     (completing-read "TMUX session: ")
-     (s-split ":")
-     (car)
-     (setq isamert/tmux-session)))
+    (let* ((tmux-sessions (->>
+                           (shell-command-to-string "tmux list-sessions -F '#{session_name}'")
+                           (s-trim)
+                           (s-split "\n")))
+           (selected (completing-read "Select a tmux session or create one: " tmux-sessions)))
+      (when (not (-contains? tmux-sessions selected))
+        (shell-command-to-string (format "tmux new-session -d -s '%s'" selected)))
+      (setq isamert/tmux-session selected)))
 
   (defun isamert/select-tmux-session-if-needed ()
     (interactive)
