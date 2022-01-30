@@ -6147,10 +6147,12 @@ I need to rewrite these functions using [[https://github.com/isamert/marks][mark
     (interactive)
     (let* ((headers (isamert/org-all-headers))
            (selected (cdr (assoc-string (completing-read "Select header:" headers) headers)))
-           (link-name (read-string "Enter link text: " (plist-get selected :header)))
-           (header-id (isamert/org-file-get-header-id (plist-get selected :fname) (plist-get selected :line)))
-           (selected-link (concat "[[id:" header-id "][" link-name "]]")))
-      (insert selected-link)))
+           (header-id (isamert/org-file-get-header-id (plist-get selected :fname) (plist-get selected :line))))
+      (org-insert-link
+       nil
+       (concat "id:" header-id)
+       (unless (use-region-p)
+         (read-string "Enter link text: " (plist-get selected :header))))))
 
   ;; TODO Removed backlinks implementation, I will implement it once
   ;; minimal functionality within "marks" is done
