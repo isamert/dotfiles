@@ -3951,6 +3951,14 @@ Adds persistent undo feature to Emacs' undo-redo functionality.
     :config
     (undohist-initialize))
 #+end_src
+** nov.el
+For reading epub files.
+
+#+begin_src emacs-lisp
+  (use-package nov
+    :config
+    (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
