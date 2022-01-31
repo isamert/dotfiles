@@ -2516,7 +2516,7 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
 
     (evil-leader/set-key
       "la" #'persp-add-buffer
-      "ls" #'isamert/persp-switch-to-project
+      "ls" #'persp-switch
       "lS" #'isamert/new-persp-with-project
       "lk" #'persp-remove-by-name
       "lr" #'persp-rename
@@ -2547,37 +2547,17 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
 
     (add-hook 'after-init-hook #'(lambda () (persp-mode 1))))
 
-  (defun isamert/persp-switch-to-project ()
-    "Like `persp-switch' but tries to guess and open project by the
-  perspective name if the perspective is a freshly created one."
-    (interactive)
-    (funcall-interactively #'persp-switch nil)
-    ;; Try to detect the project only if it's a fresh perspective
-    (unless (persp-buffers (get-current-persp))
-      (let* ((pname
-              (nth 1 (s-split "/" (persp-name (get-current-persp)))))
-             (candidates
-              (--filter
-               (s-matches? pname (f-filename it))
-               (isamert/all-project-roots))))
-        (cond
-         ((length= candidates 1)
-          (project-switch-project (car candidates)))
-         ((length> candidates 1)
-          (project-switch-project (completing-read "Select project: " candidates)))
-         (t
-          (call-interactively #'project-switch-project))))))
-
   (defun isamert/new-persp-with-project ()
     (interactive)
-    (let ((project-dir (project-prompt-project-dir)))
+    (let* ((project-dir (project-prompt-project-dir))
+           (window-name (f-filename project-dir)))
       (->>
        project-dir
        (f-filename)
        (s-prepend (concat (isamert/select-tmux-session) "/"))
        (persp-switch))
       (project-switch-project project-dir)
-      (shell-command-to-string (format "tmux new-window -n %s" (f-filename project-dir)))))
+      (isamert/tmux-focus-window window-name)))
 
   (use-package eyebrowse
     :config
@@ -5226,18 +5206,21 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (isamert/select-tmux-session)))
 
   (defun isamert/tmux-focus-window (window-name)
-    "Focus given WINDOW-NAME in `isamert/tmux-session'."
+    "Focus given WINDOW-NAME in `isamert/tmux-session'.
+  Creates WINDOW-NAME it if it does not exist."
     (interactive)
     (isamert/select-tmux-session-if-needed)
     (shell-command-to-string (format "tmux switch -t%s" isamert/tmux-session))
-    (->>
-     window-name
-     (format "tmux list-windows -t%s | grep %s" isamert/tmux-session)
-     (shell-command-to-string)
-     (s-split ":")
-     (car)
-     (format "tmux select-window -t%s:%s" isamert/tmux-session)
-     (shell-command-to-string)))
+    (let ((window-name (->>
+                        window-name
+                        (format "tmux list-windows -t%s -F '#{window_name}' | grep %s" isamert/tmux-session)
+                        (shell-command-to-string)
+                        (s-trim)
+                        (s-split "\n")
+                        (car))))
+      (shell-command-to-string
+       (format "tmux select-window -t%s:%s || tmux new-window -t%s -n %s"
+               isamert/tmux-session window-name isamert/tmux-session window-name))))
 
   (defun isamert/tmux-focus-perspective-window (&optional pname &rest rest)
     "Focus to the tmux window that has the same name with current perspective.
