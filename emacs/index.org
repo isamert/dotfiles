@@ -5678,27 +5678,62 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
           (issue-type (isamert/jira--select-issue-type))
           (summary (read-string "Issue summary: ")))
       (isamert/get-input
-       :init (format "* %s\n:PROPERTIES:\n:PROJECT-ID: %s\n:ISSUE-TYPE: %s\n:END:\n" summary project issue-type)
-       :pre-process (lambda ()
-                      (goto-char (point-min))
-                      (let* ((all (org-entry-properties nil 'standard))
-                             (rest (--remove (-contains? '("CATEGORY" "ISSUE-TYPE" "PROJECT-ID") (car it)) all)))
-                        (list
-                         :summary (org-entry-get nil "ITEM")
-                         :project-id (org-entry-get nil "PROJECT-ID")
-                         :type (org-entry-get nil "ISSUE-TYPE")
-                         :rest rest)))
-       :on-accept (lambda (description props)
-                    (setq description (org-export-string-as description 'confluence t))
-                    (message ">> (isamert/jira-create-ticket %s :description %s)" props description)
-                    (thread-last
-                        (apply #'jiralib2-create-issue
-                               `(,(plist-get props :project-id)
-                                 ,(plist-get props :type)
-                                 ,(plist-get props :summary)
-                                 ,description
-                                 ,@(plist-get props :rest)))
-                      (isamert/jira--issue-actions))))))
+       :init
+       (format (concat
+                "* %s\n"
+                ":PROPERTIES:\n"
+                ":PROJECT-ID: %s\n"
+                ":ISSUE-TYPE: %s\n"
+                ":SPRINT: active|future\n"
+                ":END:\n")
+               summary project issue-type)
+       :pre-process
+       (lambda ()
+         (goto-char (point-min))
+         (list
+          :summary (org-entry-get nil "ITEM")
+          :project-id (org-entry-get nil "PROJECT-ID")
+          :type (org-entry-get nil "ISSUE-TYPE")
+          :rest `((,(isamert/jira-get-issue-field-id-for "Sprint") .
+                   ,(alist-get 'id (isamert/jira-find-sprint (org-entry-get nil "SPRINT")))))))
+       :on-accept
+       (lambda (description props)
+         (setq description
+               (->>
+                (org-export-string-as description 'confluence t)
+                (s-split "\n")
+                (-drop 1)
+                (s-join "\n")))
+         (message ">> (isamert/jira-create-ticket %s :description %s)" props description)
+         (thread-last
+           (apply #'jiralib2-create-issue
+                  `(,(plist-get props :project-id)
+                    ,(plist-get props :type)
+                    ,(plist-get props :summary)
+                    ,description
+                    ,@(plist-get props :rest)))
+           (isamert/jira--issue-actions))))))
+
+  (defun isamert/jira-get-issue-fields ()
+    (jiralib2-session-call "/rest/api/2/field"))
+
+  ;; TODO support pagination
+  (defun isamert/jira-get-sprints ()
+    (alist-get 'values (jiralib2-session-call "/rest/agile/1.0/board/868/sprint")))
+
+  (defun isamert/jira-find-sprint (sprint)
+    "Find a sprint. SPRINT can be a full sprint name or one \"active\"|\"future\"."
+    (let ((sprints (isamert/jira-get-sprints)))
+      (or
+       (--find (string-equal sprint (alist-get 'name it)) sprints)
+       (--find (string-equal sprint (alist-get 'state it)) sprints))))
+
+  (defun isamert/jira-get-issue-field-id-for (field-name)
+    (alist-get
+     'id
+     (--find
+      (string-equal field-name (alist-get 'name it))
+      (isamert/jira-get-issue-fields))))
 
   ;;
   ;; Utility
