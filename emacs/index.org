@@ -5642,10 +5642,10 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (isamert/alist-completing-read "Select ticket: ")
       (isamert/jira--issue-actions)))
 
-  (defun isamert/jira-ticket-to-branch (issue-name)
+  (defun isamert/jira-ticket-to-branch (key summary)
     "Create a new branch from given ISSUE-NAME and switch to it."
     (interactive "sIssue name: ")
-    (let ((branch-name (isamert/jira--create-branch-name-from-ticket issue-name)))
+    (let ((branch-name (isamert/jira--create-branch-name-from-ticket (concat key summary))))
       (unless (equal isamert/git-main-branch (isamert/git-current-branch))
         (user-error "Please switch to `%s' branch first." isamert/git-main-branch))
       (message "Updating...")
@@ -5653,11 +5653,12 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (message "Creating branch...")
       (magit-branch-and-checkout branch-name isamert/jira-base-branch)
       (vc-refresh-state)
+      (isamert/jira-change-issue-status-to-status key "In Progress")
       (message "Currently on %s." (magit-get-current-branch))))
 
-  (defun isamert/jira-ticket-to-worktree (issue-name)
+  (defun isamert/jira-ticket-to-worktree (key summary)
     (interactive "sIssue name: ")
-    (let* ((branch-name (isamert/jira--create-branch-name-from-ticket issue-name))
+    (let* ((branch-name (isamert/jira--create-branch-name-from-ticket (concat key summary)))
            (worktree (expand-file-name (format "%s/%s" isamert/git-worktrees-root (s-replace "/" "-" branch-name)))))
       (message "Updating...")
       (magit-fetch-all nil)
@@ -5670,6 +5671,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (cd worktree)
       (project-find-file)
       (vc-refresh-state)
+      (isamert/jira-change-issue-status-to-status key "In Progress")
       (message "Currently on %s." (magit-get-current-branch))))
 
   (defun isamert/jira-create-ticket ()
@@ -5736,7 +5738,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (isamert/jira-get-issue-fields))))
 
   (defun isamert/jira-get-issue-transitions (issue)
-    (jiralib2-session-call (format "/rest/api/2/issue/%s/transitions?expand=transition.fields" issue)))
+    (alist-get
+     'transitions
+     (jiralib2-session-call (format "/rest/api/2/issue/%s/transitions?expand=transition.fields" issue))))
 
   (defun isamert/jira-change-issue-status-to (issue status-id)
     (jiralib2-session-call
@@ -5749,11 +5753,21 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (interactive "sIssue number: ")
     (->>
      (isamert/jira-get-issue-transitions key)
-     (alist-get 'transitions)
      (--map (cons (alist-get 'name it) it))
      (isamert/alist-completing-read "Select status: ")
      (alist-get 'id)
      (isamert/jira-change-issue-status-to key)))
+
+  (defun isamert/jira-change-issue-status-to-status (issue-id status)
+    "Same as `isamert/jira-change-issue-status-to' but uses the
+  status name as shown in Jira UI instead of status id."
+    (isamert/jira-change-issue-status-to
+     issue-id
+     (alist-get
+      'id
+      (--find
+       (string-equal (alist-get 'name it) status)
+       (isamert/jira-get-issue-transitions issue-id)))))
 
   ;;
   ;; Utility
@@ -5828,10 +5842,10 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
              (isamert/open-jira-issue .key)
              (cl-return))
             ("To branch"
-             (isamert/jira-ticket-to-branch (concat .key "-" .fields.summary))
+             (isamert/jira-ticket-to-branch .key .fields.summary)
              (cl-return))
             ("To worktree"
-             (isamert/jira-ticket-to-worktree (concat .key "-" .fields.summary))
+             (isamert/jira-ticket-to-worktree .key .fields.summary)
              (cl-return))
             ("Assign to..."
              (jiralib2-assign-issue
