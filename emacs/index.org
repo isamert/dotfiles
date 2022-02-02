@@ -5735,6 +5735,26 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (string-equal field-name (alist-get 'name it))
       (isamert/jira-get-issue-fields))))
 
+  (defun isamert/jira-get-issue-transitions (issue)
+    (jiralib2-session-call (format "/rest/api/2/issue/%s/transitions?expand=transition.fields" issue)))
+
+  (defun isamert/jira-change-issue-status-to (issue status-id)
+    (jiralib2-session-call
+     (format "/rest/api/2/issue/%s/transitions?expand=transition.fields" issue)
+     :type "POST"
+     :data (json-encode
+            `((transition (id . ,status-id))))))
+
+  (defun isamert/jira-change-issue-status (key)
+    (interactive "sIssue number: ")
+    (->>
+     (isamert/jira-get-issue-transitions key)
+     (alist-get 'transitions)
+     (--map (cons (alist-get 'name it) it))
+     (isamert/alist-completing-read "Select status: ")
+     (alist-get 'id)
+     (isamert/jira-change-issue-status-to key)))
+
   ;;
   ;; Utility
   ;;
@@ -5802,7 +5822,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
         (let* ((action
                 (completing-read
                  (format "Act on %s: " (s-truncate 20 .fields.summary))
-                 '("Open" "To branch" "To worktree" "Assign to..." "Insert as task" "[Cancel]"))))
+                 '("Open" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "[Cancel]"))))
           (pcase action
             ("Open"
              (isamert/open-jira-issue .key)
@@ -5817,6 +5837,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
              (jiralib2-assign-issue
               .key
               (alist-get 'name (isamert/jira--select-user (isamert/jira--select-project)))))
+            ("Change status"
+             (isamert/jira-change-ticket-status .key))
             ("Insert as task"
              (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
             ("[Cancel]"
