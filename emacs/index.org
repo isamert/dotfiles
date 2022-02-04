@@ -121,6 +121,7 @@ I use =s.el= and =dash.el= extensively. They already come as a dependency with o
   (use-package dash)
   (use-package s)
   (use-package yaml)
+  (use-package memoize)
 #+end_src
 
 ** Variables and functions
@@ -2016,7 +2017,7 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
       "l" #'dired-find-alternate-file)
 
     ;; Re-direct direct-jump calls to dirvish
-    (dirvish-override-dired-jump)
+    (dirvish-override-dired-mode)
     (evil-leader/set-key "ed" #'dirvish-dired))
 #+end_src
 ** image-mode
@@ -5536,39 +5537,6 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     "project = SAT AND (fixVersion in unreleasedVersions() OR fixVersion is EMPTY) AND createdDate >= -2w ORDER BY Rank ASC"
     "Query to get kanban board issues.")
 
-
-  ;; Internal state
-
-  (defvar isamert/jira-my-issues '()
-    "All of my issues")
-  (defvar isamert/jira-new-issues '()
-    "New jira issues")
-  (defvar isamert/jira-current-sprint-issues '()
-    "Current sprint issues")
-  (defvar isamert/jira-kanban-issues '()
-    "Kanban issues")
-  (defvar isamert/jira--users '()
-    "Users list")
-
-  (when (file-exists-p "~/.emacs.d/.cache/isamert-jira-my-issues")
-    (isamert/deserialize-from-file
-     "~/.emacs.d/.cache/isamert-jira-my-issues"
-     'isamert/jira-my-issues)
-    (isamert/deserialize-from-file
-     "~/.emacs.d/.cache/isamert-jira-new-issues"
-     'isamert/jira-new-issues)
-    (isamert/deserialize-from-file
-     "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
-     'isamert/jira-current-sprint-issues)
-    (isamert/deserialize-from-file
-     "~/.emacs.d/.cache/isamert-jira--users"
-     'isamert/jira--users)
-    (isamert/deserialize-from-file
-     "~/.emacs.d/.cache/isamert-jira-kanban-issues"
-     'isamert/jira-kanban-issues))
-
-  ;; Functions
-
   (defun isamert/open-jira-issue (issue-number)
     "Open given Jira ISSUE-NUMBER."
     (interactive "sIssue: ")
@@ -5579,68 +5547,49 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (interactive)
     (isamert/open-jira-issue (thing-at-point 'symbol)))
 
-  (defun isamert/jira-refresh-issue-lists ()
-    (interactive)
-    (when isamert/jira-my-issues
-      (message ">> Updating my issues...")
-      (setq isamert/jira-my-issues (jiralib2-jql-search isamert/jira-my-issues-query)))
+  (defun isamert/jira-get-my-issues ()
+    (jiralib2-jql-search isamert/jira-my-issues-query))
 
-    (message ">> Updating new issues...")
-    (setq isamert/jira-new-issues '())
-    (mapcar
-     (lambda (project)
-       (setq
-        isamert/jira-new-issues
-        (thread-last (format "project = \"%s\" AND issuekey >= \"%s-%s\""
-                             (car project) (car project) (cdr project))
-          (jiralib2-jql-search)
-          (append isamert/jira-new-issues))))
-     isamert/jira-projects)
+  (defun isamert/jira-get-kanban-issues ()
+    (jiralib2-jql-search isamert/jira-kanban-board-query))
 
-    (message ">> Updating current sprint...")
-    (setq isamert/jira-current-sprint-issues '())
-    (mapcar
-     (lambda (project)
-       (setq
-        isamert/jira-current-sprint-issues
-        (thread-last (format "project = \"%s\" AND Sprint in openSprints()"
-                             (car project) (car project) (cdr project))
-          (jiralib2-jql-search)
-          (append isamert/jira-current-sprint-issues))))
-     isamert/jira-projects)
+  (defun isamert/jira-get-current-sprint-issues ()
+    (let ((issues '()))
+      (mapc
+       (lambda (project)
+         (setq
+          issues
+          (thread-last (format "project = \"%s\" AND Sprint in openSprints()"
+                               (car project) (car project) (cdr project))
+                       (jiralib2-jql-search)
+                       (append issues))))
+       isamert/jira-projects)
+      issues))
 
-    (when isamert/jira-kanban-board-query
-      (message ">> Updating kanban issues...")
-      (setq isamert/jira-kanban-issues (jiralib2-jql-search isamert/jira-kanban-board-query)))
-
-    (message ">> DONE")
-
-    ;; Persist
-    (isamert/serialize-into-file
-     "~/.emacs.d/.cache/isamert-jira-my-issues"
-     isamert/jira-my-issues)
-    (isamert/serialize-into-file
-     "~/.emacs.d/.cache/isamert-jira-new-issues"
-     isamert/jira-new-issues)
-    (isamert/serialize-into-file
-     "~/.emacs.d/.cache/isamert-jira-current-sprint-issues"
-     isamert/jira-current-sprint-issues)
-    (isamert/serialize-into-file
-     "~/.emacs.d/.cache/isamert-jira-kanban-issues"
-     isamert/jira-kanban-issues))
+  (defun isamert/jira-get-all-issues ()
+    (let ((issues '()))
+      (mapcar
+       (lambda (project)
+         (setq
+          issues
+          (thread-last (format "project = \"%s\" AND issuekey >= \"%s-%s\""
+                               (car project) (car project) (cdr project))
+                       (jiralib2-jql-search)
+                       (append issues))))
+       isamert/jira-projects)))
 
   (defun isamert/jira-list-issues (&optional arg)
     (interactive "P")
     (when arg
       (isamert/jira-refresh-issue-lists))
     (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban"))
-                   ("My issues" isamert/jira-my-issues)
-                   ("New issues" isamert/jira-new-issues)
-                   ("Current Sprint" isamert/jira-current-sprint-issues)
-                   ("Kanban" isamert/jira-kanban-issues))
-      (--map (cons (isamert/jira--format-ticket-name it) it))
-      (isamert/alist-completing-read "Select ticket: ")
-      (isamert/jira--issue-actions)))
+                   ("My issues" (isamert/jira-get-my-issues))
+                   ("New issues" (isamert/jira-get-all-issues))
+                   ("Current Sprint" (isamert/jira-get-current-sprint-issues))
+                   ("Kanban" (isamert/jira-get-kanban-issues)))
+                 (--map (cons (isamert/jira--format-ticket-name it) it))
+                 (isamert/alist-completing-read "Select ticket: ")
+                 (isamert/jira--issue-actions)))
 
   (defun isamert/jira-ticket-to-branch (key summary)
     "Create a new branch from given ISSUE-NAME and switch to it."
@@ -5752,7 +5701,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defun isamert/jira-change-issue-status (key)
     (interactive "sIssue number: ")
     (->>
-     (isamert/jira-get-issue-transitions key)
+     (isamert/jira-get-issue-transitions "SAT-107")
      (--map (cons (alist-get 'name it) it))
      (isamert/alist-completing-read "Select status: ")
      (alist-get 'id)
@@ -5773,20 +5722,14 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   ;; Utility
   ;;
 
-  (defun isamert/jira--get-users ()
-    (unless isamert/jira--users
-      (setq
-       isamert/jira--users
-       (mapcar
-        (lambda (project) (cons project (jiralib2-get-users project)))
-        (mapcar #'car isamert/jira-projects)))
-      (isamert/serialize-into-file
-       "~/.emacs.d/.cache/isamert-jira--users"
-       isamert/jira--users))
-    isamert/jira--users)
+  (defmemoize isamert/jira-get-users ()
+    (mapcar
+     (lambda (project) (cons project (jiralib2-get-users project)))
+     (mapcar #'car isamert/jira-projects)))
 
   (defun isamert/jira--select-user (project)
-    (thread-last (isamert/jira--get-users)
+    (thread-last
+      (isamert/jira-get-users)
       (assoc-string (isamert/jira--select-project))
       (cdr)
       (--map (cons (alist-get 'name it) it))
@@ -5852,7 +5795,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
               .key
               (alist-get 'name (isamert/jira--select-user (isamert/jira--select-project)))))
             ("Change status"
-             (isamert/jira-change-ticket-status .key))
+             (isamert/jira-change-issue-status .key))
             ("Insert as task"
              (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
             ("[Cancel]"
