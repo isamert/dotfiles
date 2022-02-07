@@ -3936,9 +3936,50 @@ Adds persistent undo feature to Emacs' undo-redo functionality.
 For reading epub files.
 
 #+begin_src emacs-lisp
+  (use-package justify-kp
+    :ensure t
+    :diminish
+    :quelpa (justify-kp
+             :fetcher github
+             :repo "Fuco1/justify-kp"))
+
   (use-package nov
     :config
-    (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
+    ;; Just copied the configuration below from
+    ;; https://depp.brause.cc/nov.el/
+
+    (setq nov-text-width t)
+    (setq nov-text-width 80)
+    (setq visual-fill-column-center-text t)
+
+    (add-hook 'nov-mode-hook 'visual-line-mode)
+    (add-hook 'nov-mode-hook 'visual-fill-column-mode)
+    (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
+
+    (defun isamert/nov-window-configuration-change-hook ()
+      (isamert/nov-post-html-render-hook)
+      (remove-hook 'window-configuration-change-hook
+                   'isamert/nov-window-configuration-change-hook
+                   t))
+
+    (defun isamert/nov-post-html-render-hook ()
+      (if (get-buffer-window)
+          (let ((max-width (pj-line-width))
+                buffer-read-only)
+            (save-excursion
+              (goto-char (point-min))
+              (while (not (eobp))
+                (when (not (looking-at "^[[:space:]]*$"))
+                  (goto-char (line-end-position))
+                  (when (> (shr-pixel-column) max-width)
+                    (goto-char (line-beginning-position))
+                    (pj-justify)))
+                (forward-line 1))))
+        (add-hook 'window-configuration-change-hook
+                  'isamert/nov-window-configuration-change-hook
+                  nil t)))
+
+    (add-hook 'nov-post-html-render-hook 'isamert/nov-post-html-render-hook))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
