@@ -769,7 +769,7 @@ Colors parentheses depending on their dept.
     :diminish global-whitespace-mode
     :config
     (setq whitespace-style '(face empty tabs trailing))
-    (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode))
+    (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode))
     (global-whitespace-mode t))
 
   (defun isamert/whitespace-mode-toggle ()
@@ -4320,7 +4320,7 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
              :repo "isamert/orgmdb.el")
     :config
     (setq orgmdb-omdb-apikey isamert/orgmdb-omdb-apikey)
-    (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-rating metascore)))
+    (setq orgmdb-fill-property-list '(genre runtime director country imdb-link imdb-rating metascore)))
 
   (defun isamert/watchlist-select-episode ()
     "List all episodes of current show and act on selected one."
