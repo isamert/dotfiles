@@ -4935,9 +4935,18 @@ The following enables =CamelCase= aware editing operations.
 #+END_SRC
 
 ** clojure
+Here is the current workflow I use:
+- =lein new app project-name=
+- =cider-jack-in=
+
 #+begin_src emacs-lisp
   (use-package cider
-    :ensure t)
+    :ensure t
+    (evil-define-key 'normal clojure-mode-map (kbd "K") #'cider-doc)
+    (evil-leader/set-key-for-mode 'clojure-mode
+      ";" #'cider-eval-last-sexp
+      "'" #'cider-eval-defun-at-point
+      "\\" #'cider-eval-region))
 #+end_src
 ** emmet-mode
 Hit <C-j> after these and get:
@@ -5021,7 +5030,8 @@ For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
     :config
     (evil-leader/set-key-for-mode 'racket-mode
       ";" #'racket-eval-last-sexp
-      "," #'racket-send-definition))
+      "'" #'racket-send-definition
+      "\\" #'racket-send-region))
 #+end_src
 ** dhall
 #+begin_src emacs-lisp
@@ -5064,10 +5074,12 @@ For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
   ;; Scheme
   (use-package geiser
     :config
+    (setq geiser-debug-jump-to-debug-p nil)
     (setq geiser-default-implementation 'guile)
     (evil-leader/set-key-for-mode 'scheme-mode
       ";" #'geiser-eval-last-sexp
-      "," #'geiser-eval-definition))
+      "'" #'geiser-eval-definition
+      "\\" #'geiser-eval-region))
 
   (use-package geiser-guile
     :after geiser)
