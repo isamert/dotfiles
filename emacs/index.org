@@ -7118,6 +7118,13 @@ The code below let's you select your yankpad snippets outside of the Emacs using
       (kill-new text)))
 #+end_src
 
+** MacOS clear all notifications
+#+begin_src emacs-lisp
+  (defun isamert/macos-clear-all-notifications ()
+    "Clear all MacOS notifications."
+    (interactive)
+    (shell-command-to-string "osascript -l JavaScript ~/.local/bin/macos-clear-all-notifications.js"))
+#+end_src
 * TY (work stuff)
 Company/work related stuff.
 
