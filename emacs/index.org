@@ -5682,7 +5682,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                 ":PROJECT-ID: %s\n"
                 ":ISSUE-TYPE: %s\n"
                 ":SPRINT: active|future\n"
-                ":END:\n")
+                ":END:\n\n"
+                (isamert/jira--get-issue-template issue-type))
                summary project issue-type)
        :pre-process
        (lambda ()
@@ -5794,9 +5795,16 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (let-alist it (cons .name .id))
       (jiralib2-get-issuetypes))))
 
+  (defun isamert/jira--get-issue-template (issue-type)
+    (pcase issue-type
+      ("Story" "*Motivation*\n\n\n*Description*\n\n\n*Acceptance Criteria*\n\n\n*Projects*\n\n\n*Has Automation Test?*\n\n\n*Links (UI/UX, Analysis etc.)*\n\n")
+      ("Sprint Development Bug" "*Description*\n\n\n*Case*\n\n\n*Projects*\n\n")
+      ("Production Bug" "*Description*\n\n\n*Steps*\n\n\n*Projects*\n\n\n*Incident Excel*\n\n\n*Links - SS - Video*\n\n")))
+
   (defun isamert/jira--create-branch-name-from-ticket (issue-name)
     "Create a branch name from given Jira ISSUE-NAME"
-    (thread-last issue-name
+    (thread-last
+      issue-name
       (s-replace-all '((" " . "-") (":" . "-") ("\"" . "") ("/" . "-") ("&" . "") ("(" . "-") (")" . "-")))
       (s-replace "---" "-")
       (s-replace "--" "-")
