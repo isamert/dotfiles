@@ -6429,14 +6429,13 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   (defun isamert/bullet-current-date ()
     "Return current date."
     (save-excursion
-      (re-search-backward "^* \\[")
-      (thread-last
-          (org-get-heading t t t t)
-        (s-match "\\[.*?\\]")
-        (car)
-        (substring-no-properties)
-        (s-chop-prefix "[")
-        (s-chop-suffix "]"))))
+      (when (re-search-backward "^* \\[" nil t)
+        (-some->> (org-get-heading t t t t)
+          (s-match "\\[.*?\\]")
+          (car)
+          (substring-no-properties)
+          (s-chop-prefix "[")
+          (s-chop-suffix "]")))))
 
   (defmacro isamert/when-weekday (template &rest template-args)
     `(when (<= (isamert/u) 5)
