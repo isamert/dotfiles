@@ -4326,6 +4326,9 @@ Feed reader.
 Manage media and streams through =completing-read=.
 
 #+begin_src emacs-lisp
+  ;; Dependency of `empv-display-lyrics'
+  (use-package versuri)
+
   (use-package empv
     :diminish
     :quelpa (empv
