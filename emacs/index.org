@@ -3992,7 +3992,7 @@ automatically by the usage of =M-q=.
     (setq fill-column 80)
   #+end_src
 
-** Spell checking
+** Spell checking & dictionaries & translation
 - Use =flyspell-mode= to start spell checking.
 - Use =ispell-change-dictonary= to change dictionaries.
 - ~z=~ or ~zw~ to correct current spelling mistake.
@@ -4023,6 +4023,81 @@ Better way to correct spelling mistakes. By default it uses completing-read. Thi
       (kbd "zw") #'flyspell-correct-wrapper))
       ;; ^ This goes to nearest spelling mistake.
       ;; If called with C-u, it goes into rapid mode where you correct all mistakes in order.
+#+end_src
+
+*** synosaurus & wordnut
+Both synosaurus and wordnut uses ~wordnet~ to work.
+- Use ~synosaurus-choose-and-replace~ to replace the current word with one of it's synonyms.
+
+#+begin_src emacs-lisp
+  (use-package synosaurus
+    :config
+    (evil-leader/set-key
+      "/s" #'synosaurus-choose-and-replace))
+
+  (use-package wordnut
+    :config
+    (evil-define-key 'normal 'global (kbd "K") #'wordnut-lookup-current-word))
+#+end_src
+
+*** Etymology lookup inside Emacs
+#+begin_src emacs-lisp
+  (evil-leader/set-key
+    "/e" #'isamert/etymology-en)
+
+  (defun isamert/etymology-en (input)
+    "Find and retrieve the given word etymology from etymonline.
+  Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
+    (interactive
+     (list (isamert/region-or 'word)))
+    (let* ((buffer (generate-new-buffer (format "*etymology: %s*" input))))
+      (switch-to-buffer buffer)
+      (insert (shell-command-to-string (concat "links -dump http://www.etymonline.com/word/" input)))
+      (goto-char (point-min))
+      (if (re-search-forward "Error 404 (Not Found)" nil t)
+          (progn
+            (kill-buffer)
+            (user-error "Word not found: %s" input))
+        (progn
+          (delete-region (point-min) (progn
+                                       (goto-char (point-min))
+                                       (search-forward "[\s\s]")))
+          (delete-region (progn
+                           (goto-char (point-max))
+                           (search-backward-regexp "Others are reading"))
+                         (point-max))))
+      (goto-char (point-min))))
+#+end_src
+*** Google translate
+#+begin_src emacs-lisp
+  (evil-leader/set-key
+    "/tt" #'isamert/google-translate-this-en-to-tr
+    "/te" #'isamert/google-translate-this-tr-to-en)
+
+  (defun isamert/google-translate-this (from to)
+    "Translate selected region or current word from FROM to TO.
+  Let's you edit the query beforehand.  Result is printed into minibuffer.
+  You need to install `translate-shell' to make this work."
+    (interactive
+     `(,(read-string "From: " "en") ,(read-string "To: " "tr")))
+    (let ((word (read-string
+                 "Translating: "
+                 (isamert/region-or 'word))))
+      (switch-to-buffer (generate-new-buffer (format "*translate: %s*" word)))
+      (insert
+       (shell-command-to-string
+        (format
+         "trans %s:%s \"%s\""
+         from to word)))
+      (goto-char (point-min))))
+
+  (defun isamert/google-translate-this-en-to-tr ()
+    (interactive)
+    (isamert/google-translate-this "en" "tr"))
+
+  (defun isamert/google-translate-this-tr-to-en ()
+    (interactive)
+    (isamert/google-translate-this "tr" "en"))
 #+end_src
 
 ** string-inflection
@@ -6116,36 +6191,6 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
 
   (evil-leader/set-key
     "/g"   'isamert/google-this)
-#+end_src
-
-** Google translate
-#+begin_src emacs-lisp
-  (defun isamert/google-translate-this (from to)
-    "Translate selected region or current word from FROM to TO.
-  Let's you edit the query beforehand.  Result is printed into minibuffer.
-  You need to install `translate-shell' to make this work."
-    (interactive
-     `(,(read-string "From: " "en") ,(read-string "To: " "tr")))
-    (message
-     (shell-command-to-string
-      (format
-       "trans %s:%s \"%s\""
-       from to
-       (read-string
-        "Translating: "
-        (isamert/region-or 'word))))))
-
-  (defun isamert/google-translate-this-en-to-tr ()
-    (interactive)
-    (isamert/google-translate-this "en" "tr"))
-
-  (defun isamert/google-translate-this-tr-to-en ()
-    (interactive)
-    (isamert/google-translate-this "tr" "en"))
-
-  (evil-leader/set-key
-    "/tt"   'isamert/google-translate-this-en-to-tr
-    "/te"   'isamert/google-translate-this-tr-to-en)
 #+end_src
 
 ** TODO org-mode enhancements
