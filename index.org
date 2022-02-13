@@ -1938,13 +1938,17 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
               echo "Usage:"
               echo "compress <archive-name>.EXT file1 file2"
               echo
-              echo "EXT can be one of the following: .7z .tar.gz .tar.bz2 .zip"
+              echo "EXT can be one of the following: .7z .tar.gz .tgz .tar.bz2 .zip."
+              echo "Also you can add .nocompress to the end of EXT to archive without compressing."
               ;;
           ,*.7z)
               7z a "$EXT" "$@"
               ;;
           ,*.tar.gz|*.tgz)
               tar -czvf "$EXT" "$@"
+              ;;
+          ,*.tar.gz.nocompress|*.tgz.nocompress)
+              tar -cvf "${EXT%.*}" "$@"
               ;;
           ,*.tar.bz2)
               tar -cjvf "$EXT" "$@"
