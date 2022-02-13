@@ -881,6 +881,10 @@ Some small packages that enriches editing experience visually. I don't enable al
       (kbd "C-p") #'evil-complete-previous
       (kbd "C-o") #'evil-execute-in-normal-state)
 
+    ;; C-i is bound to TAB, so I use C-l for `evil-jump-forward'
+    (evil-define-key 'normal 'global
+      (kbd "C-l") #'evil-jump-forward)
+
     (evil-define-key 'normal 'global "Q" #'evil-quit)
 
     ;; When I paste something in visual mode, I don't want it to take
@@ -994,10 +998,6 @@ Enable leader key and bind some keys.
 
     (evil-leader/set-leader "SPC")
     (evil-leader/set-key
-      ;; generic
-      ";"   'eval-last-sexp
-      ","   'eval-defun
-
       ;; buffers
       "bq" #'evil-quit
       "bd" #'isamert/kill-this-buffer))
@@ -4943,6 +4943,9 @@ Here is the current workflow I use:
   (use-package cider
     :ensure t
     (evil-define-key 'normal clojure-mode-map (kbd "K") #'cider-doc)
+    (evil-define-key 'normal cider-inspector-mode-map
+      (kbd "RET") #'cider-inspector-operate-on-point
+      (kbd "DEL") #'cider-inspector-pop)
     (evil-leader/set-key-for-mode 'clojure-mode
       ";" #'cider-eval-last-sexp
       "'" #'cider-eval-defun-at-point
@@ -4989,6 +4992,11 @@ Hit <C-j> after these and get:
 
 ** elisp
 #+begin_src emacs-lisp
+  (evil-leader/set-key
+    ";"  #'eval-last-sexp
+    "'"  #'eval-defun
+    "\\" #'eval-region)
+
   (isamert/prettify-mode 'emacs-lisp-mode-hook
                          '((">="     . ?≥)
                            ("<="     . ?≤)
