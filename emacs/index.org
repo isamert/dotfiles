@@ -5020,8 +5020,23 @@ Here is the current workflow I use:
 - =cider-jack-in=
 
 #+begin_src emacs-lisp
+  ;; `compojure' indent
+  (define-clojure-indent
+    (defroutes 'defun)
+    (GET 2)
+    (POST 2)
+    (PUT 2)
+    (DELETE 2)
+    (HEAD 2)
+    (ANY 2)
+    (OPTIONS 2)
+    (PATCH 2)
+    (rfn 2)
+    (let-routes 1)
+    (context 2))
+
   (use-package cider
-    :ensure t
+    :config
     (evil-define-key 'normal clojure-mode-map (kbd "K") #'cider-doc)
     (evil-define-key 'normal cider-inspector-mode-map
       (kbd "RET") #'cider-inspector-operate-on-point
