@@ -1722,6 +1722,7 @@ This following trick (got it from [[https://www.reddit.com/r/emacs/comments/o68i
 #+begin_src emacs-lisp
   (defun isamert/help-at-point-mode ()
     "Show tooltips in the echo area automatically for current buffer."
+    (interactive)
     (setq-local help-at-pt-display-when-idle t)
     (setq-local help-at-pt-timer-delay 0)
     (help-at-pt-cancel-timer)
@@ -3948,8 +3949,9 @@ For reading epub files.
     ;; Just copied the configuration below from
     ;; https://depp.brause.cc/nov.el/
 
+    (require 'justify-kp)
     (setq nov-text-width t)
-    (setq nov-text-width 80)
+    (setq nov-text-width 120)
     (setq visual-fill-column-center-text t)
 
     (add-hook 'nov-mode-hook 'visual-line-mode)
