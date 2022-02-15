@@ -5367,11 +5367,12 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     "Focus given WINDOW-NAME in `isamert/tmux-session'.
   Creates WINDOW-NAME it if it does not exist."
     (interactive)
-    (isamert/select-tmux-session-if-needed)
-    (shell-command-to-string (format "tmux switch -t%s" isamert/tmux-session))
-    (shell-command-to-string
-     (format "tmux select-window -t%s:%s || tmux new-window -t%s -n %s"
-             isamert/tmux-session window-name isamert/tmux-session window-name)))
+    (let ((window-name-normalized (s-replace "." "-" window-name)))
+      (isamert/select-tmux-session-if-needed)
+      (shell-command-to-string (format "tmux switch -t%s" isamert/tmux-session))
+      (shell-command-to-string
+       (format "tmux select-window -t%s:%s || tmux new-window -t%s -n %s"
+               isamert/tmux-session window-name-normalized isamert/tmux-session window-name-normalized))))
 
   (defun isamert/tmux-focus-perspective-window (&optional pname &rest rest)
     "Focus to the tmux window that has the same name with current perspective.
