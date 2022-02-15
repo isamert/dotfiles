@@ -2501,6 +2501,19 @@ Show TODO/FIXME etc in magit-status buffer.
       (apply 'completing-read args)))
 #+end_src
 
+*** delta (for diff syntax highlighting)
+You need to install ~delta~ (or ~git-delta~) before to get this working. See [[https://github.com/dandavison/delta][here]].
+
+#+begin_src emacs-lisp
+  (use-package magit-delta
+    :after magit
+    :config
+    (setq magit-delta-default-light-theme "Github")
+    (setq magit-delta-default-dark-theme "Monokai Extended Bright")
+    (setq magit-delta-hide-plus-minus-markers nil)
+    (add-hook 'magit-mode-hook (lambda () (magit-delta-mode +1))))
+#+end_src
+
 ** persp-mode and eyebrowse
 Spacemacs has something called ~layouts~ (or something like that), which let's you have ~persp-mode~ and ~eyebrowse~ work together. Just installing eyebrowse and persp-mode just doesn't work. Hence, I copied the glue code from Spacemacs (using [[https://gist.github.com/gilbertw1/8d963083efea41f28bfdc85ed3c93eb4][this gist]]).
 
