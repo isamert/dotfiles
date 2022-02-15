@@ -3724,6 +3724,7 @@ Simple mode for editing =~/.Xmodmap= file.
   (defun isamert/slack-notify (message room team)
     (when (or
            (slack-message-minep message team)
+           (slack-mpim-p room)
            (slack-message-notify-p message room team))
       (let* ((sender-name (slack-message-sender-name message team))
              (room-name (slack-room-name room team))
