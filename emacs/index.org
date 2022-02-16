@@ -2501,7 +2501,7 @@ Show TODO/FIXME etc in magit-status buffer.
       (apply 'completing-read args)))
 #+end_src
 
-*** delta (for diff syntax highlighting)
+*** magit-delta (for diff syntax highlighting)
 You need to install ~delta~ (or ~git-delta~) before to get this working. See [[https://github.com/dandavison/delta][here]].
 
 #+begin_src emacs-lisp
@@ -2511,7 +2511,24 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
     (setq magit-delta-default-light-theme "Github")
     (setq magit-delta-default-dark-theme "Monokai Extended Bright")
     (setq magit-delta-hide-plus-minus-markers nil)
-    (add-hook 'magit-mode-hook (lambda () (magit-delta-mode +1))))
+
+    ;; Apply diff colors to whole visual line
+    ;; See https://github.com/dandavison/magit-delta/issues/6
+    (set-face-attribute 'magit-diff-added-highlight nil :background "#002800")
+    (set-face-attribute 'magit-diff-added nil :background "#002800")
+    (set-face-attribute 'magit-diff-removed-highlight nil :background "#3f0001")
+    (set-face-attribute 'magit-diff-removed nil :background "#3f0001")
+
+    (add-hook 'magit-mode-hook (lambda () (magit-delta-mode +1)))
+    (add-hook 'magit-delta-mode-hook #'isamert/delta-fix-bg-colors))
+
+  (defun isamert/delta-fix-bg-colors ()
+    (setq face-remapping-alist
+          (seq-difference face-remapping-alist
+                          '((magit-diff-removed . default)
+                            (magit-diff-removed-highlight . default)
+                            (magit-diff-added . default)
+                            (magit-diff-added-highlight . default)))))
 #+end_src
 
 ** persp-mode and eyebrowse
