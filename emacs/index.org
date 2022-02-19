@@ -230,6 +230,38 @@ Some basic variable and function definitions that will be used in configuration.
   (defun isamert/mimetype (path)
     "Return mimetype of given file at PATH."
     (string-trim (shell-command-to-string (format "file --brief --mime-type '%s'" path))))
+
+  (defun isamert/to-keyword (it)
+    "Convert given string or symbol to a :keyword."
+    (thread-last
+      (cond
+       ((stringp it) it)
+       ((symbolp it) (symbol-name it))
+       (t (error "Trying to convert %s to symbol" it)))
+      (string-remove-prefix ":")
+      (concat ":")
+      (downcase)
+      (intern)))
+
+  (defun isamert/alist-to-plist (alist)
+    "Convert association list ALIST into the equivalent property-list form.
+  The plist is returned.  This converts from
+
+  \((a . 1) (b . 2) (c . 3))
+
+  into
+
+  \(:a 1 :b 2 :c 3)
+
+  The original alist is not modified.
+
+  This function is taken from `mm-decode.el' and modified."
+    (let (plist)
+      (while alist
+        (let ((el (car alist)))
+          (setq plist (cons (cdr el) (cons (isamert/to-keyword (car el)) plist))))
+        (setq alist (cdr alist)))
+      (nreverse plist)))
 #+end_src
 
 *** Clipboard functions
@@ -307,6 +339,13 @@ Some basic variable and function definitions that will be used in configuration.
                     ('darwin "choose")))
            (result (string-trim (shell-command-to-string (format "echo '%s' | %s" str dmenu)))))
       result))
+
+
+  (defun isamert/alist-dmenu (prompt alist)
+    "Like `isamert/dmenu' but returns value of the selected key in given ALIST."
+    (alist-get
+     (isamert/dmenu prompt alist)
+     alist nil nil #'equal))
 
   (cl-defmacro isamert/output-select
       (&key cmd prompt keep-order (split "\n") (drop 0) (filter t) (map 'it) do)
