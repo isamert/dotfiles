@@ -905,7 +905,7 @@ I keep some of the polybar related variables inside the ~Xresources~ file so tha
 
   modules-left = bspwm xwindowlong
   modules-center = orgclock
-  modules-right = pacman xkeyboard volume memory cpu temperature battery date
+  modules-right = xkeyboard volume memory cpu temperature battery date
 
   tray-position = right
   tray-padding = 2
