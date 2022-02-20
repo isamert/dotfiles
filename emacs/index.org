@@ -328,7 +328,7 @@ Some basic variable and function definitions that will be used in configuration.
            (dmenu (pcase system-type
                     ('gnu/linux (format "rofi -dmenu -fuzzy -i -p '%s'" prompt))
                     ('darwin "choose")))
-           (result (string-trim (shell-command-to-string (format "echo '%s' | %s" str dmenu)))))
+           (result (string-trim (isamert/shell-command-to-string (format "echo '%s' | %s" str dmenu)))))
       result))
 
 
@@ -7224,9 +7224,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   ;; - Fill with tab
   ;; - Copy username/password etc.
   (defun isamert/password-act ()
-    (let* ((passwords (isamert/password-all))
-           (candidates (--map (cons (plist-get it :title) it) passwords))
-           (selected (isamert/alist-dmenu "Select: " candidates)))
+    (and-let* ((passwords (isamert/password-all))
+               (candidates (--map (cons (plist-get it :title) it) passwords))
+               (selected (isamert/alist-dmenu "Select: " candidates)))
       (let-plist selected
         (pcase (isamert/dmenu
                 "Action: "
