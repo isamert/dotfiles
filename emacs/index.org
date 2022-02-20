@@ -420,31 +420,34 @@ Some basic variable and function definitions that will be used in configuration.
 This function is for doing easy REST calls and it uses plists for everything because it's more readable and easier to type than alists (but you can still use alists if you want or need to). I use this to quickly prototype stuff in elisp.
 
 #+begin_src emacs-lisp
-  (cl-defun isamert/rest
+  (cl-defun isamert/request
       (endpoint
        &rest params
        &key (-type "GET") (-headers) (-data) (-params)
        &allow-other-keys)
-    "Do a basic API call and return the result. Some examples:
+    "Like `request' but sync, plist and json oriented. Query
+  parameters are constructed from top-level keywords. Examples:
 
-      (isamert/rest \"some/endpoint\")
+      (isamert/request \"some/endpoint\")
 
   With url parameters:
 
-      (isamert/rest \"...\" :query \"test\" :page 3 :page_size 15)
+      (isamert/request \"...\" :query \"test\" :page 3 :page_size 15)
 
-  If you wan't to pass an alist as url params:
+  If you want to pass an alist as url params:
 
-      (isamert/rest \"...\" :-params '((query . \"test\") (page . 3) (page_size . 15)))
+      (isamert/request \"...\" :-params '((query . \"test\") (page . 3) (page_size . 15)))
 
   POST with json body:
 
-      (isamert/rest \"...\" :-type 'POST :-data '(:key1 1 :key2 2))
+      (isamert/request \"...\" :-type 'POST :-data '(:key1 1 :key2 2))
 
   With some HTTP headers:
 
-      (isamert/rest \"...\" :-headers '(:Authorization \"Bearer e21ewqfasdwtkl\"))
+      (isamert/request \"...\" :-headers '(:Authorization \"Bearer e21ewqfasdwtkl\"))
   "
+
+    (declare (indent defun))
     (let (json
           (json-object-type 'alist)
           (json-array-type #'list)
@@ -474,9 +477,10 @@ This function is for doing easy REST calls and it uses plists for everything bec
                ((and -data (json-plist-p -data)) (transient-plist-to-alist -data))
                ((stringp -data) -data)
                (t nil))
-        :params (if (and -params (json-alist-p -params))
-                    -params
-                  (transient-plist-to-alist params)))
+        :params (cond
+                 ((and -params (json-alist-p -params)) -params)
+                 ((and -params (json-plist-p params)) (transient-plist-to-alist -params))
+                 (t (transient-plist-to-alist params))))
       json))
 #+end_src
 *** Other
