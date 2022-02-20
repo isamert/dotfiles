@@ -1213,6 +1213,9 @@ This is the global keybinding manager.
   hyper + {i,I}
     emacsclient --eval "(isamert/desktop-yankpad {nil,t})"
 
+  hyper + p
+    emacsclient --eval "(isamert/passwords-all)"
+
   # open a terminal (with shift it floats, with ctrl its opaque, with ctrl + shift its floating opaque)
   {super, hyper} + {_, shift + ctrl +, shift +, ctrl +} Return
       term {_,_} {_, --float --opaque --geometry=100x20, --float --geometry=100x20, --opaque}
@@ -1374,6 +1377,7 @@ This is the global keybinding manager for OSX.
   hyper - r : emacsclient -c
   hyper - i : emacsclient --eval "(isamert/desktop-yankpad)"
   hyper - o : emacsclient --eval "(isamert/desktop-yankpad t)"
+  hyper - p : emacsclient --eval "(isamert/passwords-all)"
 
   # move managed window
   # shift + cmd - h : yabai -m window --warp east
@@ -3418,7 +3422,7 @@ You need to install =vim-plug= to be able to install vim extensions.
 #+begin_src shell :tangle (when-on :linux "~/.config/qutebrowser/userscripts/org-pass" :darwin "~/.qutebrowser/userscripts/org-pass")
   #!/bin/bash
 
-  emacsclient --eval "(isamert/qutebrowser-pass \"$QUTE_URL\" \"$QUTE_FIFO\")"
+  emacsclient --eval "(isamert/password-qutebrowser \"$QUTE_URL\" \"$QUTE_FIFO\")"
 #+end_src
 
 *** Cosmetic block list
