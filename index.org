@@ -1214,7 +1214,7 @@ This is the global keybinding manager.
     emacsclient --eval "(isamert/desktop-yankpad {nil,t})"
 
   hyper + p
-    emacsclient --eval "(isamert/passwords-all)"
+    emacsclient --eval "(isamert/password-act)"
 
   # open a terminal (with shift it floats, with ctrl its opaque, with ctrl + shift its floating opaque)
   {super, hyper} + {_, shift + ctrl +, shift +, ctrl +} Return
