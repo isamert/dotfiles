@@ -978,6 +978,11 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'git-timemachine)
     (evil-collection-init 'calendar)
     (evil-collection-init 'eww)
+    (evil-collection-init 'vc-git)
+    (evil-collection-init 'vc-dir)
+    (evil-collection-init 'vc-annotate)
+    (evil-collection-init 'help)
+    (evil-collection-init 'custom)
     (evil-collection-unimpaired-setup))
 #+end_src
 ** evil-unimpaired
@@ -1797,7 +1802,7 @@ Insert links/images more intelligently,
       if it's not provided then it saves the image into ~/.cache."
     (interactive "FSave file to (leave empty to create a temp file): ")
     (let ((file (if (and file-path (not (string-empty-p file-path)))
-                    file-path
+                    (file-relative-name file-path)
                   (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
       (if (isamert/save-clipboard-image-to-file file)
           (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
@@ -2474,7 +2479,18 @@ A package that shows key combinations. (for example press C-x and wait) It also 
       (which-key-posframe-mode)))
 #+END_SRC
 
-** magit & forge
+** magit & vc
+While I mainly use magit for version control stuff, ~vc~ has some nicer parts that I make use of. Like
+- =vc-annotate= :: Faster and simpler alternative to =magit-blame=. (Bound to ~SPC gB~). Use =L= on line to show commit message.
+
+Sometimes I use =vc= for pure speed. Because it supports multiple backends, the terminology is a bit different but here is how you stage and commit (keybindings are coming from [[evil-collection]]):
+- =C-x v d= to open magit-status like status buffer.
+- =TAB= to show diff of the file at point.
+- =m/u= (vc-dir-mark) to mark/unmark files to take an action on them. You can also think this as staging if your next action is going to be committing.
+- =c= (vc-next-action) to commit /staged/ files.
+
+Note that it's not possible to stage hunks with =vc=.
+
 *** Installation
 - Read this for some useful status mode keymaps: https://endlessparentheses.com/it-s-magit-and-you-re-the-magician.html
   - y :: Branch viewer (delete branches with ~k~)
@@ -2500,7 +2516,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
       "gr" 'magit-reset
       "gcc" 'magit-checkout
       "gcf" 'magit-file-checkout
-      "gB" 'magit-blame
+      "gB" 'vc-annotate ;; Git Blame
       "gb" 'magit-branch))
 #+END_SRC
 
