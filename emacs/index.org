@@ -7615,9 +7615,6 @@ Company/work related stuff.
     :kill-process-buffer-on-stop t)
 #+end_src
 
-;; Local Variables:
-;; eval: (add-hook 'after-save-hook (lambda () (if (y-or-n-p "Tangle?") (org-babel-tangle))) nil t)
-;; End:
 ** forge & code-review
 #+begin_src emacs-lisp
   (use-package forge
@@ -7641,3 +7638,7 @@ Company/work related stuff.
     (setq code-review-gitlab-host "gitlab.trendyol.com/api")
     (setq code-review-gitlab-graphql-host "gitlab.trendyol.com/api"))
 #+end_src
+
+;; Local Variables:
+;; eval: (add-hook 'after-save-hook (lambda () (if (y-or-n-p "Tangle?") (org-babel-tangle))) nil t)
+;; End:
