@@ -4126,6 +4126,50 @@ Both synosaurus and wordnut uses ~wordnet~ to work.
     (evil-define-key 'normal 'global (kbd "K") #'wordnut-lookup-current-word))
 #+end_src
 
+*** tdk
+Turkish dictionary.
+
+#+begin_src emacs-lisp
+  (defun isamert/tdk (input)
+    "Fetch the meaining of INPUT from TDK and display it in a nicely
+  formatted org buffer."
+    (interactive
+     (list (read-string "Kelime: " (isamert/region-or 'word))))
+    (let ((result (isamert/request "http://sozluk.gov.tr/gts" :ara input)))
+      (when (alist-get 'error result)
+        (user-error "Böyle bir kelime yok :("))
+      (switch-to-buffer-other-window (get-buffer-create (format "*tdk: %s*" input)))
+      (-each-indexed result
+        (lambda (madde-index madde)
+          (let-alist madde
+            (insert (format "* %s (%s)\n" .madde (s-repeat (1+ madde-index) "I")))
+            (--each-indexed .anlamlarListe
+              (insert
+               (format
+                "%s. %s%s\n"
+                (1+ it-index)
+                (if-let* ((specs (string-join
+                                  (--map (format "/%s/" (alist-get 'tam_adi it)) (alist-get 'ozelliklerListe it))
+                                  ", "))
+                          (_ (not (s-blank? specs))))
+                    (concat specs ". ") "")
+                (alist-get 'anlam it)))
+              (--each (alist-get 'orneklerListe it)
+                (let-alist it
+                  (insert
+                   (format
+                    " : %s - *%s*\n" .ornek
+                    (alist-get 'tam_adi (--find (string= (alist-get 'yazar_id it) .yazar_id) .yazar)))))))
+            (unless (s-blank? .birlesikler)
+              (insert (format "\nBirleşikler: %s\n"
+                              (string-join
+                               (--map
+                                (format "[[elisp:(isamert/tdk \"%s\")][%s]]" it it)
+                                (split-string .birlesikler ", "))
+                               ", ")))))
+          (insert "\n"))))
+    (org-mode))
+#+end_src
 *** Etymology lookup inside Emacs
 #+begin_src emacs-lisp
   (evil-leader/set-key
