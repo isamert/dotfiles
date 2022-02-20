@@ -156,15 +156,6 @@ Some basic variable and function definitions that will be used in configuration.
         (buffer-substring-no-properties (region-beginning) (region-end))
       (thing-at-point what t)))
 
-  (defun isamert/define-key (&rest k+c)
-    "Simple wrapper around `define-key' that let's you define-keys
-  multiple times in one call."
-    (let ((mode (car k+c)))
-      (setq k+c (cdr k+c))
-      (while k+c
-        (define-key mode (car k+c) (cadr k+c))
-        (setq k+c (cddr k+c)))))
-
   (defmacro with-default-browser (&rest body)
     `(let ((browse-url-handlers nil)
            (browse-url-browser-function 'browse-url-default-browser))
@@ -2518,13 +2509,15 @@ Show TODO/FIXME etc in magit-status buffer.
 #+BEGIN_SRC emacs-lisp
   (use-package magit-todos
     :config
-    (magit-todos-mode 1))
+    (magit-todos-mode nil))
 #+END_SRC
 
 *** git-timemachine
-- Toggle with ~git-timemachine~.
-- When in timemachine,
-  - use =gt<SOMETHING>= to do timemachine specific operations.
+- Toggle with ~git-timemachine~ (SPC gt).
+- When in timemachine mode,
+  - use =gt<SOMETHING>= to do timemachine specific operations. Some useful ones are:
+    - t -> =git-timemachine-show-revision-fuzzy=, selects a revision through completing-read interface.
+    - y/Y -> Yank (abbreviated) revision hash.
   - ~C-j/k~ to go to prev/next revision of the file.
 
 #+begin_src emacs-lisp
@@ -2537,7 +2530,8 @@ Show TODO/FIXME etc in magit-status buffer.
     ;; Override completing-read function to make it use
     ;; `completing-read' no matter what
     (defun git-timemachine-completing-read-fn (&rest args)
-      (apply 'completing-read args)))
+      (with-completing-read-exact-order
+       (apply 'completing-read args))))
 #+end_src
 
 *** magit-delta (for diff syntax highlighting)
