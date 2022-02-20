@@ -7088,53 +7088,62 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 #+end_src
 ** Password manager
 #+begin_src emacs-lisp
+  (defun isamert/password-all ()
+    "Get list of all passwords and their properties from `passwords.org'."
+    (with-current-buffer "passwords.org"
+      (->>
+       (lambda ()
+         (let ((link "")
+               (match (org-entry-get nil "MATCH"))
+               (header-link (save-excursion (forward-char 5) (org-element-context)))
+               (title (org-entry-get nil "ITEM"))
+               (props (isamert/alist-to-plist (org-entry-properties))))
+           (when (plist-get props :username)
+             ;; ^ A password entry should contain at least the :username: prop
+             (when (eq (org-element-type header-link) 'link)
+               (setq link (org-element-property :raw-link header-link))
+               (save-excursion
+                 (setq title
+                       (buffer-substring-no-properties
+                        (org-element-property :contents-begin header-link)
+                        (org-element-property :contents-end header-link)))))
+             `(:title ,title :link ,link ,@props))))
+       (org-map-entries)
+       (-filter #'identity))))
+
   ;; TODO Better matching algorithm Check if full string matches any,
   ;; then check if host matches. Return full string match only if it
   ;; exists. Also check if toplevel domain matches, if it does not match
   ;; fully
-
-  (defun isamert/find-password-for (url)
-    "Return matching accounts for given URL."
+  (defun isamert/password-find-for (url)
+    "Return matching accounts for given URL.
+  If there are multiple accounts registered for one entry, then
+  list them as seperate entries."
     (interactive)
     (let ((urlobj (url-generic-parse-url url)))
       (setq url (url-host urlobj))
       (when-let ((port (url-port-if-non-default urlobj)))
         (setq url (format "%s:%s" url port))))
-    (with-current-buffer "passwords.org"
-      (let* ((candidates
-              (seq-filter
-               #'identity
-               (org-map-entries
-                (lambda  ()
-                  (let ((link "")
-                        (match (org-entry-get nil "MATCH"))
-                        (header-link (save-excursion
-                                       (forward-char 5)
-                                       (org-element-context)))
-                        (title (org-entry-get nil "ITEM")))
-                    (when (eq (org-element-type header-link) 'link)
-                      (setq link (org-element-property :raw-link header-link))
-                      (save-excursion
-                        (setq title
-                              (buffer-substring-no-properties
-                               (org-element-property :contents-begin header-link)
-                               (org-element-property :contents-end header-link)))))
-                    (when (or (ignore-errors (s-match match url))
-                              (s-contains? url link))
-                      `(("ITEM" . ,title) ,@(org-entry-properties)))))))))
-        (-flatten-n
-         1
-         (-map (lambda (info)
-                 (let ((unames (s-split " " (cdr (assoc-string "USERNAME" info))))
-                       (pwds (s-split " " (cdr (assoc-string "PASSWORD" info)))))
-                   (-zip  (--map (format "%s - %s" (cdr (assoc-string "ITEM" info)) it) unames)
-                          (--map (list :info info :acc it)
-                                 (-zip unames pwds)))))
-               candidates)))))
+    (let* ((candidates (--filter
+                        (when (or (ignore-errors (s-match (plist-get it :match) url))
+                                  (s-contains? url (plist-get it :link)))
+                          it)
+                        (isamert/password-all))))
+      (-flatten-n
+       1
+       (-map (lambda (info)
+               (let ((unames (s-split " " (plist-get info :username)))
+                     (pwds (s-split " " (plist-get info :password))))
+                 (-zip  (--map (format "%s - %s" (plist-get info :title) it) unames)
+                        (--map (list :info info :acc it)
+                               (-zip unames pwds)))))
+             candidates))))
 
-  (defun isamert/qutebrowser-pass (url fifo)
-    (let* ((candidates (isamert/find-password-for url))
-           (result (plist-get (alist-get (isamert/dmenu "Select account: " candidates) candidates nil nil #'equal) :acc))
+  (defun isamert/password-qutebrowser (url fifo)
+    "Find credentials for currently open link in Qutebrowser and fill."
+    (let* ((candidates (isamert/password-find-for url))
+           (result (plist-get
+                    (alist-get (isamert/dmenu "Select account: " candidates) candidates nil nil #'equal) :acc))
            (username (car result))
            (password (-some->> (cdr result)
                        (s-replace "\"" "\\\"")
@@ -7152,6 +7161,37 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
           ("Fill password"
            (write-region "mode-enter insert\n" nil fifo 'append)
            (write-region (format "fake-key %s\n" password) nil fifo 'append))))))
+
+  ;; TODO Add other actions:
+  ;; - Fill with tab
+  ;; - Copy username/password etc.
+  (defun isamert/password-act ()
+    (let* ((passwords (isamert/password-all))
+           (candidates (--map (cons (plist-get it :title) it) passwords))
+           (selected (isamert/alist-dmenu "Select: " candidates)))
+      (let-plist selected
+        (pcase (isamert/dmenu
+                "Action: "
+                (list "Copy as username:password"
+                      "Copy as PostgreSQL connection string"
+                      "Copy as SQL src block header args"
+                      "Copy as Couchbase (CBC, N1QL) src block header args"))
+          ("Copy as username:password"
+           (kill-new
+            (format "%s:%s" .username .password)))
+          ("Copy as PostgreSQL connection string"
+           (kill-new
+            (format "postgresql://%s:%s@%s:%s/%s"
+                    .username .password .host .port .db)))
+          ("Copy as SQL src block header args"
+           (kill-new
+            (format ":engine postgresql :dbhost %s :dbuser %s :dbpassword %s :database %s :dbport %s"
+                    .host .username .password .db .port)))
+          ("Copy as Couchbase (CBC, N1QL) src block header args"
+           (kill-new
+            (format ":host %s :username %s :password %s"
+                    .host .username .password)))))))
+
 #+end_src
 ** Kubernetes
 My main use case is drop into a shell of a pod. The code below makes it quite easy. Use ~isamert/kube-select-pod~ to select a pod and do some actions on it.
