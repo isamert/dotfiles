@@ -5214,17 +5214,29 @@ Hit <C-j> after these and get:
 #+end_src
 
 ** elisp
+*** Keybindings
 #+begin_src emacs-lisp
   (evil-leader/set-key
     ";"  #'eval-last-sexp
     "'"  #'eval-defun
     "\\" #'eval-region)
+#+end_src
 
-  (isamert/prettify-mode 'emacs-lisp-mode-hook
-                         '((">="     . ?≥)
-                           ("<="     . ?≤)
-                           ("defun"  . ?ƒ)
-                           ("lambda" . ?λ)))
+*** Inspector/debugging/pretty-printing
+There is a built-in function (~data-debug-eval-expression~) to inspect objects (not good as CIDERs inspector but it works). I made a helper function to evaluate last expression and open data-debug window of it.
+
+#+begin_src emacs-lisp
+  (defun isamert/eval-and-inspect-last-sexp ()
+    (interactive)
+    (data-debug-show-stuff (eval-last-sexp nil) "last sexp"))
+#+end_src
+
+There is also ~pp-eval-last-sexp~ which evaluates and pretty-prints the result of last expression in a separate buffer, which can be better for inspection sometimes.
+
+*** Inline/popup documentation
+#+begin_src emacs-lisp
+  (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
+  (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
 
   ;; https://emacs.stackexchange.com/questions/2777/how-to-get-the-function-help-without-typing
   (defun isamert/describe-thing-in-popup ()
@@ -5243,9 +5255,15 @@ Hit <C-j> after these and get:
                  :height 65
                  :scroll-bar t
                  :margin t)))
+#+end_src
 
-  (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
-  (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
+*** Pretty stuff
+#+begin_src emacs-lisp
+  (isamert/prettify-mode 'emacs-lisp-mode-hook
+                         '((">="     . ?≥)
+                           ("<="     . ?≤)
+                           ("defun"  . ?ƒ)
+                           ("lambda" . ?λ)))
 #+end_src
 
 For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
