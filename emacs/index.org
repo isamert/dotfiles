@@ -840,11 +840,6 @@ Make some temproary windows appear at bottom. This makes buffer management so mu
                    (inhibit-same-window . t)
                    (window-height . ,size))))
 
-  (isamert/shackle-window "\\*Org Select\\*" 0.4)
-  (isamert/shackle-window "magit.*" 0.7)
-  (isamert/shackle-window "\\*xref\\*" 0.4)
-  (isamert/shackle-window "\\*Org Select\\*" 0.4)
-
   (defun isamert/clear-side-windows ()
     "Clear all side windows.
   This is sometimes required to get around the error: `Cannot make
