@@ -5607,6 +5607,14 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     nil
     "Gitlab group.")
 
+  (defvar isamert/gitlab-after-mr-create-functions
+    '()
+    "Functions to run after an MR is created.")
+
+  (defvar isamert/gitlab-after-mr-mark-ready-functions
+    '()
+    "Functions to run after an MR is marked ready.")
+
   (defun isamert/gitlab-project-path ()
     "Return hexified project path for current git project.
   This is mostly used while doing an api call for the current
@@ -5626,7 +5634,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
        &key (req-type "GET") (req-headers '()) (req-data nil)
        &allow-other-keys)
     (let (json
-          (json-object-type 'hash-table)
+          (json-object-type 'alist)
           (json-array-type #'list)
           (json-key-type 'symbol))
 
@@ -5636,8 +5644,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
       (request
         (thread-last (format "%s/api/v4/%s" isamert/gitlab-host endpoint)
-          (s-replace "#{group}" (url-hexify-string isamert/gitlab-group))
-          (s-replace "#{project}" (isamert/gitlab-project-path)))
+                     (s-replace "#{group}" (url-hexify-string isamert/gitlab-group))
+                     (s-replace "#{project}" (isamert/gitlab-project-path)))
         :type req-type
         :headers `((Authorization . ,(format "Bearer %s" isamert/gitlab-token)) ,@req-headers)
         :parser #'json-read
@@ -5686,25 +5694,28 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defun isamert/gitlab-create-merge-request ()
     "Create an MR interactively."
     (interactive)
-    (isamert/gitlab--open-web-url
-     (isamert/gitlab-request
-      "projects/#{project}/merge_requests"
-      :req-type "POST"
-      :req-data (list :source_branch (completing-read
-                                      "Source branch: "
-                                      (vc-git-branches)
-                                      nil nil (isamert/git-current-branch))
-                      :target_branch (completing-read
-                                      "Target branch: "
-                                      (vc-git-branches)
-                                      nil nil "master")
-                      :title (read-string "MR Title: "
-                                          (s-trim (shell-command-to-string "git log -1 --pretty=%B")))
-                      ;; TODO Get description (and maybe title) from a
-                      ;; dedicated buffer like how magit commit asks
-                      ;; input from a user
-                      :description (read-string "Description: " (format "Closes %s" (isamert/git-current-branch)))
-                      :remove_source_branch t))))
+    (let ((result
+           (isamert/gitlab-request
+            "projects/#{project}/merge_requests"
+            :req-type "POST"
+            :req-data (list :source_branch (completing-read
+                                            "Source branch: "
+                                            (vc-git-branches)
+                                            nil nil (isamert/git-current-branch))
+                            :target_branch (completing-read
+                                            "Target branch: "
+                                            (vc-git-branches)
+                                            nil nil "master")
+                            :title (read-string "MR Title: "
+                                                (s-trim (shell-command-to-string "git log -1 --pretty=%B")))
+                            ;; TODO Get description (and maybe title) from a
+                            ;; dedicated buffer like how magit commit asks
+                            ;; input from a user
+                            :description (read-string "Description: " (format "Closes %s" (isamert/git-current-branch)))
+                            :remove_source_branch t))))
+      (--each isamert/gitlab-after-mr-create-functions
+        (funcall it result))
+      (isamert/gitlab-open-web-url result)))
 
   (defun isamert/gitlab-select-project ()
     (interactive)
@@ -5715,32 +5726,43 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       :include_subgroups 'true
       :per_page 100)))
 
+  (defun isamert/gitlab-open-web-url (it)
+    (let ((url (alist-get 'web_url it)))
+      (kill-new url)
+      (browse-url (alist-get 'web_url it))))
+
+  (defun isamert/gitlab-rebase-merge-request (it)
+    (isamert/gitlab-request
+     (format "projects/%s/merge_requests/%s/rebase" (alist-get 'project_id it) (alist-get 'iid it))
+     :req-type "PUT"))
+
+  (defun isamert/gitlab-mark-mr-as-ready (mr)
+    (let ((result
+           (isamert/gitlab-request
+            (format "projects/%s/merge_requests/%s" (alist-get 'project_id mr) (alist-get 'iid mr))
+            :req-type "PUT"
+            :req-data (list :title (s-chop-prefixes '("WIP: " "Draft: ") (alist-get 'title mr))))))
+      (--each isamert/gitlab-after-mr-mark-ready-functions
+        (funcall it result))))
+
   ;;
   ;; Internal
   ;;
 
-  (defun isamert/gitlab--open-web-url (it)
-    (browse-url (gethash 'web_url it)))
-
-  (defun isamert/gitlab--rebase-merge-request (it)
-    (isamert/gitlab-request
-     (format "projects/%s/merge_requests/%s/rebase" (gethash 'project_id it) (gethash 'iid it))
-     :req-type "PUT"))
-
   (defun isamert/gitlab--mr-format-title (mr)
     (format "%s, [%s], by %s"
-            (propertize (gethash 'title mr)
+            (propertize (alist-get 'title mr)
                         'face 'bold)
             (propertize
              (->>
-              (gethash 'web_url mr)
+              (alist-get 'web_url mr)
               (s-chop-prefix isamert/gitlab-host)
               (s-split "/-/merge_requests/")
               (car)
               (s-split "/")
               (-last-item))
              'face '(:weight thin))
-            (propertize (gethash 'name (gethash 'author mr))
+            (propertize (alist-get 'name (alist-get 'author mr))
                         'face 'italic)))
 
   (defun isamert/gitlab--select-mr-and-apply-action (mrs)
@@ -5757,30 +5779,23 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (with-completing-read-exact-order
      (let ((action (completing-read
                     "Select an action: "
-                    '("Open page"
-                      "Rebase"))))
+                    '("Open page" "Copy url" "Rebase" "Mark as ready"))))
        (pcase action
-         ("Open page" (isamert/gitlab--open-web-url mr))
-         ("Rebase" (isamert/gitlab--rebase-merge-request mr))))))
+         ("Open page" (isamert/gitlab-open-web-url mr))
+         ("Copy url" (kill-new (alist-get 'web_url mr)))
+         ("Mark as ready" (isamert/gitlab-mark-mr-as-ready mr))
+         ("Rebase" (isamert/gitlab-rebase-merge-request mr))))))
 
   ;; TODO actions
   (defun isamert/gitlab--select-project-and-apply-action (projects)
     (let ((project-alist (--map
-                          (cons (gethash 'name_with_namespace it) it)
+                          (cons (alist-get 'name_with_namespace it) it)
                           projects)))
       (completing-read
        "Project: "
        (--map
-        (gethash 'name_with_namespace it)
+        (alist-get 'name_with_namespace it)
         projects))))
-
-  ;;
-  ;; Gitlab config
-  ;;
-
-  (setq isamert/gitlab-host ty/gitlab-url)
-  (setq isamert/gitlab-token ty/gitlab-token)
-  (setq isamert/gitlab-group ty/gitlab-group)
 #+end_src
 
 ** Jira
@@ -6910,6 +6925,8 @@ Sometimes I just want to delete/rename/move etc. the current file without resort
       (let ((buffer-offer-save nil))
         (set-buffer-modified-p nil)
         (kill-buffer (current-buffer)))))
+
+  (defalias 'isamert/remove-current-file #'isamert/delete-current-file)
 #+end_src
 
 ** xah-open-file-at-cursor
@@ -7424,6 +7441,37 @@ Company/work related stuff.
 
   (when (company/is-company)
     (add-hook 'git-commit-setup-hook 'company/git-commit-message-setup))
+#+end_src
+
+** Gitlab config
+#+begin_src emacs-lisp
+  (setq isamert/gitlab-host ty/gitlab-url)
+  (setq isamert/gitlab-token ty/gitlab-token)
+  (setq isamert/gitlab-group ty/gitlab-group)
+#+end_src
+
+** Automatically move task into code review after an MR is created
+#+begin_src emacs-lisp
+  (add-hook 'isamert/gitlab-after-mr-create-functions #'ty/move-task-to-in-progress)
+  (add-hook 'isamert/gitlab-after-mr-mark-ready-functions #'ty/move-task-to-in-progress)
+
+  (defun ty/move-task-to-in-progress (mr)
+    (let ((title (alist-get 'title mr))
+          (source-branch (alist-get 'source_branch mr)))
+      (unless (or (s-prefix? "Draft:" title) (s-prefix? "WIP:" title))
+        (message ">> Moving task into `Code Review'.")
+        (isamert/jira-change-issue-status-to-status
+         (isamert/extract-ticket-number-from-branch-name source-branch)
+         "Code Review"))))
+
+  (defun isamert/extract-ticket-number-from-branch-name (branch)
+    (->>
+     branch
+     (s-split "/")
+     (nth 1)
+     (s-split "-")
+     (-take 2)
+     (s-join "-")))
 #+end_src
 
 ** Misc bindings
