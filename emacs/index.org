@@ -5143,22 +5143,8 @@ Here is the current workflow I use:
 - =cider-jack-in=
 
 #+begin_src emacs-lisp
-  ;; `compojure' indent
-  (define-clojure-indent
-    (defroutes 'defun)
-    (GET 2)
-    (POST 2)
-    (PUT 2)
-    (DELETE 2)
-    (HEAD 2)
-    (ANY 2)
-    (OPTIONS 2)
-    (PATCH 2)
-    (rfn 2)
-    (let-routes 1)
-    (context 2))
-
   (use-package cider
+    :after clojure-mode
     :config
     (evil-define-key 'normal clojure-mode-map (kbd "K") #'cider-doc)
     (evil-define-key 'normal cider-inspector-mode-map
@@ -5167,7 +5153,22 @@ Here is the current workflow I use:
     (evil-leader/set-key-for-mode 'clojure-mode
       ";" #'cider-eval-last-sexp
       "'" #'cider-eval-defun-at-point
-      "\\" #'cider-eval-region))
+      "\\" #'cider-eval-region)
+
+    ;; `compojure' indent
+    (define-clojure-indent
+     (defroutes 'defun)
+     (GET 2)
+     (POST 2)
+     (PUT 2)
+     (DELETE 2)
+     (HEAD 2)
+     (ANY 2)
+     (OPTIONS 2)
+     (PATCH 2)
+     (rfn 2)
+     (let-routes 1)
+     (context 2)))
 #+end_src
 ** emmet-mode
 Hit <C-j> after these and get:
