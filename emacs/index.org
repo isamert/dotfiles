@@ -7450,21 +7450,22 @@ Company/work related stuff.
 #+end_src
 ** Automatically insert issue numbers into commit messages
 #+begin_src emacs-lisp
-  ;; TODO: maybe find all changed functions/files and append them into
-  ;; the buffer as default message so that I can simply construct my
-  ;; commit message based on those
   (defun company/git-commit-message-setup ()
     "Insert the JIRA ticket number in front of the commit message.
   If it already exists (like for example when you use --amend),
   does not do anything."
-    (when-let (ticket-no (s-match "\\w+-[0-9]+" (magit-get-current-branch)))
-      (let* ((issue-prefix (format "%s - " (car ticket-no)))
-             (issue-prefix-exists (save-excursion
-                                    (goto-char (point-min))
-                                    (search-forward issue-prefix nil t))))
-        (when (not issue-prefix-exists)
-          (goto-char (point-min))
-          (insert issue-prefix)))))
+    (when (s-contains? "trendyol" (isamert/git-link-homepage))
+      (if-let (ticket-no (s-match "\\w+-[0-9]+" (magit-get-current-branch)))
+          (let* ((issue-prefix (format "%s - " (car ticket-no)))
+                 (issue-prefix-exists (save-excursion
+                                        (goto-char (point-min))
+                                        (search-forward issue-prefix nil t))))
+            (when (not issue-prefix-exists)
+              (goto-char (point-min))
+              (insert issue-prefix)))
+        (goto-char (point-min))
+        (unless (re-search-forward "SAT-" nil t)
+          (insert "SAT-1 ")))))
 
   (when (company/is-company)
     (add-hook 'git-commit-setup-hook 'company/git-commit-message-setup))
