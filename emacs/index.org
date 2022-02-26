@@ -339,7 +339,7 @@ Some basic variable and function definitions that will be used in configuration.
      alist nil nil #'equal))
 
   (cl-defmacro isamert/output-select
-      (&key cmd prompt keep-order (split "\n") (drop 0) (filter t) (map 'it) do)
+      (&key cmd prompt keep-order (split "\n") (drop 0) (filter t) (map 'it) (do 'it))
     "Run given CMD and do a `completing-read' on it.
   This macro is intended to quicken up the process of running a
   shell command and doing a completing-read on it and then using
@@ -2122,7 +2122,7 @@ I'm experimenting with using default Emacs calendar as my work calendar. To do s
 To sync it automatically:
 
 #+begin_src emacs-lisp
-  (run-with-timer 60 (* 30 60) #'isamert/update-calendar)
+  ;; (run-with-timer 60 (* 30 60) #'isamert/update-calendar)
 #+end_src
 
 *** appt.el: notifications for org-agenda and diary items
@@ -6009,7 +6009,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defun isamert/jira-change-issue-status (key)
     (interactive "sIssue number: ")
     (->>
-     (isamert/jira-get-issue-transitions "SAT-107")
+     (isamert/jira-get-issue-transitions key)
      (--map (cons (alist-get 'name it) it))
      (isamert/alist-completing-read "Select status: ")
      (alist-get 'id)
@@ -7290,6 +7290,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
     (s-trim (shell-command-to-string "kubectl config current-context")))
 
   (defun isamert/kube-use-context ()
+    (interactive)
     (isamert/output-select
      :cmd "kubectl config get-contexts --output=name"
      :drop 1
@@ -7316,20 +7317,32 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
     (with-completing-read-exact-order
      (let ((namespace (plist-get pod :namespace))
            (name (plist-get pod :name)))
-       (pcase (completing-read (format "Act on '%s'" name) '("Exec into default container" "Exec into container" "Logs" "Remove"))
+       (pcase (completing-read (format "Act on '%s'" name) '("Exec into default container" "Exec into container" "Logs" "App logs" "Remove"))
          ("Exec into default container"
-          (with-current-buffer (vterm (format "pod: %s" name))
+          (with-current-buffer (vterm (format "(vterm) pod: %s" name))
             (vterm-insert (format "kubectl exec --namespace='%s' -i -t '%s' -- bash"
                                   namespace
                                   name))))
          ("Exec into container"
           (let ((container (isamert/kube-pod--select-container pod)))
-            (with-current-buffer (vterm (format "pod: %s" name))
+            (with-current-buffer (vterm (format "(vterm) pod: %s" name))
               (vterm-insert (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' -- bash"
                                     namespace
                                     container
                                     name)))))
-         ("Logs" (user-error "Not implemented"))
+         ("Logs" (let ((container (isamert/kube-pod--select-container pod)))
+                   (with-current-buffer (vterm (format "(vterm) pod: %s" name))
+                     (vterm-insert (format "kubectl logs %s -f --namespace='%s' --container='%s'"
+                                           name
+                                           namespace
+                                           container)))))
+         ;; Logs from all pods combined for given pod's app
+         ("App logs" (let ((container (isamert/kube-pod--select-container pod)))
+                       (with-current-buffer (vterm (format "(vterm) pod: %s" name))
+                         (vterm-insert (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s'"
+                                               (isamert/kube-pod--get-app-name pod)
+                                               namespace
+                                               container)))))
          ("Remove" (user-error "Not implemented"))))))
 
   (defun isamert/kube-pod--select-container (pod)
@@ -7340,6 +7353,15 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
            (plist-get pod :namespace))
      :prompt (format "Container for %s: " (plist-get pod :name))
      :split " "))
+
+  (defun isamert/kube-pod--get-app-name (pod)
+    "Return the application name of the POD belongs."
+    (s-trim
+     (shell-command-to-string
+      (format
+       "kubectl get pod %s --namespace='%s' -o custom-columns=:metadata.labels.app"
+       (plist-get pod :name)
+       (plist-get pod :namespace)))))
 #+end_src
 ** Kafka
 #+begin_src emacs-lisp
