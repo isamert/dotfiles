@@ -1378,6 +1378,7 @@ This is the global keybinding manager for OSX.
   hyper - i : emacsclient --eval "(isamert/desktop-yankpad)"
   hyper - o : emacsclient --eval "(isamert/desktop-yankpad t)"
   hyper - p : emacsclient --eval "(isamert/passwords-all)"
+  hyper - 9 : /usr/bin/osascript -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
 
   # move managed window
   # shift + cmd - h : yabai -m window --warp east
