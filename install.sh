@@ -7,7 +7,7 @@ case ${1:-""} in
         echo "=> Cleaning old files..."
         rm -f ~/.emacs.d/index.org
         rm -f ~/.emacs.d/index.el
-        for file in ${PWD}/emacs/load/*.el; do
+        for file in "${PWD}/emacs/load"/*.el; do
             [[ ! $file = *secrets* ]] && rm -f "${HOME}/.emacs.d/load/$(basename "${file}")"
         done
         ;;
@@ -17,19 +17,18 @@ echo "=> Installing Emacs configuration..."
 ln -s "${PWD}/emacs/index.org" ~/.emacs.d/index.org
 ln -s "${PWD}/emacs/index.el" ~/.emacs.d/index.el
 
-mkdir -p ~/.emacs/load/
-for file in ${PWD}/emacs/load/*.el; do
-    ln -s "${file}" "$HOME/.emacs.d/load/$(basename ${file})"
+mkdir -p ~/.emacs.d/load/
+for file in "${PWD}/emacs/load"/*.el; do
+    ln -s "${file}" "$HOME/.emacs.d/load/$(basename "${file}")"
 done
-
-if [[ $EMACS_ONLY = 1 ]]; then
-    exit 0;
-fi
 
 set +e
 read -rd '' EMACS_EVAL <<EOF
 (progn
   (require 'org)
+
+  (setq org-babel-noweb-wrap-start "<<<")
+  (setq org-babel-noweb-wrap-end ">>>")
 
   (add-hook 'org-babel-post-tangle-hook 'executable-make-buffer-file-executable-if-script-p)
 
