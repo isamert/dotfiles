@@ -227,6 +227,45 @@ This file contains some mappings for my keyboard. I can simply change how a key 
   ,*color7:  #a89984
   ,*color15: #ebdbb2
 #+end_src
+** picom compositor
+See [[https://github.com/yshui/picom/blob/next/picom.sample.conf][this file]] for more detailed information on configuration options.
+
+#+begin_src conf :tangle (when-linux "~/.config/picom.conf")
+  # Performance etc.
+  vsync = true
+  dbe = false;
+  sw-opti = false;
+  unredir-if-possible = true;
+  backend = "glx";
+  glx-no-stencil = true;
+  glx-no-rebind-pixmap = true;
+  glx-swap-methond = "exchange";
+
+  # Shadows
+  shadow = true;
+  shadow-offset-x = -8;
+  shadow-offset-y = -8;
+  shadow-opacity = 0.5;
+  shadow-radius = 5;
+
+  # Exclude transparent stuff from using shadows
+  shadow-exclude = [
+    "class_g ?= 'st'",
+    "class_g ?= 'rofi'",
+    "class_g ?= 'slop'", # maim -s
+    "class_g ?= 'firefox'",
+    "class_g = 'firefox' && argb",
+    "name = 'cpt_frame_xcb_window'",
+    "class_g ?= 'zoom'",
+  ];
+
+  # Fading
+  fading = true;
+  fade-in-step = 0.03;
+  fade-out-step = 0.05;
+  fade-exclude = [ "name = 'i3lock'" ];
+#+end_src
+
 ** Karabiner config
 #+begin_src json :tangle (when-darwin "~/.config/karabiner/karabiner.json")􆎦
   {
