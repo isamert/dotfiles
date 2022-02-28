@@ -4684,7 +4684,7 @@ For the wacom tablet:
 
       xclip -selection clipboard -t "$(file -b --mime-type "$file")" -i "$file"
   elif [[ -z "$input" ]]; then
-      "$CLIP_CMD" <&0
+      $CLIP_CMD <&0
   else
       printf "$input" | "$CLIP_CMD"
   fi
