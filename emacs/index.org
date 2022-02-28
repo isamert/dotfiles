@@ -7575,15 +7575,22 @@ Company/work related stuff.
     (interactive)
     (ty/open-test-code-coverage-report t))
 
+  (defun ty/find-test-file--java ()
+    (let ((java-test-file
+           (->>
+            buffer-file-name
+            (s-replace "/main/" "/test/")
+            (s-chop-suffixes '(".java" ".kt")))))
+      (--find (s-starts-with? java-test-file it) (f-files (f-dirname java-test-file)))))
+
+  (defun ty/find-test-file--ts ()
+    (concat
+     (file-name-directory buffer-file-name)
+     "__tests__/"
+     (s-replace ".ts" ".spec.ts" (file-name-nondirectory buffer-file-name))))
+
   (defun ty/find-test-file ()
-    (let ((test-file
-           (concat
-            (file-name-directory buffer-file-name)
-            "__tests__/"
-            (s-replace ".ts" ".spec.ts" (file-name-nondirectory buffer-file-name)))))
-      (if (file-exists-p test-file)
-          test-file
-        buffer-file-name)))
+    (-find #'file-exists-p (list (ty/find-test-file--java) (ty/find-test-file--ts) buffer-file-name)))
 
   (defun ty/jump-to-test-file ()
     "Jump to test file of current file."
@@ -7592,8 +7599,15 @@ Company/work related stuff.
 
   (defun ty/run-current-test-file (run-only-focused-test)
     (interactive "P")
-    (let* ((default-directory (isamert/current-project-root))
-           (test-file (ty/find-test-file))
+    (cond
+     ((locate-dominating-file "." "yarn.lock") (ty/run-current-test-file--yarn run-only-focused-test))
+     ((locate-dominating-file "." "pom.xml") (ty/run-current-test-file--mvn run-only-focused-test))
+     (t (user-error "This project type is not recognized"))))
+
+  (defun ty/run-current-test-file--yarn (run-only-focused-test)
+    (ty/jump-to-test-file)
+    (let* ((test-file buffer-file-name)
+           (default-directory (isamert/current-project-root))
            (current-test-name
             (ignore-errors
               (save-excursion
@@ -7602,9 +7616,33 @@ Company/work related stuff.
                 (nth 1 (s-match "it(['\"]\\(.*\\)['\"]," (substring-no-properties (thing-at-point 'line))))))))
       (isamert/shell-command
        :command (format "yarn jest --colors --runTestsByPath %s %s"
-                        (file-relative-name test-file  (isamert/current-project-root))
+                        (file-relative-name test-file (isamert/current-project-root))
                         (if (and run-only-focused-test current-test-name)
                             (format "-t \"%s\"" current-test-name)
+                          "")))))
+
+  (defun ty/run-current-test-file--mvn (run-only-focused-test)
+    (ty/jump-to-test-file)
+    (let* ((test-file buffer-file-name)
+           (default-directory (isamert/current-project-root))
+           (current-test-class
+            (save-excursion
+              (end-of-line)
+              (re-search-backward "@ExtendWith(Mock" nil t)
+              (forward-line)
+              (nth 1 (s-match "class \\([A-Za-z0-9_]+\\) " (substring-no-properties (thing-at-point 'line))))))
+           (current-test-name
+            (ignore-errors
+              (save-excursion
+                (end-of-line)
+                (re-search-backward "@Test" nil t)
+                (forward-line)
+                (nth 1 (s-match " \\([A-Za-z0-9_]+\\)(" (substring-no-properties (thing-at-point 'line))))))))
+      (isamert/shell-command
+       :command (format "./mvnw test --offline -Dstyle.color=always -Djansi.force=true -Dtest='%s%s'"
+                        current-test-class
+                        (if (and run-only-focused-test current-test-name)
+                            (format "#%s" current-test-name)
                           "")))))
 
   (defun ty/run-current-test-only ()
