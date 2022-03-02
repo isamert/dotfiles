@@ -734,9 +734,9 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
 #+BEGIN_SRC emacs-lisp
   (use-package all-the-icons)
   (use-package all-the-icons-completion
-    :after (all-the-icons)
+    :after (all-the-icons vertico)
     :config
-    (all-the-icons-completion-mode))
+    (all-the-icons-completion-mode +1))
 #+END_SRC
 
 ** prettify-symbols-mode
@@ -3040,15 +3040,7 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
                 :items    isamert/my-files)
     "My frequently accessed files source for `consult-buffer'.")
 
-  (setq
-   consult-buffer-sources
-   `(isamert/consult-source-perspective-buffers
-     consult--source-buffer
-     consult--source-file
-     isamert/consult-source-files
-     consult--source-bookmark
-     consult--source-project-buffer
-     consult--source-project-file))
+  (add-to-list 'consult-buffer-sources '(isamert/consult-source-perspective-buffers isamert/consult-source-files))
 
   (defun isamert/my-files ()
     "Return list of all files I frequently use."
