@@ -2957,6 +2957,15 @@ Some key points:
     <<consult-perspective-switch-buffers>>)
 #+end_src
 
+*** consult-project-extra
+#+begin_src emacs-lisp
+  (use-package consult-project-extra
+    :ensure t
+    :config
+    (define-key project-prefix-map "o" #'consult-project-extra-find)
+    (add-to-list 'project-switch-commands `(consult-project-extra-find "consult")))
+#+end_src
+
 *** Project & file management
 Some functionality for project management. I do some fine-tuning for =find= and =ripgrep= commands that consult uses.
 
@@ -2965,8 +2974,7 @@ Some functionality for project management. I do some fine-tuning for =find= and 
   (evil-leader/set-key
     "hf"  #'isamert/find-file-in
     "hR"  #'isamert/consult-ripgrep-in-given-directory
-    "hr"  #'isamert/consult-ripgrep-current-directory
-    "pg" #'isamert/consult-ripgrep)
+    "hr"  #'isamert/consult-ripgrep-current-directory)
 
   ;; TODO fix search
   (setq
@@ -3113,9 +3121,7 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 - After doing ~project-switch-project~, you are expected to hit a key to trigger a project action, like finding a file in the project or doing a project grep. You need to add these actions into ~project-switch-commands~ list and you need to define a key in ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by given key.
 
 #+begin_src emacs-lisp
-  (evil-leader/set-key
-    "pp" #'project-switch-project
-    "pf" #'project-find-file)
+  (evil-leader/set-key "p" (lambda () (interactive) (project-switch-project (isamert/current-project-root))))
 
   (setq project-switch-commands
         '((project-find-file "Find file")
