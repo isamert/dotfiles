@@ -727,18 +727,6 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
     (load-theme theme t))
 #+END_SRC
 
-** all-the-icons
-- You should run =all-the-icons-install-fonts= command after this. Also run =fc-cache -f -v= afterwards (=all-the-icons-install-fonts= already does that but it may fail).
-- =all-the-icons-completion= gives you icons in completion UI, like in =completing-read= etc.
-
-#+BEGIN_SRC emacs-lisp
-  (use-package all-the-icons)
-  (use-package all-the-icons-completion
-    :after (all-the-icons vertico)
-    :config
-    (all-the-icons-completion-mode +1))
-#+END_SRC
-
 ** prettify-symbols-mode
 I make use of this mode quite frequently throughout the configuration.
 
@@ -3128,6 +3116,9 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
           (project-find-dir "Find directory")
           (project-eshell "Eshell")))
 
+  (define-key project-prefix-map "s" #'project-switch-project)
+  (add-to-list 'project-switch-commands `(project-switch-project "Switch"))
+
   (define-key project-prefix-map "g" #'isamert/consult-ripgrep)
   (add-to-list 'project-switch-commands `(isamert/consult-ripgrep "Grep"))
 
@@ -4060,6 +4051,17 @@ For reading epub files.
 
     (add-hook 'nov-post-html-render-hook 'isamert/nov-post-html-render-hook))
 #+end_src
+** all-the-icons
+- You should run =all-the-icons-install-fonts= command after this. Also run =fc-cache -f -v= afterwards (=all-the-icons-install-fonts= already does that but it may fail).
+- =all-the-icons-completion= gives you icons in completion UI, like in =completing-read= etc.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package all-the-icons)
+  (use-package all-the-icons-completion
+    :after (all-the-icons vertico)
+    :config
+    (all-the-icons-completion-mode +1))
+#+END_SRC
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
