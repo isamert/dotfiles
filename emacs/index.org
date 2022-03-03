@@ -5081,6 +5081,58 @@ The following enables =CamelCase= aware editing operations.
     (add-hook 'tsx-mode-hook #'isamert/add-node-modules-to-path))
 #+end_src
 
+*** REPL interaction
+#+begin_src emacs-lisp
+  (evil-leader/set-key-for-mode 'typescript-mode
+    ";" #'isamert/ts-send-expression-to-repl)
+
+  (defun isamert/tsc-find-parent-with-type (node wanted-type)
+    "Get first parent of NODE where parents type is WANTED-TYPE."
+    (let ((curr-node node)
+          (curr-type nil))
+      (while (and curr-node (not (equal curr-type wanted-type)))
+        (setq curr-node (tsc-get-parent curr-node))
+        (setq curr-type (when curr-node (tsc-node-type curr-node))))
+      curr-node))
+
+  (defun isamert/ts-current-expression ()
+    "Get smallest meaningful expression (as something that can be
+  sent to REPL)."
+    (let* ((current-node (tree-sitter-node-at-point))
+           (getter (lambda (it)
+                     (when-let (node (isamert/tsc-find-parent-with-type current-node (car it)))
+                       (if (numberp (cdr it))
+                           (tsc-get-nth-child node (cdr it))
+                         node)))))
+      (->>
+       '((variable_declarator . 2)
+         (expression_statement . 0)
+         (function_declaration)
+         (interface_declaration)
+         (enum_declaration)
+         (import_statement)
+         (class_declaration))
+       (-find getter)
+       (funcall getter)
+       (tsc-node-text))))
+
+  (defun isamert/ts-send-expression-to-repl ()
+    "Send current meaningful expression to node REPL."
+    (interactive)
+    (if-let (expression
+             (if (use-region-p)
+                 (buffer-substring-no-properties (region-beginning)
+                                                 (region-end))
+               (isamert/ts-current-expression)))
+        (isamert/with-visible-buffer
+         ".*vterm.*"
+         (vterm-send-string ".editor")
+         (vterm-send-return)
+         (vterm-send-string expression)
+         (vterm-send-C-d))
+      (user-error "No expression is found")))
+#+end_src
+
 ** json
 #+begin_src emacs-lisp
   (use-package json-mode)
