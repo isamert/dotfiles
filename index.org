@@ -1681,6 +1681,7 @@ This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really 
   alias fkill="fuzzy kill"
 
   # utility
+  alias cdt="cd $(mktemp -d)"
   alias mktar="tar -cvf"
   alias mkbz2="tar -cvjf"
   alias mkgz="tar -cvzf"
