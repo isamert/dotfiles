@@ -1651,17 +1651,15 @@ This is the global keybinding manager for OSX.
 
 * Shells
 ** Aliases
-This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really use it).
+This file is sourced by both =zsh= and =bash=.
 
 #+begin_src bash :tangle ~/.config/aliases
-  # NOTE:  Do not use alias xxx='...', use ". (For eshell converting script)
-
   # package management
   alias aur="$AUR_HELPER"
   alias aurin="$AUR_HELPER -S"
   alias aurs="$AUR_HELPER -Ss"
   alias aurupg="$AUR_HELPER -Syu"
-  alias pac="sudo pacman"
+  alias pac="fuzzy packages"       # A fuzzy, interactive package finder
   alias pacs="pacman -Ss"
   alias pacin="sudo pacman -S"
   alias pacinf="fuzzy pacman"
@@ -1673,7 +1671,6 @@ This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really 
   alias pacbin="pacman -Fs"        # Same as above
   alias pacre="sudo pacman -R"     # Leave dependencies and configurations
   alias pacrem="sudo pacman -Rns"
-  alias pacpac="fuzzy packages"    # A fuzzy, interactive package finder
 
   # process management
   alias nameof="ps -o comm= -p" # Get the name of given PID
@@ -1682,9 +1679,6 @@ This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really 
 
   # utility
   alias cdt="cd $(mktemp -d)"
-  alias mktar="tar -cvf"
-  alias mkbz2="tar -cvjf"
-  alias mkgz="tar -cvzf"
   alias ...="cd ../.."
   alias ....="cd ../../.."
   alias .....="cd ../../../.."
@@ -1693,8 +1687,6 @@ This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really 
   alias xpaste="xclip -selection clipboard -o" # paste cb content
   alias fastssh="ssh -Y -C -c chacha20-poly1305@openssh.com"
 
-  #alias ls="
-  #alias lls="ls -lthG --color --group-directories-first"
   alias ls="lsd --group-dirs first --classify"
   alias ll="lsd --group-dirs first --classify --oneline"
   alias lls="lsd --group-dirs first --classify --long"
@@ -1705,42 +1697,22 @@ This file is sourced by both =zsh= and =bash= (also =eshell= but I don't really 
   alias n="nvim"
   alias v="jaro --method=view"
   alias e="jaro --method=edit"
+  alias o="jaro"
   alias mt="jaro --mime-type"
   alias how="howdoi --color --all"
   alias mkx="chmod +x"
   alias ytdl="youtube-dl"
 
-  alias ctl="systemctl "
-  alias ctlu="systemctl --user"
-  alias ctls="systemctl status"
-  alias ctlus="systemctl --user status"
-  alias ctle="systemctl enable --now"
-  alias ctlue="systemctl --user enable"
-
   # master Wq
   alias :q="exit"
   alias :wq="exit"
 
-  # git
-  alias g="git"
-  alias gs="git status"
-  alias ga="fuzzy git add"
-  alias gl="fuzzy git log"
-  alias gf="fuzzy git files"
-  alias gc="git commit -m"
-  alias gpm="git push origin master"
-
   # useful
-  alias clearvimswap="rm $HOME/.local/share/nvim/swap/*"
   function is-emacs { [[ "$INSIDE_EMACS" = "vterm" ]]; }
 
   # stuff
   alias ipaddr="curl https://api.ipify.org"
   alias ipinfo="curl https://ipinfo.io"
-  alias download-website="wget --recursive --page-requisites --html-extension
-      --convert-links --no-parent --limit-rate=500K" # Download a website completely
-  alias git-todo="rg 'FIXME|TODO'"
-  alias git-todo-count="rg -c --color never 'FIXME|TODO' | cut -d: -f2 | paste -sd+ | bc"
 #+end_src
 * Zsh
 Check out these links to get a grasp of how all of these stuff work. I also tried to add notes to each file.
