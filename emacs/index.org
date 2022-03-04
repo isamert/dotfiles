@@ -158,7 +158,7 @@ Some basic variable and function definitions that will be used in configuration.
 
   (defmacro with-default-browser (&rest body)
     `(let ((browse-url-handlers nil)
-           (browse-url-browser-function 'browse-url-default-browser))
+           (browse-url-browser-function 'browse-url-secondary-browser))
        ,@body))
 
   (defmacro with-completing-read-exact-order (&rest body)
@@ -2176,24 +2176,6 @@ To sync it automatically:
     (appt-activate 1))
 #+end_src
 
-*** Open zoom meetings easily
-Opening a zoom link first redirects you to a browser and then opens the zoom app, but if you just use the ~zoommtg://~ schema to open a zoom meeting, it directly opens the app which is quite nice.
-
-#+begin_src emacs-lisp
-  (defun isamert/open-zoom-meeting-dwim ()
-    "Open the zoom meeting at point or the one in the kill-ring."
-    (interactive)
-    (when-let* ((zoom (s-match
-                       "https://.*zoom\\.us/j/\\(\\w+\\)\\?pwd=\\(\\w+\\)"
-                       (or (thing-at-point 'url) (car kill-ring))))
-                (cmd (format
-                      "open 'zoommtg://zoom.us/join?confno=%s&pwd=%s'"
-                      (nth 1 zoom)
-                      (nth 2 zoom))))
-      (message ">> Running %s" cmd)
-      (shell-command cmd)))
-#+end_src
-
 *** More org-mode and diary integration and utilities
 #+begin_src emacs-lisp
   (defun isamert/diary-kill-entry-as-bullet-task (&optional include-description)
@@ -2286,9 +2268,9 @@ Opening a zoom link first redirects you to a browser and then opens the zoom app
     (setq shr-max-image-proportion 0.6)
     (setq shr-discard-aria-hidden t)
 
+    (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
-          '((".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . browse-url-default-browser)
-            (".*youtube.*/watch.*" . (lambda (url &rest args) (empv-play url)))
+          '((".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . browse-url-secondary-browser-function)
             ("." . browse-url-default-browser)))
 
     (evil-define-key 'normal eww-mode-map

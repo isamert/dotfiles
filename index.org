@@ -2363,70 +2363,37 @@ In this file I define some file associations. Please refer to [[https://github.c
   #+end_src
 
 #+begin_src scheme :tangle ~/.config/associations
-  ;;
-  ;; Some utilities
-  ;;
-
-  (define (screen-width)
-    (string->number (string-trim-both (car (read-sys-out "bspwmc focused_monitor_width")))))
-
-  (define (screen-height)
-    (string->number (string-trim-both (car (read-sys-out "bspwmc focused_monitor_height")))))
-
-  ;;
-  ;; Associations
-  ;;
-
   (assoc
    #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
-   #:program "zathura %f"
-   #:view #t)
-
-  (assoc
-   #:pattern "\\.org$"
-   #:program "emacsclient -c --tty %f"
-   #:term "emacsclient -c %f"
-   #:on-error "notify-send 'error' 'emacs daemon is not working'"
-   #:view (open-with 'bat)
-   #:standalone #t)
-
-  (assoc
-   #:pattern "^(text|application)/(x-)?csv$"
-   #:program "sc-im %f"
-   #:term "term -e"
-   #:view #t
-   #:edit (open-with 'editor))
+   #:program '(zathura %f))
 
   (assoc
    #:pattern '("^text/html" "^application/x?htm")
-   #:program (open-with 'browser)
-   #:view #t
-   #:edit (open-with 'editor))
+   #:program 'browser
+   #:edit 'editor)
 
   (assoc
    #:name 'editor
    #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript|xml)")
-   #:program "emacsclient -c %f"
-   #:view (open-with 'bat)
-   #:edit #t)
+   #:emacs (elisp (find-file %F))
+   #:program '(emacsclient -c %f)
+   #:term '(emacsclient -c %f)
+   #:view 'bat)
 
   (assoc
-   #:pattern "^video/"
-   #:program "mpv %f"
-   #:on-error "vlc %f"
-   #:view #t)
-
-  (assoc
-   #:pattern "^audio/"
-   #:program "mpc insert %f"
-   #:on-success "mpc next"
-   #:on-error "mpv %f")
+   #:name 'empv
+   #:pattern '("^video/" "^audio/")
+   #:program (elisp (empv-enqueue "%F"))
+   #:on-error '(mpv %f))
 
   (assoc
    #:pattern "inode/directory"
-   #:program "ranger %f"
-   #:term "term -e"
-   #:tmux "tmux split-window -h")
+   #:program '(term -e ranger %f)
+   #:term '(ranger %f))
+
+  (assoc
+   #:pattern "https://.*zoom\\.us/j/(\\w+)\\?pwd=(\\w+)"
+   #:program '(zoom zoommtg://zoom.us/join?confno=%1&pwd=%2))
 
   (assoc
    #:pattern '("^https?://(www.)?youtube.com/watch\\?.*v="
@@ -2436,64 +2403,46 @@ In this file I define some file associations. Please refer to [[https://github.c
                "^https?://giant.gfycat.com/.+"
                "https?://v.redd.it/.+"
                "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
-   #:program (lambda (file mimetype _)
-               (system*
-                "tsp"
-                "mpv"
-                "--x11-name=youtube"
-                "--geometry=-10-10"
-                (format #f "--ytdl-format=bestvideo[height<=?~a]+bestaudio/best" (screen-height))
-                (format #f "--autofit=~ax~a" (floor (/ (screen-width) 3)) (floor (/ (screen-height) 3)))
-                file))
+   #:program 'empv
    #:on-error (open-with 'browser))
 
   (assoc
+   #:name 'feh
    #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
-   #:program "notify-send 'jaro' 'Opening image...'; TMP_IMG=$(mktemp); curl -L %f > $TMP_IMG && nsxiv $TMP_IMG"
-   #:on-error "feh --start-at %f"
-   #:view #t
-   #:edit "pinta %f")
+   #:program '(feh --start-at %f))
 
   ;; Open all images in a folder starting with given image innsxiv
   (assoc
-   #:pattern "^image/.*$"
-   #:program "nsxiv --browse --lazy-load --max-depth=3 %f"
-   #:on-error "feh --start-at %f"
-   #:view #t
-   #:edit "pinta %f")
+   #:pattern "^image/.*"
+   #:program '(nomacs %f)
+   #:on-error 'feh)
 
   (assoc
-   #:pattern "^https?://(www.)?reddit.com/r/\\w+/comments"
-   #:program "ttrv %f"
-   #:term "term -e"
-   #:tmux "tmux split-window -h"
-   #:on-error (open-with 'browser))
+   #:pattern "^https?://(www.)?reddit.com/r/(\\w+)/comments/(.*?)/"
+   #:program (elisp (reddigg-view-comments "https://www.reddit.com/r/%2/comments/%3"))
+   #:on-error 'browser)
 
   (assoc
    #:pattern '("^magnet:" "\\.torrent$")
-   #:program "qbittorrent %f"
-   #:on-success "notify-send 'Success' 'Torrent added to download list'"
-   #:on-error "notify-send 'Fail' 'Can't add torrent"
-   #:edit (open-with 'editor))
+   #:program '(qbittorrent --skip-dialog=false %f))
 
   (assoc
    #:name 'browser
-   #:pattern '("^https?://.*"
-               "^.*\\.html?(#[\\w_-]+)?")
-   #:program "qutebrowser %f"
-   #:test "pgrep qutebrowser"
-   #:on-fail "firefox %f"
-   #:view #t
-   #:edit (open-with 'editor))
+   #:pattern '("^https?://.*" "^.*\\.html?(#[\\w_-]+)?")
+   #:emacs (elisp (eww "%f"))
+   #:program '(qutebrowser %f)
+   #:test '(pgrep qutebrowser)
+   #:on-fail '(firefox %f)
+   #:edit 'editor)
 
   (assoc
    #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
-   #:program "xarchiver %f"
-   #:view "xarchiver %f")
+   #:program '(xarchiver %f)
+   #:view '(xarchiver %f))
 
   (assoc
    #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
-   #:program "desktopeditors %F")
+   #:program '(desktopeditors %F))
 
   (assoc
    #:pattern ".*"
@@ -2507,7 +2456,7 @@ In this file I define some file associations. Please refer to [[https://github.c
   (assoc
    #:name 'bat
    #:pattern ".*"
-   #:program "bat --paging=always %f"
+   #:program '(bat --paging=always %f)
    #:view #t)
 
   ;; vi:syntax=scheme
