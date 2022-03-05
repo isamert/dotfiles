@@ -2368,7 +2368,7 @@ In this file I define some file associations. Please refer to [[https://github.c
    #:program '(zoom zoommtg://zoom.us/join?confno=%1&pwd=%2))
 
   (assoc
-   #:pattern '("^https?://(www.)?youtube.com/watch\\?.*v="
+   #:pattern '("^https?://(www.)?youtube.com/"
                "^https?://(www.)?youtu.be/"
                "^https?://(www.)?v.redd.it/\\w+/DASH"
                "^https?://([a-zA-Z-]+)?streamable.com"
@@ -2383,7 +2383,6 @@ In this file I define some file associations. Please refer to [[https://github.c
    #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
    #:program '(feh --start-at %f))
 
-  ;; Open all images in a folder starting with given image innsxiv
   (assoc
    #:pattern "^image/.*"
    #:program '(nomacs %f)
@@ -2409,8 +2408,7 @@ In this file I define some file associations. Please refer to [[https://github.c
 
   (assoc
    #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
-   #:program '(xarchiver %f)
-   #:view '(xarchiver %f))
+   #:program '(xarchiver %f))
 
   (assoc
    #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
@@ -2418,8 +2416,7 @@ In this file I define some file associations. Please refer to [[https://github.c
 
   (assoc
    #:pattern ".*"
-   #:program (select-alternative-with "dmenu")
-   #:standalone #t)
+   #:program (select-alternative-with "dmenu"))
 
   ;;
   ;; Rest is used only with references
@@ -2428,8 +2425,7 @@ In this file I define some file associations. Please refer to [[https://github.c
   (assoc
    #:name 'bat
    #:pattern ".*"
-   #:program '(bat --paging=always %f)
-   #:view #t)
+   #:program '(bat --paging=always %f))
 
   ;; vi:syntax=scheme
 #+end_src
