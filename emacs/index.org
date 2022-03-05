@@ -2260,6 +2260,8 @@ To sync it automatically:
 
   (use-package eww
     :config
+    (evil-leader/set-key "ew" #'eww)
+
     (add-hook 'eww-after-render-hook #'shrface-mode)
     (setq shr-image-animate nil)
     ;; ^ Gifs make my computer suffer, so I just disable them
@@ -2284,9 +2286,7 @@ To sync it automatically:
       (kbd "S-<tab>") 'shrface-outline-cycle-buffer
       (kbd "C-t") 'shrface-toggle-bullets
       (kbd "[[") 'shrface-previous-headline
-      (kbd "]]") 'shrface-next-headline
-      (kbd "M-l") 'shrface-links-consult
-      (kbd "M-h") 'shrface-headline-consult))
+      (kbd "]]") 'shrface-next-headline)
 
   (defun isamert/eww-save-image ()
     "Save the image at point."
