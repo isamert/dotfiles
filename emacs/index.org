@@ -4490,67 +4490,6 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
     :config
     (setq orgmdb-omdb-apikey isamert/orgmdb-omdb-apikey)
     (setq orgmdb-fill-property-list '(genre runtime director country imdb-link imdb-rating metascore)))
-
-  (defun isamert/watchlist-select-episode ()
-    "List all episodes of current show and act on selected one."
-    (interactive)
-    (with-completing-read-exact-order
-     (let ((show (orgmdb :imdb (org-entry-get nil "IMDB-ID") :episode 'all)))
-       (->>
-        show
-        (alist-get 'Episodes)
-        (--map (let-alist it
-                 (cons (format "S%02dE%02d - %s"
-                               (string-to-number .Season)
-                               (string-to-number .Episode)
-                               .Title)
-                       it)))
-        (isamert/alist-completing-read "Select an episode: ")
-        (isamert/watchlist--act-on-episode show)))))
-
-  (defun isamert/watchlist--act-on-episode (show episode)
-    (let ((show-title (alist-get 'Title show))
-          (episode-selector (format
-                             "s%02de%02d"
-                             (string-to-number (alist-get 'Season episode))
-                             (string-to-number (alist-get 'Episode episode)))))
-      (pcase (completing-read "Select an action: " '("Open" "Search on 1337x.to"))
-        ("Open"
-         (message (format "fd --absolute-path --type=file --glob '*%s*%s*' %s"
-                          (s-downcase (s-replace " " "*" show-title))
-                          episode-selector
-                          empv-video-dir))
-         (->>
-          (format "fd --absolute-path --type=file --glob '*%s*%s*' %s"
-                  (s-downcase (s-replace " " "*" show-title))
-                  episode-selector
-                  empv-video-dir)
-          (shell-command-to-string)
-          (s-split "\n")
-          (--filter (not (s-blank? it)))
-          (completing-read "Select file: ")
-          (empv-play)))
-        ("Search on 1337x.to"
-         (browse-url
-          (format "https://1337x.to/search/%s+%s/1/"
-                  (->>
-                   show-title
-                   (s-downcase)
-                   (s-replace " " "+"))
-                  episode-selector))))))
-
-  (defun isamert/watchlist-open-video-at-point ()
-    (interactive)
-    (->>
-     (org-entry-get nil "ITEM")
-     (s-replace " " "*")
-     (s-downcase)
-     ((lambda (it) (format "fd --absolute-path --type=file --glob '*%s*' %s" it empv-video-dir)))
-     (shell-command-to-string)
-     (s-split "\n")
-     (--filter (not (s-blank? it)))
-     (completing-read "Select file: ")
-     (empv-play)))
 #+end_src
 ** erc (IRC client)
 IRC client for Emacs.
