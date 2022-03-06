@@ -6445,12 +6445,12 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "Get week number."
     (string-to-number (format-time-string "%V")))
 
-  (defun isamert/date (date)
+  (defun isamert/date (date &optional str)
     "Display the time described by DATE.
   DATE can be 'now', 'yesterday', 'two days ago' etc."
     (s-trim-right
      (shell-command-to-string
-      (concat (locate-file "date" exec-path) " --date='" date "' +'%Y-%m-%d %a'"))))
+      (concat (locate-file "date" exec-path) " --date='" date "' +'" (or str "%Y-%m-%d %a") "'"))))
 
   ;;
   ;; Create utils
