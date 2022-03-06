@@ -4039,6 +4039,12 @@ For reading epub files.
     :config
     (all-the-icons-completion-mode +1))
 #+END_SRC
+** reddigg
+It lets me display comments of given reddit thread in an org buffer using the =reddigg-view-comments= function.
+
+#+begin_src emacs-lisp
+  (use-package reddigg)
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
