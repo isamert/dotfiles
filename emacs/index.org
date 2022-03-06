@@ -4390,7 +4390,10 @@ Feed reader.
                (test (lambda (s r) (string-match-p r s)))
                (format (cl-assoc url youtube-feed-format :test test)))
           (cons (format (cdr format) url) tags)))
-       ((member 'reddit tags) (cons (format "https://www.reddit.com/r/%s/.rss" url) tags))
+       ((member 'reddit tags)
+        (cons (format "https://www.reddit.com/r/%s/.rss" url) tags))
+       ((member 'gh-release tags)
+        (cons (format "https://github.com/%s/releases.atom" url) tags))
        (listing))))
 
   (use-package elfeed

@@ -97,4 +97,7 @@
     ("KALTChannel" youtube fun turkish)
 
     ("UCWXCrItCF6ZgXrdozUS-Idw" youtube fun animation) ; ExplosmEntertainment
+
+    ;; Software tracking
+    ("alphapapa/org-ql" gh-release app)
     ))
