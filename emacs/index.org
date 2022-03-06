@@ -156,11 +156,6 @@ Some basic variable and function definitions that will be used in configuration.
         (buffer-substring-no-properties (region-beginning) (region-end))
       (thing-at-point what t)))
 
-  (defmacro with-default-browser (&rest body)
-    `(let ((browse-url-handlers nil)
-           (browse-url-browser-function 'browse-url-secondary-browser))
-       ,@body))
-
   (defmacro with-completing-read-exact-order (&rest body)
     "Disable any kind of sorting in completing read."
     `(let ((selectrum-should-sort nil)
@@ -1243,7 +1238,6 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
   (evil-leader/set-key
     "oyy" #'isamert/org-store-link-dwim
     "oo"  #'org-open-at-point
-    "oO"  (lambda () (interactive) (with-default-browser (call-interactively 'org-open-at-point)))
 
     "oa"  #'org-agenda
     "ow"  #'widen
@@ -4415,18 +4409,7 @@ Feed reader.
 
     ;; To apply hooks to all existing entries, use: elfeed-apply-hooks-now
 
-    (defun isamert/elfeed-search-browse-url-in-default-browser ()
-      "Open URL in the default browser."
-      (interactive)
-      (with-default-browser
-        (elfeed-search-browse-url)))
-
-    ;; o -> Open link in eww
-    ;; O -> Open link in default web browser
-    (evil-define-key 'normal elfeed-search-mode-map
-      "o" #'elfeed-search-browse-url
-      "O" #'isamert/elfeed-search-browse-url-in-default-browser)
-
+    (evil-define-key 'normal elfeed-search-mode-map "o" #'elfeed-search-browse-url)
     (evil-leader/set-key "ee" #'elfeed))
 #+end_src
 
