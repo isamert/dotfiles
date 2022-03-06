@@ -45,6 +45,7 @@
     ("https://www.theinsight.org/feed" blog essay) ;; Zeynep Tufekci
     ("https://medium.com/feed/incerto" blog essay) ;; Nassim Nicholas Taleb
     ;; ("https://jabberwocking.com/feed/" blog essay) ;; Kevin Drum
+    ("https://fatmagulunyengesi.substack.com/feed" blog essay turkish)
 
     ("BlackMetalUpdates" youtube music metal black)
     ("XOdiumNostrumX" youtube music metal extreme)
