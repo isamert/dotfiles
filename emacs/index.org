@@ -1319,7 +1319,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (setq org-directory "~/Documents/notes")
     (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
     ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
-    (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org))
+    (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org))
 
     ;; With the following, I can call functions defined inside this file in other org files
     (org-babel-lob-ingest "~/Documents/notes/utils.org"))
