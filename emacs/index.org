@@ -686,8 +686,11 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
   (use-package doom-themes
     :defer t)
 
-  (defconst isamert/font-height 160)
   (defconst isamert/fonts '("Iosevka Nerd Font"))
+  (defconst isamert/font-height
+    (pcase system-type
+      ('gnu/linux 120)
+      ('darwin 160)))
 
   (defun isamert/set-font-and-theme-config ()
     "Configure font and theme."
@@ -2286,7 +2289,7 @@ To sync it automatically:
       (kbd "S-<tab>") 'shrface-outline-cycle-buffer
       (kbd "C-t") 'shrface-toggle-bullets
       (kbd "[[") 'shrface-previous-headline
-      (kbd "]]") 'shrface-next-headline)
+      (kbd "]]") 'shrface-next-headline))
 
   (defun isamert/eww-save-image ()
     "Save the image at point."
@@ -3186,11 +3189,9 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     (setq flycheck-check-syntax-automatically '(save new-line mode-enabled))
     ;; ^ Alternatives are (save idle-change new-line mode-enabled)
     (setq flycheck-display-errors-delay 0.3)
+    (setq flycheck-emacs-lisp-load-path 'inherit)
 
-    (global-flycheck-mode)
-
-    (evil-define-minor-mode-key 'normal 'flycheck-mode
-      (kbd "gE") #'isamert/show-error-list))
+    (global-flycheck-mode))
 
   (use-package consult-flycheck
     :after flycheck
