@@ -44,6 +44,7 @@
     ("https://astralcodexten.substack.com/feed" blog essay) ;; Scott Alexander
     ("https://www.theinsight.org/feed" blog essay) ;; Zeynep Tufekci
     ("https://medium.com/feed/incerto" blog essay) ;; Nassim Nicholas Taleb
+    ("https://www.cold-takes.com/rss" blog essay)
     ;; ("https://jabberwocking.com/feed/" blog essay) ;; Kevin Drum
     ("https://fatmagulunyengesi.substack.com/feed" blog essay turkish)
 
