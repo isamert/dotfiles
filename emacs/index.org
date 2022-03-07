@@ -5803,7 +5803,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defvar isamert/jira-feature-branch-prefix "feature/"
     "Prefix to prepend feature branch names.")
 
-  (defvar isamert/jira-my-issues-query "Pair-programmer = currentUser() OR assignee = currentUser() ORDER BY createdDate DESC"
+  (defvar isamert/jira-my-issues-query "Pair-programmer = currentUser() OR assignee = currentUser() OR creator = currentUser() ORDER BY createdDate DESC"
     "Query to find out issues that are assigned to me.")
 
   (defvar isamert/jira-kanban-board-query
@@ -7221,6 +7221,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   ;; - Fill with tab
   ;; - Copy username/password etc.
   (defun isamert/password-act ()
+    (interactive)
     (and-let* ((passwords (isamert/password-all))
                (candidates (--map (cons (plist-get it :title) it) passwords))
                (selected (isamert/alist-dmenu "Select: " candidates)))
@@ -7719,6 +7720,18 @@ Company/work related stuff.
 
     (setq code-review-gitlab-host "gitlab.trendyol.com/api")
     (setq code-review-gitlab-graphql-host "gitlab.trendyol.com/api"))
+#+end_src
+
+** bigquery-mode
+- Functions are named like ~bqm-...~.
+
+#+begin_src emacs-lisp
+  (use-package bigquery-mode
+  :ensure t
+  :diminish
+  :quelpa (bigquery-mode
+           :fetcher github
+           :repo "christophstockhusen/bigquery-mode"))
 #+end_src
 
 ;; Local Variables:
