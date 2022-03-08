@@ -310,28 +310,29 @@ Some basic variable and function definitions that will be used in configuration.
      (completing-read prompt alist)
      alist nil nil #'equal))
 
-  (defun isamert/dmenu (prompt items)
+  (defun isamert/dmenu (prompt items &rest ignored)
     "Like `completing-read' but instead use dmenu.
-  Useful for system-wide scripts.  If ITEMS is an alist, then
-  returns the value instead of selected key."
-    (let* ((alist? (listp (car items)))
-           (str (string-trim-left
-                 (--reduce-from
-                  (format "%s\n%s" acc (if alist? (car it) it))
-                  ""
-                  items)))
-           (dmenu (pcase system-type
-                    ('gnu/linux (format "rofi -dmenu -fuzzy -i -p '%s'" prompt))
-                    ('darwin "choose")))
-           (result (string-trim (isamert/shell-command-to-string (format "echo '%s' | %s" str dmenu)))))
-      result))
-
-
-  (defun isamert/alist-dmenu (prompt alist)
-    "Like `isamert/dmenu' but returns value of the selected key in given ALIST."
-    (alist-get
-     (isamert/dmenu prompt alist)
-     alist nil nil #'equal))
+  Useful for system-wide scripts."
+    (with-temp-buffer
+      (thread-first
+        (cond
+         ((functionp items)
+          (funcall items "" nil t))
+         ((listp (car items))
+          (mapcar #'car items))
+         (t
+          items))
+        (string-join "\n")
+        string-trim
+        insert)
+      (shell-command-on-region
+       (point-min)
+       (point-max)
+       (pcase system-type
+         ('gnu/linux (format "rofi -dmenu -fuzzy -i -p '%s'" prompt))
+         ('darwin "choose"))
+       nil t "*isamert/dmenu error*" nil)
+      (string-trim (buffer-string))))
 
   (cl-defmacro isamert/output-select
       (&key cmd prompt keep-order (split "\n") (drop 0) (filter t) (map 'it) (do 'it))
@@ -7198,13 +7199,13 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     "Find credentials for currently open link in Qutebrowser and fill."
     (let* ((candidates (isamert/password-find-for url))
            (result (plist-get
-                    (alist-get (isamert/dmenu "Select account: " candidates) candidates nil nil #'equal) :acc))
+                    (alist-get (completing-read "Select account: " candidates) candidates nil nil #'equal) :acc))
            (username (car result))
            (password (-some->> (cdr result)
                        (s-replace "\"" "\\\"")
                        (s-replace "'" "\\'"))))
       (when (and username password)
-        (pcase (isamert/dmenu "Method: " '("Fill all with TAB" "Fill username" "Fill password"))
+        (pcase (completing-read "Method: " '("Fill all with TAB" "Fill username" "Fill password"))
           ("Fill all with TAB"
            (write-region "mode-enter insert\n" nil fifo 'append)
            (write-region (format "fake-key %s\n" username) nil fifo 'append)
@@ -7224,9 +7225,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     (interactive)
     (and-let* ((passwords (isamert/password-all))
                (candidates (--map (cons (plist-get it :title) it) passwords))
-               (selected (isamert/alist-dmenu "Select: " candidates)))
+               (selected (isamert/alist-completing-read "Select: " candidates)))
       (let-plist selected
-        (pcase (isamert/dmenu
+        (pcase (completing-read
                 "Action: "
                 (list "Copy as username:password"
                       "Copy as PostgreSQL connection string"
@@ -7354,14 +7355,11 @@ The code below let's you select your yankpad snippets outside of the Emacs using
     desktop-specific (non-Emacs) snippets under
     `desktop-snippets-mode' header in the yankpad file.")
 
-  (defun isamert/desktop-yankpad (&optional select-category)
-    "Select a snippet from yankpad snippets using `isamert/dmenu'.
+  (defun isamert/yankpad-copy-snippet (&optional select-category)
+    "Select a snippet from yankpad snippets using `completing-read'.
   If SELECT-CATEGORY is non-nil, then prompts for a category first
   and then let's you select a snippet.  Put the snippet into the
-  clipboard.
-
-  This command is meant to be used externally (from outside of
-  Emacs)."
+  clipboard."
     (interactive)
     (let ((text
            (with-temp-buffer
@@ -7370,15 +7368,11 @@ The code below let's you select your yankpad snippets outside of the Emacs using
              (let ((yas-dont-activate-functions '()))
                (yas-minor-mode-on))
              (when select-category
-               ;; Same as `yankpad-set-category' but uses `isamert/dmenu' instead of
-               ;; `completing-read'
-               (let ((categories (yankpad--categories)))
-                 (setq yankpad-category (isamert/dmenu "Category: " categories))
-                 (run-hooks 'yankpad-switched-category-hook)))
+               (yankpad-set-category))
              (unless yankpad-category
                (yankpad-local-category-to-major-mode))
              (let* ((snippets (yankpad-active-snippets))
-                    (snippet-name (isamert/dmenu "Snippet: " snippets)))
+                    (snippet-name (completing-read "Snippet: " snippets)))
                (if-let ((snippet (assoc snippet-name snippets)))
                    (yankpad--run-snippet snippet)
                  ;; TODO Show this message as a notification
@@ -7387,6 +7381,14 @@ The code below let's you select your yankpad snippets outside of the Emacs using
       (kill-new text)))
 #+end_src
 
+** Run functions globally
+Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ function when the code is called inside this macro. This way, you can use your ~completing-read~ based functions within your system, without needing to focus Emacs first.
+
+#+begin_src emacs-lisp
+  (defmacro isamert/run-globally (&rest body)
+    `(let ((completing-read-function #'isamert/dmenu))
+       ,@body))
+#+end_src
 * TY (work stuff)
 Company/work related stuff.
 
