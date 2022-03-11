@@ -1939,7 +1939,9 @@ Several packages are using this package to show system-level notifications. Here
     (setq alert-fade-time 15)
     (setq alert-default-style (pcase system-type
                                 ('gnu/linux 'libnotify)
-                                ('darwin 'osx-notifier)
+                                ;; osx-notifier having troubles showing
+                                ;; messages with Turkish characters
+                                ('darwin 'notifier)
                                 (_ 'message))))
 
   (define-advice alert (:after (msg &rest args) send-to-my-phone-if-urgent)
@@ -2864,7 +2866,7 @@ Some shortcuts you can use on any vertico window:
     :config
     (setq mini-frame-show-parameters
           '((top . 0.15)
-            (width . 0.55)
+            (width . 0.70)
             (left . 0.5))
           mini-frame-color-shift-step 15)
 
@@ -2971,13 +2973,10 @@ Some functionality for project management. I do some fine-tuning for =find= and 
   `consult-find's async approach."
     (interactive "DFind files in: ")
     (let ((default-directory dir))
-      (thread-last
-        "fd --exclude '.git' --hidden ."
-        (shell-command-to-string)
-        (s-trim)
-        (s-split "\n")
-        (completing-read "Open file: ")
-        (find-file))))
+      (isamert/output-select
+       :cmd "fd --exclude '.git' --hidden ."
+       :prompt "Open file: "
+       :do (find-file it))))
 #+end_src
 
 *** Perspective integration
@@ -3696,21 +3695,6 @@ Simple mode for editing =~/.Xmodmap= file.
 #+end_src
 ** slack
 #+begin_src emacs-lisp
-  ;; (slack-start)
-  ;; (slack-change-current-team)
-  ;; (slack-im-list-update)
-  ;; (slack-bot-list-update)
-  ;; (slack-group-list-update)
-  ;; (slack-room-list-update)
-  ;; (slack-select-unread-rooms)
-
-  ;; (slack-group-list-update)
-  ;; (slack-im-list-update)
-  ;; (slack-bot-list-update)
-  ;; (slack-user-list-update)
-  ;; (slack-channel-list-update)
-  ;; (slack-command-list-update)
-
   (use-package slack
     :quelpa (slack
              :fetcher github
@@ -3785,7 +3769,8 @@ Simple mode for editing =~/.Xmodmap= file.
                :title title
                :message-string msg-str)
          isamert/slack--last-messages)
-        (unless (slack-message-minep message team)
+        (unless (or (slack-message-minep message team)
+                    (s-contains? "message deleted" msg-str))
           (alert
            msg-str
            :title title
@@ -4050,7 +4035,9 @@ It lets me display comments of given reddit thread in an org buffer using the =r
 Allows you to scroll above the top line. Evil bindings like ~zz~ ~zt~ ~zb~ works as expected, no configuration needed.
 
 #+begin_src emacs-lisp
-  (use-package topspace)
+  (use-package topspace
+    :config
+    (topspace-mode))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
@@ -4111,50 +4098,16 @@ Both synosaurus and wordnut uses ~wordnet~ to work.
     (evil-define-key 'normal 'global (kbd "K") #'wordnut-lookup-current-word))
 #+end_src
 
-*** tdk
+*** sozluk.el
 Turkish dictionary.
 
 #+begin_src emacs-lisp
-  (defun isamert/tdk (input)
-    "Fetch the meaining of INPUT from TDK and display it in a nicely
-  formatted org buffer."
-    (interactive
-     (list (read-string "Kelime: " (isamert/region-or 'word))))
-    (let ((result (isamert/request "http://sozluk.gov.tr/gts" :ara input)))
-      (when (alist-get 'error result)
-        (user-error "Böyle bir kelime yok :("))
-      (switch-to-buffer-other-window (get-buffer-create (format "*tdk: %s*" input)))
-      (-each-indexed result
-        (lambda (madde-index madde)
-          (let-alist madde
-            (insert (format "* %s (%s)\n" .madde (s-repeat (1+ madde-index) "I")))
-            (--each-indexed .anlamlarListe
-              (insert
-               (format
-                "%s. %s%s\n"
-                (1+ it-index)
-                (if-let* ((specs (string-join
-                                  (--map (format "/%s/" (alist-get 'tam_adi it)) (alist-get 'ozelliklerListe it))
-                                  ", "))
-                          (_ (not (s-blank? specs))))
-                    (concat specs ". ") "")
-                (alist-get 'anlam it)))
-              (--each (alist-get 'orneklerListe it)
-                (let-alist it
-                  (insert
-                   (format
-                    " : %s - *%s*\n" .ornek
-                    (alist-get 'tam_adi (--find (string= (alist-get 'yazar_id it) .yazar_id) .yazar)))))))
-            (unless (s-blank? .birlesikler)
-              (insert (format "\nBirleşikler: %s\n"
-                              (string-join
-                               (--map
-                                (format "[[elisp:(isamert/tdk \"%s\")][%s]]" it it)
-                                (split-string .birlesikler ", "))
-                               ", ")))))
-          (insert "\n"))))
-    (org-mode))
+  (use-package sozluk
+    :quelpa (sozluk
+             :fetcher github
+             :repo "isamert/sozluk.el"))
 #+end_src
+
 *** Etymology lookup inside Emacs
 #+begin_src emacs-lisp
   (evil-leader/set-key
@@ -7449,7 +7402,10 @@ Company/work related stuff.
   (defun ty/move-task-to-in-progress (mr)
     (let ((title (alist-get 'title mr))
           (source-branch (alist-get 'source_branch mr)))
-      (unless (or (s-prefix? "Draft:" title) (s-prefix? "WIP:" title))
+      (unless (or (s-prefix? "Draft:" title)
+                  (s-prefix? "WIP:" title)
+                  (or (s-contains? "SAT-1-" source-branch)
+                      (s-suffix? "SAT-1" source-branch)))
         (message ">> Moving task into `Code Review'.")
         (isamert/jira-change-issue-status-to-status
          (isamert/extract-ticket-number-from-branch-name source-branch)
