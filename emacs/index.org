@@ -5400,6 +5400,47 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
         (buffer-string))))
 #+end_src
 
+** BigQuery
+#+begin_src emacs-lisp
+  (define-derived-mode bqsql-mode sql-mode "bqsql-mode")
+  (add-to-list 'auto-mode-alist (cons (rx ".bqsql" string-end) #'bqsql-mode))
+
+  (defun org-babel-execute:bqsql (query params)
+    (let* ((job-id (isamert/uuid))
+           (format (or (alist-get :format params) "pretty"))
+           (json-out? (s-matches? "json" format))
+           (buf (get-buffer-create "*isamert/bqsql*"))
+           (org-buffer (current-buffer))
+           process)
+      (with-current-buffer buf (erase-buffer))
+      (setq process (start-process "query" buf "bq" "query" "--quiet" "--nouse_legacy_sql" "--format" format "--job_id" job-id query))
+      (set-process-sentinel
+       process
+       (lambda (p m)
+         (let ((result (with-current-buffer buf
+                         (buffer-string))))
+           (with-current-buffer org-buffer
+             (save-excursion
+               (goto-char (point-max))
+               (unless (re-search-backward job-id nil t)
+                 (user-error "org-block is gone"))
+               (forward-line -4)
+               (org-babel-insert-result
+                result
+                (list "replace" (if json-out? "lang" "raw"))
+                nil
+                nil
+                (when json-out? "json")))))))
+      job-id))
+
+  (defun isamert/big-query-job-status (job-id)
+    "Get status for given job id."
+    (interactive "sJob id: ")
+    (let ((buf (get-buffer-create (format "*isamert/bigquery: %s*" job-id))))
+      (switch-to-buffer buf)
+      (insert (shell-command-to-string (format "bq show -j '%s'" job-id)))))
+#+end_src
+
 * Misc functions
 ** tmux integration
 This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generally use Emacs commands instead of command line tools and if I ever need to do something in terminal I just use eshell. Besides this, I also like to use have a tmux instance working, for non-ephemeral stuff. I generally use a dropdown terminal (which may or may not be inside Emacs) to access the tmux instance. Here is how the integration goes:
