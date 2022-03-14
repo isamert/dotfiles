@@ -2,6 +2,7 @@
 #+AUTHOR: İsa Mert Gürbüz
 #+BABEL: :cache yes
 #+PROPERTY: header-args :tangle yes :noweb yes
+#+PROPERTY: header-args:emacs-lisp :lexical t
 #+STARTUP: overview
 #+OPTIONS: toc:3
 
@@ -5405,29 +5406,40 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
   (define-derived-mode bqsql-mode sql-mode "bqsql-mode")
   (add-to-list 'auto-mode-alist (cons (rx ".bqsql" string-end) #'bqsql-mode))
 
+  ;; TODO Log query execution time
   (defun org-babel-execute:bqsql (query params)
     (let* ((job-id (isamert/uuid))
            (format (or (alist-get :format params) "pretty"))
            (json-out? (s-matches? "json" format))
            (buf (get-buffer-create "*isamert/bqsql*"))
            (org-buffer (current-buffer))
+           (start-time (float-time))
            process)
       (with-current-buffer buf (erase-buffer))
       (setq process (start-process "query" buf "bq" "query" "--quiet" "--nouse_legacy_sql" "--format" format "--job_id" job-id query))
       (set-process-sentinel
        process
        (lambda (p m)
-         (let ((result (with-current-buffer buf
-                         (buffer-string))))
+         (let ((end-time (float-time))
+               (result (with-current-buffer buf
+                         (string-trim (buffer-string)))))
+           (message "=> Query finished, time elapsed: %s" (format-seconds "%Y %D %H %M %z%S" (- end-time start-time)))
            (with-current-buffer org-buffer
              (save-excursion
                (goto-char (point-max))
                (unless (re-search-backward job-id nil t)
-                 (user-error "org-block is gone"))
+                 (let ((bname (format "*bqsql:%s" job-id)))
+                   (with-current-buffer (get-buffer-create bname)
+                     (insert result)
+                     (org-mode))
+                   (user-error "org-block is gone. Result inserted to the buffer %s" bname)))
                (forward-line -4)
                (org-babel-insert-result
                 result
-                (list "replace" (if json-out? "lang" "raw"))
+                (list "replace" (cond
+                                 ((s-prefix? "Error" result) "drawer")
+                                 (json-out? "lang")
+                                 (t "raw")))
                 nil
                 nil
                 (when json-out? "json")))))))
