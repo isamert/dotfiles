@@ -4459,7 +4459,7 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
              :repo "isamert/orgmdb.el")
     :config
     (setq orgmdb-omdb-apikey isamert/orgmdb-omdb-apikey)
-    (setq orgmdb-fill-property-list '(genre runtime director country imdb-link imdb-rating metascore)))
+    (setq orgmdb-fill-property-list '(genre runtime director country imdb-link imdb-rating metascore actors)))
 #+end_src
 ** erc (IRC client)
 IRC client for Emacs.
