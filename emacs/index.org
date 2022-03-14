@@ -5156,6 +5156,19 @@ There is a built-in function (~data-debug-eval-expression~) to inspect objects (
 
 There is also ~pp-eval-last-sexp~ which evaluates and pretty-prints the result of last expression in a separate buffer, which can be better for inspection sometimes.
 
+*** eros
+Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right next to the expression itself. There is also ~eros-inspect-last-result~ which essentially shows the result of last evaluation in a pretty printed format in a different buffer.
+
+#+begin_src emacs-lisp
+  (use-package eros
+    :ensure t
+    :diminish
+    :quelpa (eros
+             :fetcher github
+             :repo "isamert/eros")
+    :config
+    (eros-mode 1))
+#+end_src
 *** Inline/popup documentation
 #+begin_src emacs-lisp
   (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'isamert/describe-thing-in-popup)
