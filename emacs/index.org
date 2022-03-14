@@ -5406,7 +5406,6 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
   (define-derived-mode bqsql-mode sql-mode "bqsql-mode")
   (add-to-list 'auto-mode-alist (cons (rx ".bqsql" string-end) #'bqsql-mode))
 
-  ;; TODO Log query execution time
   (defun org-babel-execute:bqsql (query params)
     (let* ((job-id (isamert/uuid))
            (format (or (alist-get :format params) "pretty"))
