@@ -5436,6 +5436,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
   (add-to-list 'auto-mode-alist (cons (rx ".bqsql" string-end) #'bqsql-mode))
 
   (defun org-babel-execute:bqsql (query params)
+    "Execute bqsql (BigQuery) scripts."
     (let* ((job-id (isamert/uuid))
            (format (or (alist-get :format params) "pretty"))
            (json-out? (s-matches? "json" format))
@@ -5475,10 +5476,34 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
 
   (defun isamert/big-query-job-status (job-id)
     "Get status for given job id."
-    (interactive "sJob id: ")
+    (interactive
+     (list (read-string "Job ID: " (isamert/region-or 'symbol))))
     (let ((buf (get-buffer-create (format "*isamert/bigquery: %s*" job-id))))
       (switch-to-buffer buf)
       (insert (shell-command-to-string (format "bq show -j '%s'" job-id)))))
+
+  (defun isamert/big-query-table-info (table-name)
+    "Get summary information for TABLE-NAME.
+  This information includes schema summary, last modified date,
+  total {rows,bytes} etc. and first 10 rows of the table."
+    (interactive
+     (list (read-string
+            "Table: "
+            ;; Replace first `.' with `:'
+            (s-replace-regexp
+             "^\\([A-Za-z0-9_-]+\\)\\." "\\1:"
+             (isamert/region-or
+              (lambda () (isamert/inner-back-quote-at-point)))))))
+    (let ((buffer-name (format "*bq table info: %s*" table-name)))
+      (isamert/shell-command
+       :buffer-name buffer-name
+       :command (format "bq show '%s'" table-name)
+       :on-start
+       (lambda ()
+         (toggle-truncate-lines +1)
+         (isamert/shell-command
+          :buffer-name buffer-name
+          :command (format "bq head -n 10 '%s'" table-name))))))
 #+end_src
 
 * Misc functions
