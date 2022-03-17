@@ -151,11 +151,20 @@ Some basic variable and function definitions that will be used in configuration.
      list))
 
   (defun isamert/region-or (what)
-    "Returns currently selected string or WHAT-at-point
-  string. WHAT can be 'symbol 'word etc."
+    "Returns currently selected string or WHAT-at-point string. WHAT
+  can be 'symbol 'word or a function that returns string etc."
     (if (use-region-p)
         (buffer-substring-no-properties (region-beginning) (region-end))
-      (thing-at-point what t)))
+      (if (functionp what)
+          (funcall what)
+        (thing-at-point what t))))
+
+  (defun isamert/inner-back-quote-at-point ()
+    "Return text inside the back quotes at point."
+    (let ((bounds (evil-inner-back-quote)))
+      (buffer-substring-no-properties
+       (nth 0 bounds)
+       (nth 1 bounds))))
 
   (defmacro with-completing-read-exact-order (&rest body)
     "Disable any kind of sorting in completing read."
@@ -2931,7 +2940,6 @@ Some key points:
 *** consult-project-extra
 #+begin_src emacs-lisp
   (use-package consult-project-extra
-    :ensure t
     :config
     (define-key project-prefix-map "o" #'consult-project-extra-find)
     (add-to-list 'project-switch-commands `(consult-project-extra-find "consult")))
@@ -3035,7 +3043,7 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     "Like `consult-line' but if the buffer is too big then it calls
   `isamert/consult-ripgrep-buffer'."
     (interactive)
-    (if (> (buffer-size) 300000)
+    (if (> (buffer-size) 200000)
         (isamert/consult-ripgrep-buffer)
       (consult-line)))
 
@@ -3706,13 +3714,14 @@ Simple mode for editing =~/.Xmodmap= file.
     (setq slack-image-max-height nil)
     (setq slack-prefer-current-team t)
     ;; ^ Set current team with `slack-change-current-team'
-    (setq slack-buffer-function #'isamert/display-buffer-in-side-window)
+    (setq slack-buffer-function #'switch-to-buffer-other-window)
     ;; ^ Open slack windows on the right side of the screen
 
     (setq slack-message-custom-notifier #'isamert/slack-notify)
 
     (evil-leader/set-key
       "ess" #'slack-select-rooms
+      "esS" #'slack-select-unread-rooms
       "esm" #'isamert/slack-send-message
       "esr" #'isamert/slack-recent-messages
       "esl" #'isamert/slack-open-last-message
@@ -3771,7 +3780,10 @@ Simple mode for editing =~/.Xmodmap= file.
                :message-string msg-str)
          isamert/slack--last-messages)
         (unless (or (slack-message-minep message team)
-                    (s-contains? "message deleted" msg-str))
+                    (s-contains? "message deleted" msg-str)
+                    (--some
+                     (s-contains? room-name it)
+                     (--map (buffer-name (window-buffer it)) (window-list))))
           (alert
            msg-str
            :title title
@@ -3834,7 +3846,10 @@ Simple mode for editing =~/.Xmodmap= file.
     (interactive
      (list
       (if (use-region-p)
-          (buffer-substring-no-properties (region-beginning) (region-end))
+          (let ((text (buffer-substring-no-properties (region-beginning) (region-end))))
+            (if (y-or-n-p "Wrap with backticks? ")
+                (format "```\n%s\n```" text)
+              text))
         (read-string "Enter message: "))))
     "Send MSG to interactively selected room."
     (-let* (((room team) (isamert/slack--select-room)))
@@ -3881,7 +3896,7 @@ Simple mode for editing =~/.Xmodmap= file.
   ;;
 
   (defun isamert/slack--last-message ()
-    (car isamert/slack--last-messages))
+    (--find (not (s-matches? ".*\\(alert\\|practice\\).*" (plist-get it :room-name))) isamert/slack--last-messages))
 
   (defun isamert/slack--stringify-message (msg)
     (let ((message (plist-get msg :message))
@@ -4038,7 +4053,8 @@ Allows you to scroll above the top line. Evil bindings like ~zz~ ~zt~ ~zb~ works
 #+begin_src emacs-lisp
   (use-package topspace
     :config
-    (topspace-mode))
+    (setq topspace-autocenter-buffers nil)
+    (global-topspace-mode 1))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
@@ -5161,7 +5177,6 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 
 #+begin_src emacs-lisp
   (use-package eros
-    :ensure t
     :diminish
     :quelpa (eros
              :fetcher github
@@ -5325,7 +5340,8 @@ Mostly for editing tridactyl and sometimes real vimrc.
     :config
     (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
     (setq plantuml-default-exec-mode 'jar)
-    (setq org-plantuml-jar-path "/nix/store/q0v5nv70zc23fx4hjgghnqf7lvydr6fq-plantuml-1.2021.3/lib/plantuml.jar"))
+    (setq plantuml-jar-path "/nix/store/q0v5nv70zc23fx4hjgghnqf7lvydr6fq-plantuml-1.2021.3/lib/plantuml.jar")
+    (setq org-plantuml-jar-path plantuml-jar-path))
 #+end_src
 ** Couchbase
 Install couchbase-query package for running interactive queries inside emacs.
@@ -7751,18 +7767,7 @@ Company/work related stuff.
     (setq code-review-gitlab-graphql-host "gitlab.trendyol.com/api"))
 #+end_src
 
-** bigquery-mode
-- Functions are named like ~bqm-...~.
-
-#+begin_src emacs-lisp
-  (use-package bigquery-mode
-  :ensure t
-  :diminish
-  :quelpa (bigquery-mode
-           :fetcher github
-           :repo "christophstockhusen/bigquery-mode"))
-#+end_src
-
+* Postamble
 ;; Local Variables:
 ;; eval: (add-hook 'after-save-hook (lambda () (if (y-or-n-p "Tangle?") (org-babel-tangle))) nil t)
 ;; End:
