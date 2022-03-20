@@ -4107,6 +4107,7 @@ Both synosaurus and wordnut uses ~wordnet~ to work.
 #+begin_src emacs-lisp
   (use-package synosaurus
     :config
+    (setq synosaurus-choose-method nil)
     (evil-leader/set-key
       "/s" #'synosaurus-choose-and-replace))
 
