@@ -2464,6 +2464,26 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
   color=true
   partition-contacts=true
 #+end_src
+** ranger
+#+begin_src conf :tangle ~/.config/ranger/rc.conf
+  set confirm_on_delete never
+  set preview_images true
+  set preview_images_method ueberzug
+  set draw_borders both
+  set dirname_in_tabs true
+  set update_tmux_title false
+
+  map gh cd ~
+  map gn cd ~/Documents/notes
+  map gd cd ~/Downloads
+  map gD cd ~/Documents
+  map gi eval fm.cd('/run/media/' + os.getenv('USER'))
+#+end_src
+
+#+begin_src :tangle ~/.config/ranger/rifle.conf
+  has jaro, flag f = jaro "$@"
+#+end_src
+
 * Media
 ** mpv
 *** Keybindings
