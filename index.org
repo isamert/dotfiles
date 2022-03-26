@@ -3269,6 +3269,7 @@ You need to install =vim-plug= to be able to install vim extensions.
   command copyimageurl composite hint -pipe img src | yank
 
   " key-bindings
+  unbind <F1>
   bind <A-.> tabnext
   bind <A-,> tabprev
   bind <A-e> editor
@@ -3285,6 +3286,24 @@ You need to install =vim-plug= to be able to install vim extensions.
   " vim: set filetype=vim:
 #+end_src
 
+*** userChrome.css
+I use [[https://github.com/piroor/treestyletab][TreeStyleTab]] so I hide the tab bar and siderbar heading.
+
+#+begin_src css :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default-release" :linux "~/.mozilla/firefox/*.default-release"))) "/chrome/userChrome.css")
+  #TabsToolbar {
+      visibility: collapse;
+  }
+
+  #sidebar-header {
+    visibility: collapse !important;
+  }
+#+end_src
+
+Also need to enable following config to make userChrome.css work:
+
+#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default-release" :linux "~/.mozilla/firefox/*.default-release"))) "/user.js")
+  user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+#+end_src
 ** Qutebrowser
 - Use =Alt-a= to bring up Emacs to edit a text in the text-area.
 - Some useful keybindings that I added:
