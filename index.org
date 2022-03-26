@@ -1250,7 +1250,7 @@ This is the global keybinding manager.
 *** Running apps etc.
 #+begin_src conf :tangle (when-linux "~/.config/sxhkd/sxhkdrc")
   hyper + {i,I}
-    emacsclient --eval "(isamert/desktop-yankpad {nil,t})"
+    emacsclient --eval "(isamert/yankpad-copy-snippet {nil,t})"
 
   hyper + p
     emacsclient --eval "(isamert/password-act)"
@@ -1412,11 +1412,10 @@ This is the global keybinding manager for OSX.
   shift + lcmd - r : skhd --reload
 
   # run some apps
-  lcmd - return : alacritty
-  hyper - r : emacsclient -c
-  hyper - i : emacsclient --eval "(isamert/desktop-yankpad)"
-  hyper - o : emacsclient --eval "(isamert/desktop-yankpad t)"
-  hyper - p : emacsclient --eval "(isamert/passwords-all)"
+  hyper - r : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c
+  hyper - i : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet))"
+  hyper - o : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet t))"
+  hyper - p : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient --eval "(isamert/globally (isamert/password-act))"
   hyper - 9 : /usr/bin/osascript -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
 
   # move managed window
@@ -3419,7 +3418,7 @@ Also need to enable following config to make userChrome.css work:
 #+begin_src shell :tangle (when-on :linux "~/.config/qutebrowser/userscripts/org-pass" :darwin "~/.qutebrowser/userscripts/org-pass")
   #!/bin/bash
 
-  emacsclient --eval "(isamert/password-qutebrowser \"$QUTE_URL\" \"$QUTE_FIFO\")"
+  emacsclient --eval "(isamert/globally (isamert/password-qutebrowser \"$QUTE_URL\" \"$QUTE_FIFO\"))"
 #+end_src
 
 *** Cosmetic block list
