@@ -692,7 +692,7 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
   (use-package doom-themes
     :defer t)
 
-  (defconst isamert/fonts '("Iosevka Nerd Font"))
+  (defconst isamert/fonts '("Iosevka Comfy" "Iosevka Nerd Font"))
   (defconst isamert/font-height
     (pcase system-type
       ('gnu/linux 120)
@@ -1647,10 +1647,10 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
                            ("#+end" . "«")
                            ("#+BEGIN:" . "»")
                            ("#+END" . "«")
-                           ("#+begin_src" . "»" )
-                           ("#+end_src" . "«" )
-                           ("#+BEGIN_SRC" . "»" )
-                           ("#+END_SRC" . "«" )))
+                           ("#+begin_src" . "»")
+                           ("#+end_src" . "«")
+                           ("#+BEGIN_SRC" . "»")
+                           ("#+END_SRC" . "«")))
 #+end_src
 
 ** org-clock
@@ -2940,6 +2940,7 @@ Some key points:
 *** consult-project-extra
 #+begin_src emacs-lisp
   (use-package consult-project-extra
+    :after (consult project)
     :config
     (define-key project-prefix-map "o" #'consult-project-extra-find)
     (add-to-list 'project-switch-commands `(consult-project-extra-find "consult")))
@@ -3815,13 +3816,7 @@ Simple mode for editing =~/.Xmodmap= file.
       ;; Focus the message on buffer
       (run-with-timer
        1.3 nil
-       (lambda ()
-         (goto-char (point-max))
-         (goto-char
-          (slack-buffer-prev-point
-           (point-max)
-           (point-min)
-           (slack-ts .message)))))))
+       (lambda () (slack-buffer-goto (slack-ts .message))))))
 
   (defalias 'isamert/slack-recent-messages #'isamert/slack-last-messages)
 
@@ -7451,7 +7446,7 @@ The code below let's you select your yankpad snippets outside of the Emacs using
 Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ function when the code is called inside this macro. This way, you can use your ~completing-read~ based functions within your system, without needing to focus Emacs first.
 
 #+begin_src emacs-lisp
-  (defmacro isamert/run-globally (&rest body)
+  (defmacro isamert/globally (&rest body)
     `(let ((completing-read-function #'isamert/dmenu))
        ,@body))
 #+end_src
