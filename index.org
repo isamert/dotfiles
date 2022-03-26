@@ -3245,9 +3245,9 @@ You need to install =vim-plug= to be able to install vim extensions.
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
   sanitise tridactyllocal tridactylsync
 
-  colors quake
+  colors midnight
   set editorcmd jaro
-  set searchengine duckduckgo
+  set searchengine google
   set hintfiltermode vimperator-reflow
   set smoothscroll true
 
@@ -3256,16 +3256,24 @@ You need to install =vim-plug= to be able to install vim extensions.
 
   command sync open localhost:8384
 
-  command mpv withUrl ! mpv --x11-name=youtube --geometry=853x480-20-20
-  command mpvhint hint -W ! mpv
-  command mpd withUrl ! mpd-yt play
-
   command jaro withUrl ! jaro
   command jarohint hint -W ! jaro
 
   command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
+
+  " quick search
+  set searchurls.yt https://www.youtube.com/results?search_query=%s
+  set searchurls.nix https://search.nixos.org/packages?channel=unstable&type=packages&query=%s
+  set searchurls.r https://reddit.com/r/%s
+
+  " tridactyl search
+  unbind <C-f>
+  bind / fillcmdline find
+  bind ? fillcmdline find -?
+  bind n findnext 1
+  bind N findnext -1
 
   " key-bindings
   unbind <F1>
@@ -3279,8 +3287,6 @@ You need to install =vim-plug= to be able to install vim extensions.
   bind m jaro
   bind M jarohint
   bind ;i copyimage
-  bind ;d ytdlhint
-
 
   " vim: set filetype=vim:
 #+end_src
