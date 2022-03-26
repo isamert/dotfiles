@@ -1738,6 +1738,7 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 
   export GOPATH="$HOME/.go"
   export R_LIBS_USER="$HOME/.rlibs"
+  export NPM_PACKAGES="$HOME/.npm-packages"
 
   # The PATH
   export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/bin:$HOME/.cargo/bin:$PATH
@@ -1846,7 +1847,6 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   antigen bundle kutsan/zsh-system-clipboard
   antigen theme agnoster
   antigen bundle Aloxaf/fzf-tab
-  antigen bundle per-directory-history
   antigen apply
 #+end_src
 
@@ -2479,7 +2479,7 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
   map gi eval fm.cd('/run/media/' + os.getenv('USER'))
 #+end_src
 
-#+begin_src :tangle ~/.config/ranger/rifle.conf
+#+begin_src conf :tangle ~/.config/ranger/rifle.conf
   has jaro, flag f = jaro "$@"
 #+end_src
 
