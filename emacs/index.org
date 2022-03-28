@@ -1678,12 +1678,12 @@ Here are some utility functions that I use in org-ql dynamic blocks:
 
 #+begin_src emacs-lisp
   (defun sort-by-num-prop (prop x y)
-    (< (string-to-number (org-element-property prop y))
-       (string-to-number (org-element-property prop x))))
+    (< (string-to-number (or (org-element-property prop y) "0"))
+       (string-to-number (or (org-element-property prop x) "0"))))
 
   (defun sort-by-prop (prop x y)
-    (string< (org-element-property prop y)
-             (org-element-property prop x)))
+    (string< (or (org-element-property prop y) "")
+             (or (org-element-property prop x) "")))
 #+end_src
 
 You have to use ~:sort (lambda ...)~ syntax in org-ql dynamic blocks if you want to supply a function for the ~:sort~ parameter. You can't use a function that returns a lambda, hence the functions defined above should be used like this:
@@ -3025,7 +3025,8 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
                 :items    isamert/my-files)
     "My frequently accessed files source for `consult-buffer'.")
 
-  (add-to-list 'consult-buffer-sources '(isamert/consult-source-perspective-buffers isamert/consult-source-files))
+  (add-to-list 'consult-buffer-sources 'isamert/consult-source-perspective-buffers)
+  (add-to-list 'consult-buffer-sources 'isamert/consult-source-files)
 
   (defun isamert/my-files ()
     "Return list of all files I frequently use."
@@ -5005,14 +5006,18 @@ The following enables =CamelCase= aware editing operations.
        (funcall getter)
        (tsc-node-text))))
 
-  (defun isamert/ts-send-expression-to-repl ()
+  (defun isamert/ts-send-expression-to-repl (&optional redefine)
     "Send current meaningful expression to node REPL."
-    (interactive)
+    (interactive "P")
     (if-let (expression
-             (if (use-region-p)
-                 (buffer-substring-no-properties (region-beginning)
-                                                 (region-end))
-               (isamert/ts-current-expression)))
+             (->>
+              (if (use-region-p)
+                  (buffer-substring-no-properties (region-beginning)
+                                                  (region-end))
+                (isamert/ts-current-expression))
+              ;; Replace const with let so that we can redefine this
+              ;; thing later if we need to
+              (s-replace-regexp "^[\n\t ]*\\(let\\|const\\)" (if redefine "" "let"))))
         (isamert/with-visible-buffer
          ".*vterm.*"
          (vterm-send-string ".editor")
@@ -5540,23 +5545,31 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (isamert/select-tmux-session-if-needed)
       (shell-command-to-string (format "tmux switch -t%s" isamert/tmux-session))
       (shell-command-to-string
-       (format "tmux select-window -t%s:%s || tmux new-window -t%s -n %s"
-               isamert/tmux-session window-name-normalized isamert/tmux-session window-name-normalized))))
+       (format "tmux select-window -t%s:%s || tmux new-window -c %s -t%s -n %s"
+               isamert/tmux-session
+               window-name-normalized
+               default-directory
+               isamert/tmux-session
+               window-name-normalized))))
 
-  (defun isamert/tmux-focus-perspective-window (&optional pname &rest rest)
+  (defun isamert/tmux-focus-perspective-window (&rest _)
     "Focus to the tmux window that has the same name with current perspective.
   Tmux session is infered from isamert/select-tmux-session"
     (interactive)
-    (setq pname (or pname (persp-name (get-current-persp))))
-    (when isamert/auto-focus-tmux-window
-      (cond
-       ((s-contains? "/" pname)
-        (let* ((data (s-split "/" pname))
-               (isamert/tmux-session (car data))
-               (window-name (nth 2 data)))
-          (isamert/tmux-focus-window (cadr (s-split "/" pname)))))
-       (t
-        (isamert/tmux-focus-window pname)))))
+    (let ((pname (persp-name (get-current-persp)))
+          (default-directory (or (ignore-errors
+                                   (with-current-buffer (car (persp-buffers (get-current-persp)))
+                                     default-directory))
+                                 default-directory)))
+      (when isamert/auto-focus-tmux-window
+        (cond
+         ((s-contains? "/" pname)
+          (let* ((data (s-split "/" pname))
+                 (isamert/tmux-session (car data))
+                 (window-name (nth 2 data)))
+            (isamert/tmux-focus-window (cadr (s-split "/" pname)))))
+         (t
+          (isamert/tmux-focus-window pname))))))
 
   (defun isamert/auto-focus-tmux-advice-after (old-function &rest arguments)
     (apply old-function arguments)
@@ -5570,7 +5583,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
   ;; Required hooks and advices
 
-  (add-hook 'persp-before-switch-functions
+  (add-hook 'persp-activated-functions
             #'isamert/tmux-focus-perspective-window)
   (advice-add 'isamert/vterm-toggle-dedicated
               :around #'isamert/auto-focus-tmux-advice-after)
