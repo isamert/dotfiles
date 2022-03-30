@@ -3252,6 +3252,7 @@ You need to install =vim-plug= to be able to install vim extensions.
   set searchengine google
   set hintfiltermode vimperator-reflow
   set smoothscroll true
+  set modeindicatorshowkeys true
 
   " commands
   command withUrl composite get_current_url |
@@ -3266,9 +3267,12 @@ You need to install =vim-plug= to be able to install vim extensions.
   command copyimageurl composite hint -pipe img src | yank
 
   " quick search
+  set searchurls.g https://www.google.com/search?q=%s
   set searchurls.yt https://www.youtube.com/results?search_query=%s
   set searchurls.nix https://search.nixos.org/packages?channel=unstable&type=packages&query=%s
   set searchurls.r https://reddit.com/r/%s
+  set searchurls.ddg https://duckduckgo.com/?q=%s
+  set searchurls.yandex https://yandex.com/search/?text=%s
 
   " tridactyl search
   unbind <C-f>
@@ -3279,10 +3283,6 @@ You need to install =vim-plug= to be able to install vim extensions.
 
   " key-bindings
   unbind <F1>
-  bind <A-.> tabnext
-  bind <A-,> tabprev
-  bind <A-e> editor
-  bind --mode=insert <A-e> editor
   bind + zoom 0.1 true
   bind - zoom -0.1 true
   bind p pin
