@@ -3268,11 +3268,15 @@ You need to install =vim-plug= to be able to install vim extensions.
 
   " quick search
   set searchurls.g https://www.google.com/search?q=%s
-  set searchurls.yt https://www.youtube.com/results?search_query=%s
-  set searchurls.nix https://search.nixos.org/packages?channel=unstable&type=packages&query=%s
-  set searchurls.r https://reddit.com/r/%s
   set searchurls.ddg https://duckduckgo.com/?q=%s
   set searchurls.yandex https://yandex.com/search/?text=%s
+  set searchurls.gif https://giphy.com/search/%s
+
+  set searchurls.yt https://www.youtube.com/results?search_query=%s
+  set searchurls.r https://reddit.com/r/%s
+
+  set searchurls.npm https://www.npmjs.com/search?q=%s
+  set searchurls.nix https://search.nixos.org/packages?channel=unstable&type=packages&query=%s
 
   " tridactyl search
   unbind <C-f>
@@ -3283,12 +3287,32 @@ You need to install =vim-plug= to be able to install vim extensions.
 
   " key-bindings
   unbind <F1>
+  bind <A-x> fillcmdline_notrail
+  bind <A-≈> fillcmdline_notrail
   bind + zoom 0.1 true
   bind - zoom -0.1 true
   bind p pin
   bind m jaro
   bind M jarohint
   bind ;i copyimage
+  bind <A-j> tabmove -1
+  bind <A-∆> tabmove -1
+  bind <A-k> tabmove +1
+  bind <A-˚> tabmove +1
+  bind U fillcmdline undo
+
+
+  " Only hint search results on Google and DDG
+  bindurl www.google.com f hint -Jc #search div:not(.action-menu) > a
+  bindurl www.google.com F hint -Jbc #search div:not(.action-menu) > a
+  bindurl ^https://duckduckgo.com f hint -Jc [class~=result__a]
+  bindurl ^https://duckduckgo.com F hint -Jbc [class~=result__a]
+
+  autocmd DocStart .*eksisozluk.com () => ({redirectUrl: "https://large-type.com/#*retard*"})
+  autocmd DocStart ^http(s?)://www.reddit.com js tri.excmds.urlmodify("-t", "www", "old")
+
+  " work stuff
+  set searchurls.tywiki https://wiki.trendyol.com/dosearchsite.action?queryString=%s
 
   " vim: set filetype=vim:
 #+end_src
