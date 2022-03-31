@@ -2489,6 +2489,7 @@ Note that it's not possible to stage hunks with =vc=.
     (evil-leader/set-key
       ;; magit/git
       "gs" 'magit-status
+      "gS" 'magit-stash
       "gf" 'magit-file-dispatch
       "gp" 'magit-pull
       "gP" 'magit-push
@@ -5481,7 +5482,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
      (list (read-string "Job ID: " (isamert/region-or 'symbol))))
     (let ((buf (get-buffer-create (format "*isamert/bigquery: %s*" job-id))))
       (switch-to-buffer buf)
-      (insert (shell-command-to-string (format "bq show -j '%s'" job-id)))))
+      (insert (shell-command-to-string (format "bq show --format=prettyjson -j '%s'" job-id)))))
 
   (defun isamert/big-query-table-info (table-name)
     "Get summary information for TABLE-NAME.
@@ -5888,7 +5889,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defun isamert/open-jira-issue (issue-number)
     "Open given Jira ISSUE-NUMBER."
     (interactive "sIssue: ")
-    (browse-url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number)))))
+    (let ((url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number)))))
+      (kill-new url)
+      (browse-url url)))
 
   (defun isamert/open-jira-issue-at-point ()
     "Open issue at point."
