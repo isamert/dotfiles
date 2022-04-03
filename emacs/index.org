@@ -1340,12 +1340,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
 Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier. This does not add any spaces/tabs to the text file, the indentation is only visually apparent in Emacs.
 
 #+BEGIN_SRC emacs-lisp
-  (add-hook
-   'org-mode-hook
-   (lambda ()
-     (org-indent-mode t)
-     (diminish 'org-indent-mode))
-   t)
+  (add-hook 'org-mode-hook #'org-indent-mode t)
 #+END_SRC
 
 ** Babel
@@ -6243,12 +6238,14 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
   (defun isamert/list-phone-text-messages ()
     "List messages from my phone."
     (interactive)
-    (completing-read
-     "Messages: "
-     (seq-map
-      (lambda (msg) (let-alist msg (format "%s :: %s" .number .body)))
-      (json-read-from-string
-       (isamert/send-termux-command "termux-sms-list")))))
+    (let ((result (completing-read
+                   "Messages: "
+                   (seq-map
+                    (lambda (msg) (let-alist msg (format "%s :: %s" .number .body)))
+                    (json-read-from-string
+                     (isamert/send-termux-command "termux-sms-list"))))))
+      (switch-to-buffer-other-window (get-buffer-create "*isamert/message*"))
+      (insert result)))
 #+end_src
 
 ** Signal
