@@ -5509,6 +5509,26 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
 #+end_src
 
 * Misc functions
+** marks integration
+[[https://github.com/isamert/marks][marks]] is a grep-like tool for searching org-mode and markdown files. The following snippet provides a ~consult~ support for marks.
+
+#+begin_src emacs-lisp
+  (defun isamert/consult--marks-builder (input)
+    (list :command
+          (list "marks" "--no-color" "--null" "--path" default-directory "--query" input)
+          :highlight nil))
+
+  (defun isamert/marks (&optional directory)
+    "Run `marks'."
+    (interactive)
+    (let ((default-directory (or directory default-directory)))
+      (consult--grep "marks" #'isamert/consult--marks-builder default-directory "")))
+
+  (defun isamert/marks-my-docs ()
+    "Run marks inside `~/Documents/notes'."
+    (interactive)
+    (isamert/marks (expand-file-name "~/Documents/notes")))
+#+end_src
 ** tmux integration
 This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generally use Emacs commands instead of command line tools and if I ever need to do something in terminal I just use eshell. Besides this, I also like to use have a tmux instance working, for non-ephemeral stuff. I generally use a dropdown terminal (which may or may not be inside Emacs) to access the tmux instance. Here is how the integration goes:
 
