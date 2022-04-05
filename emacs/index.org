@@ -2611,13 +2611,16 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     (interactive)
     (let* ((project-dir (project-prompt-project-dir))
            (window-name (f-filename project-dir)))
+      ;; Call this before switching to persp to prevent conflict with
+      ;; persp-activated-functions (which also tries to change current
+      ;; tmux window)
+      (isamert/tmux-focus-window window-name project-dir)
       (->>
        project-dir
        (f-filename)
        (s-prepend (concat (isamert/select-tmux-session) "/"))
        (persp-switch))
-      (project-switch-project project-dir)
-      (isamert/tmux-focus-window window-name)))
+      (project-switch-project project-dir)))
 
   (use-package eyebrowse
     :config
@@ -5557,7 +5560,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (when (not isamert/tmux-session)
       (isamert/select-tmux-session)))
 
-  (defun isamert/tmux-focus-window (window-name)
+  (defun isamert/tmux-focus-window (window-name &optional dir)
     "Focus given WINDOW-NAME in `isamert/tmux-session'.
   Creates WINDOW-NAME it if it does not exist."
     (interactive)
@@ -5568,7 +5571,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
        (format "tmux select-window -t%s:%s || tmux new-window -c %s -t%s -n %s"
                isamert/tmux-session
                window-name-normalized
-               default-directory
+               (or dir default-directory)
                isamert/tmux-session
                window-name-normalized))))
 
