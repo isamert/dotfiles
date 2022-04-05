@@ -2144,7 +2144,7 @@ To sync it automatically:
 
   ;; Use my notification function for appt notifications
   (setq appt-disp-window-function #'isamert/appt-notify)
-  (setq appt-message-warning-time 10)
+  (setq appt-message-warning-time 6)
   (setq appt-display-interval 2)
 
   ;; Automatically update `appt-time-msg-list' after editing an
@@ -2170,17 +2170,16 @@ To sync it automatically:
   (defun isamert/appt-notify--helper (min-to-appt new-time appt-msg)
     (setq min-to-appt (string-to-number min-to-appt))
     (message ">> appt :: %s, remaining %s mins" appt-msg min-to-appt)
-    (alert
-     (isamert/org-header-line-to-title appt-msg)
-     :title (format "Reminder, %s mins left" min-to-appt new-time)
-     :severity (cond
-                ((<= min-to-appt (* appt-display-interval 2)) 'high)
-                (t 'normal))
-     :persistent (cond
-                  ((<= min-to-appt appt-display-interval) t)
-                  (t nil))
-     :category 'appt
-     :id appt-msg))
+    (let ((important? (cond
+                       ((<= min-to-appt appt-display-interval) t)
+                       (t nil))))
+      (alert
+       (isamert/org-header-line-to-title appt-msg)
+       :title (format "Reminder, %s mins left" min-to-appt new-time)
+       :severity (if important? 'high 'normal)
+       :persistent important?
+       :category 'appt
+       :id appt-msg)))
 
   (save-window-excursion
     (appt-activate 1))
