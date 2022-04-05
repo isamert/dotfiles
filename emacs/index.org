@@ -2089,6 +2089,12 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 *** Automatically syncing with remote calendars
 I'm experimenting with using default Emacs calendar as my work calendar. To do so, I import the remote calendar into my diary using the following function. Set ~isamert/calendar-remote-ics-file~ to the url of ICS file beforehand.
 
+You also need to import work diary file in your main diary file, like this:
+
+#+begin_src diary
+  #include "~/.emacs.d/.cache/work-diary"
+#+end_src
+
 #+begin_src emacs-lisp
   (defconst isamert/work-diary-path (expand-file-name "~/.emacs.d/.cache/work-diary"))
 
@@ -5859,8 +5865,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
 ** Jira
 #+begin_src emacs-lisp :lexical yes
-  (evil-leader/set-key "oj" #'isamert/open-jira-issue-at-point)
-  (evil-leader/set-key "ej" #'isamert/jira-list-issues)
+  (evil-leader/set-key "ejo" #'isamert/open-jira-issue-at-point)
+  (evil-leader/set-key "eji" #'isamert/jira-list-issues)
 
   ;;
   ;; Install required JIRA client
@@ -6442,7 +6448,8 @@ I need to rewrite these functions using [[https://github.com/isamert/marks][mark
   ;; Keybindings
 
   (evil-leader/set-key
-    "ol" 'isamert/org-link-header
+    "ol" #'isamert/org-link-header
+    "oj" #'isamert/org-jump-to-header
     ;; TODO: rewrite this:
     ;;"oL" 'isamert/org-backlinks
   )
@@ -6494,20 +6501,28 @@ I need to rewrite these functions using [[https://github.com/isamert/marks][mark
              (propertize "»" 'face '(:foreground "green"))
              (propertize header 'face '(:foreground "sky blue" :weight bold)))
            .
-           (:fname ,fname :line ,(1- (string-to-number line)) :header ,header))))))
+           (:fname ,(concat org-directory "/" fname) :line ,(1- (string-to-number line)) :header ,header))))))
 
   (defun isamert/org-link-header ()
     "Interactively select a header and insert it as a link into the buffer.
   Headers are gathered from all the org files found in `org-directory'."
     (interactive)
-    (let* ((headers (isamert/org-all-headers))
-           (selected (cdr (assoc-string (completing-read "Select header:" headers) headers)))
+    (let* ((selected (isamert/alist-completing-read "Select header:" (isamert/org-all-headers)))
            (header-id (isamert/org-file-get-header-id (plist-get selected :fname) (plist-get selected :line))))
       (org-insert-link
        nil
        (concat "id:" header-id)
        (unless (use-region-p)
          (read-string "Enter link text: " (plist-get selected :header))))))
+
+
+  (defun isamert/org-jump-to-header ()
+    "Jump to selected header."
+    (interactive)
+    (let* ((selected (isamert/alist-completing-read "Select header:" (isamert/org-all-headers))))
+      (with-current-buffer (find-file-other-window (plist-get selected :fname))
+        (goto-char 0)
+        (forward-line (plist-get selected :line)))))
 
   ;; TODO Removed backlinks implementation, I will implement it once
   ;; minimal functionality within "marks" is done
