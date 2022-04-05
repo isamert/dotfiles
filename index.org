@@ -3205,52 +3205,41 @@ You need to install =vim-plug= to be able to install vim extensions.
 * Browsers
 ** Firefox
 *** tridactyl
-**** Keybindings
-| Key      | Action                                   |
-|----------+------------------------------------------|
-| f/F      | open hinted url [in new tab]             |
-| H, L     | back,forward in history                  |
-| A-, A-.  | tab prev/next                            |
-| gt gT    | tab prev/next                            |
-| A-e, C-i | open in native editor                    |
-|----------+------------------------------------------|
-| +, -     | zoom out/in                              |
-| p        | pin                                      |
-| d        | kill/close tab (even if pinned)          |
-| u        | reopen closed tab                        |
-| m        | open url with jaro                       |
-|----------+------------------------------------------|
-| ;;       | focus an element                         |
-| ;p       | copy text of an elemet                   |
-| ;y       | copy link/url of an element              |
-| ;k       | delete a element from the page           |
-| ;i       | copy image to clipboard                  |
-|----------+------------------------------------------|
-| ]c [c    | increment/decrement the current URL by 1 |
+| Key   | Action                                   |
+|-------+------------------------------------------|
+| f/F   | open hinted url [in new tab]             |
+| H, L  | back,forward in history                  |
+| J K   | tab prev/next                            |
+| C-i   | open in native editor                    |
+|-------+------------------------------------------|
+| +, -  | zoom out/in                              |
+| p     | pin                                      |
+| d     | kill/close tab (even if pinned)          |
+| u/U   | reopen closed tab/with completion        |
+| m     | open url with jaro                       |
+|-------+------------------------------------------|
+| ;;    | focus an element                         |
+| ;p    | copy text of an elemet                   |
+| ;y    | copy link/url of an element              |
+| ;k    | delete a element from the page           |
+| ;i    | copy image to clipboard                  |
+|-------+------------------------------------------|
+| ]c [c | increment/decrement the current URL by 1 |
 
-**** Commands
-| Command              | Action                                               |
-|----------------------+------------------------------------------------------|
-| :sync                | open syncthing page                                  |
-| :mpv, :mpvHint       | open page in mpv/open hinted link in mpv             |
-| :mpd, :mpdHint       | open page in mpd/open hinted link in mpd             |
-| :mpdAdd, :mpdAddHint | same but don't play, just enqueue                    |
-| :jaro                | open url with jaro                                   |
-| :searchImage         | search selected image in google similar image search |
-
-**** Tips
 - =:undo= has autocompletion, ie. lists all tabs that are closed.
+- =:tabopen= can (~t~ binding) can take =-c container-name= parameter, which opens tab in given container. Like =:tabopen -c work ...=. You don't need to write container name fully, first letter also suffices if it does not clash with any other container name.
 
 **** Configuration
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
   sanitise tridactyllocal tridactylsync
 
   colors midnight
-  set editorcmd jaro
+  set editorcmd /Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c
   set searchengine google
   set hintfiltermode vimperator-reflow
   set smoothscroll true
   set modeindicatorshowkeys true
+  set tabopencontaineraware true
 
   " commands
   command withUrl composite get_current_url |
