@@ -97,6 +97,7 @@ Journal files starts to take a lot of disk space. I put a simple limit to that h
   pgrep syncthing || syncthing -no-browser -no-restart -logflags=0 &
   pgrep copyq || copyq &
   pgrep crow || crow &
+  pgrep redshift || redshift -l 39:35 &
 #+end_src
 
 ** .xinitrc
@@ -1467,7 +1468,7 @@ This is the global keybinding manager for OSX. [[https://github.com/koekeishiya/
 #+begin_src js :tangle (when-linux "~/.config/rofi/andrea.rasi")
   configuration {
       /* You can switch between modes below by using Alt+{comma,period} */
-      modi: "combi,run,window,vms:rofi_vms,calc";
+      modi: "combi,run,window,calc";
       /* This represents which candidates are shown in combi mode by given order. */
       combi-modi: "window,drun,run";
       async-pre-read: 0;
@@ -2360,7 +2361,8 @@ In this file I define some file associations. Please refer to [[https://github.c
   (assoc
    #:pattern "inode/directory"
    #:program '(term -e ranger %f)
-   #:term '(ranger %f))
+   #:term '(ranger %f)
+   #:gallery 'nomacs)
 
   (assoc
    #:pattern "https://.*zoom\\.us/j/(\\w+)\\?pwd=(\\w+)"
@@ -2383,6 +2385,7 @@ In this file I define some file associations. Please refer to [[https://github.c
    #:program '(feh --start-at %f))
 
   (assoc
+   #:name 'nomacs
    #:pattern "^image/.*"
    #:program '(nomacs %f)
    #:on-error 'feh)
@@ -2400,8 +2403,9 @@ In this file I define some file associations. Please refer to [[https://github.c
    #:name 'browser
    #:pattern '("^https?://.*" "^.*\\.html?(#[\\w_-]+)?")
    #:emacs (elisp (eww "%f"))
-   #:program '(qutebrowser %f)
-   #:test '(pgrep qutebrowser)
+   #:program (elisp (eww "%f"))
+   ;; #:program '(qutebrowser %f)
+   ;; #:test '(pgrep qutebrowser)
    #:on-fail '(firefox %f)
    #:edit 'editor)
 
@@ -3234,7 +3238,7 @@ You need to install =vim-plug= to be able to install vim extensions.
   sanitise tridactyllocal tridactylsync
 
   colors midnight
-  set editorcmd /Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c
+  set editorcmd emacsclient -c
   set searchengine google
   set hintfiltermode vimperator-reflow
   set smoothscroll true
@@ -3245,10 +3249,8 @@ You need to install =vim-plug= to be able to install vim extensions.
   command withUrl composite get_current_url |
 
   command sync open localhost:8384
-
   command jaro withUrl ! jaro
   command jarohint hint -W ! jaro
-
   command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
@@ -3295,9 +3297,6 @@ You need to install =vim-plug= to be able to install vim extensions.
   bindurl ^https://duckduckgo.com f hint -Jc [class~=result__a]
   bindurl ^https://duckduckgo.com F hint -Jbc [class~=result__a]
 
-  autocmd DocStart .*eksisozluk.com () => ({redirectUrl: "https://large-type.com/#*retard*"})
-  autocmd DocStart ^http(s?)://www.reddit.com js tri.excmds.urlmodify("-t", "www", "old")
-
   " work stuff
   set searchurls.tywiki https://wiki.trendyol.com/dosearchsite.action?queryString=%s
 
@@ -3322,6 +3321,13 @@ Also need to enable following config to make userChrome.css work:
 #+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default-release" :linux "~/.mozilla/firefox/*.default-release"))) "/user.js")
   user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 #+end_src
+*** TODO Redirector
+I use [[https://addons.mozilla.org/en-US/firefox/addon/redirector/][this extension]] to do automatic redirection of certain urls to the urls that I want, like redirecting twitter to nitter automatically. Here is the configuration that can be imported through the extension configuration page:
+
+#+begin_src json
+  "TODO"
+#+end_src
+
 ** Qutebrowser
 - Use =Alt-a= to bring up Emacs to edit a text in the text-area.
 - Some useful keybindings that I added:
@@ -3574,44 +3580,6 @@ Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are conv
   done
 #+end_src
 
-** .scripts/askpass
-#+begin_src bash :tangle ~/.scripts/askpass
-  #!/bin/sh
-  zenity --password --title "Enter your password" 2> /dev/null
-#+end_src
-** .scripts/browser-watch
-#+begin_src bash :tangle ~/.scripts/browser-watch
-  #!/bin/bash
-
-  # TODO: watch a list of files
-
-  CMD=$1
-  <<<bash-initialize-variables>>>
-
-  if [[ "$CMD" = "--help" ]]; then
-      echo "Detect file changes and reload it in browser."
-      echo "$(basename "$0") [--browser=(firefox|chrome|vivaldi)] [--reload=(hard|normal)] --file=FILE_TO_WATCH"
-      exit 0
-  elif [[ ${MODE} = "run" ]]; then
-      echo "RELOADING..."
-
-      current_window=$(xdotool getactivewindow)
-
-      if [[ $RELOAD = "hard" ]]; then
-          RELOAD_KEYS="CTRL+SHIFT+R"
-      else
-          RELOAD_KEYS="CTRL+R"
-      fi
-
-      xdotool search --name "${BROWSER:=chrome}" windowactivate --sync
-      xdotool search --name "${BROWSER}" key --clearmodifiers "${RELOAD_KEYS}"
-
-      xdotool windowfocus --sync "${current_window}"
-      xdotool windowactivate --sync "${current_window}"
-  else
-      echo "$FILE" | entr "$0" "$@" --mode=run
-  fi
-#+end_src
 ** .scripts/cb-save
 #+begin_src bash :tangle (when-linux "~/.scripts/cb-save")
   #!/bin/bash
@@ -3647,20 +3615,6 @@ Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are conv
   # These are generally console-spesific stuff. For other interactive fuzzy
   # finding stuff check out ~/.scripts/menu (it uses rofi and there are stuff
   # for music, apps, passwords etc.).
-
-  function fzf_git_add {
-      local files=$(git "$@" ls-files --modified --others --exclude-standard | fzf --multi --ansi --preview="git $* diff --color=always {1}")
-      if [ -n "$files" ]; then
-          git "$@" add --verbose $files
-      fi
-  }
-
-  function fzf_git_files {
-      local files=$(git "$@" ls-files | fzf --multi --ansi)
-      if [ -n "$files" ]; then
-          $EDITOR $files
-      fi
-  }
 
   # FIXME: execute
   function fzf_git_log {
@@ -3720,58 +3674,6 @@ Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are conv
       pac*) shift; fzf_packages_arch "$@" ;;
       file*|contents) shift; fzf_file_contents "$@" ;;
       "") fzf;;
-  esac
-#+end_src
-** .scripts/getpassword
-#+begin_src bash :tangle ~/.scripts/getpassword
-  #!/bin/bash
-
-  # This script gets the requested password from a keepass file.
-  # It uses gnome-keyring to get password for kdbx file.
-  # $KEYRING_ID is the name of password field for your keepass database
-  # in gnome-keyring.
-  # Save your keepass database password to keyring like this:
-  # secret-tool store --label=KeePassDbPassword name keepass
-
-  # Usage:
-  # getpassword "/path/to/password/entry"            → prints entry's password from keepass db
-  # getpassword "/path/to/password/entry" --username → prints only username
-  # getpassword "/path/to/password/entry" --dump     → prints both username and password
-  # getpassword --keepass                            → print PASSWORD_STORE's password
-  # getpass --list                                   → list PASSWORD_STORE's entries under
-  # getpass --list "Social"                          → list PASSWORD_STORE's entries under /Social
-  #
-  # $PASSWORD_STORE is defined in ~/.profile, it points to a .kdbx file
-
-
-  KEYRING_ID=keepass
-  PASSWORD_PATH="$1"
-
-  function trim {
-      local var="${*:-$(</dev/stdin)}"
-      var="${var#"${var%%[![:space:]]*}"}"
-      var="${var%"${var##*[![:space:]]}"}"
-      echo -n "$var"
-  }
-
-  if [[ "$1" == "--keepass" ]]; then
-      secret-tool lookup name "$KEYRING_ID"
-      exit
-  elif [[ "$1" == "--list" ]]; then
-      secret-tool lookup name keepass | keepassxc-cli ls "$PASSWORD_STORE" "$2"
-      exit
-  fi
-
-  password=$(secret-tool lookup name "$KEYRING_ID")
-  info=$(echo "$password" | keepassxc-cli show --show-protected --quiet "$PASSWORD_STORE" "$PASSWORD_PATH")
-  username=$(echo "$info" | grep -i "username: " | cut -d: -f2 | trim)
-  password=$(echo "$info" | grep -i "password: " | cut -d: -f2 | trim)
-
-  case "$2" in
-      "-dump-all"|"--dump-all") echo "$info" | tail -n +2 ;;
-      "-dump"|"--dump")         echo "$username"; echo "$password" ;;
-      "-username"|"--username") echo "$username" ;;
-      ,*) echo "$password" ;;
   esac
 #+end_src
 ** .scripts/init-desktops
@@ -4096,12 +3998,6 @@ For the wacom tablet:
 #+begin_src bash :tangle ~/.scripts/menu
   #!/bin/bash
 
-  # I use API of the invidious to interact with youtube
-  # https://github.com/iv-org/invidious/wiki/API
-  INVIDIOUS_INSTANCE="https://invidious.xyz/api/v1"
-
-  all_name='[ALL]'
-
   function trim {
       local var="${*:-$(</dev/stdin)}"
       var="${var#"${var%%[![:space:]]*}"}"
@@ -4110,66 +4006,7 @@ For the wacom tablet:
   }
 
   function dmenu {
-      # TODO: use fzf inside terminal
       rofi -dmenu -fuzzy -i "$@"
-  }
-
-  function youtube {
-      # Search given string in youtube and show results. Play selected one in mpd or mpv.
-
-      for arg; do
-          case "$arg" in
-              "--audio"|"--music") local AUDIO=1                               ;;
-              "--video")           local VIDEO=1                               ;;
-              "--playlist="*)      local PLAYLIST=${arg/*=/}                   ;;
-              "--out")             local ONLY_PRINT=1                          ;;
-              ,*)                  local SEARCH_STRING="${SEARCH_STRING} $arg" ;;
-          esac
-      done
-
-      local SEARCH_HISTORY_FILE="$HOME/.cache/menu_youtube_history"
-      if [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]]; then
-          SEARCH_STRING=$(dmenu -p "search yt" < "$SEARCH_HISTORY_FILE")
-          echo "$SEARCH_STRING" >> "$SEARCH_HISTORY_FILE"
-          local HISTORY=$(sort -u "$SEARCH_HISTORY_FILE" | uniq "$SEARCH_HISTORY_FILE" | sed '/^\s*$/d')
-          echo "$HISTORY" > "$SEARCH_HISTORY_FILE"
-      fi
-
-      [[ -z "$PLAYLIST" && -z "$SEARCH_STRING" ]] && exit
-
-      if [[ -n "$PLAYLIST" ]]; then
-          # TODO: this only fetches first page of the playlist
-          # api accepts page url parameter, every page has 100 videos
-          local SEARCH_RESULTS=$(curl --silent "$INVIDIOUS_INSTANCE/playlists/$PLAYLIST" | jq '.videos')
-      else
-          local SEARCH_RESULTS=$(curl --silent -G --data-urlencode "q=$SEARCH_STRING" "$INVIDIOUS_INSTANCE/search")
-      fi
-      SEARCH_RESULTS=$(echo $SEARCH_RESULTS | sed "s/&/&amp;/g")
-
-      # Only print
-      if [[ $ONLY_PRINT = 1 ]]; then
-          echo "$SEARCH_RESULTS" \
-              | jq -r '.[] | "\(.title), [\((.viewCount // 1000) / 1000 | floor)K views, \(.lengthSeconds / 60 | floor) min], https://youtu.be/\(.videoId)"'
-          exit
-      fi
-
-      local SELECTED=$( \
-          echo "$SEARCH_RESULTS" \
-              | jq -r '.[] | "\(.title), <span foreground=\"grey\" size=\"small\">[\((.viewCount // 1000) / 1000 | floor)K views, \(.lengthSeconds / 60 | floor) min]</span>"' \
-              | nl -n 'ln' -s '. ' -w1 \
-              | dmenu -markup-rows -async-pre-read 0 \
-              | cut -d'.' -f1 \
-            )
-
-      [[ -z $SELECTED ]] && exit
-
-      local URL="https://youtube.com/watch?v=$(echo "$SEARCH_RESULTS" | jq -r ".[$((SELECTED - 1))].videoId")"
-
-      if [[ $VIDEO = 1 ]]; then
-          tsp mpv "$URL"
-      else
-          mpd-yt play "$URL"
-      fi
   }
 
   function files {
@@ -4193,58 +4030,7 @@ For the wacom tablet:
   }
 
   function file_contents {
-      term --tophalf -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
-  }
-
-  # Use `menu passwords -dump` to print password info into stdout.
-  function passwords {
-      local PASSWD=$(getpassword --keepass)
-      local ENTRY=$(echo "$PASSWD" | keepassxc-cli locate "$PASSWORD_STORE" / | tail -n +2 | dmenu)
-      if [ -n "$ENTRY" ]; then
-          if [[ "$1" == "-dump" ]]; then
-              getpassword "$ENTRY" -dump
-          else
-              local passinfo=$(getpassword "$ENTRY" --dump-all)
-              local otherinfo=$(echo "$passinfo" | awk -F: '/^\[.*]:/ {print $1}')
-
-              local what=$(echo -e "Fill fields (with Tab)\nFill fields (with Enter)\nFill password\n${otherinfo}\nShow all" | dmenu)
-              local username=$(echo "$passinfo" | grep -i -m 1 "username" | cut -d: -f2- | trim)
-              local password=$(echo "$passinfo" | grep -i -m 1 "password" | cut -d: -f2- | trim)
-              case "$what" in
-                  "Fill fields (with Tab)")
-                      sleep 0.2
-                      xdotool type --delay 5 "$username"
-                      xdotool key "Tab"
-                      xdotool type --delay 5 "$password" ;;
-                  "Fill fields (with Enter)")
-                      sleep 0.2
-                      xdotool type --delay 5 "$username"
-                      xdotool key "Return"
-                      sleep 0.2
-                      xdotool type --delay 5 "$password" ;;
-                  "Fill password")
-                      sleep 0.2
-                      xdotool type --delay 5 "$password" ;;
-                  "Show all")
-                      local allinfo=$(printf "[username]: $username\\n[password]: $password\\n$passinfo" | awk -F: '/^\[.*]:/ {printf("%-40s%-70s\n",$1,$2)}' | dmenu -i | cut -d']' -f2- | trim | xclip -selection clipboard) ;;
-                  ,*)
-                      echo "$passinfo" | grep -iF -m 1 "$what" | cut -d: -f2- | trim | xclip -selection clipboard ;;
-              esac
-              notify-send --expire-time=1000 'password-menu' 'Done.'
-          fi
-      fi
-
-      # Clear clipboard after 20 secs
-      if [[ ! "$1" == "-dump" ]]; then
-          local secs=$((20))
-          while [ $secs -gt 0 ]; do
-             echo -ne "$secs\033[0K\r"
-             sleep 1
-             : $((secs--))
-          done
-
-          echo "" | xclip -selection clipboard
-      fi
+      term --float -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
   }
 
   function bookmarks {
@@ -4255,32 +4041,14 @@ For the wacom tablet:
   cmd="$1"
   shift
   case $cmd in
-      ,*help) echo "menu [mpd-(artists|all|playlist)|youtube|files|folders|file-contents|passwords]";;
-      mpd-artists) mpd-artists "$@";;
-      mpd-all) mpd-all "$@";;
-      mpd-playlist) mpd-playlist "$@";;
-      youtube) youtube "$@";;
+      ,*help) echo "menu [files|folders|file-contents|passwords]";;
       files) files "$@";;
       folders) folders "$@";;
       file*contents) file_contents "$@";;
-      passwords) passwords "$@";;
       bookmarks) bookmarks "$@";;
       calc*) rofi -show calc -modi calc -no-show-match -no-sort ;;
       ,*) rofi -show combi "$@" ;;
   esac
-#+end_src
-** .scripts/rofi_vms
-#+begin_src bash :tangle ~/.scripts/rofi_vms
-  #!/bin/sh
-
-  if [[ -z "$*" ]]; then
-      # VBoxManage seems pretty slow
-      #VBoxManage list vms | awk '{ print $1 }' | sed 's/"//g'
-      find ~/Workspace/vms/ -mindepth 1 -maxdepth 1 -type d -printf "%f\n"
-  else
-      coproc VBoxManage startvm "$*"
-      exit
-  fi
 #+end_src
 ** .scripts/sub-extract
 #+begin_src python :tangle ~/.scripts/sub-extract
@@ -4628,13 +4396,6 @@ For the wacom tablet:
       "$cmd"
 
 #+end_src
-** .scripts/unmount-sdb
-#+begin_src bash :tangle (when-linux "~/.scripts/unmount-sdb")
-  #!/bin/bash
-
-  udisksctl unmount -b /dev/sdb
-  udisksctl power-off -b /dev/sdb
-#+end_src
 ** .scripts/xcopy
 #+begin_src bash :tangle ~/.scripts/xcopy
   #!/bin/sh
@@ -4838,34 +4599,6 @@ Downloads given file in given folder with given name. Useful for adding keybindi
 
   # TODO: add peak points
 #+end_src
-*** .scripts/tdk
-#+begin_src bash :tangle ~/.scripts/tdk
-  #!/bin/bash
-
-  # Kullanim:
-  # tdk kelime - Anlamlari JSON olarak ekrana basar
-  # tdk        - Interaktif olarak kelimeyi ister ve anlamlari ekrana basar
-  # Interactive shell'den cagirilmadiginda GUI araciligiyla kelimeleri
-  # ister ve yine anlamlari GUI uzerinden siralar
-
-  get_response() {
-      curl --location --get --silent "http://sozluk.gov.tr/gts" --data-urlencode "ara=$*"
-  }
-
-  INPUT="$*"
-  if [[ -z $INPUT ]]; then
-      INPUT=$(zenity --entry --text="Kelime girin: ")
-  fi
-
-  RESULT=$(get_response $INPUT | jq '.[] | .anlamlarListe | map({tur: (try .ozelliklerListe[].tam_adi catch ""), anlam: .anlam, ornek: (try {cumle: .orneklerListe[].ornek, yazar: .orneklerListe[].yazar[].kisa_adi} catch "")})')
-
-  if [[ -t 1 ]]; then
-      echo $RESULT | jq -C '.'
-  else
-      zenity --info --no-wrap --text="$(echo "$RESULT" | jq)"
-  fi
-#+end_src
-
 ** System administration
 *** .scripts/toggle-touchpad
 #+begin_src bash :tangle (when-linux "~/.scripts/toggle-touchpad")
