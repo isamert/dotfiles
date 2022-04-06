@@ -6323,9 +6323,10 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
         (list :group (dbus-string-to-byte-array (dbus-byte-array-to-string selected))))))
 
   (defun isamert/signal-sync-message-received-handler (ts source receiver _ msg attchs)
-    (message ">> [signal] sender=%s, msg=%s attach=%s" source msg attchs)
-    (when (and (string= receiver source)
-               (string= isamert/my-phone-number source))
+    (message ">> [signal] sender=%s, receiver=%s, msg=%s, attach=%s" source receiver msg attchs)
+    (when (and (string= isamert/my-phone-number source)
+               (string= receiver
+                        (alist-get 'uuid (json-read-file (expand-file-name (format "~/.local/share/signal-cli/data/%s" isamert/my-phone-number))))))
       (cond
        ((s-prefix? "run" msg)
         (isamert/signal-send-note-to-myself
