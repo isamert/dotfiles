@@ -47,6 +47,7 @@
     ("https://www.cold-takes.com/rss" blog essay)
     ;; ("https://jabberwocking.com/feed/" blog essay) ;; Kevin Drum
     ("https://fatmagulunyengesi.substack.com/feed" blog essay turkish)
+    ("https://lukesmith.xyz/rss.xml" blog linux cli)
 
     ("BlackMetalUpdates" youtube music metal black)
     ("XOdiumNostrumX" youtube music metal extreme)
