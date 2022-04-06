@@ -2276,7 +2276,7 @@ To sync it automatically:
 
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
-          '((".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . browse-url-secondary-browser-function)
+          '((".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . browse-url-firefox)
             ("." . browse-url-default-browser)))
 
     (evil-define-key 'normal eww-mode-map
