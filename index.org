@@ -2095,7 +2095,13 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   # Some variables
   export FZF_DEFAULT_OPTS='--reverse --bind="tab:replace-query"'
 
-  setopt autocd histignoredups appendhistory incappendhistory histreduceblanks
+  # incappendhistory -> incrementally append history so that if shell
+  #   closes unexpectedly, do not loose the history
+  # nosharehistory -> sharehistory causes open zsh sessions to pick up
+  #   newly added history items immediately. This reserves that
+  # histreduceblanks -> remove superfluous blanks from commands while
+  #   appending them to the history
+  setopt autocd histignoredups incappendhistory nosharehistory histreduceblanks
   # unsetopt BEEP
   unsetopt LIST_BEEP
 
