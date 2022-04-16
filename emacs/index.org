@@ -2898,6 +2898,94 @@ Some shortcuts you can use on any vertico window:
             isamert/consult-ripgrep))
     (mini-frame-mode +1))
 #+end_src
+** ~project.el~ and project management
+- project.el offers ~C-x p~ keymap with very useful bindings. I also keep my project related bindings under ~SPC p~.
+- After doing ~project-switch-project~, you are expected to hit a key to trigger a project action, like finding a file in the project or doing a project grep. You need to add these actions into ~project-switch-commands~ list and you need to define a key in ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by given key.
+
+#+begin_src emacs-lisp
+  (evil-leader/set-key "p" (lambda () (interactive) (project-switch-project (isamert/current-project-root))))
+
+  (setq project-switch-commands
+        '((project-find-file "Find file")
+          (project-find-dir "Find directory")
+          (project-eshell "Eshell")))
+
+  (define-key project-prefix-map "s" #'project-switch-project)
+  (add-to-list 'project-switch-commands `(project-switch-project "Switch"))
+
+  (define-key project-prefix-map "g" #'isamert/consult-ripgrep)
+  (add-to-list 'project-switch-commands `(isamert/consult-ripgrep "Grep"))
+
+  (define-key project-prefix-map "D" #'dired-jump)
+  (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
+
+  (define-key project-prefix-map "m" #'magit-status)
+  (add-to-list 'project-switch-commands `(magit-status "Magit"))
+
+  (define-key project-prefix-map "!" #'isamert/project-shell-command)
+  (add-to-list 'project-switch-commands `(isamert/project-shell-command "Run shell command"))
+
+  (define-key project-prefix-map "v" #'isamert/project-vterm)
+  (add-to-list 'project-switch-commands `(isamert/project-vterm "vterm"))
+
+  (defun isamert/project-shell-command ()
+    "Run `async-shell-command' in the current project's root directory."
+    (interactive)
+    (let ((default-directory (project-root (project-current t))))
+      (call-interactively #'isamert/shell-command)))
+
+  (defun isamert/project-vterm ()
+    "Run `async-shell-command' in the current project's root directory."
+    (interactive)
+    (let ((default-directory (project-root (project-current t))))
+      (vterm t)))
+#+end_src
+
+~(project-remember-projects-under isamert/projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
+
+
+#+begin_src emacs-lisp
+  (defconst isamert/projects-root "~/Workspace/projects")
+
+  (defun isamert/current-project-root ()
+    "Return the root path of current project."
+    (interactive)
+    ;; `project-current' is a function from project.el
+    (ignore-errors
+      (expand-file-name (cdr (project-current)))))
+
+  (defun isamert/current-project-name ()
+    "Return current projects name."
+    (when-let ((proot (isamert/current-project-root)))
+      (string-trim
+       (string-remove-prefix
+        (expand-file-name isamert/projects-root)
+        proot)
+       "/" "/")))
+
+  (defun isamert/is-git-dir (dir)
+    (file-directory-p (concat dir "/.git")))
+
+  (defun isamert/all-project-roots ()
+    "Find every project dir under `isamert/projects-root'.
+  Every folder without a \".git\" folder is considered to be a project group folder."
+    (let ((home (expand-file-name "~")))
+      (->>
+       (f-directories isamert/projects-root)
+       (cons isamert/projects-root)
+       (--filter (not (isamert/is-git-dir it)))
+       (--map (f-directories it))
+       (-flatten)
+       (--filter (isamert/is-git-dir it))
+       (--map (s-replace home "~" (f-full it))))))
+
+  ;; Ensure all projects are known by project.el
+  ;; The following does not recurse as I like it to be
+  ;; (project-remember-projects-under isamert/projects-root t)
+  (--each (--map (cons 'vc it) (isamert/all-project-roots))
+    (project-remember-project it t))
+#+end_src
+
 ** consult
 Some key points:
 - =SPC RET= brings up =consult-buffer=.
@@ -3003,34 +3091,19 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 
 #+name: consult-perspective-buffers
 #+begin_src emacs-lisp
-  (defvar isamert/consult-source-perspective-buffers
-    `(:name     "Perspective buffers"
-                :narrow   ?P
-                :category buffer
-                :face     consult-buffer
-                :history  buffer-name-history
-                :state    ,#'consult--buffer-state
-                :default  t
-                :items
-                ,(lambda ()
-                   (let ((filter (consult--regexp-filter consult-buffer-filter)))
-                     (seq-remove (lambda (x) (or (not x) (string-match-p filter x)))
-                                 (ignore-errors (mapcar #'buffer-name (persp-buffers (get-current-persp))))))))
-    "Current persp buffer candidate source for `consult-buffer'.")
-
   (defvar isamert/consult-source-files
     `(:name     "My files"
-                :narrow   ?F
+                :narrow   ?f
                 :category file
                 :face     consult-file
                 :history  file-name-history
                 :state    ,#'consult--file-state
                 :default  t
+                :hidden   t
                 :items    isamert/my-files)
     "My frequently accessed files source for `consult-buffer'.")
 
-  (add-to-list 'consult-buffer-sources 'isamert/consult-source-perspective-buffers)
-  (add-to-list 'consult-buffer-sources 'isamert/consult-source-files)
+  (setq consult-buffer-sources `(,@consult-buffer-sources isamert/consult-source-files))
 
   (defun isamert/my-files ()
     "Return list of all files I frequently use."
@@ -3096,94 +3169,6 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 
   (use-package embark-consult
     :after (embark consult))
-#+end_src
-
-** ~project.el~ and project management
-- project.el offers ~C-x p~ keymap with very useful bindings. I also keep my project related bindings under ~SPC p~.
-- After doing ~project-switch-project~, you are expected to hit a key to trigger a project action, like finding a file in the project or doing a project grep. You need to add these actions into ~project-switch-commands~ list and you need to define a key in ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by given key.
-
-#+begin_src emacs-lisp
-  (evil-leader/set-key "p" (lambda () (interactive) (project-switch-project (isamert/current-project-root))))
-
-  (setq project-switch-commands
-        '((project-find-file "Find file")
-          (project-find-dir "Find directory")
-          (project-eshell "Eshell")))
-
-  (define-key project-prefix-map "s" #'project-switch-project)
-  (add-to-list 'project-switch-commands `(project-switch-project "Switch"))
-
-  (define-key project-prefix-map "g" #'isamert/consult-ripgrep)
-  (add-to-list 'project-switch-commands `(isamert/consult-ripgrep "Grep"))
-
-  (define-key project-prefix-map "D" #'dired-jump)
-  (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
-
-  (define-key project-prefix-map "m" #'magit-status)
-  (add-to-list 'project-switch-commands `(magit-status "Magit"))
-
-  (define-key project-prefix-map "!" #'isamert/project-shell-command)
-  (add-to-list 'project-switch-commands `(isamert/project-shell-command "Run shell command"))
-
-  (define-key project-prefix-map "v" #'isamert/project-vterm)
-  (add-to-list 'project-switch-commands `(isamert/project-vterm "vterm"))
-
-  (defun isamert/project-shell-command ()
-    "Run `async-shell-command' in the current project's root directory."
-    (interactive)
-    (let ((default-directory (project-root (project-current t))))
-      (call-interactively #'isamert/shell-command)))
-
-  (defun isamert/project-vterm ()
-    "Run `async-shell-command' in the current project's root directory."
-    (interactive)
-    (let ((default-directory (project-root (project-current t))))
-      (vterm t)))
-#+end_src
-
-~(project-remember-projects-under isamert/projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
-
-
-#+begin_src emacs-lisp
-  (defconst isamert/projects-root "~/Workspace/projects")
-
-  (defun isamert/current-project-root ()
-    "Return the root path of current project."
-    (interactive)
-    ;; `project-current' is a function from project.el
-    (ignore-errors
-      (expand-file-name (cdr (project-current)))))
-
-  (defun isamert/current-project-name ()
-    "Return current projects name."
-    (when-let ((proot (isamert/current-project-root)))
-      (string-trim
-       (string-remove-prefix
-        (expand-file-name isamert/projects-root)
-        proot)
-       "/" "/")))
-
-  (defun isamert/is-git-dir (dir)
-    (file-directory-p (concat dir "/.git")))
-
-  (defun isamert/all-project-roots ()
-    "Find every project dir under `isamert/projects-root'.
-  Every folder without a \".git\" folder is considered to be a project group folder."
-    (let ((home (expand-file-name "~")))
-      (->>
-       (f-directories isamert/projects-root)
-       (cons isamert/projects-root)
-       (--filter (not (isamert/is-git-dir it)))
-       (--map (f-directories it))
-       (-flatten)
-       (--filter (isamert/is-git-dir it))
-       (--map (s-replace home "~" (f-full it))))))
-
-  ;; Ensure all projects are known by project.el
-  ;; The following does not recurse as I like it to be
-  ;; (project-remember-projects-under isamert/projects-root t)
-  (--each (--map (cons 'vc it) (isamert/all-project-roots))
-    (project-remember-project it t))
 #+end_src
 
 ** flycheck
@@ -5485,7 +5470,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
      (list (read-string "Job ID: " (isamert/region-or 'symbol))))
     (let ((buf (get-buffer-create (format "*isamert/bigquery: %s*" job-id))))
       (switch-to-buffer buf)
-      (insert (shell-command-to-string (format "bq show --format=prettyjson -j '%s'" job-id)))))
+      (insert (shell-command-to-string (format "bq show %s -j '%s'" (if current-prefix-arg "--format=prettyjson" "") job-id)))))
 
   (defun isamert/big-query-table-info (table-name)
     "Get summary information for TABLE-NAME.
@@ -5950,12 +5935,11 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                                (car project) (car project) (cdr project))
                        (jiralib2-jql-search)
                        (append issues))))
-       isamert/jira-projects)))
+       isamert/jira-projects)
+      issues))
 
   (defun isamert/jira-list-issues (&optional arg)
     (interactive "P")
-    (when arg
-      (isamert/jira-refresh-issue-lists))
     (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban"))
                    ("My issues" (isamert/jira-get-my-issues))
                    ("New issues" (isamert/jira-get-all-issues))
