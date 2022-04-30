@@ -52,7 +52,7 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
 ** Package repos
 Add ~melpa~ and ~org~ package archives and update them if needed.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_src emacs-lisp
   (require 'package)
 
   (add-to-list 'package-archives '("nongnu" . "https://elpa.nongnu.org/nongnu/"))
@@ -689,8 +689,7 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
 
 ** Fonts and theme
 #+BEGIN_SRC emacs-lisp
-  (use-package doom-themes
-    :defer t)
+  (use-package doom-themes)
 
   (defconst isamert/fonts '("Iosevka Comfy" "Iosevka Nerd Font"))
   (defconst isamert/font-height
@@ -772,7 +771,7 @@ This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known 
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
 
 #+BEGIN_SRC emacs-lisp
-(setq frame-title-format "%b - emacs")
+  (setq frame-title-format "%b - emacs")
 #+END_SRC
 
 ** Parentheses
@@ -1192,6 +1191,7 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
   (use-package org-contrib)
 
   (use-package org
+    :defer t
     :config
     (setq org-return-follow-links t)
     ;; ^ Open links with RET
@@ -1225,7 +1225,9 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
       (set (make-local-variable 'electric-indent-functions)
            (list (lambda (arg) 'no-indent))))
 
-    (add-hook 'org-mode-hook #'isamert/disable-electric-indent))
+    (add-hook 'org-mode-hook #'isamert/disable-electric-indent)
+
+    <<org-babel-configuration>>)
 #+end_src
 
 ** Keybindings
@@ -1333,7 +1335,8 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org))
 
     ;; With the following, I can call functions defined inside this file in other org files
-    (org-babel-lob-ingest "~/Documents/notes/utils.org"))
+    ;; (org-babel-lob-ingest "~/Documents/notes/utils.org")
+  )
 #+END_SRC
 
 ** Auto indent subsections
@@ -1344,54 +1347,11 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 #+END_SRC
 
 ** Babel
-*** ob-http
-#+begin_src emacs-lisp
-  ;; Http request in org-mode babel.
-  ;; You can get the generated curl command after executing the code
-  ;; block, from *curl command history* buffer
-  (use-package ob-http)
-
-  ;; TODO Handle --data-urlencode, -X {POST,GET,etc...}, -L, --data-raw
-  (defun isamert/curl-to-org-http (curl-str)
-    "Convert CURL-STR into an ob-http block.
-  More concretely this function converts given curl command (that
-  is copied from Chrome/Firefox dev tools, using the `Copy as curl'
-  option) into an ob-http block to be able to use all the goodies
-  that is provided by ob-http."
-    (interactive
-     (list
-      (if (use-region-p)
-          (buffer-substring-no-properties (region-beginning) (region-end))
-        (read-string "Curl string: "))))
-    (let* ((curl (s-trim curl-str))
-           (url (cadr (s-match "['\"]\\(http.*?\\)['\"]" curl)))
-           (headers (--map (format "%s: %s" (s-titleize (nth 1 it)) (nth 2 it))
-                           (s-match-strings-all "-H '\\(.*?\\): \\(.*?\\)'" curl)))
-           (body (car (s-match "--data-binary '\\(.*?\\)'" curl)))
-           (result (format
-                    "  %s %s\n  %s%s"
-                    (if body "POST" "GET")
-                    url
-                    (--reduce (format "%s\n  %s" acc it) headers)
-                    ;; TODO if json, format it
-                    (if body
-                        (format "\n\n  %s" body)
-                      ""))))
-      (when (use-region-p)
-        (delete-region (region-beginning) (region-end)))
-      (unless (save-excursion
-                (goto-char (region-beginning))
-                (forward-line -1)
-                (s-contains? "begin_src" (thing-at-point 'line t)))
-        (insert "#+begin_src http :pretty :wrap src json\n\n#+end_src")
-        (forward-line -1))
-      (insert result)))
-#+end_src
-
 *** General configuration
-#+begin_src emacs-lisp
+#+name: org-babel-configuration
+#+begin_src emacs-lisp :tangle no
   ;; Typescript
-  (use-package ob-typescript)
+  (use-package ob-typescript :after org)
 
   ;; Allow these languages to run in code blocks
   (org-babel-do-load-languages
@@ -1442,10 +1402,54 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       (org-redisplay-inline-images)))
 #+end_src
 
+*** ob-http
+#+begin_src emacs-lisp
+  ;; Http request in org-mode babel.
+  ;; You can get the generated curl command after executing the code
+  ;; block, from *curl command history* buffer
+  (use-package ob-http :after org)
+
+  ;; TODO Handle --data-urlencode, -X {POST,GET,etc...}, -L, --data-raw
+  (defun isamert/curl-to-org-http (curl-str)
+    "Convert CURL-STR into an ob-http block.
+  More concretely this function converts given curl command (that
+  is copied from Chrome/Firefox dev tools, using the `Copy as curl'
+  option) into an ob-http block to be able to use all the goodies
+  that is provided by ob-http."
+    (interactive
+     (list
+      (if (use-region-p)
+          (buffer-substring-no-properties (region-beginning) (region-end))
+        (read-string "Curl string: "))))
+    (let* ((curl (s-trim curl-str))
+           (url (cadr (s-match "['\"]\\(http.*?\\)['\"]" curl)))
+           (headers (--map (format "%s: %s" (s-titleize (nth 1 it)) (nth 2 it))
+                           (s-match-strings-all "-H '\\(.*?\\): \\(.*?\\)'" curl)))
+           (body (car (s-match "--data-binary '\\(.*?\\)'" curl)))
+           (result (format
+                    "  %s %s\n  %s%s"
+                    (if body "POST" "GET")
+                    url
+                    (--reduce (format "%s\n  %s" acc it) headers)
+                    ;; TODO if json, format it
+                    (if body
+                        (format "\n\n  %s" body)
+                      ""))))
+      (when (use-region-p)
+        (delete-region (region-beginning) (region-end)))
+      (unless (save-excursion
+                (goto-char (region-beginning))
+                (forward-line -1)
+                (s-contains? "begin_src" (thing-at-point 'line t)))
+        (insert "#+begin_src http :pretty :wrap src json\n\n#+end_src")
+        (forward-line -1))
+      (insert result)))
+#+end_src
+
 ** Exporting
 *** HTML
 #+BEGIN_SRC emacs-lisp
-  (use-package htmlize)
+  (use-package htmlize :after org)
 #+END_SRC
 
 *** iCalendar settings
@@ -1610,28 +1614,28 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 
   ;; Make headings look better with nice bullets.
   ;; It also adjusts the size of headings according to their level.
-  (use-package org-bullets
-    :hook (org-mode . org-bullets-mode))
+  ;; (use-package org-bullets
+  ;;   :hook (org-mode . org-bullets-mode))
 
-  (use-package org-fancy-priorities
-    :diminish
-    :hook (org-mode . org-fancy-priorities-mode)
-    :config
-    (setq org-fancy-priorities-list '("🅰" "🅱" "🅲" "🅳" "🅴")))
+  ;; (use-package org-fancy-priorities
+  ;;   :diminish
+  ;;   :hook (org-mode . org-fancy-priorities-mode)
+  ;;   :config
+  ;;   (setq org-fancy-priorities-list '("🅰" "🅱" "🅲" "🅳" "🅴")))
 
   ;; Pretty nice website to find unicode stuff: unicode-table.com
-  (use-package org-pretty-tags
-    :diminish org-pretty-tags-mode
-    :config
-    (setq org-pretty-tags-surrogate-strings
-          '(("work"  . "⚒")
-            ("meeting" . "☎")
-            ("side"  . "❄")
-            ("learning" . "♢")
-            ("must"  . "✠")
-            ("rutin" . "♟")
-            ("study" . "☣")))
-    (org-pretty-tags-global-mode))
+  ;; (use-package org-pretty-tags
+  ;;   :diminish org-pretty-tags-mode
+  ;;   :config
+  ;;   (setq org-pretty-tags-surrogate-strings
+  ;;         '(("work"  . "⚒")
+  ;;           ("meeting" . "☎")
+  ;;           ("side"  . "❄")
+  ;;           ("learning" . "♢")
+  ;;           ("must"  . "✠")
+  ;;           ("rutin" . "♟")
+  ;;           ("study" . "☣")))
+  ;;   (org-pretty-tags-global-mode))
 
 
   (isamert/prettify-mode 'org-mode-hook
@@ -1663,6 +1667,7 @@ This prints the text that is used by polybar to show what I am clocking right no
 ** org-ql
 #+BEGIN_SRC emacs-lisp
   (use-package org-ql
+    :after org
     :config
     ;; Load org-ql-search prematurely to be able to use org-ql blocks in
     ;; org-mode
@@ -1697,7 +1702,7 @@ A very nice archiving tool. An org entry with ~URL~ property is considered a boo
 It has a lot of other customization but haven't find a use case for them, I'm simply using this to archive web pages.
 
 #+begin_src emacs-lisp
-  (use-package org-board)
+  (use-package org-board :after org)
 #+end_src
 
 Here is a capture template for capturing links and automatically archiving them:
@@ -2388,12 +2393,15 @@ To sync it automatically:
 This mode allows you to do /undo/ /redo/ operations on window layout changes. My most frequent use case is that sometimes I just want to focus on one window for a while and then return back to my old layout setup. These keybindings allows me to do that.
 
 #+BEGIN_SRC emacs-lisp
-  (setq winner-dont-bind-my-keys t)
-  (winner-mode t)
-  (evil-define-key 'normal 'global
-    (kbd "C-w 1") 'delete-other-windows
-    (kbd "C-w r") 'winner-redo
-    (kbd "C-w u") 'winner-undo)
+  (use-package winner
+    :init
+    (setq winner-dont-bind-my-keys t)
+    :config
+    (winner-mode t)
+    (evil-define-key 'normal 'global
+      (kbd "C-w 1") 'delete-other-windows
+      (kbd "C-w r") 'winner-redo
+      (kbd "C-w u") 'winner-undo))
 #+END_SRC
 
 ** ace-window
@@ -3305,7 +3313,7 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
     (setq lsp-headerline-breadcrumb-enable nil)
     (setq lsp-enable-snippet nil)
     ;; ^ I handle snippets myself with yasnippet
-    ;; (setq lsp-ui-doc-include-signature t)
+   (setq lsp-ui-doc-include-signature t)
     ;; ^ Show the signature in the doc posframe. This shows the
     ;; posframe even if there is no documentation for the function
     ;; etc.
@@ -3344,9 +3352,8 @@ This seems working better than =hs-minor-mode= and also it's supposedly works wi
   (defun isamert/lsp-ui-doc-focus-frame ()
     "Show and focus to the documentation."
     (interactive)
-    (unless lsp-ui-doc-mode
-      (lsp-ui-doc-show))
-    (lsp-ui-doc-focus-frame))
+    (unless (lsp-ui-doc-focus-frame)
+      (lsp-ui-doc-show)))
 
   (use-package lsp-ui
     :after (lsp-mode)
@@ -3961,7 +3968,6 @@ Adds persistent undo feature to Emacs' undo-redo functionality.
 
 #+begin_src emacs-lisp
   (use-package undohist
-    :ensure t
     :config
     (undohist-initialize))
 #+end_src
@@ -3970,7 +3976,6 @@ For reading epub files.
 
 #+begin_src emacs-lisp
   (use-package justify-kp
-    :ensure t
     :diminish
     :quelpa (justify-kp
              :fetcher github
@@ -4032,10 +4037,10 @@ It lets me display comments of given reddit thread in an org buffer using the =r
 #+begin_src emacs-lisp
   (use-package reddigg)
 #+end_src
-** topspace
+** COMMENT topspace
 Allows you to scroll above the top line. Evil bindings like ~zz~ ~zt~ ~zb~ works as expected, no configuration needed.
 
-#+begin_src emacs-lisp
+#+begin_src
   (use-package topspace
     :config
     (setq topspace-autocenter-buffers nil)
@@ -4230,11 +4235,11 @@ Turkish dictionary.
   (defun sp-wrap-underscore () (interactive) (sp-wrap-with-pair "_"))
 #+end_src
 
-** writeroom-mode
+** COMMENT writeroom-mode
 Gives you a nice, uncluttered editing experience by removing all unneeded visual clutter and by justifying the text in the middle.
 - =SPC W= to enable it.
 
-#+begin_src emacs-lisp
+#+begin_src
   (use-package writeroom-mode
     :config
     (setq writeroom-width 150) ;; Better for org-mode
@@ -4371,6 +4376,7 @@ Feed reader.
     ;; Just use something like: (blog software) and (metal black)
 
     (load "feeds")
+    (setq elfeed-search-title-max-width 100)
     (setq elfeed-curl-extra-arguments '("--netrc"))
     (setq elfeed-feeds (mapcar #'isamert/elfeed--expand isamert/feeds))
     (isamert/elfeed-auto-tag-url '(("youtube\\.com" youtube)))
@@ -7518,7 +7524,9 @@ Company/work related stuff.
               (insert issue-prefix)))
         (goto-char (point-min))
         (unless (re-search-forward "SAT-" nil t)
-          (insert "SAT-1 ")))))
+          (if (and (ignore-errors (org-clocking-p)) (s-contains? "SAT-" org-clock-heading))
+              (insert (concat (car (s-match "SAT-[0-9]+" org-clock-heading)) " "))
+            (insert "SAT-1 "))))))
 
   (when (company/is-company)
     (add-hook 'git-commit-setup-hook 'company/git-commit-message-setup))
@@ -7803,7 +7811,6 @@ Company/work related stuff.
 #+begin_src emacs-lisp
   (use-package forge
     :after magit
-    :ensure t
     :config
     (push
      '("gitlab.trendyol.com"
@@ -7813,7 +7820,6 @@ Company/work related stuff.
      forge-alist))
 
   (use-package code-review
-    :ensure t
     :diminish
     :quelpa (code-review
              :fetcher github

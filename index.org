@@ -3305,6 +3305,8 @@ You need to install =vim-plug= to be able to install vim extensions.
 
   " work stuff
   set searchurls.tywiki https://wiki.trendyol.com/dosearchsite.action?queryString=%s
+  set searchurls.tygs https://gitlab.trendyol.com/discovery/seller-ads?filter=%s
+  set searchurls.tyg https://gitlab.trendyol.com/?name=%s
 
   " vim: set filetype=vim:
 #+end_src
