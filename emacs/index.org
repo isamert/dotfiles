@@ -2703,7 +2703,6 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
         (persp-add-new "work/scratch")
         (persp-switch "work/scratch")
         (find-file work-org))
-      (persp-switch "main")
       (message ">> Perspectives are opening... Done.")))
 
   (defun isamert/persp-show-current-persp-name ()
@@ -4589,6 +4588,8 @@ Keybindings are generally set in-place, following have no context, so they are h
   (evil-define-key 'normal prog-mode-map (kbd "M-;") 'comment-line)
   (evil-define-key 'visual prog-mode-map (kbd "M-;") 'comment-dwim)
 
+  (evil-define-key 'normal 'global (kbd "M-d") #'isamert/kill-this-buffer)
+
   (evil-leader/set-key
     "1" #'(lambda () (interactive) (call-interactively (local-key-binding (kbd "C-c C-c")))))
 #+END_SRC
@@ -5858,6 +5859,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 #+begin_src emacs-lisp :lexical yes
   (evil-leader/set-key "ejo" #'isamert/open-jira-issue-at-point)
   (evil-leader/set-key "eji" #'isamert/jira-list-issues)
+  (evil-leader/set-key "ejc" #'isamert/jira-create-ticket)
 
   ;;
   ;; Install required JIRA client
@@ -6185,7 +6187,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (insert jira-markup)
       (shell-command-on-region
        (point-min) (point-max)
-       "pandoc -f jira -t org"
+       "pandoc -f jira -t org --wrap=none"
        nil t)
       (buffer-string)))
 

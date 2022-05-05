@@ -2847,7 +2847,7 @@ You need to install =vim-plug= to be able to install vim extensions.
   " faster split creation/deletion
   nnoremap <silent> <A--> :split<CR>
   nnoremap <silent> <A-\> :vsplit<CR>
-  nnoremap <silent> <A-w> :bd<CR>
+  nnoremap <silent> <A-d> :bd<CR>
 
   " change buffers
   nnoremap <silent> <C-l> :bn<CR>
@@ -3129,7 +3129,7 @@ You need to install =vim-plug= to be able to install vim extensions.
   " faster split creation/deletion
   nnoremap <silent> <A--> :split<CR>
   nnoremap <silent> <A-\> :vsplit<CR>
-  nnoremap <silent> <A-w> :bd<CR>
+  nnoremap <silent> <A-d> :bd<CR>
 
   " change buffers
   nnoremap <silent> <C-l> :bn<CR>
