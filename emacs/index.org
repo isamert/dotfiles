@@ -1958,15 +1958,9 @@ Several packages are using this package to show system-level notifications. Here
     "Send the notification to my phone if it's marked as urgent/high."
     (pcase (plist-get args :severity)
       ((or 'urgent 'high)
-       ;; Only send notification to phone if Emacs is idle for 120 secs
+       ;; Only send notification to phone if Emacs is idle for 60 secs
        (when (and (current-idle-time)
-                  (>= (time-to-seconds (current-idle-time)) 120))
-         (when isamert/signal-bot-object
-           (isamert/signal-send-message
-            (list :number isamert/my-phone-number)
-            (format "%s\n%s"
-                    (or (plist-get args :title) "Emacs")
-                    msg)))
+                  (>= (time-to-seconds (current-idle-time)) 60))
          (isamert/send-notification-to-my-phone
           :title (or (plist-get args :title) "Emacs")
           :content msg)))))
@@ -2641,8 +2635,6 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
     (evil-define-key '(normal insert) 'global (kbd "M-3") #'eyebrowse-switch-to-window-config-3)
     (evil-define-key '(normal insert) 'global (kbd "M-4") #'eyebrowse-switch-to-window-config-4)
     (evil-define-key '(normal insert) 'global (kbd "M-5") #'eyebrowse-switch-to-window-config-5)
-    (evil-define-key '(normal insert) 'global (kbd "M-,") #'eyebrowse-prev-window-config)
-    (evil-define-key '(normal insert) 'global (kbd "M-.") #'eyebrowse-next-window-config)
 
     (eyebrowse-mode)
 
@@ -2950,7 +2942,6 @@ Some shortcuts you can use on any vertico window:
 
 ~(project-remember-projects-under isamert/projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
 
-
 #+begin_src emacs-lisp
   (defconst isamert/projects-root "~/Workspace/projects")
 
@@ -2986,11 +2977,17 @@ Some shortcuts you can use on any vertico window:
        (--filter (isamert/is-git-dir it))
        (--map (s-replace home "~" (f-full it))))))
 
-  ;; Ensure all projects are known by project.el
-  ;; The following does not recurse as I like it to be
-  ;; (project-remember-projects-under isamert/projects-root t)
-  (--each (--map (cons 'vc it) (isamert/all-project-roots))
-    (project-remember-project it t))
+
+  (defun isamert/load-projects-list ()
+    (interactive)
+    ;; Ensure all projects are known by project.el
+    ;; The following does not recurse as I like it to be
+    ;; (project-remember-projects-under isamert/projects-root t)
+    (setq project--list '())
+    (--each (--map (cons 'vc it) (isamert/all-project-roots))
+      (project-remember-project it t)))
+
+  (run-with-timer 45 nil #'isamert/load-projects-list)
 #+end_src
 
 ** consult
@@ -3052,8 +3049,8 @@ Some functionality for project management. I do some fine-tuning for =find= and 
 #+begin_src emacs-lisp :tangle no
   (evil-leader/set-key
     "hf"  #'isamert/find-file-in
-    "hR"  #'isamert/consult-ripgrep-in-given-directory
-    "hr"  #'isamert/consult-ripgrep-current-directory)
+    "hG"  #'isamert/consult-ripgrep-in-given-directory
+    "hg"  #'isamert/consult-ripgrep-current-directory)
 
   ;; TODO fix search
   (setq
@@ -3161,6 +3158,12 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 #+begin_src emacs-lisp
   (use-package embark
     :config
+    ;; This disables quitting minibuffer after hitting embark-dwim so
+    ;; that you can apply the main action on multiple items without
+    ;; closing minibuffer.
+    (setq embark-quit-after-action nil)
+    (bind-key (kbd "M-o") #'embark-dwim)
+
     (bind-key (kbd "M-a") #'embark-act)
     (setq embark-prompter #'embark-completing-read-prompter)
     ;; ^ This directly shows the actions in a completing read window.
@@ -3518,7 +3521,17 @@ When you search for something, it opens the results in an org-mode buffer. Resul
       "gn" #'howdoyou-next-link
       "gp" #'howdoyou-prev-link)
     (evil-leader/set-key
-      "hs" 'howdoyou-query))
+      "is" 'howdoyou-query))
+#+END_SRC
+
+** tldr
+tldr client for Emacs.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package tldr
+    :config
+    (evil-leader/set-key
+      "it" #'tldr))
 #+END_SRC
 
 ** yasnippets and yankpad
@@ -3682,7 +3695,7 @@ It keeps your indentation working all the time. Seems like a good idea but I hav
   (use-package aggressive-indent
     :config
     (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
-    (add-hook 'typescript-mode-hook #'aggressive-indent-mode)
+    ;; (add-hook 'typescript-mode-hook #'aggressive-indent-mode)
     (add-to-list 'aggressive-indent-protected-commands 'evil-undo)
     (add-to-list 'aggressive-indent-protected-commands 'format-all-buffer))
 #+end_src
@@ -5378,12 +5391,12 @@ Create a mode for n1ql and make n1ql code blocks inside org-mode runnable.
       (shell-command-on-region
        (point-min)
        (point-max)
-       (format "cbq -quiet -engine %s -credentials '%s'"
+       (format "cbq -quiet -engine '%s' -credentials '%s'"
                host
                (format "%s:%s" username password))
        nil t)
       (replace-regexp-in-region "^cbq> " "" (point-min) (point-max))
-      (shell-command-on-region (point-min) (point-max) (format "jq -r %s" select) nil t)
+      (shell-command-on-region (point-min) (point-max) (format "jq -r '%s'" select) nil t)
       (buffer-string)))
 #+end_src
 
@@ -5409,7 +5422,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
 
   (cl-defun isamert/cbc (cbc-command &key host username password bucket raw (select "."))
     "Run given cbc command."
-    (let* ((cmd (format "cbc %s --spec=%s/%s --username=%s --password=%s"
+    (let* ((cmd (format "cbc %s --spec=%s/%s --username='%s' --password='%s'"
                         cbc-command
                         host
                         bucket
@@ -5508,6 +5521,9 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
 [[https://github.com/isamert/marks][marks]] is a grep-like tool for searching org-mode and markdown files. The following snippet provides a ~consult~ support for marks.
 
 #+begin_src emacs-lisp
+  (evil-leader/set-key "m" #'isamert/marks-my-docs)
+  (evil-leader/set-key "hm" #'isamert/marks-my-docs)
+
   (defun isamert/consult--marks-builder (input)
     (list :command
           (list "marks" "--no-color" "--null" "--path" default-directory "--query" input)
@@ -6240,7 +6256,7 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
        t t)
       (buffer-string)))
 
-  (cl-defun isamert/send-notification-to-my-phone
+  (cl-defun isamert/tmux-send-notification-to-my-phone
       (&key
        title
        content
@@ -6258,6 +6274,28 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
      (or content "")
      "--action"
      (format "termux-open %s" url-to-open)))
+
+  (cl-defun isamert/send-notification-to-my-phone
+      (&key
+       title
+       content
+       url-to-open)
+    (interactive
+     (list :title (isamert/read-string "Title: ")
+           :content (isamert/read-string "Content: ")
+           :url-to-open (isamert/read-string "URL(?): ")))
+    "Send a notification to my phone."
+    (start-process
+     "gotify"
+     "*gotify-out*"
+     "gotify"
+     "push"
+     "--title"
+     title
+     ;; TODO
+     ;; "--clickUrl"
+     ;; (or url-to-open)
+     content))
 
   (defun isamert/send-text-to-my-phone (text)
     "Send TEXT to my phones clipboard. This only works if the phone
@@ -6568,6 +6606,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "obb" 'isamert/bullet-focus-non-day-header
     "oby" 'isamert/bullet-focus-yesterday
     "obt" 'isamert/bullet-focus-today
+    "obT" 'isamert/bullet-focus-tomorrow
     "obf" 'isamert/bullet-focus-given-day
     "obr" 'isamert/bullet-focus-recurring
     "obw" 'isamert/bullet-focus-work
@@ -6620,7 +6659,11 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
             (date-to-time (concat (match-string 1) "T000"))
             (date-to-time (concat date "T000")))
        (org-insert-heading-after-current)
-       (insert (format "[%s %s] [/]" date (format-time-string "%a" (date-to-time (concat date "T000")))))
+       (insert (format "[%s%s] [/]"
+                       date
+                       (if (s-matches? "[a-zA-Z]+$" date)
+                           ""
+                         (format " %s" (format-time-string "%a" (date-to-time (concat date "T000")))))))
        (org-narrow-to-subtree)
        (cl-return))))
 
@@ -6662,6 +6705,13 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (when (not (isamert/bullet-focus-a-day today))
         (isamert/bullet-create-a-day today))))
 
+
+  (defun isamert/bullet-focus-tomorrow ()
+    "Focus yesterdays header."
+    (interactive)
+    (let ((tomorrow (isamert/date "tomorrow")))
+      (when (not (isamert/bullet-focus-a-day tomorrow))
+        (isamert/bullet-create-a-day tomorrow))))
 
   (defun isamert/bullet-focus-yesterday ()
     "Focus yesterdays header."
@@ -7408,6 +7458,20 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
      :prompt (format "Select context (current=%s): " (isamert/kube--current-context))
      :do (shell-command-to-string (format "kubectl config use-context '%s'" it))))
 
+  (defalias 'isamert/kube-get-context-server-ip 'isamert/kube-get-cluster-server-ip)
+  (defun isamert/kube-get-cluster-server-ip ()
+    (interactive)
+    (isamert/output-select
+     :cmd "kubectl config get-contexts --output=name"
+     :drop 1
+     :keep-order t
+     :prompt (format "Select context (leave blank to use %s): " (isamert/kube--current-context))
+     :do
+     (->>
+      (if (s-blank? it) (isamert/kube--current-context) it)
+      (format "kubectl config view -o jsonpath=\"{.clusters[?(@.name == '%s')].cluster.server}\"")
+      shell-command-to-string)))
+
   (defun isamert/kube-select-pod (&optional switch-context)
     "Select a pod and act on it.
   If SWITCH-CONTEXT is non nil, switch to another context before
@@ -7430,29 +7494,35 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
        (pcase (completing-read (format "Act on '%s'" name) '("Exec into default container" "Exec into container" "Logs" "App logs" "Remove"))
          ("Exec into default container"
           (with-current-buffer (vterm (format "(vterm) pod: %s" name))
-            (vterm-insert (format "kubectl exec --namespace='%s' -i -t '%s' -- bash"
-                                  namespace
-                                  name))))
+            (vterm-insert
+             (kill-new (format "kubectl exec --namespace='%s' -i -t '%s' -- bash"
+                               namespace
+                               name)))))
          ("Exec into container"
           (let ((container (isamert/kube-pod--select-container pod)))
             (with-current-buffer (vterm (format "(vterm) pod: %s" name))
-              (vterm-insert (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' -- bash"
-                                    namespace
-                                    container
-                                    name)))))
-         ("Logs" (let ((container (isamert/kube-pod--select-container pod)))
-                   (with-current-buffer (vterm (format "(vterm) pod: %s" name))
-                     (vterm-insert (format "kubectl logs %s -f --namespace='%s' --container='%s'"
-                                           name
-                                           namespace
-                                           container)))))
+              (vterm-insert
+               (kill-new (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' -- bash"
+                                 namespace
+                                 container
+                                 name))))))
+         ("Logs"
+          (let ((container (isamert/kube-pod--select-container pod)))
+            (with-current-buffer (vterm (format "(vterm) pod: %s" name))
+              (vterm-insert
+               (kill-new (format "kubectl logs %s -f --namespace='%s' --container='%s'"
+                                 name
+                                 namespace
+                                 container))))))
          ;; Logs from all pods combined for given pod's app
-         ("App logs" (let ((container (isamert/kube-pod--select-container pod)))
-                       (with-current-buffer (vterm (format "(vterm) pod: %s" name))
-                         (vterm-insert (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s'"
-                                               (isamert/kube-pod--get-app-name pod)
-                                               namespace
-                                               container)))))
+         ("App logs"
+          (let ((container (isamert/kube-pod--select-container pod)))
+            (with-current-buffer (vterm (format "(vterm) pod: %s" name))
+              (vterm-insert (kill-new
+                             (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s'"
+                                     (isamert/kube-pod--get-app-name pod)
+                                     namespace
+                                     container))))))
          ("Remove" (user-error "Not implemented"))))))
 
   (defun isamert/kube-pod--select-container (pod)

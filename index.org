@@ -42,6 +42,21 @@ These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs con
   <<<conditions>>>
   #+end_src
 
+** Supplementary functions
+You can run arbitrary shell commands inside a code block like this: ~<<<sh("which git")>>>~. This can be useful where an output of a command needs to be statically placed in an exported file.
+
+#+name: sh
+#+begin_src elisp :var code=""
+  (s-trim (shell-command-to-string code))
+#+end_src
+
+The following is just the babel version of =(when-on ...)= function defined above. It helps you insert the text to a file based on current operating system.
+
+#+name: when-on
+#+begin_src elisp :var darwin="" linux=""
+  (when-on :darwin darwin :linux linux)
+#+end_src
+
 * Programming languages
 ** R
 #+begin_src R :tangle ~/.Rprofile
@@ -56,14 +71,6 @@ Just activate readline.
   (activate-readline)
 #+end_src
 
-** Python
-Run =ipython= with some defaults.
-
-#+begin_src python :tangle ~/.ipython/profile_default/ipython_config.py
-  c.TerminalInteractiveShell.editing_mode = 'vi'
-  c.InteractiveShellApp.exec_lines = ['import os, sys, itertools, math\n']
-#+end_src
-
 ** Javascript
 Install global packages to user-local.
 
@@ -71,6 +78,14 @@ Install global packages to user-local.
   prefix=${HOME}/.npm-packages
 #+end_src
 
+** Nix
+Well, nix is mainly a package manager but it also is a programming language.
+
+The following enables ~nix search~ command.
+
+#+begin_src conf :tangle ~/.config/nix/nix.conf
+  experimental-features = nix-command flakes
+#+end_src
 * Linux
 ** SystemD journal files
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
@@ -1669,6 +1684,9 @@ This file is sourced by both =zsh= and =bash=.
   alias pacbin="pacman -Fs"        # Same as above
   alias pacre="sudo pacman -R"     # Leave dependencies and configurations
   alias pacrem="sudo pacman -Rns"
+  function nixin { nix-env -iA "nixpkgs.$1" }
+  alias nixrem="nix-env -e"
+  alias nixs="nix search nixpkgs"
 
   # process management
   alias nameof="ps -o comm= -p" # Get the name of given PID
@@ -1822,15 +1840,30 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   [[ $TERM == "dumb" ]] && unsetopt zle && PS1='$ ' && return
 #+end_src
 
+** Custom completions
+You can add completion files under =$HOME/.config/zsh/completions= and zsh will pick them up automatically. This should be one of the first things that appear in ~.zshrc~.
+
+#+begin_src bash :tangle ~/.zshrc
+  fpath=($HOME/.config/zsh/completions $fpath)
+#+end_src
+
+To rebuild completions, if something is not right, use the following:
+
+#+begin_src bash
+  rm -f ~/.zcompdump
+  rm -f $ANTIGEN_COMPDUMP
+#+end_src
+
 ** Installing plugins
 #+begin_src bash :tangle ~/.zshrc
   # Disable auto-escape-on-insert functionality
   DISABLE_MAGIC_FUNCTIONS=true
 
   # Required some plugins (like fzf-tab) to work
-  autoload -Uz compinit; compinit
-  ANTIGEN_FILE=$HOME/.local/bin/antigen.zsh
+  autoload -Uz compinit
+  compinit
 
+  ANTIGEN_FILE=$HOME/.local/bin/antigen.zsh
   if [[ ! -f $ANTIGEN_FILE ]]; then
      echo 'Installing antigen...'
      curl -L git.io/antigen > $ANTIGEN_FILE
@@ -1850,9 +1883,10 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 #+end_src
 
 ** Key bindings
+- Enable emacs keybindings
+- Use C-x C-e to edit command in $EDITOR
+
 #+begin_src bash :tangle ~/.zshrc
-  # enable emacs keybindings
-  # Use C-x C-e to edit command in $EDITOR
   bindkey -e
 #+end_src
 
@@ -1916,6 +1950,7 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 #+end_src
 
 ** Utility functions
+*** Generic interactive commands
 #+begin_src bash :tangle ~/.zshrc
   function mkcd { mkdir -p "$1"; cd "$1"; } # Make and cd to the dir
   function cpcd { cp "$1" "$2" && cd "$2"; } # Copy and go to the directory
@@ -1923,7 +1958,10 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   function cheat { curl http://cheat.sh/"$1"; }
   function shortenurl { curl -F"shorten=$1" "https://0x0.st"; }
   function uploadfile { curl -F"file=@$1" "https://0x0.st"; }
+#+end_src
 
+*** Compression/decompression
+#+begin_src bash :tangle ~/.zshrc
   function extract {
       if [[ -f $1 ]] ; then
           case $1 in
@@ -1978,7 +2016,9 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
               ;;
       esac
   }
-
+#+end_src
+*** Encryption/Decryption
+#+begin_src bash :tangle ~/.zshrc
   function encrypt {
       case "$1" in
           -h|--help)
@@ -2041,8 +2081,34 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
       esac
   }
 #+end_src
+*** Some kubernetes commands
+**** kctx
+Easily switch between contexts with completion.
 
-** Git utilities
+#+begin_src bash :tangle ~/.config/aliases
+  function kctx {
+      if [[ -z "$1" ]]; then
+          kubectl config current-context
+          echo "--"
+          kubectl config get-contexts --output=name
+      else
+          echo "Switching to $1"
+          kubectl config use-context $1
+      fi
+  }
+#+end_src
+
+#+begin_src bash :tangle ~/.config/zsh/completions/_kctx
+  #compdef kctx
+
+  _kctx() {
+      _arguments "1:contexts:($(kubectl config get-contexts --output=name | tr "\\n" " "))"
+  }
+
+  _kctx "$@"
+#+end_src
+
+*** Git utilities
 #+begin_src bash :tangle ~/.zshrc
   # TODO: Create an emacs wrapper which fuzzy searches through these
   # results and opens the file on that revision using
@@ -2212,7 +2278,17 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   export DICTIONARY=en_US
 
   # Source fzf keybindings
-  . /usr/local/opt/fzf/shell/key-bindings.zsh
+  source /usr/local/opt/fzf/shell/key-bindings.zsh
+#+end_src
+
+** Other
+*** TODO kubectl completions
+For some reason it does not work. However running the same command after shell is started just works fine.
+
+#+begin_src bash :tangle ~/.zshrc
+  if [[ -n $(which kubectl) ]]; then
+    source <(kubectl completion zsh)
+  fi
 #+end_src
 
 * Utilities
@@ -2477,7 +2553,7 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
 #+begin_src conf :tangle ~/.config/ranger/rc.conf
   set confirm_on_delete never
   set preview_images true
-  set preview_images_method ueberzug
+  set preview_images_method <<<when-on(linux="ueberzug", darwin="iterm2")>>>
   set draw_borders both
   set dirname_in_tabs true
   set update_tmux_title false
@@ -3215,41 +3291,20 @@ You need to install =vim-plug= to be able to install vim extensions.
 * Browsers
 ** Firefox
 *** tridactyl
-| Key   | Action                                   |
-|-------+------------------------------------------|
-| f/F   | open hinted url [in new tab]             |
-| H, L  | back,forward in history                  |
-| J K   | tab prev/next                            |
-| C-i   | open in native editor                    |
-|-------+------------------------------------------|
-| +, -  | zoom out/in                              |
-| p     | pin                                      |
-| d     | kill/close tab (even if pinned)          |
-| u/U   | reopen closed tab/with completion        |
-| m     | open url with jaro                       |
-|-------+------------------------------------------|
-| ;;    | focus an element                         |
-| ;p    | copy text of an elemet                   |
-| ;y    | copy link/url of an element              |
-| ;k    | delete a element from the page           |
-| ;i    | copy image to clipboard                  |
-|-------+------------------------------------------|
-| ]c [c | increment/decrement the current URL by 1 |
-
 - =:undo= has autocompletion, ie. lists all tabs that are closed.
 - =:tabopen= can (~t~ binding) can take =-c container-name= parameter, which opens tab in given container. Like =:tabopen -c work ...=. You don't need to write container name fully, first letter also suffices if it does not clash with any other container name.
 
-**** Configuration
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
   sanitise tridactyllocal tridactylsync
 
   colors midnight
-  set editorcmd emacsclient -c
+  set editorcmd <<<sh("which emacsclient")>>> -c
   set searchengine google
   set hintfiltermode vimperator-reflow
   set smoothscroll true
   set modeindicatorshowkeys true
   set tabopencontaineraware true
+  set newtab https://web.tabliss.io/
 
   " commands
   command withUrl composite get_current_url |
@@ -3290,25 +3345,119 @@ You need to install =vim-plug= to be able to install vim extensions.
   bind m jaro
   bind M jarohint
   bind ;i copyimage
-  bind <A-j> tabmove -1
-  bind <A-∆> tabmove -1
-  bind <A-k> tabmove +1
-  bind <A-˚> tabmove +1
+  bind <A-j> tabmove +1
+  bind <A-∆> tabmove +1
+  bind <A-k> tabmove -1
+  bind <A-˚> tabmove -1
   bind U fillcmdline undo
+  bind K tabprev
+  bind J tabnext
+  bind A tabaudio
+  bind % fillcmdline tabrename %
 
+  " More emacs like bindings for ex-mode
+  unbind --mode=ex <Space>
+  bind --mode=ex <Tab> ex.insert_space_or_completion
+
+  bind --mode=ex <ArrowUp> ex.prev_completion
+  bind --mode=ex <ArrowDown> ex.next_completion
+
+  bind --mode=ex <A-p> ex.prev_history
+  bind --mode=ex <A-n> ex.next_history
+  bind --mode=ex <A-π> ex.prev_history
+  bind --mode=ex <A-˜> ex.next_history
 
   " Only hint search results on Google and DDG
   bindurl www.google.com f hint -Jc #search div:not(.action-menu) > a
   bindurl www.google.com F hint -Jbc #search div:not(.action-menu) > a
   bindurl ^https://duckduckgo.com f hint -Jc [class~=result__a]
   bindurl ^https://duckduckgo.com F hint -Jbc [class~=result__a]
+#+end_src
 
-  " work stuff
+**** Redirect URLs
+I want to redirect some websites to their better alternatives (for example twitter to nitter so that I can read twitter without logging in).
+
+#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
+  autocmd DocStart .*twitter.com js tri.excmds.urlmodify("-t", "twitter.com", "nitter.42l.fr")
+  autocmd DocStart .*www.reddit.com js tri.excmds.urlmodify("-t", "www", "old")
+#+end_src
+
+When I open a useless website that I spent meaningless time on, I want to show todays tasks instead. Here is the script that renders todays tasks as HTML:
+
+#+begin_src bash :tangle ~/.scripts/todaysitems.sh :var BULLET_ORG_PATH=(expand-file-name bullet-org)
+  TODAY=$(date +"%Y-%m-%d %a")
+  cat "$BULLET_ORG_PATH" | sed -n "/\\* \[$TODAY\]/,/^\\* /p" | <<<sh("which pandoc")>>> -f org -t html > /tmp/today.html
+#+end_src
+
+...and here is the tridactyl directive:
+
+#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
+  autocmd DocStart .*(eksisozluk|ensonhaber).* composite exclaim_quiet <<<sh("which todaysitems.sh")>>>; open file:///tmp/today.html
+#+end_src
+
+**** TreeStyleTabs integration
+I use TreeStyleTabs and it's perfect. This is just cherry on top.
+
+- Source: https://github.com/tridactyl/tridactyl/issues/377#issuecomment-895565496
+
+#+begin_src vimrc  :tangle ~/.config/tridactyl/tridactylrc
+  command ttcollapse js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'collapse-tree', tab: JS_ARGS[1]})€
+  command ttcollapse_recursively js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'collapse-tree', tab: JS_ARGS[1], recursively: true})€
+  command ttexpand js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'expand-tree', tab: JS_ARGS[1]})€
+  command ttexpand_recursively js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'expand-tree', tab: JS_ARGS[1], recursively: true})€
+  command ttcollapse_current_or_parent js browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'get-tree-structure', tab: 'current'}).then(struct => browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'collapse-tree', tab: struct[0].collapsed ? 'parent' : 'current'}))
+  command ttfocus js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'focus', tab: JS_ARGS[1]})€
+  command ttindent js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'indent', tab: JS_ARGS[1]})€
+  command ttindent_recursively js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'indent', tab: JS_ARGS[1], followChildren: true})€
+  command ttoutdent js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'outdent', tab: JS_ARGS[1]})€
+  command ttoutdent_recursively js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'outdent', tab: JS_ARGS[1], followChildren: true})€
+
+  " Collapse/expand current tree
+  bind zc ttcollapse_current_or_parent
+  bind zC ttcollapse_recursively root
+  bind zo ttexpand current
+  bind zO ttexpand_recursively current
+
+  " Collapse/expand all
+  bind zm ttcollapse *
+  bind zr ttexpand *
+
+  " Focus parent/root of a tree
+  bind zp ttfocus parent
+  bind zP ttfocus root
+
+  " Focus next/previous, skipping over subtrees. May also try nextSiblingCyclic/prevSiblingCyclic:
+  bind zj ttfocus nextSibling
+  bind zk ttfocus prevSibling
+
+  " Indent/outindent current tab
+  bind << ttoutdent_recursively current
+  bind >> ttindent_recursively current
+#+end_src
+
+**** Slack integration
+Neither Slack web app nor the desktop app lets you define your own custom keybindings but using the web app in combination with Tridactyl we can create our own shortcuts. I also created [[https://github.com/tridactyl/tridactyl/wiki/Slack][this tridactyl wiki page]] based on the bindings I created here. It might contain more details.
+
+#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
+  " For more info: https://github.com/tridactyl/tridactyl/wiki/Slack
+  " Hint channels only with ;c in slack
+  bindurl .*.slack.com --mode=normal f hint -Jc div[data-sidebar-link-id]:not([data-sidebar-link-id=""]),div[data-section-channel-index]:not([data-section-channel-index=""]),button,a
+  " Jump to sidebar items with shortcuts in Slack
+  bindurl .*.slack.com --mode=normal ;u hint -Jc div[data-sidebar-link-id="Punreads"]
+  bindurl .*.slack.com --mode=normal ;t hint -Jc div[data-sidebar-link-id="Vall_threads"]
+  bindurl .*.slack.com --mode=normal ;d hint -Jc div[data-sidebar-link-id="Pdms"]
+  bindurl .*.slack.com --mode=normal ;a hint -Jc div[data-sidebar-link-id="Pactivity"]
+  " Message actions for Slack
+  bindurl .*.slack.com ;m composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-focus-key=message_actions],[role=menuitem]
+  bindurl .*.slack.com ;e composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-qa=edit_message]
+  bindurl .*.slack.com ;c composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-qa=copy_link]
+#+end_src
+
+**** Work related configuration
+#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
   set searchurls.tywiki https://wiki.trendyol.com/dosearchsite.action?queryString=%s
   set searchurls.tygs https://gitlab.trendyol.com/discovery/seller-ads?filter=%s
   set searchurls.tyg https://gitlab.trendyol.com/?name=%s
-
-  " vim: set filetype=vim:
 #+end_src
 
 *** userChrome.css
@@ -3329,13 +3478,6 @@ Also need to enable following config to make userChrome.css work:
 #+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default-release" :linux "~/.mozilla/firefox/*.default-release"))) "/user.js")
   user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 #+end_src
-*** TODO Redirector
-I use [[https://addons.mozilla.org/en-US/firefox/addon/redirector/][this extension]] to do automatic redirection of certain urls to the urls that I want, like redirecting twitter to nitter automatically. Here is the configuration that can be imported through the extension configuration page:
-
-#+begin_src json
-  "TODO"
-#+end_src
-
 ** Qutebrowser
 - Use =Alt-a= to bring up Emacs to edit a text in the text-area.
 - Some useful keybindings that I added:

@@ -98,6 +98,7 @@
     ("conmech" youtube fun turkish) ;; Efe Aydal
     ("tvMisha" youtube fun turkish vlog)
     ("KALTChannel" youtube fun turkish)
+    ("UCMixjxEx6t663lIf0aQBeSg" youtube turkish) ;; Sevan Nisanyan
 
     ("UCWXCrItCF6ZgXrdozUS-Idw" youtube fun animation) ; ExplosmEntertainment
 
