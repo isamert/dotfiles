@@ -1863,23 +1863,33 @@ To rebuild completions, if something is not right, use the following:
   autoload -Uz compinit
   compinit
 
-  ANTIGEN_FILE=$HOME/.local/bin/antigen.zsh
-  if [[ ! -f $ANTIGEN_FILE ]]; then
-     echo 'Installing antigen...'
-     curl -L git.io/antigen > $ANTIGEN_FILE
-  else
-     source $ANTIGEN_FILE
+  ### Added by Zinit's installer
+  if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
+      print -P "%F{33} %F{220}Installing %F{33}ZDHARMA-CONTINUUM%F{220} Initiative Plugin Manager (%F{33}zdharma-continuum/zinit%F{220})‚Ä¶%f"
+      command mkdir -p "$HOME/.local/share/zinit" && command chmod g-rwX "$HOME/.local/share/zinit"
+      command git clone https://github.com/zdharma-continuum/zinit "$HOME/.local/share/zinit/zinit.git" && \
+          print -P "%F{33} %F{34}Installation successful.%f%b" || \
+              print -P "%F{160} The clone has failed.%f%b"
   fi
 
-  antigen use oh-my-zsh
-  antigen bundle git
-  antigen bundle zsh-users/zsh-autosuggestions
-  antigen bundle zsh-users/zsh-syntax-highlighting
-  antigen bundle zsh-users/zsh-history-substring-search
-  antigen bundle kutsan/zsh-system-clipboard
-  antigen theme agnoster
-  antigen bundle Aloxaf/fzf-tab
-  antigen apply
+  source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
+  autoload -Uz _zinit
+  (( ${+_comps} )) && _comps[zinit]=_zinit
+
+  # To make themes work
+  setopt promptsubst
+
+  zinit light-mode for \
+        zdharma-continuum/zinit-annex-as-monitor \
+        zdharma-continuum/zinit-annex-bin-gem-node \
+        zdharma-continuum/zinit-annex-patch-dl \
+        zdharma-continuum/zinit-annex-rust \
+        zsh-users/zsh-autosuggestions \
+        zsh-users/zsh-syntax-highlighting \
+        zsh-users/zsh-history-substring-search \
+        kutsan/zsh-system-clipboard \
+        agnoster/agnoster-zsh-theme \
+        Aloxaf/fzf-tab
 #+end_src
 
 ** Key bindings
@@ -1892,31 +1902,41 @@ To rebuild completions, if something is not right, use the following:
 
 ** Theme settings
 #+begin_src bash :tangle ~/.zshrc
-  # https://github.com/sorin-ionescu/prezto/blob/master/modules/prompt/functions/prompt-pwd
-  function prompt_dir {
-      setopt localoptions extendedglob
+  # See agnoster's readme for custumization
+  # https://github.com/agnoster/agnoster-zsh-theme
 
-      # FIXME: this breaks the input line completely
-      # If we are in emacs vterm, send the current directory to emacs vterm
-      # This establishes directory tracking
-      # is-emacs && vterm_printf "51;A$(whoami)@$(hostname):$(pwd)";
+  function prompt_end {
+      prompt_segment 'magenta' '' ' ⚡'
+  }
 
-      local current_pwd="${PWD/#$HOME/~}"
-      local ret_directory
+  AGNOSTER_PROMPT_SEGMENTS=("prompt_time" "${AGNOSTER_PROMPT_SEGMENTS[@]}")
+  function prompt_time {
+      prompt_segment 'magenta' 'black' ' %* '
+  }
 
-      if [[ "$current_pwd" == (#m)[/~] ]]; then
-          ret_directory="$MATCH"
-          unset MATCH
-      elif zstyle -m ':prezto:module:prompt' pwd-length 'full'; then
-          ret_directory=${PWD}
-      elif zstyle -m ':prezto:module:prompt' pwd-length 'long'; then
-          ret_directory=${current_pwd}
+  AGNOSTER_PROMPT_SEGMENTS+="prompt_emacs"
+  # If we are in emacs vterm, send the current directory to emacs vterm
+  # This establishes directory tracking.
+  # Note that this breaks input line on long inputs. So it's better to
+  # use this with a two-line prompt like I do.
+  # This also adds a simple prompt saying "e" to indicate that we are in
+  # emacs and everything is file
+  function prompt_emacs {
+      is-emacs && vterm_printf "51;A$(whoami)@$(hostname):$(pwd)";
+      is-emacs && prompt_segment 'red' '' ' e '
+  }
+
+  AGNOSTER_PROMPT_SEGMENTS+="prompt_real_end"
+  # Add a new line to enter the actual command by overriding prompt_end
+  function prompt_real_end {
+      if [[ -n $CURRENT_BG ]]; then
+          echo -n " %{%k%F{$CURRENT_BG}%}$SEGMENT_SEPARATOR"
       else
-          ret_directory="${${${${(@j:/:M)${(@s:/:)current_pwd}##.#?}:h}%/}//\%/%%}/${${current_pwd:t}//\%/%%}"
+          echo -n "%{%k%}"
       fi
-
-      unset current_pwd
-      prompt_segment blue $CURRENT_FG "$ret_directory"
+      CURRENT_BG=''
+      echo -n "$()\e[m\n➜%{%f%} "
+      CURRENT_BG=''
   }
 #+end_src
 
