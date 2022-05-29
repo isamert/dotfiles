@@ -277,8 +277,8 @@ Some basic variable and function definitions that will be used in configuration.
 
   (defun isamert/save-clipboard-image-to-file (file)
     "Save the image in clipboard (if there is any) to given FILE.
-
     Also see `isamert/clipboard-contains-image-p' to check if there is one."
+    (interactive "FFile to save the image: ")
     (shell-command (format "%s > %s" (isamert/clipboard-command) file)))
 #+end_src
 *** User input
@@ -7470,7 +7470,8 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
      (->>
       (if (s-blank? it) (isamert/kube--current-context) it)
       (format "kubectl config view -o jsonpath=\"{.clusters[?(@.name == '%s')].cluster.server}\"")
-      shell-command-to-string)))
+      shell-command-to-string
+      kill-new)))
 
   (defun isamert/kube-select-pod (&optional switch-context)
     "Select a pod and act on it.
