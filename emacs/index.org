@@ -1826,6 +1826,22 @@ Insert links/images more intelligently,
                                            'title)))))))
 #+end_src
 
+** Insert image with width
+This function is especially useful when used in combination with =embark-act-all=. The workflow is as follows:
+- =M-x= =isamert/org-insert-image-file-with-width=
+- Filter the files that you want to insert to your buffer.
+- Hit enter if there is only one item.
+- If there are multiple items that you want to insert, do =M-a= (embark-act) and then =S= (=embark-collect-snapshot=).
+- Then you can do =embark-act-all= or just hit enter on the items that you want to insert to your buffer.
+
+#+begin_src emacs-lisp
+  (defun isamert/org-insert-image-file-with-width ()
+    "Insert interactively selected image file with fixed width information."
+    (interactive)
+    (let ((fname (file-relative-name (read-file-name "Select file: "))))
+      (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]\n\n" fname))))
+#+end_src
+
 ** Renaming files under cursor
 #+begin_src emacs-lisp
   (defun isamert/org-rename-file-at-point ()
