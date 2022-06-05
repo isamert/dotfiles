@@ -22,17 +22,18 @@ These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs con
   #+name: conditions
   #+begin_src elisp
     (defun when-darwin (file-path)
-      (when (eq system-type 'darwin)
-        file-path))
+      (if (eq system-type 'darwin)
+        file-path "no"))
 
     (defun when-linux (file-path)
-      (when (eq system-type 'gnu/linux)
-        file-path))
+      (if (eq system-type 'gnu/linux)
+          file-path "no"))
 
     (cl-defun when-on (&key linux darwin)
-      (case system-type
+      (pcase system-type
         ('darwin darwin)
-        ('gnu/linux linux)))
+        ('gnu/linux linux)
+        (_ "no")))
   #+end_src
 
 - Here is the code that puts them together, this block is executed during the startup of this file. See [[Postamble]] (at the end of this) file where this code-block is called for execution.
