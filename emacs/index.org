@@ -1386,11 +1386,19 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (defalias 'isamert/org-babel-split-or-wrap-code-block #'org-babel-demarcate-block)
 
   (defun isamert/org-babel-tangle-current-block ()
+    "Tangle the current source block and all other related
+  blocks (the ones that tangles into the same file).
+
+  This function also works inside `org-edit-special' buffers."
     (interactive)
-    (let ((current-prefix-arg '(16)))
+    (let ((src-edit? (org-src-edit-buffer-p))
+          (current-prefix-arg '(16)))
       ;;     ^ '(4) only tangles current file, '(16) tangles all code
       ;;     blocks related to current tangle file target
-      (call-interactively 'org-babel-tangle)))
+      (when src-edit? (org-edit-src-exit))
+      (call-interactively 'org-babel-tangle)
+      (when src-edit? (org-edit-special))))
+
 
   (defun isamert/make-tangled-files-executable ()
     (when (or (string-match-p  "\\.\\(sh\\|py\\)$" (buffer-file-name))
