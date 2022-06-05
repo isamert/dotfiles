@@ -87,6 +87,14 @@ The following enables ~nix search~ command.
 #+begin_src conf :tangle ~/.config/nix/nix.conf
   experimental-features = nix-command flakes
 #+end_src
+* macOS
+** Use jemalloc
+=jemalloc= seems to be better than default allocator for macOS. See [[https://eisel.me/devtool-allocators][this]].
+
+#+begin_src sh :tangle (when-darwin "~/.zshenv")
+  export DYLD_INSERT_LIBRARIES=/usr/local/lib/libjemalloc.dylib
+#+end_src
+
 * Linux
 ** SystemD journal files
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
