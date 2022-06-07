@@ -3460,13 +3460,6 @@ You need to install =vim-plug= to be able to install vim extensions.
   autocmd BufWritePre * :%s/\s\+$//e  " remove trailing spaces on save
   " }}}
 
-  " autocomplete key mappings (tab, stab to select next, prev completion from list) {{{
-  inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
-  inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-  inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
-  autocmd! CompleteDone * if pumvisible() == 0 | pclose | endif " Close preview menu when completion is done
-  " }}}
-
   " stuff {{{
   nmap <space> <leader>
   inoremap jk <ESC>|         " jk escapes to normal mode
@@ -3535,7 +3528,6 @@ You need to install =vim-plug= to be able to install vim extensions.
   command! Wq wq
   command! W w
   command! Q q
-  nnoremap <silent> <CR> :nohlsearch<CR><CR>| " enter -> clear search highlighting
   nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
   nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
   tnoremap <silent> <C-q> <C-\><C-n>:q<CR>|   " ctrl-q -> quit (term)
@@ -3560,13 +3552,6 @@ You need to install =vim-plug= to be able to install vim extensions.
   vnoremap ç .
   vnoremap Ö <
   vnoremap Ç >
-  " }}}
-
-  " move in insert mode {{{
-  inoremap <C-l> <right>| " ctrl-l -> move right in insert mode
-  inoremap <C-h> <left>|  " ...
-  inoremap <C-j> <down>|  " ...
-  inoremap <C-k> <up>|    " ...
   " }}}
 
   " utility commands {{{
