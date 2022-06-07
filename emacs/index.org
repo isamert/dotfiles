@@ -1243,6 +1243,8 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     "os"  #'org-schedule
     "od"  #'org-deadline
     "on"  #'org-toggle-narrow-to-subtree
+    "ov"  #'org-babel-expand-src-block
+    "oq"  #'isamert/org-tree-to-indirect-buffer
 
     ;; link stuff
     "oyi" #'org-copy-id
@@ -1306,6 +1308,14 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (condition-case nil
         (outline-up-heading 1)
       (error (outline-backward-same-level 1))))
+
+
+  (defun isamert/org-tree-to-indirect-buffer ()
+    "Same as `org-tree-to-indirect-buffer' but let's you open
+  multiple indirect buffers."
+    (interactive)
+    (let ((current-prefix-arg '(4)))
+      (call-interactively #'org-tree-to-indirect-buffer)))
 #+end_src
 
 ** Personal files
@@ -1742,16 +1752,18 @@ Org does not provide an easy way to copy link at point. Here is a fix for that:
     (let* ((link (org-element-lineage (org-element-context) '(link) t))
            (type (org-element-property :type link))
            (url (org-element-property :path link))
-           (url (concat type ":" url)))
-      (kill-new url)
-      (message (concat "Copied URL: " url))))
+           (url (when (and type url (not (s-blank? url))) (concat type ":" url))))
+      (when (called-interactively-p 'any)
+        (kill-new url)
+        (message (concat "Copied URL: " url)))
+      url))
 
   (defun isamert/org-store-link-dwim ()
     "Like `org-store-link' but if point is on an org-link, just copy
     it to clipboard. Otherwise call `org-store-link'."
     (interactive)
     (if (org-in-regexp org-link-any-re 1)
-        (isamert/org-link-copy)
+        (call-interactively #'isamert/org-link-copy)
       (org-store-link nil t)))
 #+end_src
 
@@ -2526,13 +2538,6 @@ Note that it's not possible to stage hunks with =vc=.
       "gb" 'magit-branch))
 #+END_SRC
 
-*** magit-todos
-Show TODO/FIXME etc in magit-status buffer.
-#+BEGIN_SRC emacs-lisp
-  (use-package magit-todos
-    :config
-    (magit-todos-mode nil))
-#+END_SRC
 
 *** git-timemachine
 - Toggle with ~git-timemachine~ (SPC gt).
@@ -3179,15 +3184,11 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     - =M-a i= (~embark-insert~) like the one above but instead of saving to the kill-ring, it directly inserts it to the buffer.
     - =M-a S= (~embark-collect-snapshot~) creates a buffer containing all the candidates.
 
+- To apply an action to multiple items, filter the items first and then do =embark-collect-snapshot=. A buffer will open and you can apply the main action or other actions on the items.
+
 #+begin_src emacs-lisp
   (use-package embark
     :config
-    ;; This disables quitting minibuffer after hitting embark-dwim so
-    ;; that you can apply the main action on multiple items without
-    ;; closing minibuffer.
-    (setq embark-quit-after-action nil)
-    (bind-key (kbd "M-o") #'embark-dwim)
-
     (bind-key (kbd "M-a") #'embark-act)
     (setq embark-prompter #'embark-completing-read-prompter)
     ;; ^ This directly shows the actions in a completing read window.
@@ -3218,6 +3219,7 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     ;; ^ Alternatives are (save idle-change new-line mode-enabled)
     (setq flycheck-display-errors-delay 0.3)
     (setq flycheck-emacs-lisp-load-path 'inherit)
+    (setq flycheck-emacs-lisp-initialize-packages 't)
 
     (global-flycheck-mode))
 
@@ -6022,7 +6024,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (persp-add-new branch-name)
       (persp-switch branch-name)
       (cd worktree)
-      (project-find-file)
+      (find-file)
       (vc-refresh-state)
       (isamert/jira-change-issue-status-to-status key "In Progress")
       (message "Currently on %s." (magit-get-current-branch))))
@@ -7938,28 +7940,6 @@ Company/work related stuff.
     :tags '(work consumer)
     :stop-signal 'sigkill
     :kill-process-buffer-on-stop t)
-#+end_src
-
-** forge & code-review
-#+begin_src emacs-lisp
-  (use-package forge
-    :after magit
-    :config
-    (push
-     '("gitlab.trendyol.com"
-       "gitlab.trendyol.com/api/v4"
-       "gitlab.trendyol.com"
-       forge-gitlab-repository)
-     forge-alist))
-
-  (use-package code-review
-    :diminish
-    :quelpa (code-review
-             :fetcher github
-             :repo "wandersoncferreira/code-review")
-
-    (setq code-review-gitlab-host "gitlab.trendyol.com/api")
-    (setq code-review-gitlab-graphql-host "gitlab.trendyol.com/api"))
 #+end_src
 
 * Postamble
