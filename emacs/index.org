@@ -7626,6 +7626,46 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
     `(let ((completing-read-function #'isamert/dmenu))
        ,@body))
 #+end_src
+** Archive URLs with single-file
+#+begin_src emacs-lisp
+  ;; TODO add --filename-template
+  ;; --filename-template Template used to generate the output filename (see help page of the extension for more info)  [string] [default: "{page-title} ({date-iso} {time-locale}).html"]
+
+  (cl-defun isamert/archive-url (url where &key (backend 'chrome) crawl)
+    "Archive the URL into WHERE. WHERE should be a directory if CRAWL
+  is non-nil otherwise it can be either a directory or a file."
+    (interactive
+     (list (or
+            (isamert/org-link-copy)
+            (thing-at-point 'url)
+            (read-string "URL: "))
+           (read-directory-name "Save files into: ")))
+    (setq where (expand-file-name where))
+    (when (and crawl (not (file-exists-p where)))
+      (f-mkdir where))
+    (isamert/shell-command
+     :command
+     (format
+      "single-file --filename-replacement-character='-' %s %s %s \"%s\" \"%s\""
+      (if (eq system-type 'darwin)
+          "--browser-executable-path=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\""
+        "")
+      (if (eq backend 'firefox)
+          "--back-end=webdriver-gecko"
+        "")
+      (if crawl
+          ;; FIXME --crawl-replace-urls=true does not work
+          "--crawl-links=true --crawl-external-links-max-depth=1 --crawl-max-depth=1 --crawl-replace-urls=true --crawl-inner-links-only=false --crawl-no-parent=true"
+        "")
+      url
+      (if crawl (format "--output-directory=%s" where) where))
+     :switch nil
+     :buffer-name "*single-file output*"
+     :on-finish
+     (lambda ()
+       (message "Archived `%s'!" url)
+       (kill-new where))))
+#+end_src
 * TY (work stuff)
 Company/work related stuff.
 
