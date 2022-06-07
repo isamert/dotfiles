@@ -5922,10 +5922,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defvar isamert/git-main-branch "master"
     "Main branch name.")
 
-  (defvar isamert/jira-projects '(("SAT" . 1))
-    "List of projects that I enrolled in JIRA.
-  CDR of each item defines which ticket number the caching should
-  start.")
+  (defvar isamert/jira-projects '(("SAT"))
+    "List of projects that I enrolled in JIRA.")
 
   (defvar isamert/jira-base-branch "origin/master"
     "Brach to create feature branches from.
@@ -5973,14 +5971,14 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
        isamert/jira-projects)
       issues))
 
-  (defun isamert/jira-get-all-issues ()
+  (defun isamert/jira-get-new-issues ()
     (let ((issues '()))
       (mapcar
        (lambda (project)
          (setq
           issues
-          (thread-last (format "project = \"%s\" AND issuekey >= \"%s-%s\""
-                               (car project) (car project) (cdr project))
+          (thread-last (format "project = \"%s\" AND created > -7d"
+                               (car project))
                        (jiralib2-jql-search)
                        (append issues))))
        isamert/jira-projects)
@@ -5990,7 +5988,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (interactive "P")
     (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban"))
                    ("My issues" (isamert/jira-get-my-issues))
-                   ("New issues" (isamert/jira-get-all-issues))
+                   ("New issues" (isamert/jira-get-new-issues))
                    ("Current Sprint" (isamert/jira-get-current-sprint-issues))
                    ("Kanban" (isamert/jira-get-kanban-issues)))
                  (--map (cons (isamert/jira--format-ticket-name it) it))
