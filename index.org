@@ -2169,10 +2169,18 @@ To rebuild completions, if something is not right, use the following:
 
 ** Key bindings
 - Enable emacs keybindings
-- Use C-x C-e to edit command in $EDITOR
 
 #+begin_src bash :tangle ~/.zshrc
   bindkey -e
+#+end_src
+
+*** Edit command in full screen editor
+Following snippet let's you edit current command with ~C-x C-e~ in your default editor.
+
+#+begin_src bash :tangle ~/.zshrc
+  autoload -z edit-command-line
+  zle -N edit-command-line
+  bindkey "^X^E" edit-command-line
 #+end_src
 
 ** Theme settings
