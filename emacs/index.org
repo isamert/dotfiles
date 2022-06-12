@@ -701,10 +701,12 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
     "Configure font and theme."
     (interactive)
     ;; Set the first avilable font from the `isamert/fonts' list
-    (--each-r-while
-        isamert/fonts #'isamert/font-exists-p
+    (let ((font (->>
+                 isamert/fonts
+                 (-filter #'isamert/font-exists-p)
+                 car)))
       (set-face-attribute 'default nil
-                          :font it
+                          :font font
                           :weight 'normal
                           :width 'normal
                           :height isamert/font-height))
