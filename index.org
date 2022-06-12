@@ -48,7 +48,7 @@ You can run arbitrary shell commands inside a code block like this: ~<<<sh("whic
 
 #+name: sh
 #+begin_src elisp :var code=""
-  (s-trim (shell-command-to-string code))
+  (string-trim (shell-command-to-string code))
 #+end_src
 
 The following is just the babel version of =(when-on ...)= function defined above. It helps you insert the text to a file based on current operating system.
@@ -2065,9 +2065,6 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   export DIR_WALLPAPERS=$HOME/Pictures/wallpapers
   export DIR_SCREENSHOTS=$HOME/Pictures/screenshots
   export DIR_NOTES=$HOME/Documents/notes
-
-  source $HOME/.nix-profile/etc/profile.d/nix.sh
-  source $HOME/.nix-profile/etc/profile.d/nix-daemon.sh
 #+end_src
 ** ~/.zprofile
 - This file is sourced after =.zshenv=.
@@ -2540,12 +2537,6 @@ Easily switch between contexts with completion.
       alias clear='vterm_printf "51;Evterm-clear-scrollback";tput clear'
   fi
 #+end_src
-** Nix configuration
-
-#+begin_src bash :tangle ~/.zshrc
-  source $HOME/.nix-profile/etc/profile.d/nix.sh
-  source $HOME/.nix-profile/etc/profile.d/nix-daemon.sh
-#+end_src
 ** Mac OSX configuration
 #+begin_src shell
   # - To get the latest pip bin path: echo $(python3 -c 'import site; print(site.USER_BASE)')/bin
@@ -2578,6 +2569,9 @@ Easily switch between contexts with completion.
 
   # Source fzf keybindings
   source /usr/local/opt/fzf/shell/key-bindings.zsh
+
+  source $HOME/.nix-profile/etc/profile.d/nix.sh
+  source $HOME/.nix-profile/etc/profile.d/nix-daemon.sh
 #+end_src
 
 ** Other
@@ -2585,7 +2579,7 @@ Easily switch between contexts with completion.
 For some reason it does not work. However running the same command after shell is started just works fine.
 
 #+begin_src bash :tangle ~/.zshrc
-  if [[ -n $(which kubectl) ]]; then
+  if (( $+commands[kubectl] )); then
     source <(kubectl completion zsh)
   fi
 #+end_src
