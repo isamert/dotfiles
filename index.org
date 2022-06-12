@@ -103,6 +103,19 @@ Journal files starts to take a lot of disk space. I put a simple limit to that h
   [Journal]
   SystemMaxUse=50M
 #+end_src
+
+** Pacman configuration
+
+Following snippet enables some configurations for pacman:
+
+- Parallel :: Enables parallel downloads. Really makes a difference, especially while upgrading your system.
+- Color :: Adds color to pacman output.
+- VerbosePkgLists :: This gives you more information about the packages that are going to be installed.
+- TotalDownload :: Adds ETA information for total progress etc.
+
+#+begin_src conf :tangle (when-linux "/sudo::/etc/pacman.conf")
+  <<<sh("cat /etc/pacman.conf | sed -E 's/^#(Parallel|Color|VerbosePkgLists|TotalDownload)/\\1/'")>>>
+#+end_src
 * X related
 ** Startup programs
 #+name: startup_programs
