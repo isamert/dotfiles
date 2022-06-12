@@ -3740,9 +3740,14 @@ Neither Slack web app nor the desktop app lets you define your own custom keybin
 #+end_src
 
 *** userChrome.css
-I use [[https://github.com/piroor/treestyletab][TreeStyleTab]] so I hide the tab bar and siderbar heading.
+I use [[https://github.com/piroor/treestyletab][TreeStyleTab]] so I hide the tab bar and siderbar heading. And now that I started using Gnome again, I also have the =firefox-gnome-theme=.
 
 #+begin_src css :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/chrome/userChrome.css")
+  @import "firefox-gnome-theme/userChrome.css";
+
+  @import "firefox-gnome-theme\/theme/colors/light-maia.css";
+  @import "firefox-gnome-theme\/theme/colors/dark-maia.css";
+
   #TabsToolbar {
       visibility: collapse;
   }
@@ -3757,6 +3762,13 @@ Also need to enable following config to make userChrome.css work:
 #+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/user.js")
   user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 #+end_src
+
+*** Other configs
+
+#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/user.js")
+  user_pref("browser.toolbars.bookmarks.visibility", "never");
+#+end_src
+
 ** Qutebrowser
 - Use =Alt-a= to bring up Emacs to edit a text in the text-area.
 - Some useful keybindings that I added:
