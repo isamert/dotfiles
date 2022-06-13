@@ -4707,6 +4707,13 @@ Keybindings are generally set in-place, following have no context, so they are h
   ;; most language formatters/linters.
   (use-package format-all)
 
+  ;; Like `format-all` but works async and automatically formats on
+  ;; buffer save.  I keep both of them because somethimes I need
+  ;; `format-all-buffer' and it works with more formatters.
+  (use-package apheleia
+    :config
+    (apheleia-global-mode +1))
+
   ;; Pick up .editorconfig settings for current project automatically
   (use-package editorconfig
     :config
