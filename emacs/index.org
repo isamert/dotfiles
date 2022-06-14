@@ -3040,6 +3040,9 @@ Some key points:
     (setq consult-preview-key (kbd "M-,"))
     ;; ^ When you do M-, on a candidate, it previews it
 
+    (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
+    ;; ^ Shows all narrowing possibilities when you hit "?"
+
     (evil-leader/set-key
       "hh"  #'consult-history
       "hy"  #'consult-yank-replace
