@@ -687,6 +687,16 @@ Disable global-hl-line-mode in eshell, ansi-term, vterm
     '(eshell-mode-hook term-mode-hook vterm-mode-hook))
 #+end_src
 
+** Fix Gnome/Mutter child frame resizing problem
+There is a problem under Mutter which causes child frames to not resize automatically. Following makes it better:
+
+#+begin_src emacs-lisp
+  (when (equal (getenv "XDG_SESSION_DESKTOP") "gnome")
+    (setq x-gtk-resize-child-frames 'resize-mode))
+#+end_src
+
+Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
+
 ** Fonts and theme
 #+BEGIN_SRC emacs-lisp
   (use-package doom-themes)
