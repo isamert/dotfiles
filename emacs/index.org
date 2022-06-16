@@ -4100,14 +4100,7 @@ It lets me display comments of given reddit thread in an org buffer using the =r
 #+begin_src emacs-lisp
   (use-package reddigg)
 #+end_src
-** COMMENT topspace
-Allows you to scroll above the top line. Evil bindings like ~zz~ ~zt~ ~zb~ works as expected, no configuration needed.
 
-#+begin_src
-  (use-package topspace
-    :config
-    (setq topspace-autocenter-buffers nil)
-    (global-topspace-mode 1))
 ** jq-mode
 A mode for editing ~jq~ scripts. Mostly using it for ~jq-interactively~ function which enables you to write a jq query and update the buffer accordingly in real time.
 
