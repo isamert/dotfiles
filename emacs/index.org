@@ -2330,6 +2330,8 @@ To sync it automatically:
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
           '((".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . browse-url-firefox)
+            (".*reddit.com.*comments.*" . (lambda (link _) (reddigg-view-comments _)))
+            (".*stackoverflow.com.*" . (lambda (link _) (isamert/open-stackoverflow-link link)))
             ("." . browse-url-default-browser)))
 
     (evil-define-key 'normal eww-mode-map
@@ -3563,6 +3565,13 @@ When you search for something, it opens the results in an org-mode buffer. Resul
       "gp" #'howdoyou-prev-link)
     (evil-leader/set-key
       "is" 'howdoyou-query))
+
+  (defun isamert/open-stackoverflow-link (link)
+    "Open stackoverflow LINK in a nicely formatted org buffer."
+    (interactive "sLink: ")
+    (switch-to-buffer (howdoyou--get-buffer))
+    (insert "Loading...")
+    (howdoyou-read-so-link link))
 #+END_SRC
 
 ** tldr
