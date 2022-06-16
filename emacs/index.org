@@ -2936,6 +2936,7 @@ Some shortcuts you can use on any vertico window:
             consult-line
             consult-ripgrep
             consult-bookmark
+            jq-interactively
             isamert/consult-line
             isamert/consult-ripgrep))
     (mini-frame-mode +1))
@@ -4107,6 +4108,11 @@ Allows you to scroll above the top line. Evil bindings like ~zz~ ~zt~ ~zb~ works
     :config
     (setq topspace-autocenter-buffers nil)
     (global-topspace-mode 1))
+** jq-mode
+A mode for editing ~jq~ scripts. Mostly using it for ~jq-interactively~ function which enables you to write a jq query and update the buffer accordingly in real time.
+
+#+begin_src emacs-lisp
+  (use-package jq-mode)
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
