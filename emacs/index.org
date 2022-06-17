@@ -2330,7 +2330,7 @@ To sync it automatically:
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
           '((".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . browse-url-firefox)
-            (".*reddit.com.*comments.*" . (lambda (link _) (reddigg-view-comments _)))
+            (".*reddit.com.*comments.*" . (lambda (link _) (reddigg-view-comments link)))
             (".*stackoverflow.com.*" . (lambda (link _) (isamert/open-stackoverflow-link link)))
             ("." . browse-url-default-browser)))
 
