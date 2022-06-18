@@ -4666,13 +4666,13 @@ Keybindings are generally set in-place, following have no context, so they are h
     (interactive)
     (split-window-right)
     (other-window 1)
-    (eshell t))
+    (vterm t))
 
   (defun isamert/split-window-below-term ()
     (interactive)
     (split-window-below)
     (other-window 1)
-    (eshell t))
+    (vterm t))
 
   (defun isamert/split-window-below ()
     (interactive)
@@ -6713,7 +6713,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
             (date-to-time (concat (match-string 1) "T000"))
             (date-to-time (concat date "T000")))
        (org-insert-heading-after-current)
-       (insert (format "[%s%s] [/]"
+       (insert (format "[%s%s] [%]"
                        date
                        (if (s-matches? "[a-zA-Z]+$" date)
                            ""
