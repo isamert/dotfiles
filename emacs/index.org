@@ -498,6 +498,12 @@ This function is for doing easy REST calls and it uses plists for everything bec
     (interactive)
     (kill-buffer (current-buffer)))
 #+end_src
+*** File operations
+#+begin_src emacs-lisp
+  (defun isamert/latest-file (&optional path)
+    "Get latest file in PATH."
+    (car (directory-files (or path default-directory) 'full "^\\([^.]\\|\\.[^.]\\|\\.\\..\\)" #'file-newer-than-file-p)))
+#+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
 
@@ -1723,36 +1729,6 @@ You have to use ~:sort (lambda ...)~ syntax in org-ql dynamic blocks if you want
   ,#+end
 #+end_example
 
-** org-board (archiving web pages)
-A very nice archiving tool. An org entry with ~URL~ property is considered a bookmark. When you are on a bookmark, you can do:
-- `org-board-archive' archives the current entry, creating a unique ID and directory via `org-attach' if necessary.
-- `org-board-new' prompts for a URL to add to the current entry's properties, then archives the entry immediately.
-- `org-board-delete-all' deletes all the archives for this entry by deleting the `org-attach' directory.
-
-It has a lot of other customization but haven't find a use case for them, I'm simply using this to archive web pages.
-
-#+begin_src emacs-lisp
-  (use-package org-board :after org)
-#+end_src
-
-Here is a capture template for capturing links and automatically archiving them:
-
-#+begin_src emacs-lisp
-  (add-to-list
-   'org-capture-templates
-   `("b" "Bookmark" entry
-     (file+headline ,bookmarks-org "Unsorted")
-     "* %?%:description\n:PROPERTIES:\n:URL: %:link\n:CREATED: %U\n:END:\n\n"))
-
-  (defun isamert/archive-bookmark ()
-    "Archive given link after capturing it."
-    (when (equal (buffer-name)
-                 (concat "CAPTURE-" (f-filename bookmarks-org)))
-      (org-board-archive)))
-
-  (add-hook 'org-capture-before-finalize-hook #'isamert/archive-bookmark)
-#+end_src
-
 ** Linking improvements
 Org does not provide an easy way to copy link at point. Here is a fix for that:
 
@@ -1947,6 +1923,30 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
     (org-table-align))
 #+end_src
 
+** Archiving URLS
+#+begin_src emacs-lisp
+  (defvar isamert/org-archive-url-path "~/Documents/notes/data/archvive/")
+
+  (defun isamert/org-archive-url (url)
+    "Archive URL and generate an new org entry for it."
+    (interactive "sURL: ")
+    (let ((archive-path (concat isamert/org-archive-url-path (org-id-get-create) ".html")))
+      (org-insert-heading)
+      (insert (isamert/org-make-link-string url))
+      (org-set-property "ARCHIVED_AT" (format-time-string "[%Y-%m-%d %a %H:%M]"))
+      (org-set-property "URL" url)
+      (f-mkdir isamert/org-archive-url-path)
+      (org-set-property "ARCHIVE_PATH" (format "[[file:./%s]]" (f-relative archive-path)))
+      (isamert/archive-url
+       url
+       :where archive-path)))
+
+  (add-to-list
+   'org-capture-templates
+   `("b" "Bookmark" entry
+     (file+headline ,bookmarks-org "Unsorted")
+     "** (call-interactively #'isamert/org-archive-url)"))
+#+end_src
 * Other packages
 ** bookmark.el
 You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult-bookmark~ and calling ~embark-act~ on them to view/delete/edit given bookmark might be easier.
@@ -7684,9 +7684,10 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
   ;; TODO add --filename-template
   ;; --filename-template Template used to generate the output filename (see help page of the extension for more info)  [string] [default: "{page-title} ({date-iso} {time-locale}).html"]
 
-  (cl-defun isamert/archive-url (url where &key (backend 'chrome) crawl)
-    "Archive the URL into WHERE. WHERE should be a directory if CRAWL
-  is non-nil otherwise it can be either a directory or a file."
+  (cl-defun isamert/archive-url (url &key where (backend 'chrome) crawl on-finish on-fail)
+    "Archive the URL into WHERE. WHERE can be a directory or a
+  file. If it's a directory, it should already exists otherwise
+  WHERE is interpreted as a file name."
     (interactive
      (list (or
             (isamert/org-link-copy)
@@ -7694,30 +7695,44 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
             (read-string "URL: "))
            (read-directory-name "Save files into: ")))
     (setq where (expand-file-name where))
-    (when (and crawl (not (file-exists-p where)))
-      (f-mkdir where))
-    (isamert/shell-command
-     :command
-     (format
-      "single-file --filename-replacement-character='-' %s %s %s \"%s\" \"%s\""
-      (if (eq system-type 'darwin)
-          "--browser-executable-path=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\""
-        "")
-      (if (eq backend 'firefox)
-          "--back-end=webdriver-gecko"
-        "")
-      (if crawl
-          ;; FIXME --crawl-replace-urls=true does not work
-          "--crawl-links=true --crawl-external-links-max-depth=1 --crawl-max-depth=1 --crawl-replace-urls=true --crawl-inner-links-only=false --crawl-no-parent=true"
-        "")
-      url
-      (if crawl (format "--output-directory=%s" where) where))
-     :switch nil
-     :buffer-name "*single-file output*"
-     :on-finish
-     (lambda ()
-       (message "Archived `%s'!" url)
-       (kill-new where))))
+    (let* ((command (format
+                     "single-file --filename-replacement-character='-' %s %s %s \"%s\" \"%s\""
+                     (if (eq system-type 'darwin)
+                         "--browser-executable-path=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\""
+                       "--browser-executable-path=chromium")
+                     (if (eq backend 'firefox)
+                         "--back-end=webdriver-gecko"
+                       "")
+                     (if crawl
+                         ;; FIXME --crawl-replace-urls=true does not work
+                         "--crawl-links=true --crawl-external-links-max-depth=1 --crawl-max-depth=1 --crawl-replace-urls=true --crawl-inner-links-only=false --crawl-no-parent=true"
+                       "")
+                     url
+                     (cond
+                      ((f-dir? where)
+                       (format "--output-directory=%s" where))
+                      (where where)
+                      (t (format "--output-directory=%s" default-directory))))))
+      (isamert/shell-command
+       :command command
+       :switch nil
+       :buffer-name "*single-file output*"
+       :on-finish
+       (lambda ()
+         (when (called-interactively-p 'any)
+           (message "Archived `%s'!" url)
+           (kill-new command))
+         ;; single-file does not return the created file name, finding that manually
+         (let ((created-file (isamert/latest-file (if (f-dir? where) where (f-dirname where)))))
+           (if (org-file-newer-than-p created-file (time-add (current-time) -30))
+               (and on-finish (funcall on-finish created-file))
+             (and on-fail (funcall on-fail 'file-not-created)))))
+       :on-fail
+       (lambda ()
+         (when (called-interactively-p 'any)
+           (message "Archiving failed: '%s'. Command is copied to your kill ring." url)
+           (kill-new command))
+         (and on-fail (funcall on-fail 'abnormal-exit))))))
 #+end_src
 * TY (work stuff)
 Company/work related stuff.
