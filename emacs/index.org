@@ -7290,8 +7290,8 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     (insert (isamert/uuid)))
 #+end_src
 
-** isamert/start-shell-command
-#+begin_src emacs-lisp :lexical yes
+** isamert/shell-command
+#+begin_src emacs-lisp
   (defvar-local isamert/shell-command-mode-command nil
     "Current shell command that belongs to the buffer.")
 
@@ -7308,6 +7308,26 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     (interactive)
     (apply #'isamert/shell-command isamert/shell-command-mode-command))
 
+
+  ;; In normal mode, hitting ! will display isamert/shell-command but in
+  ;; visual mode hitting ! will open evil's default evil-shell-command
+  ;; on selected region.
+  (evil-define-key 'normal 'global (kbd "!") #'isamert/shell-command)
+
+  (defun isamert/zsh-smart-history ()
+    (->>
+     (with-temp-buffer
+       (insert-file-contents "~/.zsh_history")
+       (buffer-string))
+     s-trim
+     (s-split "\n")
+     (--map (if (s-prefix? ":" it)
+                (s-replace-regexp "^: [0-9:]+;" "" it)
+              it))
+     (--filter (and (not (s-blank? it))
+                    (> (length it) 5)
+                    (not (s-matches? "^\\(ls\\|pwd\\|exit\\|cd\\|echo\\)" it))))))
+
   (cl-defun isamert/shell-command
       (&key
        command
@@ -7323,18 +7343,21 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   When called interactively, asks for a command to run (with eshell
   completion)."
     (interactive
-     (let ((eshell-non-interactive-p t)
-           (command))
-       (minibuffer-with-setup-hook (lambda ()
-                                     (eshell-mode)
-                                     (eshell-command-mode +1))
-         (setq command (read-from-minibuffer "Shell command: "))
-         (if (eshell-using-module 'eshell-hist)
-             (eshell-add-input-to-history command))
-         (list
-          :command command
-          :on-finish (lambda () (message ">> \"%s\" finished successfully." command))
-          :on-fail (lambda () (message ">> \"%s\" failed." command))))))
+     (let ((command (completing-read "Command: " (isamert/zsh-smart-history))))
+       (list
+        :command command
+        :on-finish
+        (lambda ()
+          (let ((msg (format ">> \"%s\" finished successfully." command)))
+            (message msg)
+            (when (not (frame-focus-state))
+              (alert msg))))
+        :on-fail
+        (lambda ()
+          (let ((msg (format ">> \"%s\" FAILED." command)))
+            (message msg)
+            (when (not (frame-focus-state))
+              (alert msg)))))))
     (let* ((proc (start-process-shell-command command buffer-name command)))
       (set-process-sentinel
        proc
