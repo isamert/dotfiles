@@ -6310,7 +6310,7 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
        t t)
       (buffer-string)))
 
-  (cl-defun isamert/tmux-send-notification-to-my-phone
+  (cl-defun isamert/send-notification-to-my-phone
       (&key
        title
        content
@@ -6328,28 +6328,6 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
      (or content "")
      "--action"
      (format "termux-open %s" url-to-open)))
-
-  (cl-defun isamert/send-notification-to-my-phone
-      (&key
-       title
-       content
-       url-to-open)
-    (interactive
-     (list :title (isamert/read-string "Title: ")
-           :content (isamert/read-string "Content: ")
-           :url-to-open (isamert/read-string "URL(?): ")))
-    "Send a notification to my phone."
-    (start-process
-     "gotify"
-     "*gotify-out*"
-     "gotify"
-     "push"
-     "--title"
-     title
-     ;; TODO
-     ;; "--clickUrl"
-     ;; (or url-to-open)
-     content))
 
   (defun isamert/send-text-to-my-phone (text)
     "Send TEXT to my phones clipboard. This only works if the phone
