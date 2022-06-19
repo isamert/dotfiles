@@ -2023,6 +2023,7 @@ This file is sourced by both =zsh= and =bash=.
 
   # useful
   function is-emacs { [[ "$INSIDE_EMACS" = "vterm" ]]; }
+  alias find-dups="find . ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD"
 
   # stuff
   alias ipaddr="curl https://api.ipify.org"
