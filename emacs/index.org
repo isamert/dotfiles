@@ -5625,6 +5625,21 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
           :command (format "bq head -n 10 '%s'" table-name))))))
 #+end_src
 
+** kbd-mode
+For working with [[id:DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983][KMonad]] kbd files. Do ~C-c C-c~ (~kbd-start-demo~) to apply your config and try it in a buffer.
+
+#+begin_src emacs-lisp
+  (use-package kbd-mode
+    :ensure t
+    :diminish
+    :quelpa (kbd-mode
+             :fetcher github
+             :repo "kmonad/kbd-mode")
+    :config
+    (setq kbd-mode-kill-kmonad "pkill -9 kmonad")
+    (setq kbd-mode-start-kmonad "kmonad ~/.config/kmonad.kbd"))
+#+end_src
+
 * Misc functions
 ** marks integration
 [[https://github.com/isamert/marks][marks]] is a grep-like tool for searching org-mode and markdown files. The following snippet provides a ~consult~ support for marks.
