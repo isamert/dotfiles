@@ -1222,6 +1222,16 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
     (global-evil-visualstar-mode 1))
 #+end_src
 
+** evil-numbers
+Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}~.
+
+#+begin_src emacs-lisp
+  (use-package evil-numbers
+    :config
+    (define-key evil-normal-state-map (kbd "C-c +") 'evil-numbers/inc-at-pt)
+    (define-key evil-normal-state-map (kbd "C-c -") 'evil-numbers/dec-at-pt))
+#+end_src
+
 ** goto-chg
 - =g;= goes to the last change. (repeatable)
 - There is also =gv= which selects the last selection. Not related to this package, it's a default functionality but I wanted to mention.
