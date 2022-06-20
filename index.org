@@ -3833,7 +3833,19 @@ I use TreeStyleTabs and it's perfect. This is just cherry on top.
 **** Slack integration
 Neither Slack web app nor the desktop app lets you define your own custom keybindings but using the web app in combination with Tridactyl we can create our own shortcuts. I also created [[https://github.com/tridactyl/tridactyl/wiki/Slack][this tridactyl wiki page]] based on the bindings I created here. It might contain more details.
 
+- ;n -> new message
+- ;u -> open unreads
+- ;t -> open all threads
+- ;d -> open all dms
+- ;a -> open activity window
+
+- ;m -> interactively select a message and open message actions
+- ;e -> interactively select a message and edit the selected message
+- ;c -> interactively select a message and copy the link of selected message
+
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
+  bindurl .*.slack.com ;n hint -Jc button[data-qa=composer_button]
+
   " For more info: https://github.com/tridactyl/tridactyl/wiki/Slack
   " Hint channels only with ;c in slack
   bindurl .*.slack.com --mode=normal f hint -Jc div[data-sidebar-link-id]:not([data-sidebar-link-id=""]),div[data-section-channel-index]:not([data-section-channel-index=""]),button,a
