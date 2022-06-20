@@ -403,6 +403,23 @@ Some basic variable and function definitions that will be used in configuration.
       (concat
        (s-upcase (substring s 0 end))
        (substring s end))))
+
+  (defun isamert/string-url-case (str)
+    "Convert STR to something like `a-string-appropriate-for-urls'."
+    (->> (downcase str)
+         (s-replace-all
+          '(("," . "")
+            ("'" . "")
+            ("ö" . "o")
+            ("ı" . "i")
+            ("ğ" . "g")
+            ("ü" . "u")
+            ("ş" . "s")
+            ("ö" . "o")
+            ("ç" . "c")))
+         (s-trim)
+         (replace-regexp-in-string "[^a-zA-Z0-9]" "-" str)
+         (replace-regexp-in-string "-+" "-")))
 #+end_src
 *** Quick table
 #+begin_src emacs-lisp
@@ -488,6 +505,17 @@ This function is for doing easy REST calls and it uses plists for everything bec
                  ((and -params (json-plist-p params)) (transient-plist-to-alist -params))
                  (t (transient-plist-to-alist params))))
       json))
+#+end_src
+*** URL/web utils
+#+begin_src emacs-lisp
+  (defun isamert/url-get-title (url)
+    "Get title of the URL."
+    (with-current-buffer (url-retrieve-synchronously url)
+      (dom-text (car
+                 (dom-by-tag (libxml-parse-html-region
+                              (point-min)
+                              (point-max))
+                             'title)))))
 #+end_src
 *** Other
 #+begin_src emacs-lisp
@@ -1811,19 +1839,10 @@ Insert links/images more intelligently,
           (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
         (user-error "Saving file failed!"))))
 
-
   (defun isamert/org-make-link-string (url)
     "Like `org-make-link-string' but fetches URL and extracts the
   title automatically."
-    (org-make-link-string
-     url
-     (read-string "Title: "
-                  (with-current-buffer (url-retrieve-synchronously url)
-                    (dom-text (car
-                               (dom-by-tag (libxml-parse-html-region
-                                            (point-min)
-                                            (point-max))
-                                           'title)))))))
+    (org-make-link-string url (read-string "Title: " (isamert/url-get-title url))))
 #+end_src
 
 ** Insert image with width
@@ -1927,19 +1946,53 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 #+begin_src emacs-lisp
   (defvar isamert/org-archive-url-path "~/Documents/notes/data/archvive/")
 
-  (defun isamert/org-archive-url (url)
+  (defun isamert/org-archive-url ()
     "Archive URL and generate an new org entry for it."
-    (interactive "sURL: ")
-    (let ((archive-path (concat isamert/org-archive-url-path (org-id-get-create) ".html")))
-      (org-insert-heading)
-      (insert (isamert/org-make-link-string url))
-      (org-set-property "ARCHIVED_AT" (format-time-string "[%Y-%m-%d %a %H:%M]"))
-      (org-set-property "URL" url)
-      (f-mkdir isamert/org-archive-url-path)
-      (org-set-property "ARCHIVE_PATH" (format "[[file:./%s]]" (f-relative archive-path)))
-      (isamert/archive-url
-       url
-       :where archive-path)))
+    (interactive)
+    (let (url update?)
+      ;; If we are on a heading and calling this function, we probably
+      ;; just want to update/initialize the archive for current
+      ;; heading. Otherwise we are creating a new archive.
+      (if-let ((_ (org-at-heading-p))
+               (old-url (org-entry-get nil "URL")))
+          (progn
+            (setq url old-url)
+            (setq update? t))
+        (progn
+          (setq url (read-string "URL: "))
+          (org-insert-heading)))
+
+      ;; Precautionary call
+      (org-id-get-create)
+
+      (let* ((url-title (read-string "Title: " (isamert/url-get-title url)))
+             (archive-path (format
+                            "%s/%s_%s_%s.html"
+                            isamert/org-archive-url-path
+                            (org-id-get-create)
+                            (format-time-string "%Y%m%dT%H%M%S")
+                            (isamert/string-url-case url-title))))
+        (org-set-property
+         "ARCHIVED_AT"
+         (format "%s[[file:./%s][%s]]"
+                 (if-let ((older-archives (org-entry-get nil "ARCHIVED_AT")))
+                     (format "%s, " older-archives)
+                   "")
+                 (f-relative archive-path)
+                 (format-time-string "%Y-%m-%dT%H:%M")))
+        (unless update?
+          (insert (org-make-link-string url url-title)))
+
+        (org-set-property "URL" url)
+        (unless (org-entry-get nil "CREATED")
+          (org-set-property "CREATED" (format-time-string "[%Y-%m-%d %a %H:%M]")))
+
+        ;; Create the archive
+        (f-mkdir isamert/org-archive-url-path)
+        (isamert/archive-url
+         url
+         :where archive-path
+         :tidy t))))
 
   (add-to-list
    'org-capture-templates
@@ -7659,10 +7712,7 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
 #+end_src
 ** Archive URLs with single-file
 #+begin_src emacs-lisp
-  ;; TODO add --filename-template
-  ;; --filename-template Template used to generate the output filename (see help page of the extension for more info)  [string] [default: "{page-title} ({date-iso} {time-locale}).html"]
-
-  (cl-defun isamert/archive-url (url &key where (backend 'chrome) crawl on-finish on-fail)
+  (cl-defun isamert/archive-url (url &key where (backend 'chrome) crawl tidy on-finish on-fail)
     "Archive the URL into WHERE. WHERE can be a directory or a
   file. If it's a directory, it should already exists otherwise
   WHERE is interpreted as a file name."
@@ -7673,24 +7723,25 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
             (read-string "URL: "))
            (read-directory-name "Save files into: ")))
     (setq where (expand-file-name where))
-    (let* ((command (format
-                     "single-file --filename-replacement-character='-' %s %s %s \"%s\" \"%s\""
-                     (if (eq system-type 'darwin)
-                         "--browser-executable-path=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\""
-                       "--browser-executable-path=chromium")
-                     (if (eq backend 'firefox)
-                         "--back-end=webdriver-gecko"
-                       "")
-                     (if crawl
-                         ;; FIXME --crawl-replace-urls=true does not work
-                         "--crawl-links=true --crawl-external-links-max-depth=1 --crawl-max-depth=1 --crawl-replace-urls=true --crawl-inner-links-only=false --crawl-no-parent=true"
-                       "")
-                     url
-                     (cond
-                      ((f-dir? where)
-                       (format "--output-directory=%s" where))
-                      (where where)
-                      (t (format "--output-directory=%s" default-directory))))))
+    (let* ((command
+            (format
+             "single-file --filename-replacement-character='-' %s %s %s \"%s\" \"%s\""
+             (if (eq system-type 'darwin)
+                 "--browser-executable-path=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\""
+               "--browser-executable-path=chromium")
+             (if (eq backend 'firefox)
+                 "--back-end=webdriver-gecko"
+               "")
+             (if crawl
+                 ;; FIXME --crawl-replace-urls=true does not work
+                 "--crawl-links=true --crawl-external-links-max-depth=1 --crawl-max-depth=1 --crawl-replace-urls=true --crawl-inner-links-only=false --crawl-no-parent=true"
+               "")
+             url
+             (cond
+              ((f-dir? where)
+               (format "--output-directory=%s" where))
+              (where where)
+              (t (format "--output-directory=%s" default-directory))))))
       (isamert/shell-command
        :command command
        :switch nil
@@ -7701,10 +7752,15 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
            (message "Archived `%s'!" url)
            (kill-new command))
          ;; single-file does not return the created file name, finding that manually
-         (let ((created-file (isamert/latest-file (if (f-dir? where) where (f-dirname where)))))
-           (if (org-file-newer-than-p created-file (time-add (current-time) -30))
-               (and on-finish (funcall on-finish created-file))
-             (and on-fail (funcall on-fail 'file-not-created)))))
+         (let ((created-file (cond
+                              ((f-file? where) where)
+                              ((f-dir? where) (isamert/latest-file where))
+                              (t (error "Can't find file created backup file")))))
+           (when tidy
+             (unless (executable-find "tidy")
+               (user-error "`tidy' not found in the path"))
+             (shell-command (format "tidy -q -w 120 -m '%s'" created-file)))
+           (and on-finish (funcall on-finish created-file))))
        :on-fail
        (lambda ()
          (when (called-interactively-p 'any)
