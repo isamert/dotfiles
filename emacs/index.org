@@ -2246,7 +2246,7 @@ To sync it automatically:
   ;; Use my notification function for appt notifications
   (setq appt-disp-window-function #'isamert/appt-notify)
   (setq appt-message-warning-time 6)
-  (setq appt-display-interval 2)
+  (setq appt-display-interval 3)
 
   ;; Automatically update `appt-time-msg-list' after editing an
   ;; org-agenda file
