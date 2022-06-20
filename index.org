@@ -88,220 +88,138 @@ The following enables ~nix search~ command.
   experimental-features = nix-command flakes
 #+end_src
 * macOS
-** Use jemalloc
-=jemalloc= seems to be better than default allocator for macOS. See [[https://eisel.me/devtool-allocators][this]].
+** yabai
+This is the window manager I use in OSX. It's pretty much like BSPWM. [[https://github.com/koekeishiya/yabai/blob/master/examples/yabairc][Here]] is an example configuration. I don't use the "scripting addition" due to company restrictions.
 
-#+begin_src sh :tangle (when-darwin "~/.zshenv")
-  export DYLD_INSERT_LIBRARIES=/usr/local/lib/libjemalloc.dylib
+Installation and enabling are done through homebrew:
+
+#+begin_src sh
+  brew install koekeishiya/formulae/yabai
+
+  # stop, and upgrade yabai
+  brew services stop yabai
+  brew upgrade yabai
+
+  # finally, start yabai
+  brew services start yabai
 #+end_src
 
-* Linux
-** SystemD journal files
-Journal files starts to take a lot of disk space. I put a simple limit to that here.
+#+begin_src sh :tangle (when-darwin "~/.config/yabai/yabairc")
+  #!/bin/bash
 
-#+begin_src conf :tangle (when-linux "/sudo::/etc/systemd/journald.conf.d/max-journal-size.conf")
-  [Journal]
-  SystemMaxUse=50M
+  yabai -m config mouse_follows_focus  on
+  yabai -m config layout               bsp
+  yabai -m config window_gap           6
+
+  yabai -m rule --add app=Emacs  manage=off
+  yabai -m rule --add app=choose manage=off
+
+  yabai -m rule --add app=Firefox     space=^1
+  yabai -m rule --add app=Emacs       space=^2
+  yabai -m rule --add app=Mail        space=^3
+  yabai -m rule --add app=Calendar    space=^4
+  yabai -m rule --add app=Zoom.us     space=^7
 #+end_src
 
-** Pacman configuration
+** skhd
+This is the global keybinding manager for OSX. [[https://github.com/koekeishiya/yabai/blob/master/examples/skhdrc][Here]] is an example configuration.
 
-Following snippet enables some configurations for pacman:
+#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
+  # focus window
+  lcmd - h : yabai -m window --focus west
+  lcmd - l : yabai -m window --focus east
+  lcmd - j : yabai -m window --focus south
+  lcmd - k : yabai -m window --focus north
 
-- Parallel :: Enables parallel downloads. Really makes a difference, especially while upgrading your system.
-- Color :: Adds color to pacman output.
-- VerbosePkgLists :: This gives you more information about the packages that are going to be installed.
-- TotalDownload :: Adds ETA information for total progress etc.
+  # swap managed window
+  shift + lcmd - h : yabai -m window --swap west
+  shift + lcmd - l : yabai -m window --swap east
 
-#+begin_src conf :tangle (when-linux "/sudo::/etc/pacman.conf")
-  <<<sh("cat /etc/pacman.conf | sed -E 's/^#(Parallel|Color|VerbosePkgLists|TotalDownload)/\\1/'")>>>
-#+end_src
-* X related
-** Startup programs
-#+name: startup_programs
-#+begin_src bash
-  deadd-notification-center &
-  xcape -e 'Hyper_L=Escape' &
-  sxhkd &
-  unclutter &
-  udiskie --smart-tray --notify &
-  nm-applet &
-  pasystray &
-  blueman-applet &
+  # send window to desktop
+  shift + lcmd - 1 : yabai -m window --space 1
+  shift + lcmd - 2 : yabai -m window --space 2
+  shift + lcmd - 3 : yabai -m window --space 3
+  shift + lcmd - 4 : yabai -m window --space 4
+  shift + lcmd - 5 : yabai -m window --space 5
+  shift + lcmd - 6 : yabai -m window --space 6
+  shift + lcmd - 7 : yabai -m window --space 7
+  shift + lcmd - 8 : yabai -m window --space 8
 
-  # Apps
-  pgrep emacs || emacs --daemon &
-  pgrep syncthing || syncthing -no-browser -no-restart -logflags=0 &
-  pgrep copyq || copyq &
-  pgrep crow || crow &
-  pgrep redshift || redshift -l 39:35 &
-#+end_src
+  # focus monitor
+  # lcmd + , and lcmd + .
+  lcmd - 0x2F  : yabai -m display --focus 1
+  lcmd - 0x2B  : yabai -m display --focus 2
 
-** .xinitrc
-#+begin_src sh :tangle (when-linux "~/.xinitrc")
-  #!/bin/sh
+  # send window to monitor
+  shift + lcmd - 0x2F  : yabai -m window --display 1; # yabai -m display --focus 1
+  shift + lcmd - 0x2B  : yabai -m window --display 2; # yabai -m display --focus 1
 
-  # Source some required stuff
-  if [[ -d /etc/X11/xinit/xinitrc.d ]] ; then
-      for f in /etc/X11/xinit/xinitrc.d/?*.sh ; do
-          echo "Sourcing $f"
-          [[ -x "$f" ]] && . "$f"
-      done
-      unset f
-  fi
+  # resize windows
+  lcmd + alt - l : yabai -m window --resize right:20:0
+  lcmd + alt - h : yabai -m window --resize left:-20:0
+  lcmd + alt - j : yabai -m window --resize bottom:0:20
+  lcmd + alt - k : yabai -m window --resize top:0:-20
 
-  # See `man dbus-launch`
-  if [[ -z "$DBUS_SESSION_BUS_ADDRESS" ]]; then
-      # If not found, launch a new one
-      eval $(dbus-launch --sh-syntax)
-      echo "D-Bus per-session daemon address is: $DBUS_SESSION_BUS_ADDRESS"
-  fi
+  # toggle window zoom
+  lcmd - d : yabai -m window --toggle zoom-parent
+  lcmd - f : yabai -m window --toggle zoom-fullscreen
 
-  sysresources=/etc/X11/xinit/.Xresources
-  sysmodmap=/etc/X11/xinit/.Xmodmap
-  [[ -f $sysresources ]] && xrdb -merge $sysresources
-  [[ -f $sysmodmap ]] && xmodmap $sysmodmap
-  setxkbmap $(echo "$KEYBOARD_LAYOUTS" | cut -d',' -f1)
-  xrdb -merge $HOME/.Xresources
-  xmodmap $HOME/.Xmodmap
-  xsetroot -cursor_name left_ptr
+  # toggle window split type
+  # alt - e : yabai -m window --toggle split
 
-  <<<startup_programs>>>
+  # float / unfloat window and center on screen
+  lcmd - t : yabai -m window --toggle float;\
+            yabai -m window --grid 4:4:1:1:2:2
 
-  exec bspwm
-#+end_src
+  # reload skhd config
+  shift + lcmd - r : skhd --reload
 
-** .Xmodmap
-This file contains some mappings for my keyboard. I can simply change how a key (or some simple key combinations) behave in  X level which  has little to none performance implications. Also see [[https://isamert.net/2020/05/30/better-keyboard-experience-in-linux.html][this post]] for further details.
+  # run some apps
+  hyper - r : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c
+  hyper - i : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet))"
+  hyper - o : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet t))"
+  hyper - p : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient --eval "(isamert/globally (isamert/password-act))"
+  hyper - 9 : /usr/bin/osascript -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
 
-#+begin_src xmodmap :tangle (when-linux "~/.Xmodmap")
-  !! Map CapsLock to Hyper key
-  !! Unmap capslock
-  clear Lock
-  keycode 66 = Hyper_L
-  !! Leave mod4 as windows key _only_
-  remove mod4 = Hyper_L
+  # move managed window
+  # shift + cmd - h : yabai -m window --warp east
 
-  !! Set mod3 to capslock
-  add mod3 = Hyper_L
+  # balance size of windows
+  # shift + alt - 0 : yabai -m space --balance
 
-  !! Fix my bluetooth keyboard:
-  !! My bluetooth keyboard does not have ESC key, in it's place
-  !! it has the Backwards key. So I'm simply rebinding it to ESC.
-  !! (Unfortunately XF86Backwards key gets overridden by ESC in my thinkpad)
-  keycode 166 = Escape NoSymbol Escape NoSymbol Escape Escape
-  keycode 166 = Escape
-  keycode 248 = Super_L
+  # make floating window fill screen
+  # shift + alt - up     : yabai -m window --grid 1:1:0:0:1:1
 
-  !! Quick access for some unicode chars
-  !! altgr + b → λ  | altgr + a → →
-  !! altgr + x → ❌ | altgr + f → ∀
-  !! altgr + n → ¬  | altgr + d → ⇒
-  !! altgr + , → ≤  | altgr + . → ≥
-  !! altgr + = → ≠  | altgr + shift + = → ≔
-  !! altgr + / → ÷  | altgr + ; → ∷
-  !! altgr + 8 → ×  | altgr + t -> ✓
-  keysym b = b B b B U03BB
-  keysym a = a A a A U2192
-  keysym x = x X x X U274C
-  keysym f = f F f F U2200
-  keysym n = n N n N U00AC
-  keysym d = d D d D U21D2
-  keysym t = t T t T U2713
-  keysym 8 = 8 asterisk 8 asterisk multiply
-  keysym comma = comma less comma less U2264
-  keysym period = period greater period greater U2265
-  keysym equal = equal plus equal plus U2260 U2254
-  keysym question = slash question slash question division
-  keysym semicolon = semicolon colon semicolon colon U2237
+  # make floating window fill left-half of screen
+  # shift + alt - left   : yabai -m window --grid 1:2:0:0:1:1
 
-  !! A comfy way to use h,j,k,l as directional keys.
-  !! With this configuration I'm able to use these keys as arrow key by simply pressing
-  !! them with AltGr.
-  keysym h = h H h H Left Home
-  keysym j = j J j J Down Prior
-  keysym k = k K k K Up Next
-  keysym l = l L l L Right End
+  # create desktop, move window and follow focus - uses jq for parsing json (brew install jq)
+  # shift + cmd - n : yabai -m space --create && \
+  #                   index="$(yabai -m query --spaces --display | jq 'map(select(."native-fullscreen" == 0))[-1].index')" && \
+  #                   yabai -m window --space "${index}" && \
+  #                   yabai -m space --focus "${index}"
 
-  !! AltGr+[ -> (, AltGr+] -> )
-  keysym bracketleft = bracketleft braceleft bracketleft braceleft parenleft
-  keysym bracketright = bracketright braceright bracketright braceright parenright
+  # fast focus desktop (doesn't work, need to disable system integrity protection)
+  # cmd + alt - x : yabai -m space --focus recent
+  # cmd - 1 : yabai -m space --focus 1
+  # cmd - 2 : yabai -m space --focus 2
+  # cmd - 3 : yabai -m space --focus 3
+  # cmd - 4 : yabai -m space --focus 4
 
-  !! Fix us(intl)
-  !! I'm using us(intl) to be able to use ISO_Shift_Level3 as AltGr, other
-  !! keyboards does not permit usage of it AFAIK. But I don't want to use dead_*
-  !! keys. So I map them to their original bindings.
-  keysym dead_grave = grave asciitilde
-  keysym dead_acute = apostrophe quotedbl
-#+end_src
-** .Xresources
-#+begin_src conf :tangle (when-linux "~/.Xresources")
-  ! hard contrast: *background: #1d2021
-  ,*background: #282828
-  ! soft contrast: *background: #32302f
-  ,*foreground: #ebdbb2
-  ! Black + DarkGrey
-  ,*color0:  #282828
-  ,*color8:  #928374
-  ! DarkRed + Red
-  ,*color1:  #cc241d
-  ,*color9:  #fb4934
-  ! DarkGreen + Green
-  ,*color2:  #98971a
-  ,*color10: #b8bb26
-  ! DarkYellow + Yellow
-  ,*color3:  #d79921
-  ,*color11: #fabd2f
-  ! DarkBlue + Blue
-  ,*color4:  #458588
-  ,*color12: #83a598
-  ! DarkMagenta + Magenta
-  ,*color5:  #b16286
-  ,*color13: #d3869b
-  ! DarkCyan + Cyan
-  ,*color6:  #689d6a
-  ,*color14: #8ec07c
-  ! LightGrey + White
-  ,*color7:  #a89984
-  ,*color15: #ebdbb2
-#+end_src
-** picom compositor
-See [[https://github.com/yshui/picom/blob/next/picom.sample.conf][this file]] for more detailed information on configuration options.
+  # move floating window
+  # shift + ctrl - a : yabai -m window --move rel:-20:0
+  # shift + ctrl - s : yabai -m window --move rel:0:20
 
-#+begin_src conf :tangle (when-linux "~/.config/picom.conf")
-  # Performance etc.
-  vsync = true
-  dbe = false;
-  sw-opti = false;
-  unredir-if-possible = true;
-  backend = "glx";
-  glx-no-stencil = true;
-  glx-no-rebind-pixmap = true;
-  glx-swap-methond = "exchange";
+  # increase window size
+  # shift + alt - a : yabai -m window --resize left:-20:0
+  # shift + alt - w : yabai -m window --resize top:0:-20
 
-  # Shadows
-  shadow = true;
-  shadow-offset-x = -8;
-  shadow-offset-y = -8;
-  shadow-opacity = 0.5;
-  shadow-radius = 5;
+  # decrease window size
+  # shift + cmd - s : yabai -m window --resize bottom:0:-20
+  # shift + cmd - w : yabai -m window --resize top:0:20
 
-  # Exclude transparent stuff from using shadows
-  shadow-exclude = [
-    "class_g ?= 'st'",
-    "class_g ?= 'rofi'",
-    "class_g ?= 'slop'", # maim -s
-    "class_g ?= 'firefox'",
-    "class_g = 'firefox' && argb",
-    "name = 'cpt_frame_xcb_window'",
-    "class_g ?= 'zoom'",
-  ];
-
-  # Fading
-  fading = true;
-  fade-in-step = 0.03;
-  fade-out-step = 0.05;
-  fade-exclude = [ "name = 'i3lock'" ];
+  # set insertion point in focused container
+  # ctrl + alt - h : yabai -m window --insert west
 #+end_src
 
 ** Karabiner config
@@ -977,7 +895,219 @@ See [[https://github.com/yshui/picom/blob/next/picom.sample.conf][this file]] fo
     ]
   }
 #+end_src
+* Linux
+** SystemD journal files
+Journal files starts to take a lot of disk space. I put a simple limit to that here.
+
+#+begin_src conf :tangle (when-linux "/sudo::/etc/systemd/journald.conf.d/max-journal-size.conf")
+  [Journal]
+  SystemMaxUse=50M
+#+end_src
+
+** Pacman configuration
+
+Following snippet enables some configurations for pacman:
+
+- Parallel :: Enables parallel downloads. Really makes a difference, especially while upgrading your system.
+- Color :: Adds color to pacman output.
+- VerbosePkgLists :: This gives you more information about the packages that are going to be installed.
+- TotalDownload :: Adds ETA information for total progress etc.
+
+#+begin_src conf :tangle (when-linux "/sudo::/etc/pacman.conf")
+  <<<sh("cat /etc/pacman.conf | sed -E 's/^#(Parallel|Color|VerbosePkgLists|TotalDownload)/\\1/'")>>>
+#+end_src
+* X related
+** Startup programs
+#+name: startup_programs
+#+begin_src bash
+  deadd-notification-center &
+  xcape -e 'Hyper_L=Escape' &
+  sxhkd &
+  unclutter &
+  udiskie --smart-tray --notify &
+  nm-applet &
+  pasystray &
+  blueman-applet &
+
+  # Apps
+  pgrep emacs || emacs --daemon &
+  pgrep syncthing || syncthing -no-browser -no-restart -logflags=0 &
+  pgrep copyq || copyq &
+  pgrep crow || crow &
+  pgrep redshift || redshift -l 39:35 &
+#+end_src
+
+** .xinitrc
+#+begin_src sh :tangle (when-linux "~/.xinitrc")
+  #!/bin/sh
+
+  # Source some required stuff
+  if [[ -d /etc/X11/xinit/xinitrc.d ]] ; then
+      for f in /etc/X11/xinit/xinitrc.d/?*.sh ; do
+          echo "Sourcing $f"
+          [[ -x "$f" ]] && . "$f"
+      done
+      unset f
+  fi
+
+  # See `man dbus-launch`
+  if [[ -z "$DBUS_SESSION_BUS_ADDRESS" ]]; then
+      # If not found, launch a new one
+      eval $(dbus-launch --sh-syntax)
+      echo "D-Bus per-session daemon address is: $DBUS_SESSION_BUS_ADDRESS"
+  fi
+
+  sysresources=/etc/X11/xinit/.Xresources
+  sysmodmap=/etc/X11/xinit/.Xmodmap
+  [[ -f $sysresources ]] && xrdb -merge $sysresources
+  [[ -f $sysmodmap ]] && xmodmap $sysmodmap
+  setxkbmap $(echo "$KEYBOARD_LAYOUTS" | cut -d',' -f1)
+  xrdb -merge $HOME/.Xresources
+  xmodmap $HOME/.Xmodmap
+  xsetroot -cursor_name left_ptr
+
+  <<<startup_programs>>>
+
+  exec bspwm
+#+end_src
+
+** .Xmodmap
+This file contains some mappings for my keyboard. I can simply change how a key (or some simple key combinations) behave in  X level which  has little to none performance implications. Also see [[https://isamert.net/2020/05/30/better-keyboard-experience-in-linux.html][this post]] for further details.
+
+#+begin_src xmodmap :tangle (when-linux "~/.Xmodmap")
+  !! Map CapsLock to Hyper key
+  !! Unmap capslock
+  clear Lock
+  keycode 66 = Hyper_L
+  !! Leave mod4 as windows key _only_
+  remove mod4 = Hyper_L
+
+  !! Set mod3 to capslock
+  add mod3 = Hyper_L
+
+  !! Fix my bluetooth keyboard:
+  !! My bluetooth keyboard does not have ESC key, in it's place
+  !! it has the Backwards key. So I'm simply rebinding it to ESC.
+  !! (Unfortunately XF86Backwards key gets overridden by ESC in my thinkpad)
+  keycode 166 = Escape NoSymbol Escape NoSymbol Escape Escape
+  keycode 166 = Escape
+  keycode 248 = Super_L
+
+  !! Quick access for some unicode chars
+  !! altgr + b → λ  | altgr + a → →
+  !! altgr + x → ❌ | altgr + f → ∀
+  !! altgr + n → ¬  | altgr + d → ⇒
+  !! altgr + , → ≤  | altgr + . → ≥
+  !! altgr + = → ≠  | altgr + shift + = → ≔
+  !! altgr + / → ÷  | altgr + ; → ∷
+  !! altgr + 8 → ×  | altgr + t -> ✓
+  keysym b = b B b B U03BB
+  keysym a = a A a A U2192
+  keysym x = x X x X U274C
+  keysym f = f F f F U2200
+  keysym n = n N n N U00AC
+  keysym d = d D d D U21D2
+  keysym t = t T t T U2713
+  keysym 8 = 8 asterisk 8 asterisk multiply
+  keysym comma = comma less comma less U2264
+  keysym period = period greater period greater U2265
+  keysym equal = equal plus equal plus U2260 U2254
+  keysym question = slash question slash question division
+  keysym semicolon = semicolon colon semicolon colon U2237
+
+  !! A comfy way to use h,j,k,l as directional keys.
+  !! With this configuration I'm able to use these keys as arrow key by simply pressing
+  !! them with AltGr.
+  keysym h = h H h H Left Home
+  keysym j = j J j J Down Prior
+  keysym k = k K k K Up Next
+  keysym l = l L l L Right End
+
+  !! AltGr+[ -> (, AltGr+] -> )
+  keysym bracketleft = bracketleft braceleft bracketleft braceleft parenleft
+  keysym bracketright = bracketright braceright bracketright braceright parenright
+
+  !! Fix us(intl)
+  !! I'm using us(intl) to be able to use ISO_Shift_Level3 as AltGr, other
+  !! keyboards does not permit usage of it AFAIK. But I don't want to use dead_*
+  !! keys. So I map them to their original bindings.
+  keysym dead_grave = grave asciitilde
+  keysym dead_acute = apostrophe quotedbl
+#+end_src
+** .Xresources
+#+begin_src conf :tangle (when-linux "~/.Xresources")
+  ! hard contrast: *background: #1d2021
+  ,*background: #282828
+  ! soft contrast: *background: #32302f
+  ,*foreground: #ebdbb2
+  ! Black + DarkGrey
+  ,*color0:  #282828
+  ,*color8:  #928374
+  ! DarkRed + Red
+  ,*color1:  #cc241d
+  ,*color9:  #fb4934
+  ! DarkGreen + Green
+  ,*color2:  #98971a
+  ,*color10: #b8bb26
+  ! DarkYellow + Yellow
+  ,*color3:  #d79921
+  ,*color11: #fabd2f
+  ! DarkBlue + Blue
+  ,*color4:  #458588
+  ,*color12: #83a598
+  ! DarkMagenta + Magenta
+  ,*color5:  #b16286
+  ,*color13: #d3869b
+  ! DarkCyan + Cyan
+  ,*color6:  #689d6a
+  ,*color14: #8ec07c
+  ! LightGrey + White
+  ,*color7:  #a89984
+  ,*color15: #ebdbb2
+#+end_src
+** picom compositor
+See [[https://github.com/yshui/picom/blob/next/picom.sample.conf][this file]] for more detailed information on configuration options.
+
+#+begin_src conf :tangle (when-linux "~/.config/picom.conf")
+  # Performance etc.
+  vsync = true
+  dbe = false;
+  sw-opti = false;
+  unredir-if-possible = true;
+  backend = "glx";
+  glx-no-stencil = true;
+  glx-no-rebind-pixmap = true;
+  glx-swap-methond = "exchange";
+
+  # Shadows
+  shadow = true;
+  shadow-offset-x = -8;
+  shadow-offset-y = -8;
+  shadow-opacity = 0.5;
+  shadow-radius = 5;
+
+  # Exclude transparent stuff from using shadows
+  shadow-exclude = [
+    "class_g ?= 'st'",
+    "class_g ?= 'rofi'",
+    "class_g ?= 'slop'", # maim -s
+    "class_g ?= 'firefox'",
+    "class_g = 'firefox' && argb",
+    "name = 'cpt_frame_xcb_window'",
+    "class_g ?= 'zoom'",
+  ];
+
+  # Fading
+  fading = true;
+  fade-in-step = 0.03;
+  fade-out-step = 0.05;
+  fade-exclude = [ "name = 'i3lock'" ];
+#+end_src
+
 ** KMonad
+:PROPERTIES:
+:ID:       DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983
+:END:
 #+begin_src kbd :tangle ~/.config/kmonad.kbd
   ;; Some references
   ;; https://github.com/kmonad/kmonad/blob/master/doc/quick-reference.md
@@ -1276,22 +1406,6 @@ This is a supplementary script for managing bspwm where I put some helpful funct
   cmd="$1"; shift
   "$cmd" "$@"
 #+end_src
-** yabai
-This is the window manager I use in OSX. It's pretty much like BSPWM. [[https://github.com/koekeishiya/yabai/blob/master/examples/yabairc][Here]] is an example configuration.
-
-#+begin_src sh :tangle (when-darwin "~/.config/yabai/yabairc")
-  #!/bin/bash
-
-  yabai -m config mouse_follows_focus  on
-  yabai -m config layout               bsp
-  yabai -m config window_gap           6
-
-  yabai -m rule --add app=Emacs  manage=off
-  yabai -m rule --add app=choose manage=off
-
-  # yabai -m rule --add app=Zoom.us     space=^4
-#+end_src
-
 ** Polybar
 *** Global configuration
 I keep some of the polybar related variables inside the ~Xresources~ file so that I can access these values using =xrdb-get-value= command if I need to.
@@ -1304,6 +1418,7 @@ I keep some of the polybar related variables inside the ~Xresources~ file so tha
   bar.height: 25
   bar.width: 100%
 #+end_src
+
 *** Main configuration
 #+begin_src conf :tangle (when-linux "~/.config/polybar/config")
   [colors]
@@ -1758,107 +1873,6 @@ This is the global keybinding manager.
   XF86Audio{Prev,Next}
       mpc {prev,next}
 #+end_src
-** skhd
-This is the global keybinding manager for OSX. [[https://github.com/koekeishiya/yabai/blob/master/examples/skhdrc][Here]] is an example configuration.
-
-#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
-  # focus window
-  lcmd - h : yabai -m window --focus west
-  lcmd - l : yabai -m window --focus east
-  lcmd - j : yabai -m window --focus south
-  lcmd - k : yabai -m window --focus north
-
-  # swap managed window
-  shift + lcmd - h : yabai -m window --swap west
-  shift + lcmd - l : yabai -m window --swap east
-
-  # send window to desktop
-  shift + lcmd - 1 : yabai -m window --space 1
-  shift + lcmd - 2 : yabai -m window --space 2
-  shift + lcmd - 3 : yabai -m window --space 3
-  shift + lcmd - 4 : yabai -m window --space 4
-  shift + lcmd - 5 : yabai -m window --space 5
-  shift + lcmd - 6 : yabai -m window --space 6
-  shift + lcmd - 7 : yabai -m window --space 7
-  shift + lcmd - 8 : yabai -m window --space 8
-
-  # focus monitor
-  # lcmd + , and lcmd + .
-  lcmd - 0x2F  : yabai -m display --focus 1
-  lcmd - 0x2B  : yabai -m display --focus 2
-
-  # send window to monitor
-  shift + lcmd - 0x2F  : yabai -m window --display 1; # yabai -m display --focus 1
-  shift + lcmd - 0x2B  : yabai -m window --display 2; # yabai -m display --focus 1
-
-  # resize windows
-  lcmd + alt - l : yabai -m window --resize right:20:0
-  lcmd + alt - h : yabai -m window --resize left:-20:0
-  lcmd + alt - j : yabai -m window --resize bottom:0:20
-  lcmd + alt - k : yabai -m window --resize top:0:-20
-
-  # toggle window zoom
-  lcmd - d : yabai -m window --toggle zoom-parent
-  lcmd - f : yabai -m window --toggle zoom-fullscreen
-
-  # toggle window split type
-  # alt - e : yabai -m window --toggle split
-
-  # float / unfloat window and center on screen
-  lcmd - t : yabai -m window --toggle float;\
-            yabai -m window --grid 4:4:1:1:2:2
-
-  # reload skhd config
-  shift + lcmd - r : skhd --reload
-
-  # run some apps
-  hyper - r : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c
-  hyper - i : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet))"
-  hyper - o : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet t))"
-  hyper - p : /Applications/Emacs.app/Contents/MacOS/bin/emacsclient --eval "(isamert/globally (isamert/password-act))"
-  hyper - 9 : /usr/bin/osascript -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
-
-  # move managed window
-  # shift + cmd - h : yabai -m window --warp east
-
-  # balance size of windows
-  # shift + alt - 0 : yabai -m space --balance
-
-  # make floating window fill screen
-  # shift + alt - up     : yabai -m window --grid 1:1:0:0:1:1
-
-  # make floating window fill left-half of screen
-  # shift + alt - left   : yabai -m window --grid 1:2:0:0:1:1
-
-  # create desktop, move window and follow focus - uses jq for parsing json (brew install jq)
-  # shift + cmd - n : yabai -m space --create && \
-  #                   index="$(yabai -m query --spaces --display | jq 'map(select(."native-fullscreen" == 0))[-1].index')" && \
-  #                   yabai -m window --space "${index}" && \
-  #                   yabai -m space --focus "${index}"
-
-  # fast focus desktop (doesn't work, need to disable system integrity protection)
-  # cmd + alt - x : yabai -m space --focus recent
-  # cmd - 1 : yabai -m space --focus 1
-  # cmd - 2 : yabai -m space --focus 2
-  # cmd - 3 : yabai -m space --focus 3
-  # cmd - 4 : yabai -m space --focus 4
-
-  # move floating window
-  # shift + ctrl - a : yabai -m window --move rel:-20:0
-  # shift + ctrl - s : yabai -m window --move rel:0:20
-
-  # increase window size
-  # shift + alt - a : yabai -m window --resize left:-20:0
-  # shift + alt - w : yabai -m window --resize top:0:-20
-
-  # decrease window size
-  # shift + cmd - s : yabai -m window --resize bottom:0:-20
-  # shift + cmd - w : yabai -m window --resize top:0:20
-
-  # set insertion point in focused container
-  # ctrl + alt - h : yabai -m window --insert west
-#+end_src
-
 ** Rofi
 *** Global configuration
 #+begin_src conf :tangle (when-linux "~/.Xresources")
