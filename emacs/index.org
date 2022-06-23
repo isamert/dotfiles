@@ -6070,6 +6070,10 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defun isamert/jira-get-kanban-issues ()
     (jiralib2-jql-search isamert/jira-kanban-board-query))
 
+  (defun isamert/jira-jql (jql)
+    (interactive "sEnter JQL: ")
+    (jiralib2-jql-search jql))
+
   (defun isamert/jira-get-current-sprint-issues ()
     (let ((issues '()))
       (mapc
@@ -6098,11 +6102,12 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
   (defun isamert/jira-list-issues (&optional arg)
     (interactive "P")
-    (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban"))
+    (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban" "JQL"))
                    ("My issues" (isamert/jira-get-my-issues))
                    ("New issues" (isamert/jira-get-new-issues))
                    ("Current Sprint" (isamert/jira-get-current-sprint-issues))
-                   ("Kanban" (isamert/jira-get-kanban-issues)))
+                   ("Kanban" (isamert/jira-get-kanban-issues))
+                   ("JQL" (call-interactively #'isamert/jira-jql)))
                  (--map (cons (isamert/jira--format-ticket-name it) it))
                  (isamert/alist-completing-read "Select ticket: ")
                  (isamert/jira--issue-actions)))
@@ -6287,10 +6292,12 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     "Format ticket name for displaying in completing-read window."
     (let-alist it
       (format
-       "%-7s [%-11s] %-15s - %s"
+       "%-7s [%-11s] %-15s => %-15s - %s"
        (propertize .key
                    'face 'bold)
        (propertize (s-truncate 11 .fields.status.name)
+                   'face 'italic)
+       (propertize (s-truncate 15 (or .fields.reporter.name "N/A"))
                    'face 'italic)
        (propertize (s-truncate 15 (or .fields.assignee.name "N/A"))
                    'face 'italic)
@@ -6303,7 +6310,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
         (let* ((action
                 (completing-read
                  (format "Act on %s: " (s-truncate 20 .fields.summary))
-                 '("Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "[Cancel]"))))
+                 '("Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Show all as JSON" "[Cancel]"))))
           (pcase action
             ("Open"
              (isamert/open-jira-issue .key)
@@ -6325,6 +6332,12 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
              (isamert/jira-change-issue-status .key))
             ("Insert as task"
              (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
+            ("Show all as JSON"
+             (switch-to-buffer-other-window (get-buffer-create (format "*jira:%s*" .key)))
+             (insert (json-encode issue))
+             (json-pretty-print-buffer)
+             (json-mode)
+             (cl-return))
             ("[Cancel]"
              (cl-return))))))))
 
