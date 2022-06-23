@@ -298,69 +298,6 @@ Following snippet enables some configurations for pacman:
   exec bspwm
 #+end_src
 
-** .Xmodmap
-This file contains some mappings for my keyboard. I can simply change how a key (or some simple key combinations) behave in  X level which  has little to none performance implications. Also see [[https://isamert.net/2020/05/30/better-keyboard-experience-in-linux.html][this post]] for further details.
-
-#+begin_src xmodmap :tangle (when-linux "~/.Xmodmap")
-  !! Map CapsLock to Hyper key
-  !! Unmap capslock
-  clear Lock
-  keycode 66 = Hyper_L
-  !! Leave mod4 as windows key _only_
-  remove mod4 = Hyper_L
-
-  !! Set mod3 to capslock
-  add mod3 = Hyper_L
-
-  !! Fix my bluetooth keyboard:
-  !! My bluetooth keyboard does not have ESC key, in it's place
-  !! it has the Backwards key. So I'm simply rebinding it to ESC.
-  !! (Unfortunately XF86Backwards key gets overridden by ESC in my thinkpad)
-  keycode 166 = Escape NoSymbol Escape NoSymbol Escape Escape
-  keycode 166 = Escape
-  keycode 248 = Super_L
-
-  !! Quick access for some unicode chars
-  !! altgr + b → λ  | altgr + a → →
-  !! altgr + x → ❌ | altgr + f → ∀
-  !! altgr + n → ¬  | altgr + d → ⇒
-  !! altgr + , → ≤  | altgr + . → ≥
-  !! altgr + = → ≠  | altgr + shift + = → ≔
-  !! altgr + / → ÷  | altgr + ; → ∷
-  !! altgr + 8 → ×  | altgr + t -> ✓
-  keysym b = b B b B U03BB
-  keysym a = a A a A U2192
-  keysym x = x X x X U274C
-  keysym f = f F f F U2200
-  keysym n = n N n N U00AC
-  keysym d = d D d D U21D2
-  keysym t = t T t T U2713
-  keysym 8 = 8 asterisk 8 asterisk multiply
-  keysym comma = comma less comma less U2264
-  keysym period = period greater period greater U2265
-  keysym equal = equal plus equal plus U2260 U2254
-  keysym question = slash question slash question division
-  keysym semicolon = semicolon colon semicolon colon U2237
-
-  !! A comfy way to use h,j,k,l as directional keys.
-  !! With this configuration I'm able to use these keys as arrow key by simply pressing
-  !! them with AltGr.
-  keysym h = h H h H Left Home
-  keysym j = j J j J Down Prior
-  keysym k = k K k K Up Next
-  keysym l = l L l L Right End
-
-  !! AltGr+[ -> (, AltGr+] -> )
-  keysym bracketleft = bracketleft braceleft bracketleft braceleft parenleft
-  keysym bracketright = bracketright braceright bracketright braceright parenright
-
-  !! Fix us(intl)
-  !! I'm using us(intl) to be able to use ISO_Shift_Level3 as AltGr, other
-  !! keyboards does not permit usage of it AFAIK. But I don't want to use dead_*
-  !! keys. So I map them to their original bindings.
-  keysym dead_grave = grave asciitilde
-  keysym dead_acute = apostrophe quotedbl
-#+end_src
 ** .Xresources
 #+begin_src conf :tangle (when-linux "~/.Xresources")
   ! hard contrast: *background: #1d2021
@@ -435,32 +372,30 @@ See [[https://github.com/yshui/picom/blob/next/picom.sample.conf][this file]] fo
 :PROPERTIES:
 :ID:       DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983
 :END:
-#+begin_src kbd :tangle ~/.config/kmonad.kbd
-  ;; Some references
-  ;; https://github.com/kmonad/kmonad/blob/master/doc/quick-reference.md
-  ;; https://github.com/kmonad/kmonad/blob/master/keymap/tutorial.kbd
-  ;; https://github.com/kmonad/kmonad/blob/master/src/KMonad/Keyboard/Keycode.hs
-  ;; https://old.reddit.com/r/emacs/comments/oyzfz9/kmonad_and_the_power_of_infinite_leader_keys/
-  ;;
 
+In the past I used [[https://isamert.net/2020/05/30/better-keyboard-experience-in-linux.html][Xmodmap & xcpae based solution]] for remapping keys. Now I am experimenting with KMonad which give more or less the same flexibility with a better configuration format. It's killer feature is that it also works on Mac[fn:: Well, almost. I had to change a few stuff in source to make it work.]. This means that I can truly keep my work computer and personal computers keyboard layouts & keyboard shortcuts in sync.
+
+Some references for editing this configuration:
+- https://github.com/kmonad/kmonad/blob/master/doc/quick-reference.md
+- https://github.com/kmonad/kmonad/blob/master/keymap/tutorial.kbd
+- https://github.com/kmonad/kmonad/blob/master/src/KMonad/Keyboard/Keycode.hs
+- https://old.reddit.com/r/emacs/comments/oyzfz9/kmonad_and_the_power_of_infinite_leader_keys/
+
+#+begin_src kbd :tangle ~/.config/kmonad.kbd
   ;; (deflayer symbols
-  ;;   _    _    _    _    _    _    _    _    _    _    _    _    _
-  ;;   _    _    _    _    _    _    _    _    _    _    _    _    _   _
-  ;;   _    _    _    _    _    _    _    _    _    _    _    _    _   _
-  ;;   _    _    _    _    _    _    _    _    _    _    _    _    _
-  ;;   _    _    _    _    _    _    _    _    _    _    _    _    _
-  ;;   _    _    _              _              _    _    _    _)
+  ;;   _   _    _    _    _    _    _    _    _    _    _    _    _
+  ;;   _   _    _    _    _    _    _    _    _    _    _    _    _    _
+  ;;   _   _    _    _    _    _    _    _    _    _    _    _    _
+  ;;   _        _    _    _    _    _    _    _    _    _    _    _    _
+  ;;   _   _    _    _    _    _    _    _    _    _    _    _    _
+  ;;   _   _    _              _              _    _    _    _)
 
   (defcfg
     ;; For Linux
-    input  (device-file "/dev/input/by-id/usb-Microsoft_Microsoft®_2.4GHz_Transceiver_v9.0-event-kbd")
-    output (uinput-sink "My KMonad output" "sleep 1 && setxkbmap -option compose:ralt")
+    input  <<<when-on(linux="(device-file \"/dev/input/by-id/usb-Microsoft_Microsoft®_2.4GHz_Transceiver_v9.0-event-kbd\")", darwin="(iokit-name)")>>>
+    output <<<when-on(linux="(uinput-sink \"My KMonad output\" \"sleep 1 && setxkbmap -option compose:ralt\")", darwin="(kext)")>>>
     cmp-seq ralt    ;; Set the compose key to `RightAlt'
     cmp-seq-delay 5 ;; 5ms delay between each compose-key sequence press
-
-    ;; For MacOS
-    ;; input  (iokit-name "my-keyboard-product-string")
-    ;; output (kext)
 
     ;; Comment this is if you want unhandled events not to be emitted
     fallthrough true
@@ -471,22 +406,98 @@ See [[https://github.com/yshui/picom/blob/next/picom.sample.conf][this file]] fo
   (defsrc
     esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
     grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
-    caps a    s    d    f    g    h    j    k    l    ;    '    ret
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
     lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
     lctl lmet lalt           spc            ralt rmet cmp  rctl)
+
+
+  (deflayer main
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
+    lctl lmet lalt           spc            @sym rmet cmp rctl)
+
+  (deflayer symbols
+    _   _    _    _    _    _    _    _    _    _    _    _    _
+    _   {    }    _    _    _    _    _    _    _    _    _    @≠   _
+    _   @¿   @↑   _    @la  @✓   _    ü    ı    ö    _    \(   \)
+    _   ←    ş    →    @fa  ğ    left down up   rght _    _    _    _
+    _   _    @↓   _    ç    _    @λ   @¬   _    @≤   @≥   _    _
+    _   _    _              _              _    _    _    _)
+
+  ;; Instead of utilizing Hyper key for creating shortcuts like I did
+  ;; with my Xmodmap configuration, I use C-M-A-S as the so called hyper
+  ;; key. This makes the key behave exactly same on Linux and Mac.
+
+  (deflayer hyper
+    _    _    _    _    _    _    _    _    _    _    _    _    _
+    @p`  @p1  @p2  @p3  @p4  @p5  @p6  @p7  @p8  vold volu @p-  @p=  _
+    @p\t @pq  @pw  @pe  @pr  @pt  @py  @pu  @pi  @po  @pp  @p[  @p]
+    _    @pa  @ps  @pd  @pf  @pg  @ph  @pj  @pk  @pl  @p;  @p'  @p\  @pRE
+    _    @p\  @pz  @px  @pc  @pv  @pb  @pn  @pm  @p,  @p.  @p/  _
+    _    _    _              @pSP           _    _    _    _)
+
 
   (defalias
     sym (layer-toggle symbols)
     hyp (tap-next esc (layer-toggle hyper))
     fa  #(= >)      ;; Fat arrow
     la  #(- >)      ;; light arrow
-    p1 prog1
-    p2 prog2
-    p3 chat
-    ;; 3 (tap-hold-next-release 170 3 =)
-    ;; 5 (tap-hold-next-release 170 5 #(= =))
-    ;; 6 (tap-hold-next-release 170 6 #(= = =))
+
+    p` C-M-A-S-`
+    p1 C-M-A-S-1
+    p2 C-M-A-S-2
+    p3 C-M-A-S-3
+    p4 C-M-A-S-4
+    p5 C-M-A-S-5
+    p6 C-M-A-S-6
+    p7 C-M-A-S-7
+    p8 C-M-A-S-8
+    p9 C-M-A-S-9
+    p0 C-M-A-S-0
+    p- C-M-A-S--
+    p= C-M-A-S-=
+    p\t C-M-A-S-tab
+    pq C-M-A-S-q
+    pw C-M-A-S-w
+    pe C-M-A-S-e
+    pr C-M-A-S-r
+    pt C-M-A-S-t
+    py C-M-A-S-y
+    pu C-M-A-S-u
+    pi C-M-A-S-i
+    po C-M-A-S-o
+    pp C-M-A-S-p
+    p[ C-M-A-S-[
+    p] C-M-A-S-]
+    p\ C-M-A-S-\
+    pa C-M-A-S-a
+    ps C-M-A-S-s
+    pd C-M-A-S-d
+    pf C-M-A-S-f
+    pg C-M-A-S-g
+    ph C-M-A-S-h
+    pj C-M-A-S-j
+    pk C-M-A-S-k
+    pl C-M-A-S-l
+    p; C-M-A-S-;
+    p' C-M-A-S-'
+    pRE C-M-A-S-ret
+    pz C-M-A-S-z
+    px C-M-A-S-x
+    pc C-M-A-S-c
+    pv C-M-A-S-v
+    pb C-M-A-S-b
+    pn C-M-A-S-n
+    pm C-M-A-S-m
+    p, C-M-A-S-,
+    p. C-M-A-S-.
+    p/ C-M-A-S-/
+    pSP C-M-A-S-spc
+
     ¿  #(ralt z q)
     λ  #(ralt z l)
     ≤  #(ralt z k)
@@ -496,30 +507,6 @@ See [[https://github.com/yshui/picom/blob/next/picom.sample.conf][this file]] fo
     ↑  #(ralt z u)
     ↓  #(ralt z d)
     ≠  #(ralt z e))
-
-  (deflayer test
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
-    @hyp a    s    d    f    g    h    j    k    l    ;    '    ret
-    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
-    lctl lmet lalt           spc            @sym rmet cmp rctl)
-
-  (deflayer symbols
-    _    _    _    _    _    _    _    _    _    _    _    _    _
-    _    {    }    _    _    _    _    _    _    _    _    _    @≠   _
-    _    @¿   @↑   _    @la  @✓   _    ü    ı    ö    _    \(   \)   _
-    _    ←    ş    →    @fa  ğ    left down up   rght _    _    _
-    _    _    @↓   _    ç    _    @λ   @¬   _    @≤   @≥   _    _
-    _    _    _              _              _    _    _    _)
-
-  (deflayer hyper
-    _    _    _    _    _    _    _    _    _    _    _    _    _
-    _    f18  @p3  _    _    _    _    _    _    vold volu _    _   _
-    _    _    _    @p1  _    _    _    _    _    _    _    _    _   _
-    _    f17  f14  _    _    _    _    _    _    _    _    _    _
-    _    _    _    _    f16  _    _    f15  _    _    _    _    _
-    _    _    _              _              _    _    _    _)
 #+end_src
 
 * Window management/DE
