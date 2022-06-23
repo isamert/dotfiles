@@ -4931,6 +4931,7 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
     (("README\\.md\\'" . gfm-mode)
      ("\\.md\\'" . markdown-mode)
      ("\\.markdown\\'" . markdown-mode)
+     ("\\.txt\\'" . markdown-mode)
      ("qutebrowser-editor-" . markdown-mode))
     :config
     (setq markdown-command "multimarkdown")
