@@ -745,17 +745,19 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
     "Configure font and theme."
     (interactive)
     ;; Set the first avilable font from the `isamert/fonts' list
-    (let ((font (->>
-                 isamert/fonts
-                 (-filter #'isamert/font-exists-p)
-                 car)))
-      (set-face-attribute 'default nil
-                          :font font
-                          :weight 'normal
-                          :width 'normal
-                          :height isamert/font-height))
-    ;; ...and load the theme
-    (load-theme 'doom-dark+ t))
+    (ignore-errors
+      (let ((font (->>
+                   isamert/fonts
+                   (-filter #'isamert/font-exists-p)
+                   car)))
+        (set-face-attribute 'default nil
+                            :font font
+                            :weight 'normal
+                            :width 'normal
+                            :height isamert/font-height))
+      ;; ...and load the theme
+      (load-theme 'doom-dark+ t)))
+
 
   (defun isamert/set-font-and-theme-config-in-frame (frame)
     (with-selected-frame frame
@@ -775,8 +777,8 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
     (interactive
      (list
       (intern (completing-read "Load custom theme: "
-                               (mapcar 'symbol-name
-                                       (custom-available-themes))))))
+             (mapcar 'symbol-name
+               (custom-available-themes))))))
     (mapc #'disable-theme custom-enabled-themes)
     (load-theme theme t))
 #+END_SRC
