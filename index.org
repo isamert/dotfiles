@@ -3114,7 +3114,7 @@ When I open a useless website that I spent meaningless time on, I want to show t
 ...and here is the tridactyl directive:
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  autocmd DocStart .*(eksisozluk|ensonhaber).* composite exclaim_quiet <<<sh("which todaysitems.sh")>>>; open file:///tmp/today.html
+  autocmd DocStart .*(eksisozluk|ensonhaber).* exclaim_quiet <<<sh("which todaysitems.sh")>>>; open file:///tmp/today.html
 #+end_src
 
 **** TreeStyleTabs integration
@@ -3160,30 +3160,38 @@ I use TreeStyleTabs and it's perfect. This is just cherry on top.
 **** Slack integration
 Neither Slack web app nor the desktop app lets you define your own custom keybindings but using the web app in combination with Tridactyl we can create our own shortcuts. I also created [[https://github.com/tridactyl/tridactyl/wiki/Slack][this tridactyl wiki page]] based on the bindings I created here. It might contain more details.
 
-- ;n -> new message
-- ;u -> open unreads
-- ;t -> open all threads
-- ;d -> open all dms
-- ;a -> open activity window
-
-- ;m -> interactively select a message and open message actions
-- ;e -> interactively select a message and edit the selected message
-- ;c -> interactively select a message and copy the link of selected message
-
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  bindurl .*.slack.com ;n hint -Jc button[data-qa=composer_button]
-
-  " For more info: https://github.com/tridactyl/tridactyl/wiki/Slack
-  " Hint channels only with ;c in slack
+  " f -> just like f but more intelligent
   bindurl .*.slack.com --mode=normal f hint -Jc div[data-sidebar-link-id]:not([data-sidebar-link-id=""]),div[data-section-channel-index]:not([data-section-channel-index=""]),button,a
-  " Jump to sidebar items with shortcuts in Slack
+
+  " v -> select and copy the message
+  bindurl .*.slack.com --mode=normal v composite hint -pipe div[data-qa=message-text] | js -p navigator.clipboard.writeText(JS_ARG.innerText)
+
+  " ;n -> compose new message
+  bindurl .*.slack.com --mode=normal ;n hint -Jc button[data-qa=composer_button]
+
+  " ;q quote selected message
+  bindurl .*.slack.com --mode=normal ;q composite hint -pipe div[data-qa=message-text] | js -p navigator.clipboard.writeText(JS_ARG.innerText.split('\n').map(it => `> ${it}`).join('\n')); hint -c div[data-qa=message_input]
+
+  " ;u -> open unreads
   bindurl .*.slack.com --mode=normal ;u hint -Jc div[data-sidebar-link-id="Punreads"]
+
+  " ;t -> open all threads
   bindurl .*.slack.com --mode=normal ;t hint -Jc div[data-sidebar-link-id="Vall_threads"]
+
+  " ;d -> open all dms
   bindurl .*.slack.com --mode=normal ;d hint -Jc div[data-sidebar-link-id="Pdms"]
+
+  " ;a -> open activity window
   bindurl .*.slack.com --mode=normal ;a hint -Jc div[data-sidebar-link-id="Pactivity"]
-  " Message actions for Slack
+
+  " ;m -> interactively select a message and open message actions
   bindurl .*.slack.com ;m composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-focus-key=message_actions],[role=menuitem]
+
+  " ;e -> interactively select a message and edit the selected message
   bindurl .*.slack.com ;e composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-qa=edit_message]
+
+  " ;c -> interactively select a message and copy the link of selected message
   bindurl .*.slack.com ;c composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-qa=copy_link]
 #+end_src
 
