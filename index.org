@@ -1394,8 +1394,8 @@ This file is sourced by both =zsh= and =bash=.
   alias pacins="sudo pacman -U"    # Install from file
   alias pacupd="sudo pacman -Sy"
   alias pacupg="sudo pacman -Syu"
-  alias pacfile="pacman -Fs"       # Find package that contains given file
-  alias pacbin="pacman -Fs"        # Same as above
+  alias pacfile="pacman -F"       # Find package that contains given file
+  alias pacbin="pacman -F"        # Same as above
   alias pacre="sudo pacman -R"     # Leave dependencies and configurations
   alias pacrem="sudo pacman -Rns"
   function nixin { nix-env -iA "nixpkgs.$1" }
