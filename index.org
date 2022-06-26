@@ -1507,6 +1507,12 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 
 - A lot of programs (like Java, Flatpak or anything that wants to edit your PATH or similar environment variables) put their configuration under =/etc/profile.d/=. Normally, =/etc/profile= (which is automatically sourced by =bash= at startup), also sources these files. In my system (or Arch Linux in general) also have =/etc/zsh/zprofile= which contains the following: =emulate sh -c 'source /etc/profile'=. So essentially sourcing the stuff under =/etc/profile.d/= is automatically handled.
 
+Some login managers (like GDM) does not source ~.zprofile~ but instead they source ~.profile~. So I'm handling it with:
+
+#+begin_src sh :tangle ~/.profile
+  emulate sh -c 'source ~/.profile'
+#+end_src
+
 #+begin_src sh :tangle ~/.zprofile
   # Changing this is not goint to change your keyboard layout. For more info, read ~/.scripts/switch-keyboard-layout
   # See `localectl list-x11-keymap-layouts` for your options. (It's generally 2-char country code.)
@@ -1529,11 +1535,12 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
   export BSPWM_SOCKET="/tmp/bspwm-socket"
   export XDG_CONFIG_DIRS=/usr/etc/xdg:/etc/xdg
 
-  # Following automatically calls "startx" when you login on tty1:
-  if [[ -z ${DISPLAY} && ${XDG_VTNR} -eq 1 ]]; then
+  # Following automatically calls "startx" when you login on tty1
+  # Disabled for now as I'm experimenting with gnome
+  # if [[ -z ${DISPLAY} && ${XDG_VTNR} -eq 1 ]]; then
       # Logs can be found in ~/.xorg.log
-      exec startx -- -keeptty -nolisten tcp > ~/.xorg.log 2>&1
-  fi
+      # exec startx -- -keeptty -nolisten tcp > ~/.xorg.log 2>&1
+  # fi
 #+end_src
 
 ** Dumb mode
