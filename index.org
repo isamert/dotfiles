@@ -3267,135 +3267,22 @@ Also need to enable following config to make userChrome.css work:
   user_pref("browser.toolbars.bookmarks.visibility", "never");
 #+end_src
 
-** Qutebrowser
-- Use =Alt-a= to bring up Emacs to edit a text in the text-area.
-- Some useful keybindings that I added:
-  - ~,m~ opens the url in MPV, ~,M~ opens hint in MPV.
-  - ~;i~ to open hinted image in a new tab.
-  - ~;I~ to yank hinted image url.
-- Use ~:session-save <SESSION-NAME=default>~ to save a named session and restore a named session by ~:session-load <SESSION-NAME>~. Sessions are saved under =~/.local/share/qutebrowser/sessions/=.
+** uBlock custom filters
+I filter distracting content on websites I frequently visit. You need to manually import these to uBlock.
 
-*** Main configuration
-#+begin_src python :tangle (when-on :linux "~/.config/qutebrowser/config.py" :darwin "~/.qutebrowser/config.py")
-  c.content.blocking.adblock.lists = ['https://easylist.to/easylist/easylist.txt', 'https://easylist.to/easylist/easyprivacy.txt']
-  c.content.blocking.method = 'both'
-  c.content.blocking.enabled = True
-  c.content.pdfjs = True
-  c.fonts.default_family = ['Iosevka Nerd Font']
-  c.fonts.default_size = '14pt'
-  c.hints.chars = 'asdfghjklqweuio'
-  c.fonts.hints = 'normal 16pt Helvetica'
-  c.hints.uppercase = True
-  c.input.insert_mode.auto_load = True
-  c.input.mouse.rocker_gestures = True
-  c.statusbar.position = 'top'
-  c.statusbar.show = 'never'
-  c.completion.shrink = True
-  c.url.default_page = 'https://start.duckduckgo.com/'
-  c.url.searchengines = {
-      'DEFAULT': 'https://google.com/search?q={}',
-      'g': 'https://google.com/search?q={}',
-      'd': 'https://duckduckgo.com/?q={}',
-      'yt': 'https://www.youtube.com/results?search_query={}',
-      'r': 'https://reddit.com/r/{}',
-      'a': 'https://web.archive.org/web/{}',
-      'nix': 'https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query={}',
-  }
-  c.url.yank_ignored_parameters = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
-  c.editor.command = ['emacsclient', '-c', '{}']
-  c.fonts.hints = 'normal 16pt Helvetica'
+#+begin_src txt :tangle ~/.config/webfilters.txt
+  ! youtube.com
+  www.youtube.com##ytd-watch-next-secondary-results-renderer.ytd-watch-flexy.style-scope > .ytd-watch-next-secondary-results-renderer.style-scope
 
-  config.bind('t', 'set-cmd-text -s :open -t')
-  config.bind('T', 'set-cmd-text :open -t -r {url:pretty}')
-  config.bind('O', 'set-cmd-text :open {url:pretty}')
+  ! stack-exchange
+  ##.tex2jax_ignore.module
+  ##.m0.p0.d-block
+  ##.overflow-hidden.blr-sm.fc-black-600.pb6.p12.bc-black-075.bb.bl.bt
+  ##.js-sticky-leftnav.left-sidebar--sticky-container
+  ##.js-dismissable-hero.ps-relative.fc-black-200.bg-black-750.py24.sm\:d-none
+  ##.py2.fs-body2.ff-sans.fc-white.bg-black-700.js-announcement-banner
+  ##.js-footer.site-footer
 
-  config.bind('b', 'set-cmd-text -sr :tab-focus')
-  config.bind('B', 'set-cmd-text -s :quickmark-load -t')
-
-  config.bind('j', 'scroll-px 0 200')
-  config.bind('k', 'scroll-px 0 -200')
-  config.bind('J', 'tab-prev')
-  config.bind('K', 'tab-next')
-  config.bind('<Alt-J>', 'tab-move -')
-  config.bind('<Alt-K>', 'tab-move +')
-
-  config.bind('<Alt-x>', 'set-cmd-text :')
-
-  config.bind(',m', 'spawn mpv {url}')
-  config.bind(',M', 'hint links spawn mpv {hint-url}')
-
-  config.bind(';i', 'hint images tab')
-  config.bind(';I', 'hint images yank')
-
-  # Ctrl-E is the go-to EOL binding and I don't want qutebrowser to
-  # override it
-  config.unbind('<Ctrl-E>', mode='insert')
-  config.bind('<Alt-A>', 'edit-text', mode='insert')
-  config.bind('<Alt-E>', 'edit-text', mode='insert')
-
-  c.content.blocking.whitelist = ['https://*.trendyol.com']
-
-  config.bind('P', 'spawn --userscript org-pass')
-
-  c.aliases = {
-      'w': 'session-save',
-      'q': 'close',
-      'qa': 'quit',
-      'wq': 'quit --save',
-      'wqa': 'quit --save',
-  }
-
-  config.load_autoconfig(False)
-#+end_src
-*** User scripts & Greasemonkey scripts
-**** youtube-autoskip
-#+begin_src js :tangle (when-on :linux "~/.config/qutebrowser/greasemonkey/youtube-autskip.user.js" :darwin "~/.qutebrowser/greasemonkey/youtube-autskip.user.js")
-  // ==UserScript==
-  // @name         Auto Skip YouTube Ads
-  // @version      1.0.2
-  // @description  Speed up and skip YouTube ads automatically
-  // @author       codiac-killer
-  // @match        *://*.youtube.com/*
-  // @exclude      *://*.youtube.com/subscribe_embed?*
-  // ==/UserScript==
-
-  let main = new MutationObserver(() => {
-    // Get skip button and click it
-    let btn = document.getElementsByClassName("ytp-ad-skip-button ytp-button").item(0)
-    if (btn) {
-      btn.click()
-    }
-
-    // (unskipable ads) If skip button didn't exist / was not clicked speed up video
-    const ad = [...document.querySelectorAll('.ad-showing')][0];
-    if (ad) {
-      // Speed up and mute
-      document.querySelector('video').playbackRate = 16;
-      document.querySelector('video').muted = true;
-    }
-  })
-
-  main.observe(document.getElementsByClassName("video-ads ytp-ad-module").item(0), {attributes: true, characterData: true, childList: true})
-#+end_src
-
-**** org-pass
-#+begin_src shell :tangle (when-on :linux "~/.config/qutebrowser/userscripts/org-pass" :darwin "~/.qutebrowser/userscripts/org-pass")
-  #!/bin/bash
-
-  emacsclient --eval "(isamert/globally (isamert/password-qutebrowser \"$QUTE_URL\" \"$QUTE_FIFO\"))"
-#+end_src
-
-*** Cosmetic block list
-The following file contains some cosmetic filters that I want to apply, in ABP style block list. Qutebrowser does not support these, so I use a tool called [[https://gitlab.com/jgkamat/jhide][jhide]] to generate /greasemonkey/ scripts based on these rules. To generate the scripts, use the following command:
-
-#+begin_src sh
-  # cd into jhide directory
-  ./jhide.sh ~/.config/qutebrowser/blocklist -o ~/.config/qutebrowser/greasemonkey/jhide.js
-  # or this if you are on mac
-  ./jhide.sh ~/.qutebrowser/blocklist -o ~/.qutebrowser/greasemonkey/jhide.js
-#+end_src
-
-#+begin_src text :tangle (when-on :linux "~/.config/qutebrowser/blocklist" :darwin "~/.qutebrowser/blocklist")
   ! https://eksisozluk.com
   eksisozluk.com###partial-index
   eksisozluk.com###aside
@@ -3404,28 +3291,6 @@ The following file contains some cosmetic filters that I want to apply, in ABP s
   yabancidizi.pw##.rek1
   yabancidizi.pw##.rek2
   yabancidizi.pw##.rek1
-
-  ! https://www.youtube.com
-  www.youtube.com###primary > .ytd-two-column-browse-results-renderer.style-scope
-  www.youtube.com##ytd-watch-next-secondary-results-renderer.ytd-watch-flexy.style-scope > .ytd-watch-next-secondary-results-renderer.style-scope
-
-  ! https://stackoverflow.com
-  stackoverflow.com##.show-votes
-  stackoverflow.com##.js-sticky-leftnav.left-sidebar--sticky-container
-
-  ! https://www.reddit.com
-  www.reddit.com##._2L5G9B5yaoqW3IegiYN-FL
-  www.reddit.com##._1tvThPWQpORoc2taKebHxs._3Kd8DQpBIbsr5E1JcrMFTY
-  www.reddit.com##._2vkeRJojnV7cb9pMlPHy7d
-  www.reddit.com##.cx1ohrUAq6ARaXTX2u8YN._2GyPfdsi-MbQFyHRECo9GO._1tvdSTbdxaK-BnUbzUIqIY
-  www.reddit.com##.q4a8asWOWdfdniAbgNhMh
-#+end_src
-
-*** Domain block list
-Following urls will be blocked in qutebrowser.
-
-#+begin_src text :tangle (when-on :linux "~/.config/qutebrowser/blocked-hosts" :darwin "~/.qutebrowser/blocked-hosts")
-  www.ensonhaber.com
 #+end_src
 * Some desktop files
 ** .local/share/applications/shortcuts.desktop
