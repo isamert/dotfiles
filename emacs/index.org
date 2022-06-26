@@ -4550,7 +4550,8 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
              :repo "isamert/orgmdb.el")
     :config
     (setq orgmdb-omdb-apikey isamert/orgmdb-omdb-apikey)
-    (setq orgmdb-fill-property-list '(genre runtime director country imdb-link imdb-rating metascore actors)))
+    (setq orgmdb-fill-property-list '(genre runtime director country imdb-link imdb-rating metascore actors))
+    (evil-define-key 'normal 'global (kbd "go") #'orgmdb-act))
 #+end_src
 ** erc (IRC client)
 IRC client for Emacs.
@@ -5314,6 +5315,10 @@ For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
 #+end_src
 
 ** Racket
+- Open a racket buffer.
+- Do C-c C-c (racket-run)
+- It'll drop you on a REPL within the scope of the file.
+
 #+begin_src emacs-lisp
   (use-package racket-mode
     :config
