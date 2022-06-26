@@ -2324,7 +2324,7 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
 #+begin_src conf :tangle ~/.config/ranger/rc.conf
   set confirm_on_delete never
   set preview_images true
-  set preview_images_method <<<when-on(linux="ueberzug", darwin="iterm2")>>>
+  set preview_images_method <<<when-on(linux="w3m", darwin="iterm2")>>>
   set draw_borders both
   set dirname_in_tabs true
   set update_tmux_title false
@@ -4278,11 +4278,46 @@ Downloads given file in given folder with given name. Useful for adding keybindi
   notify-send "Download finished!" "File path copied to your clipboard."
 #+end_src
 
+** .scripts/find-duplicate-images
+#+begin_src sh :tangle ~/.scripts/find-duplicate-images
   #!/bin/bash
 
+  # Source: https://askubuntu.com/questions/1308613/how-to-remove-slightly-modified-duplicate-images
 
+  if [[ $1 = "--help" ]] || [[ $1 = "-h" ]]; then
+      echo "Find duplicate images in current directory. Images are compared WITHOUT the metadata."
+      echo "It lists duplicate files. You need to delete them manually."
+      echo
+      echo "USAGE:"
+      echo "  find-duplicate-images"
+      exit
+  fi
 
+  echo "Scanning images... This may take some time..."
+
+  find -type f -a '(' \
+          -iname '*.jpg' -o \
+          -iname '*.png' -o \
+          -iname '*.jpeg' -o \
+          -iname '*.mov' -o \
+          -iname '*.mpg' -o \
+          -iname '*.mpeg' -o \
+          -iname '*.avi' \
+      ')' -print0 |perl -n0e '
+      my $f = $_;
+      chomp($f);
+      (my $fe = $f) =~ s|\x27|\x27\\\x27\x27|g;
+      my $md5;
+      if($f =~ m|\.[aA][vV][iI]$| or $f =~ m|\.[mM][pP][gG]$|) {
+        $md5 = `cat \x27$fe\x27 |md5sum`;
+      } else {
+        $md5 = `exiftool \x27$fe\x27 -all= -o - |md5sum`;
+      }
+      chomp($md5); $md5 =~ s| +-\n||;
+      print("$md5 $f\n");
+  ' | sort | uniq --check-chars=32 --all-repeated
 #+end_src
+
 ** Information utilities
 *** .scripts/mgm
 #+begin_src bash :tangle ~/.scripts/mgm
