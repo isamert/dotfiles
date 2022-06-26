@@ -2132,8 +2132,6 @@ For some reason it does not work. However running the same command after shell i
   bind -n M-\\ split-window -h -c '#{pane_current_path}'
   bind -n M--  split-window -v -c '#{pane_current_path}'
 
-  bind -n M-s run-shell -b tmux-switch
-
   # Swapping shortcuts
   bind-key W choose-tree -Zw "swap-window -t '%%'"
   bind-key P choose-tree -Zw "swap-pane -t '%%'"
@@ -2158,6 +2156,25 @@ For some reason it does not work. However running the same command after shell i
 
   # Load tmux plugin manager
   run '<<<TMUX_PLUGIN_PATH()>>>/tpm/tpm'
+#+end_src
+*** Jump to an open window using FZF
+The following script opens a FZF popup and lets you select a window in all sessions. [[https://eioki.eu/2021/01/12/tmux-and-fzf-fuzzy-tmux-session-window-pane-switcher][Source]]. I bound it to ~M-s~ in tmux (without any prefix key).
+
+#+begin_src conf :tangle ~/.tmux.conf
+  bind -n M-s run-shell -b tmux-switch
+#+end_src
+
+#+begin_src bash :tangle ~/.scripts/tmux-switch
+  #!/bin/bash
+
+  LIST_DATA="#{window_name} #{pane_title} #{pane_current_path} #{pane_current_command}"
+  FZF_COMMAND="fzf-tmux -p --delimiter=: --with-nth 4 --color=hl:2"
+
+  TARGET_SPEC="#{session_name}:#{window_id}:#{pane_id}:"
+  LINE=$(tmux list-panes -a -F "$TARGET_SPEC $LIST_DATA" | $FZF_COMMAND) || exit 0
+  ARGS=(${LINE//:/ })
+
+  tmux select-pane -t ${ARGS[2]} && tmux select-window -t ${ARGS[1]} && tmux switch-client -t ${ARGS[0]}
 #+end_src
 ** jaro
 *** Configuration
@@ -4396,20 +4413,10 @@ Downloads given file in given folder with given name. Useful for adding keybindi
   notify-send "Download finished!" "File path copied to your clipboard."
 #+end_src
 
-** .scripts/tmux-switch
-- Source: https://eioki.eu/2021/01/12/tmux-and-fzf-fuzzy-tmux-session-window-pane-switcher
-
-#+begin_src bash
   #!/bin/bash
 
-  LIST_DATA="#{window_name} #{pane_title} #{pane_current_path} #{pane_current_command}"
-  FZF_COMMAND="fzf-tmux -p --delimiter=: --with-nth 4 --color=hl:2"
 
-  TARGET_SPEC="#{session_name}:#{window_id}:#{pane_id}:"
-  LINE=$(tmux list-panes -a -F "$TARGET_SPEC $LIST_DATA" | $FZF_COMMAND) || exit 0
-  ARGS=(${LINE//:/ })
 
-  tmux select-pane -t ${ARGS[2]} && tmux select-window -t ${ARGS[1]} && tmux switch-client -t ${ARGS[0]}
 #+end_src
 ** Information utilities
 *** .scripts/mgm
