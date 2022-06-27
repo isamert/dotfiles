@@ -3025,7 +3025,7 @@ Some shortcuts you can use on any vertico window:
     (interactive)
     ;; `project-current' is a function from project.el
     (ignore-errors
-      (expand-file-name (cdr (project-current)))))
+      (expand-file-name (car (last (project-current))))))
 
   (defun isamert/current-project-name ()
     "Return current projects name."
