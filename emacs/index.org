@@ -2718,10 +2718,12 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
         (eyebrowse-switch-to-window-config-2)
         (find-file "~/Workspace/projects/dotfiles/emacs/index.org"))
       (progn
+        (persp-add-new "work/scratch")
+        (persp-switch "work/scratch")
+        (find-file work-org))
+      (progn
         (persp-add-new "personal/planning")
         (persp-switch "personal/planning")
-        (find-file bullet-org)
-        (isamert/bullet-focus-today)
         (eyebrowse-switch-to-window-config-2)
         (find-file engineering-org)
         (eyebrowse-switch-to-window-config-3)
@@ -2729,11 +2731,10 @@ Spacemacs has something called ~layouts~ (or something like that), which let's y
         (eyebrowse-switch-to-window-config-4)
         (find-file projects-org)
         (eyebrowse-switch-to-window-config-5)
-        (find-file passwords-org))
-      (progn
-        (persp-add-new "work/scratch")
-        (persp-switch "work/scratch")
-        (find-file work-org))
+        (find-file passwords-org)
+        (eyebrowse-switch-to-window-config-1)
+        (find-file bullet-org)
+        (isamert/bullet-focus-today))
       (message ">> Perspectives are opening... Done.")))
 
   (defun isamert/persp-show-current-persp-name ()
@@ -8042,6 +8043,10 @@ Company/work related stuff.
 #+end_src
 
 * Postamble
+#+begin_src emacs-lisp
+  (unless (daemonp)
+    (server-start))
+#+end_src
 ;; Local Variables:
 ;; eval: (add-hook 'after-save-hook (lambda () (if (y-or-n-p "Tangle?") (org-babel-tangle))) nil t)
 ;; End:
