@@ -48,22 +48,79 @@ Currently, I don't use an external package manager, =package.el= satisfies my ne
 
 I do this quite infrequently. If everything is working fine as it is, I tend to not update anything.
 
+* early-init.el
+#+begin_src emacs-lisp :tangle ~/.emacs.d/early-init.el
+  ;; Some stuff are taken from:
+  ;; https://github.com/emacs-lsp/lsp-mode#performance
+
+  (setq package-enable-at-startup nil)
+
+  (setq read-process-output-max (* 1024 1024))
+  ;; ^ Better than default
+  (setq confirm-kill-processes nil)
+  ;; ^ When exitting, kill processes withouh asking
+  (setq ring-bell-function 'ignore)
+  ;; ^ This completely disables alarms
+  (setq column-number-mode t)
+  ;; ^ Show column number
+  (setq create-lockfiles nil)
+  ;; ^ These just clutter the filesystem
+  (setq dabbrev-case-fold-search nil)
+  ;; ^ Expansions are done respecting the case (Ctrl-n and Ctrl-p was
+  ;; not behaving the way I wanted before this in evil mode)
+  (setq vc-follow-symlinks nil)
+  ;; ^ Don't ask about following symlinks
+  ;; Ask y/n instead of yes/no
+  (fset 'yes-or-no-p 'y-or-n-p)
+
+  ;; Visuals
+  (menu-bar-mode 0)                ;; Disable menubar
+  (tool-bar-mode 0)                ;; Disable toolbar
+  (blink-cursor-mode 0)            ;; Disable blinking cursor
+  (scroll-bar-mode -1)             ;; Disable scrollbars
+  (global-hl-line-mode t)          ;; Highlight current line
+  (setq inhibit-startup-message t) ;; Close startup screen
+  (setq frame-resize-pixelwise t)  ;; Fix gap issues with tiling WMs
+#+end_src
 * Preparation
-** Package repos
-Add ~melpa~ and ~org~ package archives and update them if needed.
+** straight.el and use-package
 
 #+begin_src emacs-lisp
-  (require 'package)
+  ;; Install straight.el
+  (defvar bootstrap-version)
+  (let ((bootstrap-file
+         (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+        (bootstrap-version 5))
+    (unless (file-exists-p bootstrap-file)
+      (with-current-buffer
+          (url-retrieve-synchronously
+           "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+           'silent 'inhibit-cookies)
+        (goto-char (point-max))
+        (eval-print-last-sexp)))
+    (load bootstrap-file nil 'nomessage))
 
-  (add-to-list 'package-archives '("nongnu" . "https://elpa.nongnu.org/nongnu/"))
-  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+  ;; Install use-package
+  (straight-use-package 'use-package)
 
-  (package-initialize)
-
-  ;; Update the packages
-  (unless package-archive-contents
-    (package-refresh-contents))
+  (use-package straight
+    :custom (straight-use-package-by-default t))
 #+END_SRC
+
+I tend to not use the =use-package= goodies while configuring my packages, meaning that I don't use =:hook=, =:bind= etc. as they have relatively simpler alternatives in Emacs and using =use-package= alternatives of these makes copy/pasting harder. Here are the keywords that I use the most:
+- =:init= :: This gets called before the package gets initialized.
+- =:config= :: This gets called after the package is initialized.
+- =:after= :: This makes the current definition to wait the loading of listed packages, like =:after (evil org)= makes it wait for the =evil= and =org= packages to be loaded.
+- =:if= :: Loads the package conditionally, like =:if (eq system-type 'darwin)=.
+
+*** Hiding mode indicators from modeline
+~diminish.el~ provides a way to hide mode indicators from mode line. Either pass ~:diminish t~ to use-package while installing or just call ~(diminish 'x-mode)~.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package diminish)
+#+END_SRC
+
+Currently I use [[mini-modeline]] as my modeline and it already hides minor mode indicators from the modeline. So this package is not needed but better have it as I might change my modeline in the future.
 
 ** GCMH
 This is a great hack that defers garbage collections to the times where Emacs is idling and from my initial observation, it works quite well. I load this package first to be able to benefit it from early on.
@@ -74,56 +131,6 @@ This is a great hack that defers garbage collections to the times where Emacs is
     (gcmh-mode 1)
     (setq gcmh-verbose t))
 #+end_src
-
-** Installing packages with ~use-package~
-:PROPERTIES:
-:ID:       3d974e67-11fc-4f07-8cd4-ec6fd63152c4
-:END:
-I use =use-package= to install packages and configure them but I do absolute minimal usage of it.
-
-#+BEGIN_SRC emacs-lisp
-  (unless (package-installed-p 'use-package)
-    (package-install 'use-package))
-
-  (eval-when-compile
-    (require 'use-package))
-#+END_SRC
-
-I tend to not use the =use-package= goodies while configuring my packages, meaning that I don't use =:hook=, =:bind= etc. as they have relatively simpler alternatives in Emacs and using =use-package= alternatives of these makes copy/pasting harder. Here are the keywords that I use the most:
-- =:init= :: This gets called before the package gets initialized.
-- =:config= :: This gets called after the package is initialized.
-- =:after= :: This makes the current definition to wait the loading of listed packages, like =:after (evil org)= makes it wait for the =evil= and =org= packages to be loaded.
-- =:if= :: Loads the package conditionally, like =:if (eq system-type 'darwin)=.
-
-*** Installing packages from other sources using =quelpa= (like GitHub/GitLab/Web file etc.)
-I use =quelpa= for this.
-- Use =quelpa-upgrade= and select a package or use =quelpa-upgrade-all= for updating all packages.
-
-#+BEGIN_SRC emacs-lisp
-  (use-package quelpa-use-package
-    :init (setq quelpa-update-melpa-p nil)
-    :config (quelpa-use-package-activate-advice))
-#+END_SRC
-
-Here is an example that shows you how to install a package from Github:
-
-#+BEGIN_SRC emacs-lisp :tangle no
-  (use-package PACKAGE-NAME
-    :diminish
-    :quelpa (PACKAGE-NAME
-             :fetcher github
-             :branch "WIP" ;; Optional
-             :repo "yyoncho/company-box"))
-#+END_SRC
-
-*** Hiding mode indicators from modeline
-~diminish.el~ provides a way to hide mode indicators from mode line. Either pass ~:diminish t~ to use-package while installing or just call ~(diminish 'x-mode)~.
-
-#+BEGIN_SRC emacs-lisp
-  (use-package diminish)
-#+END_SRC
-
-Currently I use [[mini-modeline]] as my modeline and it already hides minor mode indicators from the modeline. So this package is not needed but better have it as I might change my modeline in the future.
 
 ** Essential packages
 I use =s.el= and =dash.el= extensively. They already come as a dependency with other packages but I may use them before loading any package, so:
@@ -556,36 +563,6 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 #+end_src
 
 * Basics
-** Sane defaults
-#+BEGIN_SRC emacs-lisp
-  (setq read-process-output-max (* 1024 1024))
-  ;; ^ Better than default
-  (setq confirm-kill-processes nil)
-  ;; ^ When exitting, kill processes withouh asking
-  (setq ring-bell-function 'ignore)
-  ;; ^ This completely disables alarms
-  (setq column-number-mode t)
-  ;; ^ Show column number
-  (setq create-lockfiles nil)
-  ;; ^ These just clutter the filesystem
-  (setq dabbrev-case-fold-search nil)
-  ;; ^ Expansions are done respecting the case (Ctrl-n and Ctrl-p was
-  ;; not behaving the way I wanted before this in evil mode)
-  (setq vc-follow-symlinks nil)
-  ;; ^ Don't ask about following symlinks
-
-
-  ;; Ask y/n instead of yes/no
-  (fset 'yes-or-no-p 'y-or-n-p)
-
-  ;; Wrap long lines
-  (global-visual-line-mode t)
-  (diminish 'visual-line-mode)
-#+END_SRC
-
-Some sources about the variables that I changed:
-- https://github.com/emacs-lsp/lsp-mode#performance
-
 ** Overriding some defaults
 *** M-Backspace should delete, instead of killing
 #+begin_src emacs-lisp
@@ -709,21 +686,12 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
 
 * Visuals
 ** General
-Hide menubar and toolbar and replace blinking cursor with nice static box cursor.
-
-#+BEGIN_SRC emacs-lisp
-  (menu-bar-mode 0)                ;; Disable menubar
-  (tool-bar-mode 0)                ;; Disable toolbar
-  (blink-cursor-mode 0)            ;; Disable blinking cursor
-  (scroll-bar-mode -1)             ;; Disable scrollbars
-  (global-hl-line-mode t)          ;; Highlight current line
-  (setq inhibit-startup-message t) ;; Close startup screen
-  (setq frame-resize-pixelwise t)  ;; Fix gap issues with tiling WMs
-#+END_SRC
-
-Disable global-hl-line-mode in eshell, ansi-term, vterm
-
 #+begin_src emacs-lisp
+  ;; Wrap long lines
+  (global-visual-line-mode t)
+  (diminish 'visual-line-mode)
+
+  ;; Disable global-hl-line-mode in eshell, ansi-term, vterm
   (mapcar
     (lambda (mode) (add-hook mode (lambda () (setq-local global-hl-line-mode nil))))
     '(eshell-mode-hook term-mode-hook vterm-mode-hook))
@@ -795,9 +763,7 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
 I make use of this mode quite frequently throughout the configuration.
 
 #+begin_src emacs-lisp
-  (use-package prog-mode
-    :config
-    (setq prettify-symbols-unprettify-at-point t))
+  (setq prettify-symbols-unprettify-at-point t)
 
   (defmacro isamert/prettify-mode (mode pairs)
     "Prettify given PAIRS in given MODE.
@@ -1257,7 +1223,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (use-package org-contrib)
 
   (use-package org
-    :defer t
+    :defer 10
     :config
     (setq org-return-follow-links t)
     ;; ^ Open links with RET
@@ -1293,6 +1259,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 
     (add-hook 'org-mode-hook #'isamert/disable-electric-indent)
 
+    <<ob-http>>
     <<org-babel-configuration>>)
 #+end_src
 
@@ -1487,11 +1454,13 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 #+end_src
 
 *** ob-http
-#+begin_src emacs-lisp
+#+name: ob-http
+#+begin_src emacs-lisp :tangle no
   ;; Http request in org-mode babel.
   ;; You can get the generated curl command after executing the code
   ;; block, from *curl command history* buffer
-  (use-package ob-http :after org)
+  (use-package ob-http
+    :straight (:host github :repo "zweifisch/ob-http"))
 
   ;; TODO Handle --data-urlencode, -X {POST,GET,etc...}, -L, --data-raw
   (defun isamert/curl-to-org-http (curl-str)
@@ -2138,6 +2107,7 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
 #+begin_src emacs-lisp
   (use-package dired
+    :straight (:type built-in)
     :config
     (setq dired-dwim-target t)
     (setq ls-lisp-dirs-first t)
@@ -2150,9 +2120,7 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     (put 'dired-find-alternate-file 'disabled nil))
 
   (use-package dirvish
-    :quelpa (dirvish
-             :fetcher github
-             :repo "alexluigit/dirvish")
+    :straight (:host github :repo "alexluigit/dirvish")
     :config
     (setq dirvish-use-large-header nil)
     (setq dirvish-body-fontsize-increment nil)
@@ -2527,9 +2495,7 @@ A package that shows key combinations. (for example press C-x and wait) It also 
     (use-package which-key-posframe
       :after (which-key mini-frame)
       :diminish
-      :quelpa (which-key-posframe
-               :fetcher github
-               :repo "yanghaoxie/which-key-posframe")
+      :straight (:host github :repo "yanghaoxie/which-key-posframe")
       :config
       (set-face-attribute 'which-key-posframe nil :background "#373b43")
       (set-face-attribute 'which-key-posframe-border nil :background "#373b43")
@@ -2561,6 +2527,7 @@ Note that it's not possible to stage hunks with =vc=.
 
 #+BEGIN_SRC emacs-lisp
   (use-package magit
+    :defer 10
     :config
     ;; Following snippet is needed to update modeline after a checkout happens
     (defun isamert/vc-refresh-state-advice (a &optional b)
@@ -2581,7 +2548,6 @@ Note that it's not possible to stage hunks with =vc=.
       "gB" 'vc-annotate ;; Git Blame
       "gb" 'magit-branch))
 #+END_SRC
-
 
 *** git-timemachine
 - Toggle with ~git-timemachine~ (SPC gt).
@@ -3264,11 +3230,9 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     :diminish
     :config
     (setq flycheck-idle-change-delay 1)
-    (setq flycheck-check-syntax-automatically '(save new-line mode-enabled))
-    ;; ^ Alternatives are (save idle-change new-line mode-enabled)
     (setq flycheck-display-errors-delay 0.3)
     (setq flycheck-emacs-lisp-load-path 'inherit)
-    (setq flycheck-emacs-lisp-initialize-packages 't)
+    (setq flycheck-emacs-lisp-initialize-packages t)
 
     (global-flycheck-mode))
 
@@ -3560,10 +3524,16 @@ Light weight and nice modeline.
 #+begin_src emacs-lisp
   (use-package mood-line
     :diminish
-    :quelpa (mood-line
-             :fetcher gitlab
-             :repo "jessieh/mood-line")
-    :config (mood-line-mode))
+    :straight (:host gitlab :repo "jessieh/mood-line")
+    :config
+    (mood-line-mode)
+
+    (set-face-attribute
+     'mood-line-unimportant nil
+     :foreground "Sky Blue")
+    (set-face-attribute
+     'mood-line-status-neutral nil
+     :foreground "Sky Blue"))
 #+end_src
 
 ** TODO mini-modeline
@@ -3714,9 +3684,7 @@ When you press tab, jump out from the current enclosing parens/quotes etc. When 
 #+begin_src emacs-lisp
   (use-package tab-jump-out
     :diminish
-    :quelpa (tab-jump-out
-             :fetcher github
-             :repo "zhangkaiyulw/tab-jump-out")
+    :straight (:host github :repo "zhangkaiyulw/tab-jump-out")
     :config
     ;; This is not defined as a global minor mode, so define one and enable it
     (define-globalized-minor-mode global-tab-jump-out-mode tab-jump-out-mode
@@ -3733,9 +3701,7 @@ Provides an interface to xref based on completing-read.
 #+begin_src emacs-lisp
   (use-package completing-read-xref
     :diminish
-    :quelpa (completing-read-xref
-             :fetcher github
-             :repo "travitch/completing-read-xref.el")
+    :straight (:host github :repo "travitch/completing-read-xref.el")
     :config
     (setq xref-show-definitions-function #'completing-read-xref-show-defs))
 #+end_src
@@ -3795,11 +3761,9 @@ Simple mode for editing =~/.Xmodmap= file.
     "Simple mode for xmodmap files.")
 #+end_src
 ** slack
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
   (use-package slack
-    :quelpa (slack
-             :fetcher github
-             :repo "isamert/emacs-slack")
+    :straight (:host github :repo "isamert/emacs-slack")
     :config
     (setq slack-buffer-emojify t)
     (setq slack-render-image-p t)
@@ -4028,12 +3992,10 @@ Simple mode for editing =~/.Xmodmap= file.
 #+end_src
 
 ** prodigy
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
   (use-package prodigy
     :diminish
-    :quelpa (prodigy
-             :fetcher github
-             :repo "rejeep/prodigy.el")
+    :straight (:host github :repo "rejeep/prodigy.el")
     :config
     (evil-define-key 'normal prodigy-mode-map
       "m" #'prodigy-mark
@@ -4071,9 +4033,7 @@ For reading epub files.
 #+begin_src emacs-lisp
   (use-package justify-kp
     :diminish
-    :quelpa (justify-kp
-             :fetcher github
-             :repo "Fuco1/justify-kp"))
+    :straight (:host github :repo "Fuco1/justify-kp"))
 
   (use-package nov
     :config
@@ -4203,9 +4163,7 @@ Turkish dictionary.
 
 #+begin_src emacs-lisp
   (use-package sozluk
-    :quelpa (sozluk
-             :fetcher github
-             :repo "isamert/sozluk.el"))
+    :straight (:host github :repo "isamert/sozluk.el"))
 #+end_src
 
 *** Etymology lookup inside Emacs
@@ -4492,9 +4450,7 @@ Manage media and streams through =completing-read=.
 
   (use-package empv
     :diminish
-    :quelpa (empv
-             :fetcher github
-             :repo "isamert/empv.el")
+    :straight (:host github :repo "isamert/empv.el")
     :config
     (load "radio-channels")
     (setq empv-radio-channels isamert/radio-channels)
@@ -4554,9 +4510,7 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
 #+begin_src emacs-lisp
   (use-package orgmdb
     :diminish
-    :quelpa (orgmdb
-             :fetcher github
-             :repo "isamert/orgmdb.el")
+    :straight (:host github :repo "isamert/orgmdb.el")
     :config
     (setq orgmdb-omdb-apikey isamert/orgmdb-omdb-apikey)
     (setq orgmdb-fill-property-list '(genre runtime director country imdb-link imdb-rating metascore actors))
@@ -4832,7 +4786,7 @@ Keybindings are generally set in-place, following have no context, so they are h
                                (yank)
                                (insert (make-string curr-indent ? ))
                                (insert "\n}"))
-        (t (insert "const FUN_NAME =  () => {\n")
+        (_ (insert "const FUN_NAME =  () => {\n")
            (insert (make-string curr-indent ? ))
            (insert "}"))))
 
@@ -4945,9 +4899,7 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
 #+begin_src emacs-lisp
   (use-package jsdoc
     :diminish
-    :quelpa ((jsdoc
-             :fetcher github
-             :repo "isamert/jsdoc.el")))
+    :straight (:host github :repo "isamert/jsdoc.el"))
 #+end_src
 
 *** subword-mode
@@ -5173,10 +5125,9 @@ The following enables =CamelCase= aware editing operations.
 ** java
 =lsp-java= automatically installs =eclipse.jdt.ls= to get lsp.
 #+BEGIN_SRC emacs-lisp
-(use-package lsp-java :after lsp
-  :config (add-hook 'java-mode-hook 'lsp))
-
-(use-package dap-java :after (lsp-java))
+  (use-package lsp-java
+    :after lsp
+    :config (add-hook 'java-mode-hook 'lsp))
 #+END_SRC
 
 ** clojure
@@ -5277,9 +5228,7 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 #+begin_src emacs-lisp
   (use-package eros
     :diminish
-    :quelpa (eros
-             :fetcher github
-             :repo "isamert/eros")
+    :straight (:host github :repo "isamert/eros")
     :config
     (eros-mode 1))
 #+end_src
@@ -5451,9 +5400,7 @@ Install couchbase-query package for running interactive queries inside emacs.
 #+begin_src emacs-lisp
   (use-package couchbase-query
     :diminish
-    :quelpa (couchbase-query
-             :fetcher github
-             :repo "isamert/couchbase-query.el")
+    :straight (:host github :repo "isamert/couchbase-query.el")
     :config
     (setq couchbase-query-command "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/cbq"))
 #+end_src
@@ -5616,9 +5563,7 @@ For working with [[id:DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983][KMonad]] kbd files. 
   (use-package kbd-mode
     :ensure t
     :diminish
-    :quelpa (kbd-mode
-             :fetcher github
-             :repo "kmonad/kbd-mode")
+    :straight (:host github :repo "kmonad/kbd-mode")
     :config
     (setq kbd-mode-kill-kmonad "pkill -9 kmonad")
     (setq kbd-mode-start-kmonad "kmonad ~/.config/kmonad.kbd"))
@@ -8040,7 +7985,7 @@ Company/work related stuff.
        :topics kafka-topics)))
 #+end_src
 ** Projects/services
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
   (prodigy-define-service
     :name "Seller-Ads/Editor"
     :command "yarn"
