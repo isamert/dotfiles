@@ -2961,6 +2961,7 @@ Some shortcuts you can use on any vertico window:
     ;; with mini-frame
     (setq mini-frame-ignore-commands
           '(completion-at-point
+            evil-ex
             ctrlf-forward-default
             tab-jump-out
             consult-line
