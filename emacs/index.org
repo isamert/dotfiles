@@ -65,6 +65,16 @@ Add ~melpa~ and ~org~ package archives and update them if needed.
     (package-refresh-contents))
 #+END_SRC
 
+** GCMH
+This is a great hack that defers garbage collections to the times where Emacs is idling and from my initial observation, it works quite well. I load this package first to be able to benefit it from early on.
+
+#+begin_src emacs-lisp
+  (use-package gcmh
+    :config
+    (gcmh-mode 1)
+    (setq gcmh-verbose t))
+#+end_src
+
 ** Installing packages with ~use-package~
 :PROPERTIES:
 :ID:       3d974e67-11fc-4f07-8cd4-ec6fd63152c4
@@ -548,8 +558,6 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 * Basics
 ** Sane defaults
 #+BEGIN_SRC emacs-lisp
-  (setq gc-cons-threshold (* 256 1024 1024))
-  ;; ^ Better than default
   (setq read-process-output-max (* 1024 1024))
   ;; ^ Better than default
   (setq confirm-kill-processes nil)
