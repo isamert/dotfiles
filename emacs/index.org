@@ -1715,6 +1715,9 @@ This prints the text that is used by polybar to show what I am clocking right no
                 (org-duration-from-minutes (org-clock-get-clocked-time))
                 org-clock-heading)
       ""))
+
+  (setq org-clock-clocked-in-display nil)
+  ;; ^ I show it on polybar or gnome bar, so I don't need it on modeline
 #+end_src
 
 ** org-ql

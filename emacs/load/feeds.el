@@ -5,6 +5,7 @@
 (defvar isamert/feeds
   `((,isamert/github-feed-link personal)
     ("https://mail.google.com/mail/feed/atom" personal)
+    ;; ^ This requires an app password set in ~/.netrc
 
     ("https://t24.com.tr/rss/haber/gundem" news turkish)
     ("https://t24.com.tr/rss/haber/politika" news turkish)
