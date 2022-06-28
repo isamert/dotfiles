@@ -5926,6 +5926,32 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
        (--map
         (alist-get 'name_with_namespace it)
         projects))))
+
+  (defun isamert/gitlab-watch-pipeline (url)
+    "Start watching pipeline URL status.
+  Send a notification if it's finished, failed or waiting for a
+  manual action."
+    (interactive "sPipeline URL: ")
+    (let* ((data (s-match "https://.*\\.com/\\(.*\\)/-/pipelines/\\([0-9]+\\)" url))
+           (project (url-hexify-string (nth 1 data)))
+           (pipeline (nth 2 data)))
+      (run-with-timer
+       20
+       nil
+       (lambda ()
+         (let-alist (isamert/gitlab-request (format "projects/%s/pipelines/%s" project pipeline))
+           (pcase  .status
+             ("success"
+              (alert (format "Pipeline %s FINISHED successfully!" pipeline)))
+             ("failed"
+              (alert (format "Pipeline %s FAILED!" pipeline)))
+             ((or "canceled" "skipped" "scheduled")
+              (alert (format "Not interested in this pipeline anymore: %s" .status)))
+             ("manual"
+              (alert (format "Pipeline %s requires manual action!"))
+              (isamert/gitlab-check-pipeline url))
+             (_
+              (isamert/gitlab-check-pipeline url))))))))
 #+end_src
 
 ** Jira

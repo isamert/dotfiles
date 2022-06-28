@@ -3075,6 +3075,7 @@ You need to install =vim-plug= to be able to install vim extensions.
   command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
+  command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`<<<sh("which emacsclient")>>> --eval '(isamert/gitlab-watch-pipeline "${JS_ARG}")'`)
 
   " quick search
   set searchurls.g https://www.google.com/search?q=%s
