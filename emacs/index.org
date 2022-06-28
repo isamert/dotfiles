@@ -1625,7 +1625,7 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
       (file diary-org)
       "* %u\n"
       :prepend t)
-     ("m" "Meeting/clock note" item
+     ("c" "Meeting/clock note" item
       (clock))))
 
   (defun isamert/org-capture--find-daily-notes ()
@@ -8049,7 +8049,10 @@ Company/work related stuff.
 #+begin_src emacs-lisp
   (unless (daemonp)
     (server-start))
+
+  (message ">>> Started in %s" (emacs-init-time))
 #+end_src
+
 ;; Local Variables:
 ;; eval: (add-hook 'after-save-hook (lambda () (if (y-or-n-p "Tangle?") (org-babel-tangle))) nil t)
 ;; End:
