@@ -3029,7 +3029,7 @@ Some shortcuts you can use on any vertico window:
     ;; The following does not recurse as I like it to be
     ;; (project-remember-projects-under isamert/projects-root t)
     (setq project--list '())
-    (--each (--map (cons 'vc it) (isamert/all-project-roots))
+    (--each (--map (list 'vc 'Git it) (isamert/all-project-roots))
       (project-remember-project it t)))
 
   (run-with-timer 45 nil #'isamert/load-projects-list)
