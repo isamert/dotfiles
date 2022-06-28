@@ -1463,6 +1463,12 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 - Having your essential environment variables (like =PATH=) set here is also important.
   - For example when you run =unison= to sync content between your computers, =unison= connects to the other computer through =ssh=. This connection is done on a =non-interactive/non-login= shell (or just take this as an example: =ssh some-computer 'echo $PATH'= this is also done on a =non-interactive/non-login= shell). So if your =unison= binary is not in one of the paths that appear in default =PATH= variable, it'll fail to find it. So you need to add the path that
 
+Unfortunately, this file is not sourced by GDM at login. So I'm sourcing it in =~/.profile= manually:
+
+#+begin_src sh :tangle ~/.profile
+  source ~/.zshenv
+#+end_src
+
 #+begin_src sh :tangle ~/.zshenv
   # For aurin, aursearch... aliases. (Also used in some other scripts)
   export AUR_HELPER=trizen
@@ -1507,10 +1513,10 @@ Check out these links to get a grasp of how all of these stuff work. I also trie
 
 - A lot of programs (like Java, Flatpak or anything that wants to edit your PATH or similar environment variables) put their configuration under =/etc/profile.d/=. Normally, =/etc/profile= (which is automatically sourced by =bash= at startup), also sources these files. In my system (or Arch Linux in general) also have =/etc/zsh/zprofile= which contains the following: =emulate sh -c 'source /etc/profile'=. So essentially sourcing the stuff under =/etc/profile.d/= is automatically handled.
 
-Some login managers (like GDM) does not source ~.zprofile~ but instead they source ~.profile~. So I'm handling it with:
+Unfortunately, this file is (also) not sourced by GDM at login. So I'm sourcing it in =~/.profile= manually:
 
 #+begin_src sh :tangle ~/.profile
-  emulate sh -c 'source ~/.profile'
+  source ~/.zprofile
 #+end_src
 
 #+begin_src sh :tangle ~/.zprofile
