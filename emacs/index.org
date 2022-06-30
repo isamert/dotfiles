@@ -4025,7 +4025,22 @@ Simple mode for editing =~/.Xmodmap= file.
       "M" #'prodigy-jump-magit
       "t" #'prodigy-add-tag-filter
       "T" #'prodigy-clear-filters
-      (kbd "RET") #'prodigy-display-process))
+      (kbd "RET") #'prodigy-display-process)
+
+    (defun isamert/prodigy-autostart ()
+      "Start all services with the `:auto-start' set to non-nil if they
+  are not already started."
+      (interactive)
+      (prodigy-with-refresh
+       (--each
+           prodigy-services
+         (when (and (plist-get it :auto-start)
+                    (not (prodigy-service-started-p it)))
+           (prodigy-start-service it)))))
+
+    (add-hook
+     'after-init-hook
+     #'isamert/prodigy-autostart))
 #+end_src
 ** poporg
 Pop current comment section into an org (or markdown, as it's more widely used for comments) buffer and edit it there. Pretty useful for writing long comments. Use ~poporg-dwim~ on a comment/comment block.
