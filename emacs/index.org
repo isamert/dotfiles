@@ -1278,6 +1278,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     "on"  #'org-toggle-narrow-to-subtree
     "ov"  #'org-babel-expand-src-block
     "oq"  #'isamert/org-tree-to-indirect-buffer
+    "oQ"  #'isamert/org-link-to-indirect-buffer
 
     ;; link stuff
     "oyi" #'org-copy-id
@@ -1349,6 +1350,16 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (interactive)
     (let ((current-prefix-arg '(4)))
       (call-interactively #'org-tree-to-indirect-buffer)))
+
+  (defun isamert/org-link-to-indirect-buffer ()
+    "Open link at point on a new indirect buffer."
+    (interactive)
+    (save-excursion
+      (save-restriction
+        ;; Force org to open the link in current window
+        (let ((org-link-frame-setup (cons (cons 'file 'find-file) org-link-frame-setup)))
+          (org-open-at-point))
+        (isamert/org-tree-to-indirect-buffer))))
 #+end_src
 
 ** Personal files
