@@ -7772,14 +7772,13 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
 Company/work related stuff.
 
 #+begin_src emacs-lisp
-  (defun company/is-company ()
-    "Return if current computer is Well computer or not."
-    (string= (treemacs-workspace->name (treemacs-current-workspace)) "seller-ads"))
+  (defun workpc? ()
+    (eq system-type 'darwin))
 #+end_src
 
 ** Packages
 #+begin_src emacs-lisp
-  (when (company/is-company)
+  (when (workpc?)
     ;; Enable org jira/confluence exporter (org-confluence-export-as-confluence)
     (require 'ox-confluence)
     (defalias 'org-export-as-jira-confluence-markup 'org-confluence-export-as-confluence))
@@ -7805,7 +7804,7 @@ Company/work related stuff.
               (insert (concat (car (s-match "SAT-[0-9]+" org-clock-heading)) " "))
             (insert "SAT-1 "))))))
 
-  (when (company/is-company)
+  (when (workpc?)
     (add-hook 'git-commit-setup-hook 'company/git-commit-message-setup))
 #+end_src
 
