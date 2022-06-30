@@ -456,3 +456,5 @@
     ("radcap.ru // ussr"                . "http://79.120.77.11:8002/ussr")
     ("radcap.ru // vocal"               . "http://79.120.77.11:8002/vocal")
     ("radcap.ru // witchhouse"          . "http://79.120.77.11:8002/witchhouse")))
+
+(provide 'isamert-radio-channels)

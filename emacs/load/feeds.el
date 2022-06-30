@@ -106,3 +106,5 @@
     ;; Software tracking
     ("alphapapa/org-ql" gh-release app)
     ))
+
+(provide 'isamert-feeds)
