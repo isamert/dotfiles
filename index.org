@@ -3246,6 +3246,8 @@ Neither Slack web app nor the desktop app lets you define your own custom keybin
   set searchurls.tywiki https://wiki.trendyol.com/dosearchsite.action?queryString=%s
   set searchurls.tygs https://gitlab.trendyol.com/discovery/seller-ads?filter=%s
   set searchurls.tyg https://gitlab.trendyol.com/?name=%s
+
+  autocmd DocLoad https://gitlab.trendyol.com/.*/-/pipelines/.* emacs/gitlab-watch-pipeline
 #+end_src
 
 *** userChrome.css
