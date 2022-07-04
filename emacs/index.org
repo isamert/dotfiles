@@ -1352,15 +1352,22 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (let ((current-prefix-arg '(4)))
       (call-interactively #'org-tree-to-indirect-buffer)))
 
+  (defmacro isamert/org-focused-tree-to-indirect-buffer (&rest forms)
+    "Same as `org-tree-to-indirect-buffer' but let's you open
+  multiple indirect buffers."
+    `(save-excursion
+       (save-restriction
+         (let ((current-prefix-arg '(4)))
+           ,@forms
+           (call-interactively #'org-tree-to-indirect-buffer)))))
+
   (defun isamert/org-link-to-indirect-buffer ()
     "Open link at point on a new indirect buffer."
     (interactive)
-    (save-excursion
-      (save-restriction
-        ;; Force org to open the link in current window
-        (let ((org-link-frame-setup (cons (cons 'file 'find-file) org-link-frame-setup)))
-          (org-open-at-point))
-        (isamert/org-tree-to-indirect-buffer))))
+    (isamert/org-focused-tree-to-indirect-buffer
+     ;; Force org to open the link in current window
+     (let ((org-link-frame-setup (cons (cons 'file 'find-file) org-link-frame-setup)))
+       (org-open-at-point))))
 #+end_src
 
 ** Personal files
@@ -3577,9 +3584,9 @@ When you search for something, it opens the results in an org-mode buffer. Resul
     :config
     (setq howdoyou-switch-to-answer-buffer t)
     (setq howdoyou-number-of-answers 5)
-    (evil-define-key '(normal motion) howdoyou-mode-map
+    (evil-define-minor-mode-key '(normal motion) 'howdoyou-mode
       "gn" #'howdoyou-next-link
-      "gp" #'howdoyou-prev-link)
+      "gp" #'howdoyou-previous-link)
     (evil-leader/set-key
       "is" 'howdoyou-query))
 
@@ -5953,31 +5960,34 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
         (alist-get 'name_with_namespace it)
         projects))))
 
-  (defun isamert/gitlab-watch-pipeline (url)
+  (defun isamert/gitlab-watch-pipeline (url &optional rerun?)
     "Start watching pipeline URL status.
   Send a notification if it's finished, failed or waiting for a
   manual action."
     (interactive "sPipeline URL: ")
     (let* ((data (s-match "https://.*\\.com/\\(.*\\)/-/pipelines/\\([0-9]+\\)" url))
-           (project (url-hexify-string (nth 1 data)))
+           (project (nth 1 data))
+           (project-hexified (url-hexify-string project))
            (pipeline (nth 2 data)))
+      (unless rerun?
+        (message ">> Started watching pipeline %s on %s!" pipeline project))
       (run-with-timer
-       20
+       (if rerun? 20 1)
        nil
        (lambda ()
-         (let-alist (isamert/gitlab-request (format "projects/%s/pipelines/%s" project pipeline))
+         (let-alist (isamert/gitlab-request (format "projects/%s/pipelines/%s" project-hexified pipeline))
            (pcase  .status
              ("success"
-              (alert (format "Pipeline %s FINISHED successfully!" pipeline)))
+              (alert (format "Pipeline FINISHED: %s/%s" project pipeline)))
              ("failed"
-              (alert (format "Pipeline %s FAILED!" pipeline)))
+              (alert (format "Pipeline FAILED: %s/%s" project pipeline)))
              ((or "canceled" "skipped" "scheduled")
-              (alert (format "Not interested in this pipeline anymore: %s" .status)))
+              (alert (format "Pipeline %s: %s/%s" (s-upcase .status) project pipeline)))
              ("manual"
-              (alert (format "Pipeline %s requires manual action!"))
-              (isamert/gitlab-check-pipeline url))
+              (alert (format "Pipeline requires MANUAL action: %s/%s" project pipeline))
+              (isamert/gitlab-check-pipeline url t))
              (_
-              (isamert/gitlab-check-pipeline url))))))))
+              (isamert/gitlab-check-pipeline url t))))))))
 #+end_src
 
 ** Jira
@@ -6703,13 +6713,18 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   (evil-leader/set-key
     "obb" 'isamert/bullet-focus-non-day-header
     "oby" 'isamert/bullet-focus-yesterday
+    "obY" 'isamert/bullet-focus-yesterday-indirect
     "obt" 'isamert/bullet-focus-today
     "obT" 'isamert/bullet-focus-tomorrow
     "obf" 'isamert/bullet-focus-given-day
     "obr" 'isamert/bullet-focus-recurring
+    "obR" 'isamert/bullet-focus-recurring-indirect
     "obw" 'isamert/bullet-focus-work
+    "obW" 'isamert/bullet-focus-work-indirect
     "obl" 'isamert/bullet-focus-life
-    "obc" 'isamert/bullet-focus-computer)
+    "obL" 'isamert/bullet-focus-life-indirect
+    "obc" 'isamert/bullet-focus-computer
+    "obC" 'isamert/bullet-focus-computer-indirect)
 
   ;;
   ;; Date utils
@@ -6803,7 +6818,6 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (when (not (isamert/bullet-focus-a-day today))
         (isamert/bullet-create-a-day today))))
 
-
   (defun isamert/bullet-focus-tomorrow ()
     "Focus yesterdays header."
     (interactive)
@@ -6811,10 +6825,22 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (when (not (isamert/bullet-focus-a-day tomorrow))
         (isamert/bullet-create-a-day tomorrow))))
 
+  (defun isamert/bullet-focus-tomorrow-indirect ()
+    "Like `isamert/bullet-focus-tomorrow' but in an indirect buffer."
+    (interactive)
+    (isamert/org-focused-tree-to-indirect-buffer
+     (isamert/bullet-focus-tomorrow)))
+
   (defun isamert/bullet-focus-yesterday ()
     "Focus yesterdays header."
     (interactive)
     (isamert/bullet-focus-a-day (isamert/date "yesterday")))
+
+  (defun isamert/bullet-focus-yesterday-indirect ()
+    "Like `isamert/bullet-focus-yesterday' but in an indirect buffer."
+    (interactive)
+    (isamert/org-focused-tree-to-indirect-buffer
+     (isamert/bullet-focus-yesterday)))
 
   (defun isamert/bullet-focus-heading (heading)
     "Focus yesterdays header."
@@ -6830,17 +6856,41 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (interactive)
     (isamert/bullet-focus-heading "Recurring"))
 
+  (defun isamert/bullet-focus-recurring-indirect ()
+    "Like `isamert/bullet-focus-recurring' but in an indirect buffer."
+    (interactive)
+    (isamert/org-focused-tree-to-indirect-buffer
+     (isamert/bullet-focus-recurring)))
+
   (defun isamert/bullet-focus-work ()
     (interactive)
     (isamert/bullet-focus-heading "Work backlog"))
+
+  (defun isamert/bullet-focus-work-indirect ()
+    "Like `isamert/bullet-focus-work' but in an indirect buffer."
+    (interactive)
+    (isamert/org-focused-tree-to-indirect-buffer
+     (isamert/bullet-focus-work)))
 
   (defun isamert/bullet-focus-life ()
     (interactive)
     (isamert/bullet-focus-heading "Life backlog"))
 
+  (defun isamert/bullet-focus-life-indirect ()
+    "Like `isamert/bullet-focus-life' but in an indirect buffer."
+    (interactive)
+    (isamert/org-focused-tree-to-indirect-buffer
+     (isamert/bullet-focus-life)))
+
   (defun isamert/bullet-focus-computer ()
     (interactive)
     (isamert/bullet-focus-heading "Computer backlog"))
+
+  (defun isamert/bullet-focus-computer-indirect ()
+    "Like `isamert/bullet-focus-computer' but in an indirect buffer."
+    (interactive)
+    (isamert/org-focused-tree-to-indirect-buffer
+     (isamert/bullet-focus-computer)))
 
   ;;
   ;; Focus non-day
@@ -7012,9 +7062,6 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (delete-char 1)
       (org-table-align)))
 #+end_src
-
-#+RESULTS:
-: org-dblock-write:daily-summary
 
 ** Scratch/temporary buffers in side windows
 Here I define two important functions and their helpers.  The following functions are pretty useful for quick note taking or evaluating elisp. Having these buffers in a side window makes them immune to some window commands which is what I want.
