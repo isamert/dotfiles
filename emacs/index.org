@@ -2282,7 +2282,7 @@ To sync it automatically:
     (setq min-to-appt (string-to-number min-to-appt))
     (message ">> appt :: %s, remaining %s mins" appt-msg min-to-appt)
     (let ((important? (cond
-                       ((<= min-to-appt appt-display-interval) t)
+                       ((s-contains? "meeting" (s-downcase appt-msg)) t)
                        (t nil))))
       (alert
        (isamert/org-header-line-to-title appt-msg)
@@ -3859,13 +3859,18 @@ Simple mode for editing =~/.Xmodmap= file.
          isamert/slack--last-messages)
         (unless (or (slack-message-minep message team)
                     (s-contains? "message deleted" msg-str)
+                    (s-contains? "has joined the channel" msg-str)
+                    ;; Dont show notifications for visible slack windows
                     (--some
                      (s-contains? room-name it)
                      (--map (buffer-name (window-buffer it)) (window-list))))
-          (alert
-           msg-str
-           :title title
-           :category "slack")
+          ;; Only send desktop notifications for the things I'im interested
+          ;; mpim || group || in subscribed channels
+          (when (slack-message-notify-p message room team)
+            (alert
+             msg-str
+             :title title
+             :category "slack"))
           (message
            ">> Slack: %s // %s"
            title
