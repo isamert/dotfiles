@@ -249,6 +249,62 @@ Following snippet enables some configurations for pacman:
 #+begin_src conf :tangle (when-linux "/sudo::/etc/bluetooth/main.conf")
   <<<sh("sed 's/#AutoEnable=false/AutoEnable=true/' /etc/bluetooth/main.conf")>>>
 #+end_src
+** systemd user units
+After tangling all unit files, run this:
+
+#+begin_src sh
+  systemctl --user daemon-reload
+  systemctl --user enable kmonad
+  systemctl --user enable emacsd
+
+  systemctl enable syncthing
+#+end_src
+
+*** kmonad
+#+begin_src conf :tangle ~/.config/systemd/user/kmonad.service
+  [Unit]
+  Description=KMonad keyboard config
+
+  [Service]
+  Type=simple
+  Restart=always
+  RestartSec=3
+  ExecStart=/usr/bin/kmonad %h/.config/kmonad.kbd -l warn
+  Nice=-20
+
+  [Install]
+  WantedBy=default.target
+#+end_src
+*** emacsd
+systemd unit for emacs daemon. It starts after ~graphical-session.target~ so that it correctly inherits  environment variablles.
+
+#+begin_src conf :tangle ~/.config/systemd/user/emacsd.service
+  [Unit]
+  Description=Emacs text editor
+  Documentation=info:emacs man:emacs(1) https://gnu.org/software/emacs/
+
+  [Service]
+  Type=forking
+  ExecStart=/usr/bin/emacs --daemon
+  ExecStop=/usr/bin/emacsclient --eval "(kill-emacs)"
+  Restart=on-failure
+
+  [Install]
+  WantedBy=graphical-session.target
+#+end_src
+** Gnome
+#+begin_src bash :tangle ~/.scripts/gshell-eval-js
+  dbus-send --print-reply --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"$*"
+#+end_src
+
+For this script to work, you need to enable unsafe mode. You can enable it by doing ~Alt + F2~, write ~lg~ (looking glass) and hit enter. Then write ~global.context.unsafe_mode = true~ and hit enter. An indicator on top right with a red exclamation mark will appear indicating that you are in the unsafe mode. You can also start Gnome Shell with ~--unsafe~ option or use the following extension (run this to install it and then restart gnome shell and enable the extension):
+#+begin_src bash
+  cd /tmp/
+  git clone https://github.com/linushdot/unsafe-mode-menu.git
+  cd unsafe-mode-menu
+  cp -r unsafe-mode-menu@linushdot.local ~/.local/share/gnome-shell/extensions/
+#+end_src
+
 * X related
 ** Startup programs
 #+name: startup_programs
