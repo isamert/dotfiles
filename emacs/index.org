@@ -3787,6 +3787,8 @@ Simple mode for editing =~/.Xmodmap= file.
   (use-package slack
     :straight (:host github :repo "isamert/emacs-slack")
     :config
+    (setq slack-log-level 'error)
+    ;; ^ info level shows unnecessary stuff that distracts me
     (setq slack-buffer-emojify t)
     (setq slack-render-image-p t)
     (setq slack-image-max-height nil)
@@ -3859,11 +3861,14 @@ Simple mode for editing =~/.Xmodmap= file.
          isamert/slack--last-messages)
         (unless (or (slack-message-minep message team)
                     (s-contains? "message deleted" msg-str)
-                    (s-contains? "has joined the channel" msg-str)
-                    ;; Dont show notifications for visible slack windows
-                    (--some
-                     (s-contains? room-name it)
-                     (--map (buffer-name (window-buffer it)) (window-list))))
+                    (s-contains? "has joined the" msg-str)
+                    (s-contains? "has left the" msg-str)
+                    ;; Dont show notifications for visible slack windows if emacs is not idle
+                    (and
+                     (< (current-idle-time) 15)
+                     (--some
+                      (s-contains? room-name it)
+                      (--map (buffer-name (window-buffer it)) (window-list)))))
           ;; Only send desktop notifications for the things I'im interested
           ;; mpim || group || in subscribed channels
           (when (slack-message-notify-p message room team)
@@ -3994,7 +3999,7 @@ Simple mode for editing =~/.Xmodmap= file.
   (defun isamert/slack-initialize-keymaps ()
     (interactive)
     (dolist (mode-map (list slack-message-buffer-mode-map slack-thread-message-buffer-mode-map))
-      (evil-define-key 'normal mode-map
+      (evil-define-key* '(normal motion) mode-map
         "q" #'delete-window
 
         "@" 'slack-message-embed-mention
@@ -4036,6 +4041,9 @@ Simple mode for editing =~/.Xmodmap= file.
       "t" #'prodigy-add-tag-filter
       "T" #'prodigy-clear-filters
       (kbd "RET") #'prodigy-display-process)
+
+    (evil-leader/set-key
+      "et" #'prodigy)
 
     (defun isamert/prodigy-autostart ()
       "Start all services with the `:auto-start' set to non-nil if they
