@@ -3457,8 +3457,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (use-package vterm
     :config
     (evil-define-key '(normal insert) 'global (kbd "M-t") #'isamert/vterm-toggle-dedicated)
-    (evil-define-key 'insert 'vterm-mode-map (kbd "C-r") #'vterm-send-C-r)
-    (evil-define-key 'insert 'vterm-mode-map (kbd "C-c") #'vterm-send-C-c)
+    (evil-define-key* 'insert vterm-mode-map (kbd "C-r") #'vterm-send-C-r)
+    (evil-define-key* 'insert vterm-mode-map (kbd "C-c") #'vterm-send-C-c)
     (evil-leader/set-key
       "tt" 'isamert/vterm-toggle-dedicated
       "tj" 'isamert/jump-to-visible-vterm
