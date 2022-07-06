@@ -68,7 +68,7 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   (setq dabbrev-case-fold-search nil)
   ;; ^ Expansions are done respecting the case (Ctrl-n and Ctrl-p was
   ;; not behaving the way I wanted before this in evil mode)
-  (setq vc-follow-symlinks nil)
+  (setq vc-follow-symlinks t)
   ;; ^ Don't ask about following symlinks
   ;; Ask y/n instead of yes/no
   (fset 'yes-or-no-p 'y-or-n-p)
@@ -3865,7 +3865,7 @@ Simple mode for editing =~/.Xmodmap= file.
                     (s-contains? "has left the" msg-str)
                     ;; Dont show notifications for visible slack windows if emacs is not idle
                     (and
-                     (< (current-idle-time) 15)
+                     (< (time-to-seconds (or (current-idle-time) 0)) 15)
                      (--some
                       (s-contains? room-name it)
                       (--map (buffer-name (window-buffer it)) (window-list)))))
