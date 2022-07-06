@@ -6264,12 +6264,12 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   ;; Utility
   ;;
 
-  (defmemoize isamert/jira-get-users ()
+  (defmemoizefile isamert/jira-get-users () "~/.emacs.d/jira-user-cache"
     (mapcar
      (lambda (project) (cons project (jiralib2-get-users project)))
      (mapcar #'car isamert/jira-projects)))
 
-  (defun isamert/jira--select-user (project)
+  (defun isamert/jira--select-user ()
     (thread-last
       (isamert/jira-get-users)
       (assoc-string (isamert/jira--select-project))
@@ -6347,7 +6347,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
             ("Assign to..."
              (jiralib2-assign-issue
               .key
-              (alist-get 'name (isamert/jira--select-user (isamert/jira--select-project)))))
+              (alist-get 'name (isamert/jira--select-user))))
             ("Change status"
              (isamert/jira-change-issue-status .key))
             ("Insert as task"
