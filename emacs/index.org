@@ -5791,6 +5791,13 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
              (s-prepend "https://")))
        (t (s-chop-suffix ".git" remote-url)))))
 
+  (defun isamert/git-origin-switch-to-ssh ()
+    (interactive)
+    (when-let* ((https-origin (s-trim (shell-command-to-string "git config --get remote.origin.url")))
+                (it (s-match "https://\\(.*\\)\\.\\(com\\|net\\|org\\)/\\(.*\\)" https-origin))
+                (ssh-origin (format "git@%s.%s:%s" (nth 1 it) (nth 2 it) (nth 3 it))))
+      (shell-command-to-string (format "git remote set-url origin %s" ssh-origin))))
+
   ;;
   ;; Gitlab
   ;;
@@ -7522,6 +7529,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 
 ** Copy current/buffers filename into clipboard
 #+begin_src emacs-lisp
+  (defalias 'isamert/copy-current-filename-to-clipboard 'isamert/copy-file-name-to-clipboard)
   (defun isamert/copy-file-name-to-clipboard (&optional uri)
     "Copy the current buffer file name to the clipboard.
   If the URI is non-nil, then add file:// in front of the
