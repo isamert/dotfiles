@@ -211,6 +211,30 @@ Some basic variable and function definitions that will be used in configuration.
             (set symbol (read (current-buffer))))
         (message ">> isamert/deserialize-from-file failed. file-exists-p: %s, boundp: %s" (file-exists-p fpath) (boundp symbol)))))
 
+  ;; TODO Add a way to invalidate the file after given date
+  (defmacro defmemoizefile (name arglist file &rest body)
+    "Like a normal memoize function but persist the memoize cache to
+  a file so that when Emacs is opened freshly, it'll continue using
+  the memoize cache."
+    (declare (indent 3) (doc-string 4))
+    (let ((origfn (intern (concat (symbol-name name) "---defmemoizefile-origfn")))
+          (memoizemap (intern (concat (symbol-name name) "---defmemoizefile-memoizemap"))))
+      `(progn
+         (setq ,memoizemap (make-hash-table :test 'equal))
+         (when (file-exists-p (expand-file-name ,file))
+           (isamert/deserialize-from-file ,file ',memoizemap))
+
+         (defun ,origfn ,arglist
+           ,@body)
+
+         (defun ,name (&rest ___args)
+           (if-let ((memoizedresult (gethash ___args ,memoizemap)))
+               memoizedresult
+             (let ((___result (apply #',origfn ___args)))
+               (map-put! ,memoizemap ___args ___result)
+               (isamert/serialize-into-file ,file ,memoizemap)
+               ___result))))))
+
   (defun isamert/select-window-with-buffer (buffer-name)
     "Select the first visible window that matches given BUFFER-NAME."
     (--first
