@@ -2402,7 +2402,8 @@ To sync it automatically:
     (evil-leader/set-key "ew" #'w3m-goto-url)
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
-          '((".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . (lambda (link &rest _) (funcall browse-url-secondary-browser-function link)))
+          '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (isamert/jira-view-ticket link)))
+            (".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . (lambda (link &rest _) (funcall browse-url-secondary-browser-function link)))
             (".*reddit.com.*comments.*" . (lambda (link &rest _) (reddigg-view-comments link)))
             (".*stackoverflow.com.*" . (lambda (link &rest _) (isamert/open-stackoverflow-link link)))
             (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv-play link)))
@@ -6337,10 +6338,13 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
         (let* ((action
                 (completing-read
                  (format "Act on %s: " (s-truncate 20 .fields.summary))
-                 '("Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Show all as JSON" "[Cancel]"))))
+                 '("Open" "View" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Show all as JSON" "[Cancel]"))))
           (pcase action
             ("Open"
              (isamert/open-jira-issue .key)
+             (cl-return))
+            ("View"
+             (isamert/jira-view-ticket .key)
              (cl-return))
             ("Update"
              (isamert/jira-update-ticket .key .fields.summary .fields.description)
@@ -6402,6 +6406,24 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
               (s-join "\n")))
        (message ">> (isamert/jira-update-ticket \"%s\" \"%s\" \"%s\")" key summary description)
        (jiralib2-update-summary-description key summary description))))
+
+  (defun isamert/jira-view-ticket (key)
+    (interactive "sIssue key: ")
+    (when-let (match (s-match "browse/\\([a-zA-Z0-9-]+\\)/?" key))
+      (setq key (nth 1 match)))
+    (switch-to-buffer-other-window (get-buffer-create (format "*jira:%s*" key)))
+    (erase-buffer)
+    (let-alist (jiralib2-get-issue key)
+      (insert
+       (format (concat
+                "* %s\n"
+                (isamert/convert-jira-markup-to-org-mode .fields.description))
+               .fields.summary))
+      (org-mode)
+      (org-set-property "STATUS" (or .fields.status.name "N/A"))
+      (org-set-property "REPORTER" (or .fields.reporter.name "N/A"))
+      (org-set-property "ASSIGNEE" (or .fields.assignee.name "N/A"))
+      (org-fold-show-all)))
 #+end_src
 
 ** My Android phone and Emacs
