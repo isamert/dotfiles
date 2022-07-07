@@ -5624,7 +5624,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
        :buffer-name buffer-name
        :command (format "bq show '%s'" table-name)
        :on-start
-       (lambda ()
+       (lambda (&rest _)
          (toggle-truncate-lines +1)
          (isamert/shell-command
           :buffer-name buffer-name
@@ -7490,9 +7490,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
        command
        (switch t)
        (buffer-name (concat "*" command "*"))
-       (on-start (lambda ()))
-       (on-finish (lambda ()))
-       (on-fail (lambda ())))
+       (on-start (lambda (&rest _)))
+       (on-finish (lambda (&rest _)))
+       (on-fail (lambda (&rest _))))
     "Run given shell COMMAND and redirect output to given BUFFER-NAME.
   This is a wrapper around `start-process-shell-command' that adds
   support for ANSI term colors and some syntactic convenience.
@@ -7515,19 +7515,21 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
             (message msg)
             (when (not (frame-focus-state))
               (alert msg)))))))
-    (let* ((proc (start-process-shell-command command buffer-name command)))
+    (let* ((proc (start-process-shell-command command buffer-name command))
+           (proc-out ""))
       (set-process-sentinel
        proc
        (lambda (p e)
          (with-current-buffer buffer-name
            (read-only-mode -1))
          (if (= 0 (process-exit-status p))
-             (funcall on-finish)
+             (funcall on-finish proc-out)
            (funcall on-fail))))
       (set-process-filter
        proc
        (lambda (proc str)
          (with-current-buffer buffer-name
+           (setq proc-out (concat proc-out str))
            (let ((inhibit-read-only t))
              (goto-char (point-max))
              (insert (ansi-color-apply str))))))
@@ -7874,7 +7876,7 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
        :switch nil
        :buffer-name "*single-file output*"
        :on-finish
-       (lambda ()
+       (lambda (&rest _)
          (when (called-interactively-p 'any)
            (message "Archived `%s'!" url)
            (kill-new command))
@@ -7894,6 +7896,34 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
            (message "Archiving failed: '%s'. Command is copied to your kill ring." url)
            (kill-new command))
          (and on-fail (funcall on-fail 'abnormal-exit))))))
+#+end_src
+** isamert/meme-downloader
+#+begin_src emacs-lisp
+  (defun isamert/meme-downloader (url)
+    (interactive "sURL: ")
+    (let* ((title
+            (thread-last
+              url
+              isamert/url-get-title
+              isamert/string-url-case
+              s-downcase))
+           (dir (expand-file-name "~/Documents/memes"))
+           (default-directory dir)
+           (cmd (format "yt-dlp --output '%s.%%(ext)s' %s" title url)))
+      (isamert/shell-command
+       :command cmd
+       :switch nil
+       :on-finish
+       (lambda (output &rest _)
+         (if-let* ((matches (s-match "^\\[Merger\\] Merging formats into \"\\(.*\\)\"" output))
+                   (fname (nth 1 matches)))
+             (progn
+               (alert (format "Downloaded: %s!" fname))
+               (kill-new (format "%s/%s" dir fname)))
+           (alert "Can't parse yt-dlp output!")))
+       :on-fail
+       (lambda (&rest _)
+         (alert "Error while downloading: %s!" fname)))))
 #+end_src
 * TY (work stuff)
 Company/work related stuff.
@@ -8045,8 +8075,8 @@ Company/work related stuff.
           (isamert/shell-command
            :command "yarn jest --coverage --colors"
            :buffer-name (format "%s-test-cov" persp-last-persp-name)
-           :on-finish (lambda () (browse-url-default-browser cov-file))
-           :on-fail (lambda () (user-error ">> Tests are failed!")))
+           :on-finish (lambda (&rest _) (browse-url-default-browser cov-file))
+           :on-fail (lambda (&rest _) (user-error ">> Tests are failed!")))
         (browse-url-default-browser cov-file))))
 
   (defun ty/run-test-code-coverage-report ()
