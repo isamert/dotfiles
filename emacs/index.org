@@ -1246,10 +1246,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 * org-mode
 ** org-plus-contrib
 #+begin_src emacs-lisp
-  (use-package org-contrib)
-
   (use-package org
-    :defer 10
     :config
     (setq org-return-follow-links t)
     ;; ^ Open links with RET
@@ -1287,6 +1284,8 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 
     <<ob-http>>
     <<org-babel-configuration>>)
+
+  (use-package org-contrib)
 #+end_src
 
 ** Keybindings
