@@ -2412,6 +2412,12 @@ To sync it automatically:
       (kbd "&") (lambda () (interactive) (funcall browse-url-secondary-browser-function w3m-current-url)))
 
     (evil-leader/set-key "ew" #'w3m-goto-url)
+    (evil-define-key 'normal w3m-mode-map
+      (kbd "S") #'w3m-search
+      (kbd "J") #'w3m-next-buffer
+      (kbd "K") #'w3m-previous-buffer
+      (kbd "O") #'w3m-edit-url
+      (kbd "t") #'w3m-goto-url-new-session)
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
           '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (isamert/jira-view-ticket link)))
