@@ -221,23 +221,6 @@ After tangling all unit files, run this:
   systemctl enable syncthing
 #+end_src
 
-*** emacsd
-systemd unit for emacs daemon. It starts after ~graphical-session.target~ so that it correctly inherits  environment variablles.
-
-#+begin_src conf :tangle ~/.config/systemd/user/emacsd.service
-  [Unit]
-  Description=Emacs text editor
-  Documentation=info:emacs man:emacs(1) https://gnu.org/software/emacs/
-
-  [Service]
-  Type=forking
-  ExecStart=/usr/bin/emacs --daemon
-  ExecStop=/usr/bin/emacsclient --eval "(kill-emacs)"
-  Restart=on-failure
-
-  [Install]
-  WantedBy=graphical-session.target
-#+end_src
 ** Gnome
 #+begin_src bash :tangle ~/.scripts/gshell-eval-js
   dbus-send --print-reply --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"$*"
@@ -2560,6 +2543,24 @@ This file is just used for loading the configuration. The configuration is actua
   (let ((enable-local-variables :all)
         (vc-follow-symlinks t))
     (load-file "~/.emacs.d/index.el"))
+#+end_src
+
+*** emacsd
+systemd unit for emacs daemon. It starts after ~graphical-session.target~ so that it correctly inherits environment variablles.
+
+#+begin_src conf :tangle ~/.config/systemd/user/emacsd.service
+  [Unit]
+  Description=Emacs text editor
+  Documentation=info:emacs man:emacs(1) https://gnu.org/software/emacs/
+
+  [Service]
+  Type=forking
+  ExecStart=/usr/bin/emacs --daemon
+  ExecStop=/usr/bin/emacsclient --eval "(kill-emacs)"
+  Restart=on-failure
+
+  [Install]
+  WantedBy=graphical-session.target
 #+end_src
 
 ** Neovim
