@@ -2906,7 +2906,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
       (kbd "gl") 'avy-goto-line))
 #+END_SRC
 
-** vertico
+** vertico & mini-frame
 A nice, fast minibuffer narrowing framework. It works well with quite a lot of package.
 - =marginalia.el= brings annotations to completing-read, ie. it adds current keybinding of a command, summary of command to M-x.
 - =miniframe.el= shows all completing-read prompts in a nice mini popup frame.
@@ -2973,8 +2973,11 @@ Some shortcuts you can use on any vertico window:
     (setq mini-frame-show-parameters
           '((top . 0.15)
             (width . 0.70)
-            (left . 0.5))
-          mini-frame-color-shift-step 15)
+            (left . 0.5)
+            ;; https://github.com/minad/vertico/issues/115#issuecomment-973753577
+            ;; Not needed on emacs 29
+            (no-accept-focus . t)))
+    (setq mini-frame-color-shift-step 15)
 
     ;; Disable mini-frame while using some functions either that does
     ;; not work well with mini-frame or it doesn't make sense to use it
@@ -3079,7 +3082,7 @@ Some shortcuts you can use on any vertico window:
     ;; The following does not recurse as I like it to be
     ;; (project-remember-projects-under isamert/projects-root t)
     (setq project--list '())
-    (--each (--map (list 'vc 'Git it) (isamert/all-project-roots))
+    (--each (--map (cons 'vc it) (isamert/all-project-roots))
       (project-remember-project it t)))
 
   (run-with-timer 45 nil #'isamert/load-projects-list)
