@@ -1269,6 +1269,11 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (setq org-use-effective-time t)
     ;; ^ Make timestamp processing functions aware of the previous config
 
+
+    (setq org-fold-core-style 'overlays)
+    ;; ^ FIXME new default does not work well with other packages, until
+    ;; then I'm using the old default
+
     (add-to-list 'org-link-abbrev-alist '("imdb" . "https://www.imdb.com/title/%s"))
     ;; ^ More info: https://orgmode.org/manual/Link-Abbreviations.html
 
@@ -2915,6 +2920,7 @@ Some shortcuts you can use on any vertico window:
 - =M-{[,]}= goes {previous,next} group.
 - =M-m= cycles the marginalia detail level.
 - =M-a= brings up embark-act menu. See [[embark]].
+- =M-w= copy the current candidate.
 - =TAB= inserts the current candidate (into minibuffer).
 
 #+begin_src emacs-lisp
