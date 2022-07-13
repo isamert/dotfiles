@@ -221,21 +221,6 @@ After tangling all unit files, run this:
   systemctl enable syncthing
 #+end_src
 
-*** kmonad
-#+begin_src conf :tangle ~/.config/systemd/user/kmonad.service
-  [Unit]
-  Description=KMonad keyboard config
-
-  [Service]
-  Type=simple
-  Restart=always
-  RestartSec=3
-  ExecStart=/usr/bin/kmonad %h/.config/kmonad.kbd -l warn
-  Nice=-20
-
-  [Install]
-  WantedBy=default.target
-#+end_src
 *** emacsd
 systemd unit for emacs daemon. It starts after ~graphical-session.target~ so that it correctly inherits  environment variablles.
 
@@ -404,36 +389,106 @@ Some references for editing this configuration:
 - https://github.com/kmonad/kmonad/blob/master/src/KMonad/Keyboard/Keycode.hs
 - https://old.reddit.com/r/emacs/comments/oyzfz9/kmonad_and_the_power_of_infinite_leader_keys/
 
-#+begin_src kbd :tangle ~/.config/kmonad.kbd
-  ;; (deflayer symbols
-  ;;   _   _    _    _    _    _    _    _    _    _    _    _    _
-  ;;   _   _    _    _    _    _    _    _    _    _    _    _    _    _
-  ;;   _   _    _    _    _    _    _    _    _    _    _    _    _
-  ;;   _        _    _    _    _    _    _    _    _    _    _    _    _
-  ;;   _   _    _    _    _    _    _    _    _    _    _    _    _
-  ;;   _   _    _              _              _    _    _    _)
+*** Generic configuration
 
+#+begin_src kbd :tangle ~/.config/kmonad.kbd
   (defcfg
-    ;; For Linux
     input  <<<when-on(linux="(device-file \"/dev/input/by-id/usb-Microsoft_Microsoft®_2.4GHz_Transceiver_v9.0-event-kbd\")", darwin="(iokit-name)")>>>
     output <<<when-on(linux="(uinput-sink \"My KMonad output\" \"sleep 1 && setxkbmap -option compose:ralt\")", darwin="(kext)")>>>
     cmp-seq ralt    ;; Set the compose key to `RightAlt'
     cmp-seq-delay 5 ;; 5ms delay between each compose-key sequence press
-
-    ;; Comment this is if you want unhandled events not to be emitted
     fallthrough true
-
-    ;; Set this to false to disable any command-execution in KMonad
     allow-cmd true)
+#+end_src
 
+*** Unicode characters
+TODO :: use =xdotool key= for linux.
+
+#+begin_src kbd :tangle ~/.config/kmonad.kbd
+  (defalias
+    ;; Cool unicode chars
+    ¿ (cmd-button "apprint ¿")
+    λ (cmd-button "apprint λ")
+    ≤ (cmd-button "apprint ≤")
+    ≥ (cmd-button "apprint ≥")
+    ¬ (cmd-button "apprint ¬")
+    ✓ (cmd-button "apprint ✓")
+    ↑ (cmd-button "apprint ↑")
+    ↓ (cmd-button "apprint ↓")
+    ← (cmd-button "apprint ←")
+    → (cmd-button "apprint →")
+    ≠ (cmd-button "apprint ≠")
+
+    ;; Turkish chars
+    ş (cmd-button "apprint ş")
+    ğ (cmd-button "apprint ğ")
+    ü (cmd-button "apprint ü")
+    ı (cmd-button "apprint ı")
+    ö (cmd-button "apprint ö")
+    ç (cmd-button "apprint ç"))
+#+end_src
+
+**** apprint for macos
+This is a simple program for inserting given characters (including unicode) to currently open application. Taken from [[https://apple.stackexchange.com/questions/288536/is-it-possible-to-keystroke-special-characters-in-applescript/289046#289046][here]].
+
+#+begin_src objc :tangle ~/.cache/TypeChars.m
+  #import <Foundation/Foundation.h>
+
+  int main(int argc, const char * argv[]) {
+    @autoreleasepool {
+      if (argc > 1) {
+        NSString *theString = [NSString stringWithUTF8String:argv[1]];
+        NSUInteger len = [theString length];
+        NSUInteger n, i = 0;
+        CGEventRef keyEvent = CGEventCreateKeyboardEvent(nil, 0, true);
+        unichar uChars[20];
+        while (i < len) {
+          n = i + 20;
+          if (n>len){n=len;}
+          [theString getCharacters:uChars range:NSMakeRange(i, n-i)];
+          CGEventKeyboardSetUnicodeString(keyEvent, n-i, uChars);
+          CGEventPost(kCGHIDEventTap, keyEvent); // key down
+          CGEventSetType(keyEvent, kCGEventKeyUp);
+          CGEventPost(kCGHIDEventTap, keyEvent); // key up (type 20 characters maximum)
+          CGEventSetType(keyEvent, kCGEventKeyDown);
+          i = n;
+          [NSThread sleepForTimeInterval:0.004]; // wait 4/1000 of second, 0.002 it's OK on my computer, I use 0.004 to be safe, increase it If you still have issues
+        }
+        CFRelease(keyEvent);
+      }
+    }
+    return 0;
+  }
+#+end_src
+
+Run this to install it:
+
+#+begin_src sh
+  cd ~/.cache
+  clang -framework Foundation -framework ApplicationServices TypeChars.m -l objc -o apprint
+  cp ./apprint ~/.local/bin/apprint
+#+end_src
+
+*** Coding macros
+
+#+begin_src kbd :tangle ~/.config/kmonad.kbd
+  (defalias
+    ;; Fat arrow
+    fa  #(= >)
+    ;; light arrow
+    la  #(- >))
+#+end_src
+
+*** Linux config
+
+#+begin_src kbd :tangle (when-linux "~/.config/kmonad.kbd")
   (defsrc
     esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
     grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
     tab  q    w    e    r    t    y    u    i    o    p    [    ]
     caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
     lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
-    lctl lmet lalt           spc            ralt rmet cmp  rctl)
-
+    fn   lctl lmet lalt           spc            ralt rmet cmp  rctl)
 
   (deflayer main
     esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
@@ -441,95 +496,86 @@ Some references for editing this configuration:
     tab  q    w    e    r    t    y    u    i    o    p    [    ]
     @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
     lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
-    lctl lmet lalt           spc            @sym rmet cmp rctl)
+    fn   lctl lmet lalt           spc            @sym rmet cmp rctl)
+#+end_src
+
+*** Mac config
+#+begin_src kbd :tangle (when-darwin "~/.config/kmonad.kbd")
+  (defsrc
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
+    fn   lctl lmet lalt           spc            rmet ralt  cmp  rctl)
+
+  (deflayer main
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
+    lctl fn   lalt lmet           spc            @sym cmp  rmet rctl)
+#+end_src
+
+*** Generic layers
+
+#+begin_src kbd :tangle ~/.config/kmonad.kbd
+  (defalias
+    sym (layer-toggle symbols)
+    hyp (tap-next esc (layer-toggle hyper)))
 
   (deflayer symbols
     _   _    _    _    _    _    _    _    _    _    _    _    _
     _   {    }    _    _    _    _    _    _    _    _    _    @≠   _
-    _   @¿   @↑   _    @la  @✓   _    ü    ı    ö    _    \(   \)
-    _   ←    ş    →    @fa  ğ    left down up   rght _    _    _    _
-    _   _    @↓   _    ç    _    @λ   @¬   _    @≤   @≥   _    _
-    _   _    _              _              _    _    _    _)
+    _   @¿   @↑   _    @la  @✓   _    @ü   @ı   @ö   _    \(   \)
+    _   @←   @ş   @→   @fa  @ğ   left down up   rght _    _    _    _
+    _   _    @↓   _    @ç   _    @λ   @¬   _    @≤   @≥   _    _
+    _   _    _    _              _              _    _    _    _)
+
+  (defalias
+    pret C-M-A-S-ret
+    pspc C-M-A-S-spc
+    ptb  C-M-A-S-tab
+    <<<kmonad_generate_aliases_for_hyper_layer()>>>)
 
   ;; Instead of utilizing Hyper key for creating shortcuts like I did
   ;; with my Xmodmap configuration, I use C-M-A-S as the so called hyper
   ;; key. This makes the key behave exactly same on Linux and Mac.
-
   (deflayer hyper
     _    _    _    _    _    _    _    _    _    _    _    _    _
     @p`  @p1  @p2  @p3  @p4  @p5  @p6  @p7  @p8  vold volu @p-  @p=  _
-    @p\t @pq  @pw  @pe  @pr  @pt  @py  @pu  @pi  @po  @pp  @p[  @p]
-    _    @pa  @ps  @pd  @pf  @pg  @ph  @pj  @pk  @pl  @p;  @p'  @p\  @pRE
+    @ptb @pq  @pw  @pe  @pr  @pt  @py  @pu  @pi  @po  @pp  @p[  @p]
+    _    @pa  @ps  @pd  @pf  @pg  @ph  @pj  @pk  @pl  @p;  @p'  @p\  @pret
     _    @p\  @pz  @px  @pc  @pv  @pb  @pn  @pm  @p,  @p.  @p/  _
-    _    _    _              @pSP           _    _    _    _)
+    _    _    _    _              @pspc          _    _    _    _)
+#+end_src
 
+#+name: kmonad_generate_aliases_for_hyper_layer
+#+begin_src emacs-lisp
+  (string-join
+   (--map
+    (let ((chr (s-downcase (char-to-string it))))
+      (format "p%s C-M-A-S-%s" chr chr))
+    (--remove (-contains? '(?\( ?_ ?\)) it)
+              (number-sequence ?! ?`)))
+   "\n")
+#+end_src
 
-  (defalias
-    sym (layer-toggle symbols)
-    hyp (tap-next esc (layer-toggle hyper))
-    fa  #(= >)      ;; Fat arrow
-    la  #(- >)      ;; light arrow
+*** systemd unit
+#+begin_src conf :tangle (when-linux "~/.config/systemd/user/kmonad.service")
+  [Unit]
+  Description=KMonad keyboard config
 
-    p` C-M-A-S-`
-    p1 C-M-A-S-1
-    p2 C-M-A-S-2
-    p3 C-M-A-S-3
-    p4 C-M-A-S-4
-    p5 C-M-A-S-5
-    p6 C-M-A-S-6
-    p7 C-M-A-S-7
-    p8 C-M-A-S-8
-    p9 C-M-A-S-9
-    p0 C-M-A-S-0
-    p- C-M-A-S--
-    p= C-M-A-S-=
-    p\t C-M-A-S-tab
-    pq C-M-A-S-q
-    pw C-M-A-S-w
-    pe C-M-A-S-e
-    pr C-M-A-S-r
-    pt C-M-A-S-t
-    py C-M-A-S-y
-    pu C-M-A-S-u
-    pi C-M-A-S-i
-    po C-M-A-S-o
-    pp C-M-A-S-p
-    p[ C-M-A-S-[
-    p] C-M-A-S-]
-    p\ C-M-A-S-\
-    pa C-M-A-S-a
-    ps C-M-A-S-s
-    pd C-M-A-S-d
-    pf C-M-A-S-f
-    pg C-M-A-S-g
-    ph C-M-A-S-h
-    pj C-M-A-S-j
-    pk C-M-A-S-k
-    pl C-M-A-S-l
-    p; C-M-A-S-;
-    p' C-M-A-S-'
-    pRE C-M-A-S-ret
-    pz C-M-A-S-z
-    px C-M-A-S-x
-    pc C-M-A-S-c
-    pv C-M-A-S-v
-    pb C-M-A-S-b
-    pn C-M-A-S-n
-    pm C-M-A-S-m
-    p, C-M-A-S-,
-    p. C-M-A-S-.
-    p/ C-M-A-S-/
-    pSP C-M-A-S-spc
+  [Service]
+  Type=simple
+  Restart=always
+  RestartSec=3
+  ExecStart=/usr/bin/kmonad %h/.config/kmonad.kbd -l warn
+  Nice=-20
 
-    ¿  #(ralt z q)
-    λ  #(ralt z l)
-    ≤  #(ralt z k)
-    ≥  #(ralt z b)
-    ¬  #(ralt z n)
-    ✓  #(ralt z t)
-    ↑  #(ralt z u)
-    ↓  #(ralt z d)
-    ≠  #(ralt z e))
+  [Install]
+  WantedBy=default.target
 #+end_src
 
 * Window management/DE
