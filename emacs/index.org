@@ -1312,7 +1312,6 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     "or"  #'org-mode-restart
     "os"  #'org-schedule
     "od"  #'org-deadline
-    "on"  #'org-toggle-narrow-to-subtree
     "ov"  #'org-babel-expand-src-block
     "oq"  #'isamert/org-tree-to-indirect-buffer
     "oQ"  #'isamert/org-link-to-indirect-buffer
@@ -4206,7 +4205,7 @@ automatically by the usage of =M-q=.
     (setq fill-column 80)
   #+end_src
 
-** Spell checking & dictionaries & translation
+** Spell checking (flyspell) & dictionaries & translation
 - Use =flyspell-mode= to start spell checking.
 - Use =ispell-change-dictonary= to change dictionaries.
 - ~z=~ or ~zw~ to correct current spelling mistake.
@@ -7918,6 +7917,21 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
            (message "Archiving failed: '%s'. Command is copied to your kill ring." url)
            (kill-new command))
          (and on-fail (funcall on-fail 'abnormal-exit))))))
+#+end_src
+** isamert/narrow-dwim
+#+begin_src emacs-lisp
+  (evil-leader/set-key "n" #'isamert/narrow-dwim)
+
+  (defun isamert/narrow-dwim ()
+    "Smart narrowing."
+    (interactive)
+    ;; TODO narrow to defun for tree-sitter languages (at least for
+    ;; typescript and javascript)
+    (cond
+     ((use-region-p) (narrow-to-region (region-beginning) (region-end)))
+     ((eq? major-mode 'org-mode) (org-narrow-to-subtree))
+     ((eq? major-mode 'markdown-mode) (markdown-narrow-to-subtree))
+     ((eq? major-mode 'emacs-lisp-mode) (narrow-to-defun))))
 #+end_src
 ** isamert/meme-downloader
 #+begin_src emacs-lisp
