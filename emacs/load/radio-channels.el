@@ -38,6 +38,7 @@
     ("SomaFM Specials"                   . "https://somafm.com/specials.pls")
 
     ("TRT Nagme" . "https://radio-trtnagme.live.trt.com.tr/master_128.m3u8")
+    ("Avrasya  Turk" . "https://sslyayin.netyayin.net:10909/stream?icy=http")
 
     ("radcap.ru // ambient"              . "http://79.111.119.111:8002/ambient")
     ("radcap.ru // anime"                . "http://79.111.119.111:8002/anime")
