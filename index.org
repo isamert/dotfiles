@@ -385,36 +385,52 @@ Some references for editing this configuration:
 #+end_src
 
 *** Unicode characters
-TODO :: use =xdotool key= for linux.
+Here I use an external program (~xtype~, which is explained below) to type unicode characters instead of utilizing XCompose as suggested by KMonad. Managing, making it running is hard with XCompose. Also it does not work on Mac.
 
 #+begin_src kbd :tangle ~/.config/kmonad.kbd
   (defalias
     ;; Cool unicode chars
-    ¿ (cmd-button "apprint ¿")
-    λ (cmd-button "apprint λ")
-    ≤ (cmd-button "apprint ≤")
-    ≥ (cmd-button "apprint ≥")
-    ¬ (cmd-button "apprint ¬")
-    ✓ (cmd-button "apprint ✓")
-    ↑ (cmd-button "apprint ↑")
-    ↓ (cmd-button "apprint ↓")
-    ← (cmd-button "apprint ←")
-    → (cmd-button "apprint →")
-    ≠ (cmd-button "apprint ≠")
+    ¿ (cmd-button "xtype ¿")
+    λ (cmd-button "xtype λ")
+    ≤ (cmd-button "xtype ≤")
+    ≥ (cmd-button "xtype ≥")
+    ¬ (cmd-button "xtype ¬")
+    ✓ (cmd-button "xtype ✓")
+    ↑ (cmd-button "xtype ↑")
+    ↓ (cmd-button "xtype ↓")
+    ← (cmd-button "xtype ←")
+    → (cmd-button "xtype →")
+    ≠ (cmd-button "xtype ≠")
 
     ;; Turkish chars
-    ş (cmd-button "apprint ş")
-    ğ (cmd-button "apprint ğ")
-    ü (cmd-button "apprint ü")
-    ı (cmd-button "apprint ı")
-    ö (cmd-button "apprint ö")
-    ç (cmd-button "apprint ç"))
+    ş (cmd-button "xtype ş")
+    ğ (cmd-button "xtype ğ")
+    ü (cmd-button "xtype ü")
+    ı (cmd-button "xtype ı")
+    ö (cmd-button "xtype ö")
+    ç (cmd-button "xtype ç"))
 #+end_src
 
-**** apprint for macos
+**** xtype for linux
+This uses ~pynput~ python package (which can be installed with ~pip install pynput~ or with aur ~trizen -S python-pynput~). The alternative is using ~xdotool type~ (or ~ydotool type~) but they both fail on unicode inputs, they simply skip them. ~pynput~ works quite well. I found it [[https://superuser.com/a/1669624/902059][here]].
+
+THIS ALSO WORKS FOR MAC. But I decided to not to use it for two reasons:
+- It's a bit slow on Mac.
+- It's a bit hard to manage python dependencies on Mac.
+
+#+begin_src python :tangle (when-linux "~/.scripts/xtype")
+  #!/usr/bin/env python
+
+  import sys
+  from pynput.keyboard import Controller
+
+  Controller().type(' '.join(sys.argv[1:]))
+#+end_src
+
+**** xtype for macos
 This is a simple program for inserting given characters (including unicode) to currently open application. Taken from [[https://apple.stackexchange.com/questions/288536/is-it-possible-to-keystroke-special-characters-in-applescript/289046#289046][here]].
 
-#+begin_src objc :tangle ~/.cache/TypeChars.m
+#+begin_src objc :tangle (when-darwin "~/.cache/TypeChars.m")
   #import <Foundation/Foundation.h>
 
   int main(int argc, const char * argv[]) {
@@ -448,8 +464,8 @@ Run this to install it:
 
 #+begin_src sh
   cd ~/.cache
-  clang -framework Foundation -framework ApplicationServices TypeChars.m -l objc -o apprint
-  cp ./apprint ~/.local/bin/apprint
+  clang -framework Foundation -framework ApplicationServices TypeChars.m -l objc -o xtype
+  cp ./xtype ~/.local/bin/xtype
 #+end_src
 
 *** Coding macros
