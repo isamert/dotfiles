@@ -562,6 +562,13 @@ This function is for doing easy REST calls and it uses plists for everything bec
     `(let* ((browse-url-handlers nil)
             (browse-url-browser-function browse-url-secondary-browser-function))
        ,@body))
+
+  (defun isamert/json-encode-and-show (obj)
+    "Show given elisp OBJ as pretty printed JSON."
+    (switch-to-buffer-other-window (get-buffer-create "*raw-pretty*"))
+    (insert (json-encode obj))
+    (json-pretty-print-buffer)
+    (json-mode))
 #+end_src
 *** Other
 #+begin_src emacs-lisp
@@ -5813,9 +5820,24 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defun isamert/git-user-name ()
     "Return user name."
     (thread-last
-        (isamert/git-get-config "user.email")
+      (isamert/git-get-config "user.email")
       (s-split "@")
       (car)))
+
+  (defun isamert/git-clone (url dir)
+    "Clone URL to DIR."
+    (interactive
+     (list
+      (read-string "URL: ")
+      (read-directory-name "Directory to clone in: " "~/Workspace/")))
+    (let ((default-directory dir))
+      (isamert/shell-command
+       :command (format "git clone '%s'" url)
+       :switch t
+       :on-finish
+       (lambda (&rest _) (alert "Cloning finished!"))
+       :on-fail
+       (lambda (&rest _) (alert "Cloning failed!")))))
 
   (defun isamert/git-remote-homepage ()
     (let ((remote-url (isamert/git-get-config "remote.origin.url")))
@@ -5876,32 +5898,50 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (cl-defun isamert/gitlab-request
       (endpoint
        &rest params
-       &key (req-type "GET") (req-headers '()) (req-data nil)
+       &key (req-type "GET") (req-headers '()) (req-data nil) (collect-all? nil)
        &allow-other-keys)
+    "Do a gitlab request.
+  When COLLECT-ALL is non-nil, do a paged request and collect all
+  results in a list and return them."
+    ;; Remove request related items from params list
+    (dolist (key '(:req-type :req-headers :req-data :collect-all?))
+      (cl-remf params key))
+
     (let (json
+          (allitems '())
+          (lastid t)
+          (per-page 100)
           (json-object-type 'alist)
           (json-array-type #'list)
           (json-key-type 'symbol))
-
-      ;; Remove request related items from params list
-      (dolist (key '(:req-type :req-headers :req-data))
-        (cl-remf params key))
-
-      (request
-        (thread-last (format "%s/api/v4/%s" isamert/gitlab-host endpoint)
-                     (s-replace "#{group}" (url-hexify-string isamert/gitlab-group))
-                     (s-replace "#{project}" (isamert/gitlab-project-path)))
-        :type req-type
-        :headers `((Authorization . ,(format "Bearer %s" isamert/gitlab-token)) ,@req-headers)
-        :parser #'json-read
-        :success (cl-function
-                  (lambda (&key data &allow-other-keys)
-                    (setq json data)))
-        :sync t
-        :data (transient-plist-to-alist req-data)
-        ;; TODO Maybe roll my own plist-to-alist function
-        :params (transient-plist-to-alist params))
-      json))
+      (while lastid
+        (request
+          (thread-last (format "%s/api/v4/%s" isamert/gitlab-host endpoint)
+                       (s-replace "#{group}" (url-hexify-string isamert/gitlab-group))
+                       (s-replace "#{project}" (isamert/gitlab-project-path)))
+          :type req-type
+          :headers `((Authorization . ,(format "Bearer %s" isamert/gitlab-token)) ,@req-headers)
+          :parser #'json-read
+          :success (cl-function
+                    (lambda (&key data &allow-other-keys)
+                      (setq json data)
+                      (when collect-all?
+                        (setq allitems `(,@allitems ,@json)))))
+          :sync t
+          :data (transient-plist-to-alist req-data)
+          ;; TODO Maybe roll my own plist-to-alist function
+          :params `(,@(when collect-all?
+                        `(("per_page" . ,per-page)
+                          ("order_by" . "id")
+                          ("sort" . "asc")
+                          ("pagination" . "keyset")))
+                    ,@(when (and collect-all? (not (eq lastid t)))
+                        `(("id_after" . ,lastid)))
+                    ,@(transient-plist-to-alist params)))
+        (setq lastid
+              (when (and collect-all? (length= json per-page))
+                (alist-get 'id (-last-item json)))))
+      (if collect-all? allitems json)))
 
   (defun isamert/gitlab-list-current-branch-merge-requests ()
     "List all open MRs that the source branch is the current branch."
@@ -5927,21 +5967,31 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
           :scope 'assigned_to_me
           :state 'opened))))
 
-  (defun isamert/gitlab-list-group-merge-requests ()
-    "List all open MRs that belongs to `isamert/gitlab-group'."
+  (defun isamert/gitlab-list-group-merge-requests (&optional group)
+    "List all open MRs that belongs to GROUP.
+  If GROUP is omitted, `isamert/gitlab-group' is used."
     (interactive)
     (isamert/gitlab--select-mr-and-apply-action
      (isamert/gitlab-request
-      "groups/#{group}/merge_requests"
+      (format "groups/%s/merge_requests" (or group "#{group}"))
       :scope 'all
       :state 'opened)))
 
-  (defun isamert/gitlab-create-merge-request ()
-    "Create an MR interactively."
+  (defun isamert/gitlab-list-project-merge-requests (&optional project)
+    "List all open MRs that belongs to PROJECT.
+  If it's omitted,currently open project is used."
+    (interactive)
+    (isamert/gitlab--select-mr-and-apply-action
+     (isamert/gitlab-request
+      (format "projects/%s/merge_requests" (or project "#{project}"))
+      :scope 'all)))
+
+  (defun isamert/gitlab-create-merge-request (&optional project)
+    "Create an MR interactively for PROJECT."
     (interactive)
     (let ((result
            (isamert/gitlab-request
-            "projects/#{project}/merge_requests"
+            (format "projects/%s/merge_requests" (or project "#{project}"))
             :req-type "POST"
             :req-data (list :source_branch (completing-read
                                             "Source branch: "
@@ -5961,15 +6011,6 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (--each isamert/gitlab-after-mr-create-functions
         (funcall it result))
       (isamert/gitlab-open-web-url result)))
-
-  (defun isamert/gitlab-select-project ()
-    (interactive)
-    (isamert/gitlab--select-project-and-apply-action
-     (isamert/gitlab-request
-      "groups/#{group}/projects"
-      :with_shared 'false
-      :include_subgroups 'true
-      :per_page 100)))
 
   (defun isamert/gitlab-open-web-url (it)
     (let ((url (alist-get 'web_url it)))
@@ -5995,9 +6036,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   ;;
 
   (defun isamert/gitlab--mr-format-title (mr)
-    (format "%s, [%s], by %s"
-            (propertize (alist-get 'title mr)
-                        'face 'bold)
+    (format "[%-15s | %-6s => %-15s] %s"
             (propertize
              (->>
               (alist-get 'web_url mr)
@@ -6005,10 +6044,16 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
               (s-split "/-/merge_requests/")
               (car)
               (s-split "/")
-              (-last-item))
+              (-last-item)
+              (s-truncate 15))
              'face '(:weight thin))
-            (propertize (alist-get 'name (alist-get 'author mr))
-                        'face 'italic)))
+            (propertize (alist-get 'state mr)
+                        'face '(:weight thin :slant italic))
+            (propertize (s-truncate 15 (alist-get 'name (alist-get 'author mr)))
+                        'face 'italic)
+            (propertize (alist-get 'title mr)
+                        'face 'bold)))
+
 
   (defun isamert/gitlab--select-mr-and-apply-action (mrs)
     (let ((mr-infos (--map
@@ -6024,23 +6069,40 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (with-completing-read-exact-order
      (let ((action (completing-read
                     "Select an action: "
-                    '("Open page" "Copy url" "Rebase" "Mark as ready"))))
+                    '("Open page" "Copy url" "Rebase" "Mark as ready" "Raw"))))
        (pcase action
          ("Open page" (isamert/gitlab-open-web-url mr))
          ("Copy url" (kill-new (alist-get 'web_url mr)))
          ("Mark as ready" (isamert/gitlab-mark-mr-as-ready mr))
-         ("Rebase" (isamert/gitlab-rebase-merge-request mr))))))
+         ("Rebase" (isamert/gitlab-rebase-merge-request mr))
+         ("Raw" (isamert/json-encode-and-show mr))))))
 
-  ;; TODO actions
   (defun isamert/gitlab--select-project-and-apply-action (projects)
-    (let ((project-alist (--map
-                          (cons (alist-get 'name_with_namespace it) it)
-                          projects)))
-      (completing-read
-       "Project: "
-       (--map
-        (alist-get 'name_with_namespace it)
-        projects))))
+    (let* ((project-alist (--map
+                           (cons (alist-get 'name_with_namespace it) it)
+                           projects))
+           (selected (isamert/alist-completing-read
+                      "Project: "
+                      project-alist))
+           (action (completing-read "Act: " '("Clone" "Open" "List merge requests"))))
+      (let-alist selected
+        (pcase action
+          ("Clone"
+           (isamert/git-clone
+            .ssh_url_to_repo
+            (read-directory-name "Dir to clone in: " "~/Workspace/")))
+          ("Open" (with-default-browser (browse-url .web_url)))
+          ("List merge requests" (isamert/gitlab-list-project-merge-requests .id))))))
+
+    (defun isamert/gitlab-select-project ()
+      (interactive)
+      (isamert/gitlab--select-project-and-apply-action
+       (isamert/gitlab-request
+        "groups/#{group}/projects"
+        :with_shared 'false
+        :include_subgroups 'true
+        :per_page 100
+        :collect-all? t)))
 
   (defun isamert/gitlab-watch-pipeline (url &optional rerun?)
     "Start watching pipeline URL status.
@@ -6375,7 +6437,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
         (let* ((action
                 (completing-read
                  (format "Act on %s: " (s-truncate 20 .fields.summary))
-                 '("Open" "View" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Show all as JSON" "[Cancel]"))))
+                 '("Open" "View" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Raw" "[Cancel]"))))
           (pcase action
             ("Open"
              (isamert/open-jira-issue .key)
@@ -6400,11 +6462,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
              (isamert/jira-change-issue-status .key))
             ("Insert as task"
              (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
-            ("Show all as JSON"
-             (switch-to-buffer-other-window (get-buffer-create (format "*jira:%s*" .key)))
-             (insert (json-encode issue))
-             (json-pretty-print-buffer)
-             (json-mode)
+            ("Raw"
+             (isamert/json-encode-and-show issue)
              (cl-return))
             ("[Cancel]"
              (cl-return))))))))
@@ -7541,13 +7600,13 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
        (list
         :command command
         :on-finish
-        (lambda ()
+        (lambda (&rest _)
           (let ((msg (format ">> \"%s\" finished successfully." command)))
             (message msg)
             (when (not (frame-focus-state))
               (alert msg))))
         :on-fail
-        (lambda ()
+        (lambda (&rest _)
           (let ((msg (format ">> \"%s\" FAILED." command)))
             (message msg)
             (when (not (frame-focus-state))
