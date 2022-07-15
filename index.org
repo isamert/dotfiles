@@ -591,6 +591,8 @@ Run this to install it:
 #+end_src
 
 *** systemd unit
+Using ~WantedBy=graphical-session.target~ so that KMonad can access environment variables (specifically updated PATH variable so that it can call binaries/scripts from there).
+
 #+begin_src conf :tangle (when-linux "~/.config/systemd/user/kmonad.service")
   [Unit]
   Description=KMonad keyboard config
@@ -603,7 +605,7 @@ Run this to install it:
   Nice=-20
 
   [Install]
-  WantedBy=default.target
+  WantedBy=graphical-session.target
 #+end_src
 
 * Window management/DE
