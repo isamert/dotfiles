@@ -2270,7 +2270,9 @@ The following script opens a FZF popup and lets you select a window in all sessi
 #+begin_src bash :tangle ~/.scripts/tmux-switch
   #!/bin/bash
 
-  LIST_DATA="#{window_name} #{pane_title} #{pane_current_path} #{pane_current_command}"
+  # Change LIST_DATA as you wish and it'll continue to work as
+  # TARGET_SPEC handles the real information retrieval
+  LIST_DATA="#{session_name}/#{window_name} [[#{pane_title}]]"
   FZF_COMMAND="fzf-tmux -p --delimiter=: --with-nth 4 --color=hl:2"
 
   TARGET_SPEC="#{session_name}:#{window_id}:#{pane_id}:"
