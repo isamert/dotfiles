@@ -1403,10 +1403,13 @@ This is the global keybinding manager.
   commands="blueman-tray":"nm-applet":"kill -9 -1":"shutdown now"
 #+end_src
 * Alacritty terminal
+See [[https://github.com/alacritty/alacritty/blob/master/alacritty.yml][config documentation]].
+
 #+begin_src yaml :tangle ~/.config/alacritty.yml
   window:
     dynamic_title: true
     opacity: 0.8
+    decorations: none
 
   font:
     normal:
@@ -1414,7 +1417,7 @@ This is the global keybinding manager.
     size: <<<when-on(linux="12.5", darwin="14")>>>
 
   draw_bold_text_with_bright_colors: true
-  live_config_reload: true
+  live_config_reload: false
 
   shell:
     program: zsh
