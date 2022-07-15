@@ -221,6 +221,35 @@ After tangling all unit files, run this:
   systemctl enable syncthing
 #+end_src
 
+** External monitor brightness
+- Install ~ddcutil~
+- Enable automatic loading of ~i2c-dev~ module with systemd.
+  #+begin_src conf :tangle (when-linux "/sudo::/etc/modules-load.d/i2c-dev.conf")
+    i2c-dev
+  #+end_src
+- Add your user to the i2c group.
+  #+begin_src sh
+    sudo usermod -aG i2c $USER
+  #+end_src
+  - The group should've been created by the ~ddcutil~ package. If not, do this first:
+    #+begin_src sh
+      sudo groupadd --system i2c
+    #+end_src
+- Give permission to i2c user for ~/dev/i2c-*~ devices:
+  #+begin_src sh
+    sudo cp /usr/share/ddcutil/data/45-ddcutil-i2c.rules /etc/udev/rules.d
+    # OR do this, if the file does not exist:
+    echo 'KERNEL=="i2c-[0-9]*", GROUP="i2c"' >> /etc/udev/rules.d/10-i2c-user-permissions.rules
+  #+end_src
+
+Now you should be able to do:
+#+begin_src sh
+  ddcutil getvcp 10 # Return current brightness value
+  ddcutil setvcp 10 50 # Set the current brightness value
+#+end_src
+
+Also see this gnome extension and it's README for further information: https://github.com/daitj/gnome-display-brightness-ddcutil
+
 ** Gnome
 #+begin_src bash :tangle ~/.scripts/gshell-eval-js
   dbus-send --print-reply --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"$*"
