@@ -54,6 +54,7 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   ;; https://github.com/emacs-lsp/lsp-mode#performance
 
   (setq package-enable-at-startup nil)
+  (setq-default lexical-binding 'lv)
 
   (setq read-process-output-max (* 1024 1024))
   ;; ^ Better than default
@@ -6669,8 +6670,11 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
   (defun isamert/signal-sync-message-received-handler (ts source receiver _ msg attchs)
     (message ">> [signal] sender=%s, receiver=%s, msg=%s, attach=%s" source receiver msg attchs)
     (when (and (string= isamert/my-phone-number source)
-               (string= receiver
-                        (alist-get 'uuid (json-read-file (expand-file-name (format "~/.local/share/signal-cli/data/%s" isamert/my-phone-number))))))
+               (-contains?
+                (--map (alist-get 'uuid it) (alist-get 'accounts (json-read-file
+                                                                  (expand-file-name "~/.local/share/signal-cli/data/accounts.json"))))
+                receiver
+                ))
       (cond
        ((s-prefix? "run" msg)
         (isamert/signal-send-note-to-myself
@@ -8004,9 +8008,9 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
     ;; typescript and javascript)
     (cond
      ((use-region-p) (narrow-to-region (region-beginning) (region-end)))
-     ((eq? major-mode 'org-mode) (org-narrow-to-subtree))
-     ((eq? major-mode 'markdown-mode) (markdown-narrow-to-subtree))
-     ((eq? major-mode 'emacs-lisp-mode) (narrow-to-defun))))
+     ((eq major-mode 'org-mode) (org-narrow-to-subtree))
+     ((eq major-mode 'markdown-mode) (markdown-narrow-to-subtree))
+     ((eq major-mode 'emacs-lisp-mode) (narrow-to-defun))))
 #+end_src
 ** isamert/meme-downloader
 #+begin_src emacs-lisp

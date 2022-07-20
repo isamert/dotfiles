@@ -2454,7 +2454,7 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
 #+begin_src conf :tangle ~/.config/ranger/rc.conf
   set confirm_on_delete never
   set preview_images true
-  set preview_images_method <<<when-on(linux="w3m", darwin="iterm2")>>>
+  set preview_images_method <<<when-on(linux="ueberzug", darwin="iterm2")>>>
   set draw_borders both
   set dirname_in_tabs true
   set update_tmux_title false
