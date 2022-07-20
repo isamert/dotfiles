@@ -179,7 +179,7 @@ This is the global keybinding manager for OSX. [[https://github.com/koekeishiya/
   hyper - i : <<<sh("which emacsclient")>>> --eval "(isamert/globally (isamert/yankpad-copy-snippet))"
   hyper - o : <<<sh("which emacsclient")>>> --eval "(isamert/globally (isamert/yankpad-copy-snippet t))"
   hyper - p : <<<sh("which emacsclient")>>> --eval "(isamert/globally (isamert/password-act))"
-  hyper - 7 : <<<sh("which osascript")>>> -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
+  hyper - y : <<<sh("which osascript")>>> -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
   hyper - return : <<<sh("which alacritty")>>>
 #+end_src
 
