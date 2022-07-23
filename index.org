@@ -3283,7 +3283,7 @@ You need to install =vim-plug= to be able to install vim extensions.
 I want to redirect some websites to their better alternatives (for example twitter to nitter so that I can read twitter without logging in).
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  autocmd DocStart .*twitter.com js tri.excmds.urlmodify("-t", "twitter.com", "nitter.42l.fr")
+  autocmd DocStart .*twitter.com js tri.excmds.urlmodify("-r", /(mobile\.)?twitter\.com/, "nitter.42l.fr")
   autocmd DocStart .*www.reddit.com js tri.excmds.urlmodify("-t", "www", "old")
 #+end_src
 
