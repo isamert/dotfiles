@@ -735,16 +735,6 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
     '(eshell-mode-hook term-mode-hook vterm-mode-hook))
 #+end_src
 
-** Hide title bar
-Following successfully hides title bar in GNOME.
-
-#+begin_src emacs-lisp
-  (pcase system-type
-    ('gnu/linux (add-to-list 'default-frame-alist '(undecorated . t)))
-    ('darwin 'this-does-not-work-on-darwin))
-
-#+end_src
-
 ** Fix Gnome/Mutter child frame resizing problem
 There is a problem under Mutter which causes child frames to not resize automatically. Following makes it better:
 
