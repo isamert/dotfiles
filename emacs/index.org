@@ -8000,23 +8000,26 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
 #+end_src
 ** isamert/meme-downloader
 #+begin_src emacs-lisp
-  (defun isamert/meme-downloader (url)
+  (defun isamert/meme-downloader (url &optional file-title)
     (interactive "sURL: ")
     (let* ((title
-            (thread-last
-              url
-              isamert/url-get-title
-              isamert/string-url-case
-              s-downcase))
+            (or file-title
+                (s-trim
+                 (thread-last
+                   url
+                   isamert/url-get-title
+                   isamert/string-url-case
+                   s-downcase))))
            (dir (expand-file-name "~/Documents/memes"))
            (default-directory dir)
            (cmd (format "yt-dlp --output '%s.%%(ext)s' %s" title url)))
+      (message "isamert/meme-downloader :: %s" cmd)
       (isamert/shell-command
        :command cmd
        :switch nil
        :on-finish
        (lambda (output &rest _)
-         (if-let* ((matches (or (s-match "^\\[Merger\\] Merging formats into \"\\(.*\\)\"" output)
+         (if-let* ((matches (or (s-match "^\\[download\\] Destination: \\(.*\\)" output)
                                 (s-match "\\[download\\] \\(.*\\) has already been downloaded" output)))
                    (fname (nth 1 matches)))
              (progn

@@ -3219,6 +3219,7 @@ You need to install =vim-plug= to be able to install vim extensions.
   command copyimageurl composite hint -pipe img src | yank
   command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`<<<sh("which emacsclient")>>> --eval '(isamert/gitlab-watch-pipeline "${JS_ARG}")'`)
   command meme-downloader withUrl js -p tri.native.run(`<<<sh("which emacsclient")>>> --eval '(isamert/meme-downloader "${JS_ARG}")'`)
+  command meme-downloader-with-title withUrl js -p tri.native.run(`<<<sh("which emacsclient")>>> --eval '(isamert/meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
 
   " quick search
   set searchurls.g https://www.google.com/search?q=%s
