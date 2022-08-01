@@ -2432,6 +2432,7 @@ To sync it automatically:
             (".*reddit.com.*comments.*" . (lambda (link &rest _) (reddigg-view-comments link)))
             (".*stackoverflow.com.*" . (lambda (link &rest _) (isamert/open-stackoverflow-link link)))
             (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv-play link)))
+            (".*\\.slack.com/archives" . (lambda (link &rest _) (isamert/slack-open-link link)))
             ("." . w3m-goto-url))))
 #+end_src
 ** eshell
@@ -4026,6 +4027,21 @@ Simple mode for editing =~/.Xmodmap= file.
                     (message (slack-room-find-message room (slack-get-ts))))
         (slack-message-to-string message team)))
 
+  (defun isamert/slack-open-link (link)
+    (interactive
+     (list
+      (read-string "Link: " (thing-at-point 'url))))
+    (let* ((m (s-match
+               "https://\\(\\w+\\).slack.com/archives/\\(\\w+\\)/p\\(\\w+\\).*\\(\\?thread_ts=\\(\\w+\\)\\)?"
+               link))
+           (team (--find (string= (oref it domain) (nth 1 m))
+                         (hash-table-values slack-teams-by-token)))
+           (room (slack-room-find (nth 2 m) team))
+           (message-ts (number-to-string (/ (string-to-number (nth 3 m)) 1000000.0)))
+           (message (slack-room-find-message room message-ts))
+           (thread (nth 4 m)))
+      (isamert/slack--open-message-or-thread (list :message message :room room :team team))
+      thread))
 
   ;;
   ;; Utils/internals
