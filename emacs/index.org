@@ -3873,12 +3873,12 @@ Simple mode for editing =~/.Xmodmap= file.
 
     (evil-set-initial-state 'slack-mode-map 'normal)
 
+    (evil-define-key 'normal slack-message-edit-buffer-mode-map
+      "@"  #'slack-message-embed-mention
+      "mc" #'slack-message-embed-channel)
     (evil-define-key 'normal slack-message-compose-buffer-mode-map
       "@"  #'slack-message-embed-mention
-      "mc" #'slack-message-embed-channel
-      "ml" #'markdown-insert-link)
-
-    (define-key slack-message-compose-buffer-mode-map (kbd "C-c C-l") #'markdown-insert-link))
+      "mc" #'slack-message-embed-channel))
 
   (defun isamert/slack-initialize ()
     (interactive)
@@ -4088,6 +4088,7 @@ Simple mode for editing =~/.Xmodmap= file.
         "mr3" (isamert/slack--add-reaction-to-message "eyes")
         "mr4" (isamert/slack--add-reaction-to-message "ultrafastparrot")
         "mr5" (isamert/slack--add-reaction-to-message "pepedance")
+        "mrp" (isamert/slack--add-reaction-to-message "pray")
 
         "[[" 'slack-buffer-goto-prev-message
         "]]" 'slack-buffer-goto-next-message)))
