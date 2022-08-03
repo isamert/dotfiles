@@ -6133,9 +6133,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
               (alert (format "Pipeline %s: %s/%s" (s-upcase .status) project pipeline)))
              ("manual"
               (alert (format "Pipeline requires MANUAL action: %s/%s" project pipeline))
-              (isamert/gitlab-check-pipeline url t))
+              (isamert/gitlab-watch-pipeline url t))
              (_
-              (isamert/gitlab-check-pipeline url t))))))))
+              (isamert/gitlab-watch-pipeline url t))))))))
 #+end_src
 
 ** Jira
@@ -6507,6 +6507,22 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
        (message ">> (isamert/jira-update-ticket \"%s\" \"%s\" \"%s\")" key summary description)
        (jiralib2-update-summary-description key summary description))))
 
+  ;;
+  ;; jira-view-mode
+  ;;
+
+  (defvar-local jira-view-mode-ticket-number nil)
+  (define-derived-mode jira-view-mode org-mode "JiraView"
+    "Mode for viewing JIRA tickets.")
+
+  (defun jira-view-mode-open-ticket-externally ()
+    (interactive)
+    (with-default-browser
+     (isamert/open-jira-issue jira-view-mode-ticket-number)))
+
+  (evil-define-key 'normal jira-view-mode-map  (kbd "&") #'jira-view-mode-open-ticket-externally)
+
+
   (defun isamert/jira-view-ticket (key)
     (interactive "sIssue key: ")
     (when-let (match (s-match "browse/\\([a-zA-Z0-9-]+\\)/?" key))
@@ -6519,7 +6535,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                 "* %s\n"
                 (isamert/convert-jira-markup-to-org-mode .fields.description))
                .fields.summary))
-      (org-mode)
+      (jira-view-mode)
+      (setq-local jira-view-mode-ticket-number key)
       (org-set-property "STATUS" (or .fields.status.name "N/A"))
       (org-set-property "REPORTER" (or .fields.reporter.name "N/A"))
       (org-set-property "ASSIGNEE" (or .fields.assignee.name "N/A"))
