@@ -722,6 +722,20 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
         (mapcar (lambda (pair) (shell-command (s-replace "%" fname (cdr pair)))) match))))
 #+END_SRC
 
+** macOS problem: too many open files
+macOS is shit and I can't get rid of this error no matter what. Here is a [[https://www.blogbyben.com/2022/05/gotcha-emacs-on-mac-os-too-many-files.html][blogpost]] explaining the situation and here is the solution offered by the post:
+
+#+begin_src emacs-lisp
+  (defun file-notify-rm-all-watches ()
+    "Remove all existing file notification watches from Emacs."
+    (interactive)
+    (maphash
+     (lambda (key _value)
+       (file-notify-rm-watch key))
+     file-notify-descriptors))
+#+end_src
+
+Run this function (possibly after closing some buffers and killing some child processes) whenever you start getting ~too many open files~ error and hopefully emacs continues to work normally.
 * Visuals
 ** General
 #+begin_src emacs-lisp
