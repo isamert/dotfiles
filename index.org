@@ -2040,10 +2040,17 @@ Easily switch between contexts with completion.
   zstyle ':completion:*' use-cache on
   zstyle ':completion:*' cache-path ~/.zsh/cache
 
-  HISTFILE=~/.zsh_history
+  # History settings
+
+  setopt inc_append_history        # Write to the history file immediately, not when the shell exits.
+  setopt hist_ignore_all_dups      # Delete old recorded entry if new entry is a duplicate.
+  setopt hist_find_no_dups         # Do not display a line previously found.
+  setopt hist_reduce_blanks        # Remove superfluous blanks before recording entry.
+
   HISTSIZE=100000
   SAVEHIST=100000
   HISTORY_SUBSTRING_SEARCH_FUZZY=1
+  HISTFILE=~/.zsh_history
 #+end_src
 
 ** Emacs configuration
