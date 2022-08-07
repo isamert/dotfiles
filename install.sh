@@ -27,9 +27,6 @@ read -rd '' EMACS_EVAL <<EOF
 (progn
   (require 'org)
 
-  (setq org-babel-noweb-wrap-start "<<<")
-  (setq org-babel-noweb-wrap-end ">>>")
-
   (add-hook 'org-babel-post-tangle-hook 'executable-make-buffer-file-executable-if-script-p)
 
   (defun when-darwin (file-path)
@@ -60,7 +57,18 @@ read -rd '' EMACS_EVAL <<EOF
 EOF
 set -e
 
+cd emacs
+
+echo "=> Tangling Emacs config..."
+emacs -Q \
+      --batch \
+      --eval "$EMACS_EVAL"
+
+cd ..
+
 echo "=> Installing dotfiles..."
 emacs -Q \
       --batch \
-      --eval "$EMACS_EVAL" \
+      --eval '(setq org-babel-noweb-wrap-start "<<<")' \
+      --eval '(setq org-babel-noweb-wrap-end ">>>")' \
+      --eval "$EMACS_EVAL"
