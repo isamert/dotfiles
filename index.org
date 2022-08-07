@@ -421,12 +421,38 @@ Some references for editing this configuration:
 - https://github.com/kmonad/kmonad/blob/master/src/KMonad/Keyboard/Keycode.hs
 - https://old.reddit.com/r/emacs/comments/oyzfz9/kmonad_and_the_power_of_infinite_leader_keys/
 
+*** Installation
+I use the AUR package ~kmonad-git~ for my Linux machine and compile it manually on Mac. Following configuration is needed for Linux and taken from [[https://github.com/kmonad/kmonad/blob/master/doc/faq.md#q-how-do-i-get-uinput-permissions][here]].
+
+#+begin_src sh
+  # Add uinput group
+  sudo groupadd uinput
+  # Add current user to input and uinput groups
+  sudo usermod -aG input $USER
+  sudo usermod -aG uinput $USER
+#+end_src
+
+#+begin_src conf :tangle  (when-linux "/sudo::/etc/udev/rules.d/50-udev-kmonad.rules")
+  KERNEL=="uinput", MODE="0660", GROUP="uinput", OPTIONS+="static_node=uinput"
+#+end_src
+
+Restart your machine.
+
 *** Generic configuration
+#+name: kmonad-device
+#+begin_src emacs-lisp
+  (let ((external-kbd "/dev/input/by-id/usb-Microsoft_Microsoft®_2.4GHz_Transceiver_v9.0-event-kbd")
+        (x220-kbd "/dev/input/by-path/platform-i8042-serio-0-event-kbd"))
+    (cond
+     ((eq system-type 'darwin) "(iokit-name)")
+     ((file-exists-p external-kbd) (format "(device-file \"%s\")" external-kbd))
+     ((file-exists-p x220-kbd) (format "(device-file \"%s\")" x220-kbd))))
+#+end_src
 
 #+begin_src kbd :tangle ~/.config/kmonad.kbd
   (defcfg
-    input  <<<when-on(linux="(device-file \"/dev/input/by-id/usb-Microsoft_Microsoft®_2.4GHz_Transceiver_v9.0-event-kbd\")", darwin="(iokit-name)")>>>
-    output <<<when-on(linux="(uinput-sink \"My KMonad output\" \"sleep 1 && setxkbmap -option compose:ralt\")", darwin="(kext)")>>>
+    input  <<<kmonad-device()>>>
+    output <<<when-on(linux="(uinput-sink \"My KMonad output\")", darwin="(kext)")>>>
     cmp-seq ralt    ;; Set the compose key to `RightAlt'
     cmp-seq-delay 5 ;; 5ms delay between each compose-key sequence press
     fallthrough true
@@ -536,7 +562,7 @@ Run this to install it:
     tab  q    w    e    r    t    y    u    i    o    p    [    ]
     caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
     lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
-    fn   lctl lmet lalt           spc            ralt rmet cmp  rctl)
+    \    lctl lmet lalt           spc            ralt rmet cmp  rctl)
 
   (deflayer main
     esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
@@ -544,7 +570,7 @@ Run this to install it:
     tab  q    w    e    r    t    y    u    i    o    p    [    ]
     @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
     lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
-    fn   lctl lmet lalt           spc            @sym rmet cmp rctl)
+    \    lctl lmet lalt           spc            @sym rmet cmp rctl)
 #+end_src
 
 *** Mac config
