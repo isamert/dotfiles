@@ -3081,9 +3081,7 @@ Some shortcuts you can use on any vertico window:
   (defun isamert/current-project-root ()
     "Return the root path of current project."
     (interactive)
-    ;; `project-current' is a function from project.el
-    (ignore-errors
-      (expand-file-name (cdr (project-current)))))
+    (expand-file-name (project-root (project-current))))
 
   (defun isamert/current-project-name ()
     "Return current projects name."
