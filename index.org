@@ -3321,18 +3321,6 @@ I want to redirect some websites to their better alternatives (for example twitt
   autocmd DocStart .*www.reddit.com js tri.excmds.urlmodify("-t", "www", "old")
 #+end_src
 
-When I open a useless website that I spent meaningless time on, I want to show todays tasks instead. Here is the script that renders todays tasks as HTML:
-
-#+begin_src bash :tangle ~/.scripts/todaysitems.sh :var BULLET_ORG_PATH=(expand-file-name bullet-org)
-  TODAY=$(date +"%Y-%m-%d %a")
-  cat "$BULLET_ORG_PATH" | sed -n "/\\* \[$TODAY\]/,/^\\* /p" | <<<sh("which pandoc")>>> -f org -t html > /tmp/today.html
-#+end_src
-
-...and here is the tridactyl directive:
-
-#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  autocmd DocStart .*(eksisozluk|ensonhaber).* exclaim_quiet <<<sh("which todaysitems.sh")>>>; open file:///tmp/today.html
-#+end_src
 
 **** TreeStyleTabs integration
 I use TreeStyleTabs and it's perfect. This is just cherry on top.
