@@ -2442,11 +2442,11 @@ To sync it automatically:
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
           '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (isamert/jira-view-ticket link)))
+            (".*slack.com/archives/.*" . (lambda (link &rest _) (isamert/slack-open-link link)))
             (".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . (lambda (link &rest _) (funcall browse-url-secondary-browser-function link)))
             (".*reddit.com.*comments.*" . (lambda (link &rest _) (reddigg-view-comments link)))
             (".*stackoverflow.com.*" . (lambda (link &rest _) (isamert/open-stackoverflow-link link)))
             (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv-play link)))
-            (".*\\.slack.com/archives" . (lambda (link &rest _) (isamert/slack-open-link link)))
             ("." . w3m-goto-url))))
 #+end_src
 ** eshell
@@ -3929,9 +3929,6 @@ Simple mode for editing =~/.Xmodmap= file.
                :message-string msg-str)
          isamert/slack--last-messages)
         (unless (or (slack-message-minep message team)
-                    (s-contains? "message deleted" msg-str)
-                    (s-contains? "has joined the" msg-str)
-                    (s-contains? "has left the" msg-str)
                     ;; Dont show notifications for visible slack windows if emacs is not idle
                     (and
                      (< (time-to-seconds (or (current-idle-time) 0)) 15)
@@ -5815,7 +5812,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
               :around #'isamert/auto-focus-tmux-advice-before)
 #+end_src
 ** Git and GitLab extras
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :lexical yes
   (evil-leader/set-key
     "gmb" 'isamert/gitlab-list-current-branch-merge-requests
     "gmm" 'isamert/gitlab-list-my-merge-requests
@@ -6146,8 +6143,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
              ((or "canceled" "skipped" "scheduled")
               (alert (format "Pipeline %s: %s/%s" (s-upcase .status) project pipeline)))
              ("manual"
-              (alert (format "Pipeline requires MANUAL action: %s/%s" project pipeline))
-              (isamert/gitlab-watch-pipeline url t))
+              (alert (format "Pipeline requires MANUAL action: %s/%s" project pipeline)))
              (_
               (isamert/gitlab-watch-pipeline url t))))))))
 #+end_src
