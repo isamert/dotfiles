@@ -3929,6 +3929,9 @@ Simple mode for editing =~/.Xmodmap= file.
                :message-string msg-str)
          isamert/slack--last-messages)
         (unless (or (slack-message-minep message team)
+                    (s-contains? "message deleted" msg-str)
+                    (s-contains? "has joined the" msg-str)
+                    (s-contains? "has left the" msg-str)
                     ;; Dont show notifications for visible slack windows if emacs is not idle
                     (and
                      (< (time-to-seconds (or (current-idle-time) 0)) 15)
