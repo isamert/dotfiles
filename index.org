@@ -4644,6 +4644,7 @@ Refresh the rules after tangling the file: ~sudo udevadm trigger~
 * Tools
 - =dconf-editor= :: List and explore gnome/gshell/app settings.
 - =d-feet= :: List and explore running dbus instances.
+- =peek= :: Screen recorder (records gifs etc.)
 - =tokei= :: CLOC (count lines of code)
 - =subdl= :: dowload subtitles from opensubtitles.org
 - =socat= :: needed for communicating with mpv trough unix sockets
