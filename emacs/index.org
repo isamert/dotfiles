@@ -3320,6 +3320,7 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     (setq flycheck-display-errors-delay 0.3)
     (setq flycheck-emacs-lisp-load-path 'inherit)
     (setq flycheck-emacs-lisp-initialize-packages t)
+    (setq flycheck-global-modes '(not org-mode jira-view-mode))
 
     (global-flycheck-mode))
 
@@ -3402,14 +3403,6 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
     :config
     (company-prescient-mode t)
     (prescient-persist-mode))
-#+END_SRC
-
-** origami-mode
-This seems working better than =hs-minor-mode= and also it's supposedly works with =lsp-mode=.
-
-#+BEGIN_SRC emacs-lisp
-(use-package origami
-  :hook ((web-mode js-mode yaml-mode) . origami-mode))
 #+END_SRC
 
 ** lsp-mode
@@ -3856,7 +3849,7 @@ Simple mode for editing =~/.Xmodmap= file.
     :config
     (setq slack-log-level 'error)
     ;; ^ info level shows unnecessary stuff that distracts me
-    (setq slack-buffer-emojify t)
+    (setq slack-buffer-emojify nil)
     (setq slack-render-image-p t)
     (setq slack-image-max-height nil)
     (setq slack-prefer-current-team t)
@@ -3865,6 +3858,7 @@ Simple mode for editing =~/.Xmodmap= file.
     ;; ^ Open slack windows on the right side of the screen
 
     (setq slack-message-custom-notifier #'isamert/slack-notify)
+    (setq slack-message-custom-delete-notifier #'isamert/slack-notify)
 
     (evil-leader/set-key
       "ess" #'slack-select-rooms
@@ -6522,17 +6516,31 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   ;; jira-view-mode
   ;;
 
-  (defvar-local jira-view-mode-ticket-number nil)
+  (defvar-local jira-view-mode-ticket nil
+    "Currently viewed ticket object.")
   (define-derived-mode jira-view-mode org-mode "JiraView"
     "Mode for viewing JIRA tickets.")
 
-  (defun jira-view-mode-open-ticket-externally ()
+  (defun jira-view-mode-open-externally ()
     (interactive)
     (with-default-browser
-     (isamert/open-jira-issue jira-view-mode-ticket-number)))
+     (let-alist jira-view-mode-ticket
+       (isamert/open-jira-issue .key))))
 
-  (evil-define-key 'normal jira-view-mode-map  (kbd "&") #'jira-view-mode-open-ticket-externally)
+  (defun jira-view-mode-edit ()
+    (interactive)
+    (let-alist jira-view-mode-ticket
+      (isamert/jira-update-ticket .key .fields.summary .fields.description)))
 
+  (defun jira-view-mode-reload ()
+    (interactive)
+    (let-alist jira-view-mode-ticket
+      (isamert/jira-view-ticket .key)))
+
+  (evil-define-key 'normal jira-view-mode-map
+    (kbd "&") #'jira-view-mode-open-externally
+    (kbd "ge") #'jira-view-mode-edit
+    (kbd "gr") #'jira-view-mode-reload)
 
   (defun isamert/jira-view-ticket (key)
     (interactive "sIssue key: ")
@@ -6540,18 +6548,19 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (setq key (nth 1 match)))
     (switch-to-buffer-other-window (get-buffer-create (format "*jira:%s*" key)))
     (erase-buffer)
-    (let-alist (jiralib2-get-issue key)
-      (insert
-       (format (concat
-                "* %s\n"
-                (isamert/convert-jira-markup-to-org-mode .fields.description))
-               .fields.summary))
-      (jira-view-mode)
-      (setq-local jira-view-mode-ticket-number key)
-      (org-set-property "STATUS" (or .fields.status.name "N/A"))
-      (org-set-property "REPORTER" (or .fields.reporter.name "N/A"))
-      (org-set-property "ASSIGNEE" (or .fields.assignee.name "N/A"))
-      (org-fold-show-all)))
+    (let ((ticket (jiralib2-get-issue key)))
+      (let-alist ticket
+        (insert
+         (format (concat
+                  "* %s\n"
+                  (isamert/convert-jira-markup-to-org-mode .fields.description))
+                 .fields.summary))
+        (jira-view-mode)
+        (setq-local jira-view-mode-ticket ticket)
+        (org-set-property "STATUS" (or .fields.status.name "N/A"))
+        (org-set-property "REPORTER" (or .fields.reporter.name "N/A"))
+        (org-set-property "ASSIGNEE" (or .fields.assignee.name "N/A"))
+        (org-fold-show-all))))
 #+end_src
 
 ** My Android phone and Emacs
