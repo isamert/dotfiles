@@ -3097,17 +3097,16 @@ Some shortcuts you can use on any vertico window:
 
   (defun isamert/all-project-roots ()
     "Find every project dir under `isamert/projects-root'.
-  Every folder without a \".git\" folder is considered to be a project group folder."
+  It simply checks for folders with `.git' under them."
     (let ((home (expand-file-name "~")))
       (->>
-       (f-directories isamert/projects-root)
-       (cons isamert/projects-root)
-       (--filter (not (isamert/is-git-dir it)))
-       (--map (f-directories it))
-       (-flatten)
+       (expand-file-name isamert/projects-root)
+       (format "fd . '%s' --type directory --maxdepth 3 --absolute-path")
+       (shell-command-to-string)
+       (s-trim)
+       (s-split "\n")
        (--filter (isamert/is-git-dir it))
        (--map (s-replace home "~" (f-full it))))))
-
 
   (defun isamert/load-projects-list ()
     (interactive)
