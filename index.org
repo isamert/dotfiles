@@ -3321,6 +3321,18 @@ I want to redirect some websites to their better alternatives (for example twitt
   autocmd DocStart .*www.reddit.com js tri.excmds.urlmodify("-t", "www", "old")
 #+end_src
 
+When I open a useless website that I spent meaningless time on, I want to show open a random page that I marked as /read it later/. Here is the script that fetches a random page:
+
+#+begin_src sh :tangle ~/.scripts/randomlink
+  cat ~/Documents/notes/bullet.org | sed -n '/\* Investigate/,/\*\*/p' | grep -E 'https?://' | shuf -n 1 | grep -Eo "(http|https)://[a-zA-Z0-9./?=_%:-]*"
+#+end_src
+
+...and here is the tridactyl directive:
+
+#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
+  command randomlink js -d€ tri.native.run("<<<sh("which randomlink")>>>").then(link => window.location.replace(link.content.trim()))€
+  autocmd DocStart .*(eksisozluk|ensonhaber).* randomlink
+#+end_src
 
 **** TreeStyleTabs integration
 I use TreeStyleTabs and it's perfect. This is just cherry on top.
