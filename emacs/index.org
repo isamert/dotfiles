@@ -6478,17 +6478,25 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
              (cl-return))))))))
 
   (defun isamert/convert-jira-markup-to-org-mode (jira-markup)
-    "Convert given JIRA-MARKUP string to org-mode format.
-  NOTE: This creates loose lists where newlines appear between list
-  items and ox-confluence does not handle this well and breaks
-  lists."
+    "Convert given JIRA-MARKUP string to org-mode format."
     (with-temp-buffer
       (insert jira-markup)
+      ;; This creates loose lists where newlines appear between
+      ;; list items and ox-confluence does not handle this well and
+      ;; breaks lists.
       (shell-command-on-region
        (point-min) (point-max)
        "pandoc -f jira -t org --wrap=none"
        nil t)
-      (buffer-string)))
+      ;; So I try to remove those unnecassary new lines here.
+      ;; Same replacement applied twice.
+      (replace-regexp-in-string
+       "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-"
+       "\\1-\\2\n\\3-"
+       (replace-regexp-in-string
+        "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-"
+        "\\1-\\2\n\\3-"
+        (buffer-string)))))
 
   (defun isamert/jira-update-ticket (key summary description)
     (isamert/get-input
@@ -6546,7 +6554,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (interactive "sIssue key: ")
     (when-let (match (s-match "browse/\\([a-zA-Z0-9-]+\\)/?" key))
       (setq key (nth 1 match)))
-    (switch-to-buffer-other-window (get-buffer-create (format "*jira:%s*" key)))
+    (let ((buffer (get-buffer-create (format "*jira:%s*" key))))
+      (unless (eq (current-buffer) buffer)
+        (switch-to-buffer-other-window buffer)))
     (erase-buffer)
     (let ((ticket (jiralib2-get-issue key)))
       (let-alist ticket
