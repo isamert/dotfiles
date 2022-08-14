@@ -4564,9 +4564,18 @@ Feed reader.
 
     (evil-define-key 'normal elfeed-search-mode-map
       "o" #'elfeed-search-browse-url
-      "O" #'isamert/elfeed-search-browse-url-in-default-browser)
+      "O" #'isamert/elfeed-search-browse-url-in-default-browser
+      "q" #'isamert/elfeed-save-and-quit)
 
-    (evil-leader/set-key "ee" #'elfeed))
+    (evil-leader/set-key "ee" #'isamert/elfeed-reload-and-open))
+
+  (defun isamert/elfeed-reload-and-open ()
+    "Reload and open elfeed.
+  Useful if .elfeed directory is freshly syncned."
+    (interactive)
+    (elfeed-db-load)
+    (elfeed)
+    (elfeed-search-update--force))
 #+end_src
 
 ** empv (music/media/radio/youtube management)
@@ -4966,11 +4975,12 @@ This minor mode makes =[[= and =]]= move between functions, if tree sitter is en
           (tsc-get-prev-sibling)
           (tsc-node-start-position)))))))
 #+end_src
-** Refactoring
+** Refactoring (emr)
 #+begin_src emacs-lisp
   (use-package emr
     :config
-    (evil-define-key 'normal prog-mode-map (kbd "gR") #'emr-show-refactor-menu))
+    (evil-define-key 'normal prog-mode-map (kbd "gR") #'emr-show-refactor-menu)
+    (define-key popup-menu-keymap [escape] 'keyboard-quit))
 #+end_src
 
 ** markdown
