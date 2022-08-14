@@ -6781,12 +6781,18 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
 Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-and-syncing-them-to-your-phone-android-ios-whatever-.html][this post]] for further information.
 
 #+begin_src emacs-lisp
-  (defun isamert/build-contact-item (template-string contact-property)
+  (defun isamert/contacts--build-contact-item (template-string contact-property)
     (if-let ((stuff (org-entry-get nil contact-property)))
         (concat (format template-string stuff) "\n")
       ""))
 
-  (defun isamert/export-contacts-as-vcard (file-name)
+  (defun isamert/contacts--contact-entry? ()
+    (thread-last
+      (org-entry-properties)
+      (-map #'car)
+      (--any (s-prefix? "PHONE" it))))
+
+  (defun isamert/contacts-export-as-vcard (&optional file-name)
     "Create a .vcf file containing all contact information."
     (interactive
      (list
@@ -6795,24 +6801,26 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
        "~/Documents/sync/"
        "contacts.vcf")))
     (write-region
-     (string-join
-      (org-map-entries
-       (lambda ()
-         (string-join
-          `("BEGIN:VCARD\nVERSION:2.1\n"
-            ,(format "UID:urn:uuid:%s\n" (org-id-get nil t))
-            ,(isamert/build-contact-item "FN:%s" "ITEM")
-            ,(isamert/build-contact-item "TEL;CELL:%s" "PHONE")
-            ,(isamert/build-contact-item "TEL;WORK:%s" "PHONE_WORK")
-            ,(isamert/build-contact-item "EMAIL:%s" "EMAIL")
-            ,(isamert/build-contact-item "ORG:%s" "GROUP")
-            ,(isamert/build-contact-item "ADR;HOME:;;%s" "ADDRESS_HOME")
-            ,(isamert/build-contact-item "ADR;WORK:;;%s" "ADDRESS_WORK")
-            ,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
-            "END:VCARD")
-          ""))
-       "LEVEL=1")
-      "\n")
+     (thread-last
+       (org-map-entries
+        (lambda ()
+          (when (isamert/contacts--contact-entry?)
+            (string-join
+             `("BEGIN:VCARD\nVERSION:2.1\n"
+               ,(format "UID:urn:uuid:%s\n" (org-id-get nil t))
+               ,(isamert/contacts--build-contact-item "FN:%s" "ITEM")
+               ,(isamert/contacts--build-contact-item "TEL;CELL:%s" "PHONE")
+               ,(isamert/contacts--build-contact-item "TEL;WORK:%s" "PHONE_WORK")
+               ,(isamert/contacts--build-contact-item "EMAIL:%s" "EMAIL")
+               ,(isamert/contacts--build-contact-item "ORG:%s" "GROUP")
+               ,(isamert/contacts--build-contact-item "ADR;HOME:;;%s" "ADDRESS_HOME")
+               ,(isamert/contacts--build-contact-item "ADR;WORK:;;%s" "ADDRESS_WORK")
+               ,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
+               "END:VCARD")
+             "")))
+        "LEVEL=1")
+       (-filter #'identity)
+       (s-join "\n"))
      nil
      file-name))
 #+end_src
