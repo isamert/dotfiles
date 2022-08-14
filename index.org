@@ -550,7 +550,9 @@ Run this to install it:
     ;; Fat arrow
     fa  #(= >)
     ;; light arrow
-    la  #(- >))
+    la  #(- >)
+    ;; home path
+    hm #(~ /))
 #+end_src
 
 *** Linux config
@@ -602,7 +604,7 @@ Run this to install it:
   (deflayer symbols
     _   _    _    _    _    _    _    _    _    _    _    _    _
     _   {    }    _    _    _    _    _    _    _    _    _    @≠   _
-    _   @¿   @↑   _    @la  @✓   _    @ü   @ı   @ö   _    \(   \)
+    _   @¿   @↑   @hm  @la  @✓   _    @ü   @ı   @ö   _    \(   \)
     _   @←   @ş   @→   @fa  @ğ   left down up   rght _    _    _    _
     _   _    @↓   _    @ç   _    @λ   @¬   _    @≤   @≥   _    _
     _   _    _    _              _              _    _    _    _)
