@@ -2054,7 +2054,10 @@ Easily switch between contexts with completion.
   #   newly added history items immediately. This reserves that
   # histreduceblanks -> remove superfluous blanks from commands while
   #   appending them to the history
-  setopt autocd histignoredups incappendhistory nosharehistory histreduceblanks
+  # interactivecomments -> enable comments on interactive shells. I
+  #   sometimes add little notes to my commands so that I can easily find
+  #   them whenever I do a fuzzy history search
+  setopt autocd histignoredups incappendhistory nosharehistory histreduceblanks interactivecomments
   # unsetopt BEEP
   unsetopt LIST_BEEP
 
