@@ -1843,8 +1843,6 @@ Following snippet let's you edit current command with ~C-x C-e~ in your default 
   function cpcd { cp "$1" "$2" && cd "$2"; } # Copy and go to the directory
   function mvcd { mv "$1" "$2" && cd "$2"; } # Move and cd to the dir
   function cheat { curl http://cheat.sh/"$1"; }
-  function shortenurl { curl -F"shorten=$1" "https://0x0.st"; }
-  function uploadfile { curl -F"file=@$1" "https://0x0.st"; }
 #+end_src
 
 *** Compression/decompression
@@ -3571,6 +3569,87 @@ Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are conv
   done
 #+end_src
 
+** .scripts/shortenurl
+Shorten given url. To make this work:
+- I simply created a firebase application.
+- Added my domain to it (from "Build → Hosting" menu). I used a subdomain, like "urlshortener.mydomain.com". You'll see the why in a minute.
+- Installed firebase cli application
+  - ~yarn global add "firebase-tools"~
+- Configured my project with firebase-tools.
+  - ~firebase login~
+  - ~firebase projects:list~ → Just to check if it works or not
+  - ~firebase init~ → Select "Hosting: Configure files for Firebase Hosting and (optionally) set up GitHub Action deploy".
+  - Here is the firebase.json that I use which rewrites all requests to your domain with the ones provided by "Dynamic Links" application. So it's wise use a subdomain for this application as I outlined above.
+    #+begin_src js
+      {
+        "hosting": {
+          // Following two lines are the important ones
+          "appAssociation": "AUTO",
+          "rewrites": [ { "source": "/**", "dynamicLinks": true } ],
+
+          "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**"
+          ]
+        }
+      }
+
+    #+end_src
+- Then you *may* need to open "Engage → Dynamic Links" page and click to "Get Started". Select your domain from the list and finish it.
+
+#+begin_src sh :tangle ~/.scripts/shortenurl
+  #!/bin/bash
+
+  set -eo pipefail
+
+  case "$1" in
+      -h|--help)
+          echo "Usage:"
+          echo "  $(basename "$0") URL"
+          echo "  some-command-that-outputs-a-long-url | $(basename "$0")"
+          exit
+          ;;
+  esac
+
+  URL=$(echo "${1:-$(</dev/stdin)}" | xargs)
+
+  curl \
+      --silent \
+      -H 'Content-Type: application/json' \
+      -d '{"dynamicLinkInfo":{"domainUriPrefix":"'$FIREBASE_URL_SHORTENER_PREFIX'","link":"'$URL'",},"suffix":{"option":"SHORT"}}' \
+      "https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=$FIREBASE_WEB_API_KEY" \
+      | jq -r '.shortLink' | tee >(xcopy)
+#+end_src
+** .scripts/uploadfile
+Uploads given file to a predetermined folder in your ~box.com~ account and returns you a public download link for the file.
+
+Need to install ~boxcli~ for this to work.
+- You need to create an application on box.com first.
+  - Go figure out in the [[https://app.box.com/developers/console][developer console]].
+  - Select =User Authentication (OAuth 2.0)= for your application. It works well with box cli.
+  - Go to your application page, go to "Configuration" and select "Write all files and folders stored in Box" to give write permissions.
+- ~yarn global add "@box/cli"~
+- ~box login~
+
+The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this file as it contains personal information). This variable simply holds the *id* of a folder you've created in ~box.com~. You can list all folders in your root by issuing this command: ~box folders:items 0~. Then copy the folder id that you want your files to be uploaded and set this variable. I use this script for being able to quickly share files with people, I don't do complex uploads with it, so all files under one folder suffices my needs.
+
+#+begin_src bash :tangle ~/.scripts/uploadfile
+  #!/bin/bash
+
+  set -eo pipefail
+
+  FILE=$1
+
+  function get_result {
+      grep --max-count=1 "$1: " </dev/stdin | cut -d"'" -f2
+  }
+
+  FILE_ID=$(box files:upload "$FILE" --parent-id "$BOX_UPLOAD_DIR" | get_result ID)
+  LINK=$(box shared-links:create "$FILE_ID" file | get_result URL)
+
+  echo "$LINK" | tee >(xcopy)
+#+end_src
 ** .scripts/cb-save
 #+begin_src bash :tangle (when-linux "~/.scripts/cb-save")
   #!/bin/bash
