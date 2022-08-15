@@ -2242,7 +2242,7 @@ For some reason it does not work. However running the same command after shell i
   git clone https://github.com/tmux-plugins/tpm <<<TMUX_PLUGIN_PATH()>>>/tpm/
 #+end_src
 
-#+RESULTS:
+Do ~PREFIX + I~ to install plugins while tmux is open.
 
 *** Config
 #+begin_src conf :tangle ~/.tmux.conf
