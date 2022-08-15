@@ -4564,8 +4564,7 @@ Feed reader.
 
     (evil-define-key 'normal elfeed-search-mode-map
       "o" #'elfeed-search-browse-url
-      "O" #'isamert/elfeed-search-browse-url-in-default-browser
-      "q" #'isamert/elfeed-save-and-quit)
+      "O" #'isamert/elfeed-search-browse-url-in-default-browser)
 
     (evil-leader/set-key "ee" #'isamert/elfeed-reload-and-open))
 
