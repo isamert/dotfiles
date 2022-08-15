@@ -449,12 +449,11 @@ Restart your machine.
      ((file-exists-p x220-kbd) (format "(device-file \"%s\")" x220-kbd))))
 #+end_src
 
-#+begin_src kbd :tangle ~/.config/kmonad.kbd
+#+name: kmonad-cfg
+#+begin_src kbd
   (defcfg
     input  <<<kmonad-device()>>>
     output <<<when-on(linux="(uinput-sink \"My KMonad output\")", darwin="(kext)")>>>
-    cmp-seq ralt    ;; Set the compose key to `RightAlt'
-    cmp-seq-delay 5 ;; 5ms delay between each compose-key sequence press
     fallthrough true
     allow-cmd true)
 #+end_src
@@ -462,7 +461,8 @@ Restart your machine.
 *** Unicode characters
 Here I use an external program (~xtype~, which is explained below) to type unicode characters instead of utilizing XCompose as suggested by KMonad. Managing, making it running is hard with XCompose. Also it does not work on Mac.
 
-#+begin_src kbd :tangle ~/.config/kmonad.kbd
+#+name: kmonad-unicode
+#+begin_src kbd
   (defalias
     ;; Cool unicode chars
     ¿ (cmd-button "xtype ¿")
@@ -545,7 +545,8 @@ Run this to install it:
 
 *** Coding macros
 
-#+begin_src kbd :tangle ~/.config/kmonad.kbd
+#+name: kmonad-macros
+#+begin_src kbd
   (defalias
     ;; Fat arrow
     fa  #(= >)
@@ -555,47 +556,20 @@ Run this to install it:
     hm #(~ /))
 #+end_src
 
-*** Linux config
-
-#+begin_src kbd :tangle (when-linux "~/.config/kmonad.kbd")
-  (defsrc
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
-    \    lctl lmet lalt           spc            ralt rmet cmp  rctl)
-
-  (deflayer main
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
-    \    lctl lmet lalt           spc            @sym rmet cmp rctl)
-#+end_src
-
-*** Mac config
-#+begin_src kbd :tangle (when-darwin "~/.config/kmonad.kbd")
-  (defsrc
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
-    fn   lctl lmet lalt           spc            rmet ralt  cmp  rctl)
-
-  (deflayer main
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
-    lctl fn   lalt lmet           spc            @sym cmp  rmet rctl)
-#+end_src
-
 *** Generic layers
 
+#+name: kmonad-generate-aliases-for-hyper-layer
+#+begin_src emacs-lisp
+  (string-join
+   (--map
+    (let ((chr (s-downcase (char-to-string it))))
+      (format "p%s C-M-A-S-%s" chr chr))
+    (--remove (-contains? '(?\( ?_ ?\)) it)
+              (number-sequence ?! ?`)))
+   "\n")
+#+end_src
+
+#+name: kmonad-layers
 #+begin_src kbd :tangle ~/.config/kmonad.kbd
   (defalias
     sym (layer-toggle symbols)
@@ -613,7 +587,7 @@ Run this to install it:
     pret C-M-A-S-ret
     pspc C-M-A-S-spc
     ptb  C-M-A-S-tab
-    <<<kmonad_generate_aliases_for_hyper_layer()>>>)
+    <<<kmonad-generate-aliases-for-hyper-layer()>>>)
 
   ;; Instead of utilizing Hyper key for creating shortcuts like I did
   ;; with my Xmodmap configuration, I use C-M-A-S as the so called hyper
@@ -627,15 +601,59 @@ Run this to install it:
     _    _    _    _              @pspc          _    _    _    _)
 #+end_src
 
-#+name: kmonad_generate_aliases_for_hyper_layer
-#+begin_src emacs-lisp
-  (string-join
-   (--map
-    (let ((chr (s-downcase (char-to-string it))))
-      (format "p%s C-M-A-S-%s" chr chr))
-    (--remove (-contains? '(?\( ?_ ?\)) it)
-              (number-sequence ?! ?`)))
-   "\n")
+*** Linux config
+
+I use this config on both linux and mac. This is the configuration for my external keyboard. Some of the uses of ~\~ character is just to make the total key count same as the generic layers I defined above. They are mapped to itself again in the main layer.
+
+#+begin_src kbd :tangle "~/.config/kmonad-linux.kbd"
+  <<<kmonad-cfg>>>
+  <<<kmonad-unicode>>>
+  <<<kmonad-macros>>>
+
+  (defsrc
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
+    \    lctl lmet lalt           spc            ralt rmet cmp  rctl)
+
+  (deflayer main
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
+    \    lctl lmet lalt           spc            @sym rmet cmp rctl)
+
+  <<<kmonad-layers>>>
+#+end_src
+
+*** Mac config
+This is the configuration for the embedded keyboard on mac.
+
+#+begin_src kbd :tangle (when-darwin "~/.config/kmonad-mac.kbd")
+  <<<kmonad-cfg>>>
+  <<<kmonad-unicode>>>
+  <<<kmonad-macros>>>
+
+  (defsrc
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
+    fn   lctl lmet lalt           spc            rmet ralt  cmp  rctl)
+
+  (deflayer main
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
+    lctl fn   lalt lmet           spc            @sym cmp  rmet rctl)
+
+  <<<kmonad-layers>>>
 #+end_src
 
 *** systemd unit
@@ -2260,7 +2278,7 @@ For some reason it does not work. However running the same command after shell i
   setw -g pane-base-index 1 # Pane indexes starts from 1
   set -s escape-time 0 # Remove the delay after hitting <ESC>
   set-option -g set-titles off
-  set-window-option -g automatic-rename on
+  set-option -g allow-rename off
 
   # Reload config
   bind r source-file ~/.tmux.conf
