@@ -139,7 +139,12 @@ I use =s.el= and =dash.el= extensively. They already come as a dependency with o
 #+begin_src emacs-lisp
   (use-package dash)
   (use-package s)
+
+  ;; For parsing yaml.
   (use-package yaml)
+
+  ;; Following provides defmemoize macro. Use (memoize-restore
+  ;; 'fn-name) to restore the original function.
   (use-package memoize)
 #+end_src
 
@@ -3081,7 +3086,8 @@ Some shortcuts you can use on any vertico window:
   (defun isamert/current-project-root ()
     "Return the root path of current project."
     (interactive)
-    (expand-file-name (project-root (project-current))))
+    (ignore-errors
+      (expand-file-name (project-root (project-current)))))
 
   (defun isamert/current-project-name ()
     "Return current projects name."
@@ -3689,11 +3695,11 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
 
     (evil-define-key 'insert 'global
       (kbd "M-s") #'yankpad-insert
-      (kbd "M-e") #'yankpad-expand)
+      (kbd "M-e") #'hippie-expand)
 
     ;; Enable expanding in minibuffer
     (add-hook 'minibuffer-setup-hook 'yas-minor-mode)
-    (define-key minibuffer-local-map (kbd "M-e") #'yankpad-expand)
+    (define-key minibuffer-local-map (kbd "M-e") #'hippie-expand)
 
     ;; Categories returned by the following functions will be used to
     ;; expand snippets
@@ -6112,15 +6118,17 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
           ("Open" (with-default-browser (browse-url .web_url)))
           ("List merge requests" (isamert/gitlab-list-project-merge-requests .id))))))
 
-    (defun isamert/gitlab-select-project ()
-      (interactive)
-      (isamert/gitlab--select-project-and-apply-action
-       (isamert/gitlab-request
-        "groups/#{group}/projects"
-        :with_shared 'false
-        :include_subgroups 'true
-        :per_page 100
-        :collect-all? t)))
+  (defun isamert/gitlab-select-project ()
+    (interactive)
+    (isamert/gitlab--select-project-and-apply-action
+     (isamert/gitlab-request
+      "groups/#{group}/projects"
+      :with_shared 'false
+      :include_subgroups 'true
+      :per_page 100
+      :collect-all? t)))
+
+  (memoize 'isamert/gitlab-select-project)
 
   (defun isamert/gitlab-watch-pipeline (url &optional rerun?)
     "Start watching pipeline URL status.
@@ -6218,7 +6226,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (interactive "sEnter JQL: ")
     (jiralib2-jql-search jql))
 
-  (defun isamert/jira-get-current-sprint-issues ()
+  (defmemoize isamert/jira-get-current-sprint-issues ()
     (let ((issues '()))
       (mapc
        (lambda (project)
