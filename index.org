@@ -1801,6 +1801,12 @@ Following snippet let's you edit current command with ~C-x C-e~ in your default 
       prompt_segment 'magenta' 'black' ' %* '
   }
 
+  # https://github.com/sorin-ionescu/prezto/blob/master/modules/prompt/functions/prompt-pwd
+  function prompt_dir {
+      prompt_segment blue 'black' " $(short_dir) "
+  }
+
+
   AGNOSTER_PROMPT_SEGMENTS+="prompt_emacs"
   # If we are in emacs vterm, send the current directory to emacs vterm
   # This establishes directory tracking.
@@ -1822,7 +1828,7 @@ Following snippet let's you edit current command with ~C-x C-e~ in your default 
           echo -n "%{%k%}"
       fi
       CURRENT_BG=''
-      echo -n "$()\e[m\n➜%{%f%} "
+      echo -n "$()\e[m\nλ%{%f%} "
       CURRENT_BG=''
   }
 #+end_src
@@ -2034,6 +2040,27 @@ Easily switch between contexts with completion.
               done
               ;;
       esac
+  }
+#+end_src
+*** Print current path in a shorter form
+- =~/Workspace/projects/jaro= → =~/W/p/jaro=
+
+#+begin_src sh :tangle ~/.zshrc
+  # https://github.com/sorin-ionescu/prezto/blob/master/modules/prompt/functions/prompt-pwd
+  function short_dir {
+      setopt localoptions extendedglob
+      local current_pwd="${PWD/#$HOME/~}"
+      local ret_directory
+
+      if [[ "$current_pwd" == (#m)[/~] ]]; then
+          ret_directory="$MATCH"
+          unset MATCH
+      else
+          ret_directory="${${${${(@j:/:M)${(@s:/:)current_pwd}##.#?}:h}%/}//\%/%%}/${${current_pwd:t}//\%/%%}"
+      fi
+
+      unset current_pwd
+      echo "$ret_directory"
   }
 #+end_src
 ** General settings
