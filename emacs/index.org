@@ -8107,8 +8107,10 @@ Simply use ~isamert/dmenu~ function instead of the default ~completing-read~ fun
        :switch nil
        :on-finish
        (lambda (output &rest _)
-         (if-let* ((matches (or (s-match "^\\[download\\] Destination: \\(.*\\)" output)
-                                (s-match "\\[download\\] \\(.*\\) has already been downloaded" output)))
+         (if-let* ((matches (or
+                             (s-match "\\[download\\] \\(.*\\) has already been downloaded" output)
+                             (s-match "^\\[Merger\\] Merging formats into \"\\(.*\\)\"" output)
+                             (s-match "^\\[download\\] Destination: \\(.*\\)" output)))
                    (fname (nth 1 matches)))
              (progn
                (alert (format "Downloaded: %s!" fname))
