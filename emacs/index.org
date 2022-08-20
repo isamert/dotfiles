@@ -2,7 +2,7 @@
 #+AUTHOR: İsa Mert Gürbüz
 #+BABEL: :cache yes
 #+PROPERTY: header-args :tangle yes :noweb yes
-#+PROPERTY: header-args:emacs-lisp :lexical t
+#+PROPERTY: header-args:emacs-lisp :lexical yes
 #+STARTUP: overview
 #+OPTIONS: toc:3
 
@@ -803,17 +803,6 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
        #'isamert/set-font-and-theme-config-in-frame)
     ;; Not in daemon mode, set theme etc directly
     (isamert/set-font-and-theme-config))
-
-  ;; https://www.reddit.com/r/emacs/comments/30b67j/how_can_you_reset_emacs_to_the_default_theme/cprkyl0?utm_source=share&utm_medium=web2x&context=3
-  (defun isamert/switch-theme (theme)
-    "Switch to the THEME.  Also disable already enabled themes first."
-    (interactive
-     (list
-      (intern (completing-read "Load custom theme: "
-             (mapcar 'symbol-name
-               (custom-available-themes))))))
-    (mapc #'disable-theme custom-enabled-themes)
-    (load-theme theme t))
 #+END_SRC
 
 ** prettify-symbols-mode
@@ -3160,12 +3149,15 @@ Some key points:
     (evil-define-key 'normal org-mode-map
       (kbd "M-i") 'consult-org-heading)
 
-    ;; Hide some buffers from consult-buffer window. Just use
-    ;; (switch-to-buffer) or (persp-switch-to-buffer) to switch to the
-    ;; hidden ones if you want
+    ;; Hide some buffers from consult-buffer window. If you want to jump
+    ;; on one of these buffers, start with a space after opening
+    ;; `consult-buffer'.
     (add-to-list
      'consult-buffer-filter
      "\\`\\*\\(Help\\|Backtrace\\|Messages\\|Buffer List\\|Flycheck.*\\|scratch.*\\)\\'")
+
+    ;; This also supports previews. Use the `consult-preview-key'.
+    (defalias 'isamert/switch-theme #'consult-theme)
 
     <<consult-project-management>>
     <<consult-perspective-buffers>>
@@ -4426,8 +4418,9 @@ Gives you a nice, uncluttered editing experience by removing all unneeded visual
 I try to use ~lsp-mode~ and other language-specific packages for the languages I use (see [[Language specific]]), but sometimes either they are too slow or the computer I'm currently working on requires some extra setup or I just don't want to use them for some reason. For those cases, I use a collection of packages that gives you the power of IDEs but in some dummy/restricted way.
 
 - <<highlight-thing>> :: Automatically highlights the all instances of the symbol under the cursor in the buffer. Simply use evils ~*~ and ~#~ to jump between them.
-- <<devdocs-browser>> :: Let's you browse devdocs in =eww=.
-  - ~devdocs-browser-install-doc~ to install docs. ~devdocs-browser-open~ to open a documentation.
+- <<devdocs>> :: Let's you browse devdocs in Emacs.
+  - ~devdocs-install~ to install docs.
+  - ~devdocs-lookup~ to open a documentation.
 - <<dumb-jump>> :: Jumps to definition by using predefined-regexps, generally works fine. Use =gd=.
   - To debug why it's not working: M-x ~set-variable dumb-jump-debug t~, then go to *Messages* buffer.
 - <<tree-sitter>> :: This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting for some languages. Especially for JS/TS and Rust. See [[https://ubolonton.github.io/emacs-tree-sitter/][this page]] for more information.
@@ -4444,7 +4437,9 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
           dumb-jump-fallback-search nil)
     (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
-  (use-package devdocs-browser)
+  (use-package devdocs
+    :config
+    (evil-leader/set-key "id" #'devdocs-lookup))
 
   (use-package highlight-thing
     :after evil
@@ -6891,11 +6886,14 @@ I need to rewrite these functions using [[https://github.com/isamert/marks][mark
     (interactive)
     (save-excursion
       (with-current-buffer (let ((enable-local-variables nil)) (find-file-noselect file-path))
-        (goto-char 0)
-        (forward-line header-line)
-        (org-id-get nil 'create)
-        (save-buffer)
-        (org-id-get nil 'create))))
+        (save-restriction
+          (save-excursion
+            (widen)
+            (goto-char 0)
+            (forward-line header-line)
+            (org-id-get nil 'create)
+            (save-buffer)
+            (org-id-get nil 'create))))))
 
   (defun isamert/org-all-headers ()
     "Return all headers in `org-directory'."
@@ -6937,6 +6935,7 @@ I need to rewrite these functions using [[https://github.com/isamert/marks][mark
     (interactive)
     (let* ((selected (isamert/alist-completing-read "Select header:" (isamert/org-all-headers))))
       (with-current-buffer (find-file-other-window (plist-get selected :fname))
+        (widen)
         (goto-char 0)
         (forward-line (plist-get selected :line)))))
 
@@ -7457,6 +7456,7 @@ Sometimes I just want to delete/rename/move etc. the current file without resort
       (set-buffer-modified-p nil)))
 
   ;; Slightly modified version of: http://www.ergoemacs.org/emacs/elisp_delete-current-file.html
+  (defalias 'isamert/delete-this-file #'isamert/delete-current-file)
   (defun isamert/delete-current-file ()
     "Delete the current file and copy it's content to `kill-ring'."
     (interactive)
