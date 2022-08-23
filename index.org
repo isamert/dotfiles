@@ -3287,6 +3287,8 @@ You need to install =vim-plug= to be able to install vim extensions.
   command sync open localhost:8384
   command jaro withUrl ! jaro
   command jarohint hint -W ! jaro
+  command jaro-enqueue withUrl ! jaro --method=enqueue
+  command jarohint-enqueue hint -W ! jaro --method=enqueue
   command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
@@ -3321,8 +3323,6 @@ You need to install =vim-plug= to be able to install vim extensions.
   bind + zoom 0.1 true
   bind - zoom -0.1 true
   bind p pin
-  bind m jaro
-  bind M jarohint
   bind ;i copyimage
   bind <A-j> tabmove +1
   bind <A-∆> tabmove +1
@@ -3333,6 +3333,12 @@ You need to install =vim-plug= to be able to install vim extensions.
   bind J tabnext
   bind A tabaudio
   bind % fillcmdline tabrename %
+
+  " jaro
+  bind ;j jaro
+  bind ;J jarohint
+  bind ;e jaro-enqueue
+  bind ;E jarohint-enqueue
 
   " More emacs like bindings for ex-mode
   unbind --mode=ex <Space>
