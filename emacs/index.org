@@ -6113,17 +6113,18 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
           ("Open" (with-default-browser (browse-url .web_url)))
           ("List merge requests" (isamert/gitlab-list-project-merge-requests .id))))))
 
+  (defmemoize isamert/gitlab-get-all-projects ()
+    (isamert/gitlab-request
+     "groups/#{group}/projects"
+     :with_shared 'false
+     :include_subgroups 'true
+     :per_page 100
+     :collect-all? t))
+
   (defun isamert/gitlab-select-project ()
     (interactive)
     (isamert/gitlab--select-project-and-apply-action
-     (isamert/gitlab-request
-      "groups/#{group}/projects"
-      :with_shared 'false
-      :include_subgroups 'true
-      :per_page 100
-      :collect-all? t)))
-
-  (memoize 'isamert/gitlab-select-project)
+     (isamert/gitlab-get-all-projects)))
 
   (defun isamert/gitlab-watch-pipeline (url &optional rerun?)
     "Start watching pipeline URL status.
