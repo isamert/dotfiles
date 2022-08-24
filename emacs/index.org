@@ -6181,7 +6181,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defvar isamert/git-main-branch "master"
     "Main branch name.")
 
-  (defvar isamert/jira-projects '(("SAT"))
+  (defvar isamert/jira-projects '(("AI"))
     "List of projects that I enrolled in JIRA.")
 
   (defvar isamert/jira-base-branch "origin/master"
@@ -6196,7 +6196,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     "Query to find out issues that are assigned to me.")
 
   (defvar isamert/jira-kanban-board-query
-    "project = SAT AND (fixVersion in unreleasedVersions() OR fixVersion is EMPTY) AND createdDate >= -2w ORDER BY Rank ASC"
+    "project = AI AND (fixVersion in unreleasedVersions() OR fixVersion is EMPTY) AND createdDate >= -2w ORDER BY Rank ASC"
     "Query to get kanban board issues.")
 
   (defun isamert/open-jira-issue (issue-number)
@@ -6502,12 +6502,15 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       ;; So I try to remove those unnecassary new lines here.
       ;; Same replacement applied twice.
       (replace-regexp-in-string
-       "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-"
-       "\\1-\\2\n\\3-"
+       "\\\\\\\\$"
+       ""
        (replace-regexp-in-string
         "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-"
         "\\1-\\2\n\\3-"
-        (buffer-string)))))
+        (replace-regexp-in-string
+         "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-"
+         "\\1-\\2\n\\3-"
+         (buffer-string))))))
 
   (defun isamert/jira-update-ticket (key summary description)
     (isamert/get-input
