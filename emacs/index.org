@@ -935,9 +935,10 @@ Some small packages that enriches editing experience visually. I don't enable al
   (use-package beacon
     :config
     (beacon-mode 1)
-    (setq beacon-blink-duration 0.5
-          beacon-push-mark 50
-          beacon-color "#9F72D9"))
+    (setq beacon-blink-duration 0.5)
+    (setq beacon-push-mark 50)
+    (setq beacon-color "#9F72D9")
+    (add-to-list 'beacon-dont-blink-major-modes 'dirvish-mode))
 
   ;; This shows some indent guides and it's highly configurable.
   (use-package highlight-indent-guides
@@ -1290,10 +1291,13 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (setq org-use-effective-time t)
     ;; ^ Make timestamp processing functions aware of the previous config
 
-
-    (setq org-fold-core-style 'overlays)
-    ;; ^ FIXME new default does not work well with other packages, until
-    ;; then I'm using the old default
+    ;; TODO Remove when upstream fixes this
+    ;; https://github.com/minad/consult/issues/563#issuecomment-1186612641
+    (defun org-show-entry-consult-a (fn &rest args)
+      (when-let ((pos (apply fn args)))
+        (org-fold-show-entry)))
+    (advice-add 'consult-line :around #'org-show-entry-consult-a)
+    (advice-add 'consult-org-heading :around #'org-show-entry-consult-a)
 
     (add-to-list 'org-link-abbrev-alist '("imdb" . "https://www.imdb.com/title/%s"))
     (add-to-list 'org-link-abbrev-alist '("yt" . "https://youtu.be/%s"))
@@ -1423,33 +1427,31 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 
 ** Personal files
 #+BEGIN_SRC emacs-lisp
-  (when (file-directory-p "~/Documents/notes")
-    (defconst watchlist-org "~/Documents/notes/watchlist.org")
-    (defconst readinglist-org "~/Documents/notes/readinglist.org")
-    (defconst courses-org "~/Documents/notes/courses.org")
-    (defconst bullet-org "~/Documents/notes/bullet.org")
-    (defconst reality-org "~/Documents/notes/reality.org")
-    (defconst projects-org "~/Documents/notes/projects.org")
-    (defconst people-org "~/Documents/notes/people.org")
-    (defconst diary-org "~/Documents/notes/diary.org")
-    (defconst snippets-org "~/Documents/notes/snippets.org")
-    (defconst bookmarks-org "~/Documents/notes/bookmarks.org")
-    (defconst work-org "~/Documents/notes/trendyol.org")
-    (defconst temp-org "~/Documents/notes/temp.org")
-    (defconst passwords-org "~/Documents/notes/passwords.org")
-    (defconst engineering-org "~/Documents/notes/engineering.org")
+  (defconst watchlist-org "~/Documents/notes/watchlist.org")
+  (defconst readinglist-org "~/Documents/notes/readinglist.org")
+  (defconst courses-org "~/Documents/notes/courses.org")
+  (defconst bullet-org "~/Documents/notes/bullet.org")
+  (defconst reality-org "~/Documents/notes/reality.org")
+  (defconst projects-org "~/Documents/notes/projects.org")
+  (defconst people-org "~/Documents/notes/people.org")
+  (defconst diary-org "~/Documents/notes/diary.org")
+  (defconst snippets-org "~/Documents/notes/snippets.org")
+  (defconst bookmarks-org "~/Documents/notes/bookmarks.org")
+  (defconst work-org "~/Documents/notes/trendyol.org")
+  (defconst temp-org "~/Documents/notes/temp.org")
+  (defconst passwords-org "~/Documents/notes/passwords.org")
+  (defconst engineering-org "~/Documents/notes/engineering.org")
 
-    ;; Put archive files under an archive/ directory
-    ;; I don't want them to pollute my directory
-    (setq org-archive-location "archive/%s_archive::")
-    (setq org-directory "~/Documents/notes")
-    (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
-    ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
-    (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org))
+  ;; Put archive files under an archive/ directory
+  ;; I don't want them to pollute my directory
+  (setq org-archive-location "archive/%s_archive::")
+  (setq org-directory "~/Documents/notes")
+  (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
+  ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
+  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org))
 
-    ;; With the following, I can call functions defined inside this file in other org files
-    ;; (org-babel-lob-ingest "~/Documents/notes/utils.org")
-  )
+  ;; With the following, I can call functions defined inside this file in other org files
+  ;; (org-babel-lob-ingest "~/Documents/notes/utils.org")
 #+END_SRC
 
 ** Auto indent subsections
@@ -2114,7 +2116,7 @@ Several packages are using this package to show system-level notifications. Here
                                 ('gnu/linux 'libnotify)
                                 ;; osx-notifier having troubles showing
                                 ;; messages with Turkish characters
-                                ('darwin 'notifier)
+                                ('darwin 'osx-notifier)
                                 (_ 'message))))
 
   (define-advice alert (:after (msg &rest args) send-to-my-phone-if-urgent)
@@ -2183,6 +2185,7 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     :straight (:type built-in)
     :config
     (setq dired-dwim-target t)
+    (setq dired-listing-switches "-l -A -h -v --group-directories-first")
     (setq ls-lisp-dirs-first t)
     (setq ls-lisp-use-insert-directory-program nil)
     (setq dired-kill-when-opening-new-dired-buffer t)
@@ -2195,19 +2198,19 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
   (use-package dirvish
     :straight (:host github :repo "alexluigit/dirvish")
     :config
-    (setq dirvish-use-large-header nil)
-    (setq dirvish-body-fontsize-increment nil)
-    (setq dirvish-icon-monochrome t)
+    (setq dirvish-subtree-always-show-state t)
+    (setq dirvish-attributes '(vc-state subtree-state all-the-icons collapse git-msg file-size))
 
     ;; Other keybindings comes from dired-mode (which comes from
     ;; evil-collection)
     (evil-define-key 'normal dirvish-mode-map
-      "h" #'dirvish-up-directory
-      "l" #'dired-find-alternate-file)
+      "h" #'dired-up-directory
+      "l" #'dired-find-alternate-file
+      (kbd "<tab>") #'dirvish-toggle-subtree)
 
     ;; Re-direct direct-jump calls to dirvish
     (dirvish-override-dired-mode)
-    (evil-leader/set-key "ed" #'dirvish-dired))
+    (evil-leader/set-key "ed" #'dired))
 #+end_src
 ** image-mode
 I want to be able to kill image buffers with simply hitting =q=. This does that.
@@ -3096,7 +3099,7 @@ Some shortcuts you can use on any vertico window:
     (let ((home (expand-file-name "~")))
       (->>
        (expand-file-name isamert/projects-root)
-       (format "fd . '%s' --type directory --maxdepth 3 --absolute-path")
+       (format "fd . '%s' --type directory --maxdepth 4 --absolute-path")
        (shell-command-to-string)
        (s-trim)
        (s-split "\n")
@@ -3109,7 +3112,7 @@ Some shortcuts you can use on any vertico window:
     ;; The following does not recurse as I like it to be
     ;; (project-remember-projects-under isamert/projects-root t)
     (setq project--list '())
-    (--each (--map (cons 'vc it) (isamert/all-project-roots))
+    (--each (--map (project-try-vc it) (isamert/all-project-roots))
       (project-remember-project it t)))
 
   (run-with-timer 45 nil #'isamert/load-projects-list)
@@ -5194,6 +5197,15 @@ The following enables =CamelCase= aware editing operations.
        (funcall getter)
        (tsc-node-text))))
 
+  (defun isamert/ts--import-absolute (expr)
+    (if-let ((matches (s-match "^\\(import .* \\)'\\.\\(.*\\)'\\(;\\)?$" expr)))
+        (format "%s'%s'"
+                (nth 1 matches)
+                (s-chop-prefix
+                 (isamert/current-project-root)
+                 (expand-file-name (format ".%s" (nth 2 matches)))))
+      expr))
+
   (defun isamert/ts-send-expression-to-repl (&optional redefine)
     "Send current meaningful expression to node REPL."
     (interactive "P")
@@ -5205,7 +5217,9 @@ The following enables =CamelCase= aware editing operations.
                 (isamert/ts-current-expression))
               ;; Replace const with let so that we can redefine this
               ;; thing later if we need to
-              (s-replace-regexp "^[\n\t ]*\\(let\\|const\\)" (if redefine "" "let"))))
+              (s-replace-regexp "^[\n\t ]*\\(let\\|const\\)" (if redefine "" "let"))
+              ;; Replace relative imports with absolute ones
+              isamert/ts--import-absolute))
         (isamert/with-visible-buffer
          ".*vterm.*"
          (vterm-send-string ".editor")
@@ -6135,6 +6149,8 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
            (project (nth 1 data))
            (project-hexified (url-hexify-string project))
            (pipeline (nth 2 data)))
+      (when (or (not pipeline) (s-blank? pipeline))
+        (user-error "Pipeline id is nil for %s" url))
       (unless rerun?
         (message ">> Started watching pipeline %s on %s!" pipeline project))
       (run-with-timer

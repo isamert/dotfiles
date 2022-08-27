@@ -3,14 +3,18 @@
 set -euo pipefail
 
 case ${1:-""} in
-    -f|--force)
-        echo "=> Cleaning old files..."
-        rm -f ~/.emacs.d/index.org
-        rm -f ~/.emacs.d/index.el
-        for file in "${PWD}/emacs/load"/*.el; do
-            [[ ! $file = *secrets* ]] && rm -f "${HOME}/.emacs.d/load/$(basename "${file}")"
-        done
-        ;;
+-h | --help)
+    echo "./install.sh [--force] [--help]"
+    exit 0
+    ;;
+-f | --force)
+    echo "=> Cleaning old files..."
+    rm -f ~/.emacs.d/index.org
+    rm -f ~/.emacs.d/index.el
+    for file in "${PWD}/emacs/load"/*.el; do
+        [[ ! $file = *secrets* ]] && rm -f "${HOME}/.emacs.d/load/$(basename "${file}")"
+    done
+    ;;
 esac
 
 echo "=> Installing Emacs configuration..."
@@ -27,6 +31,14 @@ read -rd '' EMACS_EVAL <<EOF
 (progn
   (require 'org)
 
+  (org-babel-do-load-languages
+     'org-babel-load-languages
+     '((emacs-lisp . t)
+       (shell . t)
+       (python . t)
+       (js . t)))
+
+  (setq org-confirm-babel-evaluate nil)
   (add-hook 'org-babel-post-tangle-hook 'executable-make-buffer-file-executable-if-script-p)
 
   (defun when-darwin (file-path)
@@ -37,7 +49,6 @@ read -rd '' EMACS_EVAL <<EOF
       "no"))
 
   (defun when-linux (file-path)
-
     (if (eq system-type 'gnu/linux)
       (progn
         (message ":: Tangling %s" file-path)
@@ -61,14 +72,14 @@ cd emacs
 
 echo "=> Tangling Emacs config..."
 emacs -Q \
-      --batch \
-      --eval "$EMACS_EVAL"
+    --batch \
+    --eval "$EMACS_EVAL"
 
 cd ..
 
 echo "=> Installing dotfiles..."
 emacs -Q \
-      --batch \
-      --eval '(setq org-babel-noweb-wrap-start "<<<")' \
-      --eval '(setq org-babel-noweb-wrap-end ">>>")' \
-      --eval "$EMACS_EVAL"
+    --batch \
+    --eval '(setq org-babel-noweb-wrap-start "<<<")' \
+    --eval '(setq org-babel-noweb-wrap-end ">>>")' \
+    --eval "$EMACS_EVAL"
