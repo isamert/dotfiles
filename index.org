@@ -1773,7 +1773,6 @@ To rebuild completions, if something is not right, use the following:
         zsh-users/zsh-syntax-highlighting \
         zsh-users/zsh-history-substring-search \
         kutsan/zsh-system-clipboard \
-        agnoster/agnoster-zsh-theme \
         Aloxaf/fzf-tab
 #+end_src
 

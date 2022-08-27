@@ -789,7 +789,7 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
                             :width 'normal
                             :height isamert/font-height))
       ;; ...and load the theme
-      (load-theme 'doom-dark+ t)))
+      (load-theme 'doom-Iosvkem t)))
 
 
   (defun isamert/set-font-and-theme-config-in-frame (frame)
@@ -2611,7 +2611,6 @@ Note that it's not possible to stage hunks with =vc=.
 
 #+BEGIN_SRC emacs-lisp
   (use-package magit
-    :defer 10
     :config
     ;; Following snippet is needed to update modeline after a checkout happens
     (defun isamert/vc-refresh-state-advice (a &optional b)
