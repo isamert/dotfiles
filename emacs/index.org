@@ -3330,6 +3330,7 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
     (setq flycheck-display-errors-delay 0.3)
     (setq flycheck-emacs-lisp-load-path 'inherit)
     (setq flycheck-emacs-lisp-initialize-packages t)
+    (setq flycheck-disabled-checkers '(emacs-lisp-checkdoc))
     (setq flycheck-global-modes '(not org-mode jira-view-mode))
 
     (global-flycheck-mode))
