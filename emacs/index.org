@@ -4608,8 +4608,9 @@ Manage media and streams through =completing-read=.
     (setq empv-base-directory "~/Music")
     (setq empv-allow-insecure-connections t)
     (setq empv-invidious-instance "https://vid.puffyan.us/api/v1")
-    ;; see https://api.invidious.io/
+    ;; ^ see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
+    (add-to-list 'empv-mpv-args "--save-position-on-quit")
 
     (evil-leader/set-key
       "erp" #'empv-play
