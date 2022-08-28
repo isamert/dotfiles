@@ -3075,6 +3075,13 @@ Neither Slack web app nor the desktop app lets you define your own custom keybin
   bindurl .*.slack.com ;c composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-qa=copy_link]
 #+end_src
 
+**** Instagram integration
+You can open next/previous posts with left and right keys on instagram but as far as I know, there is no way to open next/previous picture of the current post (if it's a multi-picture post). With the following, you can use up and down keys to navigate between pictures of the current post.
+
+#+begin_src vimrc
+  bindurl .*.instagram.com --mode=normal <ArrowUp> hint -Jc button[aria-label="Go Back"]
+  bindurl .*.instagram.com --mode=normal <ArrowDown> hint -Jc button[aria-label="Next"]
+#+end_src
 **** Work related configuration
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
   set searchurls.tywiki https://wiki.trendyol.com/dosearchsite.action?queryString=%s
