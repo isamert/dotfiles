@@ -836,6 +836,17 @@ This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known 
     (add-hook 'org-mode-hook  #'fira-code-mode))
 #+end_src
 
+** page-break-lines
+Displays ~^L~ (page breaks) as full-width straight lines. You can jump between /pages/ by using ~C-x [~ and ~C-x ]~. See [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Pages.html][this]].
+
+#+begin_src emacs-lisp
+  (use-package page-break-lines
+    :config
+    ;; global-page-break-lines-mode only enables page-break-lines mode
+    ;; for the major modes listed in `page-break-lines-modes'
+    (global-page-break-lines-mode))
+#+end_src
+
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
 
