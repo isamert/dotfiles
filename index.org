@@ -3193,6 +3193,20 @@ Some shortcuts to some folders. These stuff appears in rofi so that, for example
   Type=Application
   Categories=Utility;
 #+end_src
+** .local/share/applications/switch-monitor-input.desktop
+:PROPERTIES:
+:ID:       a9df33fc-4547-440a-a1ab-0ebe9ff5f92d
+:END:
+Also see[[id:ed2554b0-83f7-4692-a16b-75403b8d25cf][raycast-switch-monitor-to-hdmi.sh]].
+
+#+begin_src conf :tangle (when-linux "~/.local/share/applications/switch-monitor-input.desktop")
+  [Desktop Entry]
+  Name=Switch monitor to USB-C
+  Terminal=false
+  Exec=ddcutil -b 3 setvcp 0x60 0x1b
+  Type=Application
+  Categories=Utility;
+#+end_src
 ** .local/share/applications/keepassxc-nopass.desktop
 #+begin_src conf :tangle (when-linux "~/.local/share/applications/keepassxc-nopass.desktop")
   [Desktop Entry]
@@ -4411,6 +4425,27 @@ Refresh the rules after tangling the file: ~sudo udevadm trigger~
   fi
 #+end_src
 
+* macOS scripts
+** raycast-switch-monitor-to-hdmi.sh
+:PROPERTIES:
+:ID:       ed2554b0-83f7-4692-a16b-75403b8d25cf
+:END:
+Also see [[id:a9df33fc-4547-440a-a1ab-0ebe9ff5f92d][switch-monitor-input.desktop]].
+
+#+begin_src sh :tangle (when-darwin "~/.scripts/raycast-switch-monitor-to-hdmi.sh")
+  #!/bin/sh
+
+  # Required parameters:
+  # @raycast.schemaVersion 1
+  # @raycast.title Switch monitor to HDMI
+  # @raycast.mode compact
+
+  # Optional parameters:
+  # @raycast.icon �
+
+  ssh asus 'ddcutil -b 3 setvcp 0x60 0x11'
+
+#+end_src
 * Tools
 - =dconf-editor= :: List and explore gnome/gshell/app settings.
 - =d-feet= :: List and explore running dbus instances.
