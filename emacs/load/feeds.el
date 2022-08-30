@@ -21,6 +21,7 @@
     ("http://aecepoglu.com/posts/index.xml" blog dev turkish soostone)
     ("http://nullprogram.com/feed/" blog dev)
     ("http://xenodium.com/rss.xml" blog dev)
+    ("https://karthinks.com/index.xml" blog dev emacs)
     ("https://eli.thegreenplace.net/feeds/all.atom.xml" blog dev)
     ("https://drewdevault.com/feed.xml" blog dev)
     ("https://haskell-explained.gitlab.io/blog/feeds/rss.xml" blog dev haskell)
@@ -85,6 +86,7 @@
     ("MentalOutlawStudios" youtube cli linux)
     ("UCbnGhYfkxiZdOPrZg4RBevw" youtube emacs cli linux) ;; Ravar's Path
     ("polyglut" youtube emacs) ;; Xah Lee
+    ("karthikchikmagalur" youtube dev emacs)
     ("babyWOGUE" youtube linux fun)
     ("UC8ENHE5xdFSwx71u3fDH5Xw" youtube vim cli dev) ;; ThePrimeagen
     ("mzamansky" youtube emacs)
@@ -101,7 +103,6 @@
     ("tvMisha" youtube fun turkish vlog)
     ("KALTChannel" youtube fun turkish)
     ("UCMixjxEx6t663lIf0aQBeSg" youtube turkish) ;; Sevan Nisanyan
-
     ("UCWXCrItCF6ZgXrdozUS-Idw" youtube fun animation) ; ExplosmEntertainment
 
     ;; Software tracking

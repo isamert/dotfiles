@@ -55,6 +55,7 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
 
   (setq package-enable-at-startup nil)
   (setq-default lexical-binding 'lv)
+  (setq native-comp-async-report-warnings-errors nil)
 
   (setq read-process-output-max (* 1024 1024))
   ;; ^ Better than default
@@ -836,7 +837,7 @@ This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known 
     (add-hook 'org-mode-hook  #'fira-code-mode))
 #+end_src
 
-** page-break-lines
+** Pages & page-break-lines & repeat-mode
 Displays ~^L~ (page breaks) as full-width straight lines. You can jump between /pages/ by using ~C-x [~ and ~C-x ]~. See [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Pages.html][this]].
 
 #+begin_src emacs-lisp
@@ -845,6 +846,15 @@ Displays ~^L~ (page breaks) as full-width straight lines. You can jump between /
     ;; global-page-break-lines-mode only enables page-break-lines mode
     ;; for the major modes listed in `page-break-lines-modes'
     (global-page-break-lines-mode))
+#+end_src
+
+After doing ~C-x [,]~ you can continue spamming ~[~ or ~]~ to jump prev/next pages with the help of ~repeat-mode~.
+
+#+begin_src emacs-lisp
+  (use-package repeat
+    :straight (:type built-in)
+    :config
+    (repeat-mode))
 #+end_src
 
 ** Frame title
@@ -1058,11 +1068,12 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'vc-dir)
     (evil-collection-init 'vc-annotate)
     (evil-collection-init 'help)
+    (evil-collection-init 'imenu-list)
     (evil-collection-init 'custom)
-    (evil-collection-unimpaired-setup))
+    <<evil-unimpaired>>)
 #+end_src
 ** evil-unimpaired
-Apparently [[evil-collection]] has an vim-unimpaired implementation already. It contains bindings like:
+Apparently [[evil-collection]] has a vim-unimpaired implementation already. It contains bindings like:
   - ~[<SPC>~ ~]<SPC>~ Insert newline above/below.
   - ~[b~ ~]b~ Go to prev/next buffer.
   - ~[p~, ~]p~ Paste up/down.
@@ -1073,12 +1084,15 @@ Apparently [[evil-collection]] has an vim-unimpaired implementation already. It 
   - ~[n~ ~]n~ Go to prev/next conflict marker.
   - ~[t~ ~]t~ Go to prev/next TODO. (This is defined in [[Dummy IDE mode]])
 
+These also support repeat-mode. You can do ~]b~ and spam ~b~ to switch buffers.
+
 Following are my extensions:
 
-#+begin_src emacs-lisp
-  (evil-define-key 'normal 'global
-    (kbd "[d") #'isamert/delete-line-above
-    (kbd "]d") #'isamert/delete-line-below)
+#+name: evil-unimpaired
+#+begin_src emacs-lisp :tangle no
+  (evil-collection-define-key 'normal 'evil-collection-unimpaired-mode-map
+    "[d" #'isamert/delete-line-above
+    "]d" #'isamert/delete-line-below)
 
   (defun isamert/delete-line-above ()
     "Delete the line above."
@@ -1087,7 +1101,8 @@ Following are my extensions:
       (previous-line 1)
       (beginning-of-line)
       (kill-line)
-      (kill-line)))
+      (when (s-blank? (s-trim (thing-at-point 'line t)))
+        (kill-line))))
 
   (defun isamert/delete-line-below ()
     "Delete the line below."
@@ -1096,7 +1111,11 @@ Following are my extensions:
       (next-line 1)
       (beginning-of-line)
       (kill-line)
-      (kill-line)))
+      (when (s-blank? (s-trim (thing-at-point 'line t)))
+        (kill-line))))
+
+  (setq evil-collection-unimpaired-want-repeat-mode-integration t)
+  (evil-collection-unimpaired-setup)
 #+end_src
 ** evil-leader
 Enable leader key and bind some keys.
@@ -3033,7 +3052,6 @@ Some shortcuts you can use on any vertico window:
             consult-ripgrep
             consult-bookmark
             jq-interactively
-            isamert/consult-line
             isamert/consult-ripgrep))
     (mini-frame-mode +1))
 #+end_src
@@ -3158,7 +3176,7 @@ Some key points:
 
     (evil-define-key 'normal 'global
       (kbd "M-i") 'consult-imenu
-      (kbd "C-f") 'isamert/consult-line)
+      (kbd "C-f") 'consult-line)
     (evil-define-key 'normal org-mode-map
       (kbd "M-i") 'consult-org-heading)
 
@@ -3259,34 +3277,17 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
       ,@(directory-files isamert/load-path t "\\.el$")))
 #+end_src
 
-*** Faster ~consult-line~
-~consult-line~ is quite slow on big files. I tried setting ~consult-fontify-max-size~ to a lower number as per [[https://github.com/minad/consult/issues/329][this thread]] but the improvement was not satisfactory. Try setting that first and check if it works for you.
+*** consult-dir: Jump to different places easily in minibuffer
+Here is a nice description of the package from it's README:
+: Avoid "navigating" long distances when picking a file or directory in any Emacs command that requires one. Think of it like the shell tools autojump, fasd or z but for Emacs.
 
 #+begin_src emacs-lisp
-  (defun isamert/consult-line ()
-    "Like `consult-line' but if the buffer is too big then it calls
-  `isamert/consult-ripgrep-buffer'."
-    (interactive)
-    (if (> (buffer-size) 200000)
-        (isamert/consult-ripgrep-buffer)
-      (consult-line)))
-
-  (defun isamert/consult-ripgrep-buffer ()
-    "Like `consult-ripgrep' but only for the current buffer."
-    (interactive)
-    (let ((consult-ripgrep-args
-           (concat "rg "
-                   "--null "
-                   "--line-buffered "
-                   "--color=never "
-                   "--max-columns=1000 "
-                   "--smart-case "
-                   "--no-heading "
-                   "--line-number "
-                   "--with-filename "
-                   (shell-quote-argument buffer-file-name))))
-      (consult-ripgrep)))
+  (use-package consult-dir
+    :bind (("C-x C-d" . consult-dir)
+           :map vertico-map
+           ("M-d" . consult-dir)))
 #+end_src
+
 ** embark
 =embark.el= provides contextual command maps.
   - =M-a= activates command mode. Next key should be command. Do =C-h= to list all commands with their keybindings.
@@ -3316,6 +3317,26 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 
   (use-package embark-consult
     :after (embark consult))
+#+end_src
+
+*** sudo-file-edit action
+Nice little embark action that let's you open files with sudo.
+
+Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
+#+begin_src emacs-lisp
+  (defun isamert/sudo-find-file (file)
+    "Open FILE as root."
+    (interactive "FOpen file as root: ")
+    (when (file-writable-p file)
+      (user-error "File is user writeable, aborting sudo"))
+    (find-file (if (file-remote-p file)
+                   (concat "/" (file-remote-p file 'method) ":"
+                           (file-remote-p file 'user) "@" (file-remote-p file 'host)
+                           "|sudo:root@"
+                           (file-remote-p file 'host) ":" (file-remote-p file 'localname))
+                 (concat "/sudo:root@localhost:" file))))
+
+  (define-key embark-file-map (kbd "S") 'isamert/sudo-find-file)
 #+end_src
 
 ** flycheck
@@ -7740,8 +7761,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
              (goto-char (point-max))
              (insert (ansi-color-apply str))))))
       (with-current-buffer buffer-name
-        (read-only-mode)
-        (font-lock-mode)
+        (prog-mode)
         (isamert/shell-command-mode 1)
         (evil-normal-state)
         (setq-local
