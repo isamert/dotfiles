@@ -837,7 +837,17 @@ This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known 
 #+end_src
 
 ** Pages & page-break-lines & repeat-mode
-Displays ~^L~ (page breaks) as full-width straight lines. You can jump between /pages/ by using ~C-x [~ and ~C-x ]~. See [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Pages.html][this]].
+You can jump between /pages/ by using ~C-x [~ and ~C-x ]~. See [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Pages.html][this]] for more information.
+
+#+begin_src emacs-lisp
+  (define-advice forward-page (:after (&rest _) recenter-buffer)
+    "Recenter the page after doing a forward-page. This is always
+  what I want."
+    (when (eq this-command 'forward-page)
+      (recenter nil)))
+#+end_src
+
+Displays ~^L~ (page breaks) as full-width straight lines:
 
 #+begin_src emacs-lisp
   (use-package page-break-lines
