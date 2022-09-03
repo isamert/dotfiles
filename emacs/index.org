@@ -1470,6 +1470,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (defconst readinglist-org "~/Documents/notes/readinglist.org")
   (defconst courses-org "~/Documents/notes/courses.org")
   (defconst bullet-org "~/Documents/notes/bullet.org")
+  (defconst life-org "~/Documents/notes/life.org")
   (defconst reality-org "~/Documents/notes/reality.org")
   (defconst projects-org "~/Documents/notes/projects.org")
   (defconst people-org "~/Documents/notes/people.org")
@@ -1487,7 +1488,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (setq org-directory "~/Documents/notes")
   (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
-  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org))
+  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org ,life-org))
 
   ;; With the following, I can call functions defined inside this file in other org files
   ;; (org-babel-lob-ingest "~/Documents/notes/utils.org")
