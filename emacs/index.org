@@ -843,7 +843,7 @@ You can jump between /pages/ by using ~C-x [~ and ~C-x ]~. See [[https://www.gnu
   (define-advice forward-page (:after (&rest _) recenter-buffer)
     "Recenter the page after doing a forward-page. This is always
   what I want."
-    (when (eq this-command 'forward-page)
+    (when (cl-find this-command '(backward-page forward-page))
       (recenter nil)))
 #+end_src
 
@@ -4319,6 +4319,7 @@ See [[https://isamert.net/2021/01/31/emacs-te-turkce-imla-denetimi.html][this]] 
 
   (add-hook 'org-mode-hook 'flyspell-mode)
   (add-hook 'markdown-mode-hook 'flyspell-mode)
+  (add-hook 'text-mode-hook 'flyspell-mode)
 #+END_SRC
 
 *** flyspell-correct
