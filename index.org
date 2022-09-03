@@ -126,16 +126,14 @@ This is the global keybinding manager for OSX. [[https://github.com/koekeishiya/
 
 #+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
   ctrl - l [
-    "Firefox" : skhd -k "cmd - l"
+    # F6 key
+    "Firefox" : skhd -k "0x61"
     ,* ~
   ]
 
   # focus window
   lcmd - h : yabai -m window --focus west
-  lcmd - l [
-    "Firefox" ~
-    ,*  : yabai -m window --focus east
-  ]
+  lcmd - l : yabai -m window --focus east
   lcmd - j : yabai -m window --focus south
   lcmd - k [
     # This is currently not possible, see the following issue
