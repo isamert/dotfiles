@@ -88,6 +88,37 @@ The following enables ~nix search~ command.
   experimental-features = nix-command flakes
 #+end_src
 * macOS
+** Application specific shortcuts
+Here is a [[https://gist.github.com/miclf/bf4b0cb6de9ead726197db7ed3d937b5][great tool]] for exporting and importing your application specific bindings in /Keyboard Shortcuts/ settings page. I was hesitant to use this feature because it was not easy to replicate but with this tool it's quite convenient.
+
+#+begin_src sh
+  # Installation
+  curl -L -o ~/.scripts/mac-kb-exporter.php https://gist.githubusercontent.com/miclf/bf4b0cb6de9ead726197db7ed3d937b5/raw/a135140b52014273d59567f24983ded99e30ac2d/macos_keyboard_shortcuts_exporter_importer.php
+  chmod +x ~/.scripts/mac-kb-exporter.php
+
+  # Usage
+  # mac-kb-exporter.php save ~/.config/mac-application-shortcuts.json
+  # mac-kb-exporter.php load ~/.config/mac-application-shortcuts.json
+#+end_src
+
+#+begin_src json :tangle ~/.config/mac-application-shortcuts.json
+  {
+      "org.mozilla.firefox": {
+          "Close Tab": "^W",
+          "Close Window": "⌘W",
+          "Find Again": "^G",
+          "Find in Page...": "^F",
+          "History": "^H",
+          "New Tab": "^T"
+      },
+      "com.google.Chrome": {
+          "Find...": "^F",
+          "New Tab": "^T",
+          "Open Location...": "^L"
+      }
+  }
+#+end_src
+
 ** yabai
 This is the window manager I use in OSX. It's pretty much like BSPWM. [[https://github.com/koekeishiya/yabai/blob/master/examples/yabairc][Here]] is an example configuration. I don't use the "scripting addition" due to company restrictions.
 
@@ -124,13 +155,15 @@ Installation and enabling are done through homebrew:
 ** skhd
 This is the global keybinding manager for OSX. [[https://github.com/koekeishiya/yabai/blob/master/examples/skhdrc][Here]] is an example configuration for yabai and [[https://github.com/koekeishiya/skhd/blob/master/examples/skhdrc][here]] is a more generic example configuration demonstrating it's capabilities.
 
-#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
-  ctrl - l [
-    # F6 key
-    "Firefox" : skhd -k "0x61"
-    ,* ~
-  ]
+It can be installed through homebrew:
 
+#+begin_src sh
+  brew install koekeishiya/formulae/skhd
+  brew services start skhd
+#+end_src
+
+*** Window manager
+#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
   # focus window
   lcmd - h : yabai -m window --focus west
   lcmd - l : yabai -m window --focus east
@@ -181,16 +214,89 @@ This is the global keybinding manager for OSX. [[https://github.com/koekeishiya/
   # float / unfloat window and center on screen
   lcmd - t : yabai -m window --toggle float;\
             yabai -m window --grid 4:4:1:1:2:2
+#+end_src
 
-  # run some apps
-  hyper - r : <<<sh("which emacsclient")>>> -c
-  hyper - i : <<<sh("which emacsclient")>>> --eval "(isamert/globally (isamert/yankpad-copy-snippet))"
-  hyper - o : <<<sh("which emacsclient")>>> --eval "(isamert/globally (isamert/yankpad-copy-snippet t))"
-  hyper - p : <<<sh("which emacsclient")>>> --eval "(isamert/globally (isamert/password-act))"
-  hyper - v : <<<sh("which emacsclient")>>> --eval "(empv-toggle-video)"
-  hyper - g : <<<sh("which emacsclient")>>> --eval "(isamert/globally (isamert/gitlab-select-project))"
-  hyper - y : <<<sh("which osascript")>>> -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
+*** Application shortcuts
+#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
+  hyper - r : emacsclient -c
+  hyper - i : emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet))"
+  hyper - o : emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet t))"
+  hyper - p : emacsclient --eval "(isamert/globally (isamert/password-act))"
+  hyper - v : emacsclient --eval "(empv-toggle-video)"
+  hyper - g : emacsclient --eval "(isamert/globally (isamert/gitlab-select-project))"
+  hyper - y : osascript -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
   hyper - return : open -n -a 'Alacritty.app'
+#+end_src
+
+*** Firefox specific
+- ~cmd-l~ (focus urlbar) clashes with my global shortcut, so I simply want to remap it to ctrl-l in Firefox. Unfortunately, Firefox does not expose ~cmd-l~ in it's menu, so its not possible to remap it natively using macOS' "Keyboard Shortcuts" settings page. Here I remap ~ctrl-l~ to ~F6~ (which also provides the "focus urlbar" functionality).
+
+#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
+  ctrl - l [
+    # F6 key
+    "Firefox" : skhd -k "0x61"
+    * ~
+  ]
+#+end_src
+
+** Hammerspoon
+[[https://www.hammerspoon.org/][Hammerspoon]] is a macOS automation tool. It can be installed with homebrew: ~brew install --cask hammerspoon~. It has a great [[https://www.hammerspoon.org/go/][starting guide]].
+
+*** init file
+#+begin_src lua :tangle (when-darwin "~/.hammerspoon/init.lua")
+  local clocking = require "clocking"
+  -- It is required to be bound to a variable, we can't just do
+  -- clocking.init() because garbage collector removes it and it stops
+  -- working.
+  dateTimeGarbageCollectorPreventer = clocking.init()
+#+end_src
+
+*** Show currently clocked-in task in menubar
+This is mostly based on: [[https://appsonthemove.com/posts/orgmode_clocking_hammerspoon/][Org mode clocking in the menu bar with Hammerspoon]].
+
+#+begin_src lua :tangle (when-darwin "~/.hammerspoon/clocking.lua")
+  local clockingLog = hs.logger.new("clocking")
+  local clockingMenu = hs.menubar.new()
+
+  local function trim(s)
+     return (s:gsub("^%s*(.-)%s*$", "%1"))
+  end
+
+  local function elisp(sexp, callback)
+     hs.task.new(
+        "/opt/homebrew/bin/emacsclient",
+        function(exitCode, stdOut, stdErr)
+           if exitCode == 0 then
+              callback(trim(stdOut))
+           end
+        end,
+        { "--eval", sexp }
+     ):start()
+  end
+
+
+  local function updateClockingMenu()
+     elisp(
+        "(isamert/format-polybar-clock-string)",
+        function(value)
+           -- Strip double quotes
+           clockingMenu:setTitle(string.match(value, '"(.+)"'))
+        end
+     )
+  end
+
+  local function startUpdatingClockingMenu()
+     return hs.timer.doEvery(5, updateClockingMenu)
+  end
+
+  local mod = {}
+
+  function mod.init()
+      updateClockingMenu()
+      return startUpdatingClockingMenu()
+  end
+
+  return mod
 #+end_src
 
 * Linux
