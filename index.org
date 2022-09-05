@@ -36,7 +36,7 @@ These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs con
         (_ "no")))
   #+end_src
 
-- Here is the code that puts them together, this block is executed during the startup of this file. See [[Postamble]] (at the end of this) file where this code-block is called for execution.
+- Here is the code that puts them together, this block is executed during the startup of this file. See [[Postamble]] (at the end of this file) where this code-block is called for execution.
   #+name: startup
   #+begin_src elisp
   <<<executable_hook>>>
@@ -3435,17 +3435,9 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
   #!/bin/bash
 
   set -eo pipefail
-
   FILE=$1
-
-  function get_result {
-      grep --max-count=1 "$1: " </dev/stdin | cut -d"'" -f2
-  }
-
-  FILE_ID=$(box files:upload "$FILE" --parent-id "$BOX_UPLOAD_DIR" | get_result ID)
-  LINK=$(box shared-links:create "$FILE_ID" file | get_result URL)
-
-  echo "$LINK" | tee >(xcopy)
+  FILE_ID=$(box files:upload --id-only "$FILE" --parent-id "$BOX_UPLOAD_DIR")
+  box shared-links:create --json "$FILE_ID" file | jq -j '.url' | tee >(xcopy)
 #+end_src
 ** .scripts/cb-save
 #+begin_src bash :tangle (when-linux "~/.scripts/cb-save")
