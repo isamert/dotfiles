@@ -3586,6 +3586,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (use-package vterm
     :config
     (evil-define-key 'insert vterm-mode-map (kbd "C-r") #'vterm-send-C-r) ;; FIXME wtf
+    (evil-define-key 'insert vterm-mode-map (kbd "M-\\") #'vterm-send-M-\\)
+    (evil-define-key 'insert vterm-mode-map (kbd "M--") #'vterm-send-M--)
     (evil-define-key 'insert vterm-mode-map (kbd "C-c") #'vterm-send-C-c)
     (evil-define-key 'insert vterm-mode-map (kbd "C-x") #'vterm-send-C-x)
     (evil-leader/set-key
