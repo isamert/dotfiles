@@ -3085,6 +3085,7 @@ Some shortcuts you can use on any vertico window:
     (let ((default-directory (project-root (project-current t))))
       (call-interactively #'isamert/shell-command)))
 
+  ;; TODO remember last window height for a buffer
   (defun isamert/project-shell (&optional shell)
     (interactive)
     (let* ((default-directory (or (ignore-errors
@@ -3103,7 +3104,7 @@ Some shortcuts you can use on any vertico window:
           (display-buffer-in-side-window
            term
            (append
-            `((window-height . ,popper-window-height)
+            `((window-height . 15)
               (side . top)
               (slot . 1))))
           (select-window (get-buffer-window term))))))
@@ -3299,7 +3300,6 @@ Here is a nice description of the package from it's README:
             :narrow ?m
             :category file
             :face consult-file
-            :history consult-file-history
             :items
             (lambda ()
               '("~/Downloads/"
@@ -4669,6 +4669,7 @@ Manage media and streams through =completing-read=.
     ;; ^ see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
     (add-to-list 'empv-mpv-args "--save-position-on-quit")
+    (add-hook 'empv-init-hook #'empv-override-quit-key)
 
     (evil-leader/set-key
       "erp" #'empv-play
