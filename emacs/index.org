@@ -5793,6 +5793,14 @@ For working with [[id:DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983][KMonad]] kbd files. 
     (setq kbd-mode-start-kmonad "kmonad ~/.config/kmonad.kbd"))
 #+end_src
 
+** lua-mode
+#+begin_src emacs-lisp
+  (use-package lua-mode)
+#+end_src
+** jsonnet-mode
+#+begin_src emacs-lisp
+  (use-package jsonnet-mode)
+#+end_src
 * Misc functions
 ** marks integration
 [[https://github.com/isamert/marks][marks]] is a grep-like tool for searching org-mode and markdown files. The following snippet provides a ~consult~ support for marks.
