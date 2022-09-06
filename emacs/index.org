@@ -1329,6 +1329,9 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     ;; ^ Consider the current day to end at 3AM
     (setq org-use-effective-time t)
     ;; ^ Make timestamp processing functions aware of the previous config
+    (setq org-element-use-cache nil)
+    ;; ^ Cache causes bunch of random errors although disabling cache
+    ;; reduces the agenda performance significantly
 
     ;; TODO Remove when upstream fixes this
     ;; https://github.com/minad/consult/issues/563#issuecomment-1186612641
@@ -5783,7 +5786,6 @@ For working with [[id:DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983][KMonad]] kbd files. 
 
 #+begin_src emacs-lisp
   (use-package kbd-mode
-    :ensure t
     :diminish
     :straight (:host github :repo "kmonad/kbd-mode")
     :config
