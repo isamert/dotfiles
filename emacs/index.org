@@ -3791,7 +3791,7 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
       (completing-read
        "Select a branch: "
        (vc-git-branches)
-       nil nil (isamert/git-current-branch))))
+       nil nil (lab-git-current-branch))))
     (let ((git-link-default-branch branch))
       (call-interactively 'git-link)))
 
@@ -6016,7 +6016,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     "Create a new branch from given ISSUE-NAME and switch to it."
     (interactive "sIssue name: ")
     (let ((branch-name (isamert/jira--create-branch-name-from-ticket (concat key summary))))
-      (unless (equal isamert/git-main-branch (isamert/git-current-branch))
+      (unless (equal isamert/git-main-branch (lab-git-current-branch))
         (user-error "Please switch to `%s' branch first." isamert/git-main-branch))
       (message "Updating...")
       (magit-fetch-all nil)
@@ -7926,6 +7926,7 @@ Company/work related stuff.
   (use-package lab
     :straight (:host github :repo "isamert/lab.el")
     :config
+    (setq lab-main-branch-name "master")
     (setq lab-host ty/gitlab-url)
     (setq lab-token ty/gitlab-token)
     (setq lab-group ty/gitlab-group))
