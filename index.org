@@ -144,6 +144,7 @@ Installation and enabling are done through homebrew:
 
   yabai -m rule --add app=Emacs  manage=off
   yabai -m rule --add app=choose manage=off
+  yabai -m rule --add app=iTerm  manage=off
 
   yabai -m rule --add app=Firefox     space=^1
   yabai -m rule --add app=Emacs       space=^2
