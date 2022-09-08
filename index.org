@@ -3083,12 +3083,6 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   bind --mode=ex <A-n> ex.next_history
   bind --mode=ex <A-π> ex.prev_history
   bind --mode=ex <A-˜> ex.next_history
-
-  " Only hint search results on Google and DDG
-  bindurl www.google.com f hint -Jc #search div:not(.action-menu) > a
-  bindurl www.google.com F hint -Jbc #search div:not(.action-menu) > a
-  bindurl ^https://duckduckgo.com f hint -Jc [class~=result__a]
-  bindurl ^https://duckduckgo.com F hint -Jbc [class~=result__a]
 #+end_src
 
 **** Redirect URLs
@@ -3193,7 +3187,7 @@ Neither Slack web app nor the desktop app lets you define your own custom keybin
 **** Instagram integration
 You can open next/previous posts with left and right keys on instagram but as far as I know, there is no way to open next/previous picture of the current post (if it's a multi-picture post). With the following, you can use up and down keys to navigate between pictures of the current post.
 
-#+begin_src vimrc
+#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
   bindurl .*.instagram.com --mode=normal <ArrowUp> hint -Jc button[aria-label="Go Back"]
   bindurl .*.instagram.com --mode=normal <ArrowDown> hint -Jc button[aria-label="Next"]
 #+end_src

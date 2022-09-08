@@ -3919,6 +3919,7 @@ Simple mode for editing =~/.Xmodmap= file.
     (setq slack-buffer-function #'switch-to-buffer-other-window)
     ;; ^ Open slack windows on the right side of the screen
 
+    (setq slack-buffer-function 'switch-to-buffer)
     (setq slack-message-custom-notifier #'isamert/slack-notify)
     (setq slack-message-custom-delete-notifier #'isamert/slack-notify)
 
