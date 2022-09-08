@@ -5799,7 +5799,14 @@ For working with [[id:DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983][KMonad]] kbd files. 
 #+end_src
 ** jsonnet-mode
 #+begin_src emacs-lisp
-  (use-package jsonnet-mode)
+  (use-package jsonnet-mode
+    :config
+    ;; Apheleia config, so that it automatically formats on save
+    (cl-defun isamert/apheleia-format-jsonnet (&key callback &allow-other-keys)
+      (jsonnet-reformat-buffer)
+      (funcall callback))
+    (setf (alist-get 'jsonnet apheleia-formatters) 'isamert/apheleia-format-jsonnet)
+    (setf (alist-get 'jsonnet-mode apheleia-mode-alist) 'jsonnet))
 #+end_src
 * Misc functions
 ** marks integration
