@@ -3308,6 +3308,10 @@ Here is a nice description of the package from it's README:
             (lambda ()
               '("~/Downloads/"
                 "~/Documents/"
+                "~/Music/"
+                "~/Music/mix/"
+                "~/Videos/Shows/"
+                "~/Videos/Movies/"
                 "~/Documents/notes/"
                 "~/Documents/notes/img/"
                 "~/Workspace/projects/"
@@ -4209,14 +4213,6 @@ Pop current comment section into an org (or markdown, as it's more widely used f
     :config
     (remove-hook 'poporg-edit-hook 'org-mode)
     (add-hook 'poporg-edit-hook 'markdown-mode))
-#+end_src
-** undohist
-Adds persistent undo feature to Emacs' undo-redo functionality.
-
-#+begin_src emacs-lisp
-  (use-package undohist
-    :config
-    (undohist-initialize))
 #+end_src
 ** nov.el
 For reading epub files.
