@@ -766,6 +766,7 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
 
 ** Fonts and theme
 #+BEGIN_SRC emacs-lisp
+  (menu-bar-mode 0)
   (use-package doom-themes)
 
   (defconst isamert/fonts '("Iosevka Comfy" "Iosevka Nerd Font"))
@@ -5969,7 +5970,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (interactive)
     (isamert/open-jira-issue (thing-at-point 'symbol)))
 
-  (defun isamert/jira-get-my-issues ()
+  (defmemoize isamert/jira-get-my-issues ()
     (jiralib2-jql-search isamert/jira-my-issues-query))
 
   (defun isamert/jira-get-kanban-issues ()
@@ -7633,7 +7634,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
   (defun isamert/kube-get-cluster-server-ip ()
     (interactive)
     (isamert/output-select
-     :cmd "kubectl config get-contexts --output=name"
+     :cmd "kubectl config get-clusters"
      :drop 1
      :keep-order t
      :prompt (format "Select context (leave blank to use %s): " (isamert/kube--current-context))
