@@ -3150,6 +3150,9 @@ I use TreeStyleTabs and it's perfect. This is just cherry on top.
 Neither Slack web app nor the desktop app lets you define your own custom keybindings but using the web app in combination with Tridactyl we can create our own shortcuts. I also created [[https://github.com/tridactyl/tridactyl/wiki/Slack][this tridactyl wiki page]] based on the bindings I created here. It might contain more details.
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
+  command slack-top js -d€ document.querySelector('[data-qa="slack_kit_scrollbar"]').scrollTop = 0€
+  command slack-top-then composite slack-top;
+
   " f -> just like f but more intelligent
   bindurl .*.slack.com --mode=normal f hint -Jc div[data-sidebar-link-id]:not([data-sidebar-link-id=""]),div[data-section-channel-index]:not([data-section-channel-index=""]),button,a
 
@@ -3163,16 +3166,16 @@ Neither Slack web app nor the desktop app lets you define your own custom keybin
   bindurl .*.slack.com --mode=normal ;q composite hint -pipe div[data-qa=message-text] | js -p navigator.clipboard.writeText(JS_ARG.innerText.split('\n').map(it => `> ${it}`).join('\n')); hint -c div[data-qa=message_input]
 
   " ;u -> open unreads
-  bindurl .*.slack.com --mode=normal ;u hint -Jc div[data-sidebar-link-id="Punreads"]
+  bindurl .*.slack.com --mode=normal ;u slack-top-then hint -Jc div[data-sidebar-link-id="Punreads"]
 
   " ;t -> open all threads
-  bindurl .*.slack.com --mode=normal ;t hint -Jc div[data-sidebar-link-id="Vall_threads"]
+  bindurl .*.slack.com --mode=normal ;t slack-top-then hint -Jc div[data-sidebar-link-id="Vall_threads"]
 
   " ;d -> open all dms
-  bindurl .*.slack.com --mode=normal ;d hint -Jc div[data-sidebar-link-id="Pdms"]
+  bindurl .*.slack.com --mode=normal ;d slack-top-then hint -Jc div[data-sidebar-link-id="Pdms"]
 
   " ;a -> open activity window
-  bindurl .*.slack.com --mode=normal ;a hint -Jc div[data-sidebar-link-id="Pactivity"]
+  bindurl .*.slack.com --mode=normal ;a slack-top-then hint -Jc div[data-sidebar-link-id="Pactivity"]
 
   " ;m -> interactively select a message and open message actions
   bindurl .*.slack.com ;m composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-focus-key=message_actions],[role=menuitem]
