@@ -2971,7 +2971,7 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   set smoothscroll true
   set modeindicatorshowkeys true
   set tabopencontaineraware true
-  set newtab https://web.tabliss.io/
+  set newtab https://isamert.net/newtab.html
 
   " commands
   command withUrl composite get_current_url |
