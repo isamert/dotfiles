@@ -3151,6 +3151,7 @@ Some shortcuts you can use on any vertico window:
      (--filter (isamert/is-git-dir it))
      (--map (abbreviate-file-name (f-full it)))))
 
+  (defalias 'isamert/import-projects #'isamert/load-projects-list)
   (defun isamert/load-projects-list ()
     (interactive)
     ;; Ensure all projects are known by project.el
