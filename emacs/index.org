@@ -855,6 +855,7 @@ Displays ~^L~ (page breaks) as full-width straight lines:
     :config
     ;; global-page-break-lines-mode only enables page-break-lines mode
     ;; for the major modes listed in `page-break-lines-modes'
+    (add-to-list 'page-break-lines-modes 'clojure-mode)
     (global-page-break-lines-mode))
 #+end_src
 
@@ -3309,6 +3310,7 @@ Here is a nice description of the package from it's README:
             (lambda ()
               '("~/Downloads/"
                 "~/Documents/"
+                "~/Pictures/f3/Camera/"
                 "~/Music/"
                 "~/Music/mix/"
                 "~/Videos/Shows/"
@@ -5363,29 +5365,45 @@ Here is the current workflow I use:
   (use-package cider
     :after clojure-mode
     :config
+    (setq cider-inspector-page-size 50)
+    (setq cider-show-error-buffer nil)
+
     (evil-define-key 'normal clojure-mode-map (kbd "K") #'cider-doc)
     (evil-define-key 'normal cider-inspector-mode-map
       (kbd "RET") #'cider-inspector-operate-on-point
       (kbd "DEL") #'cider-inspector-pop)
     (evil-leader/set-key-for-mode 'clojure-mode
-      ";" #'cider-eval-last-sexp
-      "'" #'cider-eval-defun-at-point
-      "\\" #'cider-eval-region)
+      ";" (isamert/eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point))
 
     ;; `compojure' indent
     (define-clojure-indent
-     (defroutes 'defun)
-     (GET 2)
-     (POST 2)
-     (PUT 2)
-     (DELETE 2)
-     (HEAD 2)
-     (ANY 2)
-     (OPTIONS 2)
-     (PATCH 2)
-     (rfn 2)
-     (let-routes 1)
-     (context 2)))
+      (defroutes 'defun)
+      (GET 2)
+      (POST 2)
+      (PUT 2)
+      (DELETE 2)
+      (HEAD 2)
+      (ANY 2)
+      (OPTIONS 2)
+      (PATCH 2)
+      (rfn 2)
+      (let-routes 1)
+      (context 2)))
+
+  ;; TODO use this for all lispy langs
+  (defun isamert/eval-dwim (lastf regionf defunf)
+    "Generate an interactive function that you can bind to a key
+  which calls LASTF, REGIONF or DEFUNF."
+    (lambda ()
+      (interactive)
+      (cond
+       ((use-region-p)
+        (call-interactively regionf))
+       ((or (-contains? '(?\) ?\") (char-before))
+            (-contains? '(?\ ?\)) (char-after)))
+        (call-interactively lastf))
+       (t
+        (call-interactively defunf)))))
 #+end_src
 ** emmet-mode
 Hit <C-j> after these and get:
