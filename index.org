@@ -624,6 +624,7 @@ This is a simple program for inserting given characters (including unicode) to c
 
 #+begin_src objc :tangle (when-darwin "~/.cache/TypeChars.m")
   #import <Foundation/Foundation.h>
+  #import <CoreGraphics/CoreGraphics.h>
 
   int main(int argc, const char * argv[]) {
     @autoreleasepool {

@@ -900,7 +900,7 @@ Colors parentheses depending on their dept.
     :diminish global-whitespace-mode
     :config
     (setq whitespace-style '(face empty tabs trailing))
-    (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode))
+    (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode))
     (global-whitespace-mode t))
 
   (defun isamert/whitespace-mode-toggle ()
@@ -3351,6 +3351,7 @@ Here is a nice description of the package from it's README:
   (use-package embark
     :config
     (bind-key (kbd "M-a") #'embark-act)
+    (bind-key (kbd "M-A") #'embark-act-all)
     (setq embark-prompter #'embark-completing-read-prompter)
     ;; ^ This directly shows the actions in a completing read window.
     ;; By default, it is set to `embark-keymap-prompter' and you need to
@@ -5472,7 +5473,8 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
     :diminish
     :straight (:host github :repo "isamert/eros")
     :config
-    (eros-mode 1))
+    (eros-mode 1)
+    (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1))))
 #+end_src
 *** Inline/popup documentation
 #+begin_src emacs-lisp
