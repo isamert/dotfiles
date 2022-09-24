@@ -11,7 +11,7 @@ These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs con
 - ~org-babel-tangle~ to tangle all files.
 - ~C-u org-babel-tangle~ to only tangle current file.
 
-- This file uses ~<<<this>>>~ syntax in source code blocks to embed noweb code instead of ~<<that>>~ syntax. This allows me to use noweb inside bash blocks without interfering with its syntax highlighter. See [[Postamble]].
+- This file uses ~«this»~ syntax in source code blocks to embed noweb code instead of ~<<that>>~ syntax. This allows me to use noweb inside bash blocks without interfering with its syntax highlighter. See [[Postamble]].
 - You'll want to make sure some of the files should tangle with executable permission. For that:
   #+name: exacutable_hook
   #+begin_src elisp
@@ -39,12 +39,12 @@ These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs con
 - Here is the code that puts them together, this block is executed during the startup of this file. See [[Postamble]] (at the end of this file) where this code-block is called for execution.
   #+name: startup
   #+begin_src elisp
-  <<<executable_hook>>>
-  <<<conditions>>>
+  «executable_hook»
+  «conditions»
   #+end_src
 
 ** Supplementary functions
-You can run arbitrary shell commands inside a code block like this: ~<<<sh("which git")>>>~. This can be useful where an output of a command needs to be statically placed in an exported file.
+You can run arbitrary shell commands inside a code block like this: ~«sh("which git")»~. This can be useful where an output of a command needs to be statically placed in an exported file.
 
 #+name: sh
 #+begin_src elisp :var code=""
@@ -93,8 +93,8 @@ Here is a [[https://gist.github.com/miclf/bf4b0cb6de9ead726197db7ed3d937b5][grea
 
 #+begin_src sh
   # Installation
-  curl -L -o ~/.scripts/mac-kb-exporter.php https://gist.githubusercontent.com/miclf/bf4b0cb6de9ead726197db7ed3d937b5/raw/a135140b52014273d59567f24983ded99e30ac2d/macos_keyboard_shortcuts_exporter_importer.php
-  chmod +x ~/.scripts/mac-kb-exporter.php
+  curl -L -o ~/.local/bin/mac-kb-exporter.php https://gist.githubusercontent.com/miclf/bf4b0cb6de9ead726197db7ed3d937b5/raw/a135140b52014273d59567f24983ded99e30ac2d/macos_keyboard_shortcuts_exporter_importer.php
+  chmod +x ~/.local/bin/mac-kb-exporter.php
 
   # Usage
   # mac-kb-exporter.php save ~/.config/mac-application-shortcuts.json
@@ -301,12 +301,31 @@ This is mostly based on: [[https://appsonthemove.com/posts/orgmode_clocking_hamm
 #+end_src
 
 * Linux
-** SystemD journal files
+** systemd
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
 
 #+begin_src conf :tangle (when-linux "/sudo::/etc/systemd/journald.conf.d/max-journal-size.conf")
   [Journal]
-  SystemMaxUse=50M
+  SystemMaxUse=500M
+#+end_src
+
+Unit files started with ~--user~ will have the following variables.
+
+#+name: user-env
+#+begin_src conf :tangle (when-linux "~/.config/environment.d/paths.conf")
+  GOPATH="$HOME/.go"
+  R_LIBS_USER="$HOME/.rlibs"
+  NPM_PACKAGES="$HOME/.npm-packages"
+  PATH=$HOME/.bin:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/bin:$HOME/.cargo/bin:$PATH
+#+end_src
+
+After tangling all unit files, run this:
+
+#+begin_src sh
+  systemctl --user daemon-reload
+  systemctl --user enable kmonad
+  systemctl --user enable emacsd
+  systemctl --user enable syncthing
 #+end_src
 
 ** Pacman configuration
@@ -319,25 +338,14 @@ Following snippet enables some configurations for pacman:
 - TotalDownload :: Adds ETA information for total progress etc.
 
 #+begin_src conf :tangle (when-linux "/sudo::/etc/pacman.conf")
-  <<<sh("cat /etc/pacman.conf | sed -E 's/^#(Parallel|Color|VerbosePkgLists|TotalDownload)/\\1/'")>>>
+  «sh("cat /etc/pacman.conf | sed -E 's/^#(Parallel|Color|VerbosePkgLists|TotalDownload)/\\1/'")»
 #+end_src
 
 ** Enable Bluetooth automatically
 
 #+begin_src conf :tangle (when-linux "/sudo::/etc/bluetooth/main.conf")
-  <<<sh("sed 's/#AutoEnable=false/AutoEnable=true/' /etc/bluetooth/main.conf")>>>
+  «sh("sed 's/#AutoEnable=false/AutoEnable=true/' /etc/bluetooth/main.conf")»
 #+end_src
-** systemd user units
-After tangling all unit files, run this:
-
-#+begin_src sh
-  systemctl --user daemon-reload
-  systemctl --user enable kmonad
-  systemctl --user enable emacsd
-
-  systemctl enable syncthing
-#+end_src
-
 ** External monitor brightness
 - Install ~ddcutil~
 - Enable automatic loading of ~i2c-dev~ module with systemd.
@@ -371,7 +379,7 @@ Also see this gnome extension and it's README for further information: https://g
 ** Evaluate Javascript on Gnome Shell
 I use this script on several keyboard shortcuts:
 
-#+begin_src bash :tangle ~/.scripts/gshell-eval-js
+#+begin_src bash :tangle ~/.bin/gshell-eval-js
   dbus-send --print-reply --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"$*"
 #+end_src
 
@@ -387,7 +395,7 @@ For this script to work, you need to enable unsafe mode. You can enable it by do
 ** Toggle Do Not Disturb
 Source: https://github.com/joshpetit/toggle_dnd
 
-#+begin_src sh :tangle ~/.scripts/gshell-toggle-dnd
+#+begin_src sh :tangle ~/.bin/gshell-toggle-dnd
   #!/bin/bash
   value=$(gsettings get org.gnome.desktop.notifications show-banners)
   if [[ $value == 'true' ]]
@@ -450,7 +458,7 @@ Source: https://github.com/joshpetit/toggle_dnd
   xmodmap $HOME/.Xmodmap
   xsetroot -cursor_name left_ptr
 
-  <<<startup_programs>>>
+  «startup_programs»
 
   exec bspwm
 #+end_src
@@ -569,14 +577,18 @@ Restart your machine.
 #+name: kmonad-cfg
 #+begin_src kbd
   (defcfg
-    input  <<<kmonad-device()>>>
-    output <<<when-on(linux="(uinput-sink \"My KMonad output\")", darwin="(kext)")>>>
+    input  «kmonad-device()»
+    output «when-on(linux="(uinput-sink \"My KMonad output\")", darwin="(kext)")»
     fallthrough true
     allow-cmd true)
 #+end_src
 
 *** Unicode characters
 Here I use an external program (~xtype~, which is explained below) to type unicode characters instead of utilizing XCompose as suggested by KMonad. Managing, making it running is hard with XCompose. Also it does not work on Mac.
+
+Also see these:
+- https://en.wikibooks.org/wiki/Unicode/List_of_useful_symbols
+- https://isamert.net/2022/08/12/typing-unicode-characters-programmatically-on-linux-and-macos.html
 
 #+name: kmonad-unicode
 #+begin_src kbd
@@ -593,6 +605,8 @@ Here I use an external program (~xtype~, which is explained below) to type unico
     ← (cmd-button "xtype ←")
     → (cmd-button "xtype →")
     ≠ (cmd-button "xtype ≠")
+    « (cmd-button "xtype «")
+    » (cmd-button "xtype »")
 
     ;; Turkish chars
     ş (cmd-button "xtype ş")
@@ -610,7 +624,7 @@ THIS ALSO WORKS FOR MAC. But I decided to not to use it for two reasons:
 - It's a bit slow on Mac.
 - It's a bit hard to manage python dependencies on Mac.
 
-#+begin_src python :tangle (when-linux "~/.scripts/xtype")
+#+begin_src python :tangle (when-linux "~/.bin/xtype")
   #!/usr/bin/env python
 
   import sys
@@ -689,24 +703,24 @@ Run this to install it:
 #+end_src
 
 #+name: kmonad-layers
-#+begin_src kbd :tangle ~/.config/kmonad.kbd
+#+begin_src kbd
   (defalias
     sym (layer-toggle symbols)
     hyp (tap-next esc (layer-toggle hyper)))
 
   (deflayer symbols
     _   _    _    _    _    _    _    _    _    _    _    _    _
-    _   {    }    _    _    _    _    _    _    _    _    _    @≠   _
+    _   @«   @»   _    _    _    _    _    _    _    _    _    @≠   _
     _   @¿   @↑   @hm  @la  @✓   _    @ü   @ı   @ö   _    \(   \)
     _   @←   @ş   @→   @fa  @ğ   left down up   rght _    _    _    _
-    _   _    @↓   _    @ç   _    @λ   @¬   _    @≤   @≥   _    _
+    _   _    _    @↓   @ç   _    @λ   @¬   _    @≤   @≥   _    _
     _   _    _    _              _              _    _    _    _)
 
   (defalias
     pret C-M-A-S-ret
     pspc C-M-A-S-spc
     ptb  C-M-A-S-tab
-    <<<kmonad-generate-aliases-for-hyper-layer()>>>)
+    «kmonad-generate-aliases-for-hyper-layer()»)
 
   ;; Instead of utilizing Hyper key for creating shortcuts like I did
   ;; with my Xmodmap configuration, I use C-M-A-S as the so called hyper
@@ -725,9 +739,9 @@ Run this to install it:
 I use this config on both linux and mac. This is the configuration for my external keyboard. Some of the uses of ~\~ character is just to make the total key count same as the generic layers I defined above. They are mapped to itself again in the main layer.
 
 #+begin_src kbd :tangle "~/.config/kmonad-linux.kbd"
-  <<<kmonad-cfg>>>
-  <<<kmonad-unicode>>>
-  <<<kmonad-macros>>>
+  «kmonad-cfg»
+  «kmonad-unicode»
+  «kmonad-macros»
 
   (defsrc
     esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
@@ -745,16 +759,16 @@ I use this config on both linux and mac. This is the configuration for my extern
     lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
     \    lctl lmet lalt           spc            @sym rmet cmp rctl)
 
-  <<<kmonad-layers>>>
+  «kmonad-layers»
 #+end_src
 
 *** Mac config
 This is the configuration for the embedded keyboard on mac.
 
 #+begin_src kbd :tangle (when-darwin "~/.config/kmonad-mac.kbd")
-  <<<kmonad-cfg>>>
-  <<<kmonad-unicode>>>
-  <<<kmonad-macros>>>
+  «kmonad-cfg»
+  «kmonad-unicode»
+  «kmonad-macros»
 
   (defsrc
     esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
@@ -772,11 +786,11 @@ This is the configuration for the embedded keyboard on mac.
     lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
     lctl fn   lalt lmet           spc            @sym cmp  rmet rctl)
 
-  <<<kmonad-layers>>>
+  «kmonad-layers»
 #+end_src
 
 *** systemd unit
-Using ~WantedBy=graphical-session.target~ so that KMonad can access environment variables (specifically updated PATH variable so that it can call binaries/scripts from there).
+Using ~WantedBy=xdg-desktop-autostart.target~ so that KMonad can access environment variables (specifically updated PATH variable so that it can call binaries/scripts from there).
 
 #+begin_src conf :tangle (when-linux "~/.config/systemd/user/kmonad.service")
   [Unit]
@@ -786,579 +800,15 @@ Using ~WantedBy=graphical-session.target~ so that KMonad can access environment 
   Type=simple
   Restart=always
   RestartSec=3
-  ExecStart=/usr/bin/kmonad %h/.config/kmonad.kbd -l warn
+  ExecStart=/usr/bin/kmonad %h/.config/kmonad-linux.kbd -l warn
   Nice=-20
 
   [Install]
-  WantedBy=graphical-session.target
+  WantedBy=xdg-desktop-autostart.target
 #+end_src
 
-* Window management/DE
-** BSPWM
-This is my window manager.
-
-*** Main configuration
-#+begin_src bash :tangle (when-linux "~/.config/bspwm/bspwmrc")
-  #!/bin/bash
-
-  bspc config automatic_scheme longest_side
-  bspc config initial_polarity second_child
-
-  bspc config pointer_follows_focus false
-  bspc config focus_follows_pointer true
-  bspc config single_monocle        true
-  bspc config gapless_monocle       true
-  bspc config borderless_monocle    true
-  bspc config window_gap            3
-  bspc config border_width          2
-  bspc config split_ratio           0.52
-
-  bspc rule --add '*:float'   state=floating
-
-  bspc rule --add 'Crow Translate' state=floating
-  bspc rule --add Zenity           state=floating
-  bspc rule --add feh              state=floating
-  bspc rule --add copyq            state=floating
-  bspc rule --add Emacs            state=tiled
-
-  bspc rule -a qutebrowser    desktop='^1' follow=on
-  bspc rule -a firefox        desktop='^1' follow=on
-  bspc rule -a Emacs          desktop='^2' follow=on
-
-  # Don't manage some windows
-  bspc rule --add Screenkey     manage=off
-  bspc rule --add 'dota2'       border=off
-
-  init-desktops
-#+end_src
-*** .scripts/bspwmc
-This is a supplementary script for managing bspwm where I put some helpful functions related to window management.
-
-#+begin_src bash :tangle (when-linux "~/.scripts/bspwmc")
-  #!/bin/bash
-
-  size=30
-
-  function focused_monitor_name {
-      bspc query --monitors --monitor focused --names
-  }
-
-  function focused_monitor_info {
-      xrandr -q | grep "^$(focused_monitor_name) connected" | tr "+x" " " | sed "s/primary //"
-  }
-
-  function focused_monitor_height {
-      focused_monitor_info | cut -d" " -f4
-  }
-
-  function focused_monitor_width {
-      focused_monitor_info | cut -d" " -f3
-  }
-
-  function focused_monitor_x_offset {
-      focused_monitor_info | cut -d" " -f5
-  }
-
-  function focused_monitor_y_offset {
-      focused_monitor_info | cut -d" " -f6
-  }
-
-  function is_floating {
-      bspc query -T -n | grep -q '"state":"floating"'
-  }
-
-  function recalculate_for_curr_monitor {
-      export TOP_GAP=$(($(xrdb-get-value bar.height) + $(xrdb-get-value bar.border)))
-      export SCREEN_WIDTH=$(bspwmc focused_monitor_width)
-      export SCREEN_HEIGHT=$(bspwmc focused_monitor_height)
-      export RECT_TOP_HALF=${SCREEN_WIDTH}x$((SCREEN_HEIGHT / 2))+0+${TOP_GAP}
-  }
-
-  # if current node is floating, focus the newest non-floating node
-  # otherwise focus the newest floating node
-  function focus_toggle_floating {
-      if is_floating; then
-          bspc node "newest.!hidden.!floating.local.window" --focus
-      else
-          bspc node "newest.!hidden.floating.local.window" --focus
-      fi
-  }
-
-  # if current node is floating, focus $dir{west,south,north,east} floating node
-  # otherwise focus $dir{west,south,north,east} non-floating node
-  function focus {
-      local dir="$1"
-      if is_floating; then
-          bspc node --focus "$dir.!hidden.floating"
-      else
-          bspc node --focus "$dir.!hidden.!floating"
-      fi
-  }
-
-  # if current node is floating, move the node $dir{west,south,north,east} by $size px
-  # otherwise swap current node with $dir{west,south,north,east} non-floating node
-  function move {
-      local dir="$1"
-      local switch sign
-      if is_floating; then
-          case "$dir" in
-              west)  switch="-x"; sign="-" ;;
-              east)  switch="-x"; sign="+" ;;
-              north) switch="-y"; sign="-" ;;
-              ,*)     switch="-y"; sign="+" ;;
-          esac
-          xdo move ${switch} ${sign}${size}
-      else
-          bspc node --swap $dir.local.!floating
-      fi
-  }
-
-  function resize {
-      local dir="$1"
-      local size="$2"
-      if is_floating; then
-          xdo resize -$dir $size
-      else
-          case $dir in
-              w) bspc node -z right $size 0; bspc node -z left $size 0 ;;
-              h) bspc node -z bottom 0 $size; bspc node -z top 0 $size ;;
-          esac
-      fi
-  }
-
-  # a scratchpad terminal that is shared across desktops
-  function scratchpad_top {
-      recalculate_for_curr_monitor
-
-      CLASS="padtop"
-      id=$(xdotool search --classname --class "$CLASS")
-      if [[ -z "$id" ]]; then
-          bspc rule --add "*:$CLASS" state=floating sticky=on border=off rectangle="$RECT_TOP_HALF"
-          term --class="$CLASS" -e /bin/sh -c "tmux attach-session || tmux new-session -spersonal"
-      else
-          bspc node $id --flag hidden
-          bspc node -f $id
-      fi
-  }
-
-  # center current floating window in x-axis. if $1 is true, also centers in
-  # y-axis. rest of the arguments are passed
-  function center_floating {
-      wid=''
-
-      center_y=0
-      if [[ "$1" = "true" ]]; then
-          center_y=1
-          shift
-      fi
-
-      # wait until the window shows up and set $wid
-      if [[ -n "$1" ]]; then
-          wid=$(xdotool search --sync "$@")
-      else
-          wid=$(xdotool getactivewindow)
-      fi
-
-      SCREEN_WIDTH=$(focused_monitor_width)
-      SCREEN_HEIGHT=$(focused_monitor_height)
-      WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
-      HEIGHT=$(xwininfo -id "$wid" | grep Height | cut -d: -f2 | xargs)
-      X=$(((SCREEN_WIDTH - WIDTH) / 2 + $(focused_monitor_x_offset)))
-      Y=$(((SCREEN_HEIGHT - HEIGHT) / 2 + $(focused_monitor_y_offset)))
-
-      if [[ "$center_y" = 1 ]]; then
-          xdotool windowmove "$wid" $X $Y
-      else
-          xdotool windowmove "$wid" $X y
-      fi
-  }
-
-  function move_floating {
-      wid=''
-      position=$1
-      shift
-
-      # wait until the window shows up and set $wid
-      if [[ -n "$1" ]]; then
-          wid=$(xdotool search --sync "$@")
-      else
-          wid=$(xdotool getactivewindow)
-      fi
-
-      SCREEN_WIDTH=$(focused_monitor_width)
-      SCREEN_HEIGHT=$(focused_monitor_height)
-      WIDTH=$(xwininfo -id "$wid" | grep Width | cut -d: -f2 | xargs)
-      HEIGHT=$(xwininfo -id "$wid" | grep Height | cut -d: -f2 | xargs)
-      GAP=10
-      OFFSET_X=$(($(focused_monitor_x_offset) + GAP))
-      OFFSET_Y=$(($(focused_monitor_y_offset) + GAP))
-
-      case $position in
-          Q) xdotool windowmove "$wid" $OFFSET_X $((OFFSET_Y + $(xrdb-get-value bar.height))) ;;
-          W) xdotool windowmove "$wid" $((SCREEN_WIDTH + OFFSET_X - 2 * GAP - WIDTH)) $((OFFSET_Y + $(xrdb-get-value bar.height))) ;;
-          A) xdotool windowmove "$wid" $OFFSET_X $((SCREEN_HEIGHT + OFFSET_Y - 2 * GAP - HEIGHT)) ;;
-          S) xdotool windowmove "$wid" $((SCREEN_WIDTH + OFFSET_X - 2 * GAP - WIDTH)) $((SCREEN_HEIGHT + OFFSET_Y - 2* GAP - HEIGHT)) ;;
-      esac
-  }
-
-  cmd="$1"; shift
-  "$cmd" "$@"
-#+end_src
-** Polybar
-*** Global configuration
-I keep some of the polybar related variables inside the ~Xresources~ file so that I can access these values using =xrdb-get-value= command if I need to.
-
-#+begin_src conf :tangle (when-linux "~/.Xresources")
-  bar.font0: IBM Plex Sans:fontformat=truetype:size=10:antialias=true;0
-  bar.font1: Ubuntu Nerd Font:fontformat=truetype:size=10:antialias=true;0
-  bar.border: 0
-  bar.radius: 0
-  bar.height: 25
-  bar.width: 100%
-#+end_src
-
-*** Main configuration
-#+begin_src conf :tangle (when-linux "~/.config/polybar/config")
-  [colors]
-  background = ${xrdb:background}
-  background-alt = ${xrdb:background}
-  foreground = ${xrdb:foreground}
-  foreground-alt = ${xrdb:color7}
-  primary = ${xrdb:color3}
-  secondary = ${xrdb:color4}
-  alert = ${xrdb:color1}
-
-  [bar/main]
-  monitor = ${env:MONITOR_MAIN}
-  width = ${xrdb:bar.width}
-  height = ${xrdb:bar.height}
-  radius = ${xrdb:bar.radius}
-  fixed-center = true
-  wm-restack = bspwm
-
-  background = ${colors.background}
-  foreground = ${colors.foreground}
-
-  font-0 = ${xrdb:bar.font0}
-  font-1 = ${xrdb:bar.font1}
-
-  border-size = ${xrdb:bar.border}
-  border-color = #00000000
-
-  line-size = 3
-  line-color = #f00
-
-  module-margin = 0
-  format-padding = 0
-  padding-left = 0
-  padding-right = 2
-  module-margin-left = 0
-  module-margin-right = 1
-
-  modules-left = bspwm xwindowlong
-  modules-center = orgclock
-  modules-right = xkeyboard volume memory cpu temperature battery date
-
-  tray-position = right
-  tray-padding = 2
-  cursor-click = pointer
-
-  [bar/secondary]
-  monitor = ${env:MONITOR_SECONDARY}
-  width = ${xrdb:bar.width}
-  height = ${xrdb:bar.height}
-  radius = ${xrdb:bar.radius}
-  fixed-center = true
-  wm-restack = bspwm
-
-  background = ${colors.background}
-  foreground = ${colors.foreground}
-
-  font-0 = ${xrdb:bar.font0}
-  font-1 = ${xrdb:bar.font1}
-
-  border-size = ${xrdb:bar.border}
-  border-color = #00000000
-
-  line-size = 3
-  line-color = #f00
-
-  padding-left = 0
-  padding-right = 2
-
-  module-margin-left = 1
-  module-margin-right = 2
-
-  modules-left = bspwm xwindowlong
-  modules-center = date
-  modules-right = xbacklight
-  cursor-click = pointer
-
-  tray-position = right
-  tray-padding = 2
-
-  [module/orgclock]
-  type = custom/script
-  exec-if = emacsclient --eval "t"
-  exec = emacsclient --eval "(isamert/format-polybar-clock-string)" | tr -d '"'
-  interval = 5
-
-  format-underline = ${xrdb:color2}
-
-  [module/optimus]
-  type = custom/script
-  exec-if = systemctl is-active --quiet optimus-manager
-  exec = optimus-manager --print-mode | grep GPU | cut -d: -f2 | tr -d ' ' | sed 's/.*/\u&/'
-  interval = 30000000
-
-  format-prefix = " "
-  format-underline = ${xrdb:color2}
-
-  [module/pacman]
-  type = custom/script
-  exec = pacman -Sup | wc -l
-  interval = 3600
-
-  format-prefix = " "
-  format-underline = ${xrdb:color3}
-
-  [module/xbacklight]
-  type = internal/xbacklight
-  enable-scroll = true
-
-  label = %percentage%%
-  format = <ramp> <label>
-
-  ramp-0 = 
-  ramp-1 = 
-  ramp-2 = 
-  ramp-3 = 
-  ramp-4 = 
-
-  format-underline = ${xrdb:color4}
-
-  [module/xwindow]
-  type = internal/xwindow
-  label = %title:0:30:...%
-
-  [module/xwindowlong]
-  type = internal/xwindow
-  label = %title:0:55:...%
-
-  [module/xkeyboard]
-  type = internal/xkeyboard
-  blacklist-0 = num lock
-
-  format-prefix = " "
-  format-prefix-foreground = ${colors.foreground-alt}
-  format-prefix-underline = ${xrdb:color5}
-
-  label-layout = %layout%
-  label-layout-underline = ${xrdb:color5}
-
-  label-indicator-padding = 2
-  label-indicator-margin = 1
-  label-indicator-background = ${xrdb:color5}
-  label-indicator-underline = ${xrdb:color5}
-
-  [module/bspwm]
-  type = internal/bspwm
-
-  label-focused = %index%
-  label-focused-background = ${colors.background-alt}
-  label-focused-underline= ${colors.primary}
-  label-focused-padding = 2
-
-  label-occupied = %index%
-  label-occupied-padding = 2
-
-  label-urgent = %index%!
-  label-urgent-background = ${colors.alert}
-  label-urgent-padding = 2
-
-  label-empty =
-  label-empty-foreground = ${colors.foreground-alt}
-  label-empty-padding = 0
-
-  [module/cpu]
-  type = internal/cpu
-  interval = 2
-  format-prefix = " "
-  format-prefix-foreground = ${colors.foreground-alt}
-  format-underline = ${xrdb:color6}
-  label = %percentage:2%%
-
-  [module/memory]
-  type = internal/memory
-  interval = 2
-  format-prefix = " "
-  format-prefix-foreground = ${colors.foreground-alt}
-  format-underline = ${xrdb:color7}
-  label = %{A1:popup htop &:} %percentage_used%% %{A}
-
-  [module/date]
-  type = internal/date
-  interval = 20
-
-  date = " %d-%m"
-  time = %H:%M
-
-  format-underline = ${xrdb:color13}
-  label = %{A1:popup calendar&:}  %date%   %time% %{A}
-
-  [module/volume]
-  type = internal/alsa
-
-  format-volume = <ramp-volume> <label-volume>
-  label-volume = %percentage%%
-
-  format-muted-prefix = " "
-  format-muted-foreground = ${colors.foreground-alt}
-  label-muted-foreground = #66
-
-  ramp-volume-0 =
-  ramp-volume-1 =墳
-  ramp-volume-2 =
-
-  format-volume-underline = ${xrdb:color10}
-  format-muted-underline = ${xrdb:color10}
-
-  [module/battery]
-  type = internal/battery
-  battery = BAT0
-  adapter = AC0
-  full-at = 95
-
-  format-full =
-
-  format-charging = <animation-charging> <label-charging>
-  format-charging-underline = ${xrdb:color11}
-
-  format-discharging = <ramp-capacity> <label-discharging>
-  format-discharging-underline = ${self.format-charging-underline}
-
-  ramp-capacity-0 = 
-  ramp-capacity-1 = 
-  ramp-capacity-2 = 
-  ramp-capacity-foreground = ${colors.foreground-alt}
-
-  animation-charging-0 = 
-  animation-charging-1 = 
-  animation-charging-2 = 
-  animation-charging-foreground = ${colors.foreground-alt}
-  animation-charging-framerate = 750
-
-  [module/temperature]
-  type = internal/temperature
-  thermal-zone = 0
-  warn-temperature = 65
-
-  format = <ramp> <label>
-  format-underline = ${xrdb:color12}
-  format-warn = <ramp> <label-warn>
-  format-warn-underline = ${self.format-underline}
-
-  label = %temperature-c%
-  label-warn = %temperature-c%
-  label-warn-foreground = ${colors.secondary}
-
-  ramp-2 = 
-  ramp-1 = 
-  ramp-0 = 
-  ramp-foreground = ${colors.foreground-alt}
-
-  [settings]
-  screenchange-reload = true
-#+end_src
-** sxhkd
+** TODO sxhkd
 This is the global keybinding manager.
-
-*** BSPWM bindings
-#+begin_src conf :tangle (when-linux "~/.config/sxhkd/sxhkdrc")
-  # focus/swap with left/down/up/right window
-  super + {_,shift + } {h,j,k,l}
-      {bspwmc focus, euclid_mover} {west,south,north,east}
-
-  # split
-  super + {_,shift + } {backslash,minus}
-      bspc node -p {east,west,south,north}
-
-  # set the window state
-  super + {t,shift + t,s,f}
-      bspc node --state "~{tiled,pseudo_tiled,floating,fullscreen}"
-
-  # toggle between fullscreen(monacle) and tiled desktop layout
-  super + m
-      bspc desktop --layout next
-
-  # focus last floating window
-  super + shift + f
-      bspwmc focus_toggle_floating
-
-  # close window
-  super + w
-      bspc node --close
-
-  # Make window sticky
-  super + i
-      bspc node -g sticky
-
-  # focus/move to the given desktop on current monitor
-  super + {_,shift + }{1-5}
-      bspc {desktop --focus, node --to-desktop} $(bspc query -D -m | sed -n "{1-5}p")
-
-  # focus the last node
-  super + Tab
-      bspc node --focus last
-
-  # focus next/prev monitor
-  # I don't want this shortcut to cycle, that's why I use {west, east}.
-  # If I'm on the most left corner, then "super + ," will not jump into
-  # the rightmost monitor
-  super + {comma, period}
-      bspc monitor {west, east} --focus
-
-  # move current window to next/prev monitor
-  super + shift + {comma, period}
-      bspc node --to-desktop $(bspc query -D -m {prev, next} -d .active | sed -n "1p")
-
-  # move current window to Nth monitor
-  # (no, I don't have 5 monitors but just in case. hehe)
-  super + alt + {1-5}
-      bspc node --to-desktop $(bspc query -D -m (bspc query -M | sed -n "{1-5}p") -d .active)
-
-  # focus next/prev window
-  alt + Tab
-      bspc node -f next.window.local.!floating
-
-  # change gap size
-  super {_, shift +} g
-      bspc config window_gap $(expr $(bspc config window_gap) {-,+} 3)
-
-  # resize windows
-  super + alt + {j,l,k,h}
-      bspwmc resize {h, w} {+50, -50}
-
-  # center focused floating window
-  super + C
-      bspwmc center_floating true
-
-  # move floating window to corners
-  super + shift + {Q,W,A,S}
-      bspwmc move_floating {Q,W,A,S}
-
-  # resize a floating window from all sides
-  super + {shift,_} + equal
-      xdo resize {-w +50 -h +50, -w -50 -h -50}
-
-  # rotate window tree
-  super + {r, shift + r}
-      bspc node @/ -C {forward,backward}
-
-  # logout
-  super + shift + e
-      for node in $(bspc query -N); do bspc node $node --close; done; bspc quit
-#+end_src
 
 *** Running apps etc.
 #+begin_src conf :tangle (when-linux "~/.config/sxhkd/sxhkdrc")
@@ -1430,119 +880,11 @@ This is the global keybinding manager.
       kill -s USR1 $(pidof deadd-notification-center)
 #+end_src
 
-*** System management
-#+begin_src conf :tangle (when-linux "~/.config/sxhkd/sxhkdrc")
-  control + alt + k
-      switch-keyboard-layout
-
-  control + alt + o
-      mediastuff switch-audio-channel --interactive
-
-  control + alt + l
-      lockscreen
-#+end_src
 *** Media/sound management
 #+begin_src conf :tangle (when-linux "~/.config/sxhkd/sxhkdrc")
   # volume down/up
   hyper + {9,0}
       amixer set Master 5%{-,+}
-
-  # volume down/up
-  XF86Audio{Lower,Raise}Volume
-      amixer set Master 5%{-,+}
-
-  # audio/mic toggle
-  XF86Audio{_,Mic}Mute
-      amixer set {Master,Capture} toggle
-
-  # toggle music
-  {hyper + p, XF86AudioPlay}
-      mediastuff all_toggle
-
-  # seek song
-  hyper + {bracketleft, bracketright}
-      mediastuff all_seek {-,+}3%
-
-  # next/prev song
-  hyper + shift + {bracketleft, bracketright}
-      mpc {prev,next}
-
-  # next/prev song
-  XF86Audio{Prev,Next}
-      mpc {prev,next}
-#+end_src
-** Rofi
-*** Global configuration
-#+begin_src conf :tangle (when-linux "~/.Xresources")
-  rofi.theme: andrea
-#+end_src
-
-*** Theme
-#+begin_src js :tangle (when-linux "~/.config/rofi/andrea.rasi")
-  configuration {
-      /* You can switch between modes below by using Alt+{comma,period} */
-      modi: "combi,run,window,calc";
-      /* This represents which candidates are shown in combi mode by given order. */
-      combi-modi: "window,drun,run";
-      async-pre-read: 0;
-      /* font: "Inter Regular 14"; */
-      fixed-num-lines: true;
-      show-icons: true;
-      icon-theme: "deepin";
-      drun-show-actions: true;
-      case-sensitive: false;
-      fullscreen: true;
-      window-format: "{w}\t{t}";
-      display-window: "  ";
-      display-windowcd: "  ";
-      display-drun: "  ";
-      /* display-run: ; */
-      /* display-ssh: ; */
-      /* display-combi: ; */
-      /* display-keys: ; */
-      /* kb-primary-paste: "Control+V,Shift+Insert"; */
-      /* kb-secondary-paste: "Control+v,Insert"; */
-      /* kb-move-front: "Control+a"; */
-      /* kb-move-end: "Control+e"; */
-      kb-clear-line: "";
-      kb-remove-word-back: "Control+w";
-      kb-mode-next: "alt+period";
-      kb-mode-previous: "alt+comma";
-  }
-
-  ,* {
-      background-color: transparent;
-      color: white;
-  }
-
-  window {
-      padding: 15% 20%;
-      y-offset: -200px;
-      background-color: rgba(2, 4, 8, 0.9);
-  }
-
-  inputbar {
-      padding: 10px 10px 10px 20px;
-      border-radius: 7px;
-      margin: 0 0 30px 0;
-      background-color: rgba(255, 255, 255, 0.1);
-      border: 1px;
-      border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  prompt {
-      margin: 2px 4px 0 0;
-      font: "Font Awesome 5 Free 10";
-  }
-
-  element {
-      border-radius: 7px;
-      padding: 4px 8px;
-  }
-
-  element.selected {
-      background-color: rgba(255, 255, 255, 0.1);
-  }
 #+end_src
 * Alacritty terminal
 See [[https://github.com/alacritty/alacritty/blob/master/alacritty.yml][config documentation]].
@@ -1556,7 +898,7 @@ See [[https://github.com/alacritty/alacritty/blob/master/alacritty.yml][config d
   font:
     normal:
       family: Iosevka
-    size: <<<when-on(linux="12.5", darwin="14")>>>
+    size: «when-on(linux="12.5", darwin="14")»
 
   draw_bold_text_with_bright_colors: true
   live_config_reload: false
@@ -1620,79 +962,6 @@ See [[https://github.com/alacritty/alacritty/blob/master/alacritty.yml][config d
     # ^ See https://github.com/alacritty/alacritty/issues/4111
 #+end_src
 
-* Shells
-** Aliases
-This file is sourced by both =zsh= and =bash=.
-
-#+begin_src bash :tangle ~/.config/aliases
-  # package management
-  alias aur="$AUR_HELPER"
-  alias aurin="$AUR_HELPER -S"
-  alias aurs="$AUR_HELPER -Ss"
-  alias aurupg="$AUR_HELPER -Syu"
-  alias pac="fuzzy packages"       # A fuzzy, interactive package finder
-  alias pacs="pacman -Ss"
-  alias pacin="sudo pacman -S"
-  alias pacinf="fuzzy pacman"
-  alias pacf="fuzzy pacman"
-  alias pacins="sudo pacman -U"    # Install from file
-  alias pacupd="sudo pacman -Sy"
-  alias pacupg="sudo pacman -Syu"
-  alias pacfile="pacman -F"       # Find package that contains given file
-  alias pacbin="pacman -F"        # Same as above
-  alias pacre="sudo pacman -R"     # Leave dependencies and configurations
-  alias pacrem="sudo pacman -Rns"
-  function nixin { nix-env -iA "nixpkgs.$1" }
-  alias nixrem="nix-env -e"
-  alias nixs="nix search nixpkgs"
-
-  # process management
-  alias nameof="ps -o comm= -p" # Get the name of given PID
-  alias fuckall="killall -s 9"
-  alias fkill="fuzzy kill"
-
-  # utility
-  alias cdt="cd $(mktemp -d)"
-  alias ...="cd ../.."
-  alias ....="cd ../../.."
-  alias .....="cd ../../../.."
-  alias df="df -H"
-  alias du="ncdu"
-  alias xpaste="xclip -selection clipboard -o" # paste cb content
-  alias fastssh="ssh -Y -C -c chacha20-poly1305@openssh.com"
-
-  alias ls="lsd --group-dirs first --classify"
-  alias ll="lsd --group-dirs first --classify --oneline"
-  alias lls="lsd --group-dirs first --classify --long"
-  alias lla="lsd --group-dirs first --classify --long --all"
-  alias tree="lsd --tree"
-
-  # abbrv
-  alias n="nvim"
-  alias v="jaro --method=view"
-  alias e="jaro --method=edit"
-  alias o="jaro"
-  alias mt="jaro --mime-type"
-  alias how="howdoi --color --all"
-  alias mkx="chmod +x"
-  alias ytdl="youtube-dl"
-
-  # master Wq
-  alias :q="exit"
-  alias :wq="exit"
-
-  # useful
-  function is-emacs { [[ "$INSIDE_EMACS" = "vterm" ]]; }
-  alias find-dups="find . ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD"
-
-  # stuff
-  alias ipaddr="curl https://api.ipify.org"
-  alias ipinfo="curl https://ipinfo.io"
-
-  # highlight streams with bat
-  alias hjson="bat --language=json --paging=never --style=plain"
-  alias hlog="bat --language=log --paging=never --style=plain"
-#+end_src
 * Zsh
 Check out these links to get a grasp of how all of these stuff work. I also tried to add notes to each file.
 - https://wiki.archlinux.org/index.php/Zsh
@@ -1714,37 +983,9 @@ Unfortunately, this file is not sourced by GDM at login. So I'm sourcing it in =
 #+end_src
 
 #+begin_src sh :tangle ~/.zshenv
-  # For aurin, aursearch... aliases. (Also used in some other scripts)
-  export AUR_HELPER=trizen
-
-  # To be able to deploy android apps from commandline.
-  if [[ -f /opt/android-sdk ]]; then
-      export ANDROID_SDK_ROOT=/opt/android-sdk
-  fi
-
-  export GOPATH="$HOME/.go"
-  export R_LIBS_USER="$HOME/.rlibs"
-  export NPM_PACKAGES="$HOME/.npm-packages"
-
-  # The PATH
-  export PATH=$HOME/.scripts:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/bin:$HOME/.cargo/bin:$PATH
-  # The nix path will be re-added by `/etc/profile.d/nix.sh` when
-  # it gets sourced when .zprofile is sourced but I need it before that for
-  # some programs to work over ssh correctly.
-
   # Run ts_onfinish when a tsp job is finished
   export TS_ONFINISH=ts_onfinish
-
   export SHELL=/bin/zsh
-
-  # Hyper + Y brings up a dmenu that lists the videos found in following playlist
-  export YT_MAIN_PLAYLIST=PLXawKvexOu0psiAqHCV5IFxdnWxZN1OVc
-
-  # Some constants
-  export PASSWORD_STORE=$HOME/Documents/sync/passwords.kdbx
-  export DIR_WALLPAPERS=$HOME/Pictures/wallpapers
-  export DIR_SCREENSHOTS=$HOME/Pictures/screenshots
-  export DIR_NOTES=$HOME/Documents/notes
 #+end_src
 ** ~/.zprofile
 - This file is sourced after =.zshenv=.
@@ -1764,7 +1005,7 @@ Unfortunately, this file is (also) not sourced by GDM at login. So I'm sourcing 
 #+end_src
 
 #+begin_src sh :tangle ~/.zprofile
-  # Changing this is not goint to change your keyboard layout. For more info, read ~/.scripts/switch-keyboard-layout
+  # Changing this is not goint to change your keyboard layout. For more info, read ~/.bin/switch-keyboard-layout
   # See `localectl list-x11-keymap-layouts` for your options. (It's generally 2-char country code.)
   # Set your default layout with `localectl set-keymap` and localectl set-x11-keymap
   export KEYBOARD_LAYOUTS='us(intl),tr'
@@ -2048,7 +1289,7 @@ See the [[https://spaceship-prompt.sh/options/][documentation]] for spaceship th
 **** kctx
 Easily switch between contexts with completion.
 
-#+begin_src bash :tangle ~/.config/aliases
+#+begin_src bash :tangle ~/.config/aliases/generic
   function kctx {
       if [[ -z "$1" ]]; then
           kubectl config current-context
@@ -2118,7 +1359,7 @@ Easily switch between contexts with completion.
 ** General settings
 #+begin_src bash :tangle ~/.zshrc
   FILES_TO_SOURCE=(
-      $HOME/.config/aliases
+      $HOME/.config/aliases/*
       # ^ All aliases, also sourcing it from other shells
       /usr/share/fzf/key-bindings.zsh
       # ^ fzf history search keybindings
@@ -2282,6 +1523,95 @@ For some reason it does not work. However running the same command after shell i
   fi
 #+end_src
 
+** Aliases
+This file is sourced by both =zsh= and =bash=.
+
+#+begin_src bash :tangle (when-linux "~/.config/aliases/arch")
+  alias aur="trizen"
+  alias aurin="trizen -S"
+  alias aurs="trizen -Ss"
+  alias aurupg="trizen -Syu"
+  alias pac="fuzzy packages"      # A fuzzy, interactive package finder
+  alias pacs="pacman -Ss"
+  alias pacin="sudo pacman -S"
+  alias pacins="sudo pacman -U"   # Install from file
+  alias pacupd="sudo pacman -Sy"
+  alias pacupg="sudo pacman -Syu"
+  alias pacbin="pacman -F"        # Same as above
+  alias pacre="sudo pacman -R"    # Leave dependencies and configurations
+  alias pacrem="sudo pacman -Rns"
+
+  alias ctl="systemctl"
+  alias ctls="systemctl status"
+  alias ctlr="systemctl restart"
+  alias ctlu="systemctl --full --user"
+  alias ctlus="systemctl --full --user status"
+  alias ctlur="systemctl --full --user restart"
+
+  alias xpaste="xclip -selection clipboard -o" # paste cb content
+#+end_src
+
+#+begin_src bash :tangle (when-darwin "~/.config/aliases/mac")
+  alias pacs="brew search"
+  alias pacin="brew install"
+  alias pacupd="brew update"
+  alias pacupg="brew upgrade"
+  alias pacrem="brew uninstall"
+#+end_src
+
+#+begin_src bash :tangle ~/.config/aliases/generic
+  # package management
+  function nixin { nix-env -iA "nixpkgs.$1" }
+  alias nixrem="nix-env -e"
+  alias nixs="nix search nixpkgs"
+  alias nixls="nix-env --query"
+
+  # process management
+  alias nameof="ps -o comm= -p" # Get the name of given PID (reverse pidof)
+  alias fuckall="killall -s 9"
+  alias fkill="fuzzy kill"
+
+  # utility
+  alias cdtemp="cd $(mktemp -d)"
+  alias ...="cd ../.."
+  alias ....="cd ../../.."
+  alias .....="cd ../../../.."
+  alias df="df -H"
+  alias du="ncdu"
+  alias fastssh="ssh -Y -C -c chacha20-poly1305@openssh.com"
+
+  alias ls="lsd --group-dirs first --classify"
+  alias ll="lsd --group-dirs first --classify --oneline"
+  alias lls="lsd --group-dirs first --classify --long"
+  alias lla="lsd --group-dirs first --classify --long --all"
+  alias tree="lsd --tree"
+
+  # abbrv
+  alias n="nvim"
+  alias v="jaro --method=view"
+  alias e="jaro --method=edit"
+  alias o="jaro"
+  alias mt="jaro --mime-type"
+  alias mkx="chmod +x"
+  alias ytdl="yt-dlp"
+
+  # master Wq
+  alias :q="exit"
+  alias :wq="exit"
+
+  # useful
+  function is-emacs { [[ "$INSIDE_EMACS" = "vterm" ]]; }
+  alias find-dups="find . ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD"
+
+  # stuff
+  alias ipaddr="curl https://api.ipify.org"
+  alias ipinfo="curl https://ipinfo.io"
+
+  # highlight streams with bat
+  alias hjson="bat --language=json --paging=never --style=plain"
+  alias hlog="bat --language=log --paging=never --style=plain"
+#+end_src
+
 * Utilities
 ** Tmux
 *** Keybindings
@@ -2317,8 +1647,8 @@ For some reason it does not work. However running the same command after shell i
 #+end_src
 
 #+begin_src bash
-  mkdir -p <<<TMUX_PLUGIN_PATH()>>>
-  git clone https://github.com/tmux-plugins/tpm <<<TMUX_PLUGIN_PATH()>>>/tpm/
+  mkdir -p «TMUX_PLUGIN_PATH()»
+  git clone https://github.com/tmux-plugins/tpm «TMUX_PLUGIN_PATH()»/tpm/
 #+end_src
 
 Do ~PREFIX + I~ to install plugins while tmux is open.
@@ -2419,7 +1749,7 @@ Do ~PREFIX + I~ to install plugins while tmux is open.
   set -g window-active-style 'fg=white,bg=color234'
 
   # Load tmux plugin manager
-  run '<<<TMUX_PLUGIN_PATH()>>>/tpm/tpm'
+  run '«TMUX_PLUGIN_PATH()»/tpm/tpm'
 #+end_src
 *** Jump to an open window using FZF
 The following script opens a FZF popup and lets you select a window in all sessions. [[https://eioki.eu/2021/01/12/tmux-and-fzf-fuzzy-tmux-session-window-pane-switcher][Source]]. I bound it to ~M-s~ in tmux (without any prefix key).
@@ -2428,7 +1758,7 @@ The following script opens a FZF popup and lets you select a window in all sessi
   bind -n M-s run-shell -b tmux-switch
 #+end_src
 
-#+begin_src bash :tangle ~/.scripts/tmux-switch
+#+begin_src bash :tangle ~/.bin/tmux-switch
   #!/bin/bash
 
   # Change LIST_DATA as you wish and it'll continue to work as
@@ -2590,7 +1920,7 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
 #+begin_src conf :tangle ~/.config/ranger/rc.conf
   set confirm_on_delete never
   set preview_images true
-  set preview_images_method <<<when-on(linux="ueberzug", darwin="iterm2")>>>
+  set preview_images_method «when-on(linux="ueberzug", darwin="iterm2")»
   set draw_borders both
   set dirname_in_tabs true
   set update_tmux_title false
@@ -2767,7 +2097,7 @@ This file is just used for loading the configuration. The configuration is actua
 #+end_src
 
 *** emacsd
-systemd unit for emacs daemon. It starts after ~graphical-session.target~ so that it correctly inherits environment variablles.
+systemd unit for emacs daemon. It starts after ~graphical-session.target~ so that it correctly inherits environment variables.
 
 #+begin_src conf :tangle ~/.config/systemd/user/emacsd.service
   [Unit]
@@ -2966,7 +2296,7 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   sanitise tridactyllocal tridactylsync
 
   colors midnight
-  set editorcmd <<<sh("which emacsclient")>>>
+  set editorcmd «sh("which emacsclient")»
   set searchengine google
   set hintfiltermode vimperator-reflow
   set smoothscroll true
@@ -2985,9 +2315,9 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
-  command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`<<<sh("which emacsclient")>>> --eval '(lab-watch-pipeline "${JS_ARG}")'`)
-  command meme-downloader withUrl js -p tri.native.run(`<<<sh("which emacsclient")>>> --eval '(isamert/meme-downloader "${JS_ARG}")'`)
-  command meme-downloader-with-title withUrl js -p tri.native.run(`<<<sh("which emacsclient")>>> --eval '(isamert/meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
+  command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(lab-watch-pipeline "${JS_ARG}")'`)
+  command meme-downloader withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(isamert/meme-downloader "${JS_ARG}")'`)
+  command meme-downloader-with-title withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(isamert/meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
 
   " quick search
   set searchurls.g https://www.google.com/search?q=%s
@@ -3056,14 +2386,14 @@ I want to redirect some websites to their better alternatives (for example twitt
 
 When I open a useless website that I spent meaningless time on, I want to show open a random page that I marked as /read it later/. Here is the script that fetches a random page:
 
-#+begin_src sh :tangle ~/.scripts/randomlink
+#+begin_src sh :tangle ~/.bin/randomlink
   cat ~/Documents/notes/bullet.org | sed -n '/\* Investigate/,/\*\*/p' | grep -E 'https?://' | shuf -n 1 | grep -Eo "(http|https)://[a-zA-Z0-9./?=_%:-]*"
 #+end_src
 
 ...and here is the tridactyl directive:
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  command randomlink js -d€ tri.native.run("<<<sh("which randomlink")>>>").then(link => window.location.replace(link.content.trim()))€
+  command randomlink js -d€ tri.native.run("randomlink").then(link => window.location.replace(link.content.trim()))€
   autocmd DocStart .*(eksisozluk|ensonhaber).* randomlink
 #+end_src
 
@@ -3220,49 +2550,6 @@ I filter distracting content on websites I frequently visit. You need to manuall
   yabancidizi.pw##.rek1
 #+end_src
 * Some desktop files
-** .local/share/applications/shortcuts.desktop
-Some shortcuts to some folders. These stuff appears in rofi so that, for example, I can just search for =screenshots= and hit enter to open my screenshots directory in =pqiv=.
-
-#+begin_src conf :tangle (when-linux "~/.local/share/applications/shortcuts.desktop")
-  [Desktop Entry]
-  Type=Application
-  Name=Shortcut to
-  Terminal=false
-  Exec=term
-  Actions=walls;fkill;phonepics;screenshots;memes;floatingtermopaque;floatingterm;opqueterm
-
-  [Desktop Action walls]
-  Name=Wallpapers
-  Exec=/bin/sh -c "nsxiv -t $DIR_WALLPAPERS"
-
-  [Desktop Action phonepics]
-  Name=Phone pictures
-  Exec=/bin/sh -c "nsxiv -t ~/Pictures/phone/Camera"
-
-  [Desktop Action screenshots]
-  Name=Screenshots
-  Exec=/bin/sh -c "nsxiv -t $DIR_SCREENSHOTS"
-
-  [Desktop Action memes]
-  Name=Memes (ayylmao)
-  Exec=/bin/sh -c "nsxiv -t ~/Documents/memes"
-
-  [Desktop Action fkill]
-  Name=Fuzzy kill (fkill)
-  Exec=/bin/sh -c "term --float -e fuzzy kill"
-
-  [Desktop Action opaqueterm]
-  Name=Opaque term terminal (meta + ctrl + enter)
-  Exec=/bin/sh -c "term --opaque"
-
-  [Desktop Action floatingterm]
-  Name=Floating term terminal (meta + shift + enter)
-  Exec=/bin/sh -c "term --float"
-
-  [Desktop Action floatingtermopaque]
-  Name=Floating term terminal (opaque)  (meta + shift + ctrl + enter)
-  Exec=/bin/sh -c "term --float --opaque"
-#+end_src
 ** .local/share/applications/jaro.desktop
 #+begin_src conf :tangle (when-linux "~/.local/share/applications/jaro.desktop")
   [Desktop Entry]
@@ -3277,7 +2564,7 @@ Some shortcuts to some folders. These stuff appears in rofi so that, for example
 :PROPERTIES:
 :ID:       a9df33fc-4547-440a-a1ab-0ebe9ff5f92d
 :END:
-Also see[[id:ed2554b0-83f7-4692-a16b-75403b8d25cf][raycast-switch-monitor-to-hdmi.sh]].
+Also see [[id:ed2554b0-83f7-4692-a16b-75403b8d25cf][raycast-switch-monitor-to-hdmi.sh]].
 
 #+begin_src conf :tangle (when-linux "~/.local/share/applications/switch-monitor-input.desktop")
   [Desktop Entry]
@@ -3325,7 +2612,7 @@ Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are conv
   done
 #+end_src
 
-** .scripts/shortenurl
+** shortenurl
 Shorten given url. To make this work:
 - I simply created a firebase application.
 - Added my domain to it (from "Build → Hosting" menu). I used a subdomain, like "urlshortener.mydomain.com". You'll see the why in a minute.
@@ -3354,7 +2641,7 @@ Shorten given url. To make this work:
     #+end_src
 - Then you *may* need to open "Engage → Dynamic Links" page and click to "Get Started". Select your domain from the list and finish it.
 
-#+begin_src sh :tangle ~/.scripts/shortenurl
+#+begin_src sh :tangle ~/.bin/shortenurl
   #!/bin/bash
 
   set -eo pipefail
@@ -3377,7 +2664,7 @@ Shorten given url. To make this work:
       "https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=$FIREBASE_WEB_API_KEY" \
       | jq -r '.shortLink' | tee >(xcopy)
 #+end_src
-** .scripts/uploadfile
+** uploadfile
 Uploads given file to a predetermined folder in your ~box.com~ account and returns you a public download link for the file.
 
 Need to install ~boxcli~ for this to work.
@@ -3390,7 +2677,7 @@ Need to install ~boxcli~ for this to work.
 
 The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this file as it contains personal information). This variable simply holds the *id* of a folder you've created in ~box.com~. You can list all folders in your root by issuing this command: ~box folders:items 0~. Then copy the folder id that you want your files to be uploaded and set this variable. I use this script for being able to quickly share files with people, I don't do complex uploads with it, so all files under one folder suffices my needs.
 
-#+begin_src bash :tangle ~/.scripts/uploadfile
+#+begin_src bash :tangle ~/.bin/uploadfile
   #!/bin/bash
 
   set -eo pipefail
@@ -3398,8 +2685,8 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
   FILE_ID=$(box files:upload --id-only "$FILE" --parent-id "$BOX_UPLOAD_DIR")
   box shared-links:create --json "$FILE_ID" file | jq -j '.url' | tee >(xcopy)
 #+end_src
-** .scripts/mediastuff
-#+begin_src bash :tangle ~/.scripts/mediastuff
+** mediastuff
+#+begin_src bash :tangle ~/.bin/mediastuff
   #!/bin/bash
 
   # This whole script is based on the fact that I'm not that retard to
@@ -3572,8 +2859,8 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
       find*imdb)               find_imdb_id_from_filename "$@" ;;
   esac
 #+end_src
-** .scripts/menu
-#+begin_src bash :tangle ~/.scripts/menu
+** menu
+#+begin_src bash :tangle ~/.bin/menu
   #!/bin/bash
 
   function trim {
@@ -3628,8 +2915,8 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
       ,*) rofi -show combi "$@" ;;
   esac
 #+end_src
-** .scripts/sub-extract
-#+begin_src python :tangle ~/.scripts/sub-extract
+** sub-extract
+#+begin_src python :tangle ~/.bin/sub-extract
   #!/bin/python
 
   import os
@@ -3762,42 +3049,8 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
       print("File not found: " + SUB_ARCHIVE)
       print("Archive path should be the last argument.")
 #+end_src
-** .scripts/switch-keyboard-layout
-#+begin_src bash :tangle ~/.scripts/switch-keyboard-layout
-  #!/bin/bash
-
-  # This script switches between layouts that are defined in ~/.profile.
-  # The variable is $KEYBOARD_LAYOUTS and you need to set a comma separated list
-  # that contains 2-char country codes. (Or anything that setxkbmap would accept.)
-  # To change your default keyboard layout, use localectl. See this:
-  # https://wiki.archlinux.org/index.php/Keyboard_configuration_in_Xorg#Using_X_configuration_files
-  # Afterwards you need to update `KEYBOARD_LAYOUTS`, first item must be your default layout.
-  # Rest are just the ones that you want to switch.
-
-  get_current_layout() {
-      setxkbmap -query | grep layout | cut -f2 -d ":" | xargs
-  }
-
-  # Switch to next layout
-  CURRENT_LAYOUT=$(get_current_layout)
-  LAYOUTS=(${KEYBOARD_LAYOUTS//,/ })
-  for i in "${!LAYOUTS[@]}"; do
-      if [[ "$CURRENT_LAYOUT" == "${LAYOUTS[i]}" ]]; then
-          if [[ ! "${LAYOUTS[i+1]}" ]]; then
-              NEW_LAYOUT=${LAYOUTS[0]}
-          else
-              NEW_LAYOUT=${LAYOUTS[i+1]}
-          fi
-      fi
-  done
-
-  setxkbmap "$NEW_LAYOUT"
-  [[ -f $HOME/.Xmodmap ]] && xmodmap "$HOME/.Xmodmap"
-  killall xcape && xcape -e 'Hyper_L=Escape'
-  notify-send --icon=keyboard "Current layout: $NEW_LAYOUT"
-#+end_src
-** .scripts/term
-#+begin_src bash :tangle ~/.scripts/term
+** term
+#+begin_src bash :tangle ~/.bin/term
   #!/bin/bash
 
   # When using st, it expects window class properties while urxvt expects
@@ -3877,8 +3130,8 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
   echo "${OPTS[@]}"
   $RUNNER "${OPTS[@]}" "$@"
 #+end_src
-** .scripts/togif
-#+begin_src bash :tangle ~/.scripts/togif
+** togif
+#+begin_src bash :tangle ~/.bin/togif
   #!/bin/bash
 
   in_file="$1"
@@ -3940,8 +3193,8 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
 
   fi
 #+end_src
-** .scripts/ts_onfinish
-#+begin_src bash :tangle ~/.scripts/ts_onfinish
+** ts_onfinish
+#+begin_src bash :tangle ~/.bin/ts_onfinish
   #!/bin/bash
 
   # When a job that is called with tsp finishes, this script is called.
@@ -3974,8 +3227,8 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
       "$cmd"
 
 #+end_src
-** .scripts/xcopy
-#+begin_src bash :tangle ~/.scripts/xcopy
+** xcopy
+#+begin_src bash :tangle ~/.bin/xcopy
   #!/bin/sh
 
   file="$1"
@@ -4003,16 +3256,16 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
       printf "$input" | "$CLIP_CMD"
   fi
 #+end_src
-** .scripts/xrdb-get-value
-#+begin_src bash :tangle (when-linux "~/.scripts/xrdb-get-value")
+** xrdb-get-value
+#+begin_src bash :tangle (when-linux "~/.bin/xrdb-get-value")
   #!/bin/sh
 
   # Usage:
   # xrdb-get-value "entry.example"
   xrdb -query | grep "$1" | cut -d ":" -f 2 | xargs
 #+end_src
-** .scripts/xrdb-set-value
-#+begin_src bash :tangle (when-linux "~/.scripts/xrdb-set-value")
+** xrdb-set-value
+#+begin_src bash :tangle (when-linux "~/.bin/xrdb-set-value")
   #!/bin/sh
 
   # Usage:
@@ -4023,18 +3276,18 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
 
   echo "$1: $2" | xrdb -merge
 #+end_src
-** .scripts/xres-read-value
-#+begin_src bash :tangle (when-linux "~/.scripts/xres-read-value")
+** xres-read-value
+#+begin_src bash :tangle (when-linux "~/.bin/xres-read-value")
   #!/bin/sh
   grep -v "!"  "$HOME/.Xresources" | grep "$1" | cut -d ":" -f 2 | xargs
 #+end_src
-** .scripts/media-downloader
+** media-downloader
 Downloads given file in given folder with given name. Useful for adding keybindings in browsers etc.
 
-#+begin_src bash :tangle ~/.scripts/media-downloader
+#+begin_src bash :tangle ~/.bin/media-downloader
   #!/bin/bash
 
-  <<<bash-initialize-variables>>>
+  «bash-initialize-variables»
 
   URL=${URL-$(zenity --entry --text="Enter url to download:")}
   FILE_NAME=${FILE_NAME-$(zenity --entry --text="Enter file name (without extension).")}
@@ -4052,8 +3305,8 @@ Downloads given file in given folder with given name. Useful for adding keybindi
   notify-send "Download finished!" "File path copied to your clipboard."
 #+end_src
 
-** .scripts/find-duplicate-images
-#+begin_src sh :tangle ~/.scripts/find-duplicate-images
+** find-duplicate-images
+#+begin_src sh :tangle ~/.bin/find-duplicate-images
   #!/bin/bash
 
   # Source: https://askubuntu.com/questions/1308613/how-to-remove-slightly-modified-duplicate-images
@@ -4093,8 +3346,8 @@ Downloads given file in given folder with given name. Useful for adding keybindi
 #+end_src
 
 ** Information utilities
-*** .scripts/mgm
-#+begin_src bash :tangle ~/.scripts/mgm
+*** mgm
+#+begin_src bash :tangle ~/.bin/mgm
   #!/bin/bash
 
   API="https://servis.mgm.gov.tr/web/"
@@ -4203,8 +3456,8 @@ Downloads given file in given folder with given name. Useful for adding keybindi
   # TODO: add peak points
 #+end_src
 ** System administration
-*** .scripts/toggle-touchpad
-#+begin_src bash :tangle (when-linux "~/.scripts/toggle-touchpad")
+*** toggle-touchpad
+#+begin_src bash :tangle (when-linux "~/.bin/toggle-touchpad")
   #!/bin/bash
 
   DEVICE_IDS=$()
@@ -4220,7 +3473,7 @@ Downloads given file in given folder with given name. Useful for adding keybindi
   done
 #+end_src
 
-*** .scripts/setbrightness
+*** setbrightness
 Following rule is needed for being able to write into brightness file:
 
 #+begin_src conf :tangle (when-linux "/sudo::/etc/udev/rules.d/90-backlight.rules")
@@ -4231,7 +3484,7 @@ Following rule is needed for being able to write into brightness file:
 
 Refresh the rules after tangling the file: ~sudo udevadm trigger~
 
-#+begin_src bash :tangle (when-linux "~/.scripts/setbrightness")
+#+begin_src bash :tangle (when-linux "~/.bin/setbrightness")
   #!/bin/bash
 
   BFILE=/sys/class/backlight/intel_backlight/brightness
@@ -4264,7 +3517,7 @@ Refresh the rules after tangling the file: ~sudo udevadm trigger~
 :END:
 Also see [[id:a9df33fc-4547-440a-a1ab-0ebe9ff5f92d][switch-monitor-input.desktop]].
 
-#+begin_src sh :tangle (when-darwin "~/.scripts/raycast-switch-monitor-to-hdmi.sh")
+#+begin_src sh :tangle (when-darwin "~/.bin/raycast-switch-monitor-to-hdmi.sh")
   #!/bin/sh
 
   # Required parameters:
@@ -4322,10 +3575,10 @@ See [[https://github.com/symless/synergy-core/wiki/Text-Config][here]] for detai
 * Postamble
 - The following thing automatically loads the code necessary when this file is opened.
 - This basically makes use of [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html#Specifying-File-Variables][file local variables]].
-- It also changes ~org-babel-noweb-wrap-{start,end}~ variables so that when noweb references are used inside sh/bash blocks, it does not mess up the code highlighting. You need to use ~<<<ref>>>~ instead of ~<<ref>>~ to include noweb references inside code blocks.
+- It also changes ~org-babel-noweb-wrap-{start,end}~ variables so that when noweb references are used inside sh/bash blocks, it does not mess up the code highlighting. You need to use ~«ref»~ instead of ~<<ref>>~ to include noweb references inside code blocks.
 
 # Local Variables:
-# org-babel-noweb-wrap-start: "<<<"
-# org-babel-noweb-wrap-end: ">>>"
+# org-babel-noweb-wrap-start: "«"
+# org-babel-noweb-wrap-end: "»"
 # eval: (progn (save-excursion (org-babel-goto-named-src-block "startup") (let ((code (org-babel-expand-noweb-references))) (with-temp-buffer (insert code) (eval-buffer)))))
 # End:

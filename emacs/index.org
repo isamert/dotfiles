@@ -3321,6 +3321,8 @@ Here is a nice description of the package from it's README:
                 "~/Workspace/temp/"
                 "~/Workspace/temp/git/"
                 "~/.emacs.d/"
+                "~/.local/share/"
+                "~/.local/bin/"
                 "~/.config/"))))
 
   (use-package consult-dir
@@ -4668,7 +4670,7 @@ Manage media and streams through =completing-read=.
     (load "radio-channels")
     (setq empv-radio-channels isamert/radio-channels)
     (setq empv-radio-log-file "~/Documents/notes/songs.org")
-    (setq empv-base-directory "~/Music")
+    (setq empv-base-directory "~/Music/")
     (setq empv-allow-insecure-connections t)
     (setq empv-invidious-instance "https://vid.puffyan.us/api/v1")
     ;; ^ see https://api.invidious.io/
@@ -4677,21 +4679,22 @@ Manage media and streams through =completing-read=.
     (add-hook 'empv-init-hook #'empv-override-quit-key)
 
     (evil-leader/set-key
-      "erp" #'empv-play
-      "erP" #'empv-playlist-select
-      "ere" #'empv-enqueue
-      "ert" #'empv-toggle
-      "err" #'empv-play-radio
-      "erR" #'empv-play-random-channel
-      "erV" #'empv-toggle-video
-      "erv" #'empv-set-volume
-      "ery" #'consult-empv-youtube
-      "erY" #'consult-empv-youtube-tabulated
-      "erk" #'empv-display-current
-      "erl" #'empv-log-current-radio-song-name
-      "era" #'empv-play-audio
-      "erA" #'empv-play-audio-multiple
-      "ers" #'empv-exit)
+      "ro" #'empv-play
+      "rp" #'empv-playlist-select
+      "re" #'empv-enqueue
+      "rt" #'empv-toggle
+      "rr" #'empv-play-radio
+      "rR" #'empv-play-random-channel
+      "rV" #'empv-toggle-video
+      "rv" #'empv-set-volume
+      "ry" #'consult-empv-youtube
+      "rY" #'consult-empv-youtube-tabulated
+      "rk" #'empv-display-current
+      "rl" #'empv-log-current-radio-song-name
+      "ra" #'empv-play-audio
+      "rd" #'empv-play-directory
+      "rm" #'empv-play-video
+      "rs" #'empv-exit)
     (evil-make-overriding-map empv-youtube-results-mode-map 'normal))
 
   (defun isamert/export-radio-channels-as-m3u (file)
