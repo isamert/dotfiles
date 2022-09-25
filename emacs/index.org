@@ -494,10 +494,12 @@ This function is for doing easy REST calls and it uses plists for everything bec
   (cl-defun isamert/request
       (endpoint
        &rest params
-       &key (-type "GET") (-headers) (-data) (-params)
+       &key (-type "GET") (-headers) (-data) (-params) (-async?) (-success)
        &allow-other-keys)
-    "Like `request' but sync, plist and json oriented. Query
-  parameters are constructed from top-level keywords. Examples:
+    "Like `request' but plist and JSON oriented. JSON responses are
+  automatically parsed, query parameters are constructed from
+  top-level keywords, request body can be a plist (which will be
+  serialized into JSON). Examples:
 
       (isamert/request \"some/endpoint\")
 
@@ -516,6 +518,14 @@ This function is for doing easy REST calls and it uses plists for everything bec
   With some HTTP headers:
 
       (isamert/request \"...\" :-headers '(:Authorization \"Bearer e21ewqfasdwtkl\"))
+
+  Async request:
+
+      (isamert/request \"...\"
+        :-async? t
+        :-success (cl-function
+                    (lambda (&key data &allow-other-keys)
+                      ...use the parsed json DATA...)))
   "
 
     (declare (indent defun))
@@ -524,7 +534,7 @@ This function is for doing easy REST calls and it uses plists for everything bec
           (json-array-type #'list)
           (json-key-type 'symbol))
       ;; Remove request related items from params list
-      (dolist (key '(:-type :-headers :-data :-params))
+      (dolist (key '(:-type :-headers :-data :-params :-async? :-success))
         (cl-remf params key))
 
       (request
@@ -536,13 +546,15 @@ This function is for doing easy REST calls and it uses plists for everything bec
                   ((and -headers (json-plist-p -headers)) (transient-plist-to-alist -headers))
                   (t nil))
         :parser #'json-read
-        :success (cl-function
-                  (lambda (&key data &allow-other-keys)
-                    (setq json data)))
+        :success (if -async?
+                     -success
+                   (cl-function
+                    (lambda (&key data &allow-other-keys)
+                      (setq json data))))
         :error (cl-function
                 (lambda (&key status data &allow-other-keys)
                   (user-error "STATUS: %s, DATA: %s," status data)))
-        :sync t
+        :sync (not -async?)
         :data (cond
                ((and -data (json-alist-p -data)) -data)
                ((and -data (json-plist-p -data)) (transient-plist-to-alist -data))
