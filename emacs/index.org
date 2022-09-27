@@ -4707,7 +4707,8 @@ Manage media and streams through =completing-read=.
       "rd" #'empv-play-directory
       "rm" #'empv-play-video
       "rs" #'empv-exit)
-    (evil-make-overriding-map empv-youtube-results-mode-map 'normal))
+    (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
+    (empv-initialize-embark))
 
   (defun isamert/export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."

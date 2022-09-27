@@ -51,6 +51,13 @@ You can run arbitrary shell commands inside a code block like this: ~«sh("which
   (string-trim (shell-command-to-string code))
 #+end_src
 
+...and because I use ~«sh("which X")»~ a lot, I also have this:
+
+#+name: which
+#+begin_src elisp :var binary=""
+  (string-trim (shell-command-to-string (format "which '%s'" binary)))
+#+end_src
+
 The following is just the babel version of =(when-on ...)= function defined above. It helps you insert the text to a file based on current operating system.
 
 #+name: when-on
@@ -323,7 +330,6 @@ After tangling all unit files, run this:
 
 #+begin_src sh
   systemctl --user daemon-reload
-  systemctl --user enable kmonad
   systemctl --user enable emacsd
   systemctl --user enable syncthing
 #+end_src
@@ -380,6 +386,8 @@ Also see this gnome extension and it's README for further information: https://g
 I use this script on several keyboard shortcuts:
 
 #+begin_src bash :tangle ~/.bin/gshell-eval-js
+  #!/bin/bash
+
   dbus-send --print-reply --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"$*"
 #+end_src
 
@@ -397,6 +405,7 @@ Source: https://github.com/joshpetit/toggle_dnd
 
 #+begin_src sh :tangle ~/.bin/gshell-toggle-dnd
   #!/bin/bash
+
   value=$(gsettings get org.gnome.desktop.notifications show-banners)
   if [[ $value == 'true' ]]
   then
@@ -762,6 +771,16 @@ I use this config on both linux and mac. This is the configuration for my extern
   «kmonad-layers»
 #+end_src
 
+*** Autostart entry
+#+begin_src desktop :tangle (when-linux "~/.config/autostart/kmonad.desktop")
+  [Desktop Entry]
+  Name=KMonad
+  Comment=Keyboard layout manager
+  Exec=bash -c '«which("kmonad")» ~/.config/kmonad-linux.kbd -l warn'
+  Terminal=false
+  Type=Application
+#+end_src
+
 *** Mac config
 This is the configuration for the embedded keyboard on mac.
 
@@ -789,102 +808,62 @@ This is the configuration for the embedded keyboard on mac.
   «kmonad-layers»
 #+end_src
 
-*** systemd unit
-Using ~WantedBy=xdg-desktop-autostart.target~ so that KMonad can access environment variables (specifically updated PATH variable so that it can call binaries/scripts from there).
+** sxhkd
+This is the global keybinding manager. I don't use GNOME's own keybinding manager as it's clumsy to use.
 
-#+begin_src conf :tangle (when-linux "~/.config/systemd/user/kmonad.service")
-  [Unit]
-  Description=KMonad keyboard config
+TODO: unify this and skhd configuration?
 
-  [Service]
-  Type=simple
-  Restart=always
-  RestartSec=3
-  ExecStart=/usr/bin/kmonad %h/.config/kmonad-linux.kbd -l warn
-  Nice=-20
-
-  [Install]
-  WantedBy=xdg-desktop-autostart.target
+#+name: hyper
+#+begin_src text
+  super + alt + ctrl + shift
 #+end_src
 
-** TODO sxhkd
-This is the global keybinding manager.
-
-*** Running apps etc.
 #+begin_src conf :tangle (when-linux "~/.config/sxhkd/sxhkdrc")
-  hyper + {i,I}
-    emacsclient --eval "(isamert/yankpad-copy-snippet {nil,t})"
+  # Clear notifications
+  «hyper» + y
+    gshell-eval-js "Main.panel.statusArea.dateMenu._messageList._notificationSection.clear();"
 
-  hyper + p
-    emacsclient --eval "(isamert/password-act)"
+  # Toggle aggregate menu
+  «hyper» + o
+    gshell-eval-js 'Main.panel.statusArea.aggregateMenu.menu.toggle()'
 
-  # open a terminal (with shift it floats, with ctrl its opaque, with ctrl + shift its floating opaque)
-  {super, hyper} + {_, shift + ctrl +, shift +, ctrl +} Return
-      term {_,_} {_, --float --opaque --geometry=100x20, --float --geometry=100x20, --opaque}
+  «hyper» + u
+    gshell-toggle-dnd
 
-  # open a terminal at east,west,south,north
-  hyper + {_,shift + } {backslash,minus}
-      bspc node -p {east,west,south,north}; \
-      term
+  «hyper» + v
+    emacsclient --eval '(empv-toggle-video)'
 
-  # Open scratchpad at bottom or top. Top scratchpad is shared across
-  # desktops, bottom one is dedicated to given desktop
-  hyper + {e, d}
-      bspwmc {scratchpad_top, scratchpad_bot}
+  «hyper» + Return
+    term
 
-  # Open the clipboard manager
-  hyper + q
-      copyq toggle
+  «hyper» + s
+    flameshot gui
 
-  # Open a window to select and kill process' interactively
-  hyper + x
-      /bin/sh -c "term --float --geometry=150x20 -e fuzzy kill"
+  «hyper» + c
+    copyq toggle
 
-  # An interactive calculator
-  hyper + equal
-      menu calc
+  # Show generic snippets
+  «hyper» + i
+    emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet))"
 
-  # Run some apps directly
-  hyper + r; {f, q, e, r, t, v, k}
-      {firefox, qbittorrent, emacsclient -c, jaro ~, lxtask, vivaldi-stable, /bin/sh -c "getpassword --keepass | keepassxc --pw-stdin $PASSWORD_STORE"}
+  # List all snippet categories
+  «hyper» + k
+    emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet t))"
 
-  hyper + r; p; {s, p, w}
-      nsxiv {~/Pictures/screenshots/, ~/Pictures/phone/Camera, ~/Pictures/wallpapers/}
+  «hyper» + p
+    emacsclient --eval "(isamert/globally (isamert/password-act))"
 
-  # menus (an escape hatch if hyper key does not work for some reason)
-  super + a
-      menu menu
-
-  # Show some menus: an app menu, searc in files, search in file contents, youtube
-  hyper + {a, f, F, o, y, b}
-      menu {menu,files --open,file_contents,passwords,youtube --video, bookmarks}
-
-  # Show popup for translate
-  hyper + t
-    qdbus io.crow_translate.CrowTranslate /io/crow_translate/CrowTranslate/MainWindow open || \
-    term --float -e trans -sl en -hl tr -to tr -interactive -v -pager bat
-
-  # Set a random wallpaper
-  hyper + apostrophe
-      feh --bg-scale $(find "$DIR_WALLPAPERS" | shuf -n 1)
-
-  hyper + s
-      flameshot gui
-
-  # Save clipboard image as file
-  hyper + S
-      cb-save
-
-  # Toggle notification center
-  hyper + n
-      kill -s USR1 $(pidof deadd-notification-center)
 #+end_src
 
-*** Media/sound management
-#+begin_src conf :tangle (when-linux "~/.config/sxhkd/sxhkdrc")
-  # volume down/up
-  hyper + {9,0}
-      amixer set Master 5%{-,+}
+Here is the autostart entry:
+
+#+begin_src desktop :tangle (when-linux "~/.config/autostart/sxhkd.desktop")
+  [Desktop Entry]
+  Name=sxhkd
+  Comment=Simple X hotkey daemon
+  Exec=«which("sxhkd")»
+  Terminal=false
+  Type=Application
 #+end_src
 * Alacritty terminal
 See [[https://github.com/alacritty/alacritty/blob/master/alacritty.yml][config documentation]].
@@ -1547,6 +1526,7 @@ This file is sourced by both =zsh= and =bash=.
   alias ctlu="systemctl --full --user"
   alias ctlus="systemctl --full --user status"
   alias ctlur="systemctl --full --user restart"
+  alias logu="journalctl --user --unit"
 
   alias xpaste="xclip -selection clipboard -o" # paste cb content
 #+end_src
@@ -2274,14 +2254,6 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   vnoremap ç .
   vnoremap Ö <
   vnoremap Ç >
-  " }}}
-
-  " utility commands {{{
-  command! ConfigReload so $MYVIMRC " reload vim config
-  command! ConfigEdit e $MYVIMRC    " edit vim config
-  command! Vterm vsplit|term
-  command! Term split|term
-  command! SpellCheckEn setlocal spell! spelllang=en_us
   " }}}
 
   " vi: foldmethod=marker
@@ -3256,31 +3228,6 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
       printf "$input" | "$CLIP_CMD"
   fi
 #+end_src
-** xrdb-get-value
-#+begin_src bash :tangle (when-linux "~/.bin/xrdb-get-value")
-  #!/bin/sh
-
-  # Usage:
-  # xrdb-get-value "entry.example"
-  xrdb -query | grep "$1" | cut -d ":" -f 2 | xargs
-#+end_src
-** xrdb-set-value
-#+begin_src bash :tangle (when-linux "~/.bin/xrdb-set-value")
-  #!/bin/sh
-
-  # Usage:
-  # xrdb-set-value "st.alpha" 200
-
-  # This will not override ~/.Xresources, it will just update xrdb for this
-  # session.
-
-  echo "$1: $2" | xrdb -merge
-#+end_src
-** xres-read-value
-#+begin_src bash :tangle (when-linux "~/.bin/xres-read-value")
-  #!/bin/sh
-  grep -v "!"  "$HOME/.Xresources" | grep "$1" | cut -d ":" -f 2 | xargs
-#+end_src
 ** media-downloader
 Downloads given file in given folder with given name. Useful for adding keybindings in browsers etc.
 
@@ -3345,8 +3292,7 @@ Downloads given file in given folder with given name. Useful for adding keybindi
   ' | sort | uniq --check-chars=32 --all-repeated
 #+end_src
 
-** Information utilities
-*** mgm
+** mgm
 #+begin_src bash :tangle ~/.bin/mgm
   #!/bin/bash
 
@@ -3455,61 +3401,6 @@ Downloads given file in given folder with given name. Useful for adding keybindi
 
   # TODO: add peak points
 #+end_src
-** System administration
-*** toggle-touchpad
-#+begin_src bash :tangle (when-linux "~/.bin/toggle-touchpad")
-  #!/bin/bash
-
-  DEVICE_IDS=$()
-
-  xinput list | grep -iE "(touchpad|trackpoint)" | grep -ioE 'id=[0-9]+' | cut -d= -f2 | while read DEVICE_ID ; do
-      if xinput list-props $DEVICE_ID | grep "Device Enabled.*:.*1"; then
-          xinput disable $DEVICE_ID
-          notify-send --icon=touchpad-indicator "Device [id=$DEVICE_ID] disabled"
-      else
-          xinput enable $DEVICE_ID
-          notify-send --icon=touchpad-indicator "Device [id=$DEVICE_ID] enabled"
-      fi
-  done
-#+end_src
-
-*** setbrightness
-Following rule is needed for being able to write into brightness file:
-
-#+begin_src conf :tangle (when-linux "/sudo::/etc/udev/rules.d/90-backlight.rules")
-  SUBSYSTEM=="backlight", ACTION=="add",
-  RUN+="/bin/chgrp video /sys/class/backlight/intel_backlight/brightness",
-  RUN+="/bin/chmod o+w /sys/class/backlight/intel_backlight/brightness"
-#+end_src
-
-Refresh the rules after tangling the file: ~sudo udevadm trigger~
-
-#+begin_src bash :tangle (when-linux "~/.bin/setbrightness")
-  #!/bin/bash
-
-  BFILE=/sys/class/backlight/intel_backlight/brightness
-  MFILE=/sys/class/backlight/intel_backlight/max_brightness
-
-  if [[ -n $1 ]]; then
-      case $1 in
-          max|MAX)
-              echo $(cat $MFILE) > $BFILE
-              ;;
-          med*|MED*)
-              echo $(( $(cat $MFILE) / 2 )) > $BFILE
-              ;;
-          low*|LOW*)
-              echo $(( $(cat $MFILE) / 12 )) > $BFILE
-              ;;
-          ,*)
-              echo $1 > $BFILE
-              ;;
-      esac
-  else
-      setbrightness $(echo -e "MAX\nMEDIUM\nLOW" | dmenu -i)
-  fi
-#+end_src
-
 * macOS scripts
 ** raycast-switch-monitor-to-hdmi.sh
 :PROPERTIES:
