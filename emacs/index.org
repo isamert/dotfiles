@@ -362,10 +362,10 @@ Some basic variable and function definitions that will be used in configuration.
         (setq header-line-format "Hit `C-c C-c' to save `C-c C-k' to reject.")
         (insert init))))
 
-  (defun isamert/alist-completing-read (prompt alist)
+  (defun isamert/alist-completing-read (prompt alist &optional initial)
     "Like `completing-read' but returns value of the selected key in given ALIST."
     (alist-get
-     (completing-read prompt alist)
+     (completing-read prompt alist nil nil initial)
      alist nil nil #'equal))
 
   (defun isamert/dmenu (prompt items &rest ignored)
@@ -3335,7 +3335,9 @@ Here is a nice description of the package from it's README:
                 "~/.emacs.d/"
                 "~/.local/share/"
                 "~/.local/bin/"
-                "~/.config/"))))
+                "~/.config/"
+                ,(format "/run/media/%s/" (getenv "USERNAME"))
+                ,(format "/run/media/%s/BINGUS/" (getenv "USERNAME"))))))
 
   (use-package consult-dir
     :bind (("C-x C-d" . consult-dir)
@@ -6716,14 +6718,17 @@ I need to rewrite these functions using [[https://github.com/isamert/marks][mark
     "Interactively select a header and insert it as a link into the buffer.
   Headers are gathered from all the org files found in `org-directory'."
     (interactive)
-    (let* ((selected (isamert/alist-completing-read "Select header:" (isamert/org-all-headers)))
+    (let* ((selected (isamert/alist-completing-read
+                      "Select header: "
+                      (isamert/org-all-headers)
+                      (when (use-region-p)
+                        (buffer-substring-no-properties (region-beginning) (region-end)))))
            (header-id (isamert/org-file-get-header-id (plist-get selected :fname) (plist-get selected :line))))
       (org-insert-link
        nil
        (concat "id:" header-id)
        (unless (use-region-p)
          (read-string "Enter link text: " (plist-get selected :header))))))
-
 
   (defun isamert/org-jump-to-header ()
     "Jump to selected header."
