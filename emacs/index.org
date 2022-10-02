@@ -7398,10 +7398,16 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     "Eksi gundemini entry sayisina gore sirala ve `completing-read' yap."
     (interactive)
     (with-completing-read-exact-order
-     (let ((results (->> (shell-command-to-string "curl --silent https://eksisozluk.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq")
-                         (s-split "\n")
-                         (--map (s-split "|||" it))
-                         (--map `(,(car it) . ,(cadr it))))))
+     (let ((results (->>
+                     (with-temp-buffer
+                       (insert
+                        (shell-command-to-string "curl --silent https://eksisozluk.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq"))
+                       (goto-char (point-min))
+                       (xml-parse-string))
+                     (s-trim)
+                     (s-split "\n")
+                     (--map (s-split "|||" it))
+                     (--map `(,(car it) . ,(cadr it))))))
        (->> results
             (completing-read "Baslik: ")
             (funcall (-flip 'assoc-string) results)
