@@ -2,9 +2,9 @@
 ;; like them or I'm just curious. There are some stuff that I hate but
 ;; I also like to know what's been going on
 
-(defvar isamert/feeds
-  `((,isamert/github-feed-link personal)
-    (,isamert/reddit-feed-link personal)
+(defvar im-feeds
+  `((,im-github-feed-link personal)
+    (,im-reddit-feed-link personal)
     ("https://mail.google.com/mail/feed/atom" personal)
     ;; ^ This requires an app password set in ~/.netrc
 

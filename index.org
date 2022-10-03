@@ -1864,6 +1864,9 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
   # Filter subtitle additions for the deaf or hard-of-hearing (SDH)
   sub-filter-sdh=yes
   sub-filter-sdh-harder=yes
+
+  # Tile properly
+  no-keepaspect-window
 #+end_src
 *** Bindings configuration
 #+begin_src bash :tangle ~/.config/mpv/input.conf

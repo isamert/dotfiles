@@ -1,4 +1,4 @@
-(defvar isamert/radio-channels
+(defvar im-radio-channels
   '(("SomaFM // Groove Salad"            . "https://somafm.com/groovesalad.pls")
     ("SomaFM // Drone Zone"              . "https://somafm.com/dronezone.pls")
     ("SomaFM // Indie Pop Rocks!"        . "https://somafm.com/indiepop.pls")
