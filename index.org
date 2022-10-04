@@ -227,11 +227,11 @@ It can be installed through homebrew:
 *** Application shortcuts
 #+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
   hyper - r : emacsclient -c
-  hyper - i : emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet))"
-  hyper - o : emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet t))"
-  hyper - p : emacsclient --eval "(isamert/globally (isamert/password-act))"
+  hyper - i : emacsclient --eval "(im-globally (im-yankpad-copy-snippet))"
+  hyper - o : emacsclient --eval "(im-globally (im-yankpad-copy-snippet t))"
+  hyper - p : emacsclient --eval "(im-globally (im-password-act))"
   hyper - v : emacsclient --eval "(empv-toggle-video)"
-  hyper - g : emacsclient --eval "(isamert/globally (isamert/gitlab-select-project))"
+  hyper - g : emacsclient --eval "(im-globally (im-gitlab-select-project))"
   hyper - y : osascript -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
   hyper - return : open -n -a 'Alacritty.app'
 #+end_src
@@ -285,7 +285,7 @@ This is mostly based on: [[https://appsonthemove.com/posts/orgmode_clocking_hamm
 
   local function updateClockingMenu()
      elisp(
-        "(isamert/format-polybar-clock-string)",
+        "(im-format-polybar-clock-string)",
         function(value)
            -- Strip double quotes
            clockingMenu:setTitle(string.match(value, '"(.+)"'))
@@ -728,14 +728,14 @@ TODO: unify this and skhd configuration?
 
   # Show generic snippets
   «hyper» + i
-    emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet))"
+    emacsclient --eval "(im-globally (im-yankpad-copy-snippet))"
 
   # List all snippet categories
   «hyper» + k
-    emacsclient --eval "(isamert/globally (isamert/yankpad-copy-snippet t))"
+    emacsclient --eval "(im-globally (im-yankpad-copy-snippet t))"
 
   «hyper» + p
-    emacsclient --eval "(isamert/globally (isamert/password-act))"
+    emacsclient --eval "(im-globally (im-password-act))"
 
 #+end_src
 
@@ -2175,8 +2175,8 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
   command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(lab-watch-pipeline "${JS_ARG}")'`)
-  command meme-downloader withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(isamert/meme-downloader "${JS_ARG}")'`)
-  command meme-downloader-with-title withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(isamert/meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
+  command meme-downloader withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}")'`)
+  command meme-downloader-with-title withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
 
   " quick search
   set searchurls.g https://www.google.com/search?q=%s
@@ -2429,7 +2429,8 @@ Also need to enable following config to make userChrome.css work:
   user_pref("device.sensors.orientation.enabled", false);
   user_pref("device.sensors.proximity.enabled", false);
   user_pref("dom.battery.enabled", false);
-  user_pref("dom.event.clipboardevents.enabled", false);
+  // This breaks pasting images
+  // user_pref("dom.event.clipboardevents.enabled", false);
   user_pref("experiments.activeExperiment", false);
   user_pref("experiments.enabled", false);
   user_pref("experiments.manifest.uri", "");

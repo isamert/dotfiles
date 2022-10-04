@@ -1384,7 +1384,17 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 ** Keybindings
 #+begin_src emacs-lisp
   (evil-leader/set-key-for-mode 'org-mode "oe"  #'org-edit-special)
-  (evil-define-minor-mode-key 'normal 'org-src-mode " oe" #'org-edit-src-exit)
+  (evil-define-minor-mode-key 'normal 'org-src-mode
+    " oe" #'org-edit-src-exit
+    " oE" #'org-edit-src-abort)
+
+  (use-package evil-org
+    :after org
+    :hook (org-mode . (lambda () evil-org-mode))
+    :config
+    (require 'evil-org-agenda)
+    (evil-org-agenda-set-keys)
+    (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading)))
 
   (evil-leader/set-key-for-mode 'org-mode
     "d" 'org-babel-remove-result
@@ -1418,52 +1428,6 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     "ocl" #'org-clock-in-last
     "oco" #'org-clock-out
     "ocg" #'org-clock-goto)
-
-  (evil-define-key 'normal org-mode-map
-    "[[" #'outline-previous-visible-heading
-    "]]" #'org-next-visible-heading
-    "[{" #'im-outline-up-heading-or-backward-same-level
-    "]}" #'im-outline-up-level-then-forward
-    "-"  #'org-cycle-list-bullet
-
-    (kbd "H-h") 'org-shiftleft
-    (kbd "H-j") 'org-shiftdown
-    (kbd "H-k") 'org-shiftup
-    (kbd "H-l") 'org-shiftright
-
-    ;; Hyper for macos is C-M-s
-    (kbd "C-S-s-<left>") 'org-shiftleft
-    (kbd "C-S-s-<down>") 'org-shiftdown
-    (kbd "C-S-s-<up>") 'org-shiftup
-    (kbd "C-S-s-<right>") 'org-shiftright
-
-    ;; FIXME: mac hyper already contains shift
-    (kbd "M-H") 'org-shiftmetaleft
-    (kbd "M-J") 'org-shiftmetadown
-    (kbd "M-K") 'org-shiftmetaup
-    (kbd "M-L") 'org-shiftmetaright
-
-    ;; FIXME: M-h,j,k,l conflicts with split swithcing shourtcuts
-    ;; so I just prefixed them with Hyper but this does not feel natural.
-    ;; FIXME: find a solution for M-H-{h,j,k,l} in macOS
-    (kbd "M-H-h") 'org-metaleft
-    (kbd "M-H-j") 'org-metadown
-    (kbd "M-H-k") 'org-metaup
-    (kbd "M-H-l") 'org-metaright)
-
-  (defun im-outline-up-level-then-forward ()
-    "Up one level and then go to next header with same level."
-    (interactive)
-    (ignore-errors (outline-up-heading 1))
-    (outline-forward-same-level 1))
-
-  (defun im-outline-up-heading-or-backward-same-level ()
-    "Go to one level up or go back same level."
-    (interactive)
-    (condition-case nil
-        (outline-up-heading 1)
-      (error (outline-backward-same-level 1))))
-
 
   (defun im-org-tree-to-indirect-buffer ()
     "Same as `org-tree-to-indirect-buffer' but let's you open
@@ -2967,8 +2931,6 @@ Some shortcuts you can use on any vertico window:
 #+begin_src emacs-lisp
   (use-package vertico
     :config
-    (evil-leader/set-key "hl" #'vertico-repeat)
-
     ;; Grow and shrink the Vertico minibuffer
     ;; (setq vertico-resize t)
 
@@ -2997,6 +2959,20 @@ Some shortcuts you can use on any vertico window:
     (setq completion-in-region-function #'consult-completion-in-region)
 
     (vertico-mode))
+
+  (use-package vertico-quick
+    :ensure nil
+    :straight nil
+    :after vertico
+    :config
+    (define-key vertico-map "\M-q" #'vertico-quick-exit))
+
+  (use-package vertico-repeat
+    :ensure nil
+    :straight nil
+    :after vertico
+    :config
+    (evil-leader/set-key "hl" #'vertico-repeat))
 
   (use-package orderless
     :config
@@ -3194,6 +3170,7 @@ Some key points:
     (evil-define-key 'normal 'global (kbd "M-i") 'consult-imenu)
     (evil-define-key 'normal org-mode-map (kbd "M-i") 'consult-org-heading)
     (evil-leader/set-key "ff" #'find-file)
+    (evil-leader/set-key "fs" #'save-buffer)
     (evil-leader/set-key "fd" #'consult-dir)
     (evil-leader/set-key "fl" #'consult-line)
 
@@ -4134,7 +4111,7 @@ Simple mode for editing =~/.Xmodmap= file.
     (interactive)
     (dolist (mode-map (list slack-message-buffer-mode-map slack-thread-message-buffer-mode-map))
       (evil-define-key* '(normal motion) mode-map
-        "q" #'delete-window
+        "q" #'im-quit
 
         "@" 'slack-message-embed-mention
         "mc" 'slack-message-embed-channel ;
@@ -4859,7 +4836,8 @@ Keybindings are generally set in-place, following have no context, so they are h
   ;; `format-all-buffer' and it works with more formatters.
   (use-package apheleia
     :config
-    (apheleia-global-mode +1))
+    (apheleia-global-mode +1)
+    (defalias 'im-toggle-auto-code-format #'apheleia-mode))
 
   ;; Pick up .editorconfig settings for current project automatically
   (use-package editorconfig
@@ -5823,10 +5801,10 @@ This mode allows you to do /undo/ /redo/ operations on window layout changes. My
     "wj" #'evil-window-down
     "wk" #'evil-window-up
     ;; window-size
-    "w>" #'enlarge-window
-    "w<" #'shrink-window
-    "w+" #'enlarge-window-horizontally
-    "w-" #'shrink-window-horizontally)
+    "w+" #'enlarge-window
+    "w-" #'shrink-window
+    "w>" #'enlarge-window-horizontally
+    "w<" #'shrink-window-horizontally)
 
   (im-make-repeatable winner
     "u" winner-undo
@@ -5845,10 +5823,10 @@ This mode allows you to do /undo/ /redo/ operations on window layout changes. My
     "k" evil-window-up)
 
   (im-make-repeatable window-resize
-    ">" enlarge-window
-    "<" shrink-window
-    "+" enlarge-window-horizontally
-    "-" shrink-window-horizontally)
+    "+" enlarge-window
+    "-" shrink-window
+    ">" enlarge-window-horizontally
+    "<" shrink-window-horizontally)
 #+end_src
 * Misc functions
 ** marks integration
@@ -7167,7 +7145,7 @@ Here I define two important functions and their helpers.  The following function
   (defun im-toggle-side-scratch-buffer ()
     "Toggle the scratch buffer in side window.  The buffer is opened in side window so it can't be accidentaly removed."
     (interactive)
-    (im-toggle-side-buffer-with-name "*scratch*"))
+    (im-toggle-side-buffer-with-file "~/.emacs.d/scratch.el"))
 
   (defun im-toggle-side-temp-org-buffer ()
     "Toggle `temp.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
@@ -7988,7 +7966,10 @@ Company/work related stuff.
     (setq lab-main-branch-name "master")
     (setq lab-host ty/gitlab-url)
     (setq lab-token ty/gitlab-token)
-    (setq lab-group ty/gitlab-group))
+    (setq lab-group ty/gitlab-group)
+
+    (define-advice magit-push-current-to-pushremote (:after (&rest _) start-watching-pipeline)
+      (lab-watch-pipeline-for-last-commit)))
 #+end_src
 
 ** Automatically move task into code review after an MR is created
