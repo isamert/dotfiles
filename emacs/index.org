@@ -2687,7 +2687,7 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
       (kbd "s") #'avy-goto-word-1))
 #+END_SRC
 
-** vertico & mini-frame
+** vertico & marginalia & orderless & mini-frame
 A nice, fast minibuffer narrowing framework. It works well with quite a lot of package.
 - =marginalia.el= brings annotations to completing-read, ie. it adds current keybinding of a command, summary of command to M-x.
 - =miniframe.el= shows all completing-read prompts in a nice mini popup frame.
@@ -2735,7 +2735,15 @@ Some shortcuts you can use on any vertico window:
     (setq completion-in-region-function #'consult-completion-in-region)
 
     (vertico-mode))
+#+end_src
 
+Here I enable a few extensions for vertico:
+
+#+begin_src emacs-lisp
+  ;; Load vertico extensions
+  (add-to-list 'load-path (expand-file-name (format "%sstraight/build/vertico/extensions" straight-base-dir)))
+
+  ;; Enable avy style candidate selection
   (use-package vertico-quick
     :ensure nil
     :straight nil
@@ -2750,6 +2758,46 @@ Some shortcuts you can use on any vertico window:
     :config
     (evil-leader/set-key "hl" #'vertico-repeat))
 
+  ;; Enable showing vertico in a buffer instead of minibuffer
+  (use-package vertico-buffer
+    :ensure nil
+    :straight nil
+    :after vertico)
+
+  ;; Switch between different vertico display forms for different commands
+  (use-package vertico-multiform
+    :ensure nil
+    :straight nil
+    :after vertico
+    :config
+    ;; Toggle grid mode by hitting M-G while in vertico
+    ;; Toggling grid mode does not work well with mini-frame.
+    (define-key vertico-map "\M-G" #'vertico-multiform-grid)
+
+    ;; '(command display-type... (buffer-local-variable . value))
+    ;; vertico README explains this very well
+    (setq vertico-multiform-commands
+          '((consult-org-heading
+             buffer
+             (vertico-buffer-display-action . (display-buffer-in-side-window
+                                               (side . right)
+                                               (window-width . 0.4))))
+            (consult-imenu
+             buffer
+             (vertico-buffer-display-action . (display-buffer-in-side-window
+                                               (side . right)
+                                               (window-width . 0.4)))))))
+
+  ;; Enable displaying candidates in a grid.
+  (use-package vertico-grid
+    :ensure nil
+    :straight nil
+    :after vertico)
+#+end_src
+
+Other complementary packages:
+
+#+begin_src emacs-lisp
   (use-package orderless
     :config
     (setq completion-styles '(orderless))
@@ -2784,7 +2832,9 @@ Some shortcuts you can use on any vertico window:
             consult-ripgrep
             consult-bookmark
             jq-interactively
-            im-consult-ripgrep))
+            im-consult-ripgrep
+            consult-org-heading
+            consult-imenu))
     (mini-frame-mode +1))
 #+end_src
 ** ~project.el~ and project management
@@ -2961,17 +3011,8 @@ Some key points:
     (defalias 'im-switch-theme #'consult-theme)
 
     <<consult-project-management>>
-    <<consult-perspective-buffers>>
-    <<consult-perspective-switch-buffers>>)
-#+end_src
-
-*** consult-project-extra
-#+begin_src emacs-lisp
-  (use-package consult-project-extra
-    :after (consult project)
-    :config
-    (define-key project-prefix-map "o" #'consult-project-extra-find)
-    (add-to-list 'project-switch-commands `(consult-project-extra-find "consult")))
+    <<consult-buffer-source-files>>
+    <<consult-buffer-source-projects>>)
 #+end_src
 
 *** Project & file management
@@ -3017,14 +3058,14 @@ Some functionality for project management. I do some fine-tuning for =find= and 
        :do (find-file it))))
 #+end_src
 
-*** consult-buffer and frequently used files
+*** consult-buffer and some extensions
 :PROPERTIES:
 :ID:       90769b1b-7baf-4285-80f9-153ae07d73ab
 :END:
 I use =(consult-buffer)= function for switching between buffers/files/marks etc. Here I add a source for my frequently used files. This is handy in a way that =(consult-buffer)= becomes my go-to place for switching to anything.
 
-#+name: consult-perspective-buffers
-#+begin_src emacs-lisp
+#+name: consult-buffer-source-files
+#+begin_src emacs-lisp :tangle no
   (defvar im-consult-source-files
     `(:name     "My files"
                 :narrow   ?f
@@ -3045,36 +3086,54 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
       ,@(directory-files im-load-path t "\\.el$")))
 #+end_src
 
+I also add a source for listing all of my projects:
+
+#+name: consult-buffer-source-projects
+#+begin_src emacs-lisp :tangle no
+  (defvar im-consult-source-projects
+    (list
+     :name     "Projects"
+     :narrow   ?P
+     :hidden   t
+     :category 'file
+     :action  (lambda (it &rest _) (project-switch-project it))
+     :items   (lambda () (mapcar #'car project--list)))
+    "Projects source for consult-buffer.")
+
+  (add-to-list 'consult-buffer-sources 'im-consult-source-projects)
+#+end_src
+
 *** consult-dir: Jump to different places easily in minibuffer
 Here is a nice description of the package from it's README:
 : Avoid "navigating" long distances when picking a file or directory in any Emacs command that requires one. Think of it like the shell tools autojump, fasd or z but for Emacs.
 
 #+begin_src emacs-lisp
   (defvar consult-dir--my-dirs
-    `(:name "My favorites"
-            :narrow ?m
-            :category file
-            :face consult-file
-            :items
-            (lambda ()
-              '("~/Downloads/"
-                "~/Documents/"
-                "~/Pictures/f3/Camera/"
-                "~/Music/"
-                "~/Music/mix/"
-                "~/Videos/Shows/"
-                "~/Videos/Movies/"
-                "~/Documents/notes/"
-                "~/Documents/notes/img/"
-                "~/Workspace/projects/"
-                "~/Workspace/temp/"
-                "~/Workspace/temp/git/"
-                "~/.emacs.d/"
-                "~/.local/share/"
-                "~/.local/bin/"
-                "~/.config/"
-                ,(format "/run/media/%s/" (getenv "USERNAME"))
-                ,(format "/run/media/%s/BINGUS/" (getenv "USERNAME"))))))
+    (list
+     :name "My favorites"
+     :narrow ?m
+     :category 'file
+     :face 'consult-file
+     :items
+     (lambda ()
+       `("~/Downloads/"
+         "~/Documents/"
+         "~/Pictures/f3/Camera/"
+         "~/Music/"
+         "~/Music/mix/"
+         "~/Videos/Shows/"
+         "~/Videos/Movies/"
+         "~/Documents/notes/"
+         "~/Documents/notes/img/"
+         "~/Workspace/projects/"
+         "~/Workspace/temp/"
+         "~/Workspace/temp/git/"
+         "~/.emacs.d/"
+         "~/.local/share/"
+         "~/.local/bin/"
+         "~/.config/"
+         ,(format "/run/media/%s/" (getenv "USERNAME"))
+         ,(format "/run/media/%s/BINGUS/" (getenv "USERNAME"))))))
 
   (use-package consult-dir
     :bind (("C-x C-d" . consult-dir)
@@ -5548,6 +5607,20 @@ Evil has a default binding for switching between tabs with ~gt~ and ~gT~, switch
   (im-make-repeatable tab-bar-switch
     "t" tab-bar-switch-to-next-tab
     "T" tab-bar-switch-to-prev-tab)
+#+end_src
+
+I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump a file. I also want to show it in a buffer, not in mini-buffer.
+
+#+begin_src emacs-lisp
+  (define-advice tab-bar-new-tab (:after (&rest _) show-consult-buffer-in-buffer)
+    (when (eq this-command 'tab-bar-new-tab)
+      ;; Display consult-buffer in current window (in newly opened tab)
+      ;; so that I can start typing direclty to jump another
+      ;; file/project etc.
+      (let ((vertico-multiform-commands '((consult-buffer buffer (vertico-buffer-display-action . (display-buffer-same-window)))))
+            (mini-frame-ignore-commands `(,@mini-frame-ignore-commands consult-buffer))
+            (this-command 'consult-buffer))
+        (consult-buffer))))
 #+end_src
 
 ** bufler
