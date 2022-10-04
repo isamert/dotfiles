@@ -2756,7 +2756,8 @@ Here I enable a few extensions for vertico:
     :straight nil
     :after vertico
     :config
-    (evil-leader/set-key "hl" #'vertico-repeat))
+    ;; (evil-leader/set-key "hl" #'vertico-repeat)
+    )
 
   ;; Enable showing vertico in a buffer instead of minibuffer
   (use-package vertico-buffer
@@ -2962,7 +2963,7 @@ Other complementary packages:
     (--each (--map (project-try-vc it) (im-all-project-roots))
       (project-remember-project it t)))
 
-  (run-with-timer 45 nil #'im-load-projects-list)
+  (run-with-timer 10 nil #'im-load-projects-list)
 #+end_src
 
 ** consult
@@ -2988,11 +2989,12 @@ Some key points:
     ;; ^ Shows all narrowing possibilities when you hit "?"
 
     ;; TODO move bindings
-    (evil-leader/set-key
-      "hh"  #'consult-history
-      "hy"  #'consult-yank-replace
-      "gg"  #'consult-git-grep
-      "RET" #'consult-buffer)
+    ;; (evil-leader/set-key
+    ;;   "hh"  #'consult-history
+    ;;   "hy"  #'consult-yank-replace
+    ;;   "gg"  #'consult-git-grep
+    ;;   "RET" #'consult-buffer)
+    (evil-leader/set-key "RET" #'consult-buffer)
     (evil-define-key 'normal 'global (kbd "M-i") 'consult-imenu)
     (evil-define-key 'normal org-mode-map (kbd "M-i") 'consult-org-heading)
     (evil-leader/set-key "ff" #'find-file)
@@ -3020,10 +3022,10 @@ Some functionality for project management. I do some fine-tuning for =find= and 
 
 #+name: consult-project-management
 #+begin_src emacs-lisp :tangle no
-  (evil-leader/set-key
-    "hf"  #'im-find-file-in
-    "hG"  #'im-consult-ripgrep-in-given-directory
-    "hg"  #'im-consult-ripgrep-current-directory)
+  ;; (evil-leader/set-key
+  ;;   "hf"  #'im-find-file-in
+  ;;   "hG"  #'im-consult-ripgrep-in-given-directory
+  ;;   "hg"  #'im-consult-ripgrep-current-directory)
 
   ;; TODO fix search
   (setq
@@ -5720,7 +5722,7 @@ Good for buffer management, especially for groupped killings.
 
 #+begin_src emacs-lisp
   (evil-leader/set-key "m" #'im-marks-my-docs)
-  (evil-leader/set-key "hm" #'im-marks-my-docs)
+  ;; (evil-leader/set-key "hm" #'im-marks-my-docs)
 
   (defun im-consult--marks-builder (input)
     (list :command
@@ -7918,7 +7920,7 @@ Company/work related stuff.
 
 ** Utilities
 #+begin_src emacs-lisp
-  (evil-leader/set-key "jt" #'ty/jump-to-test-file)
+  ;; (evil-leader/set-key "jt" #'ty/jump-to-test-file)
 
   (cl-defun im-toggle-config-in-file (&key file val1 val2)
     (let ((fpath (expand-file-name file))
