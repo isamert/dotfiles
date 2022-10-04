@@ -597,6 +597,19 @@ This function is for doing easy REST calls and it uses plists for everything bec
   documentation of it."
     (interactive)
     (kill-buffer (current-buffer)))
+
+  (defmacro im-make-repeatable (name &rest rest)
+    "Put given pairs in a keymap and mark them as repeatable."
+    (declare (indent 1))
+    (let ((pairs (-partition 2 rest))
+          (map-name (intern (format "im-repeat-map-for-%s" name))))
+      `(progn
+         (defvar ,map-name
+           (let ((map (make-sparse-keymap)))
+             ,@(--map `(define-key map (kbd ,(car it)) ',(cadr it)) pairs)
+             map))
+         (--each ',(-map #'cadr pairs)
+           (put it 'repeat-map ',map-name)))))
 #+end_src
 *** File operations
 #+begin_src emacs-lisp
@@ -1076,6 +1089,7 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'geiser)
     (evil-collection-init 'dired)
     (evil-collection-init 'grep)
+    (evil-collection-init 'replace)
     (evil-collection-init 'elfeed)
     (evil-collection-init 'consult)
     (evil-collection-init 'vterm)
@@ -2563,51 +2577,6 @@ To sync it automatically:
     :after treemacs magit)
 #+END_SRC
 
-** winner-mode
-This mode allows you to do /undo/ /redo/ operations on window layout changes. My most frequent use case is that sometimes I just want to focus on one window for a while and then return back to my old layout setup. These keybindings allows me to do that.
-
-#+BEGIN_SRC emacs-lisp
-  (use-package winner
-    :init
-    (setq winner-dont-bind-my-keys t)
-    :config
-    (winner-mode t)
-    (evil-define-key 'normal 'global
-      (kbd "C-w 1") 'delete-other-windows
-      (kbd "C-w r") 'winner-redo
-      (kbd "C-w u") 'winner-undo))
-#+END_SRC
-
-** ace-window
-- =SPC ws= to swap windows.
-- Some shortcuts, after doing =SPC ww=:
-  - x - delete window
-  - m - swap windows
-  - M - move window
-  - c - copy window
-  - j - select buffer
-  - n - select the previous window
-  - u - select buffer in the other window
-  - c - split window fairly, either vertically or horizontally
-  - v - split window vertically
-  - b - split window horizontally
-  - o - maximize current window
-  - ? - show these command bindings
-
-#+begin_src emacs-lisp
-  (use-package ace-window
-    :config
-    (custom-set-faces
-     '(aw-leading-char-face
-       ((t (:foreground "deep sky blue" :bold t :height 3.0)))))
-    (evil-leader/set-key "ww" #'ace-window)
-    (evil-leader/set-key "ws" #'ace-swap-window)
-    (evil-leader/set-key "wl" #'evil-window-move-far-right)
-    (evil-leader/set-key "wh" #'evil-window-move-far-left)
-    (evil-leader/set-key "wj" #'evil-window-move-very-bottom)
-    (evil-leader/set-key "wk" #'evil-window-move-very-top))
-#+end_src
-
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options. I made a few adjustment so that it's more compact and you can see full function names (most of the time) and it shows up at the top center instead of bottom left corner. This mostly eliminates the need for creating a [[Hydra]].
 
@@ -2660,14 +2629,10 @@ Note that it's not possible to stage hunks with =vc=.
 #+BEGIN_SRC emacs-lisp
   (use-package magit
     :config
-    ;; Following snippet is needed to update modeline after a checkout happens
-    (defun im-vc-refresh-state-advice (a &optional b)
-      "Refresh VC state after a checkout."
-      (vc-refresh-state))
-    (advice-add 'magit-checkout :after #'im-vc-refresh-state-advice)
+    (define-advice magit-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
+    (define-advice magit-branch-and-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
 
     (evil-leader/set-key
-      ;; magit/git
       "gs" 'magit-status
       "gS" 'magit-stash
       "gf" 'magit-file-dispatch
@@ -2677,6 +2642,7 @@ Note that it's not possible to stage hunks with =vc=.
       "gcc" 'magit-checkout
       "gcf" 'magit-file-checkout
       "gB" 'vc-annotate ;; Git Blame
+      "gR" 'vc-refresh-state
       "gb" 'magit-branch))
 #+END_SRC
 
@@ -2974,15 +2940,11 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
   (use-package avy
     :config
     (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)
-          ;; ^ Only use these for jumping.
           avy-case-fold-search nil
-          ;; ^ Case-sensetive (smart case) search
-          avy-all-windows nil)
-          ;; ^ Only do search in current window
+          avy-all-windows t)
     (evil-define-key 'normal 'global
-      (kbd "S") 'avy-goto-char-2 ;; Go to any char
-      (kbd "s") 'avy-goto-word-1 ;; Go to beginning of a word
-      (kbd "gl") 'avy-goto-line))
+      (kbd "S") #'avy-goto-subword-1
+      (kbd "s") #'avy-goto-word-1))
 #+END_SRC
 
 ** vertico & mini-frame
@@ -3109,26 +3071,43 @@ Some shortcuts you can use on any vertico window:
     (let ((default-directory (project-root (project-current t))))
       (call-interactively #'im-shell-command)))
 
-  ;; TODO remember last window height for a buffer
-  (defun im-project-shell (&optional shell)
+  (defvar im-project-shell-last-height 15)
+  (defvar im-project-shell-map (make-hash-table :test 'equal))
+
+  (defun im-project-shell ()
     (interactive)
-    (let* ((default-directory (or (ignore-errors
+    (let* ((name) (shell)
+           (default-directory (or (ignore-errors
                                     (project-root (project-current)))
                                   default-directory))
+           (project-shells (--filter (get-buffer it) (gethash default-directory im-project-shell-map)))
            (proj-name (f-base default-directory))
-           (other-buffer-names (--map (format "*%s: %s*" it proj-name) '("vterm" "shell"))))
-      (if-let (found-buffer (--find (im-buffer-visible-p it) other-buffer-names))
-          (im-remove-window-with-buffer found-buffer)
-        (setq shell (or shell (intern (cadr (read-multiple-choice "Type: " '((?1 "vterm") (?2 "shell")))))))
-        (let* ((buffer-name-requested (format "*%s: %s*" (symbol-name shell) proj-name))
-
-               (term (or (get-buffer buffer-name-requested)
+           (other-buffer-names (-flatten (map-values im-project-shell-map))))
+      (if-let ((found-buffer (--find (im-buffer-visible-p it) other-buffer-names))
+               (window (get-buffer-window found-buffer)))
+          (when (window-at-side-p window 'top)
+            (setq im-project-shell-last-height (window-height window))
+            (delete-window window))
+        (let ((selected (cadr
+                         (read-multiple-choice
+                          "Pick a shell: "
+                          `(,@(--map-indexed (list (+ 49 it-index) it) (seq-reverse project-shells))
+                            (?n "new"))))))
+          (if (equal selected "new")
+              (progn
+                (setq shell (intern (cadr (read-multiple-choice "Type: " '((?1 "vterm") (?2 "shell"))))))
+                (setq name (format "[%s, %s]: %s" proj-name (symbol-name shell) (read-string "Shell name: "))))
+            (setq name selected)))
+        (let* ((term (or (get-buffer name)
                          (save-window-excursion
-                           (funcall shell buffer-name-requested)))))
+                           (funcall shell name)))))
+          (if project-shells
+              (cl-pushnew name (gethash default-directory im-project-shell-map) :test 'equal)
+            (puthash default-directory (list name) im-project-shell-map))
           (display-buffer-in-side-window
            term
            (append
-            `((window-height . 15)
+            `((window-height . ,im-project-shell-last-height)
               (side . top)
               (slot . 1))))
           (select-window (get-buffer-window term))))))
@@ -3206,12 +3185,12 @@ Some key points:
     (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
     ;; ^ Shows all narrowing possibilities when you hit "?"
 
+    ;; TODO move bindings
     (evil-leader/set-key
       "hh"  #'consult-history
       "hy"  #'consult-yank-replace
       "gg"  #'consult-git-grep
       "RET" #'consult-buffer)
-
     (evil-define-key 'normal 'global (kbd "M-i") 'consult-imenu)
     (evil-define-key 'normal org-mode-map (kbd "M-i") 'consult-org-heading)
     (evil-leader/set-key "ff" #'find-file)
@@ -3836,22 +3815,6 @@ I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more inform
         ((s-contains? "gitlab" homepage) (concat homepage "/-/merge_requests"))
         ((s-contains? "github" homepage) (concat homepage "/pulls"))
         (t (user-error "Forge undefined."))))))
-#+end_src
-
-** bufler
-#+begin_src emacs-lisp
-  (use-package bufler
-    :config
-    (evil-define-key 'normal bufler-list-mode-map
-      (kbd "K") 'bufler-list-buffer-kill
-      (kbd "x") 'bufler-list-buffer-kill
-      (kbd "<return>") 'bufler-list-buffer-switch
-      (kbd "q") 'quit-window
-      (kbd "M-,") 'bufler-list-buffer-peek
-      (kbd "p") 'bufler-list-buffer-peek)
-
-    (evil-leader/set-key
-      "bb" #'bufler))
 #+end_src
 
 ** tab-out
@@ -4882,78 +4845,6 @@ Keybindings are generally set in-place, following have no context, so they are h
     "1" #'(lambda () (interactive) (call-interactively (local-key-binding (kbd "C-c C-c")))))
 #+END_SRC
 
-** Better window management
-- A-- splits below, A-\ splits right.
-- A-h,j,k,l to switch between splits.
-- A-H,J,K,L shrink, enlarge split.
-
-#+BEGIN_SRC emacs-lisp
-  (defun im-quit ()
-    "Quit current window or buffer. Source: meow-quit"
-    (interactive)
-    (if (> (seq-length (window-list (selected-frame))) 1)
-        (delete-window)
-      (previous-buffer)))
-
-  (defun im-split-window-right-term ()
-    (interactive)
-    (split-window-right)
-    (other-window 1)
-    (shell (format "*shell: %s*"(read-string "Buffer name: "))))
-
-  (defun im-split-window-below-term ()
-    (interactive)
-    (split-window-below)
-    (other-window 1)
-    (shell (format "*shell: %s*"(read-string "Buffer name: "))))
-
-  (defun im-split-window-below ()
-    (interactive)
-    (split-window-below)
-    (other-window 1))
-
-  (defun im-split-window-right ()
-    (interactive)
-    (split-window-right)
-    (other-window 1))
-
-  (evil-define-key 'normal 'global "Q" #'im-quit)
-
-  (evil-define-key 'normal 'global
-    (kbd "M-\\") 'im-split-window-right
-    (kbd "M-|")  'im-split-window-right-term
-    (kbd "M--")  'im-split-window-below
-    (kbd "M-_")  'im-split-window-below-term
-    (kbd "M-J")  'enlarge-window
-    (kbd "M-K")  'shrink-window
-    (kbd "M-L")  'enlarge-window-horizontally
-    (kbd "M-H")  'shrink-window-horizontally)
-
-  ;; This is needed to override other modes mappings
-  (define-minor-mode movement-map-mode "Overrides all major and minor mode keys" t)
-
-  (defvar movement-map (make-sparse-keymap "movement-map")
-    "Override all major and minor mode keys")
-
-  (evil-define-key '(normal motion emacs) movement-map
-    (kbd "M-j") 'evil-window-down
-    (kbd "M-k") 'evil-window-up
-    (kbd "M-h") 'evil-window-left
-    (kbd "M-l") 'evil-window-right)
-
-  (evil-define-key 'normal treemacs-mode-map
-    (kbd "M-j") 'evil-window-down
-    (kbd "M-k") 'evil-window-up
-    (kbd "M-h") 'evil-window-left
-    (kbd "M-l") 'evil-window-right)
-
-  (evil-make-intercept-map movement-map)
-
-  (add-to-list
-   'emulation-mode-map-alists
-   `((movement-map-mode . ,movement-map)))
-#+END_SRC
-
 * Language specific
 ** General/language-agnostic functionality
 - Use =format-all-buffer= function to format current buffer. Works for any language.
@@ -5857,6 +5748,107 @@ For working with [[id:DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983][KMonad]] kbd files. 
     ;; Apheleia config, so that it automatically formats on save
     (setf (alist-get 'jsonnet apheleia-formatters) '("jsonnetfmt" "-"))
     (setf (alist-get 'jsonnet-mode apheleia-mode-alist) 'jsonnet))
+#+end_src
+* Window and buffer management
+** bufler
+Good for buffer management, especially for groupped killings.
+
+#+begin_src emacs-lisp
+  (use-package bufler
+    :config
+    (evil-define-key 'normal bufler-list-mode-map
+      (kbd "q") 'quit-window
+      (kbd "x") 'bufler-list-buffer-kill
+      (kbd "<return>") 'bufler-list-buffer-switch
+      (kbd "M-,") 'bufler-list-buffer-peek
+      (kbd "p") 'bufler-list-buffer-peek))
+#+end_src
+** winner-mode
+This mode allows you to do /undo/ /redo/ operations on window layout changes. My most frequent use case is that sometimes I just want to focus on one window for a while and then return back to my old layout setup. These keybindings allows me to do that.
+
+#+begin_src emacs-lisp
+  (use-package winner
+    :init
+    (setq winner-dont-bind-my-keys t)
+    :config
+    (winner-mode t))
+#+end_src
+
+** Functions
+#+begin_src emacs-lisp
+  (defun im-quit ()
+    "Quit current window or buffer. Source: meow-quit"
+    (interactive)
+    (if (> (seq-length (window-list (selected-frame))) 1)
+        (delete-window)
+      (previous-buffer)))
+
+  (defun im-split-window-below ()
+    "Split window below and focus."
+    (interactive)
+    (split-window-below)
+    (other-window 1))
+
+  (defun im-split-window-right ()
+    "Split window right and focus."
+    (interactive)
+    (split-window-right)
+    (other-window 1))
+#+end_src
+** Keybindings
+#+begin_src emacs-lisp
+  (evil-define-key 'normal 'global
+    "Q" #'im-quit
+    (kbd "M-\\") #'im-split-window-right
+    (kbd "M--")  #'im-split-window-below)
+
+  (evil-leader/set-key
+    ;; buffer
+    "wb" #'bufler
+    ;; misc window operations
+    "wo" #'other-window
+    "w1" #'delete-other-windows
+    "w=" #'balance-windows
+    ;; winner
+    "wu" #'winner-undo
+    "wr" #'winner-redo
+    ;; window-move
+    "wL" #'evil-window-move-far-right
+    "wH" #'evil-window-move-far-left
+    "wJ" #'evil-window-move-very-bottom
+    "wK" #'evil-window-move-very-top
+    ;; window-focus
+    "wl" #'evil-window-right
+    "wh" #'evil-window-left
+    "wj" #'evil-window-down
+    "wk" #'evil-window-up
+    ;; window-size
+    "w>" #'enlarge-window
+    "w<" #'shrink-window
+    "w+" #'enlarge-window-horizontally
+    "w-" #'shrink-window-horizontally)
+
+  (im-make-repeatable winner
+    "u" winner-undo
+    "r" winner-redo)
+
+  (im-make-repeatable window-move
+    "l" evil-window-move-far-right
+    "h" evil-window-move-far-left
+    "j" evil-window-move-very-bottom
+    "k" evil-window-move-very-top)
+
+  (im-make-repeatable window-switch
+    "l" evil-window-right
+    "h" evil-window-left
+    "j" evil-window-down
+    "k" evil-window-up)
+
+  (im-make-repeatable window-resize
+    ">" enlarge-window
+    "<" shrink-window
+    "+" enlarge-window-horizontally
+    "-" shrink-window-horizontally)
 #+end_src
 * Misc functions
 ** marks integration
