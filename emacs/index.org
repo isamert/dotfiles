@@ -2749,6 +2749,8 @@ Here I enable a few extensions for vertico:
     :straight nil
     :after vertico
     :config
+    (setq vertico-quick1 "asdfgqwe")
+    (setq vertico-quick2 "hjklui")
     (define-key vertico-map "\M-q" #'vertico-quick-exit))
 
   (use-package vertico-repeat
@@ -2756,8 +2758,8 @@ Here I enable a few extensions for vertico:
     :straight nil
     :after vertico
     :config
-    ;; (evil-leader/set-key "hl" #'vertico-repeat)
-    )
+    (add-hook 'minibuffer-setup-hook #'vertico-repeat-save)
+    (evil-leader/set-key "0" #'vertico-repeat))
 
   ;; Enable showing vertico in a buffer instead of minibuffer
   (use-package vertico-buffer
@@ -2787,7 +2789,8 @@ Here I enable a few extensions for vertico:
              buffer
              (vertico-buffer-display-action . (display-buffer-in-side-window
                                                (side . right)
-                                               (window-width . 0.4)))))))
+                                               (window-width . 0.4))))))
+    (vertico-multiform-mode))
 
   ;; Enable displaying candidates in a grid.
   (use-package vertico-grid
@@ -2989,11 +2992,6 @@ Some key points:
     ;; ^ Shows all narrowing possibilities when you hit "?"
 
     ;; TODO move bindings
-    ;; (evil-leader/set-key
-    ;;   "hh"  #'consult-history
-    ;;   "hy"  #'consult-yank-replace
-    ;;   "gg"  #'consult-git-grep
-    ;;   "RET" #'consult-buffer)
     (evil-leader/set-key "RET" #'consult-buffer)
     (evil-define-key 'normal 'global (kbd "M-i") 'consult-imenu)
     (evil-define-key 'normal org-mode-map (kbd "M-i") 'consult-org-heading)
@@ -3022,10 +3020,10 @@ Some functionality for project management. I do some fine-tuning for =find= and 
 
 #+name: consult-project-management
 #+begin_src emacs-lisp :tangle no
-  ;; (evil-leader/set-key
-  ;;   "hf"  #'im-find-file-in
-  ;;   "hG"  #'im-consult-ripgrep-in-given-directory
-  ;;   "hg"  #'im-consult-ripgrep-current-directory)
+  (evil-leader/set-key
+    "cf"  #'im-find-file-in
+    "cG"  #'im-consult-ripgrep-in-given-directory
+    "cg"  #'im-consult-ripgrep-current-directory)
 
   ;; TODO fix search
   (setq
@@ -3238,66 +3236,45 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
       (consult-flycheck)))
 #+END_SRC
 
-** company
-An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of other stuff.
-- =company-box= :: Nice company front-end with icons and very nice documentation on hover thing.
-- =company-fuzzy= :: Do fuzzy search in completion, instead of prefix or initials matching. Works quite well with every other backend.
-  - Seems to make things slow tho
-- =company-org-block= :: Triggers completion when '<' is typed. Also completes block arguments with ':'.
-
+** corfu & corfu-doc & kind-icon & pcmpl-args
 #+BEGIN_SRC emacs-lisp
-  (use-package company
-    :init
+  (use-package corfu
     :config
-    (setq company-selection-wrap-around t)
-    ;; ^ Return to first completion after the last one (cycles)
-    (setq company-global-modes '(not erc-mode message-mode help-mode gud-mode eshell-mode shell-mode markdown-mode slack-message-buffer-mode slack-thread-message-buffer-mode fundamental-mode))
-    ;; ^ Disable on some modes
-    (setq company-minimum-prefix-length 1)
-    ;; ^ Start completing after 1 char
+    (set-face-background 'corfu-current "dim gray")
+    (setq corfu-cycle t)
+    (setq corfu-auto t)
+    (setq corfu-auto-prefix 2)
+    (global-corfu-mode))
 
-
-    (evil-define-key 'insert 'global (kbd "C-SPC") 'company-complete)
-    ;; ^ C-SPC force triggers company completion at point
-    (define-key company-active-map (kbd "<tab>") nil)
-    ;; ^ Disable tab key, so yasnippet and tab-out works nicely within company mode
-    (define-key company-active-map (kbd "<return>") 'company-complete-selection)
-    ;; ^ Enter simply applies the current selection
-
-    (define-key company-active-map (kbd "<up>") 'company-select-previous)
-    (define-key company-active-map (kbd "<down>") 'company-select-next)
-
-    (define-key company-active-map (kbd "C-u") 'company-previous-page)
-    (define-key company-active-map (kbd "C-b") 'company-previous-page)
-    (define-key company-active-map (kbd "C-d") 'company-next-page)
-
-    ;; I want to be able to use evil's C-n/C-p even when company
-    ;; suggestions are visible. I disable those bindings in company
-    ;; active map, so that evil picks them up and completes the current
-    ;; symbol.
-    (define-key company-active-map (kbd "C-p") nil)
-    (define-key company-active-map (kbd "C-n") nil)
-
-    (add-hook 'after-init-hook 'global-company-mode))
-
-  (use-package company-box
-    :after company
-    :hook (company-mode . company-box-mode))
-
-  (use-package company-org-block
+  (add-to-list 'load-path (expand-file-name (format "%sstraight/build/corfu/extensions" straight-base-dir)))
+  (use-package corfu-quick
+    :ensure nil
+    :straight nil
+    :after corfu
     :config
-    (setq company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
-    (add-hook 'org-mode-hook
-              (lambda ()
-                (add-to-list (make-local-variable 'company-backends)
-                             'company-org-block))))
+    (setq corfu-quick1 "asdfgqwe")
+    (setq corfu-quick2 "hjklui")
+    (define-key corfu-map "\M-q" #'corfu-quick-insert))
 
-
-  ;; For intelligent sorting of company results
-  (use-package company-prescient
+  (use-package kind-icon
+    :after corfu
     :config
-    (company-prescient-mode t)
-    (prescient-persist-mode))
+    (setq kind-icon-default-face 'corfu-default)
+    (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+
+  (use-package corfu-doc
+    :after corfu
+    :config
+    (setq corfu-doc-auto t)
+    ;; Enable it
+    (add-hook 'corfu-mode-hook #'corfu-doc-mode)
+    ;; Toggle doc on/off while in corfu
+    (define-key corfu-map (kbd "M-d") #'corfu-doc-toggle)
+    (define-key corfu-map (kbd "M-p") #'corfu-doc-scroll-down)
+    (define-key corfu-map (kbd "M-n") #'corfu-doc-scroll-up))
+
+  ;; For shell-mode completion
+  (use-package pcmpl-args :ensure t)
 #+END_SRC
 
 ** lsp-mode
@@ -3316,7 +3293,7 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
            (go-mode . lsp)
            (java-mode . lsp))
     :config
-    (setq lsp-use-native-json t)
+    (setq lsp-completion-provider :none) ;; for corfu
     (setq lsp-enable-xref t)
     (setq lsp-enable-links t)
     (setq lsp-enable-folding t)
@@ -3329,7 +3306,7 @@ An in-buffer completion framework. Works nicely with =lsp-mode= and bunch of oth
     (setq lsp-headerline-breadcrumb-enable nil)
     (setq lsp-enable-snippet nil)
     ;; ^ I handle snippets myself with yasnippet
-   (setq lsp-ui-doc-include-signature t)
+    (setq lsp-ui-doc-include-signature t)
     ;; ^ Show the signature in the doc posframe. This shows the
     ;; posframe even if there is no documentation for the function
     ;; etc.
@@ -5571,6 +5548,7 @@ It's a great workspace manager that comes bundled with Emacs. I was using an abo
   (tab-bar-mode)
   (tab-bar-history-mode)
 
+  (setq tab-bar-new-tab-to 'rightmost)
   (setq tab-bar-new-tab-choice im-init-file)
   (setq
    tab-bar-format
@@ -5625,6 +5603,25 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
         (consult-buffer))))
 #+end_src
 
+** tab-line-mode
+#+begin_src emacs-lisp
+  (setq tab-line-close-button-show 'selected)
+  (setq tab-line-tabs-function #'im-tab-line-buffers)
+  (global-tab-line-mode)
+
+  (defun im-tab-line-buffers ()
+    "Return releated project buffers (not limited to files, shells
+  etc.) to display in tab-line."
+    (let ((proj (or (im-current-project-root)
+                    (expand-file-name default-directory))))
+      (seq-sort-by
+       #'buffer-name #'string<
+       (seq-filter (lambda (b)
+                     (with-current-buffer b
+                       (s-starts-with? proj (expand-file-name default-directory))))
+                   (funcall tab-line-tabs-buffer-list-function)))))
+#+end_src
+
 ** bufler
 Good for buffer management, especially for groupped killings.
 
@@ -5665,7 +5662,11 @@ Good for buffer management, especially for groupped killings.
   (evil-define-key 'normal 'global
     "Q" #'im-quit
     (kbd "M-\\") #'im-split-window-right
-    (kbd "M--")  #'im-split-window-below)
+    (kbd "M--")  #'im-split-window-below
+    (kbd "[2") #'tab-line-switch-to-prev-tab
+    (kbd "]2") #'tab-line-switch-to-next-tab
+    (kbd "[1") #'tab-bar-switch-to-prev-tab
+    (kbd "]1") #'tab-bar-switch-to-next-tab)
 
   (evil-leader/set-key
     "l" #'evil-window-right
@@ -5721,8 +5722,7 @@ Good for buffer management, especially for groupped killings.
 [[https://github.com/im-marks][marks]] is a grep-like tool for searching org-mode and markdown files. The following snippet provides a ~consult~ support for marks.
 
 #+begin_src emacs-lisp
-  (evil-leader/set-key "m" #'im-marks-my-docs)
-  ;; (evil-leader/set-key "hm" #'im-marks-my-docs)
+  (evil-leader/set-key "cm" #'im-marks-my-docs)
 
   (defun im-consult--marks-builder (input)
     (list :command
@@ -7798,7 +7798,7 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
            (alert "Can't parse yt-dlp output!")))
        :on-fail
        (lambda (&rest _)
-         (alert "Error while downloading: %s!" fname)))))
+         (alert "Error while downloading: %s!" url)))))
 #+end_src
 * TY (work stuff)
 Company/work related stuff.
