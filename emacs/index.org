@@ -1672,7 +1672,7 @@ Here are the resources:
   (setq org-agenda-ignore-drawer-properties '(effort appt category))
 #+end_src
 
-** ToDo keywords
+** ToDo keywords & faces
 #+BEGIN_SRC emacs-lisp
   ;; Add this to org files if you need:
   ;; #+TODO: TODO PROG WAITING DONE
@@ -1685,10 +1685,9 @@ Here are the resources:
         '(("WAIT" . (:foreground "yellow" :weight bold))
           ("PROG" . (:foreground "magenta" :weight bold :underline t))))
 
-  (defun im-org-set-faces ()
-    (set-face-attribute 'org-headline-done nil :strike-through t))
-
-  (add-hook 'org-mode-hook #'im-org-set-faces)
+  (set-face-attribute 'org-headline-done nil :strike-through t)
+  (set-face-attribute 'org-agenda-done nil :strike-through t)
+  (set-face-attribute 'org-column nil :background nil)
 #+END_SRC
 
 ** org-capture
