@@ -2933,12 +2933,11 @@ Other complementary packages:
 
   (defun im-current-project-name ()
     "Return current projects name."
-    (when-let ((proot (im-current-project-root)))
-      (string-trim
-       (string-remove-prefix
-        (expand-file-name im-projects-root)
-        proot)
-       "/" "/")))
+    (when-let ((curr-proj (im-current-project-root))
+               (projects-root (expand-file-name im-projects-root)))
+      (if (string-prefix-p projects-root curr-proj)
+          (string-trim (string-remove-prefix projects-root curr-proj) "/" "/")
+        (file-name-nondirectory (directory-file-name curr-proj)))))
 
   (defun im-is-git-dir (dir)
     (file-directory-p (concat dir "/.git")))
@@ -5565,6 +5564,7 @@ Use a slightly modified version of ~tab-bar-tab-name-format~.
 #+begin_src emacs-lisp
   (setq tab-bar-tab-hints t)
   (setq tab-bar-tab-name-format-function #'im-tab-bar-tab-name-format)
+  (setq tab-bar-tab-name-function #'im-current-project-name)
 
   (defun im-tab-bar-tab-name-format (tab i)
     (let ((current-p (eq (car tab) 'current-tab)))
@@ -5693,6 +5693,7 @@ Good for buffer management, especially for groupped killings.
     "wr" #'tab-bar-history-forward ;; redo
     "wt" #'tab-bar-new-tab ;; tab
     "wn" #'tab-bar-rename-tab ;; name
+    "wm" #'tab-move ;; move
     "ws" #'tab-bar-switch-to-tab ;; switch
     "wl" #'tab-bar-switch-to-recent-tab ;; last
     "wk" #'tab-close ;; kill
