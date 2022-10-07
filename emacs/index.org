@@ -8025,7 +8025,8 @@ Company/work related stuff.
            (current-test-class
             (save-excursion
               (end-of-line)
-              (re-search-backward "@ExtendWith(Mock" nil t)
+              (or (re-search-backward "@ExtendWith(Mock" nil t)
+                  (re-search-backward "@TestInstance" nil t))
               (forward-line)
               (nth 1 (s-match "class \\([A-Za-z0-9_]+\\) " (substring-no-properties (thing-at-point 'line))))))
            (current-test-name
