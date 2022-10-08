@@ -2933,11 +2933,12 @@ Other complementary packages:
 
   (defun im-current-project-name ()
     "Return current projects name."
-    (when-let ((curr-proj (im-current-project-root))
-               (projects-root (expand-file-name im-projects-root)))
-      (if (string-prefix-p projects-root curr-proj)
-          (string-trim (string-remove-prefix projects-root curr-proj) "/" "/")
-        (file-name-nondirectory (directory-file-name curr-proj)))))
+    (if-let ((curr-proj (im-current-project-root))
+             (projects-root (expand-file-name im-projects-root)))
+        (if (string-prefix-p projects-root curr-proj)
+            (string-trim (string-remove-prefix projects-root curr-proj) "/" "/")
+          (file-name-nondirectory (directory-file-name curr-proj)))
+      (file-name-nondirectory (directory-file-name default-directory))))
 
   (defun im-is-git-dir (dir)
     (file-directory-p (concat dir "/.git")))
