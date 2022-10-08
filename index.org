@@ -2619,7 +2619,7 @@ Also see [[id:ed2554b0-83f7-4692-a16b-75403b8d25cf][raycast-switch-monitor-to-hd
   [Desktop Entry]
   Name=Switch monitor to USB-C
   Terminal=false
-  Exec=ddcutil -b 3 setvcp 0x60 0x1b
+  Exec=/bin/sh -c 'ddcutil -b $(ddcutil detect | grep -m 1 I2C | cut -d- -f2) setvcp 0x60 0x1b'
   Type=Application
   Categories=Utility;
 #+end_src
@@ -3495,8 +3495,7 @@ Also see [[id:a9df33fc-4547-440a-a1ab-0ebe9ff5f92d][switch-monitor-input.desktop
   # Optional parameters:
   # @raycast.icon �
 
-  ssh asus 'ddcutil -b 4 setvcp 0x60 0x11'
-
+  ssh asus 'ddcutil -b $(ddcutil detect | grep -m 1 I2C | cut -d- -f2) setvcp 0x60 0x11'
 #+end_src
 * Tools
 - =dconf-editor= :: List and explore gnome/gshell/app settings.
