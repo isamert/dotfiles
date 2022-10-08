@@ -2993,7 +2993,7 @@ Some key points:
     (evil-leader/set-key "RET" #'consult-buffer)
     (evil-define-key 'normal 'global (kbd "M-i") 'consult-imenu)
     (evil-define-key 'normal org-mode-map (kbd "M-i") 'consult-org-heading)
-    (evil-leader/set-key "ff" #'find-file)
+    (evil-leader/set-key "fo" #'find-file)
     (evil-leader/set-key "fs" #'save-buffer)
     (evil-leader/set-key "fd" #'consult-dir)
     (evil-leader/set-key "fl" #'consult-line)
@@ -3528,40 +3528,18 @@ tldr client for Emacs.
       "it" #'tldr))
 #+END_SRC
 
-** yasnippets and yankpad
-I use yankpad to manage my snippets. [[./yankpad.org][The file]] has more information on that. =yasnippet= is used while expanding the snippets defined in =yankpad= so that I can utilize all the goodies =yasnippet= offers.
-
+** tempel: template manager
 #+BEGIN_SRC emacs-lisp
-  (use-package yasnippet
+  (use-package tempel
     :config
-    (yas-global-mode))
-
-  (use-package yankpad
-    :after yasnippet
-    :config
-    (setq yankpad-file snippets-org)
-    (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand)
-    (evil-leader/set-key
-      "sr" #'yankpad-reload
-      "sc" #'yankpad-set-category
-      "se" #'yankpad-edit
-      "ss" #'yankpad-map
-      "sm" #'yankpad-map)
-
+    (add-to-list 'hippie-expand-try-functions-list #'tempel-expand)
     (evil-define-key 'insert 'global
-      (kbd "M-s") #'yankpad-insert
+      (kbd "M-s") #'tempel-complete
       (kbd "M-e") #'hippie-expand)
 
     ;; Enable expanding in minibuffer
-    (add-hook 'minibuffer-setup-hook 'yas-minor-mode)
     (define-key minibuffer-local-map (kbd "M-e") #'hippie-expand)
-
-    ;; Categories returned by the following functions will be used to
-    ;; expand snippets
-    (setq
-     yankpad-auto-category-functions
-     '(yankpad-major-mode-category im-current-project-name)))
-
+    (define-key minibuffer-local-map (kbd "M-s") #'tempel-complete))
 #+END_SRC
 
 ** git-link
