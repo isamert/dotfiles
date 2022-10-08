@@ -95,6 +95,54 @@ The following enables ~nix search~ command.
   experimental-features = nix-command flakes
 #+end_src
 * macOS
+** Start applications at boot
+#+name: mac-launchagent-template
+#+begin_src xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+  <plist version="1.0">
+  <dict>
+      <key>Label</key>
+      <string>${name}</string>
+
+      <key>ProgramArguments</key>
+      <array>
+        ${args}
+      </array>
+
+      <key>KeepAlive</key>
+      <true/>
+
+      <key>RunAtLoad</key>
+      <true/>
+
+      <key>EnvironmentVariables</key>
+      <dict>
+          <key>PATH</key>
+          <string>${HOME}/.nix-profile/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+      </dict>
+  </dict>
+  </plist>
+#+end_src
+
+#+name: mk-launchagent
+#+begin_src elisp :var name="" args='()
+  (replace-regexp-in-string
+   "\\${[a-zA-Z]+}"
+   (lambda (substr)
+     (pcase substr
+       ("${name}" (format "net.isamert.%s" name))
+       ("${args}" (replace-regexp-in-string
+                   "${HOME}"
+                   (expand-file-name "~")
+                   (string-join (mapcar (lambda (it) (format "<string>%s</string>" it)) args) "\n") t t))
+       ("${HOME}" (expand-file-name "~"))
+       (_ "???")))
+   (save-excursion
+     (org-babel-goto-named-src-block "mac-launchagent-template")
+     (org-element-property :value (org-element-at-point)))
+   t t)
+#+end_src
 ** Application specific shortcuts
 Here is a [[https://gist.github.com/miclf/bf4b0cb6de9ead726197db7ed3d937b5][great tool]] for exporting and importing your application specific bindings in /Keyboard Shortcuts/ settings page. I was hesitant to use this feature because it was not easy to replicate but with this tool it's quite convenient.
 
@@ -305,6 +353,33 @@ This is mostly based on: [[https://appsonthemove.com/posts/orgmode_clocking_hamm
   end
 
   return mod
+#+end_src
+
+** Rootless sshd
+#+begin_src conf :tangle ~/.config/sshd/cfg
+  Port 2222
+  HostKey «sh("echo $HOME")»/.config/sshd/hostkey
+  PidFile «sh("echo $HOME")»/.config/sshd/pid
+#+end_src
+
+Create the host key and enable starting it at boot:
+
+#+begin_src sh
+  ssh-keygen -t rsa -f ~/.config/sshd/hostkey -N ''
+  launchctl load -w ~/Library/LaunchAgents/net.isamert.sshd.plist
+#+end_src
+
+#+begin_src text :tangle ~/Library/LaunchAgents/net.isamert.sshd.plist
+  «mk-launchagent(name="sshd", args='("/usr/sbin/sshd" "-f" "${HOME}/.config/sshd/cfg"))»
+#+end_src
+
+** Start some applications at login
+#+begin_src text :tangle ~/Library/LaunchAgents/net.isamert.kdeconnect.plist
+  «mk-launchagent(name="kdeconnect", args='("/Applications/kdeconnect-indicator.app/Contents/MacOS/kdeconnect-indicator"))»
+#+end_src
+
+#+begin_src sh
+  launchctl load -w ~/Library/LaunchAgents/net.isamert.kdeconnect.plist
 #+end_src
 
 * Linux
@@ -2156,7 +2231,7 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
 
   colors midnight
   set editorcmd «sh("which emacsclient")»
-  set searchengine y
+  set searchengine s
   set hintfiltermode vimperator-reflow
   set smoothscroll true
   set modeindicatorshowkeys true
@@ -3420,7 +3495,7 @@ Also see [[id:a9df33fc-4547-440a-a1ab-0ebe9ff5f92d][switch-monitor-input.desktop
   # Optional parameters:
   # @raycast.icon �
 
-  ssh asus 'ddcutil -b 3 setvcp 0x60 0x11'
+  ssh asus 'ddcutil -b 4 setvcp 0x60 0x11'
 
 #+end_src
 * Tools
