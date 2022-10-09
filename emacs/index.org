@@ -888,6 +888,7 @@ Displays ~^L~ (page breaks) as full-width straight lines:
     ;; global-page-break-lines-mode only enables page-break-lines mode
     ;; for the major modes listed in `page-break-lines-modes'
     (add-to-list 'page-break-lines-modes 'clojure-mode)
+    (add-to-list 'page-break-lines-modes 'lisp-data-mode)
     (global-page-break-lines-mode))
 #+end_src
 
@@ -2992,7 +2993,9 @@ Some key points:
 
     ;; TODO move bindings
     (evil-leader/set-key "RET" #'consult-buffer)
-    (evil-define-key 'normal 'global (kbd "M-i") 'consult-imenu)
+    (evil-define-key 'normal 'global (kbd "M-i") (λ-interactive (condition-case nil
+                                                                    (consult-imenu)
+                                                                  (error (consult-outline)))))
     (evil-define-key 'normal org-mode-map (kbd "M-i") 'consult-org-heading)
     (evil-leader/set-key "fo" #'find-file)
     (evil-leader/set-key "fs" #'save-buffer)
@@ -3531,16 +3534,35 @@ tldr client for Emacs.
 
 ** tempel: template manager
 #+BEGIN_SRC emacs-lisp
-  (use-package tempel
+  (use-package yasnippet
     :config
-    (add-to-list 'hippie-expand-try-functions-list #'tempel-expand)
+    (yas-global-mode))
+
+  (use-package yankpad
+    :after yasnippet
+    :config
+    (setq yankpad-file snippets-org)
+    (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand)
+    (evil-leader/set-key
+      "sr" #'yankpad-reload
+      "sc" #'yankpad-set-category
+      "se" #'yankpad-edit
+      "ss" #'yankpad-map
+      "sm" #'yankpad-map)
+
     (evil-define-key 'insert 'global
-      (kbd "M-s") #'tempel-complete
+      (kbd "M-s") #'yankpad-insert
       (kbd "M-e") #'hippie-expand)
 
     ;; Enable expanding in minibuffer
+    (add-hook 'minibuffer-setup-hook 'yas-minor-mode)
     (define-key minibuffer-local-map (kbd "M-e") #'hippie-expand)
-    (define-key minibuffer-local-map (kbd "M-s") #'tempel-complete))
+
+    ;; Categories returned by the following functions will be used to
+    ;; expand snippets
+    (setq
+     yankpad-auto-category-functions
+     '(yankpad-major-mode-category im-current-project-name)))
 #+END_SRC
 
 ** git-link
