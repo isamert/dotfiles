@@ -3545,7 +3545,7 @@ tldr client for Emacs.
       "it" #'tldr))
 #+END_SRC
 
-** tempel: template manager
+** yasnippet & yankpad: template manager
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet
     :config
@@ -3751,9 +3751,9 @@ Simple mode for editing =~/.Xmodmap= file.
     (ignore-errors (slack-team-delete))
     (slack-register-team
      :name "trendyol"
-     :token ty/slack-token
-     :cookie ty/slack-cookie
-     :subscribed-channels ty/slack-channels)
+     :token ty-slack-token
+     :cookie ty-slack-cookie
+     :subscribed-channels ty-slack-channels)
     (slack-start)
     (slack-change-current-team)
     (im-slack-initialize-keymaps))
@@ -5570,7 +5570,8 @@ It's a great workspace manager that comes bundled with Emacs. I was using an abo
      tab-bar-separator
      tab-bar-format-add-tab
      tab-bar-format-align-right
-     tab-bar-format-global))
+     ;;tab-bar-format-global
+     ))
 #+end_src
 
 Use a slightly modified version of ~tab-bar-tab-name-format~.
@@ -5848,9 +5849,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
   (use-package jiralib2
     :config
-    (setq jiralib2-url ty/jira-url)
+    (setq jiralib2-url ty-jira-url)
     (setq jiralib2-auth 'basic)
-    (setq jiralib2-user-login-name ty/jira-login)
+    (setq jiralib2-user-login-name ty-jira-login)
     (setq jiralib2-token nil))
 
   ;;
@@ -7814,335 +7815,6 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
        (lambda (&rest _)
          (alert "Error while downloading: %s!" url)))))
 #+end_src
-* TY (work stuff)
-Company/work related stuff.
-
-#+begin_src emacs-lisp
-  (defun workpc? ()
-    (eq system-type 'darwin))
-#+end_src
-
-** Packages
-#+begin_src emacs-lisp
-  (when (workpc?)
-    ;; Enable org jira/confluence exporter (org-confluence-export-as-confluence)
-    (require 'ox-confluence)
-    (defalias 'org-export-as-jira-confluence-markup 'org-confluence-export-as-confluence))
-#+end_src
-** Automatically insert issue numbers into commit messages
-#+begin_src emacs-lisp
-  (defun company/git-commit-message-setup ()
-    "Insert the JIRA ticket number in front of the commit message.
-  If it already exists (like for example when you use --amend),
-  does not do anything."
-    (when (s-contains? "trendyol" (im-git-link-homepage))
-      (if-let (ticket-no (s-match "\\w+-[0-9]+" (magit-get-current-branch)))
-          (let* ((issue-prefix (format "%s - " (car ticket-no)))
-                 (issue-prefix-exists (save-excursion
-                                        (goto-char (point-min))
-                                        (search-forward issue-prefix nil t))))
-            (when (not issue-prefix-exists)
-              (goto-char (point-min))
-              (insert issue-prefix)))
-        (goto-char (point-min))
-        (unless (re-search-forward "SAT-" nil t)
-          (if (and (ignore-errors (org-clocking-p)) (s-contains? "SAT-" org-clock-heading))
-              (insert (concat (car (s-match "SAT-[0-9]+" org-clock-heading)) " "))
-            (insert "SAT-1 "))))))
-
-  (when (workpc?)
-    (add-hook 'git-commit-setup-hook 'company/git-commit-message-setup))
-#+end_src
-
-** Gitlab config
-#+begin_src emacs-lisp
-  (evil-leader/set-key
-    "gmb" 'lab-list-branch-merge-requests
-    "gmm" 'lab-list-my-merge-requests
-    "gma" 'lab-list-group-merge-requests
-    "gmc" 'lab-create-merge-request)
-
-  (use-package lab
-    :straight (:host github :repo "isamert/lab.el")
-    :config
-    (setq lab-main-branch-name "master")
-    (setq lab-host ty/gitlab-url)
-    (setq lab-token ty/gitlab-token)
-    (setq lab-group ty/gitlab-group)
-
-    (define-advice magit-push-current-to-pushremote (:after (&rest _) start-watching-pipeline)
-      (lab-watch-pipeline-for-last-commit)))
-#+end_src
-
-** Automatically move task into code review after an MR is created
-#+begin_src emacs-lisp
-  (add-hook 'im-gitlab-after-mr-create-functions #'ty/move-task-to-in-progress)
-  (add-hook 'im-gitlab-after-mr-mark-ready-functions #'ty/move-task-to-in-progress)
-
-  (defun ty/move-task-to-in-progress (mr)
-    (let ((title (alist-get 'title mr))
-          (source-branch (alist-get 'source_branch mr)))
-      (unless (or (s-prefix? "Draft:" title)
-                  (s-prefix? "WIP:" title)
-                  (or (s-contains? "SAT-1-" source-branch)
-                      (s-suffix? "SAT-1" source-branch)))
-        (message ">> Moving task into `Code Review'.")
-        (im-jira-change-issue-status-to-status
-         (im-extract-ticket-number-from-branch-name source-branch)
-         "Code Review"))))
-
-  (defun im-extract-ticket-number-from-branch-name (branch)
-    (->>
-     branch
-     (s-split "/")
-     (nth 1)
-     (s-split "-")
-     (-take 2)
-     (s-join "-")))
-#+end_src
-
-** Misc bindings
-#+begin_src emacs-lisp
-  (defun im-toggle-side-trendyol-org-buffer ()
-    "Toggle `well.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
-    (interactive)
-    (im-toggle-side-buffer-with-file "~/Documents/notes/trendyol.org"))
-
-  (evil-leader/set-key
-    "tw" 'im-toggle-side-trendyol-org-buffer)
-#+end_src
-
-** Token management
-#+begin_src emacs-lisp
-  ;; (defvar ty/stage-token nil)
-
-  (defun ty/stage-token ()
-    (or
-     ty/stage-token
-     (ty/set-stage-token)))
-
-  (defun ty/set-stage-token ()
-    (interactive)
-    (let ((token (read-string "Token: ")))
-      (setq ty/stage-token token)
-      token))
-
-  (defun ty/copy-kill-token ()
-    (interactive)
-    (kill-new ty/stage-token))
-#+end_src
-
-** Utilities
-#+begin_src emacs-lisp
-  ;; (evil-leader/set-key "jt" #'ty/jump-to-test-file)
-
-  (cl-defun im-toggle-config-in-file (&key file val1 val2)
-    (let ((fpath (expand-file-name file))
-          (e-val1 (s-replace "/" "\\/" val1))
-          (e-val2 (s-replace "/" "\\/" val2)))
-      (if (eq 0 (shell-command (format "grep -E '%s' '%s'" e-val1 fpath)))
-          (progn
-            (shell-command (format "sed -i 's/%s/%s/' '%s'" e-val1 e-val2 fpath))
-            (message ">> Switched to %s" val2))
-        (progn
-          (shell-command (format "sed -i 's/%s/%s/' '%s'" e-val2 e-val1 fpath))
-          (message ">> Switched to %s" val1)))))
-
-  (defun ty/toggle-editor-backend-url ()
-    "Toggle between local/stage editor-bff instace."
-    (interactive)
-    (im-toggle-config-in-file
-     :file "~/Workspace/projects/editor/src/config.ts"
-     :val1 "https://stage-discovery-sellerads-editorbff-service.earth.trendyol.com"
-     :val2 "http://localhost:3031"))
-
-  (defun ty/toggle-ebff-advert-statistics-url ()
-    "Toggle between local/stage advert-statistics instace."
-    (interactive)
-    (im-toggle-config-in-file
-     :file "~/Workspace/projects/editor-bff/config/stage.yaml"
-     :val1 "https://stageselleradsadvertstatisticapi.trendyol.com"
-     :val2 "http://localhost:8086/"))
-
-  (defun ty/open-test-code-coverage-report (run-test-before)
-    "Open code coverage report for current project.
-  With RUN-TEST-BEFORE is non-nil, then run tests before and then
-  open coverage.  You can simply call \"gf\" or
-  `xah-open-file-at-cursor' to navigate to a file shown on the
-  output."
-    (interactive "P")
-    (let ((default-directory (im-current-project-root))
-          (cov-file (format "file://%s/coverage/lcov-report/index.html" (im-current-project-root))))
-      (if run-test-before
-          (im-shell-command
-           :command "yarn jest --coverage --colors"
-           :buffer-name (format "%s-test-cov" persp-last-persp-name)
-           :on-finish (lambda (&rest _) (browse-url-default-browser cov-file))
-           :on-fail (lambda (&rest _) (user-error ">> Tests are failed!")))
-        (browse-url-default-browser cov-file))))
-
-  (defun ty/run-test-code-coverage-report ()
-    "Run all tests and then open coverage."
-    (interactive)
-    (ty/open-test-code-coverage-report t))
-
-  (defun ty/find-test-file--java ()
-    (let ((java-test-file
-           (->>
-            buffer-file-name
-            (s-replace "/main/" "/test/")
-            (s-chop-suffixes '(".java" ".kt")))))
-      (--find (s-starts-with? java-test-file it) (f-files (f-dirname java-test-file)))))
-
-  (defun ty/find-test-file--ts ()
-    (concat
-     (file-name-directory buffer-file-name)
-     "__tests__/"
-     (s-replace ".ts" ".spec.ts" (file-name-nondirectory buffer-file-name))))
-
-  (defun ty/find-test-file ()
-    (-find #'file-exists-p (list (ty/find-test-file--java) (ty/find-test-file--ts) buffer-file-name)))
-
-  (defun ty/jump-to-test-file ()
-    "Jump to test file of current file."
-    (interactive)
-    (find-file (ty/find-test-file)))
-
-  (defun ty/run-current-test-file (run-only-focused-test)
-    (interactive "P")
-    (cond
-     ((locate-dominating-file "." "yarn.lock") (ty/run-current-test-file--yarn run-only-focused-test))
-     ((locate-dominating-file "." "pom.xml") (ty/run-current-test-file--mvn run-only-focused-test))
-     (t (user-error "This project type is not recognized"))))
-
-  (defun ty/run-current-test-file--yarn (run-only-focused-test)
-    (ty/jump-to-test-file)
-    (let* ((test-file buffer-file-name)
-           (default-directory (im-current-project-root))
-           (current-test-name
-            (ignore-errors
-              (save-excursion
-                (end-of-line)
-                (re-search-backward "it(['\"]" nil t)
-                (nth 1 (s-match "it(['\"]\\(.*\\)['\"]," (substring-no-properties (thing-at-point 'line))))))))
-      (im-shell-command
-       :command (format "yarn jest --colors --runTestsByPath %s %s"
-                        (file-relative-name test-file (im-current-project-root))
-                        (if (and run-only-focused-test current-test-name)
-                            (format "-t \"%s\"" current-test-name)
-                          "")))))
-
-  (defun ty/run-current-test-file--mvn (run-only-focused-test)
-    (ty/jump-to-test-file)
-    (let* ((test-file buffer-file-name)
-           (default-directory (im-current-project-root))
-           (current-test-class
-            (save-excursion
-              (end-of-line)
-              (or (re-search-backward "@ExtendWith(Mock" nil t)
-                  (re-search-backward "@TestInstance" nil t))
-              (forward-line)
-              (nth 1 (s-match "class \\([A-Za-z0-9_]+\\) " (substring-no-properties (thing-at-point 'line))))))
-           (current-test-name
-            (ignore-errors
-              (save-excursion
-                (end-of-line)
-                (re-search-backward "@Test" nil t)
-                (forward-line)
-                (nth 1 (s-match " \\([A-Za-z0-9_]+\\)(" (substring-no-properties (thing-at-point 'line))))))))
-      (im-shell-command
-       :command (format "./mvnw test --offline -Dstyle.color=always -Djansi.force=true -Dtest='%s%s'"
-                        current-test-class
-                        (if (and run-only-focused-test current-test-name)
-                            (format "#%s" current-test-name)
-                          "")))))
-
-  (defun ty/run-current-test-only ()
-    "Run currently focused test only."
-    (interactive)
-    (ty/run-current-test-file t))
-
-  (defun ty/get-current-kafka-config ()
-    "Read kafka configuration from projects stage.yaml."
-    (let* ((kafka-config (->>
-                          (with-temp-buffer
-                            (insert-file-contents (concat (im-current-project-root) "/config/stage.yaml"))
-                            (buffer-string))
-                          (yaml-parse-string)
-                          (gethash 'default)
-                          (gethash 'kafka)))
-           (kafka-hosts (or (gethash 'hosts kafka-config)
-                            (gethash 'uri kafka-config)))
-           (kafka-items (->> kafka-config
-                             (hash-table-keys)
-                             (--remove (-contains? '(hosts uri) it))))
-           (kafka-topics (or (ignore-errors
-                               (hash-table-values (gethash 'topics kafka-config)))
-                             (--map (->> kafka-config
-                                         (gethash it)
-                                         (gethash 'topic))
-                                    kafka-items))))
-      (list
-       :hosts kafka-hosts
-       :topics kafka-topics)))
-#+end_src
-** Projects/services
-#+begin_src emacs-lisp :tangle no
-  (prodigy-define-service
-    :name "Seller-Ads/Editor"
-    :command "yarn"
-    :args '("start")
-    :cwd "~/Workspace/projects/editor/"
-    :tags '(work ui)
-    :stop-signal 'sigkill
-    :kill-process-buffer-on-stop t)
-
-  (prodigy-define-service
-    :name "Seller-Ads/Editor BFF"
-    :command "yarn"
-    :args '("start")
-    :cwd "~/Workspace/projects/editor-bff/"
-    :tags '(work bff)
-    :stop-signal 'sigkill
-    :kill-process-buffer-on-stop t)
-
-  (prodigy-define-service
-    :name "Seller-Ads/Advert Api"
-    :command "yarn"
-    :args '("start:dev")
-    :cwd "~/Workspace/projects/advert-api/"
-    :tags '(work api)
-    :stop-signal 'sigkill
-    :kill-process-buffer-on-stop t)
-
-  (prodigy-define-service
-    :name "Seller-Ads/SP/Advert Consumer"
-    :command "yarn"
-    :args '("start:dev")
-    :cwd "~/Workspace/projects/consumers/sponsored-product-advert-update-consumer/"
-    :tags '(work consumer)
-    :stop-signal 'sigkill
-    :kill-process-buffer-on-stop t)
-
-  (prodigy-define-service
-    :name "Seller-Ads/SP/DS Consumer"
-    :command "yarn"
-    :args '("start:dev")
-    :cwd "~/Workspace/projects/consumers/sponsored-product-data-science-consumer/"
-    :tags '(work consumer)
-    :stop-signal 'sigkill
-    :kill-process-buffer-on-stop t)
-
-  (prodigy-define-service
-    :name "Seller-Ads/SP/Content Invalidation Consumer"
-    :command "yarn"
-    :args '("start:dev")
-    :cwd "~/Workspace/projects/consumers/sponsored-product-content-invalidation-consumer/"
-    :tags '(work consumer)
-    :stop-signal 'sigkill
-    :kill-process-buffer-on-stop t)
-#+end_src
-
 * Postamble
 #+begin_src emacs-lisp
   ;; Load the remaining external files that I want to be loaded
