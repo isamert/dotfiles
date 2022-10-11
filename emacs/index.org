@@ -1573,13 +1573,12 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (use-package ob-http
     :straight (:host github :repo "zweifisch/ob-http"))
 
-  ;; TODO Handle --data-urlencode, -X {POST,GET,etc...}, -L, --data-raw
   (defun im-curl-to-org-http (curl-str)
     "Convert CURL-STR into an ob-http block.
-    More concretely this function converts given curl command (that
-    is copied from Chrome/Firefox dev tools, using the `Copy as curl'
-    option) into an ob-http block to be able to use all the goodies
-    that is provided by ob-http."
+  More concretely this function converts given curl command (that
+  is copied from Chrome/Firefox dev tools, using the `Copy as curl'
+  option) into an ob-http block to be able to use all the goodies
+  that is provided by ob-http."
     (interactive
      (list
       (if (use-region-p)
@@ -1589,27 +1588,39 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
            (url (cadr (s-match "['\"]\\(http.*?\\)['\"]" curl)))
            (headers (--map (format "%s: %s" (s-titleize (nth 2 it)) (nth 3 it))
                            (s-match-strings-all "-H \\('\\|\"\\)\\(.*?\\): \\(.*?\\)\\('\\|\"\\)" curl)))
-           (body (s-trim (car (s-match "--data-binary '\\(.*?\\)'" curl))))
+           (body (-some->> (s-match "--data-\\(binary\\|raw\\) '\\(.*?\\)'" curl)
+                   (nth 2)
+                   (s-trim)))
+           (compressed? (s-matches? "--compressed" curl))
+           (method (nth 2 (s-match "-\\(X\\|-request\\) ['\"]?\\([A-Z]+\\)['\"]?" curl)))
+           ;; GET https://...
+           ;; Header1: Value1
+           ;; ...
+           ;;
+           ;; body
            (result (format
-                    "  %s %s\n  %s%s"
-                    (if body "POST" "GET")
+                    "  %s %s\n%s%s"
+                    (or method (if body "POST" "GET"))
                     url
-                    (--reduce (format "%s\n  %s" acc it) headers)
+                    (s-join "\n" (--map (format "  %s" it) headers))
                     (if body
-                        (format "\n\n  %s"
+                        (format "\n\n%s"
                                 ;; if json, format the body
-                                (if
-                                    (or (and
+                                (if (or (and
                                          (s-prefix? "{" body)
                                          (s-suffix? "}" body))
                                         (and
                                          (s-prefix? "[" body)
-                                         (s-suffix? "]" body))))
-                                (with-temp-buffer
-                                  (insert body)
-                                  (json-pretty-print-buffer)
-                                  (buffer-string))
-                                body)
+                                         (s-suffix? "]" body)))
+                                    (with-temp-buffer
+                                      (insert body)
+                                      (json-pretty-print-buffer)
+                                      (->>
+                                       (buffer-string)
+                                       (s-split "\n")
+                                       (--map (format "  %s" it))
+                                       (s-join "\n")))
+                                  (format "%s" body)))
                       ""))))
       (when (use-region-p)
         (delete-region (region-beginning) (region-end)))
@@ -1617,7 +1628,9 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
                 (goto-char (region-beginning))
                 (forward-line -1)
                 (s-contains? "begin_src" (thing-at-point 'line t)))
-        (insert "#+begin_src http :pretty :wrap src json\n\n#+end_src")
+        (insert
+         (format "#+begin_src http :pretty :wrap src json%s\n\n#+end_src"
+                 (if compressed? " :curl --compressed" "")))
         (forward-line -1))
       (insert result)))
 #+end_src
