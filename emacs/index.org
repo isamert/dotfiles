@@ -85,6 +85,7 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   (setq frame-resize-pixelwise t)  ;; Fix gap issues with tiling WMs
   (defconst im-init-file (expand-file-name "~/.emacs.d/scratch.el"))
   (setq initial-buffer-choice im-init-file)
+  (add-to-list 'default-frame-alist '(undecorated . t))
 #+end_src
 * Preparation
 ** straight.el and use-package
@@ -4966,6 +4967,8 @@ The following enables =CamelCase= aware editing operations.
 *** REPL interaction
 #+begin_src emacs-lisp
   (evil-leader/set-key-for-mode 'typescript-mode
+    ";" #'im-ts-send-expression-to-repl)
+  (evil-leader/set-key-for-mode 'js-mode
     ";" #'im-ts-send-expression-to-repl)
 
   (defun im-tsc-find-parent-with-type (node wanted-type)

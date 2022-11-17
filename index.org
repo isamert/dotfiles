@@ -164,6 +164,7 @@ Here is a [[https://gist.github.com/miclf/bf4b0cb6de9ead726197db7ed3d937b5][grea
           "Find Again": "^G",
           "Find in Page...": "^F",
           "History": "^H",
+          "Bookmarks": "^B",
           "New Tab": "^T"
       },
       "com.google.Chrome": {
