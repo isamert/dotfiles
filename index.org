@@ -813,6 +813,8 @@ TODO: unify this and skhd configuration?
   «hyper» + p
     emacsclient --eval "(im-globally (im-password-act))"
 
+  «hyper» + t
+    term -e trans -shell
 #+end_src
 
 Here is the autostart entry:
@@ -1534,6 +1536,7 @@ This file is sourced by both =zsh= and =bash=.
   alias mt="jaro --mime-type"
   alias mkx="chmod +x"
   alias ytdl="yt-dlp"
+  alias ytmp3="yt-dlp --extract-audio --audio-format mp3 --output '%(title)s.%(ext)s'"
 
   # master Wq
   alias :q="exit"
