@@ -1703,6 +1703,7 @@ Here are the resources:
   (set-face-attribute 'org-headline-done nil :strike-through t)
   (set-face-attribute 'org-agenda-done nil :strike-through t)
   (set-face-attribute 'org-column nil :background nil)
+  (set-face-attribute 'org-scheduled-today nil :foreground "light green")
 #+END_SRC
 
 ** org-capture
