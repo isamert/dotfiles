@@ -1408,6 +1408,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     "oi"  #'org-toggle-inline-images
     "oI"  #'org-redisplay-inline-images
     "or"  #'org-mode-restart
+    "oh"  #'outline-show-only-headings
     "os"  #'org-schedule
     "od"  #'org-deadline
     "ov"  #'org-babel-expand-src-block
@@ -5627,6 +5628,9 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
   (setq tab-line-tabs-function #'im-tab-line-buffers)
   (global-tab-line-mode)
 
+  (defvar im-tab-line-hidden-buffer-name-regexp "\\*\\(Slack.*\\|Calc.*\\|elfeed-log\\|helpful.*\\|Compile-Log\\|Help\\)\\*\\|magit.*"
+    "Regexp to filter out buffer names on tab line.")
+
   (defun im-tab-line-buffers ()
     "Return releated project buffers (not limited to files, shells
   etc.) to display in tab-line."
@@ -5636,7 +5640,9 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
        #'buffer-name #'string<
        (seq-filter (lambda (b)
                      (with-current-buffer b
-                       (s-starts-with? proj (expand-file-name default-directory))))
+                       (and
+                        (not (s-matches? im-tab-line-hidden-buffer-name-regexp (buffer-name b)))
+                        (s-starts-with? proj (expand-file-name default-directory)))))
                    (funcall tab-line-tabs-buffer-list-function)))))
 #+end_src
 
