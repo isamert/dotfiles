@@ -1705,6 +1705,11 @@ Here are the resources:
   (set-face-attribute 'org-agenda-done nil :strike-through t)
   (set-face-attribute 'org-column nil :background nil)
   (set-face-attribute 'org-scheduled-today nil :foreground "light green")
+
+  ;; Make some stuff small
+  (set-face-attribute 'org-drawer nil :height 0.8)
+  (set-face-attribute 'org-special-keyword nil :height 0.8)
+  (set-face-attribute 'org-block-end-line nil :height 0.8)
 #+END_SRC
 
 ** org-capture
@@ -3580,6 +3585,43 @@ tldr client for Emacs.
      yankpad-auto-category-functions
      '(yankpad-major-mode-category im-current-project-name)))
 #+END_SRC
+
+I also like to use these snippets outside of Emacs. For this, I defined =im-select-any-snippet=. It let's you select any snippet from the yankpad file (no mode restriction, shows all snippets prefixed with mode name they are defined for) through =completing-read=. Combined with [[id:30465D2E-AB40-4E53-B6EA-9D72F7242700][im-globally]], you can use this outside of Emacs.
+
+#+begin_src emacs-lisp
+  (defvar im--all-snippets-cache nil)
+
+  (defun im-load-snippets-list ()
+    (interactive)
+    (message ">> Loading snippets...")
+    (setq im--all-snippets-cache
+          (-mapcat
+           (lambda (category)
+             (--map (cons (format "%s :: %s" category (car it)) it)
+                    (ignore-errors (yankpad--snippets category))))
+           (yankpad--categories)))
+    (message ">> Loading snippets... Done"))
+
+  ;; Load snippets for the first time, after the startup
+  ;; This may take a bit of time
+  (run-with-timer 30 nil #'im-load-snippets-list)
+
+  (defun im-select-any-snippet ()
+    "List all templates for all modes and return the applied template
+  as string."
+    (interactive)
+    (-let* ((selected (completing-read "Select snippet: " im--all-snippets-cache))
+            (snippet (alist-get selected im--all-snippets-cache nil nil #'equal))
+            ((_ category _) (s-match "\\(.*\\) :: \\(.*\\)" selected)))
+      (with-temp-buffer
+        (setq yankpad-category category)
+        ;; Activate yas snippet on the temp buffer
+        (let ((yas-dont-activate-functions '()))
+          (yas-minor-mode-on))
+        (yankpad--run-snippet snippet)
+        (kill-new (buffer-string)))))
+
+#+end_src
 
 ** git-link
 #+begin_src emacs-lisp
@@ -7675,42 +7717,10 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
              (format "kafka-consumer-groups.sh --describe --group %s --bootstrap-server %s" it servers))
             :buffer (get-buffer-create "*kafka-describe:%s*" it)))))
 #+end_src
-** Global snippets
-The code below let's you select your yankpad snippets outside of the Emacs using ~dmenu~.
-
-#+begin_src emacs-lisp
-  (define-derived-mode desktop-snippets-mode nil "desktop-snippets-mode"
-    "A dummy mode for expanding desktop snippets. Add
-    desktop-specific (non-Emacs) snippets under
-    `desktop-snippets-mode' header in the yankpad file.")
-
-  (defun im-yankpad-copy-snippet (&optional select-category)
-    "Select a snippet from yankpad snippets using `completing-read'.
-  If SELECT-CATEGORY is non-nil, then prompts for a category first
-  and then let's you select a snippet.  Put the snippet into the
-  clipboard."
-    (interactive)
-    (let ((text
-           (with-temp-buffer
-             (desktop-snippets-mode)
-             ;; Activate yas snippet on the temp buffer
-             (let ((yas-dont-activate-functions '()))
-               (yas-minor-mode-on))
-             (when select-category
-               (yankpad-set-category))
-             (unless yankpad-category
-               (yankpad-local-category-to-major-mode))
-             (let* ((snippets (yankpad-active-snippets))
-                    (snippet-name (completing-read "Snippet: " snippets)))
-               (if-let ((snippet (assoc snippet-name snippets)))
-                   (yankpad--run-snippet snippet)
-                 ;; TODO Show this message as a notification
-                 (message (concat "No snippet named " snippet-name))))
-             (buffer-substring-no-properties (point-min) (point-max)))))
-      (kill-new text)))
-#+end_src
-
 ** Run functions globally
+:PROPERTIES:
+:ID:       30465D2E-AB40-4E53-B6EA-9D72F7242700
+:END:
 Simply use ~im-dmenu~ function instead of the default ~completing-read~ function when the code is called inside this macro. This way, you can use your ~completing-read~ based functions within your system, without needing to focus Emacs first.
 
 #+begin_src emacs-lisp

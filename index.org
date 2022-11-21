@@ -276,8 +276,7 @@ It can be installed through homebrew:
 *** Application shortcuts
 #+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
   hyper - r : emacsclient -c
-  hyper - i : emacsclient --eval "(im-globally (im-yankpad-copy-snippet))"
-  hyper - o : emacsclient --eval "(im-globally (im-yankpad-copy-snippet t))"
+  hyper - i : emacsclient --eval "(im-globally (im-select-any-snippet))"
   hyper - p : emacsclient --eval "(im-globally (im-password-act))"
   hyper - v : emacsclient --eval "(empv-toggle-video)"
   hyper - g : emacsclient --eval "(im-globally (im-gitlab-select-project))"
@@ -802,13 +801,9 @@ TODO: unify this and skhd configuration?
   «hyper» + c
     copyq toggle
 
-  # Show generic snippets
+  # Show all snippets and select one interactively
   «hyper» + i
-    emacsclient --eval "(im-globally (im-yankpad-copy-snippet))"
-
-  # List all snippet categories
-  «hyper» + k
-    emacsclient --eval "(im-globally (im-yankpad-copy-snippet t))"
+    emacsclient --eval "(im-globally (im-select-any-snippet))"
 
   «hyper» + p
     emacsclient --eval "(im-globally (im-password-act))"
