@@ -4129,6 +4129,13 @@ You can also do ~consult-imenu~ and ~embark-collect~ but it does not have a refr
     :config
     (evil-leader/set-key "il" #'imenu-list))
 #+end_src
+** webpaste
+#+begin_src emacs-lisp
+  (use-package webpaste
+    :ensure t
+    :config
+    (setq webpaste-open-in-browser t))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
@@ -5724,6 +5731,15 @@ Good for buffer management, especially for groupped killings.
     (interactive)
     (split-window-right)
     (other-window 1))
+
+  (defun im-print-buffer-file-info ()
+    (interactive)
+    (let ((proj-name (im-current-project-name))
+          (proj-path (or (im-current-project-root) (expand-file-name "~/")))
+          (fpath (buffer-file-name)))
+      (message "[%s] %s"
+               (propertize proj-name 'face 'bold)
+               (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic)))))
 #+end_src
 ** Keybindings
 #+begin_src emacs-lisp
@@ -5766,6 +5782,8 @@ Good for buffer management, especially for groupped killings.
     "ws" #'tab-bar-switch-to-tab ;; switch
     "wl" #'tab-bar-switch-to-recent-tab ;; last
     "wk" #'tab-close ;; kill
+    ;; extra
+    "wi" #'im-print-buffer-file-info
     ;; buffer
     "wb" #'bufler)
 
@@ -7836,6 +7854,21 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
        :on-fail
        (lambda (&rest _)
          (alert "Error while downloading: %s!" url)))))
+#+end_src
+** im-jump-to-definition-at-config
+#+begin_src emacs-lisp
+  (defun im-jump-to-definition-at-config (symbol)
+    "Like normal jump-to-definition functionality but jumps to my
+  literate config instead of tangled real definition. Pretty dumb
+  but works most of the time."
+    (interactive (list (im-region-or 'symbol)))
+    (with-current-buffer (find-file-noselect "~/Workspace/projects/dotfiles/emacs/index.org")
+      (save-excursion
+        (goto-char (point-min))
+        (when (ignore-errors (re-search-forward (format "\\((def.*\\) %s" symbol)))
+          (org-edit-special)))))
+
+  (define-key embark-symbol-map (kbd "J") 'im-jump-to-definition-at-config)
 #+end_src
 * Postamble
 #+begin_src emacs-lisp
