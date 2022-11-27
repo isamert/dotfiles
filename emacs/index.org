@@ -2563,9 +2563,6 @@ To sync it automatically:
   (use-package treemacs-evil
     :after treemacs evil)
 
-  (use-package treemacs-projectile
-    :after treemacs projectile)
-
   (use-package treemacs-magit
     :after treemacs magit)
 #+END_SRC
