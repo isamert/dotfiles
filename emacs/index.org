@@ -3846,10 +3846,13 @@ Simple mode for editing =~/.Xmodmap= file.
           ;; Only send desktop notifications for the things I'im interested
           ;; mpim || group || in subscribed channels
           (when (slack-message-notify-p message room team)
-            (alert
-             msg-str
-             :title title
-             :category "slack"))
+            ;; msg-str sometimes causes errors with `alert'. Thats why I
+            ;; used `ignore-errors'.
+            (ignore-errors
+              (alert
+               msg-str
+               :title title
+               :category "slack")))
           (message
            ">> Slack: %s // %s"
            title
