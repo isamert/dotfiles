@@ -2880,11 +2880,20 @@ Other complementary packages:
   (define-key project-prefix-map "g" #'im-consult-ripgrep)
   (add-to-list 'project-switch-commands `(im-consult-ripgrep "Grep"))
 
+  (define-key project-prefix-map "H" #'git-link-homepage)
+  (add-to-list 'project-switch-commands `(git-link-homepage "Git Homepage"))
+
   (define-key project-prefix-map "D" #'dired-jump)
   (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
 
   (define-key project-prefix-map "m" #'magit-status)
   (add-to-list 'project-switch-commands `(magit-status "Magit"))
+
+  (define-key project-prefix-map "M" #'lab-list-project-merge-requests)
+  (add-to-list 'project-switch-commands `(lab-list-project-merge-requests "Merge Requests"))
+
+  (define-key project-prefix-map "P" #'lab-list-project-pipelines)
+  (add-to-list 'project-switch-commands `(lab-list-project-pipelines "Pipelines"))
 
   (define-key project-prefix-map "!" #'im-project-shell-command)
   (add-to-list 'project-switch-commands `(im-project-shell-command "Run shell command"))
