@@ -5951,6 +5951,10 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     "project = AI AND (fixVersion in unreleasedVersions() OR fixVersion is EMPTY) AND createdDate >= -2w ORDER BY Rank ASC"
     "Query to get kanban board issues.")
 
+  (defvar im-jira-board-id
+    "1066"
+    "Interested board id. TODO: make this a list so that I can access to multiple boards by `im-jira-list-issues'.")
+
   (defun im-open-jira-issue (issue-number)
     "Open given Jira ISSUE-NUMBER."
     (interactive "sIssue: ")
@@ -5968,6 +5972,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
   (defun im-jira-get-kanban-issues ()
     (jiralib2-jql-search im-jira-kanban-board-query))
+
+  (defun im-jira-get-board-issues ()
+    (jiralib2-board-issues im-jira-board-id nil))
 
   (defun im-jira-jql (jql)
     (interactive "sEnter JQL: ")
@@ -6001,10 +6008,11 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
 
   (defun im-jira-list-issues (&optional arg)
     (interactive "P")
-    (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban" "JQL"))
+    (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban" "Board" "JQL"))
                    ("My issues" (im-jira-get-my-issues))
                    ("New issues" (im-jira-get-new-issues))
                    ("Current Sprint" (im-jira-get-current-sprint-issues))
+                   ("Board" (im-jira-get-board-issues))
                    ("Kanban" (im-jira-get-kanban-issues))
                    ("JQL" (call-interactively #'im-jira-jql)))
                  (--map (cons (im-jira--format-ticket-name it) it))
