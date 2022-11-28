@@ -275,6 +275,7 @@ It can be installed through homebrew:
 
 *** Application shortcuts
 #+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
+  hyper - t : term -e trans -shell
   hyper - r : emacsclient -c
   hyper - i : emacsclient --eval "(im-globally (im-select-any-snippet))"
   hyper - p : emacsclient --eval "(im-globally (im-password-act))"

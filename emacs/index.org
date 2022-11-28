@@ -2905,38 +2905,25 @@ Other complementary packages:
       (call-interactively #'im-shell-command)))
 
   (defvar im-project-shell-last-height 15)
-  (defvar im-project-shell-map (make-hash-table :test 'equal))
 
-  (defun im-project-shell ()
+  (defun im-shell-for (&optional type)
     (interactive)
-    (let* ((name) (shell)
-           (default-directory (or (ignore-errors
-                                    (project-root (project-current)))
-                                  default-directory))
-           (project-shells (--filter (get-buffer it) (gethash default-directory im-project-shell-map)))
+    (setq type (or type 'project))
+    (let* ((proj-dir (or (ignore-errors
+                           (project-root (project-current)))
+                         default-directory))
+           (default-directory (if (eq type 'project) proj-dir default-directory))
            (proj-name (f-base default-directory))
-           (other-buffer-names (-flatten (map-values im-project-shell-map))))
-      (if-let ((found-buffer (--find (im-buffer-visible-p it) other-buffer-names))
-               (window (get-buffer-window found-buffer)))
+           (name (format "[shell-%s, %s]" type proj-name)))
+      (if-let ((window (--find (s-prefix? "[shell" (buffer-name (window-buffer it))) (window-list))))
           (when (window-at-side-p window 'top)
             (setq im-project-shell-last-height (window-height window))
             (delete-window window))
-        (let ((selected (cadr
-                         (read-multiple-choice
-                          "Pick a shell: "
-                          `(,@(--map-indexed (list (+ 49 it-index) it) (seq-reverse project-shells))
-                            (?n "new"))))))
-          (if (equal selected "new")
-              (progn
-                (setq shell (intern (cadr (read-multiple-choice "Type: " '((?1 "vterm") (?2 "shell"))))))
-                (setq name (format "[%s, %s]: %s" proj-name (symbol-name shell) (read-string "Shell name: "))))
-            (setq name selected)))
         (let* ((term (or (get-buffer name)
                          (save-window-excursion
-                           (funcall shell name)))))
-          (if project-shells
-              (cl-pushnew name (gethash default-directory im-project-shell-map) :test 'equal)
-            (puthash default-directory (list name) im-project-shell-map))
+                           (vterm name)))))
+          (with-current-buffer term
+            (tab-line-mode -1))
           (display-buffer-in-side-window
            term
            (append
@@ -2945,7 +2932,8 @@ Other complementary packages:
               (slot . 1))))
           (select-window (get-buffer-window term))))))
 
-  (bind-key "M-`" #'im-project-shell)
+  (bind-key "M-`" #'im-shell-for)
+  (bind-key "M-~" (λ-interactive (im-shell-for 'dir)))
 #+end_src
 
 ~(project-remember-projects-under im-projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
