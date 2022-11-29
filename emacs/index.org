@@ -4530,7 +4530,8 @@ Manage media and streams through =completing-read=.
       "rm" #'empv-play-video
       "rn" #'empv-playlist-next
       "rN" #'empv-playlist-prev
-      "rs" #'empv-exit)
+      "rs" #'empv-playlist-shuffle
+      "rq" #'empv-exit)
     (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
     (empv-initialize-embark))
 
