@@ -1738,6 +1738,10 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
      ("gw" "Work todo" entry
       (file+headline bullet-org "Work backlog")
       "** TODO [#B] %?")
+     ("gb" "Free time backlog" item
+      (file+headline bullet-org "Free time backlog")
+      "- %U %?"
+      :prepend t)
 
      ("d" "Daily todo/summary/note")
      ("dt" "Daily TODO" plain
