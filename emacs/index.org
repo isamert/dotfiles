@@ -4525,8 +4525,8 @@ Manage media and streams through =completing-read=.
       "rR" #'empv-play-random-channel
       "rV" #'empv-toggle-video
       "rv" #'empv-set-volume
-      "ry" #'consult-empv-youtube
-      "rY" #'consult-empv-youtube-tabulated
+      "ry" #'empv-youtube
+      "rY" #'empv-youtube-tabulated
       "rk" #'empv-display-current
       "rl" #'empv-log-current-radio-song-name
       "ra" #'empv-play-audio
@@ -5622,9 +5622,7 @@ It's a great workspace manager that comes bundled with Emacs. I was using an abo
   (setq tab-bar-new-tab-choice im-init-file)
   (setq
    tab-bar-format
-   '(tab-bar-format-menu-bar
-     tab-bar-format-history
-     tab-bar-format-tabs
+   '(tab-bar-format-tabs
      tab-bar-separator
      tab-bar-format-add-tab
      tab-bar-format-align-right
@@ -5636,6 +5634,7 @@ Use a slightly modified version of ~tab-bar-tab-name-format~.
 
 #+begin_src emacs-lisp
   (setq tab-bar-tab-hints t)
+  (setq tab-bar-auto-width nil)
   (setq tab-bar-tab-name-format-function #'im-tab-bar-tab-name-format)
   (setq tab-bar-tab-name-function #'im-current-project-name)
 
@@ -6689,6 +6688,7 @@ I need to rewrite these functions using [[https://github.com/im-marks][marks]] f
     "Interactively select a header and insert it as a link into the buffer.
   Headers are gathered from all the org files found in `org-directory'."
     (interactive)
+    (save-some-buffers)
     (let* ((selected (im-alist-completing-read
                       "Select header: "
                       (im-org-all-headers)
