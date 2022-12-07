@@ -1446,6 +1446,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   multiple indirect buffers."
     `(save-excursion
        (save-restriction
+         (widen)
          (let ((current-prefix-arg '(4)))
            ,@forms
            (call-interactively #'org-tree-to-indirect-buffer)))))
@@ -3994,6 +3995,7 @@ Simple mode for editing =~/.Xmodmap= file.
 
         "mrr" 'slack-message-add-reaction
         "mR" 'slack-message-remove-reaction
+        "mrs" (im-slack--add-reaction-to-message "seen")
         "mr1" (im-slack--add-reaction-to-message "+1")
         "mr2" (im-slack--add-reaction-to-message "ok_hand")
         "mr3" (im-slack--add-reaction-to-message "eyes")
@@ -4535,9 +4537,21 @@ Manage media and streams through =completing-read=.
       "rn" #'empv-playlist-next
       "rN" #'empv-playlist-prev
       "rs" #'empv-playlist-shuffle
+      "r[" #'empv-playback-speed-down
+      "r]" #'empv-playback-speed-up
+      "r9" #'empv-volume-down
+      "r0" #'empv-volume-up
       "rq" #'empv-exit)
     (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
     (empv-initialize-embark))
+
+  (im-make-repeatable empv-map
+    "9" empv-volume-down
+    "0" empv-volume-up
+    "n" empv-playlist-next
+    "N" empv-playlist-prev
+    "[" empv-playback-speed-down
+    "]" empv-playback-speed-up)
 
   (defun im-export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."
