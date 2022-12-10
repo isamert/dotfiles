@@ -5692,7 +5692,7 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
 #+begin_src emacs-lisp
   (setq tab-line-close-button-show 'selected)
   (setq tab-line-tabs-function #'im-tab-line-buffers)
-  (global-tab-line-mode)
+  ;; (global-tab-line-mode)
 
   (defvar im-tab-line-hidden-buffer-name-regexp "\\*\\(Slack.*\\|Calc.*\\|elfeed-log\\|helpful.*\\|Compile-Log\\|Help\\)\\*\\|magit.*"
     "Regexp to filter out buffer names on tab line.")
