@@ -4518,40 +4518,9 @@ Manage media and streams through =completing-read=.
     (add-to-list 'empv-mpv-args "--save-position-on-quit")
     (add-hook 'empv-init-hook #'empv-override-quit-key)
 
-    (evil-leader/set-key
-      "ro" #'empv-play
-      "rp" #'empv-playlist-select
-      "re" #'empv-enqueue
-      "rt" #'empv-toggle
-      "rr" #'empv-play-radio
-      "rR" #'empv-play-random-channel
-      "rV" #'empv-toggle-video
-      "rv" #'empv-set-volume
-      "ry" #'empv-youtube
-      "rY" #'empv-youtube-tabulated
-      "rk" #'empv-display-current
-      "rl" #'empv-log-current-radio-song-name
-      "ra" #'empv-play-audio
-      "rd" #'empv-play-directory
-      "rm" #'empv-play-video
-      "rn" #'empv-playlist-next
-      "rN" #'empv-playlist-prev
-      "rs" #'empv-playlist-shuffle
-      "r[" #'empv-playback-speed-down
-      "r]" #'empv-playback-speed-up
-      "r9" #'empv-volume-down
-      "r0" #'empv-volume-up
-      "rq" #'empv-exit)
+    (evil-leader/set-key "r" empv-map)
     (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
     (empv-initialize-embark))
-
-  (im-make-repeatable empv-map
-    "9" empv-volume-down
-    "0" empv-volume-up
-    "n" empv-playlist-next
-    "N" empv-playlist-prev
-    "[" empv-playback-speed-down
-    "]" empv-playback-speed-up)
 
   (defun im-export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."
