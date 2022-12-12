@@ -4556,6 +4556,7 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
     :straight (:host github :repo "isamert/orgmdb.el")
     :config
     (setq orgmdb-omdb-apikey im-orgmdb-omdb-apikey)
+    (setq orgmdb-poster-folder "~/Documents/notes/data/posters")
     (setq orgmdb-fill-property-list '(genre runtime director country imdb-link imdb-rating metascore actors poster))
     (evil-define-key 'normal 'global (kbd "go") #'orgmdb-act))
 #+end_src
