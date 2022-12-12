@@ -3846,7 +3846,7 @@ Simple mode for editing =~/.Xmodmap= file.
           (message
            ">> Slack: %s // %s"
            title
-           msg-str)))))
+           (car (s-split "\n" msg-str)))))))
 
   (defun im-slack-yank-last-message ()
     "Yank the contents of the last received message as text."
