@@ -313,6 +313,10 @@ Some basic variable and function definitions that will be used in configuration.
   (defmacro λ-interactive (&rest body)
     "Useful for defining keybindings."
     `(lambda () (interactive) ,@body))
+
+  (defun im-kill (x &optional replace)
+    (kill-new x replace)
+    x)
 #+end_src
 
 *** Clipboard functions
@@ -2442,7 +2446,7 @@ To sync it automatically:
       (im-today)
       (nth 1 it)
       (if include-description (im-diary-entry-description) ""))
-     (kill-new it)))
+     (im-kill it)))
 
   (defun im-diary-entry-meeting-link ()
     "Get meeting/zoom link of current diary entry."
@@ -2466,8 +2470,7 @@ To sync it automatically:
                    (re-search-forward "^[^ \n].+")
                    (beginning-of-line)
                    (point))))
-        (kill-new (buffer-substring beg end))
-        (buffer-substring beg end))))
+        (im-kill (buffer-substring beg end)))))
 #+end_src
 *** Show week numbers in the calendar
 #+begin_src emacs-lisp
@@ -3618,7 +3621,7 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
         (let ((yas-dont-activate-functions '()))
           (yas-minor-mode-on))
         (yankpad--run-snippet snippet)
-        (kill-new (buffer-string)))))
+        (im-kill (buffer-string)))))
 
 #+end_src
 
@@ -3851,7 +3854,7 @@ Simple mode for editing =~/.Xmodmap= file.
   (defun im-slack-yank-last-message ()
     "Yank the contents of the last received message as text."
     (interactive)
-    (kill-new
+    (im-kill
      (im-slack--stringify-message
       (im-slack--last-message))))
 
@@ -7643,7 +7646,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
       (if (s-blank? it) (im-kube--current-context) it)
       (format "kubectl config view -o jsonpath=\"{.clusters[?(@.name == '%s')].cluster.server}\"")
       shell-command-to-string
-      kill-new)))
+      im-kill)))
 
   (defun im-kube-select-pod (&optional switch-context)
     "Select a pod and act on it.
@@ -7668,14 +7671,14 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
          ("Exec into default container"
           (with-current-buffer (vterm (format "(vterm) pod: %s" name))
             (vterm-insert
-             (kill-new (format "kubectl exec --namespace='%s' -i -t '%s' -- bash"
+             (im-kill (format "kubectl exec --namespace='%s' -i -t '%s' -- bash"
                                namespace
                                name)))))
          ("Exec into container"
           (let ((container (im-kube-pod--select-container pod)))
             (with-current-buffer (vterm (format "(vterm) pod: %s" name))
               (vterm-insert
-               (kill-new (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' -- bash"
+               (im-kill (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' -- bash"
                                  namespace
                                  container
                                  name))))))
@@ -7683,7 +7686,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
           (let ((container (im-kube-pod--select-container pod)))
             (with-current-buffer (vterm (format "(vterm) pod: %s" name))
               (vterm-insert
-               (kill-new (format "kubectl logs %s -f --namespace='%s' --container='%s'"
+               (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s'"
                                  name
                                  namespace
                                  container))))))
@@ -7691,7 +7694,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
          ("App logs"
           (let ((container (im-kube-pod--select-container pod)))
             (with-current-buffer (vterm (format "(vterm) pod: %s" name))
-              (vterm-insert (kill-new
+              (vterm-insert (im-kill
                              (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s'"
                                      (im-kube-pod--get-app-name pod)
                                      namespace
