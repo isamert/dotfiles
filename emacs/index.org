@@ -3222,7 +3222,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
                            (file-remote-p file 'host) ":" (file-remote-p file 'localname))
                  (concat "/sudo:root@localhost:" file))))
 
-  (define-key embark-file-map (kbd "S") 'im-sudo-find-file)
+  (define-key embark-file-map (kbd "#") 'im-sudo-find-file)
 #+end_src
 
 ** flycheck
