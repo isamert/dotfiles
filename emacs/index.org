@@ -3024,6 +3024,7 @@ Some key points:
     (evil-leader/set-key "fs" #'save-buffer)
     (evil-leader/set-key "fd" #'consult-dir)
     (evil-leader/set-key "fl" #'consult-line)
+    (evil-leader/set-key "cr" #'consult-history)
 
     ;; Hide some buffers from consult-buffer window. If you want to jump
     ;; on one of these buffers, start with a space after opening
