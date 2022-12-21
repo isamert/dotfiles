@@ -2145,6 +2145,13 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
      "** (call-interactively #'im-org-archive-url)"))
 #+end_src
 * Other packages
+** eat & eshell
+#+begin_src emacs-lisp
+  (use-package eat
+    :straight (:repo "https://codeberg.org/akib/emacs-eat.git")
+    :config
+    (eat-eshell-mode))
+#+end_src
 ** bookmark.el
 You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult-bookmark~ and calling ~embark-act~ on them to view/delete/edit given bookmark might be easier.
 
@@ -2922,14 +2929,15 @@ Other complementary packages:
                          default-directory))
            (default-directory (if (eq type 'project) proj-dir default-directory))
            (proj-name (f-base default-directory))
-           (name (format "[shell-%s, %s]" type proj-name)))
-      (if-let ((window (--find (s-prefix? "[shell" (buffer-name (window-buffer it))) (window-list))))
+           (name (format "$%s" proj-name)))
+      (if-let ((window (--find (s-prefix? "\$" (buffer-name (window-buffer it))) (window-list))))
           (when (window-at-side-p window 'top)
             (setq im-project-shell-last-height (window-height window))
             (delete-window window))
         (let* ((term (or (get-buffer name)
                          (save-window-excursion
-                           (vterm name)))))
+                           (let ((eshell-buffer-name name))
+                             (eshell t))))))
           (with-current-buffer term
             (tab-line-mode -1))
           (display-buffer-in-side-window
