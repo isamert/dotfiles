@@ -3186,6 +3186,8 @@ Here is a nice description of the package from it's README:
 - To apply an action to multiple items, filter the items first and then do =embark-collect-snapshot=. A buffer will open and you can apply the main action or other actions on the items.
 
 #+begin_src emacs-lisp
+  (use-package embark-consult)
+
   (use-package embark
     :config
     (bind-key (kbd "M-a") #'embark-act)
@@ -3201,9 +3203,6 @@ Here is a nice description of the package from it's README:
 
     ;; Replace describe-symbol with helpful-symbol
     (define-key embark-symbol-map "h" #'helpful-symbol))
-
-  (use-package embark-consult
-    :after (embark consult))
 #+end_src
 
 *** sudo-file-edit action
@@ -3288,19 +3287,62 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (setq kind-icon-default-face 'corfu-default)
     (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
-  (use-package corfu-doc
+  (use-package corfu-popupinfo
     :after corfu
     :config
-    (setq corfu-doc-auto t)
-    ;; Enable it
-    (add-hook 'corfu-mode-hook #'corfu-doc-mode)
+    (setq corfu-popupinfo-delay 0)
+    (corfu-popupinfo-mode)
     ;; Toggle doc on/off while in corfu
-    (define-key corfu-map (kbd "M-d") #'corfu-doc-toggle)
-    (define-key corfu-map (kbd "M-p") #'corfu-doc-scroll-down)
-    (define-key corfu-map (kbd "M-n") #'corfu-doc-scroll-up))
+    ;; (define-key corfu-map (kbd "M-d") #'corfu-popupinfo-toggle)
+    ;; (define-key corfu-map (kbd "M-p") #'corfu-doc-scroll-down)
+    ;; (define-key corfu-map (kbd "M-n") #'corfu-doc-scroll-up)
+    )
+
+  ;; add extensions
+  (use-package cape
+    ;; Bind dedicated completion commands
+    ;; Alternative prefix keys: C-c p, M-p, M-+, ...
+    :bind (("M-p p" . completion-at-point) ;; capf
+           ("M-p t" . complete-tag)        ;; etags
+           ("M-p d" . cape-dabbrev)        ;; or dabbrev-completion
+           ("M-p h" . cape-history)
+           ("M-p f" . cape-file)
+           ("M-p k" . cape-keyword)
+           ("M-p s" . cape-symbol)
+           ("M-p a" . cape-abbrev)
+           ("M-p i" . cape-ispell)
+           ("M-p l" . cape-line)
+           ("M-p w" . cape-dict)
+           ("M-p \\" . cape-tex)
+           ("M-p _" . cape-tex)
+           ("M-p ^" . cape-tex)
+           ("M-p &" . cape-sgml)
+           ("M-p r" . cape-rfc1345))
+    :init
+    ;; Add `completion-at-point-functions', used by `completion-at-point'.
+    (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+    (add-to-list 'completion-at-point-functions #'cape-file)
+    ;;(add-to-list 'completion-at-point-functions #'cape-history)
+    ;;(add-to-list 'completion-at-point-functions #'cape-keyword)
+    ;;(add-to-list 'completion-at-point-functions #'cape-tex)
+    ;;(add-to-list 'completion-at-point-functions #'cape-sgml)
+    ;;(add-to-list 'completion-at-point-functions #'cape-rfc1345)
+    ;;(add-to-list 'completion-at-point-functions #'cape-abbrev)
+    ;;(add-to-list 'completion-at-point-functions #'cape-ispell)
+    ;;(add-to-list 'completion-at-point-functions #'cape-dict)
+    ;;(add-to-list 'completion-at-point-functions #'cape-symbol)
+    ;;(add-to-list 'completion-at-point-functions #'cape-line)
+    )
 
   ;; For shell-mode completion
-  (use-package pcmpl-args :ensure t)
+  (use-package pcmpl-args
+    :config
+    ;; Silence the pcomplete capf, no errors or messages!
+    (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
+
+    ;; Ensure that pcomplete does not write to the buffer
+    ;; and behaves as a pure `completion-at-point-function'.
+    (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 #+END_SRC
 
 ** lsp-mode
