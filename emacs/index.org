@@ -5578,14 +5578,23 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
   (add-to-list 'auto-mode-alist (cons (rx ".bqsql" string-end) #'bqsql-mode))
 
   (defun org-babel-execute:bqsql (query params)
-    "Execute bqsql (BigQuery) scripts."
+    "Execute bqsql (BigQuery) scripts.
+  `:var' syntax is ${var_name}."
     (let* ((job-id (im-uuid))
            (format (or (alist-get :format params) "pretty"))
            (json-out? (s-matches? "json" format))
            (buf (get-buffer-create "*im-bqsql*"))
            (org-buffer (current-buffer))
            (start-time (float-time))
-           process)
+           process
+           (vars (org-babel--get-vars params)))
+      (setq query
+            (replace-regexp-in-string
+             "${[a-zA-Z_]+}"
+             (lambda (substr)
+               (let ((var (intern (replace-regexp-in-string "${\\([a-zA-Z_]+\\)}" "\\1" substr))))
+                 (or (alist-get var vars) substr)))
+             query))
       (with-current-buffer buf (erase-buffer))
       (setq process (start-process "query" buf "bq" "query" "--quiet" "--nouse_legacy_sql" "--format" format "--job_id" job-id query))
       (set-process-sentinel
