@@ -80,7 +80,6 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   (tool-bar-mode 0)                ;; Disable toolbar
   (blink-cursor-mode 0)            ;; Disable blinking cursor
   (scroll-bar-mode -1)             ;; Disable scrollbars
-  (global-hl-line-mode t)          ;; Highlight current line
   (setq inhibit-startup-message t) ;; Close startup screen
   (setq frame-resize-pixelwise t)  ;; Fix gap issues with tiling WMs
   (defconst im-init-file (expand-file-name "~/.emacs.d/scratch.el"))
@@ -785,6 +784,7 @@ Run this function (possibly after closing some buffers and killing some child pr
   (global-visual-line-mode t)
   (diminish 'visual-line-mode)
 
+  (global-hl-line-mode t) ;; Highlight current line
   ;; Disable global-hl-line-mode in eshell, ansi-term, vterm
   (mapcar
     (lambda (mode) (add-hook mode (lambda () (setq-local global-hl-line-mode nil))))
@@ -1008,7 +1008,8 @@ Some small packages that enriches editing experience visually. I don't enable al
     (setq beacon-blink-duration 0.5)
     (setq beacon-push-mark 50)
     (setq beacon-color "#9F72D9")
-    (add-to-list 'beacon-dont-blink-major-modes 'dirvish-mode))
+    (add-to-list 'beacon-dont-blink-major-modes 'dirvish-mode)
+    (add-to-list 'beacon-dont-blink-major-modes 'eshell-mode))
 
   ;; This shows some indent guides and it's highly configurable.
   (use-package highlight-indent-guides
@@ -2151,6 +2152,31 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
     :straight (:repo "https://codeberg.org/akib/emacs-eat.git")
     :config
     (eat-eshell-mode))
+
+  (defun im-eshell (name)
+    (interactive (list (read-string "Bufffer name: " "$eshell: ")))
+    (with-current-buffer (eshell t)
+      (rename-buffer name t)
+      (current-buffer)))
+
+  (defun im-eshell-send-input (input)
+    (eat--send-input t input))
+
+  (defun im-eshell-send-key (key)
+    (eat-self-input 1 key))
+
+  (defun im-eshell-vertically ()
+    (interactive)
+    (select-window (split-window-vertically))
+    (call-interactively #'im-eshell))
+
+  (defun im-eshell-horizontally ()
+    (interactive)
+    (select-window (split-window-horizontally))
+    (call-interactively #'im-eshell))
+
+  (evil-define-key 'normal 'global (kbd "M-_") #'im-eshell-vertically)
+  (evil-define-key 'normal 'global (kbd "M-|") #'im-eshell-horizontally)
 #+end_src
 ** bookmark.el
 You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult-bookmark~ and calling ~embark-act~ on them to view/delete/edit given bookmark might be easier.
@@ -3269,7 +3295,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
       (consult-flycheck)))
 #+END_SRC
 
-** corfu & corfu-doc & kind-icon & pcmpl-args
+** corfu & corfu-doc & kind-icon & pcmpl-args & cape
 #+BEGIN_SRC emacs-lisp
   (use-package corfu
     :config
@@ -3310,26 +3336,26 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
   (use-package cape
     ;; Bind dedicated completion commands
     ;; Alternative prefix keys: C-c p, M-p, M-+, ...
-    :bind (("M-p p" . completion-at-point) ;; capf
-           ("M-p t" . complete-tag)        ;; etags
-           ("M-p d" . cape-dabbrev)        ;; or dabbrev-completion
-           ("M-p h" . cape-history)
-           ("M-p f" . cape-file)
-           ("M-p k" . cape-keyword)
-           ("M-p s" . cape-symbol)
-           ("M-p a" . cape-abbrev)
-           ("M-p i" . cape-ispell)
-           ("M-p l" . cape-line)
-           ("M-p w" . cape-dict)
-           ("M-p \\" . cape-tex)
-           ("M-p _" . cape-tex)
-           ("M-p ^" . cape-tex)
-           ("M-p &" . cape-sgml)
-           ("M-p r" . cape-rfc1345))
+    :bind (("M-o p" . completion-at-point) ;; capf
+           ("M-o t" . complete-tag)        ;; etags
+           ("M-o d" . cape-dabbrev)        ;; or dabbrev-completion
+           ("M-o h" . cape-history)
+           ("M-o f" . cape-file)
+           ("M-o k" . cape-keyword)
+           ("M-o s" . cape-symbol)
+           ("M-o a" . cape-abbrev)
+           ("M-o i" . cape-ispell)
+           ("M-o l" . cape-line)
+           ("M-o w" . cape-dict)
+           ("M-o \\" . cape-tex)
+           ("M-o _" . cape-tex)
+           ("M-o ^" . cape-tex)
+           ("M-o &" . cape-sgml)
+           ("M-o r" . cape-rfc1345))
     :init
     ;; Add `completion-at-point-functions', used by `completion-at-point'.
-    (add-to-list 'completion-at-point-functions #'cape-dabbrev)
-    (add-to-list 'completion-at-point-functions #'cape-file)
+    ;;(add-to-list 'completion-at-point-functions #'cape-dabbrev)
+    ;;(add-to-list 'completion-at-point-functions #'cape-file)
     ;;(add-to-list 'completion-at-point-functions #'cape-history)
     ;;(add-to-list 'completion-at-point-functions #'cape-keyword)
     ;;(add-to-list 'completion-at-point-functions #'cape-tex)
@@ -5115,14 +5141,14 @@ The following enables =CamelCase= aware editing operations.
               ;; Replace const with let so that we can redefine this
               ;; thing later if we need to
               (s-replace-regexp "^[\n\t ]*\\(let\\|const\\)" (if redefine "" "let"))
+              (s-replace-regexp "^[\n\t ]*export" "")
               ;; Replace relative imports with absolute ones
               im-ts--import-absolute))
         (im-with-visible-buffer
-         ".*vterm.*"
-         (vterm-send-string ".editor")
-         (vterm-send-return)
-         (vterm-send-string expression)
-         (vterm-send-C-d))
+         ".*eshell.*"
+         (im-eshell-send-input ".editor\n")
+         (im-eshell-send-input expression)
+         (im-eshell-send-key ?\C-d))
       (user-error "No expression is found")))
 #+end_src
 
@@ -6382,6 +6408,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                   (im-convert-jira-markup-to-org-mode .fields.description))
                  .fields.summary))
         (jira-view-mode)
+        (setq header-line-format "Hit `&' to open in browser, `ge' to edit, `gr' to reload.")
         (setq-local jira-view-mode-ticket ticket)
         (org-set-property "STATUS" (or .fields.status.name "N/A"))
         (org-set-property "REPORTER" (or .fields.reporter.name "N/A"))
@@ -7720,32 +7747,32 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
            (name (plist-get pod :name)))
        (pcase (completing-read (format "Act on '%s'" name) '("Exec into default container" "Exec into container" "Logs" "App logs" "Remove"))
          ("Exec into default container"
-          (with-current-buffer (vterm (format "(vterm) pod: %s" name))
-            (vterm-insert
+          (with-current-buffer (im-eshell (format "$pod: %s" name))
+            (insert
              (im-kill (format "kubectl exec --namespace='%s' -i -t '%s' -- bash"
-                               namespace
-                               name)))))
+                              namespace
+                              name)))))
          ("Exec into container"
           (let ((container (im-kube-pod--select-container pod)))
-            (with-current-buffer (vterm (format "(vterm) pod: %s" name))
-              (vterm-insert
+            (with-current-buffer (im-eshell (format "$pod: %s" name))
+              (insert
                (im-kill (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' -- bash"
-                                 namespace
-                                 container
-                                 name))))))
+                                namespace
+                                container
+                                name))))))
          ("Logs"
           (let ((container (im-kube-pod--select-container pod)))
-            (with-current-buffer (vterm (format "(vterm) pod: %s" name))
-              (vterm-insert
+            (with-current-buffer (im-eshell (format "$pod: %s" name))
+              (insert
                (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s'"
-                                 name
-                                 namespace
-                                 container))))))
+                                name
+                                namespace
+                                container))))))
          ;; Logs from all pods combined for given pod's app
          ("App logs"
           (let ((container (im-kube-pod--select-container pod)))
-            (with-current-buffer (vterm (format "(vterm) pod: %s" name))
-              (vterm-insert (im-kill
+            (with-current-buffer (im-eshell (format "$pod: %s" name))
+              (insert (im-kill
                              (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s'"
                                      (im-kube-pod--get-app-name pod)
                                      namespace
