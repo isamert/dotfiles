@@ -202,11 +202,9 @@ Installation and enabling are done through homebrew:
   yabai -m rule --add app=choose manage=off
   yabai -m rule --add app=iTerm  manage=off
 
-  yabai -m rule --add app=Firefox     space=^1
-  yabai -m rule --add app=Emacs       space=^2
-  yabai -m rule --add app=Mail        space=^3
-  yabai -m rule --add app=Calendar    space=^4
-  yabai -m rule --add app=Zoom.us     space=^7
+  yabai -m rule --add app=Emacs       space=^1
+  yabai -m rule --add app=Firefox     space=^2
+  yabai -m rule --add app=Zoom.us     space=^3
 #+end_src
 
 ** skhd
