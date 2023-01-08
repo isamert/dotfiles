@@ -93,7 +93,7 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   ;; Install straight.el
   (defvar bootstrap-version)
   (let ((bootstrap-file
-         (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+         (expand-file-name "straight/repos/straight.el/bootstrap.el" straight-base-dir))
         (bootstrap-version 5))
     (unless (file-exists-p bootstrap-file)
       (with-current-buffer
@@ -403,28 +403,26 @@ Some basic variable and function definitions that will be used in configuration.
       (string-trim (buffer-string))))
 
   (cl-defmacro im-output-select
-      (&key cmd prompt keep-order (split "\n") (drop 0) (filter t) (map 'it) (do 'it))
+      (&key cmd prompt keep-order (split "\n") (drop 0) (filter t) (map 'it) (do 'it) category)
     "Run given CMD and do a `completing-read' on it.
   This macro is intended to quicken up the process of running a
   shell command and doing a completing-read on it and then using
   the result in another context, possibly on another shell
   command."
-    (let* ((body `(completing-read
-                   ,prompt
-                   (seq-map-indexed
-                    (lambda (it idx) ,map)
-                    (seq-filter
-                     (lambda (it) ,filter)
-                     (seq-drop
-                      (s-split
-                       ,split
-                       (shell-command-to-string ,cmd)
-                       t)
-                      ,drop)))))
-           (result (if keep-order
-                       `(with-completing-read-exact-order
-                         ,body)
-                     body)))
+    (let* ((result `(lab--completing-read-object
+                     ,prompt
+                     (seq-map-indexed
+                      (lambda (it idx) ,map)
+                      (seq-filter
+                       (lambda (it) ,filter)
+                       (seq-drop
+                        (s-split
+                         ,split
+                         (shell-command-to-string ,cmd)
+                         t)
+                        ,drop)))
+                     :sort? ,(not keep-order)
+                     :category ,category)))
       `((lambda (it) ,do) ,result)))
 
   (defun im-read-string (prompt &rest rest)
@@ -2148,6 +2146,11 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 * Other packages
 ** eat & eshell
 #+begin_src emacs-lisp
+  (use-package eshell-syntax-highlighting
+    :after eshell-mode
+    :config
+    (eshell-syntax-highlighting-global-mode +1))
+
   (use-package eat
     :straight (:repo "https://codeberg.org/akib/emacs-eat.git")
     :config
@@ -2175,6 +2178,7 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
     (select-window (split-window-horizontally))
     (call-interactively #'im-eshell))
 
+  (evil-define-key 'insert 'eshell-mode (kbd "C-r") #'consult-history)
   (evil-define-key 'normal 'global (kbd "M-_") #'im-eshell-vertically)
   (evil-define-key 'normal 'global (kbd "M-|") #'im-eshell-horizontally)
 #+end_src
@@ -2541,7 +2545,7 @@ To sync it automatically:
     (evil-define-key 'normal w3m-mode-map
       (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function w3m-current-url)))
 
-    (evil-leader/set-key "ew" #'w3m-goto-url)
+    (evil-leader/set-key "ew" #'w3m-search)
     (evil-define-key 'normal w3m-mode-map
       (kbd "S") #'w3m-search
       (kbd "J") #'w3m-next-buffer
@@ -2901,83 +2905,6 @@ Other complementary packages:
     (mini-frame-mode +1))
 #+end_src
 ** ~project.el~ and project management
-- project.el offers ~C-x p~ keymap with very useful bindings. I also keep my project related bindings under ~SPC p~.
-- After doing ~project-switch-project~, you are expected to hit a key to trigger a project action, like finding a file in the project or doing a project grep. You need to add these actions into ~project-switch-commands~ list and you need to define a key in ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by given key.
-
-#+begin_src emacs-lisp
-  (evil-leader/set-key "p" (λ-interactive (project-switch-project (im-current-project-root))))
-
-  (setq project-switch-commands
-        '((project-find-file "Find file")
-          (project-find-dir "Find directory")
-          (project-eshell "Eshell")))
-
-  (define-key project-prefix-map "s" #'project-switch-project)
-  (add-to-list 'project-switch-commands `(project-switch-project "Switch"))
-
-  (define-key project-prefix-map "g" #'im-consult-ripgrep)
-  (add-to-list 'project-switch-commands `(im-consult-ripgrep "Grep"))
-
-  (define-key project-prefix-map "H" #'git-link-homepage)
-  (add-to-list 'project-switch-commands `(git-link-homepage "Git Homepage"))
-
-  (define-key project-prefix-map "D" #'dired-jump)
-  (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
-
-  (define-key project-prefix-map "m" #'magit-status)
-  (add-to-list 'project-switch-commands `(magit-status "Magit"))
-
-  (define-key project-prefix-map "M" #'lab-list-project-merge-requests)
-  (add-to-list 'project-switch-commands `(lab-list-project-merge-requests "Merge Requests"))
-
-  (define-key project-prefix-map "P" #'lab-list-project-pipelines)
-  (add-to-list 'project-switch-commands `(lab-list-project-pipelines "Pipelines"))
-
-  (define-key project-prefix-map "!" #'im-project-shell-command)
-  (add-to-list 'project-switch-commands `(im-project-shell-command "Run shell command"))
-
-  (define-key project-prefix-map "t" #'im-project-shell)
-  (add-to-list 'project-switch-commands `(im-project-shell "terminal"))
-
-  (defun im-project-shell-command ()
-    "Run `async-shell-command' in the current project's root directory."
-    (interactive)
-    (let ((default-directory (project-root (project-current t))))
-      (call-interactively #'im-shell-command)))
-
-  (defvar im-project-shell-last-height 15)
-
-  (defun im-shell-for (&optional type)
-    (interactive)
-    (setq type (or type 'project))
-    (let* ((proj-dir (or (ignore-errors
-                           (project-root (project-current)))
-                         default-directory))
-           (default-directory (if (eq type 'project) proj-dir default-directory))
-           (proj-name (f-base default-directory))
-           (name (format "$%s" proj-name)))
-      (if-let ((window (--find (s-prefix? "\$" (buffer-name (window-buffer it))) (window-list))))
-          (when (window-at-side-p window 'top)
-            (setq im-project-shell-last-height (window-height window))
-            (delete-window window))
-        (let* ((term (or (get-buffer name)
-                         (save-window-excursion
-                           (let ((eshell-buffer-name name))
-                             (eshell t))))))
-          (with-current-buffer term
-            (tab-line-mode -1))
-          (display-buffer-in-side-window
-           term
-           (append
-            `((window-height . ,im-project-shell-last-height)
-              (side . top)
-              (slot . 1))))
-          (select-window (get-buffer-window term))))))
-
-  (bind-key "M-`" #'im-shell-for)
-  (bind-key "M-~" (λ-interactive (im-shell-for 'dir)))
-#+end_src
-
 ~(project-remember-projects-under im-projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
 
 #+begin_src emacs-lisp
@@ -3024,6 +2951,90 @@ Other complementary packages:
       (project-remember-project it t)))
 
   (run-with-timer 10 nil #'im-load-projects-list)
+#+end_src
+
+- project.el offers ~C-x p~ keymap with very useful bindings. I also keep my project related bindings under ~SPC p~.
+- After doing ~project-switch-project~, you are expected to hit a key to trigger a project action, like finding a file in the project or doing a project grep. You need to add these actions into ~project-switch-commands~ list and you need to define a key in ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by given key.
+
+#+begin_src emacs-lisp
+  (evil-leader/set-key "p" (λ-interactive (project-switch-project (im-current-project-root))))
+
+  (setq project-switch-commands
+        '((project-find-file "Find file")
+          (project-find-dir "Find directory")
+          (project-eshell "Eshell")))
+
+  (define-key project-prefix-map "s" #'project-switch-project)
+  (add-to-list 'project-switch-commands `(project-switch-project "Switch"))
+
+  (define-key project-prefix-map "g" #'im-consult-ripgrep)
+  (add-to-list 'project-switch-commands `(im-consult-ripgrep "Grep"))
+
+  (define-key project-prefix-map "H" #'git-link-homepage)
+  (add-to-list 'project-switch-commands `(git-link-homepage "Git Homepage"))
+
+  (define-key project-prefix-map "D" #'dired-jump)
+  (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
+
+  (define-key project-prefix-map "m" #'magit-status)
+  (add-to-list 'project-switch-commands `(magit-status "Magit"))
+
+  (define-key project-prefix-map "M" #'lab-list-project-merge-requests)
+  (add-to-list 'project-switch-commands `(lab-list-project-merge-requests "Merge Requests"))
+
+  (define-key project-prefix-map "P" #'lab-list-project-pipelines)
+  (add-to-list 'project-switch-commands `(lab-list-project-pipelines "Pipelines"))
+
+  (define-key project-prefix-map "!" #'im-project-shell-command)
+  (add-to-list 'project-switch-commands `(im-project-shell-command "Run shell command"))
+
+  (define-key project-prefix-map "t" #'im-project-shell)
+  (add-to-list 'project-switch-commands `(im-project-shell "terminal"))
+
+  (define-key project-prefix-map "F" #'im-select-any-project-file)
+  (add-to-list 'project-switch-commands `(im-select-any-project-file "All project files"))
+
+  (defun im-select-any-project-file ()
+    (interactive)
+    (im-find-file-in im-projects-root))
+
+  (defun im-project-shell-command ()
+    "Run `async-shell-command' in the current project's root directory."
+    (interactive)
+    (let ((default-directory (project-root (project-current t))))
+      (call-interactively #'im-shell-command)))
+
+  (defvar im-project-shell-last-height 15)
+
+  (defun im-shell-for (&optional type)
+    (interactive)
+    (setq type (or type 'project))
+    (let* ((proj-dir (or (ignore-errors
+                           (project-root (project-current)))
+                         default-directory))
+           (default-directory (if (eq type 'project) proj-dir default-directory))
+           (proj-name (f-base default-directory))
+           (name (format "$%s" proj-name)))
+      (if-let ((window (--find (s-prefix? "\$" (buffer-name (window-buffer it))) (window-list))))
+          (when (window-at-side-p window 'top)
+            (setq im-project-shell-last-height (window-height window))
+            (delete-window window))
+        (let* ((term (or (get-buffer name)
+                         (save-window-excursion
+                           (let ((eshell-buffer-name name))
+                             (eshell t))))))
+          (with-current-buffer term
+            (tab-line-mode -1))
+          (display-buffer-in-side-window
+           term
+           (append
+            `((window-height . ,im-project-shell-last-height)
+              (side . top)
+              (slot . 1))))
+          (select-window (get-buffer-window term))))))
+
+  (bind-key "M-`" #'im-shell-for)
+  (bind-key "M-~" (λ-interactive (im-shell-for 'dir)))
 #+end_src
 
 ** consult
@@ -3113,8 +3124,10 @@ Some functionality for project management. I do some fine-tuning for =find= and 
     (interactive "DFind files in: ")
     (let ((default-directory dir))
       (im-output-select
-       :cmd "fd --exclude '.git' --hidden ."
+       :cmd "fd --exclude '.git' --exclude 'node_modules' --hidden ."
        :prompt "Open file: "
+       :category 'file
+       :map (s-chop-prefix "./" it)
        :do (find-file it))))
 #+end_src
 
@@ -3296,8 +3309,10 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
 #+END_SRC
 
 ** corfu & corfu-doc & kind-icon & pcmpl-args & cape
+"~/trendyol-projects/emacs/straight/build/corfu/extensions"
 #+BEGIN_SRC emacs-lisp
   (use-package corfu
+    :straight (:files (:defaults "extensions/*.el"))
     :config
     (set-face-background 'corfu-current "dim gray")
     (setq corfu-cycle t)
@@ -3305,7 +3320,6 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (setq corfu-auto-prefix 2)
     (global-corfu-mode))
 
-  (add-to-list 'load-path (expand-file-name (format "%sstraight/build/corfu/extensions" straight-base-dir)))
   (use-package corfu-quick
     :ensure nil
     :straight nil
@@ -3322,15 +3336,16 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
   (use-package corfu-popupinfo
+    :ensure nil
+    :straight nil
     :after corfu
     :config
     (setq corfu-popupinfo-delay 0)
     (corfu-popupinfo-mode)
     ;; Toggle doc on/off while in corfu
-    ;; (define-key corfu-map (kbd "M-d") #'corfu-popupinfo-toggle)
-    ;; (define-key corfu-map (kbd "M-p") #'corfu-doc-scroll-down)
-    ;; (define-key corfu-map (kbd "M-n") #'corfu-doc-scroll-up)
-    )
+    (define-key corfu-map (kbd "M-d") #'corfu-popupinfo-toggle)
+    (define-key corfu-map (kbd "M-p") #'corfu-popupinfo-scroll-down)
+    (define-key corfu-map (kbd "M-n") #'corfu-popupinfo-scroll-up))
 
   ;; add extensions
   (use-package cape
@@ -5253,6 +5268,17 @@ Here is the current workflow I use:
         (call-interactively lastf))
        (t
         (call-interactively defunf)))))
+#+end_src
+
+** common-lisp
+#+begin_src emacs-lisp
+  (use-package slime
+    :config
+    (setq inferior-lisp-program "sbcl"))
+
+  (evil-define-key 'normal lisp-mode-map (kbd "K") #'slime-documentation)
+  (evil-leader/set-key-for-mode 'lisp-mode
+    ";" (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region))
 #+end_src
 ** emmet-mode
 Hit <C-j> after these and get:
