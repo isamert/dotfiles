@@ -624,6 +624,17 @@ This function is for doing easy REST calls and it uses plists for everything bec
   (defun im-latest-file (&optional path)
     "Get latest file in PATH."
     (car (directory-files (or path default-directory) 'full "^\\([^.]\\|\\.[^.]\\|\\.\\..\\)" #'file-newer-than-file-p)))
+
+  (defun im-directory-files-recursively (dir regexp)
+    "Faster alternative to `directory-files-recursively'."
+    (->>
+     (format
+      "fd '%s' '%s' --type file --maxdepth 4 --absolute-path"
+      regexp
+      (expand-file-name dir))
+     (shell-command-to-string)
+     (s-trim)
+     (s-split "\n")))
 #+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
@@ -2146,6 +2157,8 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 * Other packages
 ** eat & eshell
 #+begin_src emacs-lisp
+  (setq eshell-history-size 10000)
+
   (use-package eshell-syntax-highlighting
     :after eshell-mode
     :config
