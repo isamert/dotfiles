@@ -6068,7 +6068,11 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defun im-open-jira-issue-at-point ()
     "Open issue at point."
     (interactive)
-    (im-open-jira-issue (thing-at-point 'symbol)))
+    (let ((sym (thing-at-point 'symbol)))
+      (im-open-jira-issue
+       (if (s-matches? "[a-zA-Z]+-[0-9]+" sym)
+           sym
+         (read-string "Enter issue number: ")))))
 
   (defmemoize im-jira-get-my-issues ()
     (jiralib2-jql-search im-jira-my-issues-query))
@@ -6233,9 +6237,10 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
   (defun im-jira-change-issue-status (key)
     (interactive "sIssue number: ")
     (->>
-     (im-jira-get-issue-transitions key)
-     (--map (cons (alist-get 'name it) it))
-     (im-alist-completing-read "Select status: ")
+     (lab--completing-read-object
+      "Select status: "
+      (im-jira-get-issue-transitions key)
+      :formatter (lambda (it) (let-alist it (format "%s [%s]" .name .to.name))))
      (alist-get 'id)
      (im-jira-change-issue-status-to key)))
 
