@@ -5320,20 +5320,13 @@ Hit <C-j> after these and get:
 #+end_src
 
 ** elisp
-*** Keybindings
-#+begin_src emacs-lisp
-  (evil-leader/set-key
-    ";"  #'eval-last-sexp
-    "'"  #'eval-defun
-    "\\" #'eval-region)
-#+end_src
-
 *** Inspector/debugging/pretty-printing
 There is a built-in function (~data-debug-eval-expression~) to inspect objects (not good as CIDERs inspector but it works). I made a helper function to evaluate last expression and open data-debug window of it.
 
 #+begin_src emacs-lisp
   (defun im-eval-and-inspect-last-sexp ()
     (interactive)
+    (require 'data-debug)
     (data-debug-show-stuff (eval-last-sexp nil) "last sexp"))
 #+end_src
 
@@ -5348,7 +5341,10 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
     :straight (:host github :repo "isamert/eros")
     :config
     (eros-mode 1)
-    (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1))))
+    (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1)))
+    (evil-leader/set-key
+      ";"  (im-eval-dwim #'eros-eval-last-sexp #'eval-region #'eros-eval-defun)
+      "'" #'eros-inspect-last-result))
 #+end_src
 *** Inline/popup documentation
 #+begin_src emacs-lisp
