@@ -476,6 +476,19 @@ Some basic variable and function definitions that will be used in configuration.
          (s-trim)
          (replace-regexp-in-string "[^a-zA-Z0-9]" "-" str)
          (replace-regexp-in-string "-+" "-")))
+
+  (defun im-human-readable-size (size-in-bytes)
+    (let* ((units '("B" "KB" "MB" "GB" "TB" "PB" "EB" "ZB" "YB"))
+           (unit (car units))
+           (bytes (float size-in-bytes))
+           (exponent (floor (log bytes 1024))))
+      (setq units (cdr units))
+      (while (> exponent 0)
+        (setq bytes (/ bytes 1024.0))
+        (setq exponent (1- exponent))
+        (setq unit (car units))
+        (setq units (cdr units)))
+      (format "%.2f %s" bytes unit)))
 #+end_src
 *** Quick table
 #+begin_src emacs-lisp
@@ -5845,10 +5858,11 @@ Good for buffer management, especially for groupped killings.
     (interactive)
     (let ((proj-name (im-current-project-name))
           (proj-path (or (im-current-project-root) (expand-file-name "~/")))
-          (fpath (buffer-file-name)))
-      (message "[%s] %s"
+          (fpath (or (buffer-file-name) (buffer-name))))
+      (message "[%s] %s (%s)"
                (propertize proj-name 'face 'bold)
-               (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic)))))
+               (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic))
+               (im-human-readable-size (buffer-size)))))
 #+end_src
 ** Keybindings
 #+begin_src emacs-lisp
