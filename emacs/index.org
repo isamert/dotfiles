@@ -5214,6 +5214,63 @@ The following enables =CamelCase= aware editing operations.
     ;; I've created two functions above for the variations
     (setq jsons-path-printer 'jsons-print-path-jq))
 
+  (defun im-run-jq-on-json (json expression &optional replace)
+    "Run given EXPRESSION with jq on JSON and return the result.
+  If REPLACE is non-nil, then clear the buffer or current
+  selection and insert the result.
+
+  When called with prefix argument, REPLACE becomes non-nil."
+    (interactive
+     (list
+      (if (use-region-p)
+          (buffer-substring-no-properties (region-beginning) (region-end))
+        (read-string "JSON: "))
+      (read-string "Expression: ")
+      current-prefix-arg))
+    (let ((result (with-temp-buffer
+                    (insert json)
+                    (shell-command-on-region (point-min) (point-max) (format "jq -r \"%s\"" jq) nil 't)
+                    (buffer-string))))
+      (when (and (called-interactively-p 'interactive)
+                 (not replace))
+        (message ">> %s" (s-trim result)))
+      (cond
+       ((and replace (use-region-p))
+        (replace-region-contents (region-beginning) (region-end) (lambda () result)))
+       (replace
+        (erase-buffer)
+        (insert result)))
+      result))
+
+  (defun im-run-nodejs-on-json (json expression &optional replace)
+    "Run given EXPRESSION with nodejs on JSON and return the result.
+  If REPLACE is non-nil, then clear the buffer or current
+  selection and insert the result.
+
+  When called with prefix argument, REPLACE becomes non-nil."
+    (interactive
+     (list
+      (if (use-region-p)
+          (buffer-substring-no-properties (region-beginning) (region-end))
+        (read-string "JSON: "))
+      (read-string "Expression: ")
+      current-prefix-arg))
+    (let ((result (with-temp-buffer
+                    (insert (format "const it = %s;" json))
+                    (insert (format "JSON.stringify(%s, null, 2)" expression))
+                    (shell-command-on-region (point-min) (point-max) "node -p" nil 't)
+                    (buffer-string))))
+      (when (and (called-interactively-p 'interactive)
+                 (not replace))
+        (message ">> %s" (s-trim result)))
+      (cond
+       ((and replace (use-region-p))
+        (replace-region-contents (region-beginning) (region-end) (lambda () result)))
+       (replace
+        (erase-buffer)
+        (insert result)))
+      result))
+
   ;; Add execution ability to json blocks inside org-mode. Either add
   ;; `:jq some-jq-query' or `:node it.accessor' to code block's header
   ;; to filter the json
@@ -5221,21 +5278,8 @@ The following enables =CamelCase= aware editing operations.
     (let ((jq (cdr (assoc :jq params)))
           (node (cdr (assoc :node params))))
       (cond
-       (jq
-        (with-temp-buffer
-          ;; Insert the JSON into the temp buffer
-          (insert body)
-          ;; Run jq command on the whole buffer, and replace the buffer
-          ;; contents with the result returned from jq
-          (shell-command-on-region (point-min) (point-max) (format "jq -r \"%s\"" jq) nil 't)
-          ;; Return the contents of the temp buffer as the result
-          (buffer-string)))
-       (node
-        (with-temp-buffer
-          (insert (format "const it = %s;" body))
-          (insert (format "JSON.stringify(%s, null, 2)" node))
-          (shell-command-on-region (point-min) (point-max) "node -p" nil 't)
-          (buffer-string))))))
+       (jq (im-run-jq-on-json body jq))
+       (node (im-run-nodejs-on-json body node)))))
 #+end_src
 
 ** java
