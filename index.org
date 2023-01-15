@@ -2229,7 +2229,7 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
 
   colors midnight
   set editorcmd «sh("which emacsclient")»
-  set searchengine g
+  set searchengine ddg
   set hintfiltermode vimperator-reflow
   set smoothscroll true
   set modeindicatorshowkeys true

@@ -496,7 +496,7 @@ Some basic variable and function definitions that will be used in configuration.
     (with-current-buffer buffer
       (let* ((lines (s-split "\n" str t))
              (header-items (s-split sep (car lines) t))
-             (header (coerce (--map (list it (/ 100 (length header-items)) nil) header-items) 'vector))
+             (header (cl-coerce (--map (list it (/ 100 (length header-items)) nil) header-items) 'vector))
              (rows (thread-last lines
                      (-drop 1)
                      (--map-indexed (list (number-to-string it-index) (coerce (s-split sep it t) 'vector))))))
@@ -1434,7 +1434,8 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     "op"  #'org-set-property
     "oi"  #'org-toggle-inline-images
     "oI"  #'org-redisplay-inline-images
-    "or"  #'org-mode-restart
+    "or"  #'org-refile
+    "oR"  #'org-mode-restart
     "oh"  #'outline-show-only-headings
     "os"  #'org-schedule
     "od"  #'org-deadline
@@ -1833,6 +1834,10 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     (unless (re-search-forward "\\*\\* One-liners" nil t)
       (end-of-line)
       (insert "\n** One-liners")))
+#+end_src
+** org-refile
+#+begin_src emacs-lisp
+  (setq org-refile-targets '((nil . (:maxlevel . 2))))
 #+end_src
 ** Fancy/pretty stuff
 #+begin_src emacs-lisp
@@ -4236,7 +4241,9 @@ For reading epub files.
 It lets me display comments of given reddit thread in an org buffer using the =reddigg-view-comments= function.
 
 #+begin_src emacs-lisp
-  (use-package reddigg)
+  (use-package reddigg
+    :config
+    (setq reddigg-convert-md-to-org t))
 #+end_src
 
 ** jq-mode
@@ -4469,11 +4476,11 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
 #+begin_src emacs-lisp
   (use-package dumb-jump
     :config
-    ;; https://github.com/jacktasia/dumb-jump/issues/376
-    ;; (setq dumb-jump-prefer-searcher 'rg)
-    (setq dumb-jump-force-searcher 'ag
-          dumb-jump-ignore-context t
-          dumb-jump-fallback-search nil)
+    ;; ag is supported by nearly every rule but rg is not.
+    ;; also see: https://github.com/jacktasia/dumb-jump/issues/376
+    (setq dumb-jump-force-searcher 'ag)
+    (setq dumb-jump-ignore-context t)
+    (setq dumb-jump-fallback-search nil)
     (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
   (use-package devdocs
