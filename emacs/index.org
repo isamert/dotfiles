@@ -779,10 +779,9 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
 
   (defun im-post-save-run-command ()
     "Execute the specified command after saving specified file."
-    (let* ((fname (buffer-file-name))
-           (match (im-assoc-regexp fname im-run-after-save-alist #'expand-file-name)))
-      (when match
-        (mapcar (lambda (pair) (shell-command (s-replace "%" fname (cdr pair)))) match))))
+    (when-let* ((fname (buffer-file-name))
+                (match (im-assoc-regexp fname im-run-after-save-alist #'expand-file-name)))
+      (mapcar (lambda (pair) (shell-command (s-replace "%" fname (cdr pair)))) match)))
 #+END_SRC
 
 ** macOS problem: too many open files
@@ -1365,7 +1364,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 #+begin_src emacs-lisp
   (use-package org
     :config
-    (setq org-return-follow-links t)
+    (setq org-return-follows-link t)
     ;; ^ Open links with RET
     (setq org-src-fontify-natively t)
     ;; ^ Enable code highlighting in ~SRC~ blocks.
@@ -1425,6 +1424,9 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (require 'evil-org-agenda)
     (evil-org-agenda-set-keys)
     (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading))
+    (evil-define-key '(normal insert) org-mode-map
+      (kbd "<RET>") #'org-return
+      (kbd "S-<return>") #'im-org-link-to-indirect-buffer)
     (add-hook 'org-mode-hook #'evil-org-mode))
 
   (evil-leader/set-key-for-mode 'org-mode
@@ -1485,7 +1487,8 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (im-org-focused-tree-to-indirect-buffer
      ;; Force org to open the link in current window
      (let ((org-link-frame-setup (cons (cons 'file 'find-file) org-link-frame-setup)))
-       (org-open-at-point))))
+       (save-window-excursion
+         (org-open-at-point)))))
 #+end_src
 
 ** Personal files
@@ -1730,15 +1733,17 @@ Here are the resources:
         '(("WAIT" . (:foreground "yellow" :weight bold))
           ("PROG" . (:foreground "magenta" :weight bold :underline t))))
 
-  (set-face-attribute 'org-headline-done nil :strike-through t)
-  (set-face-attribute 'org-agenda-done nil :strike-through t)
-  (set-face-attribute 'org-column nil :background nil)
-  (set-face-attribute 'org-scheduled-today nil :foreground "light green")
+  (custom-set-faces
+   '(org-headline-done ((t (:strike-through t))))
+   '(org-agenda-done ((t (:strike-through t))))
+   '(org-column ((t (:background nil))))
+   '(org-scheduled-today ((t (:foreground "light green"))))
 
-  ;; Make some stuff small
-  (set-face-attribute 'org-drawer nil :height 0.8)
-  (set-face-attribute 'org-special-keyword nil :height 0.8)
-  (set-face-attribute 'org-block-end-line nil :height 0.8)
+   ;; Make some stuff small
+   '(org-drawer ((t (:height 0.8))))
+   '(org-special-keyword ((t (:height 0.8))))
+   '(org-block-end-line ((t (:height 0.8)))))
+
 #+END_SRC
 
 ** org-capture
@@ -1891,10 +1896,10 @@ This prints the text that is used by polybar to show what I am clocking right no
 #+begin_src emacs-lisp
   (defun im-format-polybar-clock-string ()
     (if (org-clocking-p)
-        (format "  [%s] %s "
+        (format ">> [%s] %s "
                 (org-duration-from-minutes (org-clock-get-clocked-time))
                 org-clock-heading)
-      ""))
+      "X"))
 
   (setq org-clock-clocked-in-display nil)
   ;; ^ I show it on polybar or gnome bar, so I don't need it on modeline
@@ -2209,7 +2214,7 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
     (select-window (split-window-horizontally))
     (call-interactively #'im-eshell))
 
-  (evil-define-key 'insert 'eshell-mode (kbd "C-r") #'consult-history)
+  (evil-define-key 'insert eshell-mode-map (kbd "C-r") #'consult-history)
   (evil-define-key 'normal 'global (kbd "M-_") #'im-eshell-vertically)
   (evil-define-key 'normal 'global (kbd "M-|") #'im-eshell-horizontally)
 #+end_src
@@ -2569,28 +2574,33 @@ To sync it automatically:
 #+end_src
 
 ** w3m
+- Use "Enter" on images to display them inline.
+
 #+begin_src emacs-lisp
   (use-package w3m
     :config
-
+    (evil-leader/set-key
+      "ew" #'w3m-search
+      "eW" #'w3m-search-new-session)
     (evil-define-key 'normal w3m-mode-map
-      (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function w3m-current-url)))
-
-    (evil-leader/set-key "ew" #'w3m-search)
-    (evil-define-key 'normal w3m-mode-map
+      (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function w3m-current-url))
       (kbd "S") #'w3m-search
-      (kbd "J") #'w3m-next-buffer
-      (kbd "K") #'w3m-previous-buffer
+      (kbd "K") #'w3m-next-buffer
+      (kbd "J") #'w3m-previous-buffer
       (kbd "O") #'w3m-edit-url
-      (kbd "t") #'w3m-goto-url-new-session)
+      (kbd "t") #'w3m-goto-url-new-session
+      (kbd "M-j") #'w3m-tab-move-left
+      (kbd "M-k") #'w3m-tab-move-right
+      (kbd "x") #'w3m-delete-buffer)
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
           '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
             (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
-            (".*\\(trendyol\\|gitlab\\|github\\|slack\\).*" . (lambda (link &rest _) (funcall browse-url-secondary-browser-function link)))
-            (".*reddit.com.*comments.*" . (lambda (link &rest _) (reddigg-view-comments link)))
+            (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
             (".*stackoverflow.com.*" . (lambda (link &rest _) (im-open-stackoverflow-link link)))
             (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv-play link)))
+            (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
+            (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . (lambda (link &rest _) (funcall browse-url-secondary-browser-function link)))
             ("." . w3m-goto-url))))
 #+end_src
 ** shell-mode
@@ -2741,7 +2751,7 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
   (use-package magit-delta
     :after magit
     :config
-    (setq magit-delta-default-light-theme "Github")
+    (setq magit-delta-default-light-theme "GitHub")
     (setq magit-delta-default-dark-theme "Monokai Extended Bright")
     (setq magit-delta-hide-plus-minus-markers nil)
 
@@ -5243,7 +5253,8 @@ The following enables =CamelCase= aware editing operations.
         (message ">> %s" (s-trim result)))
       (cond
        ((and replace (use-region-p))
-        (replace-region-contents (region-beginning) (region-end) (lambda () result)))
+        (delete-region (region-beginning) (region-end))
+        (insert result))
        (replace
         (erase-buffer)
         (insert result)))
@@ -5272,7 +5283,8 @@ The following enables =CamelCase= aware editing operations.
         (message ">> %s" (s-trim result)))
       (cond
        ((and replace (use-region-p))
-        (replace-region-contents (region-beginning) (region-end) (lambda () result)))
+        (delete-region (region-beginning) (region-end))
+        (insert result))
        (replace
         (erase-buffer)
         (insert result)))
@@ -5381,7 +5393,14 @@ Hit <C-j> after these and get:
 
 ** kotlin
 #+BEGIN_SRC emacs-lisp
-(use-package kotlin-mode)
+  (use-package kotlin-mode
+    :config
+    (evil-leader/set-key-for-mode 'kotlin-mode
+      ";" (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line)
+      "'" #'kotlin-repl)
+
+    ;; ki is a better REPL for Kotlin. You can save and reload your session.
+    (setq kotlin-command "ki"))
 #+END_SRC
 
 ** gradle/groovy
@@ -5753,7 +5772,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
          (toggle-truncate-lines +1)
          (im-shell-command
           :buffer-name buffer-name
-          :command (format "bq head -n 10 '%s'" table-name))))))
+          :command (format "bq head -n 200 '%s'" table-name))))))
 #+end_src
 
 ** kbd-mode
@@ -8058,6 +8077,22 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
           (org-edit-special)))))
 
   (define-key embark-symbol-map (kbd "J") 'im-jump-to-definition-at-config)
+#+end_src
+** zoom
+#+begin_src emacs-lisp
+  (defun im-open-zoom-meeting-dwim (&optional link)
+    (interactive
+     (list
+      (or (thing-at-point 'url) (read-string "Link: "))))
+    (when-let* ((zoom (s-match
+                       "https://.*zoom\\.us/j/\\(\\w+\\)\\?pwd=\\(\\w+\\)"
+                       link))
+                (cmd (format
+                      "open 'zoommtg://zoom.us/join?confno=%s&pwd=%s'"
+                      (nth 1 zoom)
+                      (nth 2 zoom))))
+      (message ">> Running %s" cmd)
+      (shell-command cmd)))
 #+end_src
 * Operating system related
 ** Sound output chooser
