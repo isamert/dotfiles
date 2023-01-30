@@ -1357,6 +1357,10 @@ Easily switch between contexts with completion.
 
 ** Emacs configuration
 #+begin_src bash :tangle ~/.zshrc
+  function is-emacs {
+    [[ '$INSIDE_EMACS' = 'vterm' ]];
+  }
+
   if is-emacs; then
       # With this function we can send elisp commands while we are on emacs vterm
       # for example, "elisp message hey" would send (message "hey") to emacs.
@@ -1459,94 +1463,97 @@ For some reason it does not work. However running the same command after shell i
 #+end_src
 
 ** Aliases
+:PROPERTIES:
+:ID:       0B508237-3BBE-416A-A6AD-31C5C78340DB
+:END:
 This file is sourced by both =zsh= and =bash=.
 
 #+begin_src bash :tangle (when-linux "~/.config/aliases/arch")
-  alias aur="trizen"
-  alias aurin="trizen -S"
-  alias aurs="trizen -Ss"
-  alias aurupg="trizen -Syu"
-  alias pac="fuzzy packages"      # A fuzzy, interactive package finder
-  alias pacs="pacman -Ss"
-  alias pacin="sudo pacman -S"
-  alias pacins="sudo pacman -U"   # Install from file
-  alias pacupd="sudo pacman -Sy"
-  alias pacupg="sudo pacman -Syu"
-  alias pacbin="pacman -F"        # Same as above
-  alias pacre="sudo pacman -R"    # Leave dependencies and configurations
-  alias pacrem="sudo pacman -Rns"
+  alias aur='trizen'
+  alias aurin='trizen -S'
+  alias aurs='trizen -Ss'
+  alias aurupg='trizen -Syu'
+  alias pac='fuzzy packages'      # A fuzzy, interactive package finder
+  alias pacs='pacman -Ss'
+  alias pacin='sudo pacman -S'
+  alias pacins='sudo pacman -U'   # Install from file
+  alias pacupd='sudo pacman -Sy'
+  alias pacupg='sudo pacman -Syu'
+  alias pacbin='pacman -F'        # Same as above
+  alias pacre='sudo pacman -R'    # Leave dependencies and configurations
+  alias pacrem='sudo pacman -Rns'
 
-  alias ctl="systemctl"
-  alias ctls="systemctl status"
-  alias ctlr="systemctl restart"
-  alias ctlu="systemctl --full --user"
-  alias ctlus="systemctl --full --user status"
-  alias ctlur="systemctl --full --user restart"
-  alias logu="journalctl --user --unit"
+  alias ctl='systemctl'
+  alias ctls='systemctl status'
+  alias ctlr='systemctl restart'
+  alias ctlu='systemctl --full --user'
+  alias ctlus='systemctl --full --user status'
+  alias ctlur='systemctl --full --user restart'
+  alias logu='journalctl --user --unit'
 
-  alias xpaste="xclip -selection clipboard -o" # paste cb content
+  alias xpaste='xclip -selection clipboard -o' # paste cb content
 #+end_src
 
 #+begin_src bash :tangle (when-darwin "~/.config/aliases/mac")
-  alias pacs="brew search"
-  alias pacin="brew install"
-  alias pacupd="brew update"
-  alias pacupg="brew upgrade"
-  alias pacrem="brew uninstall"
+  alias pacs='brew search'
+  alias pacin='brew install'
+  alias pacupd='brew update'
+  alias pacupg='brew upgrade'
+  alias pacrem='brew uninstall'
 #+end_src
 
 #+begin_src bash :tangle ~/.config/aliases/generic
   # package management
-  function nixin { nix-env -iA "nixpkgs.$1" }
-  alias nixrem="nix-env -e"
-  alias nixs="nix search nixpkgs"
-  alias nixls="nix-env --query"
+  #eshell nixin='nix-env -iA "nixpkgs.$1"'
+  function nixin { nix-env -iA 'nixpkgs.$1' }
+  alias nixrem='nix-env -e'
+  alias nixs='nix search nixpkgs'
+  alias nixls='nix-env --query'
 
   # process management
-  alias nameof="ps -o comm= -p" # Get the name of given PID (reverse pidof)
-  alias fuckall="killall -s 9"
-  alias fkill="fuzzy kill"
+  alias nameof='ps -o comm= -p' # Get the name of given PID (reverse pidof)
+  alias fuckall='killall -s 9'
+  alias fkill='fuzzy kill'
 
   # utility
-  alias cdtemp="cd $(mktemp -d)"
-  alias ...="cd ../.."
-  alias ....="cd ../../.."
-  alias .....="cd ../../../.."
-  alias df="df -H"
-  alias du="ncdu"
-  alias fastssh="ssh -Y -C -c chacha20-poly1305@openssh.com"
+  alias cdtemp='cd $(mktemp -d)'
+  alias ...='cd ../..'
+  alias ....='cd ../../..'
+  alias .....='cd ../../../..'
+  alias df='df -H'
+  alias du='ncdu'
+  alias fastssh='ssh -Y -C -c chacha20-poly1305@openssh.com'
 
-  alias ls="lsd --group-dirs first --classify"
-  alias ll="lsd --group-dirs first --classify --oneline"
-  alias lls="lsd --group-dirs first --classify --long"
-  alias lla="lsd --group-dirs first --classify --long --all"
-  alias tree="lsd --tree"
+  alias ls='lsd --group-dirs first --classify'
+  alias ll='lsd --group-dirs first --classify --oneline'
+  alias lls='lsd --group-dirs first --classify --long'
+  alias lla='lsd --group-dirs first --classify --long --all'
+  alias tree='lsd --tree'
 
   # abbrv
-  alias n="nvim"
-  alias v="jaro --method=view"
-  alias e="jaro --method=edit"
-  alias o="jaro"
-  alias mt="jaro --mime-type"
-  alias mkx="chmod +x"
-  alias ytdl="yt-dlp"
-  alias ytmp3="yt-dlp --extract-audio --audio-format mp3 --output '%(title)s.%(ext)s'"
+  alias n='nvim'
+  alias v='jaro --method=view'
+  alias e='jaro --method=edit'
+  alias o='jaro'
+  alias mt='jaro --mime-type'
+  alias mkx='chmod +x'
+  alias ytdl='yt-dlp'
+  alias ytmp3='yt-dlp --extract-audio --audio-format mp3 --output "%(title)s.%(ext)s"'
 
   # master Wq
-  alias :q="exit"
-  alias :wq="exit"
+  alias :q='exit'
+  alias :wq='exit'
 
   # useful
-  function is-emacs { [[ "$INSIDE_EMACS" = "vterm" ]]; }
-  alias find-dups="find . ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD"
+  alias find-dups='find . ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD'
 
   # stuff
-  alias ipaddr="curl https://api.ipify.org"
-  alias ipinfo="curl https://ipinfo.io"
+  alias ipaddr='curl https://api.ipify.org'
+  alias ipinfo='curl https://ipinfo.io'
 
   # highlight streams with bat
-  alias hjson="bat --language=json --paging=never --style=plain"
-  alias hlog="bat --language=log --paging=never --style=plain"
+  alias hjson='bat --language=json --paging=never --style=plain'
+  alias hlog='bat --language=log --paging=never --style=plain'
 #+end_src
 
 * Utilities

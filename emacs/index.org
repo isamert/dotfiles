@@ -246,6 +246,7 @@ Some basic variable and function definitions that will be used in configuration.
 
   (defun im-select-window-with-buffer (buffer-name)
     "Select the first visible window that matches given BUFFER-NAME."
+    (declare (indent 1))
     (--first
      (-as-> (window-buffer it) buffer
             (buffer-name buffer)
@@ -318,6 +319,17 @@ Some basic variable and function definitions that will be used in configuration.
     x)
 #+end_src
 
+*** Elisp utils
+#+begin_src emacs-lisp
+  (defun im-tap (it)
+    (message "(im-tap) >>> %s" it)
+    it)
+
+  (defmacro im-append! (lst item)
+    "Append ITEM to end of the LST.
+  Modifies LST. Only meant to be used in configuration."
+    `(setq ,lst (append ,lst (list ,item))))
+#+end_src
 *** Clipboard functions
 #+begin_src emacs-lisp
   (defun im-clipboard-command ()
@@ -490,6 +502,18 @@ Some basic variable and function definitions that will be used in configuration.
         (setq units (cdr units)))
       (format "%.2f %s" bytes unit)))
 #+end_src
+*** List/hash-table/vector utils
+#+begin_src emacs-lisp
+  (defun im-ht-to-alist (val)
+    "Bad way to convert hash-tables with vectors into alists. I use
+  this only for debugging."
+    (cond
+     ((hash-table-p val) (im-ht-to-alist (ht-to-alist val)))
+     ((vectorp val) (mapcar #'im-ht-to-alist (cl-coerce val 'list)))
+     ((json-alist-p val) (map-apply (lambda (key it) (cons key (im-ht-to-alist it))) val))
+     ((listp val) (mapcar (lambda (key it) (cons key (im-ht-to-alist it))) val))
+     (t val)))
+#+end_src
 *** Quick table
 #+begin_src emacs-lisp
   (cl-defun im-output-to-tabulated-list (str &key buffer (sep " "))
@@ -631,6 +655,13 @@ This function is for doing easy REST calls and it uses plists for everything bec
              map))
          (--each ',(-map #'cadr pairs)
            (put it 'repeat-map ',map-name)))))
+
+  (defun im-add-to-path (path)
+    "Add given PATH to PATH variable.
+  Useful for adding something to Emacs' PATH without restarting it."
+    (interactive "sPath: ")
+    (add-to-list 'exec-path (expand-file-name path))
+    (setenv "PATH" (concat (getenv "PATH") ":" (expand-file-name path))))
 #+end_src
 *** File operations
 #+begin_src emacs-lisp
@@ -691,8 +722,10 @@ Save recent files. Also exclude package files that appears after installing a pa
 
 #+BEGIN_SRC emacs-lisp
   (recentf-mode t)
-  (add-to-list 'recentf-exclude (format "%s/\\.emacs\\.d/elpa/.*" (getenv "HOME")))
-  (add-to-list 'recentf-exclude (format "%s/\\.emacs\\.d/straight/.*" (getenv "HOME")))
+  (setq recentf-max-saved-items 500)
+  (add-to-list 'recentf-exclude (format ".*\\.elc" (getenv "HOME")))
+  (add-to-list 'recentf-exclude "/tmp/.*")
+  (add-to-list 'recentf-exclude "/var/folders/.*")
 #+END_SRC
 
 ** Save minibuffer, kill-ring, search-ring history
@@ -959,7 +992,7 @@ Colors parentheses depending on their dept.
     :diminish global-whitespace-mode
     :config
     (setq whitespace-style '(face empty tabs trailing))
-    (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode))
+    (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode))
     (global-whitespace-mode t))
 
   (defun im-whitespace-mode-toggle ()
@@ -1222,10 +1255,10 @@ Multiple cursors for evil.
 
     ;; Add my bindings using "gk"
     (evil-define-key 'normal evil-mc-key-map
-      (kbd "gkk") #'evil-mc-undo-all-cursors
-      (kbd "gkp") #'evil-mc-pause-cursors
-      (kbd "gkr") #'evil-mc-resume-cursors
-      (kbd "gkh") #'evil-mc-make-cursor-here)
+      (kbd "gcc") #'evil-mc-undo-all-cursors
+      (kbd "gcp") #'evil-mc-pause-cursors
+      (kbd "gcr") #'evil-mc-resume-cursors
+      (kbd "gch") #'evil-mc-make-cursor-here)
 
     (evil-define-key 'visual evil-mc-key-map
       "A" #'evil-mc-make-cursor-in-visual-selection-end
@@ -1411,7 +1444,8 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (add-hook 'org-mode-hook #'im-disable-electric-indent)
 
     <<ob-http>>
-    <<org-babel-configuration>>)
+    <<org-babel-configuration>>
+    <<personal-files>>)
 
   (use-package org-contrib)
 #+end_src
@@ -1474,25 +1508,38 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (defmacro im-org-focused-tree-to-indirect-buffer (&rest forms)
     "Same as `org-tree-to-indirect-buffer' but let's you open
   multiple indirect buffers."
-    `(save-excursion
-       (save-restriction
-         (widen)
-         (let ((current-prefix-arg '(4)))
+    `(let ((current-prefix-arg '(4))
+           (source-buffer (current-buffer))
+           target-buffer)
+       (save-excursion
+         (save-restriction
+           (widen)
            ,@forms
-           (call-interactively #'org-tree-to-indirect-buffer)))))
+           (call-interactively #'org-tree-to-indirect-buffer)
+           (setq target-buffer (current-buffer))))
+       ;; If the link points to another buffer, current window will start
+       ;; showing that buffer. We don't want that, so we are restoring
+       ;; the current buffer here:
+       (set-window-buffer nil source-buffer)
+       ;; Newly opened indirect buffer is not focused automatically, we
+       ;; fix that here:
+       (im-select-window-with-buffer (im-tap (format "%s::.*" (buffer-name target-buffer))))))
 
   (defun im-org-link-to-indirect-buffer ()
     "Open link at point on a new indirect buffer."
     (interactive)
-    (im-org-focused-tree-to-indirect-buffer
-     ;; Force org to open the link in current window
+    ;; Force org to open the link in current window
+    (with-default-browser
      (let ((org-link-frame-setup (cons (cons 'file 'find-file) org-link-frame-setup)))
-       (save-window-excursion
-         (org-open-at-point)))))
+       (pcase (org-element-property :type (org-element-context))
+         ((or "http" "https") (org-open-at-point))
+         (_ (im-org-focused-tree-to-indirect-buffer
+             (org-open-at-point)))))))
 #+end_src
 
 ** Personal files
-#+BEGIN_SRC emacs-lisp
+#+name: personal-files
+#+BEGIN_SRC emacs-lisp :tangle no
   (defconst watchlist-org "~/Documents/notes/watchlist.org")
   (defconst readinglist-org "~/Documents/notes/readinglist.org")
   (defconst courses-org "~/Documents/notes/courses.org")
@@ -1518,7 +1565,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org ,life-org))
 
   ;; With the following, I can call functions defined inside this file in other org files
-  ;; (org-babel-lob-ingest "~/Documents/notes/utils.org")
+  (org-babel-lob-ingest "~/Documents/notes/utils.org")
 #+END_SRC
 
 ** Auto indent subsections
@@ -2178,6 +2225,15 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
      "** (call-interactively #'im-org-archive-url)"))
 #+end_src
 * Other packages
+** outline-mode
+This is a built-in mode for providing basic outlining features. Here are a few configurations to make the navigation a bit more like what I use in org-mode:
+
+#+begin_src emacs-lisp
+  (evil-define-key 'normal outline-mode-map
+    (kbd "[[") #'outline-previous-heading
+    (kbd "]]") #'outline-next-heading)
+#+end_src
+
 ** eat & eshell
 #+begin_src emacs-lisp
   (setq eshell-history-size 10000)
@@ -2218,6 +2274,42 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
   (evil-define-key 'normal 'global (kbd "M-_") #'im-eshell-vertically)
   (evil-define-key 'normal 'global (kbd "M-|") #'im-eshell-horizontally)
 #+end_src
+
+*** Reading bash/zsh aliases into Eshell
+#+begin_src emacs-lisp
+  (defun im-eshell-load-my-aliases ()
+    "Load zsh/bash aliases into eshell.
+  '$*' is appended after each alias so that they can take
+  positional parameters in eshell. There is also a special syntax
+  for defining eshell-specific aliases that is read verbatim:
+
+  #eshell test='ls'
+  "
+    (interactive)
+    (setq
+     eshell-command-aliases-list
+     (-filter
+      #'identity
+      (--map
+       (-when-let ((_ eshell? name imp)
+                   (s-match "^\\(alias\\|#eshell\\) \\([a-zA-Z0-9_-]+\\)='\\(.*\\)'\\( *#.*\\)*$" it))
+         (list name (if (s-prefix? "#eshell" eshell?)
+                        imp
+                      (concat imp " $*"))))
+       (--mapcat
+        (s-split "\n" (with-temp-buffer (insert-file-contents it) (buffer-string)))
+        (directory-files "~/.config/aliases/" t directory-files-no-dot-files-regexp))))))
+
+  (add-hook 'eshell-alias-load-hook #'im-eshell-load-my-aliases)
+#+end_src
+
+*** Eshell-specific aliases
+Look at [[id:0B508237-3BBE-416A-A6AD-31C5C78340DB][Aliases]] section in my config to see all bash/zsh aliases. These are eshell specific:
+
+#+begin_src bash :tangle ~/.config/aliases/eshell
+  #eshell clear='clear 1'
+#+end_src
+
 ** bookmark.el
 You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult-bookmark~ and calling ~embark-act~ on them to view/delete/edit given bookmark might be easier.
 
@@ -2574,6 +2666,7 @@ To sync it automatically:
 #+end_src
 
 ** w3m
+*** Installation/Keybindings
 - Use "Enter" on images to display them inline.
 
 #+begin_src emacs-lisp
@@ -2584,6 +2677,7 @@ To sync it automatically:
       "eW" #'w3m-search-new-session)
     (evil-define-key 'normal w3m-mode-map
       (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function w3m-current-url))
+      (kbd "^") (λ-interactive (browse-url w3m-current-url))
       (kbd "S") #'w3m-search
       (kbd "K") #'w3m-next-buffer
       (kbd "J") #'w3m-previous-buffer
@@ -2591,7 +2685,10 @@ To sync it automatically:
       (kbd "t") #'w3m-goto-url-new-session
       (kbd "M-j") #'w3m-tab-move-left
       (kbd "M-k") #'w3m-tab-move-right
-      (kbd "x") #'w3m-delete-buffer)
+      (kbd "x") #'w3m-delete-buffer
+      (kbd "Y") #'im-w3m-yank-url
+      (kbd "f") #'im-w3m-avy-link)
+    (setq w3m-fill-column 80)
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
           '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
@@ -2603,6 +2700,43 @@ To sync it automatically:
             (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . (lambda (link &rest _) (funcall browse-url-secondary-browser-function link)))
             ("." . w3m-goto-url))))
 #+end_src
+
+*** Extras
+
+#+begin_src emacs-lisp
+  (defun im-w3m-all-anchor-points (&optional start end)
+    "Return all anchor points for current w3m buffer.
+  If START and/or END is given, only return anchor points between
+  START and END positions of the buffer, otherwise return all
+  anchor points in the buffer."
+    (let ((points (list))
+          (start (or start (point-min)))
+          (end (or end (point-max)))
+          (prev 0))
+      (save-excursion
+        (goto-char start)
+        (while (and (w3m-next-anchor)
+                    (> (point) prev)
+                    (<= (point) end))
+          (setq prev (point))
+          (when-let* ((url (w3m-url-valid (w3m-anchor)))
+                      (_ (string-match "\\`https?:" url)))
+            (push (point) points))))
+      points))
+
+  (defun im-w3m-avy-link ()
+    "Jump to a link and open it automatically."
+    (interactive)
+    (avy-process (im-w3m-all-anchor-points (window-start) (window-end)))
+    (w3m-goto-url (w3m-anchor)))
+
+  (defun im-w3m-yank-url ()
+    "Copy current URL to clipboard."
+    (interactive)
+    (kill-new w3m-current-url)
+    w3m-current-url)
+#+end_src
+
 ** shell-mode
 #+begin_src emacs-lisp
   (use-package shell
@@ -3046,6 +3180,7 @@ Other complementary packages:
       (call-interactively #'im-shell-command)))
 
   (defvar im-project-shell-last-height 15)
+  (defvar im-project-shell-last-window nil)
 
   (defun im-shell-for (&optional type)
     (interactive)
@@ -3055,11 +3190,14 @@ Other complementary packages:
                          default-directory))
            (default-directory (if (eq type 'project) proj-dir default-directory))
            (proj-name (f-base default-directory))
-           (name (format "$%s" proj-name)))
-      (if-let ((window (--find (s-prefix? "\$" (buffer-name (window-buffer it))) (window-list))))
-          (when (window-at-side-p window 'top)
+           (name (format "$eshell: %s" proj-name)))
+      (if-let* ((window (--find (s-prefix? "\$eshell: " (buffer-name (window-buffer it))) (window-list)))
+                (focused? (equal window (selected-window))))
+          (progn
             (setq im-project-shell-last-height (window-height window))
-            (delete-window window))
+            (delete-window window)
+            (when im-project-shell-last-window
+              (select-window im-project-shell-last-window)))
         (let* ((term (or (get-buffer name)
                          (save-window-excursion
                            (let ((eshell-buffer-name name))
@@ -3072,6 +3210,7 @@ Other complementary packages:
             `((window-height . ,im-project-shell-last-height)
               (side . top)
               (slot . 1))))
+          (setq im-project-shell-last-window (get-buffer-window))
           (select-window (get-buffer-window term))))))
 
   (bind-key "M-`" #'im-shell-for)
@@ -3181,23 +3320,24 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 #+name: consult-buffer-source-files
 #+begin_src emacs-lisp :tangle no
   (defvar im-consult-source-files
-    `(:name     "My files"
-                :narrow   ?f
-                :category file
-                :face     consult-file
-                :history  file-name-history
-                :state    ,#'consult--file-state
-                :default  t
-                :hidden   t
-                :items    im-my-files)
+    (list
+     :name     "My files"
+     :narrow   ?f
+     :category 'file
+     :face     'consult-file
+     :history  'file-name-history
+     :state    #'consult--file-state
+     :default  t
+     :hidden   nil
+     :items    #'im-my-files)
     "My frequently accessed files source for `consult-buffer'.")
-
-  (add-to-list 'consult-buffer-sources 'im-consult-source-files)
 
   (defun im-my-files ()
     "Return list of all files I frequently use."
     `(,@(directory-files org-directory t "^\\w+.*.org$")
       ,@(directory-files im-load-path t "\\.el$")))
+
+  (im-append! consult-buffer-sources 'im-consult-source-files)
 #+end_src
 
 I also add a source for listing all of my projects:
@@ -3208,13 +3348,13 @@ I also add a source for listing all of my projects:
     (list
      :name     "Projects"
      :narrow   ?P
-     :hidden   t
+     :hidden   nil
      :category 'file
      :action  (lambda (it &rest _) (project-switch-project it))
      :items   (lambda () (mapcar #'car project--list)))
     "Projects source for consult-buffer.")
 
-  (add-to-list 'consult-buffer-sources 'im-consult-source-projects)
+  (im-append! consult-buffer-sources 'im-consult-source-projects)
 #+end_src
 
 *** consult-dir: Jump to different places easily in minibuffer
@@ -3547,77 +3687,72 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (use-package vterm
     :config
     (evil-define-key 'insert vterm-mode-map (kbd "C-r") #'vterm-send-C-r) ;; FIXME wtf
-    (evil-define-key 'insert vterm-mode-map (kbd "M-\\") #'vterm-send-M-\\)
-    (evil-define-key 'insert vterm-mode-map (kbd "M--") #'vterm-send-M--)
+    (evil-define-key 'insert vterm-mode-map (kbd "M-\\") (λ-interactive (vterm-send-key "\\" nil t nil)))
+    (evil-define-key 'insert vterm-mode-map (kbd "M--") (λ-interactive (vterm-send-key "-" nil t nil)))
     (evil-define-key 'insert vterm-mode-map (kbd "C-c") #'vterm-send-C-c)
     (evil-define-key 'insert vterm-mode-map (kbd "C-x") #'vterm-send-C-x)
     (evil-leader/set-key
-      "tj" 'im-jump-to-visible-vterm
+      "tj" 'im-jump-to-visible-term
       "tl" 'im-run-last-command-on-visible-term
-      "ty" 'im-send-selected-text-to-visible-vterm
-      "tr" 'im-run-command-on-visible-vterm-with-history)
+      "ty" 'im-send-selected-text-to-visible-term
+      "tr" 'im-run-command-on-visible-term-with-history)
     (setq vterm-kill-buffer-on-exit t)
     (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
     (add-hook 'vterm-mode-hook #'evil-emacs-state))
-
-  (defun im-run-last-command-on-visible-term ()
-    (interactive)
-    (save-buffer)
-    (unless (im-run-last-command-on-visible-vterm)
-      (im-run-last-command-on-visible-eshell)))
 #+END_SRC
 
 *** Utility functions
 #+begin_src emacs-lisp
-  (defun vterm-send-M-\\ ()
+  (defun im-run-last-command-on-visible-term ()
     (interactive)
-    (vterm-send-key "\\" nil t nil))
+    (save-buffer)
+    (or
+     (im-with-visible-buffer ".*vterm.*"
+       (term-send-up)
+       (term-send-return)
+       t)
+     (im-with-visible-buffer ".*eshell.*"
+       (insert (ring-ref eshell-history-ring 0))
+       (eshell-send-input))))
 
-  (defun vterm-send-M-- ()
-    (interactive)
-    (vterm-send-key "-" nil t nil))
+  (defun im-run-command-on-visible-term (cmd)
+    (or
+     (im-with-visible-buffer ".*vterm.*"
+       (term-send-string cmd)
+       (term-send-return)
+      t)
+     (im-with-visible-buffer ".*eshell.*"
+       (insert cmd)
+       (eshell-send-input)))
+    cmd)
 
-  (defun im-run-command-on-visible-vterm (cmd)
-    (im-with-visible-buffer ".*vterm.*"
-     (vterm-send-string cmd)
-     (vterm-send-return)
-     cmd))
-
-  (defun im-send-selected-text-to-visible-vterm (start end)
+  (defun im-send-selected-text-to-visible-term (start end)
     (interactive "r")
     (if (use-region-p)
-        (im-run-command-on-visible-vterm (buffer-substring-no-properties start end))
-      (im-run-command-on-visible-vterm (s-trim (buffer-substring-no-properties (line-beginning-position) (line-end-position))))))
+        (im-run-command-on-visible-term (buffer-substring-no-properties start end))
+      (im-run-command-on-visible-term (s-trim (buffer-substring-no-properties (line-beginning-position) (line-end-position))))))
 
-  (defvar im-vterm-run-history '())
-  (defvar im-jump-to-vterm-last-window nil)
+  (defvar im-term-run-history '())
+  (defvar im-jump-to-term-last-window nil)
 
-  (defun im-run-last-command-on-visible-vterm ()
-    "Run last command on the currently visible vterm window and return back to current window."
-    (interactive)
-    (im-with-visible-buffer ".*vterm.*"
-     (vterm-send-up)
-     (vterm-send-return)
-     t))
-
-  (defun im-jump-to-visible-vterm ()
-    "Jump to the visible vterm window.
-  When invoked in a vterm window, return back to last window that
+  (defun im-jump-to-visible-term ()
+    "Jump to the visible term window.
+  When invoked in a term window, return back to last window that
   this command is invoked from."
     (interactive)
     (cond
-     ((string-match ".*vterm.*" (buffer-name (window-buffer (selected-window))))
-      (select-window im-jump-to-vterm-last-window))
+     ((string-match ".*\\(vterm\\|eshell\\).*" (buffer-name (window-buffer (selected-window))))
+      (select-window im-jump-to-term-last-window))
      (t
-      (setq im-jump-to-vterm-last-window (selected-window))
-      (im-select-window-with-buffer ".*vterm.*"))))
+      (setq im-jump-to-term-last-window (selected-window))
+      (im-select-window-with-buffer ".*\\(vterm\\|eshell\\).*"))))
 
-  (defun im-run-command-on-visible-vterm-with-history ()
+  (defun im-run-command-on-visible-term-with-history ()
     (interactive)
-    (let ((cmd (im-run-command-on-visible-vterm
-                (completing-read "Run new command" im-vterm-run-history))))
+    (let ((cmd (im-run-command-on-visible-term
+                (completing-read "Run new command: " im-term-run-history))))
       (when cmd
-        (setq im-vterm-run-history (cons cmd (delete cmd im-vterm-run-history))))))
+        (setq im-term-run-history (cons cmd (delete cmd im-term-run-history))))))
 #+end_src
 
 ** moodline modeline
@@ -4277,6 +4412,16 @@ You can also do ~consult-imenu~ and ~embark-collect~ but it does not have a refr
     :config
     (setq webpaste-open-in-browser t))
 #+end_src
+** wolfram
+Easy way to interact with WolframAlpha. I generally use it for unit conversions or stuff like that.
+
+#+begin_src emacs-lisp
+  (use-package wolfram
+    :straight (:host github :repo "hsjunnesson/wolfram.el")
+    :config
+    (setq wolfram-alpha-app-id im-wolfram-alpha-app-id)
+    (evil-leader/set-key "iw" #'wolfram-alpha))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
@@ -4342,8 +4487,14 @@ Both synosaurus and wordnut uses ~wordnet~ to work.
 Turkish dictionary.
 
 #+begin_src emacs-lisp
+  ;; This is an optional dependency for sozluk.
+  (use-package turkish)
+
   (use-package sozluk
-    :straight (:host github :repo "isamert/sozluk.el"))
+    :straight (:host github :repo "isamert/sozluk.el")
+    :config
+    (setq sozluk-include-etymology-on-sozluk t)
+    (setq sozluk-deasciify-if-not-found t))
 #+end_src
 
 *** Etymology lookup inside Emacs
@@ -4355,7 +4506,7 @@ Turkish dictionary.
     "Find and retrieve the given word etymology from etymonline.
   Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
     (interactive
-     (list (im-region-or 'word)))
+     (list (read-string "Word: " (im-region-or 'word))))
     (let* ((buffer (generate-new-buffer (format "*etymology: %s*" input))))
       (switch-to-buffer buffer)
       (insert (shell-command-to-string (concat "links -dump http://www.etymonline.com/word/" input)))
@@ -4370,7 +4521,7 @@ Turkish dictionary.
                                        (search-forward "[\s\s]")))
           (delete-region (progn
                            (goto-char (point-max))
-                           (search-backward-regexp "Others are reading"))
+                           (search-backward-regexp "See all related words"))
                          (point-max))))
       (goto-char (point-min))))
 #+end_src
@@ -4642,7 +4793,6 @@ Manage media and streams through =completing-read=.
   (use-package versuri)
 
   (use-package empv
-    :diminish
     :straight (:host github :repo "isamert/empv.el")
     :config
     (load "radio-channels")
@@ -4658,7 +4808,7 @@ Manage media and streams through =completing-read=.
 
     (evil-leader/set-key "r" empv-map)
     (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
-    (empv-initialize-embark))
+    (with-eval-after-load 'embark (empv-embark-initialize-extra-actions)))
 
   (defun im-export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."
@@ -4685,6 +4835,80 @@ Manage media and streams through =completing-read=.
        (insert))))
 #+end_src
 
+*** Lyrics manager for empv.el
+A function to search lyrics in Google and extract the lyrics from one of the found results. I'll eventually move this to upstream empv.el.
+
+#+begin_src emacs-lisp
+  (defvar empv-lyrics-folder "~/Documents/notes/data/lyrics/")
+
+  (defun im-empv-get-lyrics (&optional search?)
+    (interactive "P")
+    (empv--let-properties '(metadata media-title)
+      (let ((title (string-trim (or (empv--create-media-summary-for-notification .metadata) .media-title))))
+        (if search?
+            (w3m-search "google" (format "%s lyrics" title))
+          (message ">> Getting lyrics for '%s'..." title)
+          (im-get-lyrics title)))))
+
+  (defun im-get-lyrics (song)
+    (interactive "sSong name: ")
+    (f-mkdir-full-path empv-lyrics-folder)
+    (let ((fname (f-join empv-lyrics-folder (format "%s.lyrics" (downcase (im-string-url-case song))))))
+      (if (f-exists? fname)
+          (find-file-other-window fname)
+        (let ((links (-some->> (im--get-html (url-encode-url (format "https://google.com/search?q=%s lyrics" song)))
+                       ;; Find all the links in the response first
+                       (s-match-strings-all "\\bhttps://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]\\b")
+                       (mapcar #'car)
+                       (--map (string-trim-right it "&amp.*"))
+                       (-uniq))))
+          (if-let ((lyrics
+                    (-some->> links
+                      ;; Then find the first azlyrics|genius link
+                      ;; First part may be useful in the future
+                      (--first (s-matches? "\\(azlyrics.com/lyrics/\\|genius.com/.*-lyrics\\)" it))
+                      (im--get-html)
+                      ;; Extract the lyrics from the page
+                      (s-replace "" "")
+                      (s-replace "\n" "")
+                      ((lambda (it)
+                         (or
+                          (s-match "Sorry about that\\. -->\\(.*\\)<!-- MxM banner -->" it) ;; azlyrics
+                          (s-match "\\\\\"html\\\\\":\\\\\"\\(.*\\)\\\\\",\\\\\"children\\\\\":" it) ;; genius
+                          )))
+                      (nth 1)
+                      (s-replace-all '(("<br>" . "\n")
+                                       ("<br/>" . "\n")
+                                       ("<br />" . "\n")
+                                       ("\\n" . "\n")
+                                       ("<div>" . "")
+                                       ("</div>" . "")
+                                       ("\\" . "")
+                                       ("\"" . "")
+                                       ("&#x27;" . "'")))
+                      (s-replace "\n\n" "\n")
+                      (s-trim)
+                      ;; Clear all remaning html tags
+                      (replace-regexp-in-string "<[^>]*>" ""))))
+              (progn
+                (write-region lyrics nil fname)
+                (im-get-lyrics song))
+            (progn
+              (browse-url (completing-read (format "Links for '%s': " song) links))
+              (user-error ">> Lyrics not found for '%s'." song)))))))
+
+  (defun im--get-html (url)
+    (let ((result nil))
+      (request url
+        :parser 'buffer-string
+        :headers '(("User-Agent" . "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:108.0) Gecko/20100101 Firefox/108.0"))
+        :sync t
+        :success (cl-function
+                  (lambda (&key data &allow-other-keys)
+                    (setq result data))))
+      result))
+#+end_src
+
 ** orgmdb (movies & shows)
 I have a file called ~watchlist.org~ where I keep list of movies and shows that I watched and going to watch. Here are some packages and functions to deal with them.
 
@@ -4695,7 +4919,7 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
     :config
     (setq orgmdb-omdb-apikey im-orgmdb-omdb-apikey)
     (setq orgmdb-poster-folder "~/Documents/notes/data/posters")
-    (setq orgmdb-fill-property-list '(genre runtime director country imdb-link imdb-rating metascore actors poster))
+    (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore actors poster))
     (evil-define-key 'normal 'global (kbd "go") #'orgmdb-act))
 #+end_src
 ** erc (IRC client)
@@ -6020,88 +6244,6 @@ Good for buffer management, especially for groupped killings.
     (interactive)
     (im-marks (expand-file-name "~/Documents/notes")))
 #+end_src
-** tmux integration
-This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generally use Emacs commands instead of command line tools and if I ever need to do something in terminal I just use eshell. Besides this, I also like to use have a tmux instance working, for non-ephemeral stuff. I generally use a dropdown terminal (which may or may not be inside Emacs) to access the tmux instance. Here is how the integration goes:
-
-- I tend to name my perspectives in the following format: =<namespace>/<stuff>=.
-- Whenever I change to a different perspective, the code below changes the tmux session to session named =<namespace>= and tmux window to the window named =<stuff>=.
-
-#+begin_src emacs-lisp
-  (defcustom im-auto-focus-tmux-window t
-    "Should automatically sync Emacs and Tmux?")
-
-  (defvar im-tmux-session nil)
-
-  (defun im-select-tmux-session ()
-    "Select (or create) a tmux session for other tmux commands to use."
-    (interactive)
-    (let* ((tmux-sessions (->>
-                           (shell-command-to-string "tmux list-sessions -F '#{session_name}'")
-                           (s-trim)
-                           (s-split "\n")))
-           (selected (completing-read "Select a tmux session or create one: " tmux-sessions)))
-      (when (not (-contains? tmux-sessions selected))
-        (shell-command-to-string (format "tmux new-session -d -s '%s'" selected)))
-      (setq im-tmux-session selected)))
-
-  (defun im-select-tmux-session-if-needed ()
-    (interactive)
-    (when (not im-tmux-session)
-      (im-select-tmux-session)))
-
-  (defun im-tmux-focus-window (window-name &optional dir)
-    "Focus given WINDOW-NAME in `im-tmux-session'.
-  Creates WINDOW-NAME it if it does not exist."
-    (interactive)
-    (let ((window-name-normalized (s-replace "." "-" window-name)))
-      (im-select-tmux-session-if-needed)
-      (shell-command-to-string (format "tmux switch -t%s" im-tmux-session))
-      (shell-command-to-string
-       (format "tmux select-window -t%s:%s || tmux new-window -c %s -t%s -n %s"
-               im-tmux-session
-               window-name-normalized
-               (or dir default-directory)
-               im-tmux-session
-               window-name-normalized))))
-
-  (defun im-tmux-focus-perspective-window (&rest _)
-    "Focus to the tmux window that has the same name with current perspective.
-  Tmux session is infered from im-select-tmux-session"
-    (interactive)
-    (let ((pname (persp-name (get-current-persp)))
-          (default-directory (or (ignore-errors
-                                   (with-current-buffer (car (persp-buffers (get-current-persp)))
-                                     default-directory))
-                                 default-directory)))
-      (when im-auto-focus-tmux-window
-        (cond
-         ((s-contains? "/" pname)
-          (let* ((data (s-split "/" pname))
-                 (im-tmux-session (car data))
-                 (window-name (nth 2 data)))
-            (im-tmux-focus-window (cadr (s-split "/" pname)))))
-         (t
-          (im-tmux-focus-window pname))))))
-
-  (defun im-auto-focus-tmux-advice-after (old-function &rest arguments)
-    (apply old-function arguments)
-    (when im-auto-focus-tmux-window
-      (im-tmux-focus-perspective-window)))
-
-  (defun im-auto-focus-tmux-advice-before (old-function &rest arguments)
-    (when im-auto-focus-tmux-window
-      (im-tmux-focus-perspective-window))
-    (apply old-function arguments))
-
-  ;; Required hooks and advices
-
-  (add-hook 'persp-activated-functions
-            #'im-tmux-focus-perspective-window)
-  (advice-add 'im-run-last-command-on-visible-vterm
-              :around #'im-auto-focus-tmux-advice-before)
-  (advice-add 'im-run-command-on-visible-vterm-with-history
-              :around #'im-auto-focus-tmux-advice-before)
-#+end_src
 ** Jira
 #+begin_src emacs-lisp :lexical yes
   (evil-leader/set-key "ejo" #'im-open-jira-issue-at-point)
@@ -6158,14 +6300,17 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (kill-new url)
       (browse-url url)))
 
+  (defun im-jira-issue-at-point ()
+    (let ((sym (or (thing-at-point 'symbol) "")))
+      (when (s-matches? "[a-zA-Z]+-[0-9]+" sym)
+        sym)))
+
   (defun im-open-jira-issue-at-point ()
     "Open issue at point."
     (interactive)
-    (let ((sym (thing-at-point 'symbol)))
-      (im-open-jira-issue
-       (if (s-matches? "[a-zA-Z]+-[0-9]+" sym)
-           sym
-         (read-string "Enter issue number: ")))))
+    (im-open-jira-issue
+     (or (im-jira-issue-at-point)
+         (read-string "Enter issue number: "))))
 
   (defmemoize im-jira-get-my-issues ()
     (jiralib2-jql-search im-jira-my-issues-query))
@@ -6217,7 +6362,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                    ("JQL" (call-interactively #'im-jira-jql)))
                  (--map (cons (im-jira--format-ticket-name it) it))
                  (im-alist-completing-read "Select ticket: ")
-                 (im-jira--issue-actions)))
+                 (im-jira-issue-actions)))
 
   (defun im-jira-ticket-to-branch (key summary)
     "Create a new branch from given ISSUE-NAME and switch to it."
@@ -6292,7 +6437,7 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                     ,(plist-get props :summary)
                     ,description
                     ,@(plist-get props :rest)))
-           (im-jira--issue-actions))))))
+           (im-jira-issue-actions))))))
 
   (defun im-jira-get-issue-fields ()
     (jiralib2-session-call "/rest/api/2/field"))
@@ -6411,7 +6556,9 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
                    'face 'italic)
        .fields.summary)))
 
-  (defun im-jira--issue-actions (issue)
+  (defun im-jira-issue-actions (issue)
+    (interactive
+     (list (jiralib2-get-issue (read-string "Jira issue: " (or (im-jira-issue-at-point) "")))))
     (cl-loop
      (with-completing-read-exact-order
       (let-alist issue
@@ -6520,10 +6667,16 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
     (let-alist jira-view-mode-ticket
       (im-jira-view-ticket .key)))
 
+  (defun jira-view-mode-act ()
+    (interactive)
+    (im-jira-issue-actions jira-view-mode-ticket))
+
   (evil-define-key 'normal jira-view-mode-map
     (kbd "&") #'jira-view-mode-open-externally
     (kbd "ge") #'jira-view-mode-edit
-    (kbd "gr") #'jira-view-mode-reload)
+    (kbd "gr") #'jira-view-mode-reload
+    ;; TODO All actions might be single keypress.
+    (kbd "ga") #'jira-view-mode-act)
 
   (defun im-jira-view-ticket (key)
     (interactive "sIssue key: ")
@@ -6537,11 +6690,12 @@ This integrates tmux with [[vterm]] and [[persp-mode and eyebrowse]]. I generall
       (let-alist ticket
         (insert
          (format (concat
-                  "* %s\n"
+                  "* %s - %s\n"
                   (im-convert-jira-markup-to-org-mode .fields.description))
+                 key
                  .fields.summary))
         (jira-view-mode)
-        (setq header-line-format "Hit `&' to open in browser, `ge' to edit, `gr' to reload.")
+        (setq header-line-format "Hit `&' to open in browser, `ge' to edit, `gr' to reload, `ga' to see actions.")
         (setq-local jira-view-mode-ticket ticket)
         (org-set-property "STATUS" (or .fields.status.name "N/A"))
         (org-set-property "REPORTER" (or .fields.reporter.name "N/A"))
@@ -8093,6 +8247,37 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
                       (nth 2 zoom))))
       (message ">> Running %s" cmd)
       (shell-command cmd)))
+#+end_src
+** macOS calendar functions
+My work computer is a Mac. I synchronize my work calendar into my local by using macOS' Calendar app and I utilize [[https://hasseg.org/icalBuddy/][icalBuddy]] to interact with that calendar from Emacs.
+
+#+begin_src emacs-lisp
+  (defun im-calendar-now ()
+    "Show the current calendar item details in a buffer and open the
+  zoom link if it has one."
+    (interactive)
+    (im-shell-command
+     :command "icalBuddy -f -ea eventsNow"
+     :buffer-name "*calendar-now*"
+     :on-start (lambda (&rest _) (erase-buffer))
+     :on-finish (lambda (it)
+                  (when-let ((zoom (nth 1 (s-match "\\(https://.*zoom.us/j/.*\\)\\(\b\\|\n\\)" it))))
+                    (im-open-zoom-meeting-dwim zoom)))))
+
+  (defun im-calendar-today ()
+    "Show today's calendar in a buffer. The resulting buffer has
+  outline-mode enabled, so you can use outline-mode specific
+  bindings to jump, hide/show stuff."
+    (interactive)
+    (im-shell-command
+     :command "icalBuddy -f eventsToday"
+     :on-start (lambda (&rest _) (erase-buffer))
+     :on-finish (lambda (&rest _)
+                  (outline-mode)
+                  (setq-local outline-regexp "• ")
+                  (goto-char (point-min))
+                  (outline-cycle-buffer))
+     :buffer-name "*calendar-today*"))
 #+end_src
 * Operating system related
 ** Sound output chooser
