@@ -1478,6 +1478,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     "ov"  #'org-babel-expand-src-block
     "oq"  #'im-org-tree-to-indirect-buffer
     "oQ"  #'im-org-link-to-indirect-buffer
+    "o1"  #'im-show-outline-only
 
     ;; link stuff
     "oyi" #'org-copy-id
@@ -1485,9 +1486,6 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 
   (evil-leader/set-key
     "oyy" #'im-org-store-link-dwim
-    "oo"  #'org-open-at-point
-    "oO"  (λ-interactive (with-default-browser (call-interactively 'org-open-at-point)))
-
     "oa"  #'org-agenda
     "ow"  #'widen
 
@@ -1523,7 +1521,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
        (set-window-buffer nil source-buffer)
        ;; Newly opened indirect buffer is not focused automatically, we
        ;; fix that here:
-       (im-select-window-with-buffer (im-tap (format "%s::.*" (buffer-name target-buffer))))))
+       (im-select-window-with-buffer (format "%s::.*" (buffer-name target-buffer)))))
 
   (defun im-org-link-to-indirect-buffer ()
     "Open link at point on a new indirect buffer."
@@ -1535,6 +1533,15 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
          ((or "http" "https") (org-open-at-point))
          (_ (im-org-focused-tree-to-indirect-buffer
              (org-open-at-point)))))))
+
+  (defun im-show-outline-only ()
+    "Show all headers but hide all bodies."
+    (interactive)
+    (save-excursion
+      (goto-char (point-min))
+      (outline-next-heading)
+      (outline-show-branches)
+      (outline-hide-body)))
 #+end_src
 
 ** Personal files
@@ -1833,7 +1840,7 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
       "- %U %?")
      ("dn" "Daily note" item
       (file+function bullet-org im-org-capture--find-daily-notes)
-      "- %?"
+      "- %U %?"
       :prepend t)
      ("dN" "Daily note (for capturing from Signal)" item
       (file+function bullet-org im-org-capture--find-daily-notes)
@@ -2065,8 +2072,25 @@ Insert links/images more intelligently,
 
   (defun im-org-make-link-string (url)
     "Like `org-make-link-string' but fetches URL and extracts the
-  title automatically."
-    (org-make-link-string url (read-string "Title: " (im-url-get-title url))))
+  title automatically. Also adds author and duration info to
+  YouTube links."
+    (cond
+     ((im-youtube-link-extract-id url) (im-org-format-youtube-link url))
+     (t (org-link-make-string url (im-url-get-title url)))))
+
+  ;; YouTube related
+
+  (defun im-youtube-link-extract-id (link)
+    (nth 4 (s-match "https?://\\(www\\.\\)?\\(youtu\\.be\\|youtube.com\\)/\\(watch\\?v=\\)?\\([a-zA-Z0-9_-]+\\)\\(\\?\\|&\\)?/?" link)))
+
+  (defun im-org-format-youtube-link (link)
+    "Format given YouTube link as org-mode link.
+  Length, author, title etc. are appended to the link."
+    (let ((id (im-youtube-link-extract-id link)))
+      (let-alist (im-request (format "%s/videos/%s" empv-invidious-instance id))
+        (org-link-make-string
+         link
+         (format "%0.2f mins, by %s || %s" (/ .lengthSeconds 60.0) .author .title)))))
 #+end_src
 
 ** Insert image with width
@@ -2234,6 +2258,10 @@ This is a built-in mode for providing basic outlining features. Here are a few c
     (kbd "]]") #'outline-next-heading)
 #+end_src
 
+** debugger-mode
+#+begin_src emacs-lisp
+  (evil-set-initial-state 'debugger-mode 'normal)
+#+end_src
 ** eat & eshell
 #+begin_src emacs-lisp
   (setq eshell-history-size 10000)
@@ -3042,7 +3070,7 @@ Other complementary packages:
 #+begin_src emacs-lisp
   (use-package orderless
     :config
-    (setq completion-styles '(orderless))
+    (setq completion-styles '(orderless partial-completion basic))
     (setq completion-category-defaults nil)
     (setq completion-category-overrides '((file (styles partial-completion)))))
 
@@ -3490,7 +3518,10 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
 #+END_SRC
 
 ** corfu & corfu-doc & kind-icon & pcmpl-args & cape
-"~/trendyol-projects/emacs/straight/build/corfu/extensions"
+- When corfu popup is open
+  - M-SPC to insert a space to be able to filter with orderless.
+  - M-q to show an avy like quick selection keys.
+  - M-m to move completion items to mini-buffer (completing-read).
 #+BEGIN_SRC emacs-lisp
   (use-package corfu
     :straight (:files (:defaults "extensions/*.el"))
@@ -3500,6 +3531,15 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (setq corfu-auto t)
     (setq corfu-auto-prefix 2)
     (global-corfu-mode))
+
+  ;; This is useful because sometimes I just want to collect list of
+  ;; completions. With this I can use embark's collect functionality.
+  (defun corfu-move-to-minibuffer ()
+    (interactive)
+    (let ((completion-extra-properties corfu--extra)
+          completion-cycle-threshold completion-cycling)
+      (apply #'consult-completion-in-region completion-in-region--data)))
+  (define-key corfu-map "\M-m" #'corfu-move-to-minibuffer)
 
   (use-package corfu-quick
     :ensure nil
@@ -4422,6 +4462,15 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
     (setq wolfram-alpha-app-id im-wolfram-alpha-app-id)
     (evil-leader/set-key "iw" #'wolfram-alpha))
 #+end_src
+** writeroom-mode
+#+begin_src emacs-lisp
+  (use-package writeroom-mode
+    :config
+    (setq writeroom-fullscreen-effect 'maximized)
+    (setq writeroom-global-effects nil)
+    (setq writeroom-mode-line-toggle-position 'header-line-format)
+    (setq writeroom-width 81))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
@@ -4527,27 +4576,16 @@ Turkish dictionary.
 #+end_src
 *** Google translate
 #+begin_src emacs-lisp
-  (evil-leader/set-key
-    "T" #'im-google-translate-this)
+  (use-package go-translate :ensure t
+    :config
+    (setq gts-translate-list '(("en" "tr") ("tr" "en")))
+    (setq gts-default-translator
+          (gts-translator
+           :picker (gts-prompt-picker)
+           :engines (list (gts-bing-engine) (gts-google-engine) (gts-stardict-engine))
+           :render (gts-buffer-render))))
 
-  (defun im-google-translate-this (from to)
-    "Translate selected region or current word from FROM to TO.
-  Let's you edit the query beforehand.  Result is printed into minibuffer.
-  You need to install `translate-shell' to make this work."
-    (interactive
-     `(,(read-string "From: " "en") ,(read-string "To: " "tr")))
-    (let ((word (read-string
-                 "Translating: "
-                 (im-region-or 'word))))
-      (switch-to-buffer (generate-new-buffer (format "*translate: %s*" word)))
-      (insert word)
-      (shell-command-on-region
-       (point-min)
-       (point-max)
-       (format "trans %s:%s" from to)
-       nil
-       t)
-      (goto-char (point-min))))
+  (evil-leader/set-key "T" #'gts-do-translate)
 #+end_src
 
 ** string-inflection
@@ -4789,9 +4827,6 @@ Feed reader.
 Manage media and streams through =completing-read=.
 
 #+begin_src emacs-lisp
-  ;; Dependency of `empv-display-lyrics'
-  (use-package versuri)
-
   (use-package empv
     :straight (:host github :repo "isamert/empv.el")
     :config
@@ -4833,80 +4868,6 @@ Manage media and streams through =completing-read=.
        (--reduce (format "%s\n%s" acc it))
        (s-prepend "#EXTM3U\n")
        (insert))))
-#+end_src
-
-*** Lyrics manager for empv.el
-A function to search lyrics in Google and extract the lyrics from one of the found results. I'll eventually move this to upstream empv.el.
-
-#+begin_src emacs-lisp
-  (defvar empv-lyrics-folder "~/Documents/notes/data/lyrics/")
-
-  (defun im-empv-get-lyrics (&optional search?)
-    (interactive "P")
-    (empv--let-properties '(metadata media-title)
-      (let ((title (string-trim (or (empv--create-media-summary-for-notification .metadata) .media-title))))
-        (if search?
-            (w3m-search "google" (format "%s lyrics" title))
-          (message ">> Getting lyrics for '%s'..." title)
-          (im-get-lyrics title)))))
-
-  (defun im-get-lyrics (song)
-    (interactive "sSong name: ")
-    (f-mkdir-full-path empv-lyrics-folder)
-    (let ((fname (f-join empv-lyrics-folder (format "%s.lyrics" (downcase (im-string-url-case song))))))
-      (if (f-exists? fname)
-          (find-file-other-window fname)
-        (let ((links (-some->> (im--get-html (url-encode-url (format "https://google.com/search?q=%s lyrics" song)))
-                       ;; Find all the links in the response first
-                       (s-match-strings-all "\\bhttps://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]\\b")
-                       (mapcar #'car)
-                       (--map (string-trim-right it "&amp.*"))
-                       (-uniq))))
-          (if-let ((lyrics
-                    (-some->> links
-                      ;; Then find the first azlyrics|genius link
-                      ;; First part may be useful in the future
-                      (--first (s-matches? "\\(azlyrics.com/lyrics/\\|genius.com/.*-lyrics\\)" it))
-                      (im--get-html)
-                      ;; Extract the lyrics from the page
-                      (s-replace "" "")
-                      (s-replace "\n" "")
-                      ((lambda (it)
-                         (or
-                          (s-match "Sorry about that\\. -->\\(.*\\)<!-- MxM banner -->" it) ;; azlyrics
-                          (s-match "\\\\\"html\\\\\":\\\\\"\\(.*\\)\\\\\",\\\\\"children\\\\\":" it) ;; genius
-                          )))
-                      (nth 1)
-                      (s-replace-all '(("<br>" . "\n")
-                                       ("<br/>" . "\n")
-                                       ("<br />" . "\n")
-                                       ("\\n" . "\n")
-                                       ("<div>" . "")
-                                       ("</div>" . "")
-                                       ("\\" . "")
-                                       ("\"" . "")
-                                       ("&#x27;" . "'")))
-                      (s-replace "\n\n" "\n")
-                      (s-trim)
-                      ;; Clear all remaning html tags
-                      (replace-regexp-in-string "<[^>]*>" ""))))
-              (progn
-                (write-region lyrics nil fname)
-                (im-get-lyrics song))
-            (progn
-              (browse-url (completing-read (format "Links for '%s': " song) links))
-              (user-error ">> Lyrics not found for '%s'." song)))))))
-
-  (defun im--get-html (url)
-    (let ((result nil))
-      (request url
-        :parser 'buffer-string
-        :headers '(("User-Agent" . "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:108.0) Gecko/20100101 Firefox/108.0"))
-        :sync t
-        :success (cl-function
-                  (lambda (&key data &allow-other-keys)
-                    (setq result data))))
-      result))
 #+end_src
 
 ** orgmdb (movies & shows)
@@ -6913,9 +6874,16 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
 
 #+begin_src emacs-lisp
   (defun im-contacts--build-contact-item (template-string contact-property)
-    (if-let ((stuff (org-entry-get nil contact-property)))
-        (concat (format template-string stuff) "\n")
-      ""))
+    (cond
+     ((s-contains? "$1" contact-property)
+      (->>
+       (org-entry-properties)
+       (--filter (s-matches? (s-replace "$1" ".*" contact-property) (car it)))
+       (--map (let ((subprop (nth 1 (s-match (s-replace "$1" "\\([a-zA-Z0-9_-]+\\)" contact-property) (car it)))))
+                (concat (format (s-replace "$1" subprop template-string) (cdr it)) "\n")))))
+     (t (if-let ((stuff (org-entry-get nil contact-property)))
+            (concat (format template-string stuff) "\n")
+          ""))))
 
   (defun im-contacts--contact-entry? ()
     (thread-last
@@ -6940,12 +6908,10 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
              `("BEGIN:VCARD\nVERSION:2.1\n"
                ,(format "UID:urn:uuid:%s\n" (org-id-get nil t))
                ,(im-contacts--build-contact-item "FN:%s" "ITEM")
-               ,(im-contacts--build-contact-item "TEL;CELL:%s" "PHONE")
-               ,(im-contacts--build-contact-item "TEL;WORK:%s" "PHONE_WORK")
+               ,@(im-contacts--build-contact-item "TEL;$1:%s" "PHONE_$1")
                ,(im-contacts--build-contact-item "EMAIL:%s" "EMAIL")
                ,(im-contacts--build-contact-item "ORG:%s" "GROUP")
-               ,(im-contacts--build-contact-item "ADR;HOME:;;%s" "ADDRESS_HOME")
-               ,(im-contacts--build-contact-item "ADR;WORK:;;%s" "ADDRESS_WORK")
+               ,@(im-contacts--build-contact-item "ADR;$1:;;%s" "ADDRESS_$1")
                ,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
                "END:VCARD")
              "")))
@@ -8223,12 +8189,15 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
     "Like normal jump-to-definition functionality but jumps to my
   literate config instead of tangled real definition. Pretty dumb
   but works most of the time."
-    (interactive (list (im-region-or 'symbol)))
+    (interactive (list (read-string "Symbol: " (im-region-or 'symbol))))
     (with-current-buffer (find-file-noselect "~/Workspace/projects/dotfiles/emacs/index.org")
-      (save-excursion
-        (goto-char (point-min))
-        (when (ignore-errors (re-search-forward (format "\\((def.*\\) %s" symbol)))
-          (org-edit-special)))))
+      (org-save-outline-visibility nil
+        (save-restriction
+          (save-excursion
+            (org-show-all)
+            (goto-char (point-min))
+            (when (re-search-forward (format "\\((def.*\\) %s" symbol nil t))
+              (call-interactively #'org-edit-special)))))))
 
   (define-key embark-symbol-map (kbd "J") 'im-jump-to-definition-at-config)
 #+end_src
@@ -8278,6 +8247,31 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
                   (goto-char (point-min))
                   (outline-cycle-buffer))
      :buffer-name "*calendar-today*"))
+#+end_src
+** im-clipboard-image-to-text
+#+begin_src emacs-lisp
+  (defalias 'im-clipboard-tesseract-ocr-text #'im-clipboard-image-to-text)
+  (defun im-clipboard-image-to-text ()
+    (interactive)
+    (let ((temp-image (make-temp-file "tesseract-image" nil ".png"))
+          (temp-text (make-temp-file "tesseract-text"))
+          (buffer (get-buffer-create "*ocr-result*")))
+      (im-save-clipboard-image-to-file temp-image)
+      (set-process-sentinel
+       (start-process "*tesseract-ocr*" nil "tesseract" temp-image temp-text)
+       (lambda (proc out)
+         (if (and
+              (eq 'exit (process-status proc))
+              (eq 0 (process-exit-status proc)))
+             (progn
+               (with-current-buffer buffer
+                 (erase-buffer)
+                 (insert (format "[[%s]]\n\n\n" temp-image))
+                 (insert-file-contents (concat temp-text ".txt"))
+                 (iimage-mode))
+               (switch-to-buffer buffer))
+           (message "*tesseract-ocr*: %s" (string-trim out)))))))
+
 #+end_src
 * Operating system related
 ** Sound output chooser

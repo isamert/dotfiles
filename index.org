@@ -194,10 +194,11 @@ Installation and enabling are done through homebrew:
 #+begin_src sh :tangle (when-darwin "~/.config/yabai/yabairc")
   #!/bin/bash
 
-  yabai -m config mouse_follows_focus  on
+  yabai -m config mouse_follows_focus  off
   yabai -m config layout               bsp
   yabai -m config window_gap           6
 
+  yabai -m rule --add app=CopyQ  manage=off
   yabai -m rule --add app=Emacs  manage=off
   yabai -m rule --add app=choose manage=off
   yabai -m rule --add app=iTerm  manage=off
@@ -968,7 +969,7 @@ Unfortunately, this file is (also) not sourced by GDM at login. So I'm sourcing 
 You can add completion files under =$HOME/.config/zsh/completions= and zsh will pick them up automatically. This should be one of the first things that appear in ~.zshrc~.
 
 #+begin_src bash :tangle ~/.zshrc
-  fpath=($HOME/.config/zsh/completions $fpath)
+  export fpath=($HOME/.config/zsh/completions $fpath)
 #+end_src
 
 To rebuild completions, if something is not right, use the following:
