@@ -2001,8 +2001,7 @@ Org does not provide an easy way to copy link at point. Here is a fix for that:
            (url (org-element-property :path link))
            (url (when (and type url (not (s-blank? url))) (concat type ":" url))))
       (when (called-interactively-p 'any)
-        (kill-new url)
-        (message (concat "Copied URL: " url)))
+        (message (concat "Copied URL: " (im-kill url))))
       url))
 
   (defun im-org-store-link-dwim ()
