@@ -93,15 +93,15 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   ;; Install straight.el
   (defvar bootstrap-version)
   (let ((bootstrap-file
-         (expand-file-name "straight/repos/straight.el/bootstrap.el" straight-base-dir))
-        (bootstrap-version 5))
+	 (expand-file-name "straight/repos/straight.el/bootstrap.el" (or (ignore-errors straight-base-dir) user-emacs-directory))
+	(bootstrap-version 5))
     (unless (file-exists-p bootstrap-file)
       (with-current-buffer
-          (url-retrieve-synchronously
-           "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-           'silent 'inhibit-cookies)
-        (goto-char (point-max))
-        (eval-print-last-sexp)))
+	  (url-retrieve-synchronously
+	   "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+	   'silent 'inhibit-cookies)
+	(goto-char (point-max))
+	(eval-print-last-sexp)))
     (load bootstrap-file nil 'nomessage))
 
   ;; Install use-package
@@ -1172,6 +1172,7 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'help)
     (evil-collection-init 'imenu-list)
     (evil-collection-init 'custom)
+    (evil-collection-init 'xwidget)
     <<evil-unimpaired>>)
 #+end_src
 ** evil-unimpaired
@@ -2866,8 +2867,10 @@ Note that it's not possible to stage hunks with =vc=.
 #+BEGIN_SRC emacs-lisp
   (use-package magit
     :config
-    (define-advice magit-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
-    (define-advice magit-branch-and-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
+    (advice-add #'magit-checkout :after #'vc-refresh-state)
+    (advice-add #'magit-branch-and-checkout :after #'vc-refresh-state)
+    (advice-add #'vc-switch-branch :after #'vc-refresh-state)
+    (advice-add #'vc-create-branch :after #'vc-refresh-state)
 
     (evil-leader/set-key
       "gs" 'magit-status
@@ -2876,11 +2879,11 @@ Note that it's not possible to stage hunks with =vc=.
       "gp" 'magit-pull
       "gP" 'magit-push
       "gr" 'magit-reset
-      "gcc" 'magit-checkout
-      "gcf" 'magit-file-checkout
+      "gcc" 'vc-switch-branch
       "gB" 'vc-annotate ;; Git Blame
       "gR" 'vc-refresh-state
-      "gb" 'magit-branch))
+      "gbc" 'vc-create-branch
+      "gbb" 'magit-branch))
 #+END_SRC
 
 *** git-timemachine
@@ -3159,7 +3162,10 @@ Other complementary packages:
 - After doing ~project-switch-project~, you are expected to hit a key to trigger a project action, like finding a file in the project or doing a project grep. You need to add these actions into ~project-switch-commands~ list and you need to define a key in ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by given key.
 
 #+begin_src emacs-lisp
-  (evil-leader/set-key "p" (λ-interactive (project-switch-project (im-current-project-root))))
+  (evil-leader/set-key "p" (λ-interactive
+                            (if-let (root (im-current-project-root))
+                                (project-switch-project root)
+                              (call-interactively #'project-switch-project))))
 
   (setq project-switch-commands
         '((project-find-file "Find file")
@@ -3260,7 +3266,7 @@ Some key points:
     :config
     (advice-add #'register-preview :override #'consult-register-window)
 
-    (setq consult-preview-key (kbd "M-,"))
+    (setq consult-preview-key "M-,")
     ;; ^ When you do M-, on a candidate, it previews it
 
     (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
@@ -3374,7 +3380,7 @@ I also add a source for listing all of my projects:
   (defvar im-consult-source-projects
     (list
      :name     "Projects"
-     :narrow   ?P
+     :narrow   ?a
      :hidden   nil
      :category 'file
      :action  (lambda (it &rest _) (project-switch-project it))
@@ -6053,24 +6059,45 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
 #+begin_src emacs-lisp
   (setq tab-line-close-button-show 'selected)
   (setq tab-line-tabs-function #'im-tab-line-buffers)
-  ;; (global-tab-line-mode)
+  (global-tab-line-mode)
 
-  (defvar im-tab-line-hidden-buffer-name-regexp "\\*\\(Slack.*\\|Calc.*\\|elfeed-log\\|helpful.*\\|Compile-Log\\|Help\\)\\*\\|magit.*"
+  (defvar im-tab-line-hidden-buffer-name-regexp
+    (concat
+     "\\*\\(Calc.*\\|Calendar\\|elfeed-log\\|helpful.*\\|Compile-Log\\|Help\\|lsp-log\\)\\*"
+     "\\|magit.*"
+     "\\|slack-curl-downloader"
+     "\\|.*-ls\\*"
+     "\\|.*stderr\\*"
+     "")
     "Regexp to filter out buffer names on tab line.")
 
   (defun im-tab-line-buffers ()
     "Return releated project buffers (not limited to files, shells
   etc.) to display in tab-line."
-    (let ((proj (or (im-current-project-root)
-                    (expand-file-name default-directory))))
+    (let* ((proj (or (im-current-project-root)
+                     (expand-file-name default-directory)))
+           (buffer-name (buffer-name))
+           (buffer-filter (if (s-matches? "^\\*\\|\\$" buffer-name)
+                              (apply-partially #'im-tab-line--buffer-same-group? buffer-name)
+                            (apply-partially #'im-tab-line--buffer-same-project? proj))))
       (seq-sort-by
        #'buffer-name #'string<
        (seq-filter (lambda (b)
                      (with-current-buffer b
-                       (and
-                        (not (s-matches? im-tab-line-hidden-buffer-name-regexp (buffer-name b)))
-                        (s-starts-with? proj (expand-file-name default-directory)))))
+                       (and (im-tab-line--buffer-valid?)
+                            (funcall buffer-filter))))
                    (funcall tab-line-tabs-buffer-list-function)))))
+
+  (defun im-tab-line--buffer-valid? ()
+    (not (s-matches? im-tab-line-hidden-buffer-name-regexp (buffer-name))))
+
+  (defun im-tab-line--buffer-same-project? (project-dir)
+    (and
+     (s-prefix? project-dir (expand-file-name default-directory))
+     (not (s-matches? "^\\*\\|\\$" (buffer-name)))))
+
+  (defun im-tab-line--buffer-same-group? (orig-buffer-name)
+    (s-prefix? (substring orig-buffer-name 0 4) (buffer-name)))
 #+end_src
 
 ** bufler
