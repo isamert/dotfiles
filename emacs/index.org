@@ -2483,7 +2483,13 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
     ;; Re-direct direct-jump calls to dirvish
     (dirvish-override-dired-mode)
-    (evil-leader/set-key "ed" #'dired))
+    (evil-leader/set-key "ed" #'dired)
+
+    (setq dirvish-side-width 50)
+    (evil-define-key 'normal 'global
+      (kbd "M-f") #'dirvish-side)
+
+    (add-hook 'dired-mode-hook #'(lambda () (visual-line-mode -1))))
 #+end_src
 ** image-mode
 I want to be able to kill image buffers with simply hitting =q=. This does that.
@@ -2725,7 +2731,7 @@ To sync it automatically:
             (".*stackoverflow.com.*" . (lambda (link &rest _) (im-open-stackoverflow-link link)))
             (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv-play link)))
             (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
-            (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . (lambda (link &rest _) (funcall browse-url-secondary-browser-function link)))
+            (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . (lambda (link &rest _) (xwidget-webkit-browse-url link)))
             ("." . w3m-goto-url))))
 #+end_src
 
@@ -2772,48 +2778,6 @@ To sync it automatically:
     :config
     (evil-define-key 'insert 'shell-mode-map (kbd "C-l") #'comint-clear-buffer))
 #+end_src
-
-** treemacs
-#+BEGIN_SRC emacs-lisp
-  (use-package treemacs
-    :defer t
-    :config
-    (setq treemacs-show-hidden-files nil
-          treemacs-width 34
-          treemacs-space-between-root-nodes nil
-          treemacs-indentation 2)
-    (add-to-list 'treemacs-ignored-file-predicates (lambda (filename abspath) (string-equal filename "node_modules")))
-
-    (evil-define-key 'treemacs treemacs-mode-map
-      ;; Treemacs has it's own mode, named treemacs.
-      (kbd "M-f") 'treemacs
-      (kbd "M-l") 'evil-window-right
-      (kbd "\\") 'treemacs-visit-node-horizontal-split
-      (kbd "-") 'treemacs-visit-node-vertical-split
-      (kbd "W") 'treemacs-switch-workspace
-      (kbd "E") 'treemacs-edit-workspaces
-      (kbd "l") 'treemacs-TAB-action
-      (kbd "h") 'treemacs-TAB-action
-      (kbd "D") 'treemacs-delete
-      (kbd "]]") 'treemacs-next-neighbour
-      (kbd "[[") 'treemacs-previous-neighbour
-      (kbd "]p") 'treemacs-next-project
-      (kbd "[p") 'treemacs-previous-project
-      (kbd "zm") 'treemacs-collapse-all-projects
-      (kbd "za") 'treemacs-toggle-node
-      (kbd "s") 'avy-goto-word-1
-      (kbd "S") 'avy-goto-char-2
-      (kbd "gl") 'avy-goto-line)
-
-    (evil-define-key 'normal 'global
-      (kbd "M-f") #'treemacs))
-
-  (use-package treemacs-evil
-    :after treemacs evil)
-
-  (use-package treemacs-magit
-    :after treemacs magit)
-#+END_SRC
 
 ** which-key
 A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options. I made a few adjustment so that it's more compact and you can see full function names (most of the time) and it shows up at the top center instead of bottom left corner. This mostly eliminates the need for creating a [[Hydra]].
@@ -3178,8 +3142,8 @@ Other complementary packages:
   (define-key project-prefix-map "g" #'im-consult-ripgrep)
   (add-to-list 'project-switch-commands `(im-consult-ripgrep "Grep"))
 
-  (define-key project-prefix-map "H" #'git-link-homepage)
-  (add-to-list 'project-switch-commands `(git-link-homepage "Git Homepage"))
+  (define-key project-prefix-map "H" #'im-git-link-homepage)
+  (add-to-list 'project-switch-commands `(im-git-link-homepage "Git Homepage"))
 
   (define-key project-prefix-map "D" #'dired-jump)
   (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
@@ -3196,8 +3160,8 @@ Other complementary packages:
   (define-key project-prefix-map "!" #'im-project-shell-command)
   (add-to-list 'project-switch-commands `(im-project-shell-command "Run shell command"))
 
-  (define-key project-prefix-map "t" #'im-project-shell)
-  (add-to-list 'project-switch-commands `(im-project-shell "terminal"))
+  (define-key project-prefix-map "t" #'multi-vterm-project)
+  (add-to-list 'project-switch-commands `(multi-vterm-project "terminal"))
 
   (define-key project-prefix-map "F" #'im-select-any-project-file)
   (add-to-list 'project-switch-commands `(im-select-any-project-file "All project files"))
@@ -3211,6 +3175,11 @@ Other complementary packages:
     (interactive)
     (let ((default-directory (project-root (project-current t))))
       (call-interactively #'im-shell-command)))
+
+  (defun im-git-link-homepage ()
+    (interactive)
+    (let ((default-directory (project-root (project-current t))))
+      (call-interactively #'git-link-homepage)))
 
   (defvar im-project-shell-last-height 15)
   (defvar im-project-shell-last-window nil)
@@ -3731,11 +3700,13 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
 
   (use-package vterm
     :config
-    (evil-define-key 'insert vterm-mode-map (kbd "C-r") #'vterm-send-C-r) ;; FIXME wtf
-    (evil-define-key 'insert vterm-mode-map (kbd "M-\\") (λ-interactive (vterm-send-key "\\" nil t nil)))
-    (evil-define-key 'insert vterm-mode-map (kbd "M--") (λ-interactive (vterm-send-key "-" nil t nil)))
-    (evil-define-key 'insert vterm-mode-map (kbd "C-c") #'vterm-send-C-c)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-x") #'vterm-send-C-x)
+    (evil-define-key 'insert vterm-mode-map
+      (kbd "C-r") #'vterm--self-insert
+      (kbd "M-\\") #'vterm--self-insert
+      (kbd "M--") #'vterm--self-insert
+      (kbd "C-c") #'vterm--self-insert
+      (kbd "C-x") #'vterm--self-insert)
+
     (evil-leader/set-key
       "tj" 'im-jump-to-visible-term
       "tl" 'im-run-last-command-on-visible-term
@@ -3744,6 +3715,13 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (setq vterm-kill-buffer-on-exit t)
     (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
     (add-hook 'vterm-mode-hook #'evil-emacs-state))
+
+  (use-package multi-vterm
+    :config
+    (evil-leader/set-key
+      "tt" #'multi-vterm-dedicated-toggle
+      "tn" #'multi-vterm-project
+      "td" #'multi-vterm))
 #+END_SRC
 
 *** Utility functions
@@ -3753,8 +3731,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (save-buffer)
     (or
      (im-with-visible-buffer ".*vterm.*"
-       (term-send-up)
-       (term-send-return)
+       (vterm-send-up)
+       (vterm-send-return)
        t)
      (im-with-visible-buffer ".*eshell.*"
        (insert (ring-ref eshell-history-ring 0))
@@ -3763,8 +3741,8 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (defun im-run-command-on-visible-term (cmd)
     (or
      (im-with-visible-buffer ".*vterm.*"
-       (term-send-string cmd)
-       (term-send-return)
+       (vterm-send-string cmd)
+       (vterm-send-return)
       t)
      (im-with-visible-buffer ".*eshell.*"
        (insert cmd)
@@ -4467,14 +4445,14 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
     (setq wolfram-alpha-app-id im-wolfram-alpha-app-id)
     (evil-leader/set-key "iw" #'wolfram-alpha))
 #+end_src
-** writeroom-mode
+** xwidget-webkit & xwwp
 #+begin_src emacs-lisp
-  (use-package writeroom-mode
+  (use-package xwwp
+    :straight (:host github :repo "BlueFlo0d/xwwp" :files (:defaults "*.el"))
     :config
-    (setq writeroom-fullscreen-effect 'maximized)
-    (setq writeroom-global-effects nil)
-    (setq writeroom-mode-line-toggle-position 'header-line-format)
-    (setq writeroom-width 81))
+    (require 'xwwp-ace)
+    (evil-define-key '(normal insert) xwidget-webkit-mode-map
+      (kbd "f") #'xwwp-ace-toggle))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
@@ -4584,6 +4562,7 @@ Turkish dictionary.
   (use-package go-translate :ensure t
     :config
     (setq gts-translate-list '(("en" "tr") ("tr" "en")))
+    (setq gts-buffer-follow-p t)
     (setq gts-default-translator
           (gts-translator
            :picker (gts-prompt-picker)
@@ -4652,16 +4631,16 @@ Turkish dictionary.
   (defun sp-wrap-underscore () (interactive) (sp-wrap-with-pair "_"))
 #+end_src
 
-** COMMENT writeroom-mode
+** writeroom-mode
 Gives you a nice, uncluttered editing experience by removing all unneeded visual clutter and by justifying the text in the middle.
-- =SPC W= to enable it.
 
-#+begin_src
+#+begin_src emacs-lisp
   (use-package writeroom-mode
     :config
-    (setq writeroom-width 150) ;; Better for org-mode
-    (evil-leader/set-key
-      "W" 'writeroom-mode))
+    (setq writeroom-fullscreen-effect 'maximized)
+    (setq writeroom-global-effects nil)
+    (setq writeroom-mode-line-toggle-position 'header-line-format)
+    (setq writeroom-width 81))
 #+end_src
 
 * Dummy IDE mode
@@ -4673,7 +4652,7 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
   - ~devdocs-lookup~ to open a documentation.
 - <<dumb-jump>> :: Jumps to definition by using predefined-regexps, generally works fine. Use =gd=.
   - To debug why it's not working: M-x ~set-variable dumb-jump-debug t~, then go to *Messages* buffer.
-- <<tree-sitter>> :: This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting for some languages. Especially for JS/TS and Rust. See [[https://ubolonton.github.io/emacs-tree-sitter/][this page]] for more information.
+- <<treesit>> :: This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting for some languages. Especially for JS/TS and Rust.
 - <<hl-todo>> :: Highlight TODO/FIXME etc.
   - Use ~]t~ and ~[t~ to go next/prev TODO/FIXME item.
 
@@ -4708,13 +4687,9 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
           highlight-thing-ignore-list '("False" "True" "->" "::" "defun" "def"))
     (add-hook 'prog-mode-hook 'highlight-thing-mode))
 
-  (use-package tree-sitter
-    :config
-    (global-tree-sitter-mode)
-    (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
-
-  (use-package tree-sitter-langs
-    :after tree-sitter)
+  ;; Call treesit-auto-install-all
+  (use-package  treesit-auto
+    :straight (:host github :repo "renzmann/treesit-auto"))
 
   (use-package hl-todo
     :hook (prog-mode . hl-todo-mode)
@@ -5036,7 +5011,9 @@ Keybindings are generally set in-place, following have no context, so they are h
     (editorconfig-mode 1))
 #+end_src
 
-*** Get currently focused function name
+*** TODO Get currently focused function name
+Needs to be fixed for new treesitter.
+
 #+begin_src emacs-lisp
   (defun im-refactor-debug-log-text ()
     "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
@@ -5069,83 +5046,6 @@ Keybindings are generally set in-place, following have no context, so they are h
                          (tsc-get-child-by-field curr-node :name))))
         (setq curr-node (tsc-get-parent curr-node)))
         curr-node))
-
-
-  ;; Experimenting with tree sitter, ts-ls already provides this feature:
-
-  (defun im-refactor-move-function-out ()
-    ""
-    (interactive)
-    (let ((curr-indent nil)
-          (curr-func (im-get-current-func-node))
-          (new-func-name (read-string "New function name: ")))
-      (kill-region (region-beginning) (region-end))
-      (goto-char (tsc-node-end-position curr-func))
-      (setq curr-indent (current-indentation))
-      (insert "\n\n")
-      (insert (make-string curr-indent ? ))
-      (pcase (tsc-node-type curr-func)
-        ('method_definition (insert (format "%s ()  {\n" new-func-name))
-                            (insert (make-string curr-indent ? ))
-                            (yank)
-                            (insert (make-string curr-indent ? ))
-                            (insert "}"))
-        ('function_declaration (insert "function FUN_NAME () {\n")
-                               (insert (make-string curr-indent ? ))
-                               (yank)
-                               (insert (make-string curr-indent ? ))
-                               (insert "\n}"))
-        (_ (insert "const FUN_NAME =  () => {\n")
-           (insert (make-string curr-indent ? ))
-           (insert "}"))))
-
-    (forward-line -1)
-    (message "%s"
-             (-difference (-uniq (mapcar #'tsc-node-text (jsdoc--tsc-find-descendants-with-type (im-get-current-func-node) 'identifier)))
-                          (--map (tsc-node-text (tsc-get-child-by-field it :name))  (jsdoc--tsc-find-descendants-with-type (im-get-current-func-node) 'variable_declarator)))))
-#+end_src
-*** Move between functions mode
-This minor mode makes =[[= and =]]= move between functions, if tree sitter is enabled otherwise default evil bindings are used.
-
-#+begin_src emacs-lisp
-  (define-minor-mode im-jump-between-functions-mode
-    "Jump between functions."
-    :lighter "jump-fns"
-    :keymap (make-sparse-keymap))
-
-  (evil-define-minor-mode-key 'normal 'im-jump-between-functions-mode
-    (kbd "[[") #'im-goto-prev-function
-    (kbd "]]") #'im-goto-next-function)
-
-  (add-hook 'tree-sitter-mode-hook #'im-jump-between-functions-mode)
-
-  (defun im-goto-next-function ()
-    "Go to next function."
-    (interactive)
-    (->>
-     (or (im-get-current-func-node)
-         (tree-sitter-node-at-point))
-     (tsc-get-next-sibling)
-     (tsc-node-start-position)
-     (goto-char)))
-
-  (defun im-goto-prev-function ()
-    "Go to previous function."
-    (interactive)
-    (let* ((curr-func (im-get-current-func-node))
-           (curr-func-line (ignore-errors
-                             (car (tsc-node-start-point curr-func)))))
-      (cond
-       ((eq curr-func-line (line-number-at-pos))
-        (goto-char (tsc-node-start-position (tsc-get-prev-sibling curr-func))))
-       (curr-func
-        (goto-char (tsc-node-start-position curr-func)))
-       (t
-        (goto-char
-         (->>
-          (tree-sitter-node-at-point)
-          (tsc-get-prev-sibling)
-          (tsc-node-start-position)))))))
 #+end_src
 ** Refactoring (emr)
 #+begin_src emacs-lisp
@@ -5297,12 +5197,12 @@ The following enables =CamelCase= aware editing operations.
     "Insert a `console.log' line for currently focused variable."
     (interactive)
     (let ((curr-indent)
-          (node (tsc-get-child-by-field
+          (node (treesit-node-child-by-field-name
                  (car (jsdoc--tsc-find-descendants-with-type
-                       (tsc-get-parent (tree-sitter-node-at-point))
-                       'variable_declarator))
-                 :name)))
-      (goto-char (tsc-node-end-position node))
+                       (treesit-node-parent (treesit-node-at (point)))
+                       "variable_declarator"))
+                 "name")))
+      (goto-char (treesit-node-end node))
       (end-of-line)
       (setq curr-indent (current-indentation))
       (insert "\n")
@@ -5313,7 +5213,7 @@ The following enables =CamelCase= aware editing operations.
         (im-refactor-debug-log-text)
         (->>
          node
-         (tsc-node-text)
+         (treesit-node-text)
          (s-split "\n")
          (-map #'s-trim)
          (s-join " "))))))
@@ -5331,7 +5231,9 @@ The following enables =CamelCase= aware editing operations.
     (add-hook 'tsx-mode-hook #'im-add-node-modules-to-path))
 #+end_src
 
-*** REPL interaction
+*** TODO REPL interaction
+Needs to be fixed for new treesitter.
+
 #+begin_src emacs-lisp
   (evil-leader/set-key-for-mode 'typescript-mode
     ";" #'im-ts-send-expression-to-repl)
@@ -5496,7 +5398,12 @@ The following enables =CamelCase= aware editing operations.
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-java
     :after lsp
-    :config (add-hook 'java-mode-hook 'lsp))
+    :config
+    (setq-default c-basic-offset 4)
+    ;; ^ This is required for java-ts-mode, otherwise it fails for some reason.
+    ;; https://github.com/emacs-lsp/lsp-mode/issues/3135#issuecomment-933539371
+    (add-hook 'java-mode-hook 'lsp)
+    (add-hook 'java-ts-mode-hook 'lsp))
 #+END_SRC
 
 ** clojure
@@ -6066,6 +5973,9 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
      "\\*\\(Calc.*\\|Calendar\\|elfeed-log\\|helpful.*\\|Compile-Log\\|Help\\|lsp-log\\)\\*"
      "\\|magit.*"
      "\\|slack-curl-downloader"
+     "\\|slack-log"
+     "\\|slack-event-log"
+     "\\|dir-data"
      "\\|.*-ls\\*"
      "\\|.*stderr\\*"
      "")
@@ -8167,13 +8077,15 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
   (defun im-narrow-dwim ()
     "Smart narrowing."
     (interactive)
-    ;; TODO narrow to defun for tree-sitter languages (at least for
-    ;; typescript and javascript)
     (cond
      ((use-region-p) (narrow-to-region (region-beginning) (region-end)))
      ((eq major-mode 'org-mode) (org-narrow-to-subtree))
      ((eq major-mode 'markdown-mode) (markdown-narrow-to-subtree))
-     ((eq major-mode 'emacs-lisp-mode) (narrow-to-defun))))
+     ((eq major-mode 'emacs-lisp-mode) (narrow-to-defun))
+     ((s-contains? "-ts-" (symbol-name major-mode))
+      (when-let (def (treesit-defun-at-point))
+        (narrow-to-region (treesit-node-start def)
+                          (treesit-node-end def))))))
 #+end_src
 ** im-meme-downloader
 #+begin_src emacs-lisp
