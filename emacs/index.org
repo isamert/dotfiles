@@ -93,15 +93,15 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   ;; Install straight.el
   (defvar bootstrap-version)
   (let ((bootstrap-file
-	 (expand-file-name "straight/repos/straight.el/bootstrap.el" (or (ignore-errors straight-base-dir) user-emacs-directory))
-	(bootstrap-version 5))
+         (expand-file-name "straight/repos/straight.el/bootstrap.el" (or (ignore-errors straight-base-dir) user-emacs-directory)))
+        (bootstrap-version 5))
     (unless (file-exists-p bootstrap-file)
       (with-current-buffer
-	  (url-retrieve-synchronously
-	   "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-	   'silent 'inhibit-cookies)
-	(goto-char (point-max))
-	(eval-print-last-sexp)))
+          (url-retrieve-synchronously
+           "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+           'silent 'inhibit-cookies)
+        (goto-char (point-max))
+        (eval-print-last-sexp)))
     (load bootstrap-file nil 'nomessage))
 
   ;; Install use-package
@@ -539,7 +539,7 @@ This function is for doing easy REST calls and it uses plists for everything bec
   (cl-defun im-request
       (endpoint
        &rest params
-       &key (-type "GET") (-headers) (-data) (-params) (-async?) (-success)
+       &key (-type "GET") (-headers) (-data) (-params) (-async?) (-success) (-raw)
        &allow-other-keys)
     "Like `request' but plist and JSON oriented. JSON responses are
   automatically parsed, query parameters are constructed from
@@ -572,14 +572,13 @@ This function is for doing easy REST calls and it uses plists for everything bec
                     (lambda (&key data &allow-other-keys)
                       ...use the parsed json DATA...)))
   "
-
     (declare (indent defun))
     (let (json
           (json-object-type 'alist)
           (json-array-type #'list)
           (json-key-type 'symbol))
       ;; Remove request related items from params list
-      (dolist (key '(:-type :-headers :-data :-params :-async? :-success))
+      (dolist (key '(:-type :-headers :-data :-params :-async? :-success :-raw))
         (cl-remf params key))
 
       (request
@@ -590,7 +589,7 @@ This function is for doing easy REST calls and it uses plists for everything bec
                   ((and -headers (json-alist-p -headers)) -headers)
                   ((and -headers (json-plist-p -headers)) (transient-plist-to-alist -headers))
                   (t nil))
-        :parser #'json-read
+        :parser (if -raw #'buffer-string #'json-read)
         :success (if -async?
                      -success
                    (cl-function
@@ -1087,6 +1086,8 @@ Some small packages that enriches editing experience visually. I don't enable al
     (setq evil-want-keybinding nil)
     ;; C-i interferes with TAB key, so disable it
     (setq evil-want-C-i-jump nil)
+    ;; This generally confuses me.
+    (setq evil-jumps-cross-buffers nil)
     ;; Disable evil bindings in insert mode. This needs to be called
     ;; before loading evil mode...
     (setq evil-disable-insert-state-bindings t)
@@ -1563,6 +1564,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (defconst temp-org "~/Documents/notes/temp.org")
   (defconst passwords-org "~/Documents/notes/passwords.org")
   (defconst engineering-org "~/Documents/notes/engineering.org")
+  (defconst netherlands-org "~/Documents/notes/netherlands.org")
 
   ;; Put archive files under an archive/ directory
   ;; I don't want them to pollute my directory
@@ -1570,7 +1572,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (setq org-directory "~/Documents/notes")
   (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
-  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org ,life-org))
+  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org ,life-org ,netherlands-org))
 
   ;; With the following, I can call functions defined inside this file in other org files
   (org-babel-lob-ingest "~/Documents/notes/utils.org")
@@ -1602,6 +1604,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (sql . t)
      (http . t)
      (dot . t)
+     (gnuplot . t)
      (plantuml . t)))
 
   ;; Don't ask permissions for evaluating code blocks
@@ -2831,10 +2834,10 @@ Note that it's not possible to stage hunks with =vc=.
 #+BEGIN_SRC emacs-lisp
   (use-package magit
     :config
-    (advice-add #'magit-checkout :after #'vc-refresh-state)
-    (advice-add #'magit-branch-and-checkout :after #'vc-refresh-state)
-    (advice-add #'vc-switch-branch :after #'vc-refresh-state)
-    (advice-add #'vc-create-branch :after #'vc-refresh-state)
+    (define-advice magit-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
+    (define-advice magit-branch-and-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
+    (define-advice vc-create-branch (:after (&rest _) refresh-vc-state) (vc-refresh-state))
+    (define-advice vc-switch-branch (:after (&rest _) refresh-vc-state) (vc-refresh-state))
 
     (evil-leader/set-key
       "gs" 'magit-status
@@ -2926,7 +2929,7 @@ A nice, fast minibuffer narrowing framework. It works well with quite a lot of p
 - Also see [[embark]].
 
 Keybindings:
-- =SPC hl= to repeat/open last vertico window you closed.
+- =SPC 0= to repeat/open last vertico window you closed.
 
 Some shortcuts you can use on any vertico window:
 - =M-{n,p}= goes {back,forward} in minibuffer history.
@@ -4088,7 +4091,7 @@ Simple mode for editing =~/.Xmodmap= file.
     (ignore-errors (slack-ws-close))
     (ignore-errors (slack-team-delete))
     (slack-register-team
-     :name "trendyol"
+     :name ty-slack-name
      :token ty-slack-token
      :cookie ty-slack-cookie
      :subscribed-channels ty-slack-channels)
@@ -4447,12 +4450,23 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
 #+end_src
 ** xwidget-webkit & xwwp
 #+begin_src emacs-lisp
+  (use-package ctable)
+
   (use-package xwwp
     :straight (:host github :repo "BlueFlo0d/xwwp" :files (:defaults "*.el"))
     :config
     (require 'xwwp-ace)
+    (require 'xwwp-history)
     (evil-define-key '(normal insert) xwidget-webkit-mode-map
-      (kbd "f") #'xwwp-ace-toggle))
+      ;; TODO: F → xwwp-ace-new-tab-toggle?
+      (kbd "f") #'xwwp-ace-toggle
+      (kbd "^") (λ-interactive (browse-url (xwidget-webkit-uri (xwidget-webkit-current-session))))
+      (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function (xwidget-webkit-uri (xwidget-webkit-current-session))))
+      (kbd "o") #'xwwp))
+
+  (defun im-w3m-open-in-xwebkit ()
+    (interactive nil w3m-mode)
+    (xwwp w3m-current-url))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
@@ -4815,7 +4829,7 @@ Manage media and streams through =completing-read=.
     (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music/")
     (setq empv-allow-insecure-connections t)
-    (setq empv-invidious-instance "https://vid.puffyan.us/api/v1")
+    (setq empv-invidious-instance "https://yt.femboy.hu/api/v1")
     ;; ^ see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
     (add-to-list 'empv-mpv-args "--save-position-on-quit")
@@ -5022,14 +5036,14 @@ Needs to be fixed for new treesitter.
 
   (defun im-current-func-name ()
     (if-let ((fn-node (im-get-current-func-node)))
-        (tsc-node-text (tsc-get-child-by-field fn-node :name))
+        (treesit-node-text (treesit-node-child-by-field-name fn-node :name))
       (which-function)))
 
   (defun im-get-current-func-node ()
     "Return currently focused function node."
     (let ((curr-func nil)
           (curr-node (ignore-errors
-                       (tree-sitter-node-at-point))))
+                       (treesit-node-at (point)))))
       ;; Find first function declaration or definition
       (while (and curr-node
                   (not (-contains? '(method_definition ;; JS
@@ -5037,15 +5051,15 @@ Needs to be fixed for new treesitter.
                                      arrow_function ;; JS
                                      function_item ;; Rust
                                      )
-                                   (tsc-node-type curr-node))))
-        (setq curr-node (tsc-get-parent curr-node)))
+                                   (treesit-node-type curr-node))))
+        (setq curr-node (treesit-node-parent curr-node)))
 
       ;; Find first named object of the found function definition
       (while (and curr-node
                   (not (ignore-errors
-                         (tsc-get-child-by-field curr-node :name))))
-        (setq curr-node (tsc-get-parent curr-node)))
-        curr-node))
+                         (treesit-node-child-by-field-name curr-node :name))))
+        (setq curr-node (treesit-node-parent curr-node)))
+      curr-node))
 #+end_src
 ** Refactoring (emr)
 #+begin_src emacs-lisp
@@ -5220,55 +5234,46 @@ The following enables =CamelCase= aware editing operations.
 #+end_src
 ** typescript
 #+begin_src emacs-lisp
-  (use-package typescript-mode
-    :config
-    ;; Create a tsx mode based on ts mode and make tree-sitter use tsx
-    ;; parser for that mode
-    (define-derived-mode tsx-mode typescript-mode "typescript-tsx")
-    (add-to-list 'auto-mode-alist (cons (rx ".tsx" string-end) #'tsx-mode))
-    (setf (alist-get 'tsx-mode tree-sitter-major-mode-language-alist) 'tsx)
-    (add-hook 'typescript-mode-hook #'im-add-node-modules-to-path)
-    (add-hook 'tsx-mode-hook #'im-add-node-modules-to-path))
+  (add-hook 'typescript-ts-mode-hook #'im-add-node-modules-to-path)
+  (add-hook 'tsx-ts-mode-hook #'im-add-node-modules-to-path)
 #+end_src
 
-*** TODO REPL interaction
-Needs to be fixed for new treesitter.
-
+*** REPL interaction
 #+begin_src emacs-lisp
-  (evil-leader/set-key-for-mode 'typescript-mode
+  (evil-leader/set-key-for-mode 'typescript-ts-mode
     ";" #'im-ts-send-expression-to-repl)
   (evil-leader/set-key-for-mode 'js-mode
     ";" #'im-ts-send-expression-to-repl)
 
-  (defun im-tsc-find-parent-with-type (node wanted-type)
+  (defun im-treesit-find-parent-with-type (node wanted-type)
     "Get first parent of NODE where parents type is WANTED-TYPE."
     (let ((curr-node node)
           (curr-type nil))
       (while (and curr-node (not (equal curr-type wanted-type)))
-        (setq curr-node (tsc-get-parent curr-node))
-        (setq curr-type (when curr-node (tsc-node-type curr-node))))
+        (setq curr-node (treesit-node-parent curr-node))
+        (setq curr-type (when curr-node (treesit-node-type curr-node))))
       curr-node))
 
   (defun im-ts-current-expression ()
     "Get smallest meaningful expression (as something that can be
   sent to REPL)."
-    (let* ((current-node (tree-sitter-node-at-point))
+    (let* ((current-node (treesit-node-at (point)))
            (getter (lambda (it)
-                     (when-let (node (im-tsc-find-parent-with-type current-node (car it)))
+                     (when-let (node (im-treesit-find-parent-with-type current-node (car it)))
                        (if (numberp (cdr it))
-                           (tsc-get-nth-child node (cdr it))
+                           (treesit-node-child node (cdr it))
                          node)))))
       (->>
-       '((variable_declarator . 2)
-         (expression_statement . 0)
-         (function_declaration)
-         (interface_declaration)
-         (enum_declaration)
-         (import_statement)
-         (class_declaration))
+       '(("variable_declarator" . 2)
+         ("expression_statement" . 0)
+         ("function_declaration")
+         ("interface_declaration")
+         ("enum_declaration")
+         ("import_statement")
+         ("class_declaration"))
        (-find getter)
        (funcall getter)
-       (tsc-node-text))))
+       (treesit-node-text))))
 
   (defun im-ts--import-absolute (expr)
     (if-let ((matches (s-match "^\\(import .* \\)'\\.\\(.*\\)'\\(;\\)?$" expr)))
@@ -5342,7 +5347,11 @@ Needs to be fixed for new treesitter.
                     (buffer-string))))
       (when (and (called-interactively-p 'interactive)
                  (not replace))
-        (message ">> %s" (s-trim result)))
+        (if (>= (max-mini-window-lines) (length (s-lines result)))
+            (message ">> %s" (s-trim result))
+          (with-current-buffer (get-buffer-create "*nodejs-result*")
+            (switch-to-buffer-other-window (current-buffer))
+            (insert result))))
       (cond
        ((and replace (use-region-p))
         (delete-region (region-beginning) (region-end))
@@ -5372,7 +5381,11 @@ Needs to be fixed for new treesitter.
                     (buffer-string))))
       (when (and (called-interactively-p 'interactive)
                  (not replace))
-        (message ">> %s" (s-trim result)))
+        (if (>= (max-mini-window-lines) (length (s-lines result)))
+            (message ">> %s" (s-trim result))
+          (with-current-buffer (get-buffer-create "*nodejs-result*")
+            (switch-to-buffer-other-window (current-buffer))
+            (insert result))))
       (cond
        ((and replace (use-region-p))
         (delete-region (region-beginning) (region-end))
@@ -5966,6 +5979,8 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
 #+begin_src emacs-lisp
   (setq tab-line-close-button-show 'selected)
   (setq tab-line-tabs-function #'im-tab-line-buffers)
+  (setq tab-line-tab-name-function #'tab-line-tab-name-truncated-buffer)
+  (setq tab-line-tab-name-truncated-max 25)
   (global-tab-line-mode)
 
   (defvar im-tab-line-hidden-buffer-name-regexp
@@ -6045,15 +6060,19 @@ Good for buffer management, especially for groupped killings.
     (split-window-right)
     (other-window 1))
 
-  (defun im-print-buffer-file-info ()
-    (interactive)
-    (let ((proj-name (im-current-project-name))
-          (proj-path (or (im-current-project-root) (expand-file-name "~/")))
-          (fpath (or (buffer-file-name) (buffer-name))))
-      (message "[%s] %s (%s)"
+  (defun im-print-buffer-file-info (&optional kill-file-path)
+    (interactive "P")
+    (let* ((proj-name (im-current-project-name))
+           (proj-path (or (im-current-project-root) (expand-file-name "~/")))
+           (fpath (or (buffer-file-name) (buffer-name)))
+           (fpath-pretty (string-replace (expand-file-name "~") "~" fpath)))
+      (message "[%s] %s (%s)\n%s"
                (propertize proj-name 'face 'bold)
                (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic))
-               (im-human-readable-size (buffer-size)))))
+               (im-human-readable-size (buffer-size))
+               (format "%s%s" (if kill-file-path (propertize "Copied: " 'face 'bold) "") fpath-pretty))
+      (when kill-file-path
+        (im-kill fpath-pretty))))
 #+end_src
 ** Keybindings
 #+begin_src emacs-lisp
@@ -6422,9 +6441,9 @@ Good for buffer management, especially for groupped killings.
 
   (defun im-jira--get-issue-template (issue-type)
     (pcase issue-type
-      ("Story" "*Motivation*\n\n\n*Description*\n\n\n*Acceptance Criteria*\n\n\n*Projects*\n\n\n*Has Automation Test?*\n\n\n*Links (UI/UX, Analysis etc.)*\n\n")
-      ("Sprint Development Bug" "*Description*\n\n\n*Case*\n\n\n*Projects*\n\n")
-      ("Production Bug" "*Description*\n\n\n*Steps*\n\n\n*Projects*\n\n\n*Incident Excel*\n\n\n*Links - SS - Video*\n\n")))
+      ("Story" "** Motivation\n\n\n** Description\n\n\n** Acceptance Criteria\n\n\n**Projects\n\n\n** Has Automation Test?\n\n\n** Links (UI/UX, Analysis etc.)\n\n")
+      ("Sprint Development Bug" "** Description\n\n\n**Case\n\n\n** Projects\n\n")
+      ("Production Bug" "** Description\n\n\n** Steps\n\n\n** Projects\n\n\n** Incident Excel\n\n\n** Links - SS - Video\n\n")))
 
   (defun im-jira--create-branch-name-from-ticket (issue-name)
     "Create a branch name from given Jira ISSUE-NAME"
@@ -6631,19 +6650,27 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
        title
        content
        url-to-open)
+    "Send a notification to my phone."
     (interactive
      (list :title (im-read-string "Title: ")
            :content (im-read-string "Content: ")
            :url-to-open (im-read-string "URL(?): ")))
-    "Send a notification to my phone."
-    (im-send-termux-command
-     "termux-notification"
-     "--title"
-     title
-     "--content"
-     (or content "")
-     "--action"
-     (format "termux-open %s" url-to-open)))
+    (set-process-sentinel
+     (start-process
+      "gotify" "*gotify-out*"
+      "gotify" "push" (format "--title='%s'" title) (format "--clickUrl='%s'" url-to-open) content)
+     (lambda (proc text)
+       (message "here %s %s" (process-exit-status proc) text)
+       ;; Try sending notification through termux if gotify fails
+       (unless (eq (process-exit-status proc) 0)
+         (im-send-termux-command
+          "termux-notification"
+          "--title"
+          title
+          "--content"
+          (or content "")
+          "--action"
+          (format "termux-open %s" url-to-open))))))
 
   (defun im-send-text-to-my-phone (text)
     "Send TEXT to my phones clipboard. This only works if the phone
@@ -7988,6 +8015,8 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
 #+end_src
 ** Kafka
 #+begin_src emacs-lisp
+  ;; TODO rewrite this using kafkactl
+  ;; Also add functions like `im-kafka-switch-context' etc.
   (defun im-kafka-describe-consumer-group ()
     (interactive)
     ;; `im-select-kafka-consumers' is a private function that
@@ -8210,6 +8239,23 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
                (switch-to-buffer buffer))
            (message "*tesseract-ocr*: %s" (string-trim out)))))))
 
+#+end_src
+** Update all git projects
+#+begin_src emacs-lisp
+  ;; TODO: switch to master/main before if head is not dirty?
+  (defun im-pull/update-all-projects ()
+    "Pull all projects."
+    (interactive)
+    (--map
+     (let ((fname (f-filename it))
+           (default-directory it))
+       (set-process-sentinel
+        (start-process (format "*git-pull-%s*" fname) nil "git" "pull" "--rebase")
+        (lambda (proc _code)
+          (if (eq (process-exit-status proc) 0)
+              (message ">> Pulled %s on branch '%s'." fname (let ((default-directory it)) (lab-git-current-branch)))
+            (message ">> Failed to pull %s, exit code is %s." fname (process-exit-status proc))))))
+     (im-all-project-roots)))
 #+end_src
 * Operating system related
 ** Sound output chooser
