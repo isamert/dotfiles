@@ -2789,11 +2789,12 @@ A package that shows key combinations. (for example press C-x and wait) It also 
   (use-package which-key
     :diminish which-key-mode
     :config
-    (setq which-key-min-display-lines 5)
-    (setq which-key-max-display-columns 5)
+    (setq which-key-min-display-lines 1)
+    (setq which-key-max-display-columns 1)
     (setq which-key-max-description-length 70)
+    (setq which-key-show-docstrings t)
     (setq which-key-idle-delay 0.5)
-    (setq which-key-sort-order #'which-key-description-order)
+    (setq which-key-sort-order #'which-key-prefix-then-key-order)
     (which-key-mode))
 
   (unless (eq system-type 'darwin)
@@ -2801,14 +2802,14 @@ A package that shows key combinations. (for example press C-x and wait) It also 
     (use-package which-key-posframe
       :after (which-key mini-frame)
       :diminish
-      :straight (:host github :repo "yanghaoxie/which-key-posframe")
+      :straight (:host github :repo "emacsorphanage/which-key-posframe")
       :config
       (set-face-attribute 'which-key-posframe nil :background "#373b43")
       (set-face-attribute 'which-key-posframe-border nil :background "#373b43")
       ;; Obtained the "#373b43" by calling `(mini-frame-get-background-color)'
 
-      (setq which-key-posframe-border-width 12)
-      (setq which-key-posframe-poshandler 'posframe-poshandler-frame-top-center)
+      (setq which-key-posframe-border-width 15)
+      (setq which-key-posframe-poshandler 'posframe-poshandler-frame-center)
       (which-key-posframe-mode)))
 #+END_SRC
 
@@ -3606,7 +3607,8 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
            (kotlin-mode . lsp)
            (rust-mode . lsp)
            (go-mode . lsp)
-           (java-mode . lsp))
+           (java-mode . lsp)
+           (java-ts-mode . lsp))
     :config
     (setq lsp-completion-provider :none) ;; for corfu
     (setq lsp-enable-xref t)
@@ -3668,12 +3670,6 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     :commands lsp-ui-mode
     :config
     (setq lsp-ui-sideline-show-code-actions nil))
-
-  (use-package lsp-treemacs
-    :after (lsp-mode)
-    :commands lsp-treemacs
-    :config
-    (lsp-treemacs-sync-mode 1))
 
   ;; I don't really use this, but it may come handy later
   ;; (use-package dap-mode
@@ -4703,7 +4699,9 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
 
   ;; Call treesit-auto-install-all
   (use-package  treesit-auto
-    :straight (:host github :repo "renzmann/treesit-auto"))
+    :straight (:host github :repo "renzmann/treesit-auto")
+    :config
+    (global-treesit-auto-mode))
 
   (use-package hl-todo
     :hook (prog-mode . hl-todo-mode)
@@ -5415,8 +5413,13 @@ The following enables =CamelCase= aware editing operations.
     (setq-default c-basic-offset 4)
     ;; ^ This is required for java-ts-mode, otherwise it fails for some reason.
     ;; https://github.com/emacs-lsp/lsp-mode/issues/3135#issuecomment-933539371
-    (add-hook 'java-mode-hook 'lsp)
-    (add-hook 'java-ts-mode-hook 'lsp))
+    )
+
+  (defun im-lsp-java-find-lombok-jar ()
+    (expand-file-name (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>))))
+
+  (when-let (lombok (im-lsp-java-find-lombok-jar))
+    (add-to-list 'lsp-java-vmargs (concat "-javaagent:" lombok)))
 #+END_SRC
 
 ** clojure
@@ -7439,8 +7442,7 @@ Here I define two important functions and their helpers.  The following function
     "to" 'im-toggle-side-temp-org-buffer
     "th" 'im-toggle-side-bullet-org-buffer
     "tp" 'im-toggle-side-projects-buffer
-    "tm" 'im-toggle-side-messages-buffer
-    "tf" 'treemacs)
+    "tm" 'im-toggle-side-messages-buffer)
 #+end_src
 
 ** org-babel extension functions
@@ -7463,7 +7465,9 @@ Here I define two important functions and their helpers.  The following function
     (interactive "nHow many spaces do you want? ")
     (setq-local tab-width n)
     (setq-local c-basic-offset n)
+    (setq-local sh-basic-offset n)
     (setq-local coffee-tab-width n) ; coffeescript
+    (setq-local java-ts-mode-indent-offset n)
     (setq-local javascript-indent-level n) ; javascript-mode
     (setq-local js-indent-level n) ; js-mode
     (setq-local web-mode-markup-indent-offset n) ; web-mode, html tag in html file
@@ -7477,7 +7481,9 @@ Here I define two important functions and their helpers.  The following function
     (interactive "nHow many spaces do you want? ")
     (setq tab-width n)
     (setq c-basic-offset n)
+    (setq sh-basic-offset n)
     (setq coffee-tab-width n) ; coffeescript
+    (setq java-ts-mode-indent-offset n)
     (setq javascript-indent-level n) ; javascript-mode
     (setq js-indent-level n) ; js-mode
     (setq web-mode-markup-indent-offset n) ; web-mode, html tag in html file
