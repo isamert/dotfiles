@@ -534,12 +534,12 @@ Restart your machine.
 *** Generic configuration
 #+name: kmonad-device
 #+begin_src emacs-lisp
-  (let ((external-kbd "/dev/input/by-id/usb-Microsoft_Microsoft®_2.4GHz_Transceiver_v9.0-event-kbd")
-        (x220-kbd "/dev/input/by-path/platform-i8042-serio-0-event-kbd"))
+  (let ((usb-kbd (car (file-expand-wildcards "/dev/input/by-path/usb*kbd")))
+        (onboard-kbd (car (file-expand-wildcards "/dev/input/by-path/platform*kbd"))))
     (cond
      ((eq system-type 'darwin) "(iokit-name)")
-     ((file-exists-p external-kbd) (format "(device-file \"%s\")" external-kbd))
-     ((file-exists-p x220-kbd) (format "(device-file \"%s\")" x220-kbd))))
+     ((and usb-kbd (file-exists-p usb-kbd)) (format "(device-file \"%s\")" usb-kbd))
+     ((and onboard-kbd (file-exists-p onboard-kbd)) (format "(device-file \"%s\")" onboard-kbd))))
 #+end_src
 
 #+name: kmonad-cfg
