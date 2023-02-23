@@ -5438,10 +5438,10 @@ The following enables =CamelCase= aware editing operations.
     )
 
   (defun im-lsp-java-find-lombok-jar ()
-    (expand-file-name (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>))))
+    (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>)))
 
   (when-let (lombok (im-lsp-java-find-lombok-jar))
-    (add-to-list 'lsp-java-vmargs (concat "-javaagent:" lombok)))
+    (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok))))
 #+END_SRC
 
 ** clojure
