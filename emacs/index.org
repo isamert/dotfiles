@@ -4452,17 +4452,39 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
     :straight (:host github :repo "BlueFlo0d/xwwp" :files (:defaults "*.el"))
     :config
     (require 'xwwp-ace)
-    (require 'xwwp-history)
     (evil-define-key '(normal insert) xwidget-webkit-mode-map
       ;; TODO: F → xwwp-ace-new-tab-toggle?
       (kbd "f") #'xwwp-ace-toggle
       (kbd "^") (λ-interactive (browse-url (xwidget-webkit-uri (xwidget-webkit-current-session))))
       (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function (xwidget-webkit-uri (xwidget-webkit-current-session))))
-      (kbd "o") #'xwwp))
+      (kbd "o") #'im-xwidget-webkit-open
+      (kbd "O") (λ-interactive (im-xwidget-webkit-open (read-string "URL: " (xwidget-webkit-uri (xwidget-webkit-current-session)))))
+      (kbd "t") (λ-interactive (im-xwidget-webkit-open (read-string "URL: ") :new-session))
+      (kbd "T") (λ-interactive (im-xwidget-webkit-open (read-string "URL: " (xwidget-webkit-uri (xwidget-webkit-current-session))) :new-session))))
 
-  (defun im-w3m-open-in-xwebkit ()
+  (defun im-w3m-open-in-xwidget-webkit ()
     (interactive nil w3m-mode)
     (xwwp w3m-current-url))
+
+  (defun evil-collection-xwidget-webkit-new-tab (url)
+    "New tab (new buffer) of URL."
+    (interactive "s(New Tab) xwidget-webkit URL: ")
+    (xwidget-webkit-browse-url url :new-session))
+
+
+  (defmemoizefile im-xwidget-webkit-history () "~/.emacs.d/im-browser-history"
+    (mapcar
+     (lambda (project) (cons project (jiralib2-get-users project)))
+     (mapcar #'car im-jira-projects)))
+
+  (defun im-xwidget-webkit-open (url &optional new-session)
+    (interactive "sURL: ")
+    (xwidget-webkit-browse-url
+     (if (or (s-match "^\\(https?\\|file\\)://\||www." url)
+             (s-match "\\.\\(org\\|net\\|com\\)$" url))
+         url
+       (concat eww-search-prefix url))
+     new-session))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
