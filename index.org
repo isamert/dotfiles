@@ -535,7 +535,7 @@ Restart your machine.
 #+name: kmonad-device
 #+begin_src emacs-lisp
   (let ((usb-kbd (car (file-expand-wildcards "/dev/input/by-path/usb*kbd")))
-        (onboard-kbd (car (file-expand-wildcards "/dev/input/by-path/platform*kbd"))))
+        (onboard-kbd (car (file-expand-wildcards "/dev/input/by-id/usb*kbd"))))
     (cond
      ((eq system-type 'darwin) "(iokit-name)")
      ((and usb-kbd (file-exists-p usb-kbd)) (format "(device-file \"%s\")" usb-kbd))
