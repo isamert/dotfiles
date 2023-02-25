@@ -1167,10 +1167,12 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'git-timemachine)
     (evil-collection-init 'calendar)
     (evil-collection-init 'w3m)
+    (evil-collection-init 'eww)
     (evil-collection-init 'vc-git)
     (evil-collection-init 'vc-dir)
     (evil-collection-init 'vc-annotate)
     (evil-collection-init 'help)
+    (evil-collection-init 'Custom)
     (evil-collection-init 'imenu-list)
     (evil-collection-init 'custom)
     (evil-collection-init 'xwidget)
@@ -2726,6 +2728,7 @@ To sync it automatically:
       (kbd "Y") #'im-w3m-yank-url
       (kbd "f") #'im-w3m-avy-link)
     (setq w3m-fill-column 80)
+    (setq w3m-default-display-inline-images t)
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
           '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
@@ -2739,7 +2742,6 @@ To sync it automatically:
 #+end_src
 
 *** Extras
-
 #+begin_src emacs-lisp
   (defun im-w3m-all-anchor-points (&optional start end)
     "Return all anchor points for current w3m buffer.
