@@ -373,6 +373,12 @@ Create the host key and enable starting it at boot:
   «mk-launchagent(name="sshd", args='("/usr/sbin/sshd" "-f" "${HOME}/.config/sshd/cfg"))»
 #+end_src
 
+To enable it, run this:
+
+#+begin_src sh
+  launchctl load -w ~/Library/LaunchAgents/net.isamert.sshd.plist
+#+end_src
+
 ** Start some applications at login
 #+begin_src text :tangle ~/Library/LaunchAgents/net.isamert.kdeconnect.plist
   «mk-launchagent(name="kdeconnect", args='("/Applications/kdeconnect-indicator.app/Contents/MacOS/kdeconnect-indicator"))»
