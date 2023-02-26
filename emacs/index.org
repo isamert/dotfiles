@@ -4707,23 +4707,6 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
     :config
     (evil-leader/set-key "id" #'devdocs-lookup))
 
-  (use-package highlight-thing
-    :after evil
-    :config
-    (setq-default evil-symbol-word-search t)
-    ;; ^ highlight-thing highlights symbols, not words. # and * searches for
-    ;; symbols if you set this to true, otherwise they search for words.
-
-    (add-hook
-     'highlight-thing-mode-hook
-     #'(lambda () (set-face-attribute 'highlight-thing nil :background "dark violet" :foreground "white")))
-    ;; ^ Default one with my theme makes some text quite unreadable
-
-    (setq highlight-thing-prefer-active-region nil
-          ;; ^ Don't highlight the selected text in visual mode
-          highlight-thing-ignore-list '("False" "True" "->" "::" "defun" "def"))
-    (add-hook 'prog-mode-hook 'highlight-thing-mode))
-
   ;; Call treesit-auto-install-all
   (use-package  treesit-auto
     :straight (:host github :repo "renzmann/treesit-auto")
@@ -4743,6 +4726,56 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
     (evil-define-key 'normal 'global
       (kbd "]t") #'hl-todo-next
       (kbd "[t") #'hl-todo-previous))
+#+end_src
+
+** highlight-thing
+#+begin_src emacs-lisp
+  (use-package highlight-thing
+    :after evil
+    :config
+    (setq-default evil-symbol-word-search t)
+    ;; ^ highlight-thing highlights symbols, not words. # and * searches for
+    ;; symbols if you set this to true, otherwise they search for words.
+
+    (add-hook
+     'highlight-thing-mode-hook
+     #'(lambda () (set-face-attribute 'highlight-thing nil :background "dark violet" :foreground "white")))
+    ;; ^ Default one with my theme makes some text quite unreadable
+
+    (setq highlight-thing-prefer-active-region nil
+          ;; ^ Don't highlight the selected text in visual mode
+          highlight-thing-ignore-list '("False" "True" "->" "::" "defun" "def"))
+    ;; I'm experimenting with manual highlighting
+    ;; (global-highlight-thing-mode)
+    )
+
+  (setq
+   hi-lock-face-defaults
+   '("hi-salmon" "hi-aquamarine" "hi-blue" "hi-yellow" "hi-pink" "hi-green" "hi-black-b" "hi-blue-b" "hi-red-b" "hi-green-b" "hi-black-hb"))
+
+  (defun im-highlight-thing-at-point-dwim ()
+    "Hightlight or unhighlight current symbol or selection."
+    (interactive)
+    (cond
+     ((--any?
+       (-contains? hi-lock-face-defaults
+                   (symbol-name it))
+       (-flatten (list (plist-get (text-properties-at (point)) 'face))))
+      (unhighlight-regexp
+       (if (use-region-p)
+           (regexp-quote (buffer-substring-no-properties (region-beginning) (region-end)))
+         (hi-lock-regexp-okay (find-tag-default-as-symbol-regexp)))))
+     ((use-region-p)
+      (highlight-regexp
+       (regexp-quote (buffer-substring-no-properties (region-beginning) (region-end))))
+      (deactivate-mark))
+     ((thing-at-point 'symbol)
+      (hi-lock-face-symbol-at-point))
+     (t (unhighlight-regexp t))))
+
+  (evil-define-key 'normal 'global
+    (kbd "M-h") #'im-highlight-thing-at-point-dwim
+    (kbd "M-H") (λ-interactive (unhighlight-regexp t)))
 #+end_src
 
 * Media/feed/IRC
