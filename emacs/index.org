@@ -5386,38 +5386,53 @@ The following enables =CamelCase= aware editing operations.
     ;; I've created two functions above for the variations
     (setq jsons-path-printer 'jsons-print-path-jq))
 
+  (defvar im-nodejs-runner-preface
+    "const R = require(\"ramda\");")
+
+  (defun im--run-x-on-json (result interactive? &optional replace)
+    "Run given EXPRESSION with nodejs on JSON and return the result.
+  If REPLACE is non-nil, then clear the buffer or current
+  selection and insert the result.
+
+  When called with prefix argument, REPLACE becomes non-nil."
+    (when (and interactive?
+               (not replace))
+      (if (>= (max-mini-window-lines) (length (s-lines result)))
+          (message ">> %s" (s-trim result))
+        (with-current-buffer (get-buffer-create "*nodejs-result*")
+          (switch-to-buffer-other-window (current-buffer))
+          (insert result))))
+    (cond
+     ((and replace (use-region-p))
+      (delete-region (region-beginning) (region-end))
+      (insert result))
+     (replace
+      (erase-buffer)
+      (insert result)))
+    result)
+
+  (defun im--read-json-and-expression ()
+    (list
+     (if (use-region-p)
+         (buffer-substring-no-properties (region-beginning) (region-end))
+       (read-string "JSON: "))
+     (read-string "Expression: ")
+     current-prefix-arg))
+
   (defun im-run-jq-on-json (json expression &optional replace)
     "Run given EXPRESSION with jq on JSON and return the result.
   If REPLACE is non-nil, then clear the buffer or current
   selection and insert the result.
 
   When called with prefix argument, REPLACE becomes non-nil."
-    (interactive
-     (list
-      (if (use-region-p)
-          (buffer-substring-no-properties (region-beginning) (region-end))
-        (read-string "JSON: "))
-      (read-string "Expression: ")
-      current-prefix-arg))
-    (let ((result (with-temp-buffer
-                    (insert json)
-                    (shell-command-on-region (point-min) (point-max) (format "jq -r \"%s\"" jq) nil 't)
-                    (buffer-string))))
-      (when (and (called-interactively-p 'interactive)
-                 (not replace))
-        (if (>= (max-mini-window-lines) (length (s-lines result)))
-            (message ">> %s" (s-trim result))
-          (with-current-buffer (get-buffer-create "*nodejs-result*")
-            (switch-to-buffer-other-window (current-buffer))
-            (insert result))))
-      (cond
-       ((and replace (use-region-p))
-        (delete-region (region-beginning) (region-end))
-        (insert result))
-       (replace
-        (erase-buffer)
-        (insert result)))
-      result))
+    (interactive (im--read-json-and-expression))
+    (im--run-x-on-json
+     (with-temp-buffer
+       (insert json)
+       (shell-command-on-region (point-min) (point-max) (format "jq -r \"%s\"" expression) nil 't)
+       (buffer-string))
+     (called-interactively-p 'interactive)
+     replace))
 
   (defun im-run-nodejs-on-json (json expression &optional replace)
     "Run given EXPRESSION with nodejs on JSON and return the result.
@@ -5425,33 +5440,17 @@ The following enables =CamelCase= aware editing operations.
   selection and insert the result.
 
   When called with prefix argument, REPLACE becomes non-nil."
-    (interactive
-     (list
-      (if (use-region-p)
-          (buffer-substring-no-properties (region-beginning) (region-end))
-        (read-string "JSON: "))
-      (read-string "Expression: ")
-      current-prefix-arg))
-    (let ((result (with-temp-buffer
-                    (insert (format "const it = %s;" json))
-                    (insert (format "JSON.stringify(%s, null, 2)" expression))
-                    (shell-command-on-region (point-min) (point-max) "node -p" nil 't)
-                    (buffer-string))))
-      (when (and (called-interactively-p 'interactive)
-                 (not replace))
-        (if (>= (max-mini-window-lines) (length (s-lines result)))
-            (message ">> %s" (s-trim result))
-          (with-current-buffer (get-buffer-create "*nodejs-result*")
-            (switch-to-buffer-other-window (current-buffer))
-            (insert result))))
-      (cond
-       ((and replace (use-region-p))
-        (delete-region (region-beginning) (region-end))
-        (insert result))
-       (replace
-        (erase-buffer)
-        (insert result)))
-      result))
+    (interactive (im--read-json-and-expression))
+    (im--run-x-on-json
+     (with-temp-buffer
+       (insert im-nodejs-runner-preface)
+       (insert "\n")
+       (insert (format "const it = %s;" json))
+       (insert (format "JSON.stringify(%s, null, 2)" expression))
+       (shell-command-on-region (point-min) (point-max) "node -p" nil 't)
+       (buffer-string))
+     (called-interactively-p 'interactive)
+     replace))
 
   ;; Add execution ability to json blocks inside org-mode. Either add
   ;; `:jq some-jq-query' or `:node it.accessor' to code block's header
