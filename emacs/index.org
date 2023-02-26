@@ -4471,17 +4471,6 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
     (interactive nil w3m-mode)
     (xwwp w3m-current-url))
 
-  (defun evil-collection-xwidget-webkit-new-tab (url)
-    "New tab (new buffer) of URL."
-    (interactive "s(New Tab) xwidget-webkit URL: ")
-    (xwidget-webkit-browse-url url :new-session))
-
-
-  (defmemoizefile im-xwidget-webkit-history () "~/.emacs.d/im-browser-history"
-    (mapcar
-     (lambda (project) (cons project (jiralib2-get-users project)))
-     (mapcar #'car im-jira-projects)))
-
   (defun im-xwidget-webkit-open (url &optional new-session)
     (interactive "sURL: ")
     (xwidget-webkit-browse-url
