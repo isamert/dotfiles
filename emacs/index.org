@@ -5584,23 +5584,29 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
   (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'im-describe-thing-in-popup)
   (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'im-describe-thing-in-popup)
 
-  ;; https://emacs.stackexchange.com/questions/2777/how-to-get-the-function-help-without-typing
+  (defvar im-describe-thing-posframe-point nil)
+  (defun im-describe-thing--remove-posframe (&rest _)
+    (unless (eq (point) im-describe-thing-posframe-point)
+      (posframe-hide "*im-describe*")
+      (remove-hook 'post-command-hook #'im-describe-thing--remove-posframe)))
+
   (defun im-describe-thing-in-popup ()
     (interactive)
     (let* ((thing (symbol-at-point))
            (help-xref-following t)
            (description (save-window-excursion
-                          (with-temp-buffer
-                            (help-mode)
-                            (help-xref-interned thing)
-                            (buffer-string)))))
-      (flycheck-inline-hide-errors)
-      (popup-tip description
-                 :point (point)
-                 :around t
-                 :height 65
-                 :scroll-bar t
-                 :margin t)))
+                          (helpful-symbol thing)
+                          (buffer-string))))
+      (posframe-hide-all)
+      (posframe-show
+       "*im-describe*"
+       :string description
+       :poshandler #'posframe-poshandler-frame-top-right-corner
+       :border-width 10
+       :max-width 80
+       :background-color (mini-frame-get-background-color))
+      (setq im-describe-thing-posframe-point (point))
+      (add-hook 'post-command-hook #'im-describe-thing--remove-posframe)))
 #+end_src
 
 *** Pretty stuff
