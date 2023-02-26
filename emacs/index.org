@@ -2343,6 +2343,54 @@ Look at [[id:0B508237-3BBE-416A-A6AD-31C5C78340DB][Aliases]] section in my confi
   #eshell clear='clear 1'
 #+end_src
 
+*** Automatically print notes for given directory
+I have the file ~im-autodir-file~ which contains notes for directories, like in the following format:
+
+#+begin_src org :tangle no
+  ,* ~/a/directory
+  Here are my notes for the directory...
+
+  ,* ~/another/directory: This one contains some source code
+  Use the following to compile this:
+  ...
+#+end_src
+
+When I enter any of the listed directories, eshell automatically prints out my notes.
+
+#+begin_src elisp
+  (defvar im-autodir-file "~/Documents/notes/directory-notes.org")
+  (defvar im-autodir-last-doc nil)
+
+  (defun im-eshell-handle-dir-change ()
+    (let ((dir (expand-file-name default-directory)))
+      (setq im-autodir-last-doc
+            (with-current-buffer (find-file-noselect im-autodir-file)
+              (catch 'found
+                (org-map-entries
+                 (lambda ()
+                   (when (->>
+                          (org-entry-get nil "ITEM")
+                          (s-split ":")
+                          (car)
+                          (file-name-as-directory)
+                          (expand-file-name)
+                          (equal dir))
+                     (throw 'found (buffer-substring-no-properties
+                                    (org-element-property :contents-begin (org-element-at-point))
+                                    (org-element-property :contents-end (org-element-at-point))))))
+                 "LEVEL=1")
+                nil)))
+      (when im-autodir-last-doc
+        (insert "im-autodir-show-doc")
+        (eshell-send-input))))
+
+  (defun im-autodir-show-doc ()
+    im-autodir-last-doc)
+
+  (add-hook 'eshell-directory-change-hook #'im-eshell-handle-dir-change)
+  ;; eshell-directory-change-hook is not get triggered when eshell is opened, hence:
+  (add-hook 'eshell-mode-hook #'im-eshell-handle-dir-change)
+#+end_src
 ** bookmark.el
 You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult-bookmark~ and calling ~embark-act~ on them to view/delete/edit given bookmark might be easier.
 
