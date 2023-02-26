@@ -4517,12 +4517,12 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
 
   (defun im-w3m-open-in-xwidget-webkit ()
     (interactive nil w3m-mode)
-    (xwwp w3m-current-url))
+    (xwidget-webkit-browse-url w3m-current-url :new-session))
 
   (defun im-xwidget-webkit-open (url &optional new-session)
     (interactive "sURL: ")
     (xwidget-webkit-browse-url
-     (if (or (s-match "^\\(https?\\|file\\)://\||www." url)
+     (if (or (s-match "^\\(https?\\|file\\)://\\|www." url)
              (s-match "\\.\\(org\\|net\\|com\\)$" url))
          url
        (concat eww-search-prefix url))
