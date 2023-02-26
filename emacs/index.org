@@ -1956,10 +1956,10 @@ This prints the text that is used by polybar to show what I am clocking right no
 #+begin_src emacs-lisp
   (defun im-format-polybar-clock-string ()
     (if (org-clocking-p)
-        (format ">> [%s] %s "
+        (format "⏲ [%s] %s "
                 (org-duration-from-minutes (org-clock-get-clocked-time))
                 org-clock-heading)
-      "X"))
+      "⏸"))
 
   (setq org-clock-clocked-in-display nil)
   ;; ^ I show it on polybar or gnome bar, so I don't need it on modeline
@@ -3484,10 +3484,13 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (evil-define-minor-mode-key 'normal 'flycheck-mode
       (kbd "ge") #'im-show-error-list))
 
-  (use-package flycheck-inline
-    :after flycheck
+  (use-package flycheck-posframe
+    :straight (:host github :repo "alexmurray/flycheck-posframe")
     :config
-    (global-flycheck-inline-mode))
+    (setq flycheck-posframe-border-width 1)
+    (setq flycheck-posframe-border-use-error-face t)
+    (setq flycheck-posframe-position 'point-bottom-left-corner)
+    (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
 
   (defun im-show-error-list (arg)
     "Show all lsp errors or flycheck erros, depending on which is available."
