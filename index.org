@@ -399,12 +399,23 @@ Journal files starts to take a lot of disk space. I put a simple limit to that h
 
 Unit files started with ~--user~ will have the following variables.
 
-#+name: user-env
+#+name: path-variable
+#+begin_src text
+  $HOME/.bin:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/bin:$HOME/.cargo/bin:$PATH
+#+end_src
+
 #+begin_src conf :tangle (when-linux "~/.config/environment.d/paths.conf")
   GOPATH="$HOME/.go"
   R_LIBS_USER="$HOME/.rlibs"
   NPM_PACKAGES="$HOME/.npm-packages"
-  PATH=$HOME/.bin:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/bin:$HOME/.cargo/bin:$PATH
+  NODE_PATH="$HOME/.npm-packages/lib/node_modules"
+  PATH=«path-variable»
+#+end_src
+
+KDE fucks-up the PATH variable (and only the PATH variable) while booting up. This fixes that:
+
+#+begin_src sh :tangle (when-linux "~/.config/plasma-workspace/env/path.sh")
+  export PATH=«path-variable»
 #+end_src
 
 After tangling all unit files, run this:
@@ -462,50 +473,6 @@ Now you should be able to do:
 
 Also see this gnome extension and it's README for further information: https://github.com/daitj/gnome-display-brightness-ddcutil
 
-* Gnome
-** Evaluate Javascript on Gnome Shell
-I use this script on several keyboard shortcuts:
-
-#+begin_src bash :tangle ~/.bin/gshell-eval-js
-  #!/bin/bash
-
-  dbus-send --print-reply --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"$*"
-#+end_src
-
-For this script to work, you need to enable unsafe mode. You can enable it by doing ~Alt + F2~, write ~lg~ (looking glass) and hit enter. Then write ~global.context.unsafe_mode = true~ and hit enter. An indicator on top right with a red exclamation mark will appear indicating that you are in the unsafe mode.
-
-You can also start Gnome Shell with ~--unsafe-mode~ option (which I prefer):
-
-#+begin_src conf :tangle (when-linux "/sudo::/usr/lib/systemd/user/org.gnome.Shell@x11.service")
-  «sh("sed -E 's/^ExecStart=(.*)gnome-shell$/ExecStart=\\1gnome-shell --unsafe-mode/' /usr/lib/systemd/user/org.gnome.Shell@x11.service")»
-#+end_src
-
-...or use the following extension (run this to install it and then restart gnome shell and enable the extension):
-
-#+begin_src bash
-  cd /tmp/
-  git clone https://github.com/linushdot/unsafe-mode-menu.git
-  cd unsafe-mode-menu
-  cp -r unsafe-mode-menu@linushdot.local ~/.local/share/gnome-shell/extensions/
-#+end_src
-
-** Toggle Do Not Disturb
-Source: https://github.com/joshpetit/toggle_dnd
-
-#+begin_src sh :tangle ~/.bin/gshell-toggle-dnd
-  #!/bin/bash
-
-  value=$(gsettings get org.gnome.desktop.notifications show-banners)
-  if [[ $value == 'true' ]]
-  then
-      notify-send "Notifications are disabled" -i user-busy
-      gsettings set org.gnome.desktop.notifications show-banners false
-  else
-      gsettings set org.gnome.desktop.notifications show-banners true
-      notify-send "Notifications are enabled" -i user-available
-  fi
-#+end_src
-
 * X related
 ** KMonad
 :PROPERTIES:
@@ -540,8 +507,8 @@ Restart your machine.
 *** Generic configuration
 #+name: kmonad-device
 #+begin_src emacs-lisp
-  (let ((usb-kbd (car (file-expand-wildcards "/dev/input/by-path/usb*kbd")))
-        (onboard-kbd (car (file-expand-wildcards "/dev/input/by-id/usb*kbd"))))
+  (let ((usb-kbd (car (file-expand-wildcards "/dev/input/by-*/usb-*Microsoft*kbd")))
+        (onboard-kbd (car (file-expand-wildcards "/dev/input/by-*/platform*kbd"))))
     (cond
      ((eq system-type 'darwin) "(iokit-name)")
      ((and usb-kbd (file-exists-p usb-kbd)) (format "(device-file \"%s\")" usb-kbd))
@@ -736,14 +703,20 @@ I use this config on both linux and mac. This is the configuration for my extern
   «kmonad-layers»
 #+end_src
 
-*** Autostart entry
-#+begin_src desktop :tangle (when-linux "~/.config/autostart/kmonad.desktop")
-  [Desktop Entry]
-  Name=KMonad
-  Comment=Keyboard layout manager
-  Exec=bash -c '«which("kmonad")» ~/.config/kmonad-linux.kbd -l warn'
-  Terminal=false
-  Type=Application
+*** SystemD service entry
+#+begin_src desktop :tangle (when-linux "~/.config/systemd/user/kmonad.service")
+  [Unit]
+  Description=KMonad keyboard config
+
+  [Service]
+  Type=simple
+  Restart=always
+  RestartSec=3
+  ExecStart=which("kmonad") %h/.config/kmonad-linux.kbd -l warn
+  Nice=-20
+
+  [Install]
+  WantedBy=xdg-desktop-autostart.target
 #+end_src
 
 *** Mac config
@@ -785,16 +758,6 @@ TODO: unify this and skhd configuration?
 
 #+begin_src conf :tangle (when-linux "~/.config/sxhkd/sxhkdrc")
   # Clear notifications
-  «hyper» + y
-    gshell-eval-js "Main.panel.statusArea.dateMenu._messageList._notificationSection.clear();"
-
-  # Toggle aggregate menu
-  «hyper» + o
-    gshell-eval-js 'Main.panel.statusArea.aggregateMenu.menu.toggle()'
-
-  «hyper» + u
-    gshell-toggle-dnd
-
   «hyper» + v
     emacsclient --eval '(empv-toggle-video)'
 
@@ -816,17 +779,26 @@ TODO: unify this and skhd configuration?
 
   «hyper» + t
     term -e trans -shell
+
+  ctrl + alt + l
+    loginctl lock-session
 #+end_src
 
-Here is the autostart entry:
+Here is the systemd service entry:
 
-#+begin_src desktop :tangle (when-linux "~/.config/autostart/sxhkd.desktop")
-  [Desktop Entry]
-  Name=sxhkd
-  Comment=Simple X hotkey daemon
-  Exec=«which("sxhkd")»
-  Terminal=false
-  Type=Application
+#+begin_src desktop :tangle (when-linux "~/.config/systemd/user/sxhkd.service")
+  [Unit]
+  Description=SXHKD
+
+  [Service]
+  Type=simple
+  Restart=always
+  RestartSec=3
+  ExecStart=«which("sxhkd")»
+  Nice=-20
+
+  [Install]
+  WantedBy=xdg-desktop-autostart.target
 #+end_src
 * Alacritty terminal
 See [[https://github.com/alacritty/alacritty/blob/master/alacritty.yml][config documentation]].
@@ -935,7 +907,7 @@ Unfortunately, this file is not sourced by GDM at login. So I'm sourcing it in =
 - System-wide equivalent of this file is =/etc/zprofile= or =/etc/zsh/zprofile=.
 - This is where I run =startx= which essentially calls [[.xinitrc]]
 - I put stuff that is not going to change during the session, this may include
-  - Stuff that is static. For example my =KEYBOARD_LAYOUTS= are not going to change but I may want to update =PATH= variable, hence it's in =.zshenv=.
+  - Stuff that is static.
   - Stuff that takes time to load. Because this file is loaded at the start and only sourced once, it makes sense to load heavy stuff here.
 
 - A lot of programs (like Java, Flatpak or anything that wants to edit your PATH or similar environment variables) put their configuration under =/etc/profile.d/=. Normally, =/etc/profile= (which is automatically sourced by =bash= at startup), also sources these files. In my system (or Arch Linux in general) also have =/etc/zsh/zprofile= which contains the following: =emulate sh -c 'source /etc/profile'=. So essentially sourcing the stuff under =/etc/profile.d/= is automatically handled.
@@ -947,11 +919,6 @@ Unfortunately, this file is (also) not sourced by GDM at login. So I'm sourcing 
 #+end_src
 
 #+begin_src sh :tangle ~/.zprofile
-  # Changing this is not goint to change your keyboard layout. For more info, read ~/.bin/switch-keyboard-layout
-  # See `localectl list-x11-keymap-layouts` for your options. (It's generally 2-char country code.)
-  # Set your default layout with `localectl set-keymap` and localectl set-x11-keymap
-  export KEYBOARD_LAYOUTS='us(intl),tr'
-
   # Use `qt5ct` program to configure qt themes
   # and use `lxappearance` for gtk
   export QT_QPA_PLATFORMTHEME=qt5ct
@@ -1564,165 +1531,6 @@ This file is sourced by both =zsh= and =bash=.
 #+end_src
 
 * Utilities
-** Tmux
-*** Keybindings
-- ~`~ is the prefix key which is =Alt-a=.
-| Key                         | Action                                                                             |
-|-----------------------------+------------------------------------------------------------------------------------|
-| `c                          | create new window                                                                  |
-| `n,p                        | go next/prev window                                                                |
-| `1-9                        | go to Nth window                                                                   |
-| `{h,j,k,l} OR Alt-{h,j,k,l} | focus/switch to split                                                              |
-| `W                          | swap windows (opens a window list, selected one will be replaced with current one) |
-| `P                          | swap panes (same as above)                                                         |
-|-----------------------------+------------------------------------------------------------------------------------|
-| `{                          | move split to left                                                                 |
-| `}                          | move split to right                                                                |
-| `-                          | split below                                                                        |
-| `\                          | split right                                                                        |
-| `a-1                        | balance windows horizontally                                                       |
-| `a-2                        | balance windows vertically                                                         |
-|-----------------------------+------------------------------------------------------------------------------------|
-| `[                          | selection/copy mode                                                                |
-| y                           | copy to clipboard (in copy mode)                                                   |
-|-----------------------------+------------------------------------------------------------------------------------|
-| `q                          | focus split using a number                                                         |
-| `w                          | list windows                                                                       |
-| `s                          | list sessions                                                                      |
-
-*** Install TPM (Tmux Plugin Manager)
-
-#+name: TMUX_PLUGIN_PATH
-#+begin_src bash
-  echo ~/.local/share/tmux/plugins
-#+end_src
-
-#+begin_src bash
-  mkdir -p «TMUX_PLUGIN_PATH()»
-  git clone https://github.com/tmux-plugins/tpm «TMUX_PLUGIN_PATH()»/tpm/
-#+end_src
-
-Do ~PREFIX + I~ to install plugins while tmux is open.
-
-*** Config
-#+begin_src conf :tangle ~/.tmux.conf
-  # ####################################################
-  #      __                                         ____
-  #     / /_____ ___  __  ___  __ _________  ____  / __/
-  #    / __/ __ `__ \/ / / / |/_// ___/ __ \/ __ \/ /_
-  #  _/ /_/ / / / / / /_/ />  <_/ /__/ /_/ / / / / __/
-  # (_)__/_/ /_/ /_/\__,_/_/|_(_)___/\____/_/ /_/_/
-  # ####################################################
-
-  # Add the plugin manager (PREFIX I -> install them)
-  set -g @plugin 'tmux-plugins/tpm'
-
-  # PREFIX C-s -> save, PREFIX C-r -> restore
-  set -g @plugin 'tmux-plugins/tmux-resurrect'
-
-  # Highlight when prefix is pressed, in copy mode etc.
-  set -g @plugin 'tmux-plugins/tmux-prefix-highlight'
-  set -g @prefix_highlight_show_copy_mode 'on'
-  set -g @prefix_highlight_copy_mode_attr 'fg=white,bg=yellow,bold' # default is 'fg=default,bg=yellow'
-  set -g @prefix_highlight_show_sync_mode 'on'
-  set -g @prefix_highlight_sync_mode_attr 'fg=black,bg=green' # default is 'fg=default,bg=yellow'
-
-  # PREFIX o -> captures the output of last command
-  set -g @plugin 'artemave/tmux_capture_last_command_output'
-  set -g @command-capture-key o
-  set -g @command-capture-prompt-pattern '➜ '
-
-  set -g default-shell $PREFIX/bin/zsh
-  set -g mouse on
-  set -g base-index 1 # Window indexes starts from 1
-  setw -g pane-base-index 1 # Pane indexes starts from 1
-  set -s escape-time 0 # Remove the delay after hitting <ESC>
-  set-option -g set-titles off
-  set-option -g allow-rename off
-
-  # Reload config
-  bind r source-file ~/.tmux.conf
-
-  # Open copy mode
-  bind -n M-y copy-mode
-
-  # Set prefix to A-a
-  unbind C-b
-  set -g prefix M-a
-  bind-key M-a send-prefix
-
-  # Increase the time of display-panes (PREFIX q)
-  set -g display-panes-time 4000
-
-  # Split remaps
-  bind \\ split-window -h -c '#{pane_current_path}'
-  bind - split-window -v -c '#{pane_current_path}'
-  unbind '"'
-  unbind %
-
-  # Vim-like pane switches
-  bind k selectp -U
-  bind j selectp -D
-  bind h selectp -L
-  bind l selectp -R
-
-  # Pane switches (without prefix key)
-  bind -n M-h select-pane -L
-  bind -n M-j select-pane -D
-  bind -n M-k select-pane -U
-  bind -n M-l select-pane -R
-  bind -n M-\\ split-window -h -c '#{pane_current_path}'
-  bind -n M--  split-window -v -c '#{pane_current_path}'
-
-  # Swapping shortcuts
-  bind-key W choose-tree -Zw "swap-window -t '%%'"
-  bind-key P choose-tree -Zw "swap-pane -t '%%'"
-
-  # Vi keys for copy-mode
-  setw -g mode-keys vi
-  bind-key -T copy-mode-vi v send-keys -X begin-selection
-  bind-key -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel
-  bind-key -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "xclip -selection clipboard"
-
-  # Status bar theme
-  set -g status-position bottom
-  set -g status-left-length 32
-
-  set -g status-fg white
-  set -g status-bg black
-
-  set -g status-left '#[fg=colour235,bg=colour252,bold] #S #[fg=colour252,bg=colour238,nobold]#[fg=colour245,bg=colour238,bold] #(whoami) #[fg=colour238,bg=black,nobold]'
-  set -g window-status-format "#[fg=white,bg=black] #I #W "
-  set -g window-status-current-format "#[fg=black,bg=colour39]#[fg=colour25,bg=colour39,noreverse,bold] #I  #W #[fg=colour39,bg=black,nobold]"
-  set -g status-right "#{prefix_highlight}"
-
-  set -g window-style 'fg=white,bg=black'
-  set -g window-active-style 'fg=white,bg=color234'
-
-  # Load tmux plugin manager
-  run '«TMUX_PLUGIN_PATH()»/tpm/tpm'
-#+end_src
-*** Jump to an open window using FZF
-The following script opens a FZF popup and lets you select a window in all sessions. [[https://eioki.eu/2021/01/12/tmux-and-fzf-fuzzy-tmux-session-window-pane-switcher][Source]]. I bound it to ~M-s~ in tmux (without any prefix key).
-
-#+begin_src conf :tangle ~/.tmux.conf
-  bind -n M-s run-shell -b tmux-switch
-#+end_src
-
-#+begin_src bash :tangle ~/.bin/tmux-switch
-  #!/bin/bash
-
-  # Change LIST_DATA as you wish and it'll continue to work as
-  # TARGET_SPEC handles the real information retrieval
-  LIST_DATA="#{session_name}/#{window_name} [[#{pane_title}]]"
-  FZF_COMMAND="fzf-tmux -p --delimiter=: --with-nth 4 --color=hl:2"
-
-  TARGET_SPEC="#{session_name}:#{window_id}:#{pane_id}:"
-  LINE=$(tmux list-panes -a -F "$TARGET_SPEC $LIST_DATA" | $FZF_COMMAND) || exit 0
-  ARGS=(${LINE//:/ })
-
-  tmux select-pane -t ${ARGS[2]} && tmux select-window -t ${ARGS[1]} && tmux switch-client -t ${ARGS[0]}
-#+end_src
 ** jaro
 *** Configuration
 In this file I define some file associations. Please refer to [[https://github.com/isamert/jaro][jaro]] README for more info. It's simply an =xdg-open= alternative.
