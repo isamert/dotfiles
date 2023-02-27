@@ -1170,6 +1170,8 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'eww)
     (evil-collection-init 'vc-git)
     (evil-collection-init 'vc-dir)
+    (evil-collection-init 'log-view)
+    (evil-collection-init 'log-edit)
     (evil-collection-init 'vc-annotate)
     (evil-collection-init 'help)
     (evil-collection-init 'Custom)
