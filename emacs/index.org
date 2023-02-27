@@ -1162,6 +1162,7 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'elfeed)
     (evil-collection-init 'consult)
     (evil-collection-init 'vterm)
+    (evil-collection-init 'xref)
     (evil-collection-init 'magit)
     (evil-collection-init 'magit-todos)
     (evil-collection-init 'git-timemachine)
@@ -3671,7 +3672,8 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     :commands lsp
     :hook ((web-mode . lsp)
            (js-mode . lsp)
-           (typescript-mode . lsp)
+           (tsx-ts-mode . lsp)
+           (typescript-ts-mode . lsp)
            (dhall-mode . lsp)
            (haskell-mode . lsp)
            (kotlin-mode . lsp)
@@ -3722,7 +3724,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     ;; Number Boolean Array Object Key Null Struct Event Operator
     ;; TypeParameter
 
-    (evil-define-key 'normal lsp-mode-map
+    (evil-define-minor-mode-key 'normal 'lsp-mode-map
       "gr" #'lsp-ui-peek-find-references
       "gd" #'lsp-ui-peek-find-definitions
       "gi" #'lsp-ui-peek-find-implementation
@@ -5346,6 +5348,7 @@ The following enables =CamelCase= aware editing operations.
 #+end_src
 ** typescript
 #+begin_src emacs-lisp
+  (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-ts-mode))
   (add-hook 'typescript-ts-mode-hook #'im-add-node-modules-to-path)
   (add-hook 'tsx-ts-mode-hook #'im-add-node-modules-to-path)
 #+end_src
