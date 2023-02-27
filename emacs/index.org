@@ -2911,6 +2911,7 @@ Note that it's not possible to stage hunks with =vc=.
       "gB" 'vc-annotate ;; Git Blame
       "gR" 'vc-refresh-state
       "gbc" 'vc-create-branch
+      "gL" 'vc-print-root-log
       "gbb" 'magit-branch))
 #+END_SRC
 
@@ -3215,6 +3216,9 @@ Other complementary packages:
 
   (define-key project-prefix-map "m" #'magit-status)
   (add-to-list 'project-switch-commands `(magit-status "Magit"))
+
+  (define-key project-prefix-map "v" #'project-vc-dir)
+  (add-to-list 'project-switch-commands `(project-vc-dir "vc-dir"))
 
   (define-key project-prefix-map "M" #'lab-list-project-merge-requests)
   (add-to-list 'project-switch-commands `(lab-list-project-merge-requests "Merge Requests"))
