@@ -631,7 +631,7 @@ This function is for doing easy REST calls and it uses plists for everything bec
     (switch-to-buffer-other-window (get-buffer-create "*raw-pretty*"))
     (insert (json-encode obj))
     (json-pretty-print-buffer)
-    (json-mode))
+    (json-ts-mode))
 
   (defun im-url? (url)
     "Check if given URL is really an URL or not."
@@ -2788,6 +2788,7 @@ To sync it automatically:
     (setq w3m-default-display-inline-images t)
     (setq w3m-use-tab-line nil)
     ;; (setq w3m-display-mode 'plain)
+    (add-hook 'w3m-mode-hook #'(lambda () (setq-local scroll-margin 0)))
     (w3m-display-mode 'plain)
 
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
@@ -5461,8 +5462,6 @@ The following enables =CamelCase= aware editing operations.
 
 ** json
 #+begin_src emacs-lisp
-  (use-package json-mode)
-
   (defun im-jsons-print-path-python ()
     (interactive)
     (let ((jsons-path-printer 'jsons-print-path-python))
