@@ -58,6 +58,7 @@
     ("UCUIIM9pPaSdRg7xquOX7s-w" youtube music metal power) ;; Unknown Power Metal YT
     ("UCzCWehBejA23yEz3zp7jlcg" youtube music metal black) ;; Black Metal Promotion
     ("UCZQHDXu4JvsmptR86XDyaRQ" youtube music metal heavy classic) ;; Rare & Obsucre Metal Archives
+    ("UCU7JpmRu-T0XdDseYb-JSTg" youtube music metal death) ;;UnknownMelodeath
     ("BangerTV" youtube music review)
 
     ("commandline" reddit linux cli)
@@ -68,14 +69,14 @@
     ("UCyoQK-mZXr2ws4C0nXGCH1w" youtube philosophy) ;; Zero Books
     ("UCSkzHxIcfoEr69MWBdo0ppg" youtube philosophy) ;; Cuck philosophy
     ("thephilosophytube" youtube fun philosophy)
-    ("ContraPoints" youtube fun philosophy)
+    ("UCNvsIonJdJ5E4EXMa65VYpA" youtube fun philosophy) ;; ContraPoints
     ("UC738SsV6BSLUVvMgKnEFFzQ" youtube philosophy) ;; Epoch Philosophy
-    ("ShaunandnotJen" youtube philosophy commentary) ;; Shaun
+    ("UCJ6o36XL0CpYb6U5dNBiXHQ" youtube philosophy commentary) ;; Shaun
     ("UCkS_HP3m9NXOgswVAKbMeJQ" youtube philosophy) ;; Then & Now
     ("UCjnpuIGovFFUBLG5BeHzTag" youtube philosophy podcast) ;; Philosophize This
-    ("aliabdaal" youtube vlog)
     ("UCYO_jab_esuFRV4b17AJtAw" youtube fun science animation) ; 3Blue1Brown
     ("UCsXVk37bltHxD1rDPwtNM8Q" youtube fun science animation) ;; Kurzgesagt – In a Nutshel
+    ("UCCT8a7d6S6RJUivBgNRsiYg" youtube fun philosophy) ;; Three Arrows
     ("numberphile" youtube fun science)
     ("UC0uTPqBCFIpZxlz_Lv1tk_g" youtube emacs dev) ;; Protesilaos Stavrou
     ("UC2NXVB__-v-hf-l6wcg1zjQ" youtube linux dev cli) ;; Tom on the internet
@@ -89,15 +90,20 @@
     ("karthikchikmagalur" youtube dev emacs)
     ("babyWOGUE" youtube linux fun)
     ("UC8ENHE5xdFSwx71u3fDH5Xw" youtube vim cli dev) ;; ThePrimeagen
+    ("UCS4FAVeYW_IaZqAbqhlvxlA" youtube dev) ;; Context-Free
+    ("UCkf4VIqu3Acnfzuk3kRIFwA" youtube cli) ;; gotbletu
     ("mzamansky" youtube emacs)
     ("YourMovieSucksDOTorg" youtube fun movie)
+    ("UC9DkCKm4_VDztRRyge4mCJQ" youtube fun music) ;; Amoeba
     ("RedLetterMedia" youtube fun movie)
     ("MrDanielmac" youtube movie)
     ("CineFix" youtube movie fun)
+    ("UCn8zNIfYAQNdrFRrr8oibKw" youtube news documentary) ;; VICE
     ("hotbananastud" youtube fun skit) ;; Brandon Rogers
     ("ilkercanikligil" youtube fun turkish) ;; Flu TV
     ("199sokak" youtube fun turkish skit) ;; Kamusal Mizah
     ("UC3Xu0FQeizzXhUtthFjFs8g" youtube fun skit vlog) ;; Deniz Bagdas
+    ("UCGSGPehp0RWfca-kENgBJ9Q" youtube fun skit) ;; jREG
     ("codyko69" youtube fun commentary)
     ("conmech" youtube fun turkish) ;; Efe Aydal
     ("tvMisha" youtube fun turkish vlog)
