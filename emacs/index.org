@@ -2835,6 +2835,17 @@ To sync it automatically:
     (interactive)
     (kill-new w3m-current-url)
     w3m-current-url)
+
+  ;; Rename w3m buffer names in a way that works with my
+  ;; `im-tab-line-buffers' implementation
+  (define-advice w3m-buffer-name-add-title (:after (&rest _) rename-w3m-buffer-name)
+    (when w3m-use-title-buffer-name
+      (rename-buffer
+       (format
+        "*w3m: %s *w3m*<%d>" (w3m-current-title)
+        ;; Lot's of functions on w3m depend on this number. Hence I left
+        ;; it here. Ugly but not worth dealing with
+        (w3m-buffer-number (current-buffer))))))
 #+end_src
 
 ** shell-mode
