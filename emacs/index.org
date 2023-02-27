@@ -2754,8 +2754,6 @@ To sync it automatically:
 
 ** w3m
 *** Installation/Keybindings
-- Use "Enter" on images to display them inline.
-
 #+begin_src emacs-lisp
   (use-package w3m
     :config
@@ -2774,9 +2772,15 @@ To sync it automatically:
       (kbd "M-k") #'w3m-tab-move-right
       (kbd "x") #'w3m-delete-buffer
       (kbd "Y") #'im-w3m-yank-url
-      (kbd "f") #'im-w3m-avy-link)
+      (kbd "f") #'im-w3m-avy-link
+      (kbd "F") #'im-w3m-avy-link-new-session)
     (setq w3m-fill-column 80)
+    (setq w3m-use-title-buffer-name t)
     (setq w3m-default-display-inline-images t)
+    (setq w3m-use-tab-line nil)
+    ;; (setq w3m-display-mode 'plain)
+    (w3m-display-mode 'plain)
+
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
           '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
@@ -2816,6 +2820,12 @@ To sync it automatically:
     (interactive)
     (avy-process (im-w3m-all-anchor-points (window-start) (window-end)))
     (w3m-goto-url (w3m-anchor)))
+
+  (defun im-w3m-avy-link-new-session ()
+    "Jump to a link and open it automatically."
+    (interactive)
+    (avy-process (im-w3m-all-anchor-points (window-start) (window-end)))
+    (w3m-goto-url-new-session (w3m-anchor)))
 
   (defun im-w3m-yank-url ()
     "Copy current URL to clipboard."
@@ -3125,7 +3135,8 @@ Other complementary packages:
             im-consult-ripgrep
             consult-org-heading
             consult-imenu))
-    (mini-frame-mode +1))
+    ;; (mini-frame-mode +1)
+    )
 #+end_src
 ** ~project.el~ and project management
 ~(project-remember-projects-under im-projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
