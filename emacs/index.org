@@ -2918,6 +2918,19 @@ Note that it's not possible to stage hunks with =vc=.
       "gbb" 'magit-branch))
 #+END_SRC
 
+*** vc configuration
+#+begin_src emacs-lisp
+  (evil-define-key 'normal vc-dir-mode-map "r" #'vc-dir-refresh)
+
+  (remove-hook 'log-edit-hook #'log-edit-show-files)
+  (add-hook 'log-edit-hook #'im-vc-show-diff)
+
+  (defun im-vc-show-diff ()
+    "Same as log-edit-show-diff but do not focus to the diff window."
+    (let ((bname (buffer-name (current-buffer))))
+      (log-edit-show-diff)
+      (im-select-window-with-buffer bname)))
+#+end_src
 *** git-timemachine
 - Toggle with ~git-timemachine~ (SPC gt).
 - When in timemachine mode,
@@ -3724,7 +3737,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     ;; Number Boolean Array Object Key Null Struct Event Operator
     ;; TypeParameter
 
-    (evil-define-minor-mode-key 'normal 'lsp-mode-map
+    (evil-define-minor-mode-key 'normal 'lsp-mode
       "gr" #'lsp-ui-peek-find-references
       "gd" #'lsp-ui-peek-find-definitions
       "gi" #'lsp-ui-peek-find-implementation
