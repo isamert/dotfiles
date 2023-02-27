@@ -3801,13 +3801,15 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (interactive)
     (save-buffer)
     (or
-     (im-with-visible-buffer ".*vterm.*"
-       (vterm-send-up)
-       (vterm-send-return)
-       t)
-     (im-with-visible-buffer ".*eshell.*"
-       (insert (ring-ref eshell-history-ring 0))
-       (eshell-send-input))))
+     (im-with-visible-buffer
+      ".*vterm.*"
+      (vterm-send-up)
+      (vterm-send-return)
+      t)
+     (im-with-visible-buffer
+      ".*eshell.*"
+      (eshell-previous-matching-input "" 0)
+      (eshell-send-input))))
 
   (defun im-run-command-on-visible-term (cmd)
     (or
