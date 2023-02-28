@@ -2845,9 +2845,8 @@ To sync it automatically:
 
   (defun im-w3m-yank-url ()
     "Copy current URL to clipboard."
-    (interactive)
-    (kill-new w3m-current-url)
-    w3m-current-url)
+    (interactive nil 'w3m-mode)
+    (im-kill w3m-current-url))
 
   ;; Rename w3m buffer names in a way that works with my
   ;; `im-tab-line-buffers' implementation
