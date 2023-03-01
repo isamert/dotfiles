@@ -133,7 +133,7 @@ This is a great hack that defers garbage collections to the times where Emacs is
   (use-package gcmh
     :config
     (gcmh-mode 1)
-    (setq gcmh-verbose nil))
+    (setq gcmh-verbose t))
 #+end_src
 
 ** Essential packages
@@ -2767,7 +2767,7 @@ To sync it automatically:
     :config
     (evil-leader/set-key
       "ew" #'im-w3m-open-url-dwim
-      "eW" (λ-interactive (im-w3m-open-url-dwim (read-string "URL: ") :new-session)))
+      "eW" #'im-xwidget-webkit-open)
     (evil-define-key 'normal w3m-mode-map
       (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function w3m-current-url))
       (kbd "^") (λ-interactive (browse-url w3m-current-url))
@@ -3591,7 +3591,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     :config
     (setq flycheck-posframe-border-width 1)
     (setq flycheck-posframe-border-use-error-face t)
-    (setq flycheck-posframe-position 'point-bottom-left-corner)
+    (setq flycheck-posframe-position 'point-bottom-left-corner-upward)
     (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
 
   (defun im-show-error-list (arg)
@@ -4162,6 +4162,8 @@ Simple mode for editing =~/.Xmodmap= file.
     (setq slack-buffer-function #'switch-to-buffer-other-window)
     ;; ^ Open slack windows on the right side of the screen
 
+    ;; Disable filling as it fucks with copying stuff
+    (setq lui-fill-type nil)
     (setq slack-buffer-function 'switch-to-buffer)
     (setq slack-message-custom-notifier #'im-slack-notify)
     (setq slack-message-custom-delete-notifier #'im-slack-notify)
@@ -4581,7 +4583,7 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
     (xwidget-webkit-browse-url
      (if (im-url? url)
          url
-       (concat eww-search-prefix url))
+       (concat eww-search-prefix (url-hexify-string url)))
      new-session))
 #+end_src
 * Editing
