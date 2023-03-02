@@ -1479,7 +1479,7 @@ This file is sourced by both =zsh= and =bash=.
 #+begin_src bash :tangle ~/.config/aliases/generic
   # package management
   #eshell nixin='nix-env -iA "nixpkgs.$1"'
-  function nixin { nix-env -iA 'nixpkgs.$1' }
+  function nixin { nix-env -iA "nixpkgs.$1" }
   alias nixrem='nix-env -e'
   alias nixs='nix search nixpkgs'
   alias nixls='nix-env --query'
@@ -1488,6 +1488,14 @@ This file is sourced by both =zsh= and =bash=.
   alias nameof='ps -o comm= -p' # Get the name of given PID (reverse pidof)
   alias fuckall='killall -s 9'
   alias fkill='fuzzy kill'
+
+  function fuckemacs {
+      if pgrep Emacs; then
+          kill -USR2 $(pgrep Emacs)
+      else
+          kill -USR2 $(pgrep emacs)
+      fi
+  }
 
   # utility
   alias cdtemp='cd $(mktemp -d)'
