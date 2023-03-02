@@ -2945,14 +2945,32 @@ Note that it's not possible to stage hunks with =vc=.
 #+begin_src emacs-lisp
   (evil-define-key 'normal vc-dir-mode-map "r" #'vc-dir-refresh)
 
+  ;; Magit like commit interface:
+  ;; - Open commit window
+  ;; - Clear all other windows
+  ;; - Open diff
+  ;; - When committed, kill diff buffer and window.
+  ;; TODO Also kill diff buffer when C-c C-k is called on commit window
+
   (remove-hook 'log-edit-hook #'log-edit-show-files)
   (add-hook 'log-edit-hook #'im-vc-show-diff)
 
+  (defvar im--last-log-diff-buffer nil)
   (defun im-vc-show-diff ()
     "Same as log-edit-show-diff but do not focus to the diff window."
     (let ((bname (buffer-name (current-buffer))))
+      (delete-other-windows)
       (log-edit-show-diff)
+      (setq im--last-log-diff-buffer (current-buffer))
       (im-select-window-with-buffer bname)))
+
+  (add-hook
+   'log-edit-done-hook
+   #'(lambda ()
+       (im-select-window-with-buffer (buffer-name im--last-log-diff-buffer))
+       (when (equal (window-buffer) im--last-log-diff-buffer)
+         (im-quit))
+       (kill-buffer im--last-log-diff-buffer)))
 #+end_src
 *** git-timemachine
 - Toggle with ~git-timemachine~ (SPC gt).
