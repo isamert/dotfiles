@@ -5593,6 +5593,64 @@ The following enables =CamelCase= aware editing operations.
     (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok))))
 #+END_SRC
 
+*** maven helpers
+#+begin_src emacs-lisp
+  (defun im-maven-goal-run (&optional invalidate)
+    "Select a maven goal and run it.
+  This function caches the goal list in the firt run. If you want
+  to invalidate the cache, pass a non-nil value for INVALIDATE."
+    (interactive "P")
+    (let* ((cache-dir (expand-file-name "~/.cache/im-maven/"))
+           (cache-file (f-join cache-dir (concat (s-replace "/" "!" (im-current-project-root)) "maven-goals")))
+           goals)
+      (if (and (not invalidate) (f-exists? cache-file))
+          (setq goals (im-deserialize-from-file cache-file))
+        (progn
+          (message "Generating maven goal list, please wait...")
+          (f-mkdir-full-path cache-dir)
+          (setq goals (im-maven-goals-read))
+          (im-serialize-into-file cache-file goals)
+          (message "Generating maven goal list, please wait...Done")))
+      (let ((selected (lab--completing-read-object
+                       "Select maven goal: "
+                       goals
+                       :formatter #'(lambda (x) (format "%s - %s"
+                                                   (propertize (car x) 'face '(:weight bold))
+                                                   (propertize (cadr x) 'face '(:weight thin :slant italic))))
+                       :category 'maven-goal)))
+        (let ((default-directory (im-current-project-root)))
+          (im-shell-command
+           :command (format "./mvnw %s" (car selected)))))))
+
+  (defun im-maven-goals-read ()
+    "Find all maven goals and their descriptions in current project."
+    (let ((default-directory (im-current-project-root)))
+      (->>
+       (shell-command-to-string "mvn help:effective-pom | grep -E -A 1 '<groupId>'")
+       (s-split "\n")
+       (--filter (not (equal it "--")))
+       (-partition 2)
+       (--filter (s-contains? "plugin" (nth 1 it)))
+       (--map (let ((group-id (nth 1 (s-match ">\\(.*\\)<" (car it))))
+                    (artifact-id (nth 1 (s-match ">\\(.*\\)<" (nth 1 it)))))
+                (format "-DgroupId=%s -DartifactId=%s" group-id artifact-id)))
+       (-uniq)
+       (--mapcat
+        (--map
+         (let ((xd (s-split "\n" (s-trim it))))
+           (list (car xd)
+                 (s-join " " (mapcar #'s-trim (-drop 1 xd)))))
+         (s-split
+          "\n\n"
+          (let ((x
+                 (->
+                  (im-tap (format "mvn help:describe %s" it) )
+                  shell-command-to-string
+                  (string-trim-left "\\(\n\\|.\\)*This plugin has [0-9]+ goals:\n\n")
+                  (string-trim-right "\n\nFor more information\\(\n\\|.\\)*"))))
+            (if (s-contains? "[ERROR]" x) "" x))))))))
+#+end_src
+
 ** clojure
 Here is the current workflow I use:
 - =lein new app project-name=
