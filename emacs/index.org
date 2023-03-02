@@ -211,14 +211,13 @@ Some basic variable and function definitions that will be used in configuration.
     (with-temp-file (expand-file-name file)
       (prin1 data (current-buffer))))
 
-  (defun im-deserialize-from-file (file symbol)
+  (defun im-deserialize-from-file (file)
     (let ((fpath (expand-file-name file)))
-      (if (and (file-exists-p fpath) (boundp symbol))
-          (with-temp-buffer
-            (insert-file-contents fpath)
-            (goto-char (point-min))
-            (set symbol (read (current-buffer))))
-        (message ">> im-deserialize-from-file failed. file-exists-p: %s, boundp: %s" (file-exists-p fpath) (boundp symbol)))))
+      (when (and (file-exists-p fpath))
+        (with-temp-buffer
+          (insert-file-contents fpath)
+          (goto-char (point-min))
+          (read (current-buffer))))))
 
   ;; TODO Add a way to invalidate the file after given date
   (defmacro defmemoizefile (name arglist file &rest body)
@@ -231,7 +230,7 @@ Some basic variable and function definitions that will be used in configuration.
       `(progn
          (setq ,memoizemap (make-hash-table :test 'equal))
          (when (file-exists-p (expand-file-name ,file))
-           (im-deserialize-from-file ,file ',memoizemap))
+           (setq ,memoizemap (im-deserialize-from-file ,file)))
 
          (defun ,origfn ,arglist
            ,@body)
@@ -2927,11 +2926,12 @@ Note that it's not possible to stage hunks with =vc=.
     (define-advice vc-switch-branch (:after (&rest _) refresh-vc-state) (vc-refresh-state))
 
     (evil-leader/set-key
+      "gv" 'project-vc-dir
       "gs" 'magit-status
       "gS" 'magit-stash
       "gf" 'magit-file-dispatch
-      "gp" 'magit-pull
-      "gP" 'magit-push
+      "gp" 'vc-pull
+      "gP" 'vc-push
       "gr" 'magit-reset
       "gcc" 'vc-switch-branch
       "gB" 'vc-annotate ;; Git Blame
