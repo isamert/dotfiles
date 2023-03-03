@@ -764,7 +764,7 @@ If the cursor is at the end of the file, when you scroll emacs does a strange ju
 
 #+BEGIN_SRC emacs-lisp
   (setq scroll-conservatively 100) ;; When cursor reaches end, just scroll line-by-line
-  (setq scroll-margin 10) ;; Start scolling earlier
+  ;; (setq scroll-margin 10) ;; Start scolling earlier
 #+END_SRC
 
 ** Backups
@@ -862,6 +862,7 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
 #+BEGIN_SRC emacs-lisp
   (menu-bar-mode 0)
   (use-package doom-themes)
+  (use-package modus-themes)
 
   (defconst im-fonts '("Iosevka Comfy" "Iosevka Nerd Font"))
   (defconst im-font-height
@@ -884,7 +885,7 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
                             :width 'normal
                             :height im-font-height))
       ;; ...and load the theme
-      (load-theme 'doom-Iosvkem t)))
+      (load-theme 'modus-vivendi t)))
 
 
   (defun im-set-font-and-theme-config-in-frame (frame)
@@ -1278,17 +1279,29 @@ Multiple cursors for evil.
 #+END_SRC
 
 ** evil-surround
-Change surroundings. Do =cs"'= to turn ="Hello world!"= into ='Hello world!'=.
-- ='Hello world!'= ~cs'<q>~ =<q>Hello world!</q>=
-- =Hel|lo= ~ysiw"~ ="Hello"= (| is the cursor position.)
-- =Hello= ~ysw{~ ={ Hello }=  (~{[(~ adds spaces)
-- =Hello= ~ysw}~ ={Hello}=    (~}])~ does not add spaces)
+- Change surroundings. Do =cs"'= to turn ="Hello world!"= into ='Hello world!'=.
+  - ='Hello world!'= ~cs'<q>~ =<q>Hello world!</q>=
+  - =Hel|lo= ~ysiw"~ ="Hello"= (| is the cursor position.)
+  - =Hello= ~ysw{~ ={ Hello }=  (~{[(~ adds spaces)
+  - =Hello= ~ysw}~ ={Hello}=    (~}])~ does not add spaces)
+
+- Wrap selection with ~<visual-state> S~.
+- Wrap selection on new lines with ~<visual-state> gS~
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-surround
     :after evil
     :init
-    (global-evil-surround-mode 1))
+    (global-evil-surround-mode 1)
+
+    ;; Invert some default pairs
+    (require 'map)
+    (map-put! evil-surround-pairs-alist ?\( '("(" . ")"))
+    (map-put! evil-surround-pairs-alist ?\) '("( " . " )"))
+    (map-put! evil-surround-pairs-alist ?\[ '("[" . "]"))
+    (map-put! evil-surround-pairs-alist ?\] '("[ " . " ]"))
+    (map-put! evil-surround-pairs-alist ?\{ '("{" . "}"))
+    (map-put! evil-surround-pairs-alist ?\} '("{ " . " }")))
 #+END_SRC
 
 ** evil-escape
@@ -2881,21 +2894,6 @@ A package that shows key combinations. (for example press C-x and wait) It also 
     (setq which-key-idle-delay 0.5)
     (setq which-key-sort-order #'which-key-prefix-then-key-order)
     (which-key-mode))
-
-  (unless (eq system-type 'darwin)
-    ;; It causes some annoyances on darwin
-    (use-package which-key-posframe
-      :after (which-key mini-frame)
-      :diminish
-      :straight (:host github :repo "emacsorphanage/which-key-posframe")
-      :config
-      (set-face-attribute 'which-key-posframe nil :background "#373b43")
-      (set-face-attribute 'which-key-posframe-border nil :background "#373b43")
-      ;; Obtained the "#373b43" by calling `(mini-frame-get-background-color)'
-
-      (setq which-key-posframe-border-width 15)
-      (setq which-key-posframe-poshandler 'posframe-poshandler-frame-center)
-      (which-key-posframe-mode)))
 #+END_SRC
 
 ** magit & vc
@@ -3265,9 +3263,6 @@ Other complementary packages:
   (define-key project-prefix-map "g" #'im-consult-ripgrep)
   (add-to-list 'project-switch-commands `(im-consult-ripgrep "Grep"))
 
-  (define-key project-prefix-map "H" #'im-git-link-homepage)
-  (add-to-list 'project-switch-commands `(im-git-link-homepage "Git Homepage"))
-
   (define-key project-prefix-map "D" #'dired-jump)
   (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
 
@@ -3301,11 +3296,6 @@ Other complementary packages:
     (interactive)
     (let ((default-directory (project-root (project-current t))))
       (call-interactively #'im-shell-command)))
-
-  (defun im-git-link-homepage ()
-    (interactive)
-    (let ((default-directory (project-root (project-current t))))
-      (call-interactively #'git-link-homepage)))
 
   (defvar im-project-shell-last-height 15)
   (defvar im-project-shell-last-window nil)
@@ -4051,8 +4041,9 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
     (evil-leader/set-key
       "glm" 'im-git-link-merge-requests
       "gll" 'im-git-link-on-branch
-      "glh" 'git-link-homepage
-      "glc" 'git-link-commit))
+      "glL" 'im-git-link-commit
+      "glc" 'im-git-link-commit
+      "glh" 'git-link-homepage))
 
   (defun im-git-link-homepage ()
     "Like git-link-homepage itself but it does not open in browser, simply returns the address as string."
@@ -4070,6 +4061,12 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
        (vc-git-branches)
        nil nil (lab-git-current-branch))))
     (let ((git-link-default-branch branch))
+      (call-interactively 'git-link)))
+
+  (defun im-git-link-commit ()
+    "Like `git-link' but use commit hash in url."
+    (interactive)
+    (let ((git-link-use-commit t))
       (call-interactively 'git-link)))
 
   (defun im-git-link-merge-requests ()
@@ -4739,26 +4736,6 @@ Turkish dictionary.
   (use-package smartparens
     :config
     (require 'smartparens-config)
-    ;; (setq sp-autoinsert-pair nil)
-    ;; (setq sp-autodelete-pair nil)
-
-    (evil-define-key 'visual sp-keymap
-      "S("  #'sp-wrap-round
-      "S["  #'sp-wrap-square
-      "S'"  #'sp-wrap-quote-single
-      "S`"  #'sp-wrap-backtick
-      "S<"  #'sp-wrap-angle
-      "S\"" #'sp-wrap-quote-double
-      "S="  #'sp-wrap-equal
-      "S{"  #'sp-wrap-curly
-      "S/"  #'sp-wrap-slash
-      "S*"  #'sp-wrap-star
-      "S+"  #'sp-wrap-plus
-      "S#"  #'sp-wrap-star
-      "S_"  #'sp-wrap-underscore
-      "S~"  #'sp-wrap-tilda)
-
-    (sp-local-pair 'org-mode "=" "=" :actions :rem)
 
     (evil-define-key*
       '(normal insert) sp-keymap
@@ -4766,19 +4743,7 @@ Turkish dictionary.
       (kbd "M-]") #'sp-forward-slurp-sexp
       (kbd "M-{") #'sp-backward-slurp-sexp
       (kbd "M-}") #'sp-backward-barf-sexp)
-
     (smartparens-global-mode))
-
-  (defun sp-wrap-quote-double () (interactive) (sp-wrap-with-pair "\""))
-  (defun sp-wrap-quote-single () (interactive) (sp-wrap-with-pair "'"))
-  (defun sp-wrap-backtick () (interactive) (sp-wrap-with-pair "`"))
-  (defun sp-wrap-angle () (interactive) (sp-wrap-with-pair "<"))
-  (defun sp-wrap-equal () (interactive) (sp-wrap-with-pair "="))
-  (defun sp-wrap-tilda () (interactive) (sp-wrap-with-pair "~"))
-  (defun sp-wrap-slash () (interactive) (sp-wrap-with-pair "/"))
-  (defun sp-wrap-star () (interactive) (sp-wrap-with-pair "*"))
-  (defun sp-wrap-plus () (interactive) (sp-wrap-with-pair "+"))
-  (defun sp-wrap-underscore () (interactive) (sp-wrap-with-pair "_"))
 #+end_src
 
 ** writeroom-mode
@@ -4797,9 +4762,6 @@ Gives you a nice, uncluttered editing experience by removing all unneeded visual
 I try to use ~lsp-mode~ and other language-specific packages for the languages I use (see [[Language specific]]), but sometimes either they are too slow or the computer I'm currently working on requires some extra setup or I just don't want to use them for some reason. For those cases, I use a collection of packages that gives you the power of IDEs but in some dummy/restricted way.
 
 - <<highlight-thing>> :: Automatically highlights the all instances of the symbol under the cursor in the buffer. Simply use evils ~*~ and ~#~ to jump between them.
-- <<devdocs>> :: Let's you browse devdocs in Emacs.
-  - ~devdocs-install~ to install docs.
-  - ~devdocs-lookup~ to open a documentation.
 - <<dumb-jump>> :: Jumps to definition by using predefined-regexps, generally works fine. Use =gd=.
   - To debug why it's not working: M-x ~set-variable dumb-jump-debug t~, then go to *Messages* buffer.
 - <<treesit>> :: This is a generic parser for bunch of languages. You can also inspect the syntax tree on the fly and do whatever you want to do with it. Best feature so far is just better (like, miles ahead better) syntax highlighting for some languages. Especially for JS/TS and Rust.
@@ -4815,10 +4777,6 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
     (setq dumb-jump-ignore-context t)
     (setq dumb-jump-fallback-search nil)
     (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
-
-  (use-package devdocs
-    :config
-    (evil-leader/set-key "id" #'devdocs-lookup))
 
   ;; Call treesit-auto-install-all
   (use-package  treesit-auto
@@ -6679,7 +6637,7 @@ Good for buffer management, especially for groupped killings.
 
   (defun im-jira--get-issue-template (issue-type)
     (pcase issue-type
-      ("Story" "** Motivation\n\n\n** Description\n\n\n** Acceptance Criteria\n\n\n**Projects\n\n\n** Has Automation Test?\n\n\n** Links (UI/UX, Analysis etc.)\n\n")
+      ("Story" "** Motivation\n\n\n** Description\n\n\n** Acceptance Criteria\n\n\n** Projects\n\n\n** Has Automation Test?\n\n\n** Links (UI/UX, Analysis etc.)\n\n")
       ("Sprint Development Bug" "** Description\n\n\n**Case\n\n\n** Projects\n\n")
       ("Production Bug" "** Description\n\n\n** Steps\n\n\n** Projects\n\n\n** Incident Excel\n\n\n** Links - SS - Video\n\n")))
 
@@ -6851,6 +6809,7 @@ Good for buffer management, especially for groupped killings.
         (jira-view-mode)
         (setq header-line-format "Hit `&' to open in browser, `ge' to edit, `gr' to reload, `ga' to see actions.")
         (setq-local jira-view-mode-ticket ticket)
+        (goto-char (point-min))
         (org-set-property "STATUS" (or .fields.status.name "N/A"))
         (org-set-property "REPORTER" (or .fields.reporter.name "N/A"))
         (org-set-property "ASSIGNEE" (or .fields.assignee.name "N/A"))
