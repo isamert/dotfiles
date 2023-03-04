@@ -1546,7 +1546,8 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
        (set-window-buffer nil source-buffer)
        ;; Newly opened indirect buffer is not focused automatically, we
        ;; fix that here:
-       (im-select-window-with-buffer (format "%s::.*" (buffer-name target-buffer)))))
+       (im-select-window-with-buffer (format "%s::.*" (buffer-name target-buffer)))
+       (im-show-outline-only)))
 
   (defun im-org-link-to-indirect-buffer ()
     "Open link at point on a new indirect buffer."
@@ -7288,6 +7289,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (goto-char day-entry)
       (beginning-of-line)
       (org-narrow-to-subtree)
+      (im-show-outline-only)
       t))
 
   (defun im-bullet-focus-given-day (date)
@@ -7333,13 +7335,13 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
      (im-bullet-focus-yesterday)))
 
   (defun im-bullet-focus-heading (heading)
-    "Focus yesterdays header."
     (interactive)
     (widen)
     (goto-char (point-min))
     (when (re-search-forward (format "^*+ %s" heading))
       (beginning-of-line)
       (org-narrow-to-subtree)
+      (im-show-outline-only)
       t))
 
   (defun im-bullet-focus-recurring ()
