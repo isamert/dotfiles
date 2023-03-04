@@ -320,9 +320,10 @@ Some basic variable and function definitions that will be used in configuration.
 
 *** Elisp utils
 #+begin_src emacs-lisp
-  (defun im-tap (it)
-    (message "(im-tap) >>> %s" it)
-    it)
+  (defmacro im-tap (form)
+    `(let ((result ,form))
+       (message "[im-tap :: %s] → %s" ,(prin1-to-string form) result)
+       result))
 
   (defmacro im-append! (lst item)
     "Append ITEM to end of the LST.
