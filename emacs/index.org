@@ -4579,7 +4579,7 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
     :straight (:host github :repo "BlueFlo0d/xwwp" :files (:defaults "*.el"))
     :config
     (require 'xwwp-ace)
-    (evil-define-key '(normal insert) xwidget-webkit-mode-map
+    (evil-define-key '(normal) xwidget-webkit-mode-map
       ;; TODO: F → xwwp-ace-new-tab-toggle?
       (kbd "f") #'xwwp-ace-toggle
       (kbd "^") (λ-interactive (browse-url (xwidget-webkit-uri (xwidget-webkit-current-session))))
