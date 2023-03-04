@@ -8552,6 +8552,86 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
               nil t)
              (buffer-string))))))
 #+end_src
+** Image and file system tags
+#+begin_src emacs-lisp
+  (defun im-image-edit-tags (tags image &optional clear-all)
+    "Add TAGS to IMAGE.
+  If CLEAR-ALL is non-nil, clear all tags before setting TAGS as
+  image tags. Otherwise TAGS are appended.  If cursor is on an org
+  link, use that as the IMAGE (when called interactively)."
+    (interactive
+     (let* ((org-link? (org-in-regexp org-link-any-re 1))
+            (file
+             (if org-link?
+                 (progn
+                   (goto-char (car org-link?))
+                   (plist-get (cadr (org-element-link-parser)) :path))
+               (read-file-name "Image file: ")))
+            (file-tags (s-join ", " (im-image-tags file)))
+            (tags (completing-read-multiple
+                   "Tags: "
+                   (im-directory-image-tags (f-dirname file))
+                   nil nil
+                   (if (s-blank? file-tags) nil (concat file-tags ",")))))
+       (list
+        tags
+        file
+        t)))
+    (setq image (expand-file-name image))
+    (when clear-all
+      (shell-command (format "exiftool -overwrite_original -keywords='' '%s'" image)))
+    (shell-command
+     (format "exiftool -overwrite_original %s '%s'"
+             (s-join " " (--map (format "-keywords+='%s'" (s-trim it)) tags))
+             image))
+    ;; Also add these tags as file extended attribute which helps KDE to
+    ;; easily index these files.  I'm using this in conjunction with exif
+    ;; attributes because it's quite easy to loose extended attributes
+    ;; and exif attributes serves as a backup.
+    (if clear-all
+        (im-set-file-attribute image "user.xdg.tags" (s-join "," tags))
+      (im-set-file-attribute
+       image "user.xdg.tags"
+       (s-join "," (cons (im-get-file-attribute image "user.xdg.tags") tags)))))
+
+  (defun im-image-tags (image)
+    "Return tags of IMAGE."
+    (let ((result
+           (plist-get
+            (seq-first
+             (json-parse-string
+              (shell-command-to-string (format "exiftool -quiet -json -keywords '%s'" (expand-file-name image)))
+              :array-type 'list
+              :object-type 'plist))
+            :Keywords)))
+      (if (listp result) result (list result))))
+
+  (defun im-directory-image-tags (&optional directory)
+    "Return all unique image tags in DIRECTORY.
+  If DIRECTORY is null, `default-directory' is used."
+    (-uniq
+     (--mapcat
+      (plist-get it :Keywords)
+      (json-parse-string
+       (shell-command-to-string (format "exiftool -m -quiet -json -keywords '%s'" (expand-file-name (or directory default-directory))))
+       :object-type 'plist :array-type 'list))))
+
+  (defun im-get-file-attribute (file name)
+    "Get extended attribute NAME for FILE."
+    (shell-command-to-string (format "getfattr --absolute-names --only-values --name='%s' '%s'" name (expand-file-name file))))
+
+  (defun im-set-file-attribute (file name value)
+    "Set extended attribute NAME as VALUE for FILE.
+  When called interactively, set given NAME to VALUE as extended
+  attribute for current buffers file or selected file."
+    (interactive
+     (let ((attr (completing-read "Attribute: " '("user.xdg.tags"))))
+       (list
+        (or (buffer-file-name) (read-file-name "File: "))
+        attr
+        (read-string (format "Value for '%s': " attr)))))
+    (shell-command-to-string (format "setfattr --name='%s' --value='%s' '%s'" name value (expand-file-name file))))
+#+end_src
 * Operating system related
 ** Sound output chooser
 #+begin_src emacs-lisp
