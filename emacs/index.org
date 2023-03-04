@@ -6221,6 +6221,31 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
 
   (defun im-tab-line--buffer-same-group? (orig-buffer-name)
     (s-prefix? (substring orig-buffer-name 0 4) (buffer-name)))
+
+  (defun im-avy-jump-to-tab ()
+    "avy-like jump to tab function."
+    (interactive)
+    (let ((result nil)
+          (choices (make-hash-table)))
+      (let* ((old-fn tab-line-tab-name-format-function)
+             (tab-line-tab-name-format-function
+              #'(lambda (tab tabs)
+                  (let ((char (nth (--find-index (equal it tab) tabs) avy-keys))
+                        (old-format (funcall old-fn tab tabs)))
+                    (map-put! choices char tab)
+                    (format "%s%s"
+                            (propertize (format "%c" char) 'face '(:weight bold :background "blue"))
+                            (substring old-format 1))))))
+        (set-window-parameter nil 'tab-line-cache nil)
+        (force-mode-line-update t)
+        (setq result (read-key "Which?")))
+      (set-window-parameter nil 'tab-line-cache nil)
+      (force-mode-line-update t)
+      (when-let (selected (map-elt choices result))
+        (switch-to-buffer selected))))
+
+  (evil-define-minor-mode-key 'normal 'org-mode (kbd "M-t") #'im-avy-jump-to-tab)
+  (evil-define-key 'normal 'evil-org-mode (kbd "M-t") #'im-avy-jump-to-tab)
 #+end_src
 
 ** bufler
