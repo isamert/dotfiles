@@ -6971,11 +6971,11 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
   (defun im-signal-sync-message-received-handler (ts source receiver _ msg attchs)
     (message ">> [signal] sender=%s, receiver=%s, msg=%s, attach=%s" source receiver msg attchs)
     (when (and (string= im-my-phone-number source)
-               (-contains?
-                (--map (alist-get 'uuid it) (alist-get 'accounts (json-read-file
-                                                                  (expand-file-name "~/.local/share/signal-cli/data/accounts.json"))))
-                receiver
-                ))
+               (or
+                (string= receiver im-my-phone-number)
+                (-contains?
+                 (--map (alist-get 'uuid it) (alist-get 'accounts (json-read-file (expand-file-name "~/.local/share/signal-cli/data/accounts.json"))))
+                 receiver)))
       (cond
        ((s-prefix? "run" msg)
         (im-signal-send-note-to-myself
