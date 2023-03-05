@@ -2926,6 +2926,7 @@ Note that it's not possible to stage hunks with =vc=.
 
     (evil-leader/set-key
       "gv" 'project-vc-dir
+      "gn" 'vc-next-action
       "gs" 'magit-status
       "gS" 'magit-stash
       "gf" 'magit-file-dispatch
