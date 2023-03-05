@@ -808,7 +808,8 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
     '(("~/.\\(Xresources\\|Xdefaults\\)" . "xrdb %; notify-send 'xrdb updated'")
       ("~/.Xresources.d/.*"              . "xrdb ~/.Xresources; notify-send 'xrdb updated'")
       ("~/.config/sxhkd/sxhkdrc"         . "pkill -USR1 -x sxhkd; notify-send 'sxhkd updated'")
-      ("~/.config/skhd/skhdrc"           . "skhd --reload; osascript -e 'display notification \"skhd updated\"'"))
+      ("~/.config/skhd/skhdrc"           . "skhd --reload; osascript -e 'display notification \"skhd updated\"'")
+      ("~/.config/kmonad-linux.kbd"      . "systemctl --user restart kmonad"))
     "File association list with their respective command.")
 
   (add-hook 'after-save-hook #'im-post-save-run-command)
