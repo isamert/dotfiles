@@ -3334,6 +3334,7 @@ Other complementary packages:
 
   (defun im-shell-for (&optional type)
     (interactive)
+    (require 'eshell)
     (setq type (or type 'project))
     (let* ((proj-dir (or (ignore-errors
                            (project-root (project-current)))
