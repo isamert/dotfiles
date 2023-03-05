@@ -1847,17 +1847,16 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
       :prepend t)
      ("gt" "Life todo" entry
       (file+headline bullet-org "Life backlog")
-      "** TODO [#B] %?")
+      "** %?")
      ("gc" "Computer todo" entry
       (file+headline bullet-org "Computer backlog")
-      "** TODO [#B] %?")
+      "**  %?" :prepend t)
      ("gw" "Work todo" entry
       (file+headline bullet-org "Work backlog")
-      "** TODO [#B] %?")
+      "** TODO [#B] %?" :prepend t)
      ("gb" "Free time backlog" item
       (file+headline bullet-org "Free time backlog")
-      "- %U %?"
-      :prepend t)
+      "- %U %?" :prepend t)
 
      ("d" "Daily todo/summary/note")
      ("dt" "Daily TODO" plain
@@ -6174,6 +6173,9 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
 #+end_src
 
 ** tab-line-mode
+:PROPERTIES:
+:ID:       163981c6-a121-4841-be08-54e359233450
+:END:
 #+begin_src emacs-lisp
   (setq tab-line-close-button-show 'selected)
   (setq tab-line-tabs-function #'im-tab-line-buffers)
