@@ -612,14 +612,22 @@ This function is for doing easy REST calls and it uses plists for everything bec
 #+end_src
 *** URL/web utils
 #+begin_src emacs-lisp
+  (defun im-url-parse-title ()
+    (dom-text (car (dom-by-tag (libxml-parse-html-region (point-min) (point-max)) 'title))))
+
   (defun im-url-get-title (url)
     "Get title of the URL."
-    (with-current-buffer (url-retrieve-synchronously url)
-      (dom-text (car
-                 (dom-by-tag (libxml-parse-html-region
-                              (point-min)
-                              (point-max))
-                             'title)))))
+    (with-current-buffer (url-retrieve-synchronously url :silent :inhibit-cookies)
+      (im-url-parse-title)))
+
+  (defun im-url-get-title-async (url cb)
+    "Get title of the URL, async."
+    (url-retrieve
+     url
+     (lambda (_status)
+       (funcall cb (im-url-parse-title))
+       (kill-buffer))
+     nil :silent :inhibit-cookies))
 
   (defmacro with-default-browser (&rest body)
     `(let* ((browse-url-handlers nil)
@@ -2810,7 +2818,7 @@ To sync it automatically:
           '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
             (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
             (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
-            (".*stackoverflow.com.*" . (lambda (link &rest _) (im-open-stackoverflow-link link)))
+            (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
             (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv-play link)))
             (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
             (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . (lambda (link &rest _) (xwidget-webkit-browse-url link)))
@@ -3039,6 +3047,7 @@ Some small enhancments to diff mode:
     "r" #'vc-diff
     "x" #'im-diff-reverse-hunk
     "-" #'diff-split-hunk
+    (kbd "RET") #'diff-goto-source
     (kbd "tab") #'outline-cycle
     (kbd "<backtab>") #'outline-cycle-buffer)
 
@@ -3946,21 +3955,6 @@ Light weight and nice modeline.
      :foreground "Sky Blue"))
 #+end_src
 
-** TODO mini-modeline
-- Moves modeline to the minibuffer and disables modeline in all windows.
-- FIXME: does not work with [[moodline modeline]]
-
-#+begin_src
-  (use-package mini-modeline
-    :quelpa (mini-modeline :repo "kiennq/emacs-mini-modeline" :fetcher github)
-    :after mood-line
-    :config
-    (setq mini-modeline-enhance-visual nil)
-    ;; ^ Otherwise it breaks the color of completion menu popup.
-    (setq mini-modeline-update-interval 0.5)
-    ;; ^ Not sure
-    (mini-modeline-mode t))
-#+end_src
 ** howdoyou
 When you search for something, it opens the results in an org-mode buffer. Results are fetched from SX (stack-exchange, stackoverflow etc) sites.
 - =SPC hs= or =howdoyou-query= :: search function
@@ -3978,12 +3972,18 @@ When you search for something, it opens the results in an org-mode buffer. Resul
     (evil-leader/set-key
       "is" 'howdoyou-query))
 
-  (defun im-open-stackoverflow-link (link)
-    "Open stackoverflow LINK in a nicely formatted org buffer."
+  (defun im-open-stackexchange-link (link)
+    "Open stackexchange LINK in a nicely formatted org buffer."
     (interactive "sLink: ")
     (switch-to-buffer (howdoyou--get-buffer))
     (insert "Loading...")
-    (howdoyou-read-so-link link))
+    (let ((buffer (current-buffer)))
+      (promise-chain (howdoyou-read-so-link link)
+        (then #'(lambda (_)
+                  (im-url-get-title-async
+                   link
+                   (lambda (title)
+                     (with-current-buffer buffer (rename-buffer (format "*se: %s*" title) :unique)))))))))
 #+END_SRC
 
 ** tldr

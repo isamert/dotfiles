@@ -764,6 +764,9 @@ TODO: unify this and skhd configuration?
   «hyper» + Return
     term
 
+  «hyper» + d
+    dolphin
+
   «hyper» + s
     flameshot gui
 
