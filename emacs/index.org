@@ -4958,6 +4958,8 @@ Manage media and streams through =completing-read=.
     (setq empv-radio-channels im-radio-channels)
     (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music/")
+    (setq empv-video-dir `("~/Videos" ,(format "/run/media/%s/BINGUS/Videos" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Videos" (user-login-name))))
+    (setq empv-audio-dir `("~/Music" ,(format "/run/media/%s/BINGUS/Music" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Music" (user-login-name))))
     (setq empv-allow-insecure-connections t)
     (setq empv-invidious-instance "https://yt.femboy.hu/api/v1")
     ;; ^ see https://api.invidious.io/
@@ -6246,7 +6248,7 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
       (when-let (selected (map-elt choices result))
         (switch-to-buffer selected))))
 
-  (evil-define-minor-mode-key 'normal 'org-mode (kbd "M-t") #'im-avy-jump-to-tab)
+  (evil-define-key 'normal 'global (kbd "M-t") #'im-avy-jump-to-tab)
   (evil-define-key 'normal 'evil-org-mode (kbd "M-t") #'im-avy-jump-to-tab)
 #+end_src
 
