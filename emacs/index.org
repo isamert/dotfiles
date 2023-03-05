@@ -3024,6 +3024,35 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
                             (magit-diff-added-highlight . default)))))
 #+end_src
 
+** diff-mode
+Some small enhancments to diff mode:
+- Cycle hunks with TAB, SHIFTTAB.
+- Reverse hunks with "x" (like magit diff).
+- Split hunks with "-", which enables you to split and then reverse so that you can reverse individual lines/portions etc.
+- TODO: maybe add ability to stage hunks
+
+#+begin_src emacs-lisp
+  (add-hook 'diff-mode-hook #'outline-minor-mode)
+
+  (evil-define-key 'normal diff-mode-map
+    "r" #'vc-diff
+    "x" #'im-diff-reverse-hunk
+    "-" #'diff-split-hunk
+    (kbd "tab") #'outline-cycle
+    (kbd "<backtab>") #'outline-cycle-buffer)
+
+  (defun im-diff-reverse-hunk ()
+    "Reverse hunk at point."
+    (interactive)
+    (pcase-let ((`(,buf ,_line-offset ,_pos ,_src ,_dst ,_switched)
+                 (diff-find-source-location nil nil)))
+      (when (y-or-n-p "Really want to revert?")
+        (save-excursion
+          (diff-apply-hunk :reverse)
+          (with-current-buffer buf
+            (save-buffer)))
+        (diff-hunk-kill))))
+#+end_src
 ** avy
 avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using a given char.
 - =s= for jumping to beginning of a word
