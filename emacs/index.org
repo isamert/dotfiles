@@ -1441,8 +1441,12 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     ;; ^ include up to 7-depth headers in imenu search
     (setq org-image-actual-width nil)
     ;; ^ Disable showing inline images in full width. Now you can add `#+ATTR_*: :width 300` to resize inline images
-    (setq org-ellipsis "⤵")
-    ;; ^ Replace ... with ⤵ in collapsed sections
+    ;; (setq org-ellipsis "⤵")
+    (setq org-ellipsis "…")
+    ;; ^ Replace ... with … in collapsed sections
+    (setq org-hide-emphasis-markers t)
+    ;; Hide *...* /.../ etc.
+    (setq org-pretty-entities t)
     (setq org-habit-show-habits-only-for-today t)
     ;; ^ If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
     (setq org-log-into-drawer t)
@@ -1454,6 +1458,8 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (setq org-element-use-cache nil)
     ;; ^ Cache causes bunch of random errors although disabling cache
     ;; reduces the agenda performance significantly
+    (setq org-tags-column 0)
+    ;; Tags starts right after the heading.
 
     ;; TODO Remove when upstream fixes this
     ;; https://github.com/minad/consult/issues/563#issuecomment-1186612641
@@ -1934,52 +1940,12 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 #+begin_src emacs-lisp
   (setq org-refile-targets '((nil . (:maxlevel . 2))))
 #+end_src
-** Fancy/pretty stuff
+** org-modern
 #+begin_src emacs-lisp
-  (setq org-tags-column 0)
-  ;; ^ This does not work well with combination of org-fancy-priorities and org-pretty tags, so I disable it
-  ;; And it also makes sense to disable this because it restricts yyour heading char limit.
-
-  ;; Make headings look better with nice bullets.
-  ;; It also adjusts the size of headings according to their level.
-  ;; (use-package org-bullets
-  ;;   :hook (org-mode . org-bullets-mode))
-
-  ;; (use-package org-fancy-priorities
-  ;;   :diminish
-  ;;   :hook (org-mode . org-fancy-priorities-mode)
-  ;;   :config
-  ;;   (setq org-fancy-priorities-list '("🅰" "🅱" "🅲" "🅳" "🅴")))
-
-  ;; Pretty nice website to find unicode stuff: unicode-table.com
-  ;; (use-package org-pretty-tags
-  ;;   :diminish org-pretty-tags-mode
-  ;;   :config
-  ;;   (setq org-pretty-tags-surrogate-strings
-  ;;         '(("work"  . "⚒")
-  ;;           ("meeting" . "☎")
-  ;;           ("side"  . "❄")
-  ;;           ("learning" . "♢")
-  ;;           ("must"  . "✠")
-  ;;           ("rutin" . "♟")
-  ;;           ("study" . "☣")))
-  ;;   (org-pretty-tags-global-mode))
-
-
-  (im-prettify-mode 'org-mode-hook
-                         '(("[ ]" . "☐")
-                           ("[X]" . "☑")
-                           ("[-]" . "❍")
-                           ("#+begin:" . "»")
-                           ("#+end" . "«")
-                           ("#+BEGIN:" . "»")
-                           ("#+END" . "«")
-                           ("#+begin_src" . "»")
-                           ("#+end_src" . "«")
-                           ("#+BEGIN_SRC" . "»")
-                           ("#+END_SRC" . "«")))
+  (use-package org-modern
+    :config
+    (add-hook 'org-mode-hook #'org-modern-mode))
 #+end_src
-
 ** org-clock
 This prints the text that is used by polybar to show what I am clocking right now. See my [[../index.org::* Polybar][Polybar]] config where I utilize this function.
 
@@ -3048,7 +3014,7 @@ Some small enhancments to diff mode:
     "x" #'im-diff-reverse-hunk
     "-" #'diff-split-hunk
     (kbd "RET") #'diff-goto-source
-    (kbd "tab") #'outline-cycle
+    (kbd "<tab>") #'outline-cycle
     (kbd "<backtab>") #'outline-cycle-buffer)
 
   (defun im-diff-reverse-hunk ()
