@@ -6132,22 +6132,12 @@ Use a slightly modified version of ~tab-bar-tab-name-format~.
 
 #+begin_src emacs-lisp
   (setq tab-bar-tab-hints t)
-  (setq tab-bar-auto-width nil)
-  (setq tab-bar-tab-name-format-function #'im-tab-bar-tab-name-format)
+  ;; ^ Show numbers before tab names
+  (setq tab-bar-auto-width t)
+  (setq tab-bar-auto-width-max nil)
+  ;; ^ Hmmm
+  (setq tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
   (setq tab-bar-tab-name-function #'im-current-project-name)
-
-  (defun im-tab-bar-tab-name-format (tab i)
-    (let ((current-p (eq (car tab) 'current-tab)))
-      (propertize
-       (concat (if tab-bar-tab-hints (format "%d) " i) "")
-               (alist-get 'name tab)
-               " "
-               (or (and tab-bar-close-button-show
-                        (not (eq tab-bar-close-button-show
-                                 (if current-p 'non-selected 'selected)))
-                        tab-bar-close-button)
-                   ""))
-       'face (funcall tab-bar-tab-face-function tab))))
 #+end_src
 
 Evil has a default binding for switching between tabs with ~gt~ and ~gT~, switching forward and backward respectively. I just make them repeatable so that after first ~gt~ (~gT~) I can hammer down ~t~ (or ~T~) to switch next/prev tab quickly instead of doing ~gt~ (or ~gT~) again and again.
@@ -6223,33 +6213,14 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
 
   (defun im-tab-line--buffer-same-group? (orig-buffer-name)
     (s-prefix? (substring orig-buffer-name 0 4) (buffer-name)))
-
-  (defun im-avy-jump-to-tab ()
-    "avy-like jump to tab function."
-    (interactive)
-    (let ((result nil)
-          (choices (make-hash-table)))
-      (let* ((old-fn tab-line-tab-name-format-function)
-             (tab-line-tab-name-format-function
-              #'(lambda (tab tabs)
-                  (let ((char (nth (--find-index (equal it tab) tabs) avy-keys))
-                        (old-format (funcall old-fn tab tabs)))
-                    (map-put! choices char tab)
-                    (format "%s%s"
-                            (propertize (format "%c" char) 'face '(:weight bold :background "blue"))
-                            (substring old-format 1))))))
-        (set-window-parameter nil 'tab-line-cache nil)
-        (force-mode-line-update t)
-        (setq result (read-key "Which?")))
-      (set-window-parameter nil 'tab-line-cache nil)
-      (force-mode-line-update t)
-      (when-let (selected (map-elt choices result))
-        (switch-to-buffer selected))))
-
-  (evil-define-key 'normal 'global (kbd "M-t") #'im-avy-jump-to-tab)
-  (evil-define-key 'normal 'evil-org-mode (kbd "M-t") #'im-avy-jump-to-tab)
 #+end_src
 
+** tabgo.el
+#+begin_src emacs-lisp
+  (use-package tabgo :straight (:host github :repo "isamert/tabgo.el"))
+  (evil-define-key 'normal 'global (kbd "M-t") #'tabgo)
+  (evil-define-key 'normal 'evil-org-mode (kbd "M-t") #'tabgo)
+#+end_src
 ** bufler
 Good for buffer management, especially for groupped killings.
 
@@ -6291,11 +6262,12 @@ Good for buffer management, especially for groupped killings.
            (proj-path (or (im-current-project-root) (expand-file-name "~/")))
            (fpath (or (buffer-file-name) (buffer-name)))
            (fpath-pretty (string-replace (expand-file-name "~") "~" fpath)))
-      (message "[%s] %s (%s)\n%s"
+      (message "[%s] %s\n%s\n%s\n%s"
                (propertize proj-name 'face 'bold)
                (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic))
-               (im-human-readable-size (buffer-size))
-               (format "%s%s" (if kill-file-path (propertize "Copied: " 'face 'bold) "") fpath-pretty))
+               (format "%s%s" (if kill-file-path (propertize "Copied: " 'face 'bold) "") fpath-pretty)
+               (format "Size: %s" (im-human-readable-size (buffer-size)))
+               (format "Current branch: %s" (lab-git-current-branch)))
       (when kill-file-path
         (im-kill fpath-pretty))))
 #+end_src
@@ -8349,7 +8321,10 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
 ** im-meme-downloader
 #+begin_src emacs-lisp
   (defun im-meme-downloader (url &optional file-title)
-    (interactive "sURL: ")
+    (interactive
+     (list
+      (read-string "URL: ")
+      (read-string "Title: ")))
     (let* ((title
             (or file-title
                 (s-trim
@@ -8360,7 +8335,7 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
                    s-downcase))))
            (dir (expand-file-name "~/Documents/memes"))
            (default-directory dir)
-           (cmd (format "yt-dlp --output '%s.%%(ext)s' %s" title url)))
+           (cmd (format "yt-dlp --output '%s.%%(ext)s' '%s'" title url)))
       (message "im-meme-downloader :: %s" cmd)
       (im-shell-command
        :command cmd
@@ -8378,7 +8353,7 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
            (alert "Can't parse yt-dlp output!")))
        :on-fail
        (lambda (&rest _)
-         (alert "Error while downloading: %s!" url)))))
+         (alert (format "Error while downloading: %s!" url))))))
 #+end_src
 ** im-jump-to-definition-at-config
 #+begin_src emacs-lisp
