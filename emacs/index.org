@@ -1946,6 +1946,16 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     :config
     (add-hook 'org-mode-hook #'org-modern-mode))
 #+end_src
+** org-rainbow-tags
+#+begin_src emacs-lisp
+  (use-package org-rainbow-tags
+    :custom
+    (org-rainbow-tags-hash-start-index 6)
+    (org-rainbow-tags-extra-face-attributes
+     '(:inverse-video t :box nil :weight 'bold))
+    :hook
+    (org-mode . org-rainbow-tags-mode))
+#+end_src
 ** org-clock
 This prints the text that is used by polybar to show what I am clocking right now. See my [[../index.org::* Polybar][Polybar]] config where I utilize this function.
 
