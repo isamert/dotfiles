@@ -2911,6 +2911,8 @@ Note that it's not possible to stage hunks with =vc=.
 
     (evil-leader/set-key
       "gv" 'project-vc-dir
+      "gd" 'vc-diff
+      "gD" 'vc-root-diff
       "gn" 'vc-next-action
       "gs" 'magit-status
       "gS" 'magit-stash
@@ -3280,6 +3282,9 @@ Other complementary packages:
   (define-key project-prefix-map "g" #'im-consult-ripgrep)
   (add-to-list 'project-switch-commands `(im-consult-ripgrep "Grep"))
 
+  (define-key project-prefix-map "f" #'im-find-file-in-current-project)
+  (add-to-list 'project-switch-commands `(im-find-file-in-current-project "Files"))
+
   (define-key project-prefix-map "D" #'dired-jump)
   (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
 
@@ -3434,7 +3439,7 @@ Some functionality for project management. I do some fine-tuning for =find= and 
     (interactive "DSelect directory: ")
     (consult-ripgrep dir))
 
-  (defun im-find-file-in (dir)
+  (defun im-find-file-in (&optional dir)
     "Find file in DIR. `fd' is already fast enough, no need for
   `consult-find's async approach."
     (interactive "DFind files in: ")
@@ -3445,6 +3450,10 @@ Some functionality for project management. I do some fine-tuning for =find= and 
        :category 'file
        :map (s-chop-prefix "./" it)
        :do (find-file it))))
+
+  (defun im-find-file-in-current-project ()
+    (interactive)
+    (im-find-file-in (im-current-project-root)))
 #+end_src
 
 *** consult-buffer and some extensions
@@ -3617,8 +3626,9 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     :config
     (setq flycheck-posframe-border-width 1)
     (setq flycheck-posframe-border-use-error-face t)
-    (setq flycheck-posframe-position 'point-bottom-left-corner-upward)
-    (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
+    (setq flycheck-posframe-position 'window-bottom-center)
+    (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode)
+    (flycheck-posframe-configure-pretty-defaults))
 
   (defun im-show-error-list (arg)
     "Show all lsp errors or flycheck erros, depending on which is available."
@@ -4969,7 +4979,7 @@ Manage media and streams through =completing-read=.
     (setq empv-video-dir `("~/Videos" ,(format "/run/media/%s/BINGUS/Videos" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Videos" (user-login-name))))
     (setq empv-audio-dir `("~/Music" ,(format "/run/media/%s/BINGUS/Music" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Music" (user-login-name))))
     (setq empv-allow-insecure-connections t)
-    (setq empv-invidious-instance "https://yt.femboy.hu/api/v1")
+    (setq empv-invidious-instance "https://inv.riverside.rocks/api/v1")
     ;; ^ see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
     (add-to-list 'empv-mpv-args "--save-position-on-quit")
@@ -6143,7 +6153,7 @@ Use a slightly modified version of ~tab-bar-tab-name-format~.
 #+begin_src emacs-lisp
   (setq tab-bar-tab-hints t)
   ;; ^ Show numbers before tab names
-  (setq tab-bar-auto-width t)
+  (setq tab-bar-auto-width nil)
   (setq tab-bar-auto-width-max nil)
   ;; ^ Hmmm
   (setq tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
@@ -6352,9 +6362,9 @@ Good for buffer management, especially for groupped killings.
   (evil-leader/set-key "cm" #'im-marks-my-docs)
 
   (defun im-consult--marks-builder (input)
-    (list :command
-          (list "marks" "--no-color" "--null" "--path" default-directory "--query" input)
-          :highlight nil))
+    (cons
+     (list "marks" "--no-color" "--null" "--path" default-directory "--query" input)
+     nil))
 
   (defun im-marks (&optional directory)
     "Run `marks'."
