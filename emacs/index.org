@@ -7946,6 +7946,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   (cl-defun im-shell-command
       (&key
        command
+       args
        (switch t)
        (buffer-name (concat "*" command "*"))
        (on-start (lambda (&rest _)))
@@ -7954,6 +7955,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     "Run given shell COMMAND and redirect output to given BUFFER-NAME.
   This is a wrapper around `start-process-shell-command' that adds
   support for ANSI term colors and some syntactic convenience.
+
+  If ARGS is non-nil list, then use `start-process' with command as
+  COMMAND and args as ARGS.
 
   When called interactively, asks for a command to run (with eshell
   completion)."
@@ -7973,7 +7977,10 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
             (message msg)
             (when (not (frame-focus-state))
               (alert msg)))))))
-    (let* ((proc (start-process-shell-command command buffer-name command))
+    (let* ((proc
+            (if args
+                (apply #'start-process command buffer-name command args)
+              (start-process-shell-command command buffer-name command)))
            (proc-out ""))
       (set-process-sentinel
        proc
@@ -7999,6 +8006,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
          im-shell-command-mode-command
          (list
           :command command
+          :args args
           :buffer-name buffer-name
           :on-start on-start
           :on-finish on-finish
