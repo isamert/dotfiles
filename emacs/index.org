@@ -57,6 +57,8 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   (setq-default lexical-binding 'lv)
   (setq native-comp-async-report-warnings-errors nil)
 
+  (setq gc-cons-threshold 3000000)
+  ;; ^ Set gc threshold to ~30MB
   (setq read-process-output-max (* 1024 1024))
   ;; ^ Better than default
   (setq confirm-kill-processes nil)
@@ -125,16 +127,6 @@ I tend to not use the =use-package= goodies while configuring my packages, meani
 #+END_SRC
 
 Currently I use [[mini-modeline]] as my modeline and it already hides minor mode indicators from the modeline. So this package is not needed but better have it as I might change my modeline in the future.
-
-** GCMH
-This is a great hack that defers garbage collections to the times where Emacs is idling and from my initial observation, it works quite well. I load this package first to be able to benefit it from early on.
-
-#+begin_src emacs-lisp
-  (use-package gcmh
-    :config
-    (gcmh-mode 1)
-    (setq gcmh-verbose t))
-#+end_src
 
 ** Essential packages
 I use =s.el= and =dash.el= extensively. They already come as a dependency with other packages but I may use them before loading any package, so:
@@ -3624,7 +3616,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
   (use-package flycheck-posframe
     :straight (:host github :repo "alexmurray/flycheck-posframe")
     :config
-    (setq flycheck-posframe-border-width 1)
+    (setq flycheck-posframe-border-width 2)
     (setq flycheck-posframe-border-use-error-face t)
     (setq flycheck-posframe-position 'window-bottom-center)
     (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode)
@@ -3753,6 +3745,8 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
            (go-mode . lsp)
            (java-mode . lsp)
            (java-ts-mode . lsp))
+    :init
+    (setq lsp-use-plists t)
     :config
     (setq lsp-completion-provider :none) ;; for corfu
     (setq lsp-enable-xref t)
@@ -4585,7 +4579,6 @@ You can also do ~consult-imenu~ and ~embark-collect~ but it does not have a refr
 ** webpaste
 #+begin_src emacs-lisp
   (use-package webpaste
-    :ensure t
     :config
     (setq webpaste-open-in-browser t))
 #+end_src
@@ -4734,7 +4727,7 @@ Turkish dictionary.
 #+end_src
 *** Google translate
 #+begin_src emacs-lisp
-  (use-package go-translate :ensure t
+  (use-package go-translate
     :config
     (setq gts-translate-list '(("en" "tr") ("tr" "en")))
     (setq gts-buffer-follow-p t)
