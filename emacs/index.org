@@ -8706,6 +8706,22 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
 
   (evil-leader/set-key "eb" #'im-linux-connect-paired-bluetooth-device)
 #+end_src
+** Switch next monitor input
+#+begin_src emacs-lisp
+  (defun im-ddcutil-toggle/switch-monitor-input ()
+    "Switch to other monitor, USBC or HDMI."
+    (interactive)
+    (let* ((hdmi "0x11")
+           (usbc "0x1b")
+           (cmd (format
+                 "ddcutil -b $(ddcutil detect | grep I2C | cut -d- -f2 | tail -n 1) setvcp 0x60 %s"
+                 (if (s-contains? hdmi (shell-command-to-string "ddcutil -d 1 getvcp 60"))
+                     usbc hdmi))))
+      (shell-command-to-string
+       (if (workpc?)
+           (format "ssh x220 '%s'" cmd)
+         cmd))))
+#+end_src
 * Postamble
 #+begin_src emacs-lisp
   ;; Load the remaining external files that I want to be loaded

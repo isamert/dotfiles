@@ -2440,20 +2440,6 @@ Enabling uBlock [[https://github.com/gorhill/uBlock/wiki/Cloud-storage][cloud st
   Type=Application
   Categories=Utility;
 #+end_src
-** .local/share/applications/switch-monitor-input.desktop
-:PROPERTIES:
-:ID:       a9df33fc-4547-440a-a1ab-0ebe9ff5f92d
-:END:
-Also see [[id:ed2554b0-83f7-4692-a16b-75403b8d25cf][raycast-switch-monitor-to-hdmi.sh]].
-
-#+begin_src conf :tangle (when-linux "~/.local/share/applications/switch-monitor-input.desktop")
-  [Desktop Entry]
-  Name=Switch monitor to USB-C
-  Terminal=false
-  Exec=/bin/sh -c 'ddcutil -b $(ddcutil detect | grep -m 1 I2C | cut -d- -f2) setvcp 0x60 0x1b'
-  Type=Application
-  Categories=Utility;
-#+end_src
 ** .local/share/applications/keepassxc-nopass.desktop
 #+begin_src conf :tangle (when-linux "~/.local/share/applications/keepassxc-nopass.desktop")
   [Desktop Entry]
@@ -3307,26 +3293,6 @@ Downloads given file in given folder with given name. Useful for adding keybindi
   fi
 
   # TODO: add peak points
-#+end_src
-* macOS scripts
-** raycast-switch-monitor-to-hdmi.sh
-:PROPERTIES:
-:ID:       ed2554b0-83f7-4692-a16b-75403b8d25cf
-:END:
-Also see [[id:a9df33fc-4547-440a-a1ab-0ebe9ff5f92d][switch-monitor-input.desktop]].
-
-#+begin_src sh :tangle (when-darwin "~/.bin/raycast-switch-monitor-to-hdmi.sh")
-  #!/bin/sh
-
-  # Required parameters:
-  # @raycast.schemaVersion 1
-  # @raycast.title Switch monitor to HDMI
-  # @raycast.mode compact
-
-  # Optional parameters:
-  # @raycast.icon �
-
-  ssh asus 'ddcutil -b $(ddcutil detect | grep -m 1 I2C | cut -d- -f2) setvcp 0x60 0x11'
 #+end_src
 * Tools
 - =dconf-editor= :: List and explore gnome/gshell/app settings.
