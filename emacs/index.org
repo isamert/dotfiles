@@ -3815,19 +3815,28 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     :config
     (setq lsp-ui-sideline-show-code-actions nil))
 
-  ;; I don't really use this, but it may come handy later
-  ;; (use-package dap-mode
-  ;;   :after (lsp-mode)
-  ;;   :config
-  ;;   (dap-mode t)
-  ;;   (dap-ui-mode t))
-
   ;; consult-lsp-diagnostics and consult-lsp-symbols
   (use-package consult-lsp
     :config
     (evil-define-key 'normal lsp-mode-map
       (kbd "M-I") 'consult-lsp-symbols))
 #+END_SRC
+
+** dap-mode
+Basic workflow is as follows:
+- ~dap-breakpoint-add~
+- ~dap-debug~
+  - You may need to run this on root of your project (like in README etc.) otherwise it may fail.
+- When debugger kicks-in, ~dap-hydra~ will be displayed, or you can call it manually anytime you want.
+- ~dap-ui-repl~ → This drops you in a REPL where you can run code in the debug context, which is better than the hydra provided eval functionality.
+
+#+begin_src emacs-lisp
+  (use-package dap-mode
+    :after (lsp-mode)
+    :config
+    ;; When debugger kicks-in, run dap-hydra
+    (add-hook 'dap-stopped-hook (lambda (arg) (call-interactively #'dap-hydra))))
+#+end_src
 
 ** vterm
 Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains some helpful commands that enriches ~vterm~ usage.
