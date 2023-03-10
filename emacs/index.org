@@ -1858,7 +1858,7 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
    '(("g" "General todo/note")
      ("gi" "Study later" item
       (file+olp bullet-org "Life backlog" "Investigate")
-      "- [ ] %(im-org-make-link-string (read-string \"URL: \"))"
+      "- [ ] %U %(im-org-make-link-string (read-string \"URL: \"))"
       :prepend t)
      ("gt" "Life todo" entry
       (file+headline bullet-org "Life backlog")
@@ -5599,7 +5599,8 @@ The following enables =CamelCase= aware editing operations.
                        :category 'maven-goal)))
         (let ((default-directory (im-current-project-root)))
           (im-shell-command
-           :command (format "./mvnw %s" (car selected)))))))
+           :command (format "./mvnw %s" (car selected))
+           :buffer-name (format "*%s: %s*" (f-filename (im-current-project-name)) (car selected)))))))
 
   (defun im-maven-goals-read ()
     "Find all maven goals and their descriptions in current project."
