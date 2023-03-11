@@ -2792,9 +2792,6 @@ To sync it automatically:
 #+begin_src emacs-lisp
   (use-package w3m
     :config
-    (evil-leader/set-key
-      "ew" #'im-w3m-open-url-dwim
-      "eW" #'im-xwidget-webkit-open)
     (evil-define-key 'normal w3m-mode-map
       (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function w3m-current-url))
       (kbd "^") (λ-interactive (browse-url w3m-current-url))
@@ -2816,18 +2813,7 @@ To sync it automatically:
     (setq w3m-use-tab-line nil)
     ;; (setq w3m-display-mode 'plain)
     (add-hook 'w3m-mode-hook #'(lambda () (setq-local scroll-margin 0)))
-    (w3m-display-mode 'plain)
-
-    (setq browse-url-secondary-browser-function #'browse-url-firefox)
-    (setq browse-url-handlers
-          '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
-            (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
-            (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
-            (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
-            (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv-play link)))
-            (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
-            (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . (lambda (link &rest _) (xwidget-webkit-browse-url link)))
-            ("." . w3m-goto-url))))
+    (w3m-display-mode 'plain))
 
   (defun im-w3m-open-url-dwim (url &optional new-session)
     (interactive "sURL: ")
@@ -2887,6 +2873,79 @@ To sync it automatically:
         (w3m-buffer-number (current-buffer))))))
 #+end_src
 
+** eww
+#+begin_src emacs-lisp
+  (use-package eww
+    :config
+    ;; (setq shr-image-animate nil)
+    ;; ^ Gifs make my computer suffer, so I just disable them
+    (setq shr-max-image-proportion 0.6)
+    (setq shr-discard-aria-hidden t)
+    (setq shr-use-xwidgets-for-media t)
+    (setq eww-auto-rename-buffer
+          (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "..."))))
+
+    (evil-define-key 'normal eww-mode-map
+      "Y" #'eww-copy-page-url
+      "d" #'im-eww-save-image
+      "O" (λ-interactive (eww (read-string "URL: " (eww-current-url))))
+      "t" (λ-interactive (eww (read-string "URL: ") :new-session))
+      "T" (λ-interactive (eww (read-string "URL: " (eww-current-url)) :new-session))
+      "f" #'im-eww-avy-follow
+      "F" (λ-interactive (im-eww-avy-follow :new-session))
+      "r" #'eww-reload
+      "R" #'eww-readable
+      "^" (λ-interactive (browse-url (eww-current-url)))
+      "&" (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url))))
+    (setq browse-url-secondary-browser-function #'browse-url-firefox)
+    (setq browse-url-handlers
+          '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
+            (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
+            (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
+            (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
+            (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv-play link)))
+            (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
+            (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . (lambda (link &rest _) (xwidget-webkit-browse-url link)))
+            ("." . w3m-goto-url)))
+
+    (defun im-eww-avy-follow (&optional follow-type)
+      (interactive)
+      (let ((wend (window-end))
+            (urls '()))
+        (save-excursion
+          (goto-char (window-start))
+          (while-let ((match (text-property-search-forward 'shr-tab-stop nil nil t))
+                      ((< (point) wend)))
+            (goto-char (prop-match-beginning match))
+            ;; (push (get-text-property (point) 'shr-url) urls)
+            (push (point) urls)))
+        (avy-process (nreverse urls))
+        (pcase follow-type
+          (:new-session
+           (eww (get-text-property (point) 'shr-url) :new-session))
+          (:external (eww-browse-with-external-browser  t))
+          (_ (eww-follow-link)))))
+
+    (evil-leader/set-key
+      "ew" #'eww
+      "eW" #'im-xwidget-webkit-open))
+
+  (defun im-eww-save-image ()
+    "Save the image at point."
+    (interactive)
+    (let ((image (get-text-property (point) 'display))
+          ;; Disable all save hooks as they might damage the file
+          (before-save-hook '())
+          (after-save-hook '()))
+      (unless (and image
+                   (eq (car image) 'image))
+        (user-error "No images at point!"))
+      (with-temp-buffer
+        (setq buffer-file-name
+              (read-file-name "Save to: "  nil default-directory nil))
+        (insert (plist-get (cdr image) :data))
+        (save-buffer))))
+#+end_src
 ** shell-mode
 #+begin_src emacs-lisp
   (use-package shell
