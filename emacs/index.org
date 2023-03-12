@@ -1965,18 +1965,9 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     (org-mode . org-rainbow-tags-mode))
 #+end_src
 ** org-clock
-This prints the text that is used by polybar to show what I am clocking right now. See my [[../index.org::* Polybar][Polybar]] config where I utilize this function.
-
 #+begin_src emacs-lisp
-  (defun im-format-polybar-clock-string ()
-    (if (org-clocking-p)
-        (format "⏲ [%s] %s "
-                (org-duration-from-minutes (org-clock-get-clocked-time))
-                org-clock-heading)
-      "⏸"))
-
-  (setq org-clock-clocked-in-display nil)
-  ;; ^ I show it on polybar or gnome bar, so I don't need it on modeline
+  (setq org-clock-clocked-in-display 'mode-line)
+  ;; Shows in the tab-bar, if tab-bar is enabled.
 #+end_src
 
 ** org-ql
@@ -2268,6 +2259,12 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
      "** (call-interactively #'im-org-archive-url)"))
 #+end_src
 * Other packages
+** display-time-mode
+I started using Emacs in full screen (Emacs maximalism goes on), so this is helpful.
+#+begin_src emacs-lisp
+  (setq display-time-format "%b %d, %H:%M")
+  (display-time-mode)
+#+end_src
 ** outline-mode
 This is a built-in mode for providing basic outlining features. Here are a few configurations to make the navigation a bit more like what I use in org-mode:
 
@@ -6259,8 +6256,8 @@ It's a great workspace manager that comes bundled with Emacs. I was using an abo
      tab-bar-separator
      tab-bar-format-add-tab
      tab-bar-format-align-right
-     ;;tab-bar-format-global
-     ))
+     tab-bar-format-global))
+
 #+end_src
 
 Use a slightly modified version of ~tab-bar-tab-name-format~.
