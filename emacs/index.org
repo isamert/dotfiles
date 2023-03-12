@@ -2908,7 +2908,9 @@ To sync it automatically:
       "F" (λ-interactive (im-eww-avy-follow :new-session))
       "r" #'eww-reload
       "R" #'eww-readable
-      "^" (λ-interactive (browse-url (eww-current-url)))
+      (kbd "<f2>") #'im-eww-open-in-xwidget-webkit
+      (kbd "<f3>") (λ-interactive (browse-url (eww-current-url)))
+      (kbd "<f4>") (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url)))
       "&" (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url))))
     (setq browse-url-secondary-browser-function #'browse-url-firefox)
     (setq browse-url-handlers
@@ -2916,10 +2918,10 @@ To sync it automatically:
             (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
             (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
             (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
-            (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv-play link)))
+            (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv--play-or-enqueue link)))
             (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
             (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . (lambda (link &rest _) (xwidget-webkit-browse-url link)))
-            ("." . w3m-goto-url)))
+            ("." . eww)))
 
     (defun im-eww-avy-follow (&optional follow-type)
       (interactive)
@@ -4722,6 +4724,10 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
   (defun im-w3m-open-in-xwidget-webkit ()
     (interactive nil w3m-mode)
     (xwidget-webkit-browse-url w3m-current-url :new-session))
+
+  (defun im-eww-open-in-xwidget-webkit ()
+    (interactive nil eww-mode)
+    (xwidget-webkit-browse-url (eww-current-url) :new-session))
 
   (defun im-xwidget-webkit-open (url &optional new-session)
     (interactive "sURL: ")
