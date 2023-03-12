@@ -1712,6 +1712,37 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (use-package ob-http
     :straight (:host github :repo "zweifisch/ob-http"))
 
+  (defun im-cmdargs-tokenize (input)
+    (with-temp-buffer
+      (insert input)
+      (goto-char (point-min))
+      (let ((tokens '()))
+        (while-let ((chr (get-byte))
+                    ((not (eobp))))
+          (pcase chr
+            ((or ?\s ?\t ?\n) (forward-char))
+            (?\"
+             (forward-char)
+             (push
+              (replace-regexp-in-string
+               (regexp-quote "\\\"") "\""
+               (buffer-substring
+                (point)
+                (1- (re-search-forward "[^\\]\"" nil t))))
+              tokens))
+            (?\'
+             (forward-char)
+             (push (buffer-substring
+                    (point)
+                    (1- (re-search-forward "'" nil t)))
+                   tokens))
+            (_ (push (buffer-substring
+                      (point)
+                      ;; TODO Handle eol
+                      (1- (re-search-forward "[ \t]" nil t)))
+                     tokens))))
+        (nreverse tokens))))
+
   (defun im-curl-to-org-http (curl-str)
     "Convert CURL-STR into an ob-http block.
   More concretely this function converts given curl command (that
@@ -1723,55 +1754,23 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       (if (use-region-p)
           (buffer-substring-no-properties (region-beginning) (region-end))
         (read-string "Curl string: "))))
-    (let* ((curl (s-trim curl-str))
-           (url (cadr (s-match "['\"]\\(http.*?\\)['\"]" curl)))
-           (headers (--map (format "%s: %s" (s-titleize (nth 2 it)) (nth 3 it))
-                           (s-match-strings-all "-H \\('\\|\"\\)\\(.*?\\): \\(.*?\\)\\('\\|\"\\)" curl)))
-           (body (-some->> (s-match "--data-\\(binary\\|raw\\) '\\(.*?\\)'" curl)
-                   (nth 2)
-                   (s-trim)))
-           (compressed? (s-matches? "--compressed" curl))
-           (method (nth 2 (s-match "-\\(X\\|-request\\) ['\"]?\\([A-Z]+\\)['\"]?" curl)))
-           ;; GET https://...
-           ;; Header1: Value1
-           ;; ...
-           ;;
-           ;; body
-           (result (format
-                    "  %s %s\n%s%s"
-                    (or method (if body "POST" "GET"))
-                    url
-                    (s-join "\n" (--map (format "  %s" it) headers))
-                    (if body
-                        (format "\n\n%s"
-                                ;; if json, format the body
-                                (if (or (and
-                                         (s-prefix? "{" body)
-                                         (s-suffix? "}" body))
-                                        (and
-                                         (s-prefix? "[" body)
-                                         (s-suffix? "]" body)))
-                                    (with-temp-buffer
-                                      (insert body)
-                                      (json-pretty-print-buffer)
-                                      (->>
-                                       (buffer-string)
-                                       (s-split "\n")
-                                       (--map (format "  %s" it))
-                                       (s-join "\n")))
-                                  (format "%s" body)))
-                      ""))))
-      (when (use-region-p)
-        (delete-region (region-beginning) (region-end)))
-      (unless (save-excursion
-                (goto-char (region-beginning))
-                (forward-line -1)
-                (s-contains? "begin_src" (thing-at-point 'line t)))
-        (insert
-         (format "#+begin_src http :pretty :wrap src json%s\n\n#+end_src"
-                 (if compressed? " :curl --compressed" "")))
-        (forward-line -1))
-      (insert result)))
+    (let ((tokens cmdargs-example-tokens)
+          (headers '())
+          (request "GET")
+          url
+          data)
+      (--each-indexed tokens
+        (pcase it
+          ((or "-H" "--header")
+           (push (nth (1+ it-index) tokens) headers))
+          ((or "-d" "--data-binary" "--data-raw")
+           (setq data (nth (1+ it-index) tokens)))
+          ((or "-X" "--request" "--data-raw")
+           (setq request (nth (1+ it-index) tokens)))
+          ((pred (lambda (x) (s-prefix? "http" x)))
+           (setq url it))))
+      (insert
+       (im-s-interpolated "#{request} #{url}\n#{(s-join \"\\n\" headers)}\n\n#{data}"))))
 #+end_src
 
 ** Exporting
