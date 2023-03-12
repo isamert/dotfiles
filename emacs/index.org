@@ -809,7 +809,9 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
       ("~/.Xresources.d/.*"              . "xrdb ~/.Xresources; notify-send 'xrdb updated'")
       ("~/.config/sxhkd/sxhkdrc"         . "pkill -USR1 -x sxhkd; notify-send 'sxhkd updated'")
       ("~/.config/skhd/skhdrc"           . "skhd --reload; osascript -e 'display notification \"skhd updated\"'")
-      ("~/.config/kmonad-linux.kbd"      . "systemctl --user restart kmonad"))
+      ("~/.config/kmonad-linux.kbd"      . "systemctl --user restart kmonad")
+      ("~/.ssh/config" . im-unison-sync)
+      ("~/.emacs.d/load/isamert.*" . im-unison-sync))
     "File association list with their respective command.")
 
   (add-hook 'after-save-hook #'im-post-save-run-command)
@@ -819,7 +821,21 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
     "Execute the specified command after saving specified file."
     (when-let* ((fname (buffer-file-name))
                 (match (im-assoc-regexp fname im-run-after-save-alist #'expand-file-name)))
-      (mapcar (lambda (pair) (shell-command (s-replace "%" fname (cdr pair)))) match)))
+      (mapcar
+       (-lambda ((_ . command))
+         (cond
+          ((stringp command)
+           (shell-command (s-replace "%" fname command)))
+          ((functionp command)
+           (funcall command fname))
+          (t
+           (message ">> Wrong specification in `im-run-after-save-alist' for %s" fname))))
+       match)))
+
+  (defun im-unison-sync (file)
+    (async-shell-command
+     (format "DISPLAY= unison sync -ui text -batch -root ~ -root ssh://%s"
+             (if (workpc?) "x220" "mac"))))
 #+END_SRC
 
 ** macOS problem: too many open files
