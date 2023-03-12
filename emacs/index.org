@@ -4735,6 +4735,22 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
        (concat eww-search-prefix (url-hexify-string url)))
      new-session))
 #+end_src
+** chatgpt-arcana & org-ai
+Just experimenting with OpenAI clients.
+
+#+begin_src emacs-lisp
+  (use-package chatgpt-arcana
+    :ensure t
+    :straight (:host github :repo "CarlQLange/chatgpt-arcana.el")
+    :config
+    (setq chatgpt-arcana-api-key im-openai-api-key))
+
+  (use-package org-ai
+    :ensure t
+    :straight (:host github :repo "rksm/org-ai")
+    :config
+    (setq org-ai-openai-api-token im-openai-api-key))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
