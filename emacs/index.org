@@ -3285,6 +3285,7 @@ Other complementary packages:
   (use-package marginalia
     :config
     (define-key minibuffer-local-map (kbd "M-m") #'marginalia-cycle)
+    (setq marginalia-censor-variables '("pass\\|auth-source-netrc-cache\\|auth-source-.*-nonce\\|token\\|key\\|password\\|cookie\\|phone-number\\|app-id\\|feed-link"))
     (marginalia-mode))
 
   (use-package mini-frame
@@ -3292,10 +3293,7 @@ Other complementary packages:
     (setq mini-frame-show-parameters
           '((top . 0.15)
             (width . 0.70)
-            (left . 0.5)
-            ;; https://github.com/minad/vertico/issues/115#issuecomment-973753577
-            ;; Not needed on emacs 29
-            (no-accept-focus . t)))
+            (left . 0.5)))
     (setq mini-frame-color-shift-step 15)
 
     ;; Disable mini-frame while using some functions either that does
