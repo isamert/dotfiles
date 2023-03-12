@@ -295,66 +295,6 @@ It can be installed through homebrew:
   ]
 #+end_src
 
-** Hammerspoon
-[[https://www.hammerspoon.org/][Hammerspoon]] is a macOS automation tool. It can be installed with homebrew: ~brew install --cask hammerspoon~. It has a great [[https://www.hammerspoon.org/go/][starting guide]].
-
-*** init file
-#+begin_src lua :tangle (when-darwin "~/.hammerspoon/init.lua")
-  local clocking = require "clocking"
-  -- It is required to be bound to a variable, we can't just do
-  -- clocking.init() because garbage collector removes it and it stops
-  -- working.
-  dateTimeGarbageCollectorPreventer = clocking.init()
-#+end_src
-
-*** Show currently clocked-in task in menubar
-This is mostly based on: [[https://appsonthemove.com/posts/orgmode_clocking_hammerspoon/][Org mode clocking in the menu bar with Hammerspoon]].
-
-#+begin_src lua :tangle (when-darwin "~/.hammerspoon/clocking.lua")
-  local clockingLog = hs.logger.new("clocking")
-  local clockingMenu = hs.menubar.new()
-
-  local function trim(s)
-     return (s:gsub("^%s*(.-)%s*$", "%1"))
-  end
-
-  local function elisp(sexp, callback)
-     hs.task.new(
-        "/opt/homebrew/bin/emacsclient",
-        function(exitCode, stdOut, stdErr)
-           if exitCode == 0 then
-              callback(trim(stdOut))
-           end
-        end,
-        { "--eval", sexp }
-     ):start()
-  end
-
-
-  local function updateClockingMenu()
-     elisp(
-        "(im-format-polybar-clock-string)",
-        function(value)
-           -- Strip double quotes
-           clockingMenu:setTitle(string.match(value, '"(.+)"'))
-        end
-     )
-  end
-
-  local function startUpdatingClockingMenu()
-     return hs.timer.doEvery(5, updateClockingMenu)
-  end
-
-  local mod = {}
-
-  function mod.init()
-      updateClockingMenu()
-      return startUpdatingClockingMenu()
-  end
-
-  return mod
-#+end_src
-
 ** Rootless sshd
 #+begin_src conf :tangle ~/.config/sshd/cfg
   Port 2222
