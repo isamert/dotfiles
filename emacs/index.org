@@ -2261,7 +2261,8 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 ** display-time-mode
 I started using Emacs in full screen (Emacs maximalism goes on), so this is helpful.
 #+begin_src emacs-lisp
-  (setq display-time-format "%b %d, %H:%M")
+  (setq display-time-format "%b %d, %H:%M %a")
+  (setq display-time-default-load-average nil)
   (display-time-mode)
 #+end_src
 ** outline-mode
@@ -6285,7 +6286,7 @@ Use a slightly modified version of ~tab-bar-tab-name-format~.
   (setq tab-bar-tab-hints t)
   ;; ^ Show numbers before tab names
   (setq tab-bar-auto-width nil)
-  (setq tab-bar-auto-width-max nil)
+  (setq tab-bar-auto-width-max t)
   ;; ^ Hmmm
   (setq tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
   (setq tab-bar-tab-name-function #'im-current-project-name)
