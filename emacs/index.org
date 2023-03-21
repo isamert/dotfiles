@@ -1703,7 +1703,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       (org-redisplay-inline-images)))
 #+end_src
 
-*** ob-http
+*** ob-http & verb-mode
 #+name: ob-http
 #+begin_src emacs-lisp :tangle no
   ;; Http request in org-mode babel.
@@ -1711,6 +1711,10 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   ;; block, from *curl command history* buffer
   (use-package ob-http
     :straight (:host github :repo "zweifisch/ob-http"))
+
+  ;; An alternative to ob-http, might be better
+  (use-package verb
+    :straight (:host github :repo "federicotdn/verb"))
 
   (defun im-cmdargs-tokenize (input)
     (with-temp-buffer
@@ -1754,7 +1758,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       (if (use-region-p)
           (buffer-substring-no-properties (region-beginning) (region-end))
         (read-string "Curl string: "))))
-    (let ((tokens cmdargs-example-tokens)
+    (let ((tokens (im-cmdargs-tokenize curl-str))
           (headers '())
           (request "GET")
           url
@@ -1950,8 +1954,28 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 ** org-modern
 #+begin_src emacs-lisp
   (use-package org-modern
+    :custom
+    (org-modern-table nil)
+    (org-modern-list
+     '(;; (?- . "-")
+       (?* . "•")
+       (?+ . "‣")))
+    (org-modern-todo-faces
+     '(("TODO" :inverse-video t :weight semibold :inherit (org-todo org-modern-label))
+       ("PROG" :inverse-video t :weight semibold :inherit (org-todo org-modern-label) :foreground "magenta1")
+       ("WAIT" :inverse-video t :weight semibold :inherit (org-todo org-modern-label) :foreground "yellow1")
+       ("DONE" :inverse-video t :weight semibold :inherit (org-todo org-modern-label) :foreground "dark gray")))
+    (org-modern-priority-faces
+     '((?A :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green1")
+       (?B :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green2")
+       (?C :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green3")
+       (?D :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green4")))
+    :hook (org-mode . org-modern-mode))
+
+  (use-package org-modern-indent
+    :straight (:host github :repo "jdtsmith/org-modern-indent")
     :config
-    (add-hook 'org-mode-hook #'org-modern-mode))
+    (add-hook 'org-mode-hook #'org-modern-indent-mode 90))
 #+end_src
 ** org-rainbow-tags
 #+begin_src emacs-lisp
@@ -2442,19 +2466,28 @@ You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult
       (kbd "r") #'tabulated-list-revert))
 #+end_src
 
-** alert
+** alert & im-notify-posframe
 Several packages are using this package to show system-level notifications. Here I set some defaults/fallback values.
 
 #+begin_src emacs-lisp
   (use-package alert
     :config
+    (alert-define-style
+     'im-alert-posframe
+     :title "Posframe alerts"
+     :notifier
+     (lambda (info)
+       (im-notify-posframe :title (plist-get info :title)
+                           :message (plist-get info :message)
+                           :margin t
+                           :duration (unless (plist-get info :persistent) 10)
+                           :severity (plist-get info :severity))))
+
     (setq alert-fade-time 15)
-    (setq alert-default-style (pcase system-type
-                                ('gnu/linux 'libnotify)
-                                ;; osx-notifier having troubles showing
-                                ;; messages with Turkish characters
-                                ('darwin 'osx-notifier)
-                                (_ 'message))))
+    (setq alert-default-style 'im-alert-posframe))
+
+  (setq org-show-notification-handler
+        #'(lambda (notification) (im-notify-posframe :title "*org-mode*" :message notification :margin t)))
 
   (define-advice alert (:after (msg &rest args) send-to-my-phone-if-urgent)
     "Send the notification to my phone if it's marked as urgent/high."
@@ -2466,6 +2499,85 @@ Several packages are using this package to show system-level notifications. Here
          (im-send-notification-to-my-phone
           :title (or (plist-get args :title) "Emacs")
           :content msg)))))
+
+  (defvar im-notify-posframe--active '())
+  (defvar-local im-notify-posframe--notification-data nil)
+  (cl-defun im-notify-posframe (&rest data &key id title message (duration 15) margin (severity 'normal))
+    (setq title (propertize title 'face '(:weight bold)))
+    (let ((bname (format "*im-notify-%s*" (or id (format "%s-%s" (if title (im-string-url-case title) "") (random))))))
+      (posframe-show
+       (with-current-buffer (get-buffer-create bname)
+         (setq im-notify-posframe--notification-data
+               (thread-first
+                 data
+                 (map-insert :time (float-time))
+                 (map-insert :id (substring-no-properties bname))))
+         (current-buffer))
+       :string (if margin
+                   (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
+                 (format "%s\n%s" title message))
+       :poshandler (lambda (info)
+                     (let ((posy (* (line-pixel-height)
+                                    (--reduce-from (+ acc
+                                                      (with-current-buffer it
+                                                        (count-lines (point-min) (point-max))))
+                                                   0
+                                                   (remove bname im-notify-posframe--active)))))
+                       (cons (/ (- (plist-get info :parent-frame-width)
+                                   (plist-get info :posframe-width))
+                                2)
+                             (if (> posy 0)
+                                 (+ posy (+ 3 3 15))
+                               15))))
+       :border-width 3
+       :max-height 10
+       :min-width 30
+       :max-width 80
+       :border-color (pcase severity
+                       ((or 'high 'urgent) "red3")
+                       ('normal "yellow3")
+                       (_ nil)))
+      (push bname im-notify-posframe--active)
+      (when duration
+        (run-with-timer
+         duration nil
+         (lambda ()
+           (posframe-hide bname)
+           (push bname im-notify-posframe--active)
+           (setq im-notify-posframe--active (delete bname im-notify-posframe--active)))))))
+
+  (defun im-notify-posframe-clear-all (&optional delete?)
+    (interactive "P")
+    (--each
+        (--filter (s-prefix? "*im-notify" (buffer-name it)) (buffer-list))
+      (if delete?
+          (posframe-delete it)
+        (posframe-hide it)))
+    (setq im-notify-posframe--active '()))
+
+  (defun im-dummy-notification ()
+    (interactive)
+    (im-notify-posframe :title (format "%s" (random)) :message (with-temp-buffer (spook) (buffer-string)) :margin t))
+
+  (defun im-notify-posframe-notifications ()
+    (interactive)
+    (thread-first
+      (lab--completing-read-object
+       "Select notification: "
+       (thread-last
+         (buffer-list)
+         (--filter (string-prefix-p "*im-notify" (buffer-name it)))
+         (--map (with-current-buffer it (when-let (x im-notify-posframe--notification-data) (map-insert x :buffer-name (buffer-name)))))
+         (--filter it)
+         (--sort (> (plist-get it :time) (plist-get other :time))))
+       :formatter (lambda (it) (format "%s | %s - %s" (format-time-string "%Y-%m-%d %H:%M" (plist-get it :time)) (plist-get it :title) (plist-get it :message)))
+       :sort? nil)
+      (plist-get :buffer-name)
+      (switch-to-buffer-other-window)))
+
+  (evil-leader/set-key
+    "yy" #'im-notify-posframe-notifications
+    "yc" #'im-notify-posframe-clear-all)
 #+end_src
 
 ** Hydra
@@ -3407,12 +3519,23 @@ Other complementary packages:
   (define-key project-prefix-map "t" #'multi-vterm-project)
   (add-to-list 'project-switch-commands `(multi-vterm-project "terminal"))
 
+  ;; All-projects commands
+
   (define-key project-prefix-map "F" #'im-select-any-project-file)
   (add-to-list 'project-switch-commands `(im-select-any-project-file "All project files"))
+
+  (define-key project-prefix-map "G" #'im-consult-ripgrep-all-projects)
+  (add-to-list 'project-switch-commands `(im-consult-ripgrep-all-projects "Grep"))
 
   (defun im-select-any-project-file ()
     (interactive)
     (im-find-file-in im-projects-root))
+
+  (defun im-consult-ripgrep-all-projects ()
+    (interactive)
+    (im-consult-ripgrep im-projects-root))
+
+  ;; Others
 
   (defun im-project-shell-command ()
     "Run `async-shell-command' in the current project's root directory."
@@ -3632,8 +3755,8 @@ Here is a nice description of the package from it's README:
          "~/.local/share/"
          "~/.local/bin/"
          "~/.config/"
-         ,(format "/run/media/%s/" (getenv "USERNAME"))
-         ,(format "/run/media/%s/BINGUS/" (getenv "USERNAME"))))))
+         ,(format "/run/media/%s/" (user-login-name))
+         ,(format "/run/media/%s/BINGUS/" (user-login-name))))))
 
   (use-package consult-dir
     :bind (("C-x C-d" . consult-dir)
@@ -3878,6 +4001,10 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     ;; ^ Disable showing errors on sideline, because I use
     ;; flycheck-inline already and it does a better job showing
     ;; errors inline
+    (setq lsp-modeline-code-actions-enable nil)
+    (setq lsp-modeline-diagnostics-enable nil)
+    (setq lsp-modeline-workspace-status-enable nil)
+    ;; ^ Disable modeline stuff because it's distracting
 
     (setq
      lsp-imenu-index-symbol-kinds
@@ -4740,13 +4867,21 @@ Just experimenting with OpenAI clients.
 
 #+begin_src emacs-lisp
   (use-package chatgpt-arcana
-    :ensure t
     :straight (:host github :repo "CarlQLange/chatgpt-arcana.el")
     :config
-    (setq chatgpt-arcana-api-key im-openai-api-key))
+    (setq chatgpt-arcana-api-key im-openai-api-key)
+    (add-to-list
+     'chatgpt-arcana-common-prompts-alist
+     '(techdoc .
+               "I am writing technical documentation. I will give you the documentation I wrote and I want you to do the following edits on the documentation I gave you:
+  - Fix spelling errors.
+  - Make it more understandable, easier to follow.
+  - Use technical jargon instead of long explanations where possible.
+  - Use more elegant words rather than my simplified English.
+
+  DO NOT WRITE EXPLANATIONS, ONLY ANSWER WITH THE FIXED DOCUMENTATION.")))
 
   (use-package org-ai
-    :ensure t
     :straight (:host github :repo "rksm/org-ai")
     :config
     (setq org-ai-openai-api-token im-openai-api-key))
@@ -5917,10 +6052,11 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
       (posframe-show
        "*im-describe*"
        :string description
-       :poshandler #'posframe-poshandler-frame-top-right-corner
-       :border-width 10
+       :poshandler #'posframe-poshandler-point-top-left-corner
+       :border-width 3
        :max-width 80
-       :background-color (mini-frame-get-background-color))
+       :max-height 30
+       :border-color "gray30")
       (setq im-describe-thing-posframe-point (point))
       (add-hook 'post-command-hook #'im-describe-thing--remove-posframe)))
 #+end_src
@@ -6278,6 +6414,9 @@ It's a great workspace manager that comes bundled with Emacs. I was using an abo
      tab-bar-format-align-right
      tab-bar-format-global))
 
+  ;; Don't show global-mode-string in mode-line because we already show
+  ;; it on right side of the tab-bar
+  (setq mode-line-misc-info (assq-delete-all 'global-mode-string mode-line-misc-info))
 #+end_src
 
 Use a slightly modified version of ~tab-bar-tab-name-format~.
@@ -6555,7 +6694,7 @@ Good for buffer management, especially for groupped killings.
     "Query to get kanban board issues.")
 
   (defvar im-jira-board-id
-    "1066"
+    "1332"
     "Interested board id. TODO: make this a list so that I can access to multiple boards by `im-jira-list-issues'.")
 
   (defun im-open-jira-issue (issue-number)
@@ -8317,52 +8456,82 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
      :prompt (format "Select a pod from '%s': " (im-kube--current-context))
      :keep-order t
      :do (let ((info (s-split " " it t)))
-           (im-kube-pod--act (list :name (nth 1 info) :namespace (nth 0 info))))))
-
+           (im-kube-pod--act (list :name (nth 1 info) :namespace (nth 0 info) :context (im-kube--current-context))))))
+  ;; TODO wtf is this shit
   (defun im-kube-pod--act (pod)
     (with-completing-read-exact-order
      (let ((namespace (plist-get pod :namespace))
-           (name (plist-get pod :name)))
-       (pcase (completing-read (format "Act on '%s'" name) '("Exec into default container" "Exec into container" "Logs" "App logs" "Remove"))
+           (name (plist-get pod :name))
+           (context (plist-get pod :context)))
+       (pcase (completing-read (format "Act on '%s'" name) '("Exec into default container" "Exec into container" "Logs" "Write to file and open logs" "App logs" "Remove"))
          ("Exec into default container"
           (with-current-buffer (im-eshell (format "$pod: %s" name))
             (insert
-             (im-kill (format "kubectl exec --namespace='%s' -i -t '%s' -- bash"
+             (im-kill (format "kubectl exec --namespace='%s' -i -t '%s' --context='%s' -- bash"
                               namespace
-                              name)))))
+                              name
+                              context)))))
          ("Exec into container"
           (let ((container (im-kube-pod--select-container pod)))
             (with-current-buffer (im-eshell (format "$pod: %s" name))
               (insert
-               (im-kill (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' -- bash"
+               (im-kill (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' --context='%s' -- bash"
                                 namespace
                                 container
-                                name))))))
+                                name
+                                context))))))
          ("Logs"
           (let ((container (im-kube-pod--select-container pod)))
-            (with-current-buffer (im-eshell (format "$pod: %s" name))
+            (with-current-buffer (vterm (format "$pod: %s" name))
               (insert
-               (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s'"
+               (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s' --context='%s'"
                                 name
                                 namespace
-                                container))))))
+                                container
+                                context))))))
+         ("Write to file and open logs"
+          (let ((container (im-kube-pod--select-container pod))
+                (fname (expand-file-name (read-file-name "File: " (format "~/Workspace/temp/%s-%s.logs" (format-time-string "%Y-%m-%d") name)))))
+            (message ">> Downloading logs for %s. Done." name)
+            (set-process-sentinel
+             (start-process-shell-command
+              "*im-kube-log-write*"
+              "*im-kube-log-write*"
+              (im-kill (format "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s' > '%s'"
+                               name
+                               namespace
+                               container
+                               context
+                               fname)))
+             (lambda (proc event)
+               (if (eq (process-exit-status proc) 0)
+                   (progn
+                     (message ">> Downloading logs for %s. Done." name)
+                     (find-file fname))
+                 (user-error "Failed to get logs."))))))
          ;; Logs from all pods combined for given pod's app
          ("App logs"
           (let ((container (im-kube-pod--select-container pod)))
             (with-current-buffer (im-eshell (format "$pod: %s" name))
               (insert (im-kill
-                             (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s'"
-                                     (im-kube-pod--get-app-name pod)
-                                     namespace
-                                     container))))))
-         ("Remove" (user-error "Not implemented"))))))
+                       (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s' --context='%s'"
+                               (im-kube-pod--get-app-name pod)
+                               namespace
+                               container
+                               context))))))
+         ("Remove" (format "Copied: %s"
+                           (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
+                                            name
+                                            namespace
+                                            context))))))))
 
   (defun im-kube-pod--select-container (pod)
     (im-output-select
      :cmd (format
-           "kubectl get pods '%s' --namespace='%s' -o jsonpath='{.spec.containers[*].name}'"
+           "kubectl get pods '%s' --namespace='%s' --context='%s' -o jsonpath='{.spec.containers[*].name}'"
            (plist-get pod :name)
-           (plist-get pod :namespace))
+           (plist-get pod :namespace)
+           (plist-get pod :context))
      :prompt (format "Container for %s: " (plist-get pod :name))
      :split " "))
 
