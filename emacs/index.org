@@ -2687,7 +2687,7 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
            (ssh-regexp "/ssh:\\([a-zA-Z0-9_-]+\\):")
            (fix-remote-files (lambda (it)
                                (if-let (host (nth 1 (s-match ssh-regexp it)))
-                                   (concat host ":" (shell-quote-argument (string-trim-left it ssh-regexp)))
+                                   (concat host ":" (string-trim-left it ssh-regexp))
                                  it))))
       (im-shell-command
        :command "rsync"
@@ -4862,24 +4862,14 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
        (concat eww-search-prefix (url-hexify-string url)))
      new-session))
 #+end_src
-** chatgpt-arcana & org-ai
+** gptel & org-ai
 Just experimenting with OpenAI clients.
 
 #+begin_src emacs-lisp
-  (use-package chatgpt-arcana
-    :straight (:host github :repo "CarlQLange/chatgpt-arcana.el")
+  (use-package gptel
+    :straight (:host github :repo "karthink/gptel")
     :config
-    (setq chatgpt-arcana-api-key im-openai-api-key)
-    (add-to-list
-     'chatgpt-arcana-common-prompts-alist
-     '(techdoc .
-               "I am writing technical documentation. I will give you the documentation I wrote and I want you to do the following edits on the documentation I gave you:
-  - Fix spelling errors.
-  - Make it more understandable, easier to follow.
-  - Use technical jargon instead of long explanations where possible.
-  - Use more elegant words rather than my simplified English.
-
-  DO NOT WRITE EXPLANATIONS, ONLY ANSWER WITH THE FIXED DOCUMENTATION.")))
+    (setq gptel-api-key im-openai-api-key))
 
   (use-package org-ai
     :straight (:host github :repo "rksm/org-ai")
@@ -7987,6 +7977,7 @@ Sometimes I just want to delete/rename/move etc. the current file without resort
 #+begin_src emacs-lisp
   ;; Slightly modified from:
   ;; http://steve.yegge.googlepages.com/my-dot-emacs-file
+  (defalias 'im-rename-this-file-name-and-buffer #'im-rename-current-file-name-and-buffer)
   (defun im-rename-current-file-name-and-buffer (new-name)
     "Renames both current buffer and file it's visiting to NEW-NAME."
     (interactive "FNew name: ")
