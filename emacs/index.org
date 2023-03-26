@@ -885,7 +885,7 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
   (defconst im-fonts '("Iosevka Comfy" "Iosevka Nerd Font"))
   (defconst im-font-height
     (pcase system-type
-      ('gnu/linux 120)
+      ('gnu/linux 138)
       ('darwin 160)))
 
   (defun im-set-font-and-theme-config ()
