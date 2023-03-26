@@ -380,11 +380,6 @@ Following snippet enables some configurations for pacman:
   «sh("cat /etc/pacman.conf | sed -E 's/^#(Parallel|Color|VerbosePkgLists|TotalDownload)/\\1/'")»
 #+end_src
 
-** Enable Bluetooth automatically
-
-#+begin_src conf :tangle (when-linux "/sudo::/etc/bluetooth/main.conf")
-  «sh("sed 's/#AutoEnable=false/AutoEnable=true/' /etc/bluetooth/main.conf")»
-#+end_src
 ** External monitor brightness
 - Install ~ddcutil~
 - Enable automatic loading of ~i2c-dev~ module with systemd.
