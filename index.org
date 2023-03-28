@@ -344,6 +344,7 @@ Unit files started with ~--user~ will have the following variables.
   $HOME/.bin:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/bin:$HOME/.cargo/bin:$PATH
 #+end_src
 
+#+name: env-variables
 #+begin_src conf :tangle (when-linux "~/.config/environment.d/paths.conf")
   GOPATH="$HOME/.go"
   R_LIBS_USER="$HOME/.rlibs"
@@ -843,6 +844,7 @@ Unfortunately, this file is not sourced by GDM at login. So I'm sourcing it in =
   # Run ts_onfinish when a tsp job is finished
   export TS_ONFINISH=ts_onfinish
   export SHELL=/bin/zsh
+  export «env-variables»
 #+end_src
 ** ~/.zprofile
 - This file is sourced after =.zshenv=.
