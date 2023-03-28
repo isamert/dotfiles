@@ -4874,6 +4874,7 @@ Just experimenting with OpenAI clients.
   (use-package org-ai
     :straight (:host github :repo "rksm/org-ai")
     :config
+    (setq org-ai-default-max-tokens 2000)
     (setq org-ai-openai-api-token im-openai-api-key))
 #+end_src
 * Editing
