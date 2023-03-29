@@ -4394,7 +4394,25 @@ Provides an interface to xref based on completing-read.
   (use-package expand-region
     :config
     (evil-define-key 'normal 'global
-      (kbd "M-w") #'er/expand-region))
+      (kbd "M-w") #'er/expand-region)
+    (setq er/try-expand-list (append er/try-expand-list '(im-tree-sitter-mark-bigger-node))))
+
+  (defun im-tree-sitter-mark-bigger-node ()
+    "Select the next parent node.
+  Adapted to emacs 29 treesit from: https://github.com/emacs-tree-sitter/elisp-tree-sitter/issues/20"
+    (interactive)
+    (let* ((node (treesit-node-descendant-for-range
+                  (treesit-buffer-root-node) (region-beginning)
+                  (if (use-region-p) (region-end) (point))))
+           (node-start (treesit-node-start node))
+           (node-end (treesit-node-end node)))
+      ;; Node fits the region exactly. Try its parent node instead.
+      (when (and (= (region-beginning) node-start) (= (region-end) node-end))
+        (when-let ((node (treesit-node-parent node)))
+          (setq node-start (treesit-node-start node)
+                node-end (treesit-node-end node))))
+      (set-mark node-end)
+      (goto-char node-start)))
 #+end_src
 ** aggressive-indent
 It keeps your indentation working all the time. Seems like a good idea but I have some concerns about it, so I just use it with elisp for the time being.
