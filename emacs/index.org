@@ -1808,12 +1808,13 @@ Some general settings.
     "R" 'org-agenda-clockreport-mode
     "r" 'org-agenda-redo)
 
+  (setq org-agenda-remove-tags t)
+  (setq org-agenda-include-diary t)
   (setq org-agenda-use-time-grid t)
   (setq org-agenda-time-grid
-        '((today remove-match)
+        '((daily today require-timed remove-match)
           (800 900 1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100 2200 2300 2400)
-          "......"
-          "----------------"))
+          " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄"))
 #+END_SRC
 
 *** Making agenda buffer open faster
@@ -1955,6 +1956,7 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 #+begin_src emacs-lisp
   (use-package org-modern
     :custom
+    (org-use-sub-superscripts nil)
     (org-modern-table nil)
     (org-modern-list
      '(;; (?- . "-")
@@ -1970,7 +1972,9 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
        (?B :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green2")
        (?C :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green3")
        (?D :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green4")))
-    :hook (org-mode . org-modern-mode))
+    :hook
+    (org-mode . org-modern-mode)
+    (org-agenda-finalize . org-modern-agenda))
 
   (use-package org-modern-indent
     :straight (:host github :repo "jdtsmith/org-modern-indent")
@@ -2720,6 +2724,8 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (evil-define-key 'normal diary-fancy-display-mode-map
     "q" #'evil-delete-buffer)
 
+  (calendar-set-date-style 'european)
+
   ;; Start the week from Monday
   (setq calendar-week-start-day 1)
 
@@ -2737,9 +2743,18 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
   (add-hook 'diary-list-entries-hook #'diary-include-other-diary-files)
   (add-hook 'diary-list-entries-hook #'diary-sort-entries t)
   (setq diary-display-function #'diary-fancy-display)
+  (setq diary-number-of-entries 7)
 
   ;; Show calendar at the bottom
   (im-shackle-window "Calendar" 0.2)
+
+  (evil-define-key 'normal calendar-mode-map (kbd "a") #'im-calendar-jump-org-agenda)
+  (defun im-calendar-jump-org-agenda ()
+    "Open the currently selected calendar date on org-agenda."
+    (interactive nil calendar-mode)
+    (let ((org-agenda-window-setup 'other-window)
+          (org-agenda-span 1))
+      (org-calendar-goto-agenda)))
 #+end_src
 
 *** Automatically syncing with remote calendars
@@ -3435,8 +3450,8 @@ Other complementary packages:
   (defun im-current-project-root ()
     "Return the root path of current project."
     (interactive)
-    (ignore-errors
-      (expand-file-name (project-root (project-current)))))
+    (when-let (path (locate-dominating-file default-directory ".git"))
+      (expand-file-name path)))
 
   (defun im-current-project-name ()
     "Return current projects name."
@@ -3507,6 +3522,9 @@ Other complementary packages:
   (define-key project-prefix-map "v" #'project-vc-dir)
   (add-to-list 'project-switch-commands `(project-vc-dir "vc-dir"))
 
+  (define-key project-prefix-map "V" #'im-vterm-project)
+  (add-to-list 'project-switch-commands `(im-vterm-project "vterm"))
+
   (define-key project-prefix-map "M" #'lab-list-project-merge-requests)
   (add-to-list 'project-switch-commands `(lab-list-project-merge-requests "Merge Requests"))
 
@@ -3546,7 +3564,7 @@ Other complementary packages:
   (defvar im-project-shell-last-height 15)
   (defvar im-project-shell-last-window nil)
 
-  (defun im-shell-for (&optional type)
+  (defun im-shell-for (&optional type top?)
     (interactive)
     (require 'eshell)
     (setq type (or type 'project))
@@ -3569,14 +3587,17 @@ Other complementary packages:
                              (eshell t))))))
           (with-current-buffer term
             (tab-line-mode -1))
-          (display-buffer-in-side-window
-           term
-           (append
-            `((window-height . ,im-project-shell-last-height)
-              (side . top)
-              (slot . 1))))
           (setq im-project-shell-last-window (get-buffer-window))
-          (select-window (get-buffer-window term))))))
+          (if (not top?)
+              (switch-to-buffer term)
+            (progn
+              (display-buffer-in-side-window
+               term
+               (append
+                `((window-height . ,im-project-shell-last-height)
+                  (side . top)
+                  (slot . 1))))
+              (select-window (get-buffer-window term))))))))
 
   (bind-key "M-`" #'im-shell-for)
   (bind-key "M-~" (λ-interactive (im-shell-for 'dir)))
@@ -4093,17 +4114,40 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
       "tj" 'im-jump-to-visible-term
       "tl" 'im-run-last-command-on-visible-term
       "ty" 'im-send-selected-text-to-visible-term
-      "tr" 'im-run-command-on-visible-term-with-history)
+      "tr" 'im-run-command-on-visible-term-with-history
+      "tn" #'im-vterm-project
+      "td" #'im-vterm-dir)
     (setq vterm-kill-buffer-on-exit t)
     (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
     (add-hook 'vterm-mode-hook #'evil-emacs-state))
 
-  (use-package multi-vterm
-    :config
-    (evil-leader/set-key
-      "tt" #'multi-vterm-dedicated-toggle
-      "tn" #'multi-vterm-project
-      "td" #'multi-vterm))
+  (defun im-vterm-project ()
+    "Open vterm for current project."
+    (interactive)
+    (when-let ((pname (im-current-project-name)))
+      (let* ((vterm-buffer-name (format "*vterm-proj-%s*" pname))
+             (default-directory (im-current-project-root))
+             (existing (--find
+                        (and
+                         (s-prefix? "*vterm-proj" (buffer-name it))
+                         (equal default-directory (with-current-buffer it default-directory)))
+                        (buffer-list))))
+        (if existing
+            (switch-to-buffer existing)
+          (vterm t)))))
+
+  (defun im-vterm-dir ()
+    "Open vterm for `default-directory'."
+    (interactive)
+    (let* ((vterm-buffer-name (format "*vterm-dir-%s*" (f-filename default-directory)))
+           (existing (--find
+                      (and
+                       (s-prefix? "*vterm-dir" (buffer-name it))
+                       (equal default-directory (with-current-buffer it default-directory)))
+                      (buffer-list))))
+      (if existing
+          (switch-to-buffer existing)
+        (vterm t))))
 #+END_SRC
 
 *** Utility functions
@@ -5450,41 +5494,30 @@ Keybindings are generally set in-place, following have no context, so they are h
     (editorconfig-mode 1))
 #+end_src
 
-*** TODO Get currently focused function name
-Needs to be fixed for new treesitter.
-
+*** Display/get currently focused function name in odeline
 #+begin_src emacs-lisp
+  (which-function-mode)
+
   (defun im-refactor-debug-log-text ()
     "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
-    This is used in my snippets."
-    (format "%s:%s:%s" (buffer-name) (im-current-func-name) (line-number-at-pos)))
+  This is used in my snippets."
+    (format "%s:%s:%s" (buffer-name) (which-function) (line-number-at-pos)))
+#+end_src
+*** jump to beginning/end of a statement
+#+begin_src emacs-lisp
+  (defun im-treesit-end-of-statement ()
+    (interactive)
+    (treesit-end-of-thing
+     (rx (or "local_variable" "return" "if" "for" "with" "try" "method") (or "_statement" "_declaration"))))
 
-  (defun im-current-func-name ()
-    (if-let ((fn-node (im-get-current-func-node)))
-        (treesit-node-text (treesit-node-child-by-field-name fn-node :name))
-      (which-function)))
+  (defun im-treesit-beginning-of-statement ()
+    (interactive)
+    (treesit-beginning-of-thing
+     (rx (or "local_variable" "return" "if" "for" "with" "try" "method") (or "_statement" "_declaration"))))
 
-  (defun im-get-current-func-node ()
-    "Return currently focused function node."
-    (let ((curr-func nil)
-          (curr-node (ignore-errors
-                       (treesit-node-at (point)))))
-      ;; Find first function declaration or definition
-      (while (and curr-node
-                  (not (-contains? '(method_definition ;; JS
-                                     function_declaration ;; JS
-                                     arrow_function ;; JS
-                                     function_item ;; Rust
-                                     )
-                                   (treesit-node-type curr-node))))
-        (setq curr-node (treesit-node-parent curr-node)))
-
-      ;; Find first named object of the found function definition
-      (while (and curr-node
-                  (not (ignore-errors
-                         (treesit-node-child-by-field-name curr-node :name))))
-        (setq curr-node (treesit-node-parent curr-node)))
-      curr-node))
+  ;; Only tried in java-ts-mode so far
+  (evil-define-key 'normal java-ts-mode-map "[w" 'im-treesit-beginning-of-statement)
+  (evil-define-key 'normal java-ts-mode-map "]w" 'im-treesit-end-of-statement)
 #+end_src
 ** Refactoring (emr)
 #+begin_src emacs-lisp
@@ -6857,7 +6890,7 @@ Good for buffer management, especially for groupped killings.
 
   ;; TODO support pagination
   (defun im-jira-get-sprints ()
-    (alist-get 'values (jiralib2-session-call "/rest/agile/1.0/board/868/sprint")))
+    (alist-get 'values (jiralib2-session-call (format "/rest/agile/1.0/board/%s/sprint" im-jira-board-id))))
 
   (defun im-jira-find-sprint (sprint)
     "Find a sprint. SPRINT can be a full sprint name or one \"active\"|\"future\"."
@@ -8012,7 +8045,6 @@ Sometimes I just want to delete/rename/move etc. the current file without resort
       (set-buffer-modified-p nil)))
 
   ;; Slightly modified version of: http://www.ergoemacs.org/emacs/elisp_delete-current-file.html
-  (defalias 'im-delete-this-file #'im-delete-current-file)
   (defun im-delete-current-file ()
     "Delete the current file and copy it's content to `kill-ring'."
     (interactive)
@@ -8026,7 +8058,7 @@ Sometimes I just want to delete/rename/move etc. the current file without resort
         (set-buffer-modified-p nil)
         (kill-buffer (current-buffer)))))
 
-  (defalias 'im-remove-current-file #'im-delete-current-file)
+  (defalias 'im-delete/remove-this-file #'im-delete-current-file)
 #+end_src
 
 ** xah-open-file-at-cursor
