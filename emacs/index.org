@@ -4087,6 +4087,15 @@ Basic workflow is as follows:
     :config
     ;; When debugger kicks-in, run dap-hydra
     (add-hook 'dap-stopped-hook (lambda (arg) (call-interactively #'dap-hydra))))
+
+  (defun im-dap-debug-start ()
+    "Like `dap-start' but start debugger at the root of the project.
+    Normally `dap-start' uses `default-directory' to start the
+    debugger in but it's almost 99% of time not what I want."
+    (interactive)
+    (if-let ((default-directory (im-current-project-root)))
+        (call-interactively #'dap-debug)
+      (user-error "Not in a project")))
 #+end_src
 
 ** vterm
