@@ -881,6 +881,7 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
   (menu-bar-mode 0)
   (use-package doom-themes)
   (use-package modus-themes)
+  (use-package ef-themes)
 
   (defconst im-fonts '("Iosevka Comfy" "Iosevka Nerd Font"))
   (defconst im-font-height
