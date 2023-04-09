@@ -1468,6 +1468,8 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     ;; reduces the agenda performance significantly
     (setq org-tags-column 0)
     ;; Tags starts right after the heading.
+    (setq org-reverse-note-order t)
+    ;; ^ I keep new notes at the beginning. This helps with that.
 
     ;; TODO Remove when upstream fixes this
     ;; https://github.com/minad/consult/issues/563#issuecomment-1186612641
