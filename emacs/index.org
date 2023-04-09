@@ -3622,7 +3622,7 @@ Some key points:
     :config
     (advice-add #'register-preview :override #'consult-register-window)
 
-    (setq consult-preview-key "M-,")
+    (setq consult-preview-key (kbd "M-,"))
     ;; ^ When you do M-, on a candidate, it previews it
 
     (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
