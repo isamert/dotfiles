@@ -4939,6 +4939,29 @@ Just experimenting with OpenAI clients.
     (setq org-ai-default-max-tokens 2000)
     (setq org-ai-openai-api-token im-openai-api-key))
 #+end_src
+** tmr.el
+Pretty timers. I forget everything, so it's quite important for me to have a quick way to define timers. I was using ~appt-add~ for this before but it does not let you view/manipulate upcoming timers easily and tmr does this very well with ~tmr-tabulated-view~.
+
+- tmr :: To quickly define a timer, without any description.
+- tmr-with-details :: Define a timer with description, also asks if you need acknowledgment. Acknowledgment is useful in a sense that you can re-schedule the timer if you need it. It will ask you to write ~ack~ when the time is up, if you are not ready, you can re-schedule the timer with the same notation you use while creating it which is super convenient.
+
+#+begin_src emacs-lisp
+  (use-package tmr
+    :config
+    ;; Replace the notification function so that it works on my Mac
+    (remove-hook 'tmr-timer-finished-functions #'tmr-notification-notify)
+    (add-hook 'tmr-timer-finished-functions #'im-tmr-notify)
+    (when (eq system-type 'darwin)
+      (setq tmr-sound-file "/System/Library/Sounds/Glass.aiff"))
+
+    (evil-leader/set-key "N" #'tmr-with-details))
+
+  (defun im-tmr-notify (timer)
+    (alert
+     (tmr--long-description-for-finished-timer timer)
+     :title "TMR"
+     :severity tmr-notification-urgency))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
