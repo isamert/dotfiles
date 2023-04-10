@@ -317,10 +317,25 @@ Some basic variable and function definitions that will be used in configuration.
        (message "[im-tap :: %s] → %s" ,(prin1-to-string form) result)
        result))
 
+  (defun im-debug (thing)
+    "Like `im-tap' but uses `pp-display-expression' to display the
+  result instead of `message'."
+    (pp-display-expression thing "*im-debug*")
+    thing)
+
   (defmacro im-append! (lst item)
     "Append ITEM to end of the LST.
   Modifies LST. Only meant to be used in configuration."
     `(setq ,lst (append ,lst (list ,item))))
+
+  (defun im-elisp-find-file-prefix ()
+    "Extract prefix from defgroup statement in current buffer.
+  I use this in my `defun' snippet via yasnippet."
+    (or (save-excursion
+          (goto-char (point-min))
+          (when (search-forward-regexp ":prefix \"\\(.*\\)\"" nil t)
+            (match-string 1)))
+        "im-"))
 #+end_src
 *** Clipboard functions
 #+begin_src emacs-lisp
@@ -1434,7 +1449,53 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (use-package goto-chg
     :after evil)
 #+END_SRC
+** Custom text-objects
+*** org blocks
+#+begin_src emacs-lisp
+  ;; There is `org-babel-mark-block' but it only works for source blocks
+  ;; but this one works for everything between #begin_<> ... #end_<>.
+  ;; There is also "e" object defined by evil-org, which works for quite
+  ;; most things but it does not work, for example, org-ai blocks etc.
 
+  (evil-define-text-object im-evil-inner-org-block (count &optional beg end type)
+    "Select inner side of org source blocks."
+    :extend-selection nil
+    (im-find-hash-positions))
+
+  (evil-define-text-object im-evil-outer-org-block (count &optional beg end type)
+    "Select outer side of org source blocks."
+    :extend-selection nil
+    (im-find-hash-positions t))
+
+  (define-key evil-inner-text-objects-map "#" 'im-evil-inner-org-block)
+  (define-key evil-outer-text-objects-map "#" 'im-evil-outer-org-block)
+
+  (defun im-find-hash-positions (&optional include-hash-lines)
+    "Find the positions of the first line starting with '#' upwards and downwards."
+    (let ((up-pos nil)
+          (down-pos nil))
+      ;; Search upwards for the first line starting with "#"
+      (save-excursion
+        (beginning-of-line)
+        (while (and (not up-pos) (not (bobp)))
+          (forward-line -1)
+          (beginning-of-line)
+          (when (looking-at "^#")
+            (unless include-hash-lines
+              (forward-line 1))
+            (setq up-pos (point)))))
+      ;; Search downwards for the first line starting with "#"
+      (save-excursion
+        (beginning-of-line)
+        (while (and (not down-pos) (not (eobp)))
+          (forward-line 1)
+          (beginning-of-line)
+          (when (looking-at "^#")
+            (when include-hash-lines
+              (forward-line 1))
+            (setq down-pos (point)))))
+      (list up-pos down-pos)))
+#+end_src
 * org-mode
 ** org-plus-contrib
 #+begin_src emacs-lisp
@@ -1603,6 +1664,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (defconst readinglist-org "~/Documents/notes/readinglist.org")
   (defconst courses-org "~/Documents/notes/courses.org")
   (defconst bullet-org "~/Documents/notes/bullet.org")
+  (defconst directory-notes-org "~/Documents/notes/directory-notes.org")
   (defconst life-org "~/Documents/notes/life.org")
   (defconst reality-org "~/Documents/notes/reality.org")
   (defconst projects-org "~/Documents/notes/projects.org")
@@ -1895,13 +1957,14 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
      ("ds" "Daily summary" item
       (file+function bullet-org im-org-capture--find-daily-summary)
       "- %U %?")
-     ("dn" "Daily note" item
-      (file+function bullet-org im-org-capture--find-daily-notes)
+
+     ("i" "Inbox" item
+      (file+headline bullet-org "Inbox")
       "- %U %?"
       :prepend t)
-     ("dN" "Daily note (for capturing from Signal)" item
-      (file+function bullet-org im-org-capture--find-daily-notes)
-      "%U %c"
+     ("I" "Inbox (for capturing from Signal, send \"note ...\" as text to myself)" item
+      (file+headline bullet-org "Inbox")
+      "- %U %c"
       :prepend t
       :immediate-finish t)
 
@@ -1920,15 +1983,9 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
      ("c" "Meeting/clock note" item
       (clock))))
 
-  (defun im-org-capture--find-daily-notes ()
-    (im-bullet-focus-today)
-    (re-search-forward "^** Notes" nil t))
-
   (defun im-org-capture--find-daily-last-entry ()
     (im-bullet-focus-today)
-    (re-search-forward "^** Notes" nil t)
-    (forward-line -1)
-    (end-of-line))
+    (end-of-buffer))
 
   (defun im-org-capture--find-daily-summary ()
     (im-bullet-focus-today)
@@ -2028,6 +2085,21 @@ You have to use ~:sort (lambda ...)~ syntax in org-ql dynamic blocks if you want
   ,#+begin: org-ql :query ... :sort (lambda (x y) (sort-by-num-prop :RATING x y))
   ,#+end
 #+end_example
+
+Here are some predefined searches:
+
+#+begin_src emacs-lisp
+  (defun im-org-ql-current-week-tasks ()
+    (interactive)
+    (let ((week-end (im-date "next monday - 1 day")))
+      (org-ql-search org-agenda-files
+        `(and (or (scheduled :to ,week-end)
+                  (deadline :to ,week-end))
+              (not (done)))
+        :title (format "W%s" (format-time-string "%U"))
+        :super-groups '((:auto-category))
+        :sort '(date))))
+#+end_src
 
 ** Linking improvements
 Org does not provide an easy way to copy link at point. Here is a fix for that:
@@ -2288,6 +2360,40 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
      (file+headline ,bookmarks-org "Unsorted")
      "** (call-interactively #'im-org-archive-url)"))
 #+end_src
+** Convert items to TODO entries
+#+begin_src emacs-lisp :lexical t
+  (defun im-org-convert-item-to-todo-and-refile ()
+    "Convert org item to todo header and refile.
+  I take notes in the following format during the day via
+  org-capture template:
+
+      - [2023-04-09 Sun 23:57] Some note
+
+  At the end of the day, I convert these notes into tasks if
+  applicable. This means rewriting them into a TODO header with
+  CREATED_AT property and refiling into the appropriate
+  header. This function automatizes that."
+    (interactive)
+    (save-excursion
+      (beginning-of-line)
+      (let ((line (thing-at-point 'line))
+            (timestamp nil)
+            (text nil))
+        (when (string-match "^- \\[\\(.*\\)\\] \\(.*\\)" line)
+          (setq timestamp (match-string 1 line))
+          (setq text (match-string 2 line))
+          (delete-region (line-beginning-position) (1+ (line-end-position)))
+          (let ((buffer (current-buffer)))
+            (with-temp-buffer
+              (insert
+               (concat "** TODO [#B] " text "\n"
+                       ":PROPERTIES:" "\n"
+                       ":CREATED_AT: " timestamp "\n"
+                       ":END:" "\n"))
+              (org-mode)
+              (let ((org-refile-targets nil))
+                (org-refile nil buffer))))))))
+#+end_src
 * Other packages
 ** display-time-mode
 I started using Emacs in full screen (Emacs maximalism goes on), so this is helpful.
@@ -2400,7 +2506,7 @@ I have the file ~im-autodir-file~ which contains notes for directories, like in 
 When I enter any of the listed directories, eshell automatically prints out my notes.
 
 #+begin_src elisp
-  (defvar im-autodir-file "~/Documents/notes/directory-notes.org")
+  (defvar im-autodir-file directory-notes-org)
   (defvar im-autodir-last-doc nil)
 
   (defun im-eshell-handle-dir-change ()
@@ -2432,6 +2538,21 @@ When I enter any of the listed directories, eshell automatically prints out my n
   (add-hook 'eshell-directory-change-hook #'im-eshell-handle-dir-change)
   ;; eshell-directory-change-hook is not get triggered when eshell is opened, hence:
   (add-hook 'eshell-mode-hook #'im-eshell-handle-dir-change)
+
+  (defun im-org-jump-to-project-documentation ()
+    "Jump to *my* documentation for current project."
+    (interactive)
+    (let* ((projdir (abbreviate-file-name (im-current-project-root)))
+           (buf (find-file-noselect directory-notes-org))
+           (pos (with-current-buffer buf
+                  (widen)
+                  (org-find-exact-headline-in-buffer projdir))))
+      (unless pos
+        (user-error "Doc not found directory: %s" projdir))
+      (switch-to-buffer buf)
+      (goto-char pos)
+      (org-fold-show-entry)
+      (org-narrow-to-subtree)))
 #+end_src
 ** bookmark.el
 You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult-bookmark~ and calling ~embark-act~ on them to view/delete/edit given bookmark might be easier.
@@ -4936,20 +5057,16 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
        (concat eww-search-prefix (url-hexify-string url)))
      new-session))
 #+end_src
-** gptel & org-ai
-Just experimenting with OpenAI clients.
+** org-ai
+There are bunch of Emacs-ChatGPT integrations and org-ai seems to be best as it fits my workflow quite well. Besides being useful in org-mode, it also has org-mode independent features.
 
 #+begin_src emacs-lisp
-  (use-package gptel
-    :straight (:host github :repo "karthink/gptel")
-    :config
-    (setq gptel-api-key im-openai-api-key))
-
   (use-package org-ai
-    :straight (:host github :repo "rksm/org-ai")
     :config
+    ;; (setq org-ai-default-chat-model "gpt-4")
     (setq org-ai-default-max-tokens 2000)
-    (setq org-ai-openai-api-token im-openai-api-key))
+    (setq org-ai-openai-api-token im-openai-api-key)
+    (add-hook 'org-mode-hook #'org-ai-mode))
 #+end_src
 ** tmr.el
 Pretty timers. I forget everything, so it's quite important for me to have a quick way to define timers. I was using ~appt-add~ for this before but it does not let you view/manipulate upcoming timers easily and tmr does this very well with ~tmr-tabulated-view~.
@@ -4966,6 +5083,11 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
     (when (eq system-type 'darwin)
       (setq tmr-sound-file "/System/Library/Sounds/Glass.aiff"))
 
+    ;; evilify
+    (define-key tmr-tabulated-mode-map "j" #'next-line)
+    (define-key tmr-tabulated-mode-map "k" #'previous-line)
+    (evil-set-initial-state 'tmr-tabulated-mode 'emacs)
+
     (evil-leader/set-key "N" #'tmr-with-details))
 
   (defun im-tmr-notify (timer)
@@ -4973,6 +5095,29 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
      (tmr--long-description-for-finished-timer timer)
      :title "TMR"
      :severity tmr-notification-urgency))
+
+  (defvar im-tmr-upcoming-string nil)
+  (put 'im-tmr-upcoming-string 'risky-local-variable t) ;; This is required to make propertize work
+
+  (defun im-tmr-format-upcoming ()
+    (setq
+     im-tmr-upcoming-string
+     (-some->>
+         tmr--timers
+       (--filter (and (not (tmr--timer-finishedp it))
+                      (let ((remaining (- (float-time (tmr--timer-end-date it))
+                                          (float-time))))
+                        (<= remaining 900))))
+       (--map (format "%s (%s)"
+                      (propertize (tmr--timer-description it) 'face 'underline)
+                      (propertize (tmr--format-remaining it) 'face 'italic)))
+       (s-join ", ")
+       (s-prepend " «")
+       (s-append "» ")))
+    (force-mode-line-update t))
+
+  (setq global-mode-string (append global-mode-string '(im-tmr-upcoming-string)))
+  (run-with-timer 1 15 #'im-tmr-format-upcoming)
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
@@ -7361,7 +7506,7 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
        ((s-prefix? "note" msg)
         (kill-new (s-chop-prefix "note " msg))
         (im-clear-side-windows)
-        (org-capture nil "dN")
+        (org-capture nil "I")
         (im-signal-send-note-to-myself (format ">> Noted: %s" msg)))
        ((s-prefix? "http" msg)
         (message ">> [signal] Copied to clipboard: %s" msg)
@@ -7582,7 +7727,9 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "obl" 'im-bullet-focus-life
     "obL" 'im-bullet-focus-life-indirect
     "obc" 'im-bullet-focus-computer
-    "obC" 'im-bullet-focus-computer-indirect)
+    "obC" 'im-bullet-focus-computer-indirect
+    "obi" 'im-bullet-focus-inbox
+    "obI" 'im-bullet-focus-inbox-indirect)
 
   ;;
   ;; Date utils
@@ -7750,6 +7897,16 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (interactive)
     (im-org-focused-tree-to-indirect-buffer
      (im-bullet-focus-computer)))
+
+  (defun im-bullet-focus-inbox ()
+    (interactive)
+    (im-bullet-focus-heading "Inbox"))
+
+  (defun im-bullet-focus-inbox-indirect ()
+    "Like `im-bullet-focus-inbox' but in an indirect buffer."
+    (interactive)
+    (im-org-focused-tree-to-indirect-buffer
+     (im-bullet-focus-inbox)))
 
   ;;
   ;; Focus non-day
@@ -8000,12 +8157,18 @@ Here I define two important functions and their helpers.  The following function
     (interactive)
     (im-toggle-side-buffer-with-name "*Messages*"))
 
+  (defun im-toggle-side-tmr-buffer ()
+    (interactive)
+    (im-toggle-side-buffer-with-name (get-buffer-create "*tmr-tabulated-view*"))
+    (tmr-tabulated-mode))
+
   ;; Toggle temproary buffers
   (evil-leader/set-key
     "ts" 'im-toggle-side-scratch-buffer
     "to" 'im-toggle-side-temp-org-buffer
     "th" 'im-toggle-side-bullet-org-buffer
     "tp" 'im-toggle-side-projects-buffer
+    "tt" 'im-toggle-side-tmr-buffer
     "tm" 'im-toggle-side-messages-buffer)
 #+end_src
 
