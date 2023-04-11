@@ -3574,8 +3574,10 @@ Other complementary packages:
   (defun im-current-project-root ()
     "Return the root path of current project."
     (interactive)
-    (when-let (path (locate-dominating-file default-directory ".git"))
-      (expand-file-name path)))
+    (ignore-errors
+      (expand-file-name (project-root (project-current)))))
+  ;; (when-let (path (locate-dominating-file default-directory ".git"))
+  ;;   (expand-file-name path)))
 
   (defun im-current-project-name ()
     "Return current projects name."
@@ -3623,51 +3625,49 @@ Other complementary packages:
                                 (project-switch-project root)
                               (call-interactively #'project-switch-project))))
 
-  (setq project-switch-commands
-        '((project-find-file "Find file")
-          (project-find-dir "Find directory")
-          (project-eshell "Eshell")))
 
-  (define-key project-prefix-map "s" #'project-switch-project)
-  (add-to-list 'project-switch-commands `(project-switch-project "Switch"))
+  (cl-defmacro im-projectelify (&key cmd desc key non-interactive dont-wrap)
+    "If you add a command to `project-switch-commands', it will not
+  work properly everytime becuse the function should be aware of
+  what the current project is, provided by the `project-current'
+  function. This function simply wraps the original CMD to make it
+  work in the `project-current's directory.
 
-  (define-key project-prefix-map "g" #'im-consult-ripgrep)
-  (add-to-list 'project-switch-commands `(im-consult-ripgrep "Grep"))
+  If CMD is already project.el aware, then pass DONT-WRAP as
+  non-nil so that you only add it to `project-prefix-map'."
+    (let ((fn (if dont-wrap
+                  (symbol-name cmd)
+                (concat (symbol-name cmd) "-projectel"))))
+      `(progn
+         (unless ,dont-wrap
+           (defun ,(intern fn) ()
+             (interactive)
+             (let ((default-directory (project-root (project-current t))))
+               (if ,non-interactive
+                   (funcall #',cmd)
+                 (call-interactively #',cmd)))))
+         (when ,desc
+           (add-to-list 'project-switch-commands '(,(intern fn) ,desc)))
+         (when ,key
+           (define-key project-prefix-map ,key #',(intern fn))))))
 
-  (define-key project-prefix-map "f" #'im-find-file-in-current-project)
-  (add-to-list 'project-switch-commands `(im-find-file-in-current-project "Files"))
-
-  (define-key project-prefix-map "D" #'dired-jump)
-  (add-to-list 'project-switch-commands `(dired-jump "Open in dired"))
-
-  (define-key project-prefix-map "m" #'magit-status)
-  (add-to-list 'project-switch-commands `(magit-status "Magit"))
-
-  (define-key project-prefix-map "v" #'project-vc-dir)
-  (add-to-list 'project-switch-commands `(project-vc-dir "vc-dir"))
-
-  (define-key project-prefix-map "V" #'im-vterm-project)
-  (add-to-list 'project-switch-commands `(im-vterm-project "vterm"))
-
-  (define-key project-prefix-map "M" #'lab-list-project-merge-requests)
-  (add-to-list 'project-switch-commands `(lab-list-project-merge-requests "Merge Requests"))
-
-  (define-key project-prefix-map "P" #'lab-list-project-pipelines)
-  (add-to-list 'project-switch-commands `(lab-list-project-pipelines "Pipelines"))
-
-  (define-key project-prefix-map "!" #'im-project-shell-command)
-  (add-to-list 'project-switch-commands `(im-project-shell-command "Run shell command"))
-
-  (define-key project-prefix-map "t" #'multi-vterm-project)
-  (add-to-list 'project-switch-commands `(multi-vterm-project "terminal"))
+  (setq project-switch-commands '())
+  (im-projectelify :cmd im-shell-for :desc "Eshell" :key "e")
+  (im-projectelify :cmd im-vterm-project :desc "vterm" :key "t" :dont-wrap t)
+  (im-projectelify :cmd im-shell-command :desc "Run shell command" :key "!")
+  (im-projectelify :cmd im-find-file-in :desc "Files" :key "f" :non-interactive t)
+  (im-projectelify :cmd dired-jump :desc "Dired" :key "D")
+  (im-projectelify :cmd magit-status :desc "Magit" :key "m")
+  (im-projectelify :cmd consult-ripgrep :desc "Grep" :key "g")
+  (im-projectelify :cmd lab-list-project-merge-requests :desc "Merge requests" :key "M")
+  (im-projectelify :cmd lab-list-project-pipelines :desc "Pipelines" :key "P")
+  (im-projectelify :cmd project-switch-project :desc "Switch" :key "s" :dont-wrap t)
+  (im-projectelify :cmd project-vc-dir :desc "VC dir" :key "v" :dont-wrap t)
+  (im-projectelify :cmd im-select-any-project-file :desc "Files (all projects)" :key "F" :dont-wrap t)
+  (im-projectelify :cmd im-consult-ripgrep-all-projects :desc "Grep (all projects)" :key "G" :dont-wrap t)
+  (im-projectelify :cmd git-link-homepage :desc "Homepage" :key "H")
 
   ;; All-projects commands
-
-  (define-key project-prefix-map "F" #'im-select-any-project-file)
-  (add-to-list 'project-switch-commands `(im-select-any-project-file "All project files"))
-
-  (define-key project-prefix-map "G" #'im-consult-ripgrep-all-projects)
-  (add-to-list 'project-switch-commands `(im-consult-ripgrep-all-projects "Grep"))
 
   (defun im-select-any-project-file ()
     (interactive)
@@ -3678,12 +3678,6 @@ Other complementary packages:
     (im-consult-ripgrep im-projects-root))
 
   ;; Others
-
-  (defun im-project-shell-command ()
-    "Run `async-shell-command' in the current project's root directory."
-    (interactive)
-    (let ((default-directory (project-root (project-current t))))
-      (call-interactively #'im-shell-command)))
 
   (defvar im-project-shell-last-height 15)
   (defvar im-project-shell-last-window nil)
@@ -3743,7 +3737,7 @@ Some key points:
     :config
     (advice-add #'register-preview :override #'consult-register-window)
 
-    (setq consult-preview-key (kbd "M-,"))
+    (setq consult-preview-key "M-,")
     ;; ^ When you do M-, on a candidate, it previews it
 
     (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
@@ -3812,17 +3806,13 @@ Some functionality for project management. I do some fine-tuning for =find= and 
     "Find file in DIR. `fd' is already fast enough, no need for
   `consult-find's async approach."
     (interactive "DFind files in: ")
-    (let ((default-directory dir))
+    (let ((default-directory (or dir default-directory)))
       (im-output-select
        :cmd "fd --exclude '.git' --exclude 'node_modules' --hidden ."
        :prompt "Open file: "
        :category 'file
        :map (s-chop-prefix "./" it)
        :do (find-file it))))
-
-  (defun im-find-file-in-current-project ()
-    (interactive)
-    (im-find-file-in (im-current-project-root)))
 #+end_src
 
 *** consult-buffer and some extensions
@@ -5084,9 +5074,10 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
       (setq tmr-sound-file "/System/Library/Sounds/Glass.aiff"))
 
     ;; evilify
-    (define-key tmr-tabulated-mode-map "j" #'next-line)
-    (define-key tmr-tabulated-mode-map "k" #'previous-line)
-    (evil-set-initial-state 'tmr-tabulated-mode 'emacs)
+    (with-eval-after-load 'tmr-tabulated
+      (define-key tmr-tabulated-mode-map "j" #'next-line)
+      (define-key tmr-tabulated-mode-map "k" #'previous-line)
+      (evil-set-initial-state 'tmr-tabulated-mode 'emacs))
 
     (evil-leader/set-key "N" #'tmr-with-details))
 
