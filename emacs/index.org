@@ -2510,7 +2510,7 @@ When I enter any of the listed directories, eshell automatically prints out my n
   (defvar im-autodir-last-doc nil)
 
   (defun im-eshell-handle-dir-change ()
-    (let ((dir (expand-file-name default-directory)))
+    (let ((dir (file-name-as-directory (expand-file-name default-directory))))
       (setq im-autodir-last-doc
             (with-current-buffer (find-file-noselect im-autodir-file)
               (catch 'found
@@ -2520,8 +2520,8 @@ When I enter any of the listed directories, eshell automatically prints out my n
                           (org-entry-get nil "ITEM")
                           (s-split ":")
                           (car)
-                          (file-name-as-directory)
                           (expand-file-name)
+                          (file-name-as-directory)
                           (equal dir))
                      (throw 'found (buffer-substring-no-properties
                                     (org-element-property :contents-begin (org-element-at-point))
@@ -2533,7 +2533,11 @@ When I enter any of the listed directories, eshell automatically prints out my n
         (eshell-send-input))))
 
   (defun im-autodir-show-doc ()
-    im-autodir-last-doc)
+    (->>
+     im-autodir-last-doc
+     s-lines
+     (-take 20)
+     (s-join "\n")))
 
   (add-hook 'eshell-directory-change-hook #'im-eshell-handle-dir-change)
   ;; eshell-directory-change-hook is not get triggered when eshell is opened, hence:
