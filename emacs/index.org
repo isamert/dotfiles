@@ -6047,14 +6047,29 @@ The following enables =CamelCase= aware editing operations.
     ;; ^ This is required for java-ts-mode, otherwise it fails for some reason.
     ;; https://github.com/emacs-lsp/lsp-mode/issues/3135#issuecomment-933539371
     )
+#+END_SRC
 
+*** Fix LSP and Lombok interaction
+#+begin_src emacs-lisp
   (defun im-lsp-java-find-lombok-jar ()
     (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>)))
 
+  ;; This is required to make lsp work well with Lombok
   (when-let (lombok (im-lsp-java-find-lombok-jar))
     (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok))))
-#+END_SRC
-
+#+end_src
+*** Supplementary functions
+#+begin_src emacs-lisp
+  (defun im-jshell ()
+    "Open JShell."
+    (interactive)
+    (let* ((default-directory (im-current-project-root))
+           (vterm-shell "mvn -q com.github.johnpoth:jshell-maven-plugin:1.3:run -DtestClasspath")
+           ;; ^ This plugin makes it possible to import project's maven dependencies
+           ;; another option is to use jshell directly.
+           (vterm-buffer-name "*vterm-jshell*"))
+      (vterm)))
+#+end_src
 *** maven helpers
 #+begin_src emacs-lisp
   (defun im-maven-goal-run (&optional invalidate)
