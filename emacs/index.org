@@ -8170,6 +8170,8 @@ Here I define two important functions and their helpers.  The following function
   (defun im-toggle-side-tmr-buffer ()
     (interactive)
     (im-toggle-side-buffer-with-name (get-buffer-create "*tmr-tabulated-view*"))
+    (unless (featurep 'tmr-tabulated)
+      (require 'tmr-tabulated))
     (tmr-tabulated-mode))
 
   ;; Toggle temproary buffers
