@@ -3846,6 +3846,10 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
       ,@(directory-files im-load-path t "\\.el$")))
 
   (im-append! consult-buffer-sources 'im-consult-source-files)
+
+  ;; Move bookmarks to the top of buffer sources
+  (delq 'consult--source-bookmark consult-buffer-sources)
+  (add-to-list 'consult-buffer-sources 'consult--source-bookmark)
 #+end_src
 
 I also add a source for listing all of my projects:
@@ -8785,7 +8789,12 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
                              context))))
          "Logs (to a file)" →
          (let ((container (im-kube-pod--select-container pod))
-               (fname (expand-file-name (read-file-name "File: " (format "~/Workspace/temp/%s-%s.logs" (format-time-string "%Y-%m-%d") name)))))
+               (fname (expand-file-name (read-file-name
+                                         "File: "
+                                         "~/Workspace/temp/"
+                                         nil
+                                         nil
+                                         (format "%s-%s.logs" (format-time-string "%Y-%m-%d") name)))))
            (message ">> Downloading logs for %s. Done." name)
            (set-process-sentinel
             (start-process-shell-command
