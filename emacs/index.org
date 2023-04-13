@@ -4005,7 +4005,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
       (consult-flycheck)))
 #+END_SRC
 
-** corfu & corfu-doc & kind-icon & pcmpl-args & cape
+** corfu & corfu-doc & kind-icon & pcmpl-args
 - When corfu popup is open
   - M-SPC to insert a space to be able to filter with orderless.
   - M-q to show an avy like quick selection keys.
@@ -4056,7 +4056,19 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (define-key corfu-map (kbd "M-p") #'corfu-popupinfo-scroll-down)
     (define-key corfu-map (kbd "M-n") #'corfu-popupinfo-scroll-up))
 
-  ;; add extensions
+  ;; For shell-mode completion
+  (use-package pcmpl-args
+    :config
+    ;; Silence the pcomplete capf, no errors or messages!
+    (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
+
+    ;; Ensure that pcomplete does not write to the buffer
+    ;; and behaves as a pure `completion-at-point-function'.
+    (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
+#+END_SRC
+
+** cape
+#+begin_src emacs-lisp
   (use-package cape
     ;; Bind dedicated completion commands
     ;; Alternative prefix keys: C-c p, M-p, M-+, ...
@@ -4092,17 +4104,22 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     ;;(add-to-list 'completion-at-point-functions #'cape-line)
     )
 
-  ;; For shell-mode completion
-  (use-package pcmpl-args
-    :config
-    ;; Silence the pcomplete capf, no errors or messages!
-    (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
-
-    ;; Ensure that pcomplete does not write to the buffer
-    ;; and behaves as a pure `completion-at-point-function'.
-    (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
-#+END_SRC
-
+  (cl-defmacro im-cape-from-generator (&key name generator category bound key)
+    "Create a cape completion function with given parameters."
+    (let ((cape-fn (intern (format "im-cape-%s" (symbol-name name)))))
+      `(progn
+         (defun ,cape-fn (&optional interactive)
+           (interactive (list t))
+           (if interactive
+               (cape-interactive #',cape-fn)
+             (let ((bounds (cape--bounds ',bound)))
+               `(,(car bounds) ,(cdr bounds)
+                 ,(cape--table-with-properties
+                   (cape--cached-table (car bounds) (cdr bounds) ,generator 'substring)
+                   :category ',category)))))
+         (when ,key
+           (bind-key ,key #',cape-fn)))))
+#+end_src
 ** lsp-mode
 - See: https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
 
@@ -6628,17 +6645,12 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
   (defun im-bq-all-table-names ()
     (--map (alist-get 'id it) (im-bq-all-tables)))
 
-  (defun im-cape-bq-tables (&optional interactive)
-    (interactive (list t))
-    (if interactive
-        (cape-interactive #'im-cape-bq-tables)
-      (let ((bounds (cape--bounds 'symbol)))
-        `(,(car bounds) ,(cdr bounds)
-          ,(cape--table-with-properties
-            (cape--cached-table (car bounds) (cdr bounds) (lambda (&rest _) (im-bq-all-table-names)) 'substring)
-            :category 'symbol)))))
-
-  (bind-key "M-o B" #'im-cape-bq-tables)
+  (im-cape-from-generator
+   :name bq-tables
+   :generator (lambda (&rest _) (im-bq-all-table-names))
+   :bound symbol
+   :category symbol
+   :key "M-o B")
 #+end_src
 
 ** kbd-mode
