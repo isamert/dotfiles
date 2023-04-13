@@ -6600,6 +6600,41 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
          (im-shell-command
           :buffer-name buffer-name
           :command (format "bq head -n 200 '%s'" table-name))))))
+
+  (defun im-big-query-get-all-datasets (project-id)
+    (json-parse-string
+     (shell-command-to-string
+      (format "bq ls --format=json --project_id=%s" project-id))
+     :object-type 'alist
+     :array-type 'list))
+
+  (defun im-big-query-get-all-tables (dataset-id)
+    (json-parse-string
+     (shell-command-to-string
+      (format "bq ls --format=json --max_results 5000 '%s'" dataset-id))
+     :object-type 'alist
+     :array-type 'list))
+
+  (defmemoizefile im-bq-all-tables () "~/.emacs.d/big-query-table-cache"
+    (->>
+     (im-big-query-get-all-datasets im-bq-project-id)
+     (--map (alist-get 'id it))
+     (--mapcat (im-big-query-get-all-tables it))))
+
+  (defun im-bq-all-table-names ()
+    (--map (alist-get 'id it) (im-bq-all-tables)))
+
+  (defun im-cape-bq-tables (&optional interactive)
+    (interactive (list t))
+    (if interactive
+        (cape-interactive #'im-cape-bq-tables)
+      (let ((bounds (cape--bounds 'symbol)))
+        `(,(car bounds) ,(cdr bounds)
+          ,(cape--table-with-properties
+            (cape--cached-table (car bounds) (cdr bounds) (lambda (&rest _) (im-bq-all-table-names)) 'substring)
+            :category 'symbol)))))
+
+  (bind-key "M-o B" #'im-cape-bq-tables)
 #+end_src
 
 ** kbd-mode
