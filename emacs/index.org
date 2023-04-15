@@ -2787,6 +2787,7 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     (evil-define-key 'normal dirvish-mode-map
       "h" #'dired-up-directory
       "l" #'dired-find-alternate-file
+      "\\" #'dired-find-file-other-window
       (kbd "<tab>") #'dirvish-toggle-subtree)
 
     ;; Re-direct direct-jump calls to dirvish
@@ -3614,7 +3615,7 @@ Other complementary packages:
     ;; The following does not recurse as I like it to be
     ;; (project-remember-projects-under im-projects-root t)
     (setq project--list '())
-    (--each (--map (project-try-vc it) (im-all-project-roots))
+    (--each (--map (project--find-in-directory it) (im-all-project-roots))
       (project-remember-project it t)))
 
   (run-with-timer 10 nil #'im-load-projects-list)
@@ -3657,6 +3658,8 @@ Other complementary packages:
 
   (setq project-switch-commands '())
   (im-projectelify :cmd im-shell-for :desc "Eshell" :key "e")
+  (im-projectelify :cmd project-query-replace-regexp :desc "Replace in project (regexp)" :key "r" :dont-wrap t)
+  (im-projectelify :cmd project-kill-buffers :desc "Kill buffers" :key "k" :dont-wrap t)
   (im-projectelify :cmd im-vterm-project :desc "vterm" :key "t" :dont-wrap t)
   (im-projectelify :cmd im-shell-command :desc "Run shell command" :key "!")
   (im-projectelify :cmd im-find-file-in :desc "Files" :key "f" :non-interactive t)
@@ -5077,6 +5080,7 @@ There are bunch of Emacs-ChatGPT integrations and org-ai seems to be best as it 
 
 #+begin_src emacs-lisp
   (use-package org-ai
+    :straight (:host github :repo "rksm/org-ai")
     :config
     ;; (setq org-ai-default-chat-model "gpt-4")
     (setq org-ai-default-max-tokens 2000)
