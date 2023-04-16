@@ -826,6 +826,8 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
       ("~/.config/skhd/skhdrc"           . "skhd --reload; osascript -e 'display notification \"skhd updated\"'")
       ("~/.config/kmonad-linux.kbd"      . "systemctl --user restart kmonad")
       ("~/.ssh/config" . im-unison-sync)
+      ("~/.emacs.d/bookmarks" . im-unison-sync)
+      ("~/.emacs.d/scratch.el" . im-unison-sync)
       ("~/.emacs.d/load/isamert.*" . im-unison-sync))
     "File association list with their respective command.")
 
@@ -847,10 +849,12 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
            (message ">> Wrong specification in `im-run-after-save-alist' for %s" fname))))
        match)))
 
-  (defun im-unison-sync (file)
-    (async-shell-command
-     (format "DISPLAY= unison sync -ui text -batch -root ~ -root ssh://%s"
-             (if (workpc?) "x220" "mac"))))
+  (defun im-unison-sync (&optional _)
+    (interactive)
+    (save-window-excursion
+      (async-shell-command
+       (format "DISPLAY= unison sync -ui text -batch -root ~ -root ssh://%s"
+               (if (workpc?) "x220" "mac")))))
 #+END_SRC
 
 ** macOS problem: too many open files
@@ -1711,6 +1715,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (shell . t)
      (scheme . t)
      (python . t)
+     (R . t)
      (haskell . t)
      (js . t)
      (sql . t)
@@ -4107,8 +4112,25 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     ;;(add-to-list 'completion-at-point-functions #'cape-line)
     )
 
-  (cl-defmacro im-cape-from-generator (&key name generator category bound key)
-    "Create a cape completion function with given parameters."
+  (cl-defmacro im-cape
+      (&key name generator category bound key annotate (exclusive 'no) kind)
+    "Create a cape completion function with given parameters.
+  GENERATOR is a function that returns the completion list when
+  called.
+
+  BOUND is boundaries of the thing that gets completed. May be
+  symbol, word, file etc.
+
+  KEY is key to bind this cape to.
+
+  ANNOTATE is a function that returns annotation for given
+  completion. A function called with single argument, current
+  completion item.
+
+  KIND is a function that returns the kind for current completion
+  item. It should return a symbol like `file' `directory' etc. In
+  turn, there is a icon displayed that is associated with the kind
+  symbol."
     (let ((cape-fn (intern (format "im-cape-%s" (symbol-name name)))))
       `(progn
          (defun ,cape-fn (&optional interactive)
@@ -4116,10 +4138,16 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
            (if interactive
                (cape-interactive #',cape-fn)
              (let ((bounds (cape--bounds ',bound)))
-               `(,(car bounds) ,(cdr bounds)
-                 ,(cape--table-with-properties
-                   (cape--cached-table (car bounds) (cdr bounds) ,generator 'substring)
-                   :category ',category)))))
+               (append
+                (list (car bounds) (cdr bounds)
+                      (cape--nonessential-table ,generator)
+                      :exclusive ',exclusive)
+                (when ,annotate
+                  (list :annotation-function ,annotate))
+                (when ,kind
+                  (list :company-kind ,kind))
+                (when ',category
+                  (list :category ',category))))))
          (when ,key
            (bind-key ,key #',cape-fn)))))
 #+end_src
@@ -6649,7 +6677,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
   (defun im-bq-all-table-names ()
     (--map (alist-get 'id it) (im-bq-all-tables)))
 
-  (im-cape-from-generator
+  (im-cape
    :name bq-tables
    :generator (lambda (&rest _) (im-bq-all-table-names))
    :bound symbol
