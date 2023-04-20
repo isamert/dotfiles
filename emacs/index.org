@@ -5885,8 +5885,7 @@ The following enables =CamelCase= aware editing operations.
     (-some--> (locate-dominating-file "." "node_modules")
       (expand-file-name it)
       (f-join it "node_modules/.bin")
-      (setq-local exec-path `(,it ,@exec-path))
-      (message "%s added to buffer-local path." it)))
+      (setq-local exec-path `(,it ,@exec-path))))
 
   (add-hook 'js-mode-hook #'im-add-node-modules-to-path)
   (add-hook 'js2-mode-hook #'im-add-node-modules-to-path)
