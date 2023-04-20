@@ -2714,7 +2714,8 @@ Several packages are using this package to show system-level notifications. Here
 
   (evil-leader/set-key
     "yy" #'im-notify-posframe-notifications
-    "yc" #'im-notify-posframe-clear-all)
+    "yc" #'im-notify-posframe-clear-all
+    "yC" (λ-interactive  (im-notify-posframe-clear-all t)))
 #+end_src
 
 ** Hydra
