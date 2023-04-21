@@ -6329,7 +6329,6 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
   (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'im-describe-thing-in-popup)
   (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'im-describe-thing-in-popup)
 
-
   (defconst im-describe-thing-buffer-name "*im-describe*")
 
   (defun im-describe-thing-mode-scroll-up (&optional n)
@@ -6361,8 +6360,10 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
   (defvar im-describe-thing-current-buffer nil)
   (defun im-describe-thing--remove-posframe (&optional force-remove &rest _)
     (with-current-buffer im-describe-thing-current-buffer
-      (when (or (eq force-remove :force)
-                (not (eq (point) im-describe-thing-posframe-point)))
+      (when (or
+             (eq this-command #'keyboard-quit)
+             (eq force-remove :force)
+             (not (eq (point) im-describe-thing-posframe-point)))
         (posframe-hide im-describe-thing-buffer-name)
         (remove-hook 'post-command-hook #'im-describe-thing--remove-posframe)
         (im-describe-thing-mode -1)
