@@ -3316,13 +3316,16 @@ Note that it's not possible to stage hunks with =vc=.
       (setq im--last-log-diff-buffer (current-buffer))
       (im-select-window-with-buffer bname)))
 
-  (add-hook
-   'log-edit-done-hook
-   #'(lambda ()
-       (im-select-window-with-buffer (buffer-name im--last-log-diff-buffer))
-       (when (equal (window-buffer) im--last-log-diff-buffer)
-         (im-quit))
-       (kill-buffer im--last-log-diff-buffer)))
+  (defun im-vc-kill-diff ()
+    (im-select-window-with-buffer (buffer-name im--last-log-diff-buffer))
+    (when (equal (window-buffer) im--last-log-diff-buffer)
+      (im-quit))
+    (kill-buffer im--last-log-diff-buffer)
+    (tab-bar-history-back))
+
+  ;; Restore window configuration etc. after we are done
+  (add-hook 'log-edit-done-hook #'im-vc-kill-diff)
+  (define-advice log-edit-kill-buffer (:after (&rest args) kill-diff-window) (im-vc-kill-diff))
 #+end_src
 *** git-timemachine
 - Toggle with ~git-timemachine~ (SPC gt).
