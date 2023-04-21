@@ -3302,7 +3302,6 @@ Note that it's not possible to stage hunks with =vc=.
   ;; - Clear all other windows
   ;; - Open diff
   ;; - When committed, kill diff buffer and window.
-  ;; TODO Also kill diff buffer when C-c C-k is called on commit window
 
   (remove-hook 'log-edit-hook #'log-edit-show-files)
   (add-hook 'log-edit-hook #'im-vc-show-diff)
@@ -3316,16 +3315,15 @@ Note that it's not possible to stage hunks with =vc=.
       (setq im--last-log-diff-buffer (current-buffer))
       (im-select-window-with-buffer bname)))
 
-  (defun im-vc-kill-diff ()
+  ;; Restore window configuration etc. after we are done.
+  ;; log-edit-done-hook only works on successful case but this advice
+  ;; works for every case
+  (define-advice log-edit-kill-buffer (:after (&rest args) kill-diff-window)
     (im-select-window-with-buffer (buffer-name im--last-log-diff-buffer))
     (when (equal (window-buffer) im--last-log-diff-buffer)
       (im-quit))
     (kill-buffer im--last-log-diff-buffer)
     (tab-bar-history-back))
-
-  ;; Restore window configuration etc. after we are done
-  (add-hook 'log-edit-done-hook #'im-vc-kill-diff)
-  (define-advice log-edit-kill-buffer (:after (&rest args) kill-diff-window) (im-vc-kill-diff))
 #+end_src
 *** git-timemachine
 - Toggle with ~git-timemachine~ (SPC gt).
@@ -3395,7 +3393,13 @@ Some small enhancments to diff mode:
     "-" #'diff-split-hunk
     (kbd "RET") #'diff-goto-source
     (kbd "<tab>") #'outline-cycle
-    (kbd "<backtab>") #'outline-cycle-buffer)
+    (kbd "<backtab>") #'outline-cycle-buffer
+    ;; Add ability to exit from commit window (log-edit) of vc from the
+    ;; diff buffer. Because it automatically opens, sometimes I decide
+    ;; to discard what I'm currently doing inside the diff buffer
+    (kbd "C-c C-k") (λ-interactive
+                     (when (im-select-window-with-buffer "*vc-log*")
+                       (call-interactively #'log-edit-kill-buffer))))
 
   (defun im-diff-reverse-hunk ()
     "Reverse hunk at point."
@@ -3403,10 +3407,11 @@ Some small enhancments to diff mode:
     (pcase-let ((`(,buf ,_line-offset ,_pos ,_src ,_dst ,_switched)
                  (diff-find-source-location nil nil)))
       (when (y-or-n-p "Really want to revert?")
-        (save-excursion
-          (diff-apply-hunk :reverse)
-          (with-current-buffer buf
-            (save-buffer)))
+        (save-window-excursion
+          (save-excursion
+            (diff-apply-hunk :reverse)
+            (with-current-buffer buf
+              (save-buffer))))
         (diff-hunk-kill))))
 #+end_src
 ** avy
