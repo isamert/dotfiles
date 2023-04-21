@@ -1302,6 +1302,7 @@ Multiple cursors for evil.
     ;; So remove "gr" binding
     (evil-define-key* '(normal visual) evil-mc-key-map (kbd "gr") nil)
     (evil-define-key* '(normal visual) evil-mc-key-map (kbd "M-p") nil)
+    (evil-define-key* '(normal visual) evil-mc-key-map (kbd "M-n") nil)
 
     ;; Add my bindings using "gk"
     (evil-define-key 'normal evil-mc-key-map
@@ -6328,11 +6329,46 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
   (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'im-describe-thing-in-popup)
   (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'im-describe-thing-in-popup)
 
+
+  (defconst im-describe-thing-buffer-name "*im-describe*")
+
+  (defun im-describe-thing-mode-scroll-up (&optional n)
+    (interactive nil im-describe-thing-mode)
+    (with-selected-frame (posframe--find-existing-posframe (get-buffer im-describe-thing-buffer-name))
+      (with-current-buffer im-describe-thing-buffer-name
+        (scroll-up (or n 1)))))
+
+  (defun im-describe-thing-mode-scroll-down (&optional n)
+    (interactive nil im-describe-thing-mode)
+    (im-describe-thing-mode-scroll-up (- (or n 1))))
+
+  (defun im-describe-thing-jump ()
+    (interactive nil im-describe-thing-mode)
+    (im-describe-thing--remove-posframe :force)
+    (switch-to-buffer-other-window im-describe-thing-buffer-name))
+
+  (define-minor-mode im-describe-thing-mode
+    "Elisp popup documentation mode."
+    :lighter " ElPopDoc"
+    :global t
+    :keymap (let ((map (make-sparse-keymap)))
+              (define-key map (kbd "M-n") #'im-describe-thing-mode-scroll-up)
+              (define-key map (kbd "M-p") #'im-describe-thing-mode-scroll-down)
+              (define-key map (kbd "M-RET") #'im-describe-thing-jump)
+              map))
+
   (defvar im-describe-thing-posframe-point nil)
-  (defun im-describe-thing--remove-posframe (&rest _)
-    (unless (eq (point) im-describe-thing-posframe-point)
-      (posframe-hide "*im-describe*")
-      (remove-hook 'post-command-hook #'im-describe-thing--remove-posframe)))
+  (defvar im-describe-thing-current-buffer nil)
+  (defun im-describe-thing--remove-posframe (&optional force-remove &rest _)
+    (with-current-buffer im-describe-thing-current-buffer
+      (when (or (eq force-remove :force)
+                (not (eq (point) im-describe-thing-posframe-point)))
+        (posframe-hide im-describe-thing-buffer-name)
+        (remove-hook 'post-command-hook #'im-describe-thing--remove-posframe)
+        (im-describe-thing-mode -1)
+        (setq minor-mode-overriding-map-alist
+              (assq-delete-all #'im-describe-thing-mode
+                               minor-mode-overriding-map-alist)))))
 
   (defun im-describe-thing-in-popup ()
     (interactive)
@@ -6341,17 +6377,21 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
            (description (save-window-excursion
                           (helpful-symbol thing)
                           (buffer-string))))
+      (im-describe-thing-mode +1)
+      (setq im-describe-thing-posframe-point (point))
+      (setq im-describe-thing-current-buffer (current-buffer))
+      (setf (alist-get #'im-describe-thing-mode minor-mode-overriding-map-alist)
+            im-describe-thing-mode-map)
+      (add-hook 'post-command-hook #'im-describe-thing--remove-posframe)
       (posframe-hide-all)
       (posframe-show
-       "*im-describe*"
+       im-describe-thing-buffer-name
        :string description
        :poshandler #'posframe-poshandler-point-top-left-corner
        :border-width 3
        :max-width 80
        :max-height 30
-       :border-color "gray30")
-      (setq im-describe-thing-posframe-point (point))
-      (add-hook 'post-command-hook #'im-describe-thing--remove-posframe)))
+       :border-color "gray30")))
 #+end_src
 
 *** Pretty stuff
