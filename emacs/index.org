@@ -1716,6 +1716,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (shell . t)
      (scheme . t)
      (python . t)
+     (verb . t)
      (R . t)
      (haskell . t)
      (js . t)
@@ -1774,18 +1775,41 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       (org-redisplay-inline-images)))
 #+end_src
 
-*** ob-http & verb-mode
+*** verb-mode
 #+name: ob-http
 #+begin_src emacs-lisp :tangle no
-  ;; Http request in org-mode babel.
-  ;; You can get the generated curl command after executing the code
-  ;; block, from *curl command history* buffer
-  (use-package ob-http
-    :straight (:host github :repo "zweifisch/ob-http"))
-
   ;; An alternative to ob-http, might be better
   (use-package verb
     :straight (:host github :repo "federicotdn/verb"))
+
+  (defun im-curl-to-org-http (curl-str)
+    "Convert CURL-STR into an ob-http block.
+  More concretely this function converts given curl command (that
+  is copied from Chrome/Firefox dev tools, using the `Copy as curl'
+  option) into an ob-http block to be able to use all the goodies
+  that is provided by ob-http."
+    (interactive
+     (list
+      (if (use-region-p)
+          (buffer-substring-no-properties (region-beginning) (region-end))
+        (read-string "Curl string: "))))
+    (let ((tokens (im-cmdargs-tokenize curl-str))
+          (headers '())
+          (request "GET")
+          url
+          data)
+      (--each-indexed tokens
+        (pcase it
+          ((or "-H" "--header")
+           (push (nth (1+ it-index) tokens) headers))
+          ((or "-d" "--data-binary" "--data-raw")
+           (setq data (nth (1+ it-index) tokens)))
+          ((or "-X" "--request" "--data-raw")
+           (setq request (nth (1+ it-index) tokens)))
+          ((pred (lambda (x) (s-prefix? "http" x)))
+           (setq url it))))
+      (insert
+       (im-s-interpolated "#{request} #{url}\n#{(s-join \"\\n\" headers)}\n\n#{data}"))))
 
   (defun im-cmdargs-tokenize (input)
     (with-temp-buffer
@@ -1817,35 +1841,6 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
                       (1- (re-search-forward "[ \t]" nil t)))
                      tokens))))
         (nreverse tokens))))
-
-  (defun im-curl-to-org-http (curl-str)
-    "Convert CURL-STR into an ob-http block.
-  More concretely this function converts given curl command (that
-  is copied from Chrome/Firefox dev tools, using the `Copy as curl'
-  option) into an ob-http block to be able to use all the goodies
-  that is provided by ob-http."
-    (interactive
-     (list
-      (if (use-region-p)
-          (buffer-substring-no-properties (region-beginning) (region-end))
-        (read-string "Curl string: "))))
-    (let ((tokens (im-cmdargs-tokenize curl-str))
-          (headers '())
-          (request "GET")
-          url
-          data)
-      (--each-indexed tokens
-        (pcase it
-          ((or "-H" "--header")
-           (push (nth (1+ it-index) tokens) headers))
-          ((or "-d" "--data-binary" "--data-raw")
-           (setq data (nth (1+ it-index) tokens)))
-          ((or "-X" "--request" "--data-raw")
-           (setq request (nth (1+ it-index) tokens)))
-          ((pred (lambda (x) (s-prefix? "http" x)))
-           (setq url it))))
-      (insert
-       (im-s-interpolated "#{request} #{url}\n#{(s-join \"\\n\" headers)}\n\n#{data}"))))
 #+end_src
 
 ** Exporting
