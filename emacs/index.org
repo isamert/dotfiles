@@ -3993,7 +3993,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (setq flycheck-display-errors-delay 0.3)
     (setq flycheck-emacs-lisp-load-path 'inherit)
     (setq flycheck-emacs-lisp-initialize-packages t)
-    (setq-default flycheck-disabled-checkers '(emacs-lisp-checkdoc))
+    ;; (setq-default flycheck-disabled-checkers '(emacs-lisp-checkdoc))
     (setq flycheck-global-modes '(not org-mode jira-view-mode))
 
     (global-flycheck-mode))
