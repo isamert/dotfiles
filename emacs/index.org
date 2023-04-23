@@ -1502,6 +1502,9 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
       (list up-pos down-pos)))
 #+end_src
 * org-mode
+** Tips etc.
+- Some lesser known functions:
+  - org-copy-visible :: Useful for only sending the outline. Also works with selection.
 ** org-plus-contrib
 #+begin_src emacs-lisp
   (use-package org
