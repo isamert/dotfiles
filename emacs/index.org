@@ -428,7 +428,7 @@ Some basic variable and function definitions that will be used in configuration.
   shell command and doing a completing-read on it and then using
   the result in another context, possibly on another shell
   command."
-    (let* ((result `(lab--completing-read-object
+    (let* ((result `(empv--completing-read-object
                      ,prompt
                      (seq-map-indexed
                       (lambda (it idx) ,map)
@@ -947,14 +947,14 @@ I make use of this mode quite frequently throughout the configuration.
 
   (defmacro im-prettify-mode (mode pairs)
     "Prettify given PAIRS in given MODE.
-    Just a simple wrapper around `prettify-symbols-mode`"
-    `(add-hook
-      ,mode
-      (lambda ()
-        (mapc (lambda (pair)
-                (push pair prettify-symbols-alist))
-              ,pairs)
-        (prettify-symbols-mode 1))))
+  Just a simple wrapper around `prettify-symbols-mode`"
+    (declare (indent 1))
+    (let ((hook (intern (concat (symbol-name mode) "-prettify-symbols-hook"))))
+      `(progn
+         (defun ,hook ()
+           (setq prettify-symbols-alist `(,@prettify-symbols-alist ,@,pairs))
+           (prettify-symbols-mode 1))
+         (add-hook ',mode #',hook))))
 #+end_src
 
 ** fira-code-mode (font ligatures)
@@ -1505,6 +1505,9 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 ** Tips etc.
 - Some lesser known functions:
   - org-copy-visible :: Useful for only sending the outline. Also works with selection.
+  - orgtbl-create-or-convert-from-region :: Useful for data that is separated by \t or spaces.
+    - After converting to table, I can use ~org-table-sort-lines~. Alternative is using ~sort-fields~ without converting the data into table but it's not that nice to use.
+    - I generally use it in combination with ~embark-collect~. Any completing-read → embark-collect → orgtbl-create-or-convert-from-region.
 ** org-plus-contrib
 #+begin_src emacs-lisp
   (use-package org
@@ -2613,74 +2616,117 @@ Several packages are using this package to show system-level notifications. Here
      :title "Posframe alerts"
      :notifier
      (lambda (info)
-       (im-notify-posframe :title (plist-get info :title)
-                           :message (plist-get info :message)
-                           :margin t
-                           :duration (unless (plist-get info :persistent) 10)
-                           :severity (plist-get info :severity))))
-
+       (im-notify-posframe
+        :title (plist-get info :title)
+        :message (plist-get info :message)
+        :margin t
+        :duration (unless (plist-get info :persistent) alert-fade-time)
+        :severity (plist-get info :severity))))
     (setq alert-fade-time 15)
     (setq alert-default-style 'im-alert-posframe))
 
-  (setq org-show-notification-handler
-        #'(lambda (notification) (im-notify-posframe :title "*org-mode*" :message notification :margin t)))
+  (evil-leader/set-key
+    "yy" #'im-notify-posframe-notifications
+    "yu" #'im-notify-posframe-enable-dnd
+    "yU" #'im-notify-posframe-disable-dnd
+    "yb" #'im-notify-posframe-blacklist
+    "ys" #'im-notify-posframe-snooze-last
+    "yc" #'im-notify-posframe-clear-all
+    "yC" (λ-interactive  (im-notify-posframe-clear-all t)))
 
-  (define-advice alert (:after (msg &rest args) send-to-my-phone-if-urgent)
-    "Send the notification to my phone if it's marked as urgent/high."
-    (pcase (plist-get args :severity)
-      ((or 'urgent 'high)
-       ;; Only send notification to phone if Emacs is idle for 60 secs
-       (when (and (current-idle-time)
-                  (>= (time-to-seconds (current-idle-time)) 60))
-         (im-send-notification-to-my-phone
-          :title (or (plist-get args :title) "Emacs")
-          :content msg)))))
+  (run-with-idle-timer 600 t #'im-keep-me-in-the-moment)
+  (defun im-keep-me-in-the-moment ()
+    (alert "What are you doing bro?" :title "BRO?!" :severity 'high))
 
+  ;; org-clock sends notification if the current tasks estimated effort is met.
+  (setq
+   org-show-notification-handler
+   (lambda (notification)
+     (im-notify-posframe :title "*org-mode*" :message notification :margin t)))
+
+  (defvar im-notify-posframe-blacklist-regexp nil)
+  (defvar im-notify-posframe-dnd nil)
   (defvar im-notify-posframe--active '())
   (defvar-local im-notify-posframe--notification-data nil)
-  (cl-defun im-notify-posframe (&rest data &key id title message (duration 15) margin (severity 'normal))
+  (cl-defun im-notify-posframe (&rest data &key id title message (duration 15) margin (severity 'normal) &allow-other-keys)
     (setq title (propertize title 'face '(:weight bold)))
-    (let ((bname (format "*im-notify-%s*" (or id (format "%s-%s" (if title (im-string-url-case title) "") (random))))))
-      (posframe-show
-       (with-current-buffer (get-buffer-create bname)
-         (setq im-notify-posframe--notification-data
-               (thread-first
-                 data
-                 (map-insert :time (float-time))
-                 (map-insert :id (substring-no-properties bname))))
-         (current-buffer))
-       :string (if margin
-                   (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
-                 (format "%s\n%s" title message))
-       :poshandler (lambda (info)
-                     (let ((posy (* (line-pixel-height)
-                                    (--reduce-from (+ acc
-                                                      (with-current-buffer it
-                                                        (count-lines (point-min) (point-max))))
-                                                   0
-                                                   (remove bname im-notify-posframe--active)))))
-                       (cons (/ (- (plist-get info :parent-frame-width)
-                                   (plist-get info :posframe-width))
-                                2)
-                             (if (> posy 0)
-                                 (+ posy (+ 3 3 15))
-                               15))))
-       :border-width 3
-       :max-height 10
-       :min-width 30
-       :max-width 80
-       :border-color (pcase severity
-                       ((or 'high 'urgent) "red3")
-                       ('normal "yellow3")
-                       (_ nil)))
-      (push bname im-notify-posframe--active)
-      (when duration
-        (run-with-timer
-         duration nil
-         (lambda ()
-           (posframe-hide bname)
-           (push bname im-notify-posframe--active)
-           (setq im-notify-posframe--active (delete bname im-notify-posframe--active)))))))
+    (let ((bname (format "*im-notify-%s*"
+                         (or id (format "%s-%s" (if title (im-string-url-case title) "") (random))))))
+      (when (and (not im-notify-posframe-dnd)
+                 (not (and im-notify-posframe-blacklist-regexp
+                           (s-matches?
+                            (if (stringp im-notify-posframe-blacklist-regexp)
+                                im-notify-posframe-blacklist-regexp
+                              (eval im-notify-posframe-blacklist-regexp))
+                            (concat (or title "") "\n" message)))))
+        (posframe-show
+         (with-current-buffer (get-buffer-create bname)
+           (setq im-notify-posframe--notification-data
+                 (thread-first
+                   data
+                   (map-insert :time (float-time))
+                   (map-insert :id (substring-no-properties bname))))
+           (current-buffer))
+         :string
+         (if margin
+             (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
+           (format "%s\n%s" title message))
+         :poshandler
+         (lambda (info)
+           (let ((posy (* (line-pixel-height)
+                          (--reduce-from (+ acc
+                                            (with-current-buffer it
+                                              (count-lines (point-min) (point-max))))
+                                         0
+                                         (remove bname im-notify-posframe--active)))))
+             (cons (/ (- (plist-get info :parent-frame-width)
+                         (plist-get info :posframe-width))
+                      2)
+                   (if (> posy 0)
+                       (+ posy (+ 3 3 15))
+                     15))))
+         :border-width 3
+         :max-height 10
+         :min-width 30
+         :max-width 80
+         :border-color (pcase severity
+                         ((or 'high 'urgent) "red3")
+                         ('normal "yellow3")
+                         (_ nil)))
+        (push bname im-notify-posframe--active)
+
+        ;; Clear the notification after a certain time, if requested
+        (when duration
+          (run-with-timer
+           duration nil
+           (lambda ()
+             (posframe-hide bname)
+             (push bname im-notify-posframe--active)
+             (setq im-notify-posframe--active (delete bname im-notify-posframe--active)))))
+
+        ;; Also use native notifications if Emacs is not focused
+        (unless (frame-focus-state)
+          (let ((alert-default-style
+                 (pcase system-type
+                   ('gnu/linux 'libnotify)
+                   ;; TODO osx-notifier having troubles showing messages
+                   ;; with Turkish characters.
+                   ('darwin 'osx-notifier)
+                   (_ 'message))))
+            (alert message :title title :severity severity)))
+
+        ;; Based on the severity, send it to my phone but only if Emacs is
+        ;; idle for a certain time
+        (pcase severity
+          ((or 'urgent 'high)
+           (when (and (current-idle-time)
+                      (>= (time-to-seconds (current-idle-time)) 60))
+             (im-send-notification-to-my-phone
+              :title (or title "Emacs")
+              :content message)))))
+
+      ;; Also show it as a message
+      (message ">> %s :: %s" title message)))
 
   (defun im-notify-posframe-clear-all (&optional delete?)
     (interactive "P")
@@ -2697,24 +2743,82 @@ Several packages are using this package to show system-level notifications. Here
 
   (defun im-notify-posframe-notifications ()
     (interactive)
-    (thread-first
-      (lab--completing-read-object
-       "Select notification: "
-       (thread-last
-         (buffer-list)
-         (--filter (string-prefix-p "*im-notify" (buffer-name it)))
-         (--map (with-current-buffer it (when-let (x im-notify-posframe--notification-data) (map-insert x :buffer-name (buffer-name)))))
-         (--filter it)
-         (--sort (> (plist-get it :time) (plist-get other :time))))
-       :formatter (lambda (it) (format "%s | %s - %s" (format-time-string "%Y-%m-%d %H:%M" (plist-get it :time)) (plist-get it :title) (plist-get it :message)))
-       :sort? nil)
-      (plist-get :buffer-name)
-      (switch-to-buffer-other-window)))
+    (let ((notification (im-notify-posframe--select)))
+      (empv--select-action "Act on notification"
+        "Open" → (switch-to-buffer-other-window (plist-get notification :buffer-name))
+        "Delete" → (progn (posframe-delete (plist-get notification :buffer-name)) (message ">> Deleted."))
+        "Snooze" → (im-notify-posframe-snooze (im-read-seconds) notification))))
 
-  (evil-leader/set-key
-    "yy" #'im-notify-posframe-notifications
-    "yc" #'im-notify-posframe-clear-all
-    "yC" (λ-interactive  (im-notify-posframe-clear-all t)))
+  (defun im-notify-posframe-enable-dnd (seconds)
+    "Enable DND mode for SECONDS."
+    (interactive (list (im-read-duration)))
+    (setq im-notify-posframe-dnd t)
+    (message ">> Disabling notifications for %s seconds." seconds)
+    (run-with-timer seconds nil #'im-notify-posframe-disable-dnd))
+
+  (defun im-notify-posframe-disable-dnd ()
+    "Disable DND mode."
+    (interactive)
+    (setq im-notify-posframe-dnd nil))
+
+  (defun im-notify-posframe-blacklist ()
+    (interactive)
+    (let* ((pp-use-max-width t)
+           (result (read-string
+                    "Blacklist expr: "
+                    (if (stringp im-notify-posframe-blacklist-regexp)
+                        im-notify-posframe-blacklist-regexp
+                      (s-trim (pp-to-string im-notify-posframe-blacklist-regexp))))))
+      (setq im-notify-posframe-blacklist-regexp
+            (if (s-blank? result)
+                nil
+              (if (s-prefix? "(rx" result)
+                  (car (read-from-string result))
+                result)))))
+
+  ;; TODO Add ack, like tmr? Maybe add ack option to im-notify-posframe
+  ;; itself and call with ack within this function
+  (defun im-notify-posframe-snooze (notification seconds)
+    (interactive (list
+        (im-notify-posframe--select)
+        (im-read-duration)))
+    (run-with-timer
+     seconds nil
+     (lambda () (apply #'im-notify-posframe notification)))
+    (message ">> You will be reminded about '%s' in %s seconds." (plist-get notification :title) seconds))
+
+  (defun im-notify-posframe-snooze-last ()
+    (interactive)
+    (im-notify-posframe-snooze (car (im-notify-posframe-notifications-list)) (im-read-duration)))
+
+  (defun im-notify-posframe-notifications-list ()
+    "Return notification datas in sorted order.
+  First one is the latest one."
+    (thread-last
+      (buffer-list)
+      (--filter (string-prefix-p "*im-notify" (buffer-name it)))
+      (--map (with-current-buffer it (when-let (x im-notify-posframe--notification-data) (map-insert x :buffer-name (buffer-name)))))
+      (--filter it)
+      (--sort (> (plist-get it :time) (plist-get other :time)))))
+
+  (defun im-notify-posframe--format-notification (it)
+    (format "%s | %s - %s"
+            (format-time-string "%Y-%m-%d %H:%M" (plist-get it :time))
+            (plist-get it :title)
+            (plist-get it :message)))
+
+  (defun im-notify-posframe--select ()
+    (empv--completing-read-object
+     "Select notification: "
+     (im-notify-posframe-notifications-list)
+     :formatter #'im-notify-posframe--format-notification
+     :category 'im-notification
+     :sort? nil))
+
+  (defun im-read-duration ()
+    "Ask the user to type a duration in a human-readable way.
+  Return parsed seconds from users answer."
+    (tmr--parse-duration (current-time) (tmr--read-duration)))
 #+end_src
 
 ** Hydra
@@ -2793,6 +2897,7 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
       "h" #'dired-up-directory
       "l" #'dired-find-alternate-file
       "\\" #'dired-find-file-other-window
+      "q" #'dirvish-quit
       (kbd "<tab>") #'dirvish-toggle-subtree)
 
     ;; Re-direct direct-jump calls to dirvish
@@ -2950,8 +3055,8 @@ To sync it automatically:
 
   ;; Use my notification function for appt notifications
   (setq appt-disp-window-function #'im-appt-notify)
-  (setq appt-message-warning-time 6)
-  (setq appt-display-interval 3)
+  (setq appt-message-warning-time 10)
+  (setq appt-display-interval 4)
 
   ;; Automatically update `appt-time-msg-list' after editing an
   ;; org-agenda file
@@ -5373,27 +5478,8 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
       (kbd "[t") #'hl-todo-previous))
 #+end_src
 
-** highlight-thing
+** Highlight thing at point manually
 #+begin_src emacs-lisp
-  (use-package highlight-thing
-    :after evil
-    :config
-    (setq-default evil-symbol-word-search t)
-    ;; ^ highlight-thing highlights symbols, not words. # and * searches for
-    ;; symbols if you set this to true, otherwise they search for words.
-
-    (add-hook
-     'highlight-thing-mode-hook
-     #'(lambda () (set-face-attribute 'highlight-thing nil :background "dark violet" :foreground "white")))
-    ;; ^ Default one with my theme makes some text quite unreadable
-
-    (setq highlight-thing-prefer-active-region nil
-          ;; ^ Don't highlight the selected text in visual mode
-          highlight-thing-ignore-list '("False" "True" "->" "::" "defun" "def"))
-    ;; I'm experimenting with manual highlighting
-    ;; (global-highlight-thing-mode)
-    )
-
   (setq
    hi-lock-face-defaults
    '("hi-salmon" "hi-aquamarine" "hi-blue" "hi-yellow" "hi-pink" "hi-green" "hi-black-b" "hi-blue-b" "hi-red-b" "hi-green-b" "hi-black-hb"))
@@ -6390,18 +6476,40 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
        :border-width 3
        :max-width 80
        :max-height 30
+       ;; M-n, M-p bindings only makes sense if accept-focus is
+       ;; nil. When accept-focus is non-nil, user is directly focused to
+       ;; the posframe and they can scroll using their conventional
+       ;; methods.
+       :accept-focus t
        :border-color "gray30")))
 #+end_src
 
 *** Pretty stuff
 #+begin_src emacs-lisp
-  (im-prettify-mode 'emacs-lisp-mode-hook
-                         '((">="     . ?≥)
-                           ("<="     . ?≤)
-                           ("defun"  . ?ƒ)
-                           ("lambda" . ?λ)))
+  (im-prettify-mode emacs-lisp-mode-hook
+    '((">="     . ?≥)
+      ("<="     . ?≤)
+      ("progn" . ?≡)
+      ("defun"  . ?ƒ)
+      ("interactive" . ?⎇)
+      ("lambda" . ?λ)
+      ("thread-last" . ?↠)
+      ("thread-first" . ?→)
+      ("->>" . ?↠)
+      ("->" . ?→)
+      ("mapcar" . ?↦)
+      ("--map" . ?↦)
+      ("-map" . ?↦)
+      ("seq-map" . ?↦)
+      ("-filter" . ?∀)
+      ("--filter" . ?∀)
+      ("seq-filter" . ?∀)
+      ("-sort" . ?⇅)
+      ("--sort" . ?⇅)
+      ("seq-sort" . ?⇅)))
 #+end_src
 
+*** Linting & package development
 For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
 
 #+begin_src emacs-lisp
@@ -7307,11 +7415,12 @@ Good for buffer management, especially for groupped killings.
       (s-prepend im-jira-feature-branch-prefix)
       (read-string "Branch name: ")))
 
+  ;; TODO Color code status etc.
   (defun im-jira--format-ticket-name (it)
     "Format ticket name for displaying in completing-read window."
     (let-alist it
       (format
-       "%-7s [%-11s] %-15s => %-15s - %s"
+       "%-7s\t[%-11s]\t%-15s => %-15s\t%s"
        (propertize .key
                    'face 'bold)
        (propertize (s-truncate 11 .fields.status.name)
