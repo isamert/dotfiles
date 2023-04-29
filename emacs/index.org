@@ -1670,7 +1670,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 
 ** Personal files
 #+name: personal-files
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
   (defconst watchlist-org "~/Documents/notes/watchlist.org")
   (defconst readinglist-org "~/Documents/notes/readinglist.org")
   (defconst courses-org "~/Documents/notes/courses.org")
