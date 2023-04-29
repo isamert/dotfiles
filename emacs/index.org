@@ -7602,6 +7602,26 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
     "f3"
     "Hostname or local address to connect to my phone by SSH.")
 
+  (defun im-send-termux-command-async (cmd fn &rest args)
+    "Send CMD to my phone.
+  When CMD finishes, FN is called with the process output."
+    (interactive "sText: ")
+    (let (output
+          (txt
+           (concat cmd " " (s-join "" (--map (concat "\"" (s-replace "\"" "\\\"" it) "\"" " ") args))))
+          (proc (start-process
+                 "*im-termux-cmd*"
+                 nil
+                 "ssh"
+                 "-T"
+                 im-phone-hostname)))
+      (set-process-filter proc (lambda (proc out) (setq output (concat output out))))
+      (set-process-sentinel proc (lambda (proc event) (funcall fn output)))
+      (process-send-string proc txt)
+      (process-send-eof proc)
+      (process-send-eof proc)
+      proc))
+
   (defun im-send-termux-command (cmd &rest args)
     "Send CMD to my phone."
     (interactive "sText: ")
@@ -7626,28 +7646,29 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
      (list :title (im-read-string "Title: ")
            :content (im-read-string "Content: ")
            :url-to-open (im-read-string "URL(?): ")))
-    (set-process-sentinel
-     (start-process
-      "gotify" "*gotify-out*"
-      "gotify" "push" (format "--title='%s'" title) (format "--clickUrl='%s'" url-to-open) content)
-     (lambda (proc text)
-       (message "here %s %s" (process-exit-status proc) text)
-       ;; Try sending notification through termux if gotify fails
-       (unless (eq (process-exit-status proc) 0)
-         (im-send-termux-command
-          "termux-notification"
-          "--title"
-          title
-          "--content"
-          (or content "")
-          "--action"
-          (format "termux-open %s" url-to-open))))))
+    ;; I used to use Gotify but not using right now
+    ;; (set-process-sentinel
+    ;;  (start-process
+    ;;   "gotify" "*gotify-out*"
+    ;;   "gotify" "push" (format "--title='%s'" title) (format "--clickUrl='%s'" url-to-open) content)
+    ;;  (lambda (proc text)
+    ;;    ;; Try sending notification through termux if gotify fails
+    ;;    (unless (eq (process-exit-status proc) 0)
+    (im-send-termux-command-async
+     "termux-notification"
+     (lambda (_out) ">> Sent notification to phone.")
+     "--title"
+     title
+     "--content"
+     (or content "")
+     "--action"
+     (format "termux-open %s" url-to-open)))
 
   (defun im-send-text-to-my-phone (text)
     "Send TEXT to my phones clipboard. This only works if the phone
   is already open."
     (interactive "sText: ")
-    (im-send-termux-command "termux-clipboard-set" text))
+    (im-send-termux-command-async "termux-clipboard-set" (lambda (_) (message ">> Text sent: %s." text)) text))
 
   (defun im-send-clipboard-to-my-phone ()
     "Send current clipboard content to my phones clipboard. This only
