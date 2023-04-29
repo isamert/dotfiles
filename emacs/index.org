@@ -1803,6 +1803,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
           (headers '())
           (request "GET")
           url
+          (query-params '())
           data)
       (--each-indexed tokens
         (pcase it
@@ -1812,10 +1813,20 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
            (setq data (nth (1+ it-index) tokens)))
           ((or "-X" "--request" "--data-raw")
            (setq request (nth (1+ it-index) tokens)))
+          ;; Only supports --data-urlencode in the GET context. It will
+          ;; append --data-urlencode arguments to url as query string.
+          ("--data-urlencode"
+           (push (nth (1+ it-index) tokens) query-params))
           ((pred (lambda (x) (s-prefix? "http" x)))
            (setq url it))))
+      (when-let ((query-params)
+                 (qs (url-build-query-string (--map (s-split-up-to "=" it 2) query-params))))
+        (if (s-contains? "?" url)
+            (setq url (concat url "&" qs))
+          (setq url (concat url "?" qs))))
       (insert
-       (im-s-interpolated "#{request} #{url}\n#{(s-join \"\\n\" headers)}\n\n#{data}"))))
+       (s-trim (im-s-interpolated "#{request} #{url}\n#{(s-join \"\\n\" headers)}\n\n#{(or data \"\")}")))))
+
 
   (defun im-cmdargs-tokenize (input)
     (with-temp-buffer
