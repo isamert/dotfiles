@@ -1727,7 +1727,6 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (haskell . t)
      (js . t)
      (sql . t)
-     (http . t)
      (dot . t)
      (gnuplot . t)
      (plantuml . t)))
