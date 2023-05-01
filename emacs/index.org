@@ -3296,7 +3296,7 @@ To sync it automatically:
             (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
             (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv--play-or-enqueue link)))
             (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
-            (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . (lambda (link &rest _) (xwidget-webkit-browse-url link)))
+            (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . browse-url-firefox)
             ("." . eww)))
 
     (defun im-eww-avy-follow (&optional follow-type)
@@ -4733,6 +4733,14 @@ Provides an interface to xref based on completing-read.
     :after helpful
     :config
     (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
+#+end_src
+
+Here, I also bind some keys for convenience. Taken from [[https://github.com/radian-software/radian/blob/23e80b3d865bfb60b166309249ac4db2b176b9fc/emacs/radian.el#LL3970C1-L3982C1][here]].
+
+#+begin_src emacs-lisp
+  (bind-key "C-h C-f" #'find-function)
+  (bind-key "C-h C-v" #'find-variable)
+  (bind-key "C-h C-l" #'find-library)
 #+end_src
 
 ** expand-region
@@ -7453,7 +7461,8 @@ Good for buffer management, especially for groupped killings.
                  '("Open" "View" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Raw" "[Cancel]"))))
           (pcase action
             ("Open"
-             (im-open-jira-issue .key)
+             (with-default-browser
+              (im-open-jira-issue .key))
              (cl-return))
             ("View"
              (im-jira-view-ticket .key)
@@ -7493,17 +7502,15 @@ Good for buffer management, especially for groupped killings.
        "pandoc -f jira -t org --wrap=none"
        nil t)
       ;; So I try to remove those unnecassary new lines here.
-      ;; Same replacement applied twice.
-      (replace-regexp-in-string
-       "\\\\\\\\$"
-       ""
-       (replace-regexp-in-string
-        "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-"
-        "\\1-\\2\n\\3-"
-        (replace-regexp-in-string
-         "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-"
-         "\\1-\\2\n\\3-"
-         (buffer-string))))))
+      (->>
+       (buffer-string)
+       ;; Same replacement applied twice.
+       (replace-regexp-in-string "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-" "\\1-\\2\n\\3-")
+       (replace-regexp-in-string "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-" "\\1-\\2\n\\3-")
+       (replace-regexp-in-string "\\\\\\\\$" "")
+       ;; Fix - [ ] markers
+       (replace-regexp-in-string "- \\*=( )=\\* " "- [ ] ")
+       (replace-regexp-in-string "- \\*=(X)=\\* " "- [X] "))))
 
   (defun im-jira-update-ticket (key summary description)
     (im-get-input
