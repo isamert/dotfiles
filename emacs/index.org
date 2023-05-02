@@ -1723,6 +1723,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (scheme . t)
      (python . t)
      (verb . t)
+     (http . t)
      (R . t)
      (haskell . t)
      (js . t)
@@ -1780,12 +1781,16 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       (org-redisplay-inline-images)))
 #+end_src
 
-*** verb-mode
+*** ob-http & verb-mode
 #+name: ob-http
 #+begin_src emacs-lisp :tangle no
+  ;; Http request in org-mode babel.
+  ;; You can get the generated curl command after executing the code
+  ;; block, from *curl command history* buffer
+  (use-package ob-http :straight (:host github :repo "zweifisch/ob-http"))
+
   ;; An alternative to ob-http, might be better
-  (use-package verb
-    :straight (:host github :repo "federicotdn/verb"))
+  (use-package verb :straight (:host github :repo "federicotdn/verb"))
 
   (defun im-curl-to-org-http (curl-str)
     "Convert CURL-STR into an ob-http block.
