@@ -952,7 +952,7 @@ I make use of this mode quite frequently throughout the configuration.
     (let ((hook (intern (concat (symbol-name mode) "-prettify-symbols-hook"))))
       `(progn
          (defun ,hook ()
-           (setq prettify-symbols-alist `(,@prettify-symbols-alist ,@,pairs))
+           (setq prettify-symbols-alist `(,@prettify-symbols-alist ,@',(eval pairs)))
            (prettify-symbols-mode 1))
          (add-hook ',mode #',hook))))
 #+end_src
@@ -6503,28 +6503,31 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 #+end_src
 
 *** Pretty stuff
-#+begin_src emacs-lisp
-  (im-prettify-mode emacs-lisp-mode-hook
-    '((">="     . ?≥)
-      ("<="     . ?≤)
-      ("progn" . ?≡)
-      ("defun"  . ?ƒ)
-      ("interactive" . ?⎇)
-      ("lambda" . ?λ)
-      ("thread-last" . ?↠)
-      ("thread-first" . ?→)
-      ("->>" . ?↠)
-      ("->" . ?→)
-      ("mapcar" . ?↦)
-      ("--map" . ?↦)
-      ("-map" . ?↦)
-      ("seq-map" . ?↦)
-      ("-filter" . ?∀)
-      ("--filter" . ?∀)
-      ("seq-filter" . ?∀)
-      ("-sort" . ?⇅)
-      ("--sort" . ?⇅)
-      ("seq-sort" . ?⇅)))
+#+begin_src  emacs-lisp
+  (setq
+   im-elisp-pretty-symbols
+   '((">="     . ?≥)
+     ("<="     . ?≤)
+     ("progn" . ?≡)
+     ("defun"  . ?ƒ)
+     ("interactive" . ?⎇)
+     ("lambda" . ?λ)
+     ("thread-last" . ?↠)
+     ("thread-first" . ?→)
+     ("->>" . ?↠)
+     ("->" . ?→)
+     ("mapcar" . ?↦)
+     ("--map" . ?↦)
+     ("-map" . ?↦)
+     ("seq-map" . ?↦)
+     ("-filter" . ?∀)
+     ("--filter" . ?∀)
+     ("seq-filter" . ?∀)
+     ("-sort" . ?⇅)
+     ("--sort" . ?⇅)
+     ("seq-sort" . ?⇅)))
+  (im-prettify-mode emacs-lisp-mode-hook im-elisp-pretty-symbols)
+  (im-prettify-mode lisp-interaction-mode-hook im-elisp-pretty-symbols)
 #+end_src
 
 *** Linting & package development
@@ -6535,6 +6538,11 @@ For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
   (use-package flycheck-package)
 #+end_src
 
+*** Other
+#+begin_src emacs-lisp
+  (add-hook 'emacs-lisp-mode-hook #'hs-minor-mode)
+  (add-hook 'lisp-interaction-mode-hook #'hs-minor-mode)
+#+end_src
 ** Racket
 - Open a racket buffer.
 - Do C-c C-c (racket-run)
@@ -9478,6 +9486,35 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
         attr
         (read-string (format "Value for '%s': " attr)))))
     (shell-command-to-string (format "setfattr --name='%s' --value='%s' '%s'" name value (expand-file-name file))))
+#+end_src
+** Converting minibuffer candidates to a table automatically
+#+begin_src emacs-lisp
+  (defun im-minibuffer-to-table ()
+    (interactive)
+    (let ((buffer (get-buffer-create "*im-minibuffer-table*"))
+          (items (completion-all-completions
+                  (minibuffer-contents)
+                  minibuffer-completion-table
+                  minibuffer-completion-predicate
+                  (max 0 (- (point) (minibuffer-prompt-end))))))
+      (when-let (last (last items))
+        (setcdr last nil))
+      (with-current-buffer buffer
+        (erase-buffer)
+        (goto-char (point-min))
+        (thread-last
+          (cdr items)
+          (s-join "\n")
+          (insert))
+        (goto-char (point-min))
+        (push-mark (point-max) t t)
+        (orgtbl-create-or-convert-from-region nil)
+        (deactivate-mark)
+        (org-mode))
+      (run-with-timer 0.1 nil (lambda () (switch-to-buffer-other-window buffer)))
+      (abort-recursive-edit)))
+
+  (define-key minibuffer-local-map (kbd "M-|") #'im-minibuffer-to-table)
 #+end_src
 * Operating system related
 ** Sound output chooser
