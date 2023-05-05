@@ -4315,6 +4315,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     ;; ^ Show the signature in the doc posframe. This shows the
     ;; posframe even if there is no documentation for the function
     ;; etc.
+    (setq lsp-ui-doc-position 'at-point)
     (setq lsp-ui-sideline-show-diagnostics nil)
     ;; ^ Disable showing errors on sideline, because I use
     ;; flycheck-inline already and it does a better job showing
