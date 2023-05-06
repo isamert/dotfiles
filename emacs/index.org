@@ -828,6 +828,7 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
       ("~/.ssh/config" . im-unison-sync)
       ("~/.emacs.d/bookmarks" . im-unison-sync)
       ("~/.emacs.d/scratch.el" . im-unison-sync)
+      ("~/.emacs.d/im-.*" . im-unison-sync)
       ("~/.emacs.d/load/isamert.*" . im-unison-sync))
     "File association list with their respective command.")
 
@@ -1567,8 +1568,7 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (add-hook 'org-mode-hook #'im-disable-electric-indent)
 
     <<ob-http>>
-    <<org-babel-configuration>>
-    <<personal-files>>)
+    <<org-babel-configuration>>)
 
   (use-package org-contrib)
 #+end_src
@@ -1669,7 +1669,6 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 #+end_src
 
 ** Personal files
-#+name: personal-files
 #+BEGIN_SRC emacs-lisp
   (defconst watchlist-org "~/Documents/notes/watchlist.org")
   (defconst readinglist-org "~/Documents/notes/readinglist.org")
@@ -4191,16 +4190,6 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (define-key corfu-map (kbd "M-d") #'corfu-popupinfo-toggle)
     (define-key corfu-map (kbd "M-p") #'corfu-popupinfo-scroll-down)
     (define-key corfu-map (kbd "M-n") #'corfu-popupinfo-scroll-up))
-
-  ;; For shell-mode completion
-  (use-package pcmpl-args
-    :config
-    ;; Silence the pcomplete capf, no errors or messages!
-    (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
-
-    ;; Ensure that pcomplete does not write to the buffer
-    ;; and behaves as a pure `completion-at-point-function'.
-    (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 #+END_SRC
 
 ** cape
@@ -5305,6 +5294,31 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
 
   (setq global-mode-string (append global-mode-string '(im-tmr-upcoming-string)))
   (run-with-timer 1 15 #'im-tmr-format-upcoming)
+#+end_src
+** lab.el -- gitlab integration
+#+begin_src emacs-lisp
+  (evil-leader/set-key
+    "gmb" 'lab-list-branch-merge-requests
+    "gmm" 'lab-list-my-merge-requests
+    "gma" 'lab-list-group-merge-requests
+    "gmp" 'lab-list-project-merge-requests
+    "gmc" 'lab-create-merge-request)
+
+  (use-package lab
+    :straight (:host github :repo "isamert/lab.el")
+    :config
+    (setq lab-main-branch-name "master")
+    (setq lab-pipeline-watcher-initial-delay 45)
+    (setq lab-host ty-gitlab-url)
+    (setq lab-token ty-gitlab-token)
+    (setq lab-group ty-gitlab-group)
+    (setq lab-should-open-pipeline-on-manual-action? t)
+
+    (define-advice magit-push-current-to-pushremote (:after (&rest _) start-watching-pipeline)
+      (lab-watch-pipeline-for-last-commit))
+
+    (define-advice vc-push (:after (&rest _) start-watching-pipeline)
+      (lab-watch-pipeline-for-last-commit)))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
@@ -6946,15 +6960,14 @@ Evil has a default binding for switching between tabs with ~gt~ and ~gT~, switch
 I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump a file. I also want to show it in a buffer, not in mini-buffer.
 
 #+begin_src emacs-lisp
-  (define-advice tab-bar-new-tab (:after (&rest _) show-consult-buffer-in-buffer)
-    (when (eq this-command 'tab-bar-new-tab)
-      ;; Display consult-buffer in current window (in newly opened tab)
-      ;; so that I can start typing direclty to jump another
-      ;; file/project etc.
-      (let ((vertico-multiform-commands '((consult-buffer buffer (vertico-buffer-display-action . (display-buffer-same-window)))))
-            (mini-frame-ignore-commands `(,@mini-frame-ignore-commands consult-buffer))
-            (this-command 'consult-buffer))
-        (consult-buffer))))
+  (defun im-tab-bar-new-tab ()
+    "Open a new tab and display consult-buffer."
+    (interactive)
+    (tab-bar-new-tab)
+    (let ((vertico-multiform-commands '((consult-buffer buffer (vertico-buffer-display-action . (display-buffer-same-window)))))
+          (mini-frame-ignore-commands `(,@mini-frame-ignore-commands consult-buffer))
+          (this-command 'consult-buffer))
+      (consult-buffer)))
 #+end_src
 
 ** tab-line-mode
@@ -7101,7 +7114,7 @@ Good for buffer management, especially for groupped killings.
     ;; workspace (tab-bar-mode)
     "wu" #'tab-bar-history-back ;; undo
     "wr" #'tab-bar-history-forward ;; redo
-    "wt" #'tab-bar-new-tab ;; tab
+    "wt" #'im-tab-bar-new-tab ;; tab
     "wn" #'tab-bar-rename-tab ;; name
     "wm" #'tab-move ;; move
     "ws" #'tab-bar-switch-to-tab ;; switch
