@@ -5901,14 +5901,16 @@ Keybindings are generally set in-place, following have no context, so they are h
     :config
     (setq markdown-command "multimarkdown")
     (setq markdown-fontify-code-blocks-natively t)
+    (setq-default markdown-hide-markup t)
 
     (evil-leader/set-key-for-mode 'markdown-mode
       "oi" #'markdown-toggle-inline-images)
 
     (evil-define-key 'normal markdown-mode-map
-      (kbd "TAB") 'markdown-cycle
-      (kbd "]]") 'markdown-outline-next
-      (kbd "[[") 'markdown-outline-previous))
+      (kbd "<RET>") #'markdown-follow-thing-at-point
+      (kbd "TAB") #'markdown-cycle
+      (kbd "]]") #'markdown-outline-next
+      (kbd "[[") #'markdown-outline-previous))
 #+END_SRC
 
 ** haskell
