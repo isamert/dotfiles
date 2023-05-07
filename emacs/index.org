@@ -1154,7 +1154,7 @@ Some small packages that enriches editing experience visually. I don't enable al
     ;; over the kill ring I also use evil-exchange, which eliminates the
     ;; need for this totally
     (setq evil-kill-on-visual-paste nil)
-    ;; ^ Over the time I found myself utilizing emacs C-u more and more,
+    ;; Over the time I found myself utilizing emacs C-u more and more,
     ;; so disable this
     (setq evil-want-C-u-scroll nil)
 
@@ -1171,6 +1171,9 @@ Some small packages that enriches editing experience visually. I don't enable al
     ;; but other ones (like for Racket, Clojure etc.) are not patched by
     ;; default.
     (setq evil-move-beyond-eol t)
+
+    ;; Makes # and * search for symbols instead of words.
+    (setq evil-symbol-word-search t)
 
     ;; Move between visual lines instead of real lines
     (evil-define-key 'normal 'global
