@@ -1748,6 +1748,7 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
   (add-hook 'org-babel-after-execute-hook #'im-org-redisplay-images-if-enabled)
 
   (evil-leader/set-key-for-mode 'org-mode
+    "oo" #'im-org-babel-result-to-buffer
     "oe" #'org-edit-special
     "ot" #'im-org-babel-tangle-current-block
     "o-" #'org-babel-demarcate-block)
@@ -1772,6 +1773,12 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       (call-interactively 'org-babel-tangle)
       (when src-edit? (org-edit-special))))
 
+  ;; https://emacs.stackexchange.com/questions/23870/org-babel-result-to-a-separate-buffer/27190#27190
+  (defun im-org-babel-result-to-buffer ()
+    "A function to efficiently feed babel code block result to a separate buffer."
+    (interactive)
+    (org-open-at-point)
+    (org-babel-remove-result))
 
   (defun im-make-tangled-files-executable ()
     (when (or (string-match-p  "\\.\\(sh\\|py\\)$" (buffer-file-name))
