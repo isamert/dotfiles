@@ -5253,7 +5253,7 @@ There are bunch of Emacs-ChatGPT integrations and org-ai seems to be best as it 
     (setq org-ai-openai-api-token im-openai-api-key)
     (add-hook 'org-mode-hook #'org-ai-mode))
 #+end_src
-** tmr.el
+** tmr.el -- timers, reminders etc.
 Pretty timers. I forget everything, so it's quite important for me to have a quick way to define timers. I was using ~appt-add~ for this before but it does not let you view/manipulate upcoming timers easily and tmr does this very well with ~tmr-tabulated-view~.
 
 - tmr :: To quickly define a timer, without any description.
@@ -5293,7 +5293,7 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
        (--filter (and (not (tmr--timer-finishedp it))
                       (let ((remaining (- (float-time (tmr--timer-end-date it))
                                           (float-time))))
-                        (<= remaining 900))))
+                        (<= remaining 300))))
        (--map (format "%s (%s)"
                       (propertize (tmr--timer-description it) 'face 'underline)
                       (propertize (tmr--format-remaining it) 'face 'italic)))
@@ -5893,6 +5893,7 @@ Keybindings are generally set in-place, following have no context, so they are h
 #+end_src
 ** Refactoring (emr)
 #+begin_src emacs-lisp
+  ;; FIXME: Somehow, the usage of  popup.el breaks tab-bar
   (use-package emr
     :config
     (evil-define-key 'normal prog-mode-map (kbd "gR") #'emr-show-refactor-menu)
