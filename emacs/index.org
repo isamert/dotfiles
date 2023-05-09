@@ -7883,7 +7883,7 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
        (org-entry-properties)
        (--filter (s-matches? (s-replace "$1" ".*" contact-property) (car it)))
        (--map (let ((subprop (nth 1 (s-match (s-replace "$1" "\\([a-zA-Z0-9_-]+\\)" contact-property) (car it)))))
-                (concat (format (s-replace "$1" subprop template-string) (cdr it)) "\n")))))
+            (concat (format (s-replace "$1" subprop template-string) (cdr it)) "\n")))))
      (t (if-let ((stuff (org-entry-get nil contact-property)))
             (concat (format template-string stuff) "\n")
           ""))))
@@ -7895,7 +7895,8 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
       (--any (s-prefix? "PHONE" it))))
 
   (defun im-contacts-export-as-vcard (&optional file-name)
-    "Create a .vcf file containing all contact information."
+    "Create a .vcf FILE-NAME containing all contact information.
+  I use \"Simple Contacts Pro\" to import contacts to my phone."
     (interactive
      (list
       (read-file-name
@@ -7908,15 +7909,23 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
         (lambda ()
           (when (im-contacts--contact-entry?)
             (string-join
-             `("BEGIN:VCARD\nVERSION:2.1\n"
+             `("BEGIN:VCARD\nVERSION:4.0\nPRODID:ez-vcard 0.11.3\n"
                ,(format "UID:urn:uuid:%s\n" (org-id-get nil t))
                ,(im-contacts--build-contact-item "FN:%s" "ITEM")
-               ,@(im-contacts--build-contact-item "TEL;$1:%s" "PHONE_$1")
-               ,(im-contacts--build-contact-item "EMAIL:%s" "EMAIL")
+               ,(im-contacts--build-contact-item "N:;%s;;;" "ITEM")
+               ,@(im-contacts--build-contact-item "TEL;TYPE=$1:%s" "PHONE_$1")
+               ,@(im-contacts--build-contact-item "EMAIL;TYPE=$1:%s" "EMAIL_$1")
+               ,@(im-contacts--build-contact-item "ADR;TYPE=$1:;;%s;;;;" "ADDRESS_$1")
                ,(im-contacts--build-contact-item "ORG:%s" "GROUP")
-               ,@(im-contacts--build-contact-item "ADR;$1:;;%s" "ADDRESS_$1")
-               ,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
-               "END:VCARD")
+               ,(im-contacts--build-contact-item "CATEGORIES:%s" "GROUP")
+               ,(thread-last
+                  (im-contacts--build-contact-item "BDAY:%s" "SCHEDULED")
+                  (s-replace-regexp "BDAY:<[0-9]\\{4\\}\\(.*\\) \\(\\w+\\)>" "BDAY:1900\\1")
+                  (s-replace "-" ""))
+               ;;,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
+               ;; TODO: add notes
+               ;; Be careful while exporting and sending contact to other people
+               "TITLE:\nEND:VCARD")
              "")))
         "LEVEL=1")
        (-filter #'identity)
