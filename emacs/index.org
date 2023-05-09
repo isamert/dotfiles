@@ -6792,52 +6792,70 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
   (define-derived-mode bqsql-mode sql-mode "bqsql-mode")
   (add-to-list 'auto-mode-alist (cons (rx ".bqsql" string-end) #'bqsql-mode))
 
+  (defun org-babel-expand-body:bqsql (body params)
+    (s-format
+     body
+     (lambda (key alist) (assoc-default (intern key) alist))
+     (mapcar (lambda (x) (when (eq (car x) :var) (cdr x))) params)))
+
   (defun org-babel-execute:bqsql (query params)
-    "Execute bqsql (BigQuery) scripts.
-  `:var' syntax is ${var_name}."
+    "Execute QUERY with given PARAMS.
+  `:var' syntax is ${var_name} and replaced as-is.
+
+  `:format' can be either `pretty' or `json'.  Former outputs an
+  org table, other one outputs the result as json.
+
+  If `:buffer' is non-nil, then output results to a buffer, instead
+  of the results drawer."
     (let* ((job-id (im-uuid))
            (format (or (alist-get :format params) "pretty"))
+           (buffer? (alist-get :buffer params))
            (json-out? (s-matches? "json" format))
            (buf (get-buffer-create "*im-bqsql*"))
            (org-buffer (current-buffer))
            (start-time (float-time))
            process
            (vars (org-babel--get-vars params)))
-      (setq query
-            (replace-regexp-in-string
-             "${[a-zA-Z_]+}"
-             (lambda (substr)
-               (let ((var (intern (replace-regexp-in-string "${\\([a-zA-Z_]+\\)}" "\\1" substr))))
-                 (or (alist-get var vars) substr)))
-             query))
+      (setq query (org-babel-expand-body:bqsql query params))
       (with-current-buffer buf (erase-buffer))
       (setq process (start-process "query" buf "bq" "query" "--quiet" "--nouse_legacy_sql" "--format" format "--job_id" job-id query))
       (set-process-sentinel
        process
        (lambda (p m)
-         (let ((end-time (float-time))
-               (result (with-current-buffer buf
-                         (string-trim (buffer-string)))))
-           (message "=> Query finished, time elapsed: %s" (format-seconds "%Y %D %H %M %z%S" (- end-time start-time)))
+         (let* ((end-time (float-time))
+                (result (with-current-buffer buf
+                          (string-trim (buffer-string))))
+                (msg (format "=> Query finished, time elapsed: %s"
+                             (format-seconds "%Y %D %H %M %z%S" (- end-time start-time))))
+                (bname (format "*bqsql:%s" (if (eq buffer? t) job-id buffer?)))
+                found?)
            (with-current-buffer org-buffer
              (save-excursion
                (goto-char (point-max))
-               (unless (re-search-backward job-id nil t)
-                 (let ((bname (format "*bqsql:%s" job-id)))
-                   (with-current-buffer (get-buffer-create bname)
-                     (insert result)
+               (setq found? (re-search-backward job-id nil t))
+               (when (or buffer? (not found?))
+                 (with-current-buffer (get-buffer-create bname)
+                   (erase-buffer)
+                   (insert result)
+                   (if json-out?
+                       (json-ts-mode)
                      (org-mode))
-                   (user-error "org-block is gone. Result inserted to the buffer %s" bname)))
+                   (setq header-line-format msg))
+                 (unless found?
+                   (user-error "Org-block is gone.  Result inserted to the buffer %s" bname)))
                (forward-line -4)
                (org-babel-insert-result
-                result
+                (if buffer? msg result)
                 (list "replace" (cond
                                  ((s-prefix? "Error" result) "drawer")
+                                 (buffer? "drawer")
                                  (json-out? "lang")
                                  (t "raw")))
                 nil
                 nil
-                (when json-out? "json")))))))
+                (when json-out? "json"))
+               (when buffer?
+                 (switch-to-buffer-other-window bname)))))))
       job-id))
 
   (defun im-big-query-job-status (job-id)
