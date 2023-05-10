@@ -5846,51 +5846,87 @@ Keybindings are generally set in-place, following have no context, so they are h
 
 * Language specific
 ** General/language-agnostic functionality
+*** Jump to beginning/end of a statement
+Using [w and ]w, I can jump between statements. For
+#+begin_src emacs-lisp
+  ;; TODO: should be able to descend down the tree
+  (defun im-treesit-end-of-statement ()
+    (interactive)
+    (treesit-end-of-thing
+     (rx (or "local_variable" "return" "if" "for" "with" "try" "method" "lexical" "call")
+         (or "_statement" "_declaration" "_definition" "_expression"))))
+
+  (defun im-treesit-beginning-of-statement ()
+    (interactive)
+    (treesit-beginning-of-thing
+     (rx (or "local_variable" "return" "if" "for" "with" "try" "method" "lexical" "call")
+         (or "_statement" "_declaration" "_definition" "_expression"))))
+
+  ;; Only tried in java-ts-mode so far
+  (evil-define-key 'normal java-ts-mode-map "[w" 'im-treesit-beginning-of-statement)
+  (evil-define-key 'normal java-ts-mode-map "]w" 'im-treesit-end-of-statement)
+  (evil-define-key 'normal tsx-ts-mode-map "[w" 'im-treesit-beginning-of-statement)
+  (evil-define-key 'normal tsx-ts-mode-map "]w" 'im-treesit-end-of-statement)
+  (evil-define-key 'normal typescript-ts-mode-map "[w" 'im-treesit-beginning-of-statement)
+  (evil-define-key 'normal typescript-ts-mode-map "]w" 'im-treesit-end-of-statement)
+#+end_src
+*** format-all, apheleia -- Format buffers, automatically
 - Use =format-all-buffer= function to format current buffer. Works for any language.
 
-#+begin_src emacs-lisp
-  ;; Automatically format file with `format-all-buffer'. It recognizes
-  ;; most language formatters/linters.
-  (use-package format-all)
+Automatically format file with ~format-all-buffer~. It recognizes most language formatters/linters.
 
-  ;; Like `format-all` but works async and automatically formats on
-  ;; buffer save.  I keep both of them because somethimes I need
-  ;; `format-all-buffer' and it works with more formatters.
+#+begin_src emacs-lisp
+  (use-package format-all)
+#+end_src
+
+/Apheleia/ is like ~format-all~ but works async and automatically formats on buffer save.  I keep both of them because somethimes I need ~format-all-buffer~ and it works with more formatters.
+
+#+begin_src emacs-lisp
   (use-package apheleia
     :config
     (apheleia-global-mode +1)
     (defalias 'im-toggle-auto-code-format #'apheleia-mode))
+#+end_src
 
-  ;; Pick up .editorconfig settings for current project automatically
+*** editorconfig -- Pick up .editorconfig settings
+Pick up ~.editorconfig~ settings for current project automatically.
+
+#+begin_src emacs-lisp
   (use-package editorconfig
     :config
     (editorconfig-mode 1))
 #+end_src
 
-*** Display/get currently focused function name in odeline
+*** Display/get currently focused function name in modeline
 #+begin_src emacs-lisp
-  (which-function-mode)
+  ;; (which-function-mode)
 
   (defun im-refactor-debug-log-text ()
     "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
   This is used in my snippets."
     (format "%s:%s:%s" (buffer-name) (which-function) (line-number-at-pos)))
 #+end_src
-*** jump to beginning/end of a statement
+*** topsy -- sticky header for function/class etc. names
 #+begin_src emacs-lisp
-  (defun im-treesit-end-of-statement ()
-    (interactive)
-    (treesit-end-of-thing
-     (rx (or "local_variable" "return" "if" "for" "with" "try" "method") (or "_statement" "_declaration"))))
+  (use-package topsy
+    :straight (:fetcher github :repo "alphapapa/topsy.el")
+    :hook
+    (prog-mode . topsy-mode)
+    (magit-section-mode . topsy-mode))
+#+end_src
 
-  (defun im-treesit-beginning-of-statement ()
-    (interactive)
-    (treesit-beginning-of-thing
-     (rx (or "local_variable" "return" "if" "for" "with" "try" "method") (or "_statement" "_declaration"))))
+*** ts-fold -- folding code with treesitter
+It automatically registers itself to evil mode, so you can use regular vim bindings for folding code.
 
-  ;; Only tried in java-ts-mode so far
-  (evil-define-key 'normal java-ts-mode-map "[w" 'im-treesit-beginning-of-statement)
-  (evil-define-key 'normal java-ts-mode-map "]w" 'im-treesit-end-of-statement)
+#+begin_src emacs-lisp
+  (use-package ts-fold
+    :straight
+    (ts-fold :type git
+             :host github
+             :repo "AndrewSwerlick/ts-fold"
+             :branch "andrew-sw/treesit-el-support")
+    :config
+    (global-ts-fold-mode))
 #+end_src
 ** Refactoring (emr)
 #+begin_src emacs-lisp
@@ -6564,14 +6600,19 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
      ("seq-sort" . ?⇅)))
   (im-prettify-mode emacs-lisp-mode-hook im-elisp-pretty-symbols)
   (im-prettify-mode lisp-interaction-mode-hook im-elisp-pretty-symbols)
+
+
+  ;; Highlights quotes. Surprisingly useful
+  (use-package highlight-quoted
+    :hook (emacs-lisp-mode . highlight-quoted-mode))
 #+end_src
 
 *** Linting & package development
-For linting packages, use  ~(flycheck-package-setup)~ to initialize it.
-
 #+begin_src emacs-lisp
   (use-package package-lint)
-  (use-package flycheck-package)
+  (use-package flycheck-package
+    :after 'flycheck
+    :config (flycheck-package-setup))
 #+end_src
 
 *** Other
