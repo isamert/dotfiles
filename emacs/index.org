@@ -6955,7 +6955,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
 
   (im-cape
    :name bq-tables
-   :generator (lambda (&rest _) (im-bq-all-table-names))
+   :generator (lambda (&rest _) (--map (s-replace ":" "." it) (im-bq-all-table-names)))
    :bound symbol
    :category symbol
    :key "M-o B")
