@@ -2658,6 +2658,7 @@ Several packages are using this package to show system-level notifications. Here
     "yc" #'im-notify-posframe-clear-all
     "yC" (λ-interactive  (im-notify-posframe-clear-all t)))
 
+  ;; TODO check if computer is idle or not, if idle do not send this.
   (run-with-idle-timer 600 t #'im-keep-me-in-the-moment)
   (defun im-keep-me-in-the-moment ()
     (alert "What are you doing bro?" :title "BRO?!" :severity 'high))
@@ -3773,7 +3774,7 @@ Other complementary packages:
                               (call-interactively #'project-switch-project))))
 
 
-  (cl-defmacro im-projectelify (&key cmd desc key non-interactive dont-wrap)
+  (cl-defmacro im-projectelify (&key cmd desc key non-interactive dont-wrap dir-as-param)
     "If you add a command to `project-switch-commands', it will not
   work properly everytime becuse the function should be aware of
   what the current project is, provided by the `project-current'
@@ -3790,9 +3791,10 @@ Other complementary packages:
            (defun ,(intern fn) ()
              (interactive)
              (let ((default-directory (project-root (project-current t))))
-               (if ,non-interactive
-                   (funcall #',cmd)
-                 (call-interactively #',cmd)))))
+               (cond
+                (,non-interactive (funcall #',cmd))
+                (,dir-as-param (funcall #',cmd default-directory))
+                (t (call-interactively #',cmd))))))
          (when ,desc
            (add-to-list 'project-switch-commands '(,(intern fn) ,desc)))
          (when ,key
@@ -3805,7 +3807,7 @@ Other complementary packages:
   (im-projectelify :cmd im-vterm-project :desc "vterm" :key "t" :dont-wrap t)
   (im-projectelify :cmd im-shell-command :desc "Run shell command" :key "!")
   (im-projectelify :cmd im-find-file-in :desc "Files" :key "f" :non-interactive t)
-  (im-projectelify :cmd dired-jump :desc "Dired" :key "D")
+  (im-projectelify :cmd dired :desc "Dired" :key "D" :dir-as-param t)
   (im-projectelify :cmd magit-status :desc "Magit" :key "m")
   (im-projectelify :cmd consult-ripgrep :desc "Grep" :key "g")
   (im-projectelify :cmd lab-list-project-merge-requests :desc "Merge requests" :key "M"  :dont-wrap t)
