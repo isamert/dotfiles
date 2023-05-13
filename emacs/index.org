@@ -1183,6 +1183,10 @@ Some small packages that enriches editing experience visually. I don't enable al
       (kbd "<remap> <evil-next-line>") #'evil-next-visual-line
       (kbd "<remap> <evil-previous-line>") #'evil-previous-visual-line)
 
+    ;; Use default yank-pop because it integrates itself with consult
+    ;; The binding may seem a bit weird but it's how it's done.
+    (define-key evil-normal-state-map [remap yank-pop] 'yank-pop)
+
     ;; Change cursor colors based on current mode.
     (setq evil-normal-state-cursor '("green" box)
           evil-visual-state-cursor '("orange" box)
@@ -2440,6 +2444,10 @@ This is a built-in mode for providing basic outlining features. Here are a few c
   (evil-define-key 'normal outline-mode-map
     (kbd "[[") #'outline-previous-heading
     (kbd "]]") #'outline-next-heading)
+
+  (im-make-repeatable outline
+    "[" outline-previous-heading
+    "]" outline-next-heading)
 #+end_src
 
 ** debugger-mode
@@ -3899,7 +3907,9 @@ Some key points:
     (evil-define-key 'normal 'global (kbd "M-i") (λ-interactive (condition-case nil
                                                                     (consult-imenu)
                                                                   (error (consult-outline)))))
-    (evil-define-key 'normal org-mode-map (kbd "M-i") 'consult-org-heading)
+
+    (evil-define-key 'normal org-mode-map (kbd "M-i") #'consult-org-heading)
+
     (evil-leader/set-key "fo" #'find-file)
     (evil-leader/set-key "fs" #'save-buffer)
     (evil-leader/set-key "fd" #'consult-dir)
