@@ -3421,7 +3421,7 @@ Note that it's not possible to stage hunks with =vc=.
       "gS" 'magit-stash
       "gf" 'magit-file-dispatch
       "gp" 'vc-pull
-      "gP" 'vc-push
+      "gP" 'magit-push
       "gr" 'magit-reset
       "gcc" 'vc-switch-branch
       "gB" 'vc-annotate ;; Git Blame
