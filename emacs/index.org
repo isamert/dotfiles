@@ -422,27 +422,28 @@ Some basic variable and function definitions that will be used in configuration.
       (string-trim (buffer-string))))
 
   (cl-defmacro im-output-select
-      (&key cmd prompt keep-order (split "\n") (drop 0) (filter t) (map 'it) (do 'it) category)
+      (&key cmd prompt keep-order (formatter 'it) (split "\n") (drop 0) (filter t) (map 'it) (do 'it) category)
     "Run given CMD and do a `completing-read' on it.
   This macro is intended to quicken up the process of running a
   shell command and doing a completing-read on it and then using
   the result in another context, possibly on another shell
   command."
-    (let* ((result `(empv--completing-read-object
-                     ,prompt
-                     (seq-map-indexed
-                      (lambda (it idx) ,map)
-                      (seq-filter
-                       (lambda (it) ,filter)
-                       (seq-drop
-                        (s-split
-                         ,split
-                         (shell-command-to-string ,cmd)
-                         t)
-                        ,drop)))
-                     :sort? ,(not keep-order)
-                     :category ,category)))
-      `((lambda (it) ,do) ,result)))
+    `((lambda (it) ,do)
+      (empv--completing-read-object
+       ,prompt
+       (seq-map-indexed
+        (lambda (it idx) ,map)
+        (seq-filter
+         (lambda (it) ,filter)
+         (seq-drop
+          (s-split
+           ,split
+           (shell-command-to-string ,cmd)
+           t)
+          ,drop)))
+       :formatter (lambda (it) ,formatter)
+       :sort? ,(not keep-order)
+       :category ,category)))
 
   (defun im-read-string (prompt &rest rest)
     "Like `read-string' but returns `nil' on empty input."
@@ -9665,7 +9666,25 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
 
 ** Bluetooth device connector
 #+begin_src emacs-lisp
-    ;; TODO: osx version?
+  (defun im-osx-connect-paired-bluetooth-device ()
+    (interactive)
+    (im-output-select
+     :prompt "Select Bluetooth device: "
+     :cmd "blueutil --paired"
+     :formatter (->> it
+                   (s-split ", ")
+                   (--map (s-split ":" it))
+                   (--find (equal (car it) "name"))
+                   cadr
+                   (s-replace "\"" "")
+                   s-trim)
+     :filter (s-contains? "not connected" it)
+     :keep-order nil
+     :do (let ((id (->> (s-split "," it) car (s-split ":") cadr s-trim)))
+           (message ">> Connecting to %s..." id)
+           (shell-command-to-string (format "blueutil --connect %s" id))
+           (message ">> Connecting to %s...Connected." id))))
+
   (defun im-linux-connect-paired-bluetooth-device ()
     (interactive)
     (let* ((paired-devices (->>
@@ -9692,7 +9711,14 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
           ((s-matches? "Failed to connect" out) (message "%s" out))
           ((s-matches? "Connection successful" out) (message "%s" out)))))))
 
-  (evil-leader/set-key "eb" #'im-linux-connect-paired-bluetooth-device)
+  (defun im-connect-paired-bluetooth-device ()
+    (interactive)
+    (funcall
+     (pcase system-type
+       ('darwin #'im-osx-connect-paired-bluetooth-device)
+       ('gnu/linux #'im-linux-connect-paired-bluetooth-device))))
+
+  (evil-leader/set-key "eb" #'im-connect-paired-bluetooth-device)
 #+end_src
 ** Switch next monitor input
 #+begin_src emacs-lisp
