@@ -1129,8 +1129,6 @@ Some small packages that enriches editing experience visually. I don't enable al
     ;; evil-collection
     (setq evil-want-integration t)
     (setq evil-want-keybinding nil)
-    ;; C-i interferes with TAB key, so disable it
-    (setq evil-want-C-i-jump nil)
     ;; This generally confuses me.
     (setq evil-jumps-cross-buffers nil)
     ;; Disable evil bindings in insert mode. This needs to be called
@@ -1147,9 +1145,10 @@ Some small packages that enriches editing experience visually. I don't enable al
       (kbd "C-p") #'evil-complete-previous
       (kbd "C-o") #'evil-execute-in-normal-state)
 
+    ;; C-i interferes with TAB key, so disable it
+    (setq evil-want-C-i-jump nil)
     ;; C-i is bound to TAB, so I use C-l for `evil-jump-forward'
-    (evil-define-key 'normal 'global
-      (kbd "C-l") #'evil-jump-forward)
+    (evil-define-key 'normal 'global (kbd "C-l") #'evil-jump-forward)
 
     ;; When I paste something in visual mode, I don't want it to take
     ;; over the kill ring I also use evil-exchange, which eliminates the
