@@ -6177,24 +6177,33 @@ The following enables =CamelCase= aware editing operations.
   (defun im-ts-send-expression-to-repl (&optional redefine)
     "Send current meaningful expression to node REPL."
     (interactive "P")
-    (if-let (expression
-             (->>
-              (if (use-region-p)
-                  (buffer-substring-no-properties (region-beginning)
-                                                  (region-end))
-                (im-ts-current-expression))
-              ;; Replace const with let so that we can redefine this
-              ;; thing later if we need to
-              (s-replace-regexp "^[\n\t ]*\\(let\\|const\\)" (if redefine "" "let"))
-              (s-replace-regexp "^[\n\t ]*export" "")
-              ;; Replace relative imports with absolute ones
-              im-ts--import-absolute))
-        (im-with-visible-buffer
-         ".*eshell.*"
-         (im-eshell-send-input ".editor\n")
-         (im-eshell-send-input expression)
-         (im-eshell-send-key ?\C-d))
-      (user-error "No expression is found")))
+    (let* ((proc (im-with-visible-buffer ".*eshell.*" (process-name eat--process)))
+           (deno (s-contains? "deno" proc))
+           (nodejs (s-contains? "node" proc)))
+      (if-let (expression
+               (->>
+                (if (use-region-p)
+                    (buffer-substring-no-properties (region-beginning)
+                                                    (region-end))
+                  (im-ts-current-expression))
+                ;; Replace const with let so that we can redefine this
+                ;; thing later if we need to. Deno already supports this
+                ;; but node does not.
+                (when node
+                  (s-replace-regexp "^[\n\t ]*\\(let\\|const\\)" (if redefine "" "let"))
+                  (s-replace-regexp "^[\n\t ]*export" ""))
+                ;; Replace relative imports with absolute ones
+                im-ts--import-absolute))
+          (im-with-visible-buffer
+           ".*eshell.*"
+           (when nodejs
+             (im-eshell-send-input ".editor\n"))
+           (im-eshell-send-input expression)
+           (when nodejs
+             (im-eshell-send-key ?\C-d))
+           (when deno
+             (im-eshell-send-key ?\n)))
+        (user-error "No expression is found"))))
 #+end_src
 
 ** json
