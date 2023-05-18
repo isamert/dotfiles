@@ -2530,6 +2530,14 @@ Look at [[id:0B508237-3BBE-416A-A6AD-31C5C78340DB][Aliases]] section in my confi
   #eshell clear='clear 1'
 #+end_src
 
+Also here are some aliases/functions for eshell defined in elisp:
+
+#+begin_src emacs-lisp
+  (defun eshell/mkcd (&rest args)
+    (eshell/mkdir args)
+    (eshell/cd args))
+#+end_src
+
 *** Automatically print notes for given directory
 I have the file ~im-autodir-file~ which contains notes for directories, like in the following format:
 
@@ -3341,7 +3349,7 @@ To sync it automatically:
           (_ (eww-follow-link)))))
 
     (evil-leader/set-key
-      "ew" #'eww
+      "ew" (λ-interactive (eww (read-string "URL: ") t))
       "eW" #'im-xwidget-webkit-open))
 
   (defun im-eww-save-image ()
