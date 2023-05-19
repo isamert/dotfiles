@@ -6154,7 +6154,7 @@ The following enables =CamelCase= aware editing operations.
                            (treesit-node-child node (cdr it))
                          node)))))
       (->>
-       '(("variable_declarator" . 2)
+       '(("lexical_declaration")
          ("expression_statement" . 0)
          ("function_declaration")
          ("interface_declaration")
@@ -6162,8 +6162,7 @@ The following enables =CamelCase= aware editing operations.
          ("import_statement")
          ("class_declaration"))
        (-find getter)
-       (funcall getter)
-       (treesit-node-text))))
+       (funcall getter))))
 
   (defun im-ts--import-absolute (expr)
     (if-let ((matches (s-match "^\\(import .* \\)'\\.\\(.*\\)'\\(;\\)?$" expr)))
@@ -6187,12 +6186,10 @@ The following enables =CamelCase= aware editing operations.
                                                     (region-end))
                   (im-ts-current-expression))
                 ;; Replace const with let so that we can redefine this
-                ;; thing later if we need to. Deno already supports this
-                ;; but node does not.
-                (when node
-                  (s-replace-regexp "^[\n\t ]*\\(let\\|const\\)" (if redefine "" "let"))
-                  (s-replace-regexp "^[\n\t ]*export" ""))
+                ;; thing later if we need to.
+                (s-replace-regexp "^[\n\t ]*\\(let\\|const\\)" (if redefine "" "let"))
                 ;; Replace relative imports with absolute ones
+                (s-replace-regexp "^[\n\t ]*export" "")
                 im-ts--import-absolute))
           (im-with-visible-buffer
            ".*eshell.*"
@@ -6205,7 +6202,64 @@ The following enables =CamelCase= aware editing operations.
              (im-eshell-send-key ?\n)))
         (user-error "No expression is found"))))
 #+end_src
+*** Deno REPL
+/Deno REPL/ lets you redefine any declaration. This is quite nice and /Node REPL/ does not have this. To be able get more out of the /Deno REPL/, I run it on the background and send expressions to it and then print the results back to echo area using ~im-deno-eval~ function. Like ~eval-last-sexp~ but for Deno.
 
+#+begin_src emacs-lisp
+  (defvar im-deno-repl-process nil)
+
+  (evil-leader/set-key-for-mode 'typescript-ts-mode ";" #'im-deno-eval)
+
+  (defun im-deno-eval ()
+    "Eval current or selected expression in a Deno REPL and print the result.
+  Puts the result into the `kill-ring' automatically.  See `im-deno-process-filter'."
+    (interactive)
+    (unless (im-deno-is-repl-running?)
+      (im-deno-start-repl))
+    (let ((expr
+           (if (use-region-p)
+               (buffer-substring-no-properties (region-beginning)
+                                               (region-end))
+             (let ((curr (im-ts-current-expression))
+                   (this-command 'evil-paste-after))
+               (evil-goggles--show-async-hint
+                (treesit-node-start curr)
+                (treesit-node-end curr))
+               (treesit-node-text curr)))))
+      (process-send-string im-deno-repl-process (s-concat (s-trim expr) "\n"))))
+
+  (defun im-deno-start-repl ()
+    "Start (or restart, if already running) the Deno REPL on the background."
+    (interactive)
+    (unless (im-deno-is-repl-running?)
+      (delete-process im-deno-repl-process))
+    (let ((deno (start-process "*deno-repl*" nil "deno" "repl" "--allow-net")))
+      (setq im-deno-repl-process deno)
+      (set-process-filter deno #'im-deno-process-filter)
+      (set-process-sentinel deno #'im-deno-process-sentinel)))
+
+  (defun im-deno-process-filter (proc out)
+    (let ((result (->>
+                   out
+                   (s-split "\n")
+                   (-drop-last 1)
+                   (s-join "\n")
+                   ansi-color-apply)))
+      (message "=> %s" (im-kill result))
+      ;; FIXME: Following does not work for some reason, probably
+      ;; something related to this being a filter function
+      (eros--eval-overlay
+       result
+       (point))))
+
+  (defun im-deno-process-sentinel (proc out)
+    (if (eq (process-exit-status proc) 0)
+        (message ">> Closed Deno REPL session.")
+      (message ">> Deno REPL has crashed.")))
+
+  (defun im-deno-is-repl-running? ()
+    (and im-deno-repl-process (process-live-p im-deno-repl-process)))
+#+end_src
 ** json
 #+begin_src emacs-lisp
   (defun im-jsons-print-path-python ()
