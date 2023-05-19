@@ -5889,6 +5889,10 @@ Using [w and ]w, I can jump between statements. For
   (evil-define-key 'normal tsx-ts-mode-map "]w" 'im-treesit-end-of-statement)
   (evil-define-key 'normal typescript-ts-mode-map "[w" 'im-treesit-beginning-of-statement)
   (evil-define-key 'normal typescript-ts-mode-map "]w" 'im-treesit-end-of-statement)
+
+  (im-make-repeatable im-treesit-statement
+    "[" im-treesit-beginning-of-statement
+    "]" im-treesit-end-of-statement)
 #+end_src
 *** format-all, apheleia -- Format buffers, automatically
 - Use =format-all-buffer= function to format current buffer. Works for any language.
