@@ -5930,15 +5930,6 @@ Pick up ~.editorconfig~ settings for current project automatically.
   This is used in my snippets."
     (format "%s:%s:%s" (buffer-name) (which-function) (line-number-at-pos)))
 #+end_src
-*** topsy -- sticky header for function/class etc. names
-#+begin_src emacs-lisp
-  (use-package topsy
-    :straight (:fetcher github :repo "alphapapa/topsy.el")
-    :hook
-    (prog-mode . topsy-mode)
-    (magit-section-mode . topsy-mode))
-#+end_src
-
 *** ts-fold -- folding code with treesitter
 It automatically registers itself to evil mode, so you can use regular vim bindings for folding code.
 
