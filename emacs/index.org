@@ -5923,12 +5923,7 @@ Pick up ~.editorconfig~ settings for current project automatically.
 
 *** Display/get currently focused function name in modeline
 #+begin_src emacs-lisp
-  ;; (which-function-mode)
-
-  (defun im-refactor-debug-log-text ()
-    "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
-  This is used in my snippets."
-    (format "%s:%s:%s" (buffer-name) (which-function) (line-number-at-pos)))
+  (which-function-mode)
 #+end_src
 *** ts-fold -- folding code with treesitter
 It automatically registers itself to evil mode, so you can use regular vim bindings for folding code.
@@ -6091,16 +6086,22 @@ The following enables =CamelCase= aware editing operations.
 #+end_src
 *** Debug helpers
 #+begin_src emacs-lisp
+  (defun im-refactor-debug-log-text ()
+    "Return a string in the following format: 'BufferName:FunctionName:LineNumber'.
+    This is used in my snippets."
+    (format "%s:%s:%s" (buffer-name) (which-function) (line-number-at-pos)))
+
   (defun im-js-insert-debug-log-for-current-variable ()
     "Insert a `console.log' line for currently focused variable."
     (interactive)
-    (let ((curr-indent)
-          (node (treesit-node-child-by-field-name
-                 (car (jsdoc--tsc-find-descendants-with-type
-                       (treesit-node-parent (treesit-node-at (point)))
-                       "variable_declarator"))
-                 "name")))
-      (goto-char (treesit-node-end node))
+    (let* ((curr-indent)
+           (node (treesit-node-child-by-field-name
+                  (car (jsdoc--tsc-find-descendants-with-type
+                        (treesit-node-parent (treesit-node-at (point)))
+                        "variable_declarator"))
+                  "name"))
+           (text (treesit-node-text node)))
+      (goto-char (treesit-node-end (treesit-node-parent node)))
       (end-of-line)
       (setq curr-indent (current-indentation))
       (insert "\n")
@@ -6110,8 +6111,7 @@ The following enables =CamelCase= aware editing operations.
         "console.log(\"%s\", %s) // FIXME remove log"
         (im-refactor-debug-log-text)
         (->>
-         node
-         (treesit-node-text)
+         text
          (s-split "\n")
          (-map #'s-trim)
          (s-join " "))))))
