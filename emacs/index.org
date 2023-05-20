@@ -6237,7 +6237,7 @@ The following enables =CamelCase= aware editing operations.
     (interactive)
     (unless (im-deno-is-repl-running?)
       (delete-process im-deno-repl-process))
-    (let ((deno (start-process "*deno-repl*" nil "deno" "repl" "--allow-net")))
+    (let ((deno (start-process "*deno-repl*" "*deno-repl*" "deno" "repl" "--allow-net")))
       (setq im-deno-repl-process deno)
       (set-process-filter deno #'im-deno-process-filter)
       (set-process-sentinel deno #'im-deno-process-sentinel)))
@@ -6249,6 +6249,10 @@ The following enables =CamelCase= aware editing operations.
                    (-drop-last 1)
                    (s-join "\n")
                    ansi-color-apply)))
+      (with-current-buffer "*deno-repl*"
+        (goto-char (point-max))
+        (insert (ansi-color-apply out))
+        (insert "\n"))
       (message "=> %s" (im-kill result))
       ;; FIXME: Following does not work for some reason, probably
       ;; something related to this being a filter function
@@ -6263,6 +6267,37 @@ The following enables =CamelCase= aware editing operations.
 
   (defun im-deno-is-repl-running? ()
     (and im-deno-repl-process (process-live-p im-deno-repl-process)))
+#+end_src
+*** Deno utils
+Here are some functions that I use while developing with Deno.
+
+#+begin_src emacs-lisp
+  (defun im-lsp-switch-to-deno ()
+    "Start `deno' lsp in current buffer."
+    (interactive)
+    (let ((lsp-enabled-clients '(deno-ls)))
+      (ignore-errors
+        (funcall-interactively #'lsp-workspace-shutdown))
+      (lsp)))
+
+  (defun im-deno-cache-buffer-dependencies ()
+    "Install and cache dependencies stated in current Deno file."
+    (interactive)
+    ;; TODO reload lsp on file on save?
+    (let ((buf (current-buffer)))
+      (save-buffer)
+      (im-shell-command
+       :command (format "deno cache %s" (f-relative (buffer-file-name)))
+       :on-start
+       (lambda (&rest _)
+         (message ">> Downloading deps..."))
+       :on-fail
+       (lambda (&rest _)
+         (user-error ">> Downloading deps...Failed!"))
+       :on-finish
+       (lambda (&rest _)
+         (message ">> Downloading deps...Done.")
+         (switch-to-buffer buf)))))
 #+end_src
 ** json
 #+begin_src emacs-lisp
