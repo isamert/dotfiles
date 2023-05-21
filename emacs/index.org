@@ -4170,11 +4170,11 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
       (consult-flycheck)))
 #+END_SRC
 
-** corfu & corfu-doc & kind-icon & pcmpl-args
+** corfu & corfu-doc & kind-icon
 - When corfu popup is open
-  - M-SPC to insert a space to be able to filter with orderless.
-  - M-q to show an avy like quick selection keys.
-  - M-m to move completion items to mini-buffer (completing-read).
+  - ~M-SPC~ to insert a space to be able to filter with orderless.
+  - ~M-q~ to show an avy like quick selection keys.
+  - ~M-m~ to move completion items to mini-buffer (completing-read).
 #+BEGIN_SRC emacs-lisp
   (use-package corfu
     :straight (:files (:defaults "extensions/*.el"))
@@ -4300,7 +4300,6 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
 #+end_src
 ** lsp-mode
 - See: https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
-
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-mode
     :commands lsp
@@ -4314,7 +4313,17 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
            (rust-mode . lsp)
            (go-mode . lsp)
            (java-mode . lsp)
-           (java-ts-mode . lsp))
+           (java-ts-mode . lsp)
+           ;; See:
+           ;; https://github.com/minad/corfu/wiki#configuring-corfu-for-lsp-mode
+           ;; Lsp-mode filters candide using the server each time you
+           ;; type. Instead of this, we filter candidates on Emacs using
+           ;; orderless (so that I can use M-SPC while filtering etc.)
+           ;; after the initial candidate list is provided by lsp
+           ;; server. I'm not quite sure if this causes some loss of
+           ;; candidates but we can always exit the completion and
+           ;; re-trigger it to get the fresh list from lsp server.
+           (lsp-completion-mode . im-lsp-mode-setup-orderless-completion))
     :init
     (setq lsp-use-plists t)
     :config
@@ -4371,6 +4380,11 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
       "gi" #'lsp-ui-peek-find-implementation
       "ga" #'lsp-execute-code-action
       "K"  #'im-lsp-ui-doc-focus-frame))
+
+
+  (defun im-lsp-mode-setup-orderless-completion ()
+    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+          '(orderless)))
 
   (defun im-lsp-ui-doc-focus-frame ()
     "Show and focus to the documentation."
