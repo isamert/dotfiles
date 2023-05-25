@@ -1999,7 +1999,7 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
 
   colors midnight
   set editorcmd «sh("which emacsclient")»
-  set searchengine ddg
+  set searchengine you
   set hintfiltermode vimperator-reflow
   set smoothscroll true
   set modeindicatorshowkeys true
@@ -2028,6 +2028,7 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
 
   " quick search
   set searchurls.g https://www.google.com/search?q=%s
+  set searchurls.you https://you.com/search?q=%s
   set searchurls.y https://yandex.com/search/?text=%s
   set searchurls.s https://serx.ml/search?q=%s
   set searchurls.ddg https://duckduckgo.com/?q=%s

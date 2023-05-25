@@ -4301,6 +4301,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
 ** lsp-mode
 - See: https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
 #+BEGIN_SRC emacs-lisp
+  (setenv "LSP_USE_PLISTS" "true")
   (use-package lsp-mode
     :commands lsp
     :hook ((web-mode . lsp)
@@ -9860,16 +9861,15 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
 #+end_src
 ** Switch next monitor input
 #+begin_src emacs-lisp
-  (defun im-ddcutil-toggle/switch-monitor-input ()
+  (defun im-ddcutil-toggle/switch-monitor-input (monitor)
     "Switch to other monitor, USBC or HDMI."
-    (interactive)
-    (let* ((hdmi "0x11")
-           (dp "0x0f")
-           (usbc "0x1b")
+    (interactive (list (intern (completing-read "Monitor: " '(usbc hdmi dp)))))
+    (let* ((addresses '((hdmi . "0x11")
+                        (dp . "0x0f")
+                        (usbc . "0x1b")))
            (cmd (format
                  "ddcutil -b $(ddcutil detect | grep I2C | cut -d- -f2 | tail -n 1) setvcp 0x60 %s"
-                 (if (s-contains? dp (shell-command-to-string "ddcutil -d 1 getvcp 60"))
-                     usbc dp))))
+                 (alist-get monitor addresses))))
       (shell-command-to-string
        (if (workpc?)
            (format "ssh x220 '%s'" cmd)
