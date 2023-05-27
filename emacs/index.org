@@ -5394,6 +5394,16 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
     (define-advice vc-push (:after (&rest _) start-watching-pipeline)
       (lab-watch-pipeline-for-last-commit)))
 #+end_src
+** activity-watch-mode
+#+begin_src emacs-lisp
+  (use-package activity-watch-mode
+    :straight (:host github :repo "pauldub/activity-watch-mode")
+    :config
+    (setq activity-watch-project-name-resolvers '(im))
+    (defun activity-watch-project-name-im ()
+      (im-current-project-name))
+    (global-activity-watch-mode))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple
@@ -8654,8 +8664,15 @@ Here I define two important functions and their helpers.  The following function
 
 #+begin_src emacs-lisp
   (defun im-buffer-visible-p (buffer)
-   "Check if given BUFFER is visible or not.  BUFFER is a string representing the buffer name."
+    "Check if given BUFFER is visible or not.  BUFFER is a string representing the buffer name."
     (or (eq buffer (window-buffer (selected-window))) (get-buffer-window buffer)))
+
+  (defun im-display-buffer-other-frame ()
+    "Like `display-buffer-other-frame' but with some sensible defaults."
+    (interactive)
+    (let ((default-frame-alist '((tab-bar-lines . 0) (vertical-scroll-bars))))
+      (tab-line-mode -1)
+      (display-buffer-other-frame (current-buffer))))
 
   (defun im-display-buffer-in-side-window (buffer)
     "Just like `display-buffer-in-side-window` but only takes a BUFFER and rest of the parameters are for my taste."
