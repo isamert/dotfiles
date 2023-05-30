@@ -590,6 +590,7 @@ This function is for doing easy REST calls and it uses plists for everything bec
                     (lambda (&key data &allow-other-keys)
                       ...use the parsed json DATA...)))
   "
+    (interactive (list (read-string "URL: ") :-raw t))
     (declare (indent defun))
     (let (json
           (json-object-type 'alist)
@@ -626,6 +627,14 @@ This function is for doing easy REST calls and it uses plists for everything bec
                  ((and -params (json-alist-p -params)) -params)
                  ((and -params (json-plist-p params)) (transient-plist-to-alist -params))
                  (t (transient-plist-to-alist params))))
+      (when (called-interactively-p 'interactive)
+        (with-current-buffer (get-buffer-create "*im-request-response*")
+          (erase-buffer)
+          (insert json)
+          (json-pretty-print-buffer)
+          (json-ts-mode)
+          (switch-to-buffer-other-window (current-buffer))
+          (goto-char (point-min))))
       json))
 #+end_src
 *** URL/web utils
@@ -673,19 +682,6 @@ This function is for doing easy REST calls and it uses plists for everything bec
     (interactive)
     (kill-buffer (current-buffer)))
 
-  (defmacro im-make-repeatable (name &rest rest)
-    "Put given pairs in a keymap and mark them as repeatable."
-    (declare (indent 1))
-    (let ((pairs (-partition 2 rest))
-          (map-name (intern (format "im-repeat-map-for-%s" name))))
-      `(progn
-         (defvar ,map-name
-           (let ((map (make-sparse-keymap)))
-             ,@(--map `(define-key map (kbd ,(car it)) ',(cadr it)) pairs)
-             map))
-         (--each ',(-map #'cadr pairs)
-           (put it 'repeat-map ',map-name)))))
-
   (defun im-add-to-path (path)
     "Add given PATH to PATH variable.
   Useful for adding something to Emacs' PATH without restarting it."
@@ -729,7 +725,6 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 *** M-Backspace should delete, instead of killing
 #+begin_src emacs-lisp
   ;; https://www.emacswiki.org/emacs/BackwardDeleteWord
-
   (defun delete-word (arg)
     "Delete characters forward until encountering the end of a word.
   With argument, do this that many times."
@@ -751,21 +746,28 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 Save recent files. Also exclude package files that appears after installing a package or after an update from recent list.
 
 #+BEGIN_SRC emacs-lisp
-  (recentf-mode t)
-  (setq recentf-max-saved-items 500)
-  (add-to-list 'recentf-exclude (format ".*\\.elc" (getenv "HOME")))
-  (add-to-list 'recentf-exclude "/tmp/.*")
-  (add-to-list 'recentf-exclude "/var/folders/.*")
+  (use-package recentf
+    :straight (:type built-in)
+    :defer 5
+    :config
+    (setq recentf-max-saved-items 500)
+    (add-to-list 'recentf-exclude (format ".*\\.elc" (getenv "HOME")))
+    (add-to-list 'recentf-exclude "/tmp/.*")
+    (add-to-list 'recentf-exclude "/var/folders/.*")
+    (recentf-mode t))
+
 #+END_SRC
 
 ** Save minibuffer, kill-ring, search-ring history
 #+begin_src emacs-lisp
-  (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
-  (setq savehist-file "~/.emacs.d/savehist")
-  (savehist-mode 1)
-
-  (setq save-interprogram-paste-before-kill t)
-  ;; ^ Clipboard selections are copied into the kill-ring
+  (use-package savehist
+    :straight (:type built-in)
+    :config
+    ;; Clipboard selections are copied into the kill-ring
+    (setq save-interprogram-paste-before-kill t)
+    (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
+    (setq savehist-file "~/.emacs.d/savehist")
+    (savehist-mode 1))
 #+end_src
 
 ** Better scrolling
@@ -798,10 +800,10 @@ If the cursor is at the end of the file, when you scroll emacs does a strange ju
 Instead of having a file that ends with ~ or '# files in same directory, save all backup files in =~/.emacs.d/backups=.
 
 #+BEGIN_SRC emacs-lisp
-  (defconst backup-dir (im-mkdir-if-not "~/.emacs.d/backups/"))
+  (defconst im-backup-dir (im-mkdir-if-not "~/.emacs.d/backups/"))
 
-  (setq backup-directory-alist `((".*" . ,backup-dir)))
-  (setq auto-save-file-name-transforms `((".*" ,backup-dir t)))
+  (setq backup-directory-alist `((".*" . ,im-backup-dir)))
+  (setq auto-save-file-name-transforms `((".*" ,im-backup-dir t)))
 
   (setq backup-by-copying t)
   ;; ^ Don't delink hardlinks
@@ -823,7 +825,8 @@ Instead of having a file that ends with ~ or '# files in same directory, save al
 ** Make script files executable automatically
 #+begin_src emacs-lisp
   (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
-  (add-hook 'org-babel-post-tangle-hook #'executable-make-buffer-file-executable-if-script-p)
+  (with-eval-after-load 'ob-tangle
+    (add-hook 'org-babel-post-tangle-hook #'executable-make-buffer-file-executable-if-script-p))
 #+end_src
 
 ** Automatically run some commands after saving specific files
@@ -844,7 +847,8 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
     "File association list with their respective command.")
 
   (add-hook 'after-save-hook #'im-post-save-run-command)
-  (add-hook 'org-babel-post-tangle-hook #'im-post-save-run-command)
+  (with-eval-after-load 'ob-tangle
+    (add-hook 'org-babel-post-tangle-hook #'im-post-save-run-command))
 
   (defun im-post-save-run-command ()
     "Execute the specified command after saving specified file."
@@ -869,56 +873,53 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
                (if (workpc?) "x220" "mac")))))
 #+END_SRC
 
-** macOS problem: too many open files
-macOS is shit and I can't get rid of this error no matter what. Here is a [[https://www.blogbyben.com/2022/05/gotcha-emacs-on-mac-os-too-many-files.html][blogpost]] explaining the situation and here is the solution offered by the post:
+** repeat-mode
+Enables you to have repeatable keybindings.
 
 #+begin_src emacs-lisp
-  (defun file-notify-rm-all-watches ()
-    "Remove all existing file notification watches from Emacs."
-    (interactive)
-    (maphash
-     (lambda (key _value)
-       (file-notify-rm-watch key))
-     file-notify-descriptors))
+  (use-package repeat
+    :straight (:type built-in)
+    :hook (after-init . repeat-mode))
+
+  (defmacro im-make-repeatable (name &rest rest)
+    "Put given pairs in a keymap and mark them as repeatable."
+    (declare (indent 1))
+    (let ((pairs (-partition 2 rest))
+          (map-name (intern (format "im-repeat-map-for-%s" name))))
+      `(progn
+         (defvar ,map-name
+           (let ((map (make-sparse-keymap)))
+             ,@(--map `(define-key map (kbd ,(car it)) ',(cadr it)) pairs)
+             map))
+         (--each ',(-map #'cadr pairs)
+           (put it 'repeat-map ',map-name)))))
 #+end_src
 
-Run this function (possibly after closing some buffers and killing some child processes) whenever you start getting ~too many open files~ error and hopefully emacs continues to work normally.
 * Visuals
 ** General
 #+begin_src emacs-lisp
   ;; Wrap long lines
   (global-visual-line-mode t)
-  (diminish 'visual-line-mode)
-
-  (global-hl-line-mode t) ;; Highlight current line
+  ;; Highlight current line
+  (global-hl-line-mode t)
   ;; Disable global-hl-line-mode in eshell, ansi-term, vterm
-  (mapcar
-    (lambda (mode) (add-hook mode (lambda () (setq-local global-hl-line-mode nil))))
-    '(eshell-mode-hook term-mode-hook vterm-mode-hook))
+
+  (defun im-disable-hl-line-mode-for-buffer ()
+    "Disable `global-hl-line-mode' for current buffer only.
+  I explicitly disable this mode for some modes in my configuration
+  using this function."
+    (setq-local global-hl-line-mode nil))
 #+end_src
-
-** Fix Gnome/Mutter child frame resizing problem
-There is a problem under Mutter which causes child frames to not resize automatically. Following makes it better:
-
-#+begin_src emacs-lisp
-  (when (equal (getenv "XDG_SESSION_DESKTOP") "gnome")
-    (setq x-gtk-resize-child-frames 'resize-mode))
-#+end_src
-
-Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
 
 ** Fonts and theme
 #+BEGIN_SRC emacs-lisp
-  (menu-bar-mode 0)
   (use-package doom-themes)
   (use-package modus-themes)
   (use-package ef-themes)
 
+  (defconst im-theme 'modus-vivendi)
   (defconst im-fonts '("Iosevka Comfy" "Iosevka Nerd Font"))
-  (defconst im-font-height
-    (pcase system-type
-      ('gnu/linux 138)
-      ('darwin 160)))
+  (defconst im-font-height (pcase system-type ('gnu/linux 138) ('darwin 160)))
 
   (defun im-set-font-and-theme-config ()
     "Configure font and theme."
@@ -935,8 +936,7 @@ Also see [[https://gitlab.gnome.org/GNOME/mutter/-/issues/840][this issue]].
                             :width 'normal
                             :height im-font-height))
       ;; ...and load the theme
-      (load-theme 'modus-vivendi t)))
-
+      (load-theme im-theme t)))
 
   (defun im-set-font-and-theme-config-in-frame (frame)
     (with-selected-frame frame
@@ -976,10 +976,10 @@ This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known 
 #+begin_src emacs-lisp :tangle no
   ;; FIXME: having problems with X forwarding
   (use-package fira-code-mode
+    :hook
+    ((prog-mode org-mode) . fira-code-mode)
     :config
-    (setq fira-code-mode-disabled-ligatures '(":" "x" "[]"))
-    (add-hook 'prog-mode-hook #'fira-code-mode)
-    (add-hook 'org-mode-hook  #'fira-code-mode))
+    (setq fira-code-mode-disabled-ligatures '(":" "x" "[]")))
 #+end_src
 
 ** Pages & page-break-lines & repeat-mode
@@ -997,22 +997,17 @@ Displays ~^L~ (page breaks) as full-width straight lines:
 
 #+begin_src emacs-lisp
   (use-package page-break-lines
-    :config
-    ;; global-page-break-lines-mode only enables page-break-lines mode
-    ;; for the major modes listed in `page-break-lines-modes'
-    (add-to-list 'page-break-lines-modes 'clojure-mode)
-    (add-to-list 'page-break-lines-modes 'lisp-data-mode)
-    (global-page-break-lines-mode))
+    :hook ((emacs-lisp-mode . page-break-lines-mode)
+           (lisp-mode . page-break-lines-mode)
+           (lisp-data-mode . page-break-lines-mode)
+           (scheme-mode . page-break-lines-mode)
+           (compilation-mode . page-break-lines-mode)
+           (outline-mode . page-break-lines-mode)
+           (clojure-mode . page-break-lines-mode)
+           (help-mode . page-break-lines-mode)))
 #+end_src
 
 After doing ~C-x [,]~ you can continue spamming ~[~ or ~]~ to jump prev/next pages with the help of ~repeat-mode~.
-
-#+begin_src emacs-lisp
-  (use-package repeat
-    :straight (:type built-in)
-    :config
-    (repeat-mode))
-#+end_src
 
 ** Frame title
 Make window title contain buffer name so it's easier to identify windows. I use ~rofi~ to switch between windows in my DE, so it helps to have buffer name in window title.
@@ -1026,8 +1021,11 @@ Make window title contain buffer name so it's easier to identify windows. I use 
 Just enable parenthesis matching.
 
 #+BEGIN_SRC emacs-lisp
-  (setq show-paren-style 'parenthesis)
-  (show-paren-mode 1)
+  (use-package show-paren
+    :straight (:type built-in)
+    :hook (prog-mode . show-paren-local-mode)
+    :config
+    (setq show-paren-style 'parenthesis))
 #+END_SRC
 
 *** Rainbow
@@ -1043,11 +1041,10 @@ Colors parentheses depending on their dept.
 
 #+BEGIN_SRC emacs-lisp
   (use-package whitespace
-    :diminish global-whitespace-mode
+    :hook (after-init . global-whitespace-mode)
     :config
     (setq whitespace-style '(face empty tabs trailing))
-    (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode))
-    (global-whitespace-mode t))
+    (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode)))
 
   (defun im-whitespace-mode-toggle ()
     "Toggle between more and less agressive whitespace modes.
@@ -1097,22 +1094,25 @@ Some small packages that enriches editing experience visually. I don't enable al
 
 #+begin_src emacs-lisp
   ;; Show column guidelines
-  (use-package fill-column-indicator)
+  (use-package fill-column-indicator
+    :defer t)
 
   ;; By default Emacs scales fonts with text-scale-{increase,decrease}
   ;; per buffer. This scales fonts with
   ;; default-text-scale-{increase,decrease} globally.
-  (use-package default-text-scale)
+  (use-package default-text-scale
+    :defer t)
 
   ;; Highlights changed lines in git. You need to save the buffer to see
   ;; the changes.
-  (use-package diff-hl)
+  (use-package diff-hl
+    :hook (prog-mode . diff-hl-mode))
 
   ;; It helps you to find your cursor when you change buffers/windows
   ;; etc with a little animation.
   (use-package beacon
+    :hook (after-init . beacon-mode)
     :config
-    (beacon-mode 1)
     (setq beacon-blink-duration 0.5)
     (setq beacon-push-mark 50)
     (setq beacon-color "#9F72D9")
@@ -1121,6 +1121,7 @@ Some small packages that enriches editing experience visually. I don't enable al
 
   ;; This shows some indent guides and it's highly configurable.
   (use-package highlight-indent-guides
+    :defer t
     :config
     (set-face-background 'highlight-indent-guides-odd-face "darkgray")
     (set-face-background 'highlight-indent-guides-even-face "dimgray")
@@ -1133,6 +1134,7 @@ Some small packages that enriches editing experience visually. I don't enable al
 ** Basic configuration
 #+BEGIN_SRC emacs-lisp
   (use-package evil
+    :demand t
     :init
     ;; Following two is required by evil-collection. It's probably wiser
     ;; to set evil-want-keybinding to t if you will not use
@@ -1208,6 +1210,13 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-mode 1))
 #+END_SRC
 
+** general.el
+#+begin_src emacs-lisp
+  (use-package general
+    ;; Not required to be installed after evil but loading it before
+    ;; causes some problems like keys not getting bound sometimes etc.
+    :demand t)
+#+end_src
 ** evil-collection
 #+begin_src emacs-lisp
   (use-package evil-collection
@@ -1223,6 +1232,7 @@ Some small packages that enriches editing experience visually. I don't enable al
     (evil-collection-init 'elfeed)
     (evil-collection-init 'consult)
     (evil-collection-init 'vterm)
+    (evil-collection-init 'term)
     (evil-collection-init 'xref)
     (evil-collection-init 'magit)
     (evil-collection-init 'magit-todos)
@@ -1303,6 +1313,7 @@ Multiple cursors for evil.
 
 - Basics
   - =C-n= / =C-p= are used for creating cursors
+  - =M-n= / =M-p= are used for moving between cursors
   - =A= and =I= creates cursors in visual selection mode as you may expect.
   - =gkk= to clear all cursors.
 
@@ -1311,29 +1322,22 @@ Multiple cursors for evil.
   - =gkr= to resume paused cursors.
   - =gkh= create a cursor at the point of main cursor. (Use after =gkp=).
 
-#+BEGIN_SRC emacs-lisp
+#+begin_src emacs-lisp
   (use-package evil-mc
     :after evil
-    :diminish evil-mc-mode
-    :config
-    ;; I use "gr" (which is the default key combination that brings up evil-mc commands) for something else
-    ;; So remove "gr" binding
-    (evil-define-key* '(normal visual) evil-mc-key-map (kbd "gr") nil)
-    (evil-define-key* '(normal visual) evil-mc-key-map (kbd "M-p") nil)
-    (evil-define-key* '(normal visual) evil-mc-key-map (kbd "M-n") nil)
-
-    ;; Add my bindings using "gk"
-    (evil-define-key 'normal evil-mc-key-map
-      (kbd "gcc") #'evil-mc-undo-all-cursors
-      (kbd "gcp") #'evil-mc-pause-cursors
-      (kbd "gcr") #'evil-mc-resume-cursors
-      (kbd "gch") #'evil-mc-make-cursor-here)
-
-    (evil-define-key 'visual evil-mc-key-map
-      "A" #'evil-mc-make-cursor-in-visual-selection-end
-      "I" #'evil-mc-make-cursor-in-visual-selection-beg)
-    (global-evil-mc-mode 1))
-#+END_SRC
+    :general
+    (:states '(normal visual) :keymaps 'evil-mc-key-map
+     ;; Add my bindings using "gc"
+     "gcc" #'evil-mc-undo-all-cursors
+     "gcp" #'evil-mc-pause-cursors
+     "gcr" #'evil-mc-resume-cursors
+     "gch" #'evil-mc-make-cursor-here)
+    (:states 'visual
+     "A" #'evil-mc-make-cursor-in-visual-selection-end
+     "I" #'evil-mc-make-cursor-in-visual-selection-beg)
+    :hook
+    (after-init . global-evil-mc-mode))
+#+end_src
 
 ** evil-surround
 - Change surroundings. Do =cs"'= to turn ="Hello world!"= into ='Hello world!'=.
@@ -1366,13 +1370,11 @@ Return back to normal mode using ~jk~ from anywhere. It does not play well with 
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-escape
-    :diminish
     :after evil
     :config
     (setq evil-escape-key-sequence "jk") ;; Just Kidding bro, I didn't mean that *escapes*
     (setq evil-escape-delay 0.1)
     (setq evil-escape-excluded-major-modes '(magit-status-mode magit-log-mode magit-diff-mode))
-    ()
     (evil-escape-mode 1))
 #+END_SRC
 
@@ -1381,7 +1383,6 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 
 #+BEGIN_SRC emacs-lisp
   (use-package evil-matchit
-    :diminish
     :after evil
     :config
     (global-evil-matchit-mode 1))
@@ -1393,7 +1394,6 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 #+BEGIN_SRC emacs-lisp
   (use-package evil-goggles
     :after evil
-    :diminish
     :config
     (setq evil-goggles-duration 0.20
           evil-goggles-pulse nil
@@ -1423,14 +1423,14 @@ Jump between matching tags using ~%~, like =<div>...</div>=, ={...}= etc. =ci%=,
 #+BEGIN_SRC emacs-lisp
   (use-package evil-snipe
     :after evil
-    :diminish evil-snipe-local-mode
+    :hook (magit-mode . turn-off-evil-snipe-override-mode)
+    :demand t
     :config
     ;; (evil-snipe-mode 1) ;; This enables s/S bindings. I use those keys with avy
     (evil-snipe-override-mode 1) ;; This overrides default f/F, t/T bindings
     (setq evil-snipe-scope 'visible)
-    (setq evil-snipe-skip-leading-whitespace nil)
-    ;; ^ See https://github.com/hlissner/evil-snipe/issues/72
-    (add-hook 'magit-mode-hook 'turn-off-evil-snipe-override-mode))
+    ;; See https://github.com/hlissner/evil-snipe/issues/72
+    (setq evil-snipe-skip-leading-whitespace nil))
 #+END_SRC
 
 ** evil-exchange
@@ -1450,19 +1450,21 @@ With this package, you can do a visual selection and ~*~, ~#~ keys will work on 
 
 #+begin_src emacs-lisp
   (use-package evil-visualstar
+    :after evil
     :config
     (setq evil-visualstar/persistent t)
     (global-evil-visualstar-mode 1))
 #+end_src
 
 ** evil-numbers
-Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}~.
+Pretty useful for macros. Increment or decrement number at point with ~+,-~ in normal mode.
 
 #+begin_src emacs-lisp
   (use-package evil-numbers
-    :config
-    (define-key evil-normal-state-map (kbd "C-c +") 'evil-numbers/inc-at-pt)
-    (define-key evil-normal-state-map (kbd "C-c -") 'evil-numbers/dec-at-pt))
+    :general
+    (:states 'normal
+     "+" #'evil-numbers/inc-at-pt
+     "-" #'evil-numbers/dec-at-pt))
 #+end_src
 
 ** goto-chg
@@ -1529,7 +1531,10 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     - I generally use it in combination with ~embark-collect~. Any completing-read → embark-collect → orgtbl-create-or-convert-from-region.
 ** org-plus-contrib
 #+begin_src emacs-lisp
+  <<org-personal-files>>
+
   (use-package org
+    :mode ("\\.org\\'" . org-mode)
     :config
     (setq org-return-follows-link t)
     ;; ^ Open links with RET
@@ -1547,8 +1552,6 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (setq org-hide-emphasis-markers t)
     ;; Hide *...* /.../ etc.
     (setq org-pretty-entities t)
-    (setq org-habit-show-habits-only-for-today t)
-    ;; ^ If a TODO item has the ':STYLE: habit' property, then show it only on todays agenda, does not show recurring times.
     (setq org-log-into-drawer t)
     ;; ^ Log into LOGBOOK drawer instead of directly loging under the heading
     (setq org-extend-today-until 3)
@@ -1562,6 +1565,10 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     ;; Tags starts right after the heading.
     (setq org-reverse-note-order t)
     ;; ^ I keep new notes at the beginning. This helps with that.
+    (setq org-confirm-babel-evaluate nil)
+    ;; ^ Don't ask permissions for evaluating code blocks
+    (setq org-clock-clocked-in-display 'mode-line)
+    ;; ^ Shows in the tab-bar, if tab-bar is enabled.
 
     ;; TODO Remove when upstream fixes this
     ;; https://github.com/minad/consult/issues/563#issuecomment-1186612641
@@ -1575,9 +1582,6 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
     (add-to-list 'org-link-abbrev-alist '("yt" . "https://youtu.be/%s"))
     ;; ^ More info: https://orgmode.org/manual/Link-Abbreviations.html
 
-    (add-to-list 'org-modules 'org-habit t)
-    ;; ^ Enable habit tracking
-
     ;; http://www.foldl.me/2012/disabling-electric-indent-mode/
     (defun im-disable-electric-indent ()
       (set (make-local-variable 'electric-indent-functions)
@@ -1585,57 +1589,75 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 
     (add-hook 'org-mode-hook #'im-disable-electric-indent)
 
-    <<ob-http>>
-    <<org-babel-configuration>>)
+    ;; Automatically invoke `org-indent-mode' which gives nice little
+    ;; indentation under subsections. It makes reading easier. This does
+    ;; not add any spaces/tabs to the text file, the indentation is only
+    ;; visually apparent in Emacs.
+    ;; (add-hook 'org-mode-hook #'org-indent-mode t)
 
-  (use-package org-contrib)
+    <<org-lob-ingest>>
+    <<org-faces>>
+    <<org-refile>>
+    <<org-capture>>
+    <<org-icalendar>>)
+
+  (use-package org-contrib :after org)
 #+end_src
 
 ** Keybindings
 #+begin_src emacs-lisp
   (use-package evil-org
-    :after org
+    :after (org org-agenda)
+    :general
+    (:keymaps 'org-mode-map :states '(normal insert)
+     "<RET>" #'org-return
+     "S-<return>" #'im-org-link-to-indirect-buffer)
+    (:states 'normal :prefix "<SPC>"
+     "oyy" #'im-org-store-link-dwim
+     "oa"  #'org-agenda
+     "ow"  #'widen
+     ;; org-capture
+     "og" #'org-capture
+     "oG" #'org-capture-goto-last-stored
+     ;; org-clock
+     "occ" #'org-clock-in
+     "ocC" #'org-clock-cancel
+     "ocl" #'org-clock-in-last
+     "oco" #'org-clock-out
+     "ocg" #'org-clock-goto)
+    (:keymaps 'org-mode-map :states 'normal :prefix "<SPC>"
+     ;; general
+     "op"  #'org-set-property
+     "oi"  #'org-toggle-inline-images
+     "oI"  #'org-redisplay-inline-images
+     "or"  #'org-refile
+     "oR"  #'org-mode-restart
+     "oh"  #'outline-show-only-headings
+     "os"  #'org-schedule
+     "od"  #'org-deadline
+     "ov"  #'org-babel-expand-src-block
+     "oq"  #'im-org-tree-to-indirect-buffer
+     "oQ"  #'im-org-link-to-indirect-buffer
+     "o1"  #'im-show-outline-only
+     ;; link stuff
+     "oyi" #'org-copy-id
+     "o#" #'org-insert-structure-template
+     ;; src blocks etc
+     "d" #'org-babel-remove-result
+     "D" #'im-org-babel-remove-all-results
+     "oo" #'im-org-babel-result-to-buffer
+     "oe" #'org-edit-special
+     "ot" #'im-org-babel-tangle-current-block
+     "o-" #'org-babel-demarcate-block)
+    (:keymaps 'org-src-mode-map :states 'normal :prefix "<SPC>"
+     "oe" #'org-edit-src-exit
+     "oE" #'org-edit-src-abort)
+    :hook
+    (org-mode . evil-org-mode)
     :config
     (require 'evil-org-agenda)
     (evil-org-agenda-set-keys)
-    (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading))
-    (evil-define-key '(normal insert) org-mode-map
-      (kbd "<RET>") #'org-return
-      (kbd "S-<return>") #'im-org-link-to-indirect-buffer)
-    (add-hook 'org-mode-hook #'evil-org-mode))
-
-  (evil-leader/set-key-for-mode 'org-mode
-    "d" #'org-babel-remove-result
-    "D" #'im-org-babel-remove-all-results
-
-    "op"  #'org-set-property
-    "oi"  #'org-toggle-inline-images
-    "oI"  #'org-redisplay-inline-images
-    "or"  #'org-refile
-    "oR"  #'org-mode-restart
-    "oh"  #'outline-show-only-headings
-    "os"  #'org-schedule
-    "od"  #'org-deadline
-    "ov"  #'org-babel-expand-src-block
-    "oq"  #'im-org-tree-to-indirect-buffer
-    "oQ"  #'im-org-link-to-indirect-buffer
-    "o1"  #'im-show-outline-only
-
-    ;; link stuff
-    "oyi" #'org-copy-id
-    "o#" #'org-insert-structure-template)
-
-  (evil-leader/set-key
-    "oyy" #'im-org-store-link-dwim
-    "oa"  #'org-agenda
-    "ow"  #'widen
-
-    ;; org-clock
-    "occ" #'org-clock-in
-    "ocC" #'org-clock-cancel
-    "ocl" #'org-clock-in-last
-    "oco" #'org-clock-out
-    "ocg" #'org-clock-goto)
+    (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading)))
 
   (defun im-org-tree-to-indirect-buffer ()
     "Same as `org-tree-to-indirect-buffer' but let's you open
@@ -1687,7 +1709,8 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
 #+end_src
 
 ** Personal files
-#+BEGIN_SRC emacs-lisp
+#+name: org-personal-files
+#+begin_src emacs-lisp  :tangle no
   (defconst watchlist-org "~/Documents/notes/watchlist.org")
   (defconst readinglist-org "~/Documents/notes/readinglist.org")
   (defconst courses-org "~/Documents/notes/courses.org")
@@ -1713,25 +1736,18 @@ Pretty useful for macros. Increment or decrement number at point with ~C-c {+,-}
   (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
   (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org ,life-org ,netherlands-org))
+#+end_src
 
+#+name: org-lob-ingest
+#+begin_src emacs-lisp :tangle no
   ;; With the following, I can call functions defined inside this file in other org files
-  (org-babel-lob-ingest "~/Documents/notes/utils.org")
-#+END_SRC
-
-** Auto indent subsections
-Automatically invoke ~org-indent-mode~ which gives nice little indentation under subsections. It makes reading easier. This does not add any spaces/tabs to the text file, the indentation is only visually apparent in Emacs.
-
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'org-mode-hook #'org-indent-mode t)
-#+END_SRC
+  (org-babel-lob-ingest (concat org-directory "/utils.org"))
+#+end_src
 
 ** Babel
 *** General configuration
 #+name: org-babel-configuration
 #+begin_src emacs-lisp :tangle no
-  ;; Typescript
-  (use-package ob-typescript :after org)
-
   ;; Allow these languages to run in code blocks
   (org-babel-do-load-languages
    'org-babel-load-languages
@@ -1749,28 +1765,27 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
      (gnuplot . t)
      (plantuml . t)))
 
-  ;; Don't ask permissions for evaluating code blocks
-  (setq org-confirm-babel-evaluate nil)
-
-  ;; Make certain files exacutable when tangled
-  ;; Source: https://lists.gnu.org/archive/html/emacs-orgmode/2011-02/msg00465.html
-  (add-hook 'org-babel-post-tangle-hook #'im-make-tangled-files-executable)
-
+  ;; TODO: im-load-ob-lang-lazy
+  ;; (defmacro im-load-ob-lang-lazy (&rest langs)
+  ;;   "Like `org-babel-do-load-languages' but load them lazily using `use-package'."
+  ;;   `(progn
+  ;;      ,@(mapcar (lambda (lang)
+  ;;                  `(use-package ,(intern (concat "ob-" (symbol-name lang)))
+  ;;                     :defer t
+  ;;                     :straight (:type built-in)
+  ;;                     ;; TODO add view
+  ;;                     :commands (,(intern (concat "org-babel-execute:" (symbol-name lang))))))
+  ;;                langs)))
+  ;; (im-load-ob-lang-lazy
+  ;;  emacs-lisp shell scheme python verb http R haskell js sql dot gnuplot plantuml)
+#+end_src
+*** Helper functions
+#+begin_src emacs-lisp
   ;; Some codeblocks produce image files as it's result (like dot
   ;; language). Re-executing these blocks removes the image
   ;; overlay. With this hook images are automatically updated after
   ;; code-block execution and not removed from screen.
   (add-hook 'org-babel-after-execute-hook #'im-org-redisplay-images-if-enabled)
-
-  (evil-leader/set-key-for-mode 'org-mode
-    "oo" #'im-org-babel-result-to-buffer
-    "oe" #'org-edit-special
-    "ot" #'im-org-babel-tangle-current-block
-    "o-" #'org-babel-demarcate-block)
-
-  (evil-define-minor-mode-key 'normal 'org-src-mode
-    " oe" #'org-edit-src-exit
-    " oE" #'org-edit-src-abort)
 
   (defalias 'im-org-babel-split-or-wrap-src-code-block #'org-babel-demarcate-block)
 
@@ -1795,26 +1810,25 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
     (org-open-at-point)
     (org-babel-remove-result))
 
-  (defun im-make-tangled-files-executable ()
-    (when (or (string-match-p  "\\.\\(sh\\|py\\)$" (buffer-file-name))
-              (string-match-p  "\\(python\\|sh\\)$" (symbol-name major-mode)))
-      (set-file-modes (buffer-file-name) #o755)))
-
   (defun im-org-redisplay-images-if-enabled ()
     (when org-inline-image-overlays
       (org-redisplay-inline-images)))
 #+end_src
 
 *** ob-http & verb-mode
-#+name: ob-http
-#+begin_src emacs-lisp :tangle no
+#+begin_src emacs-lisp
   ;; Http request in org-mode babel.
   ;; You can get the generated curl command after executing the code
   ;; block, from *curl command history* buffer
-  (use-package ob-http :straight (:host github :repo "zweifisch/ob-http"))
+  (use-package ob-http
+    :straight (:host github :repo "zweifisch/ob-http")
+    :after org)
 
   ;; An alternative to ob-http, might be better
-  (use-package verb :straight (:host github :repo "federicotdn/verb"))
+  (use-package verb
+    :straight (:host github :repo "federicotdn/verb")
+    :after org
+    :hook (org-mode . verb-mode))
 
   (defun im-curl-to-org-http (curl-str)
     "Convert CURL-STR into an ob-http block.
@@ -1855,7 +1869,6 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
       (insert
        (s-trim (im-s-interpolated "#{request} #{url}\n#{(s-join \"\\n\" headers)}\n\n#{(or data \"\")}")))))
 
-
   (defun im-cmdargs-tokenize (input)
     (with-temp-buffer
       (insert input)
@@ -1891,11 +1904,13 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 ** Exporting
 *** HTML
 #+BEGIN_SRC emacs-lisp
-  (use-package htmlize :after org)
+  (use-package htmlize
+    :after org)
 #+END_SRC
 
 *** iCalendar settings
-#+BEGIN_SRC emacs-lisp
+#+name: org-icalendar
+#+BEGIN_SRC emacs-lisp :tangle no
   (setq org-icalendar-store-UID t)
   (setq org-icalendar-alarm-time 15)
   (setq org-icalendar-use-scheduled '(todo-start event-if-todo))
@@ -1905,43 +1920,42 @@ Automatically invoke ~org-indent-mode~ which gives nice little indentation under
 ** Agenda
 Some general settings.
 
-#+BEGIN_SRC emacs-lisp
-  (evil-set-initial-state 'org-agenda-mode 'normal)
-  (evil-define-key 'normal org-agenda-mode-map
-    (kbd "<RET>") 'org-agenda-switch-to
-    (kbd "\t") 'org-agenda-goto
-    "s" 'org-agenda-schedule
-    "w" 'org-agenda-week-view
-    "d" 'org-agenda-day-view
-    "t" 'org-agenda-todo
-    "L" 'org-agenda-log-mode
-    "q" 'org-agenda-quit
-    "R" 'org-agenda-clockreport-mode
-    "r" 'org-agenda-redo)
-
-  (setq org-agenda-remove-tags t)
-  (setq org-agenda-include-diary t)
-  (setq org-agenda-use-time-grid t)
-  (setq org-agenda-time-grid
-        '((daily today require-timed remove-match)
-          (800 900 1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100 2200 2300 2400)
-          " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄"))
-#+END_SRC
-
-*** Making agenda buffer open faster
-Here are the resources:
-- https://orgmode.org/manual/Speeding-Up-Your-Agendas.html
-- https://orgmode.org/worg/agenda-optimization.html
-
 #+begin_src emacs-lisp
-  (setq org-agenda-dim-blocked-tasks nil)
-  (setq org-agenda-inhibit-startup t)
-  (setq org-agenda-use-tag-inheritance nil)
-  (setq org-agenda-ignore-drawer-properties '(effort appt category))
+  (use-package org-agenda
+    :straight nil
+    :after org
+    :general
+    (:states 'normal :keymaps 'org-agenda-mode-map
+     (kbd "<RET>") #'org-agenda-switch-to
+     (kbd "\t") #'org-agenda-goto
+     "s" #'org-agenda-schedule
+     "w" #'org-agenda-week-view
+     "d" #'org-agenda-day-view
+     "t" #'org-agenda-todo
+     "L" #'org-agenda-log-mode
+     "q" #'org-agenda-quit
+     "R" #'org-agenda-clockreport-mode
+     "r" #'org-agenda-redo)
+    :config
+    (evil-set-initial-state 'org-agenda-mode 'normal)
+    (setq org-agenda-remove-tags t)
+    (setq org-agenda-include-diary t)
+    (setq org-agenda-use-time-grid t)
+    (setq org-agenda-time-grid
+          '((daily today require-timed remove-match)
+            (800 900 1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100 2200 2300 2400)
+            " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄"))
+    ;; Make it open faster
+    ;; https://orgmode.org/manual/Speeding-Up-Your-Agendas.html
+    ;; https://orgmode.org/worg/agenda-optimization.html
+    (setq org-agenda-dim-blocked-tasks nil)
+    (setq org-agenda-inhibit-startup t)
+    (setq org-agenda-use-tag-inheritance nil)
+    (setq org-agenda-ignore-drawer-properties '(effort appt category)))
 #+end_src
-
 ** ToDo keywords & faces
-#+BEGIN_SRC emacs-lisp
+#+name: org-faces
+#+begin_src emacs-lisp :tangle no
   ;; Add this to org files if you need:
   ;; #+TODO: TODO PROG WAITING DONE
   ;; OR
@@ -1964,7 +1978,7 @@ Here are the resources:
    '(org-special-keyword ((t (:height 0.8))))
    '(org-block-end-line ((t (:height 0.8)))))
 
-#+END_SRC
+#+end_src
 
 ** org-capture
 :PROPERTIES:
@@ -1972,10 +1986,8 @@ Here are the resources:
 :END:
 See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this page]] for more detail on template elements.
 
-#+begin_src emacs-lisp
-  (evil-leader/set-key "og" #'org-capture)
-  (evil-leader/set-key "oG" #'org-capture-goto-last-stored)
-
+#+name: org-capture
+#+begin_src emacs-lisp :tangle no
   (setq
    org-capture-templates
    '(("g" "General todo/note")
@@ -2055,12 +2067,14 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
       (insert "\n** One-liners")))
 #+end_src
 ** org-refile
-#+begin_src emacs-lisp
+#+name: org-refile
+#+begin_src emacs-lisp :tangle no
   (setq org-refile-targets '((nil . (:maxlevel . 2))))
 #+end_src
 ** org-modern
 #+begin_src emacs-lisp
   (use-package org-modern
+    :after org
     :custom
     (org-use-sub-superscripts nil)
     (org-modern-table nil)
@@ -2081,11 +2095,6 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     :hook
     (org-mode . org-modern-mode)
     (org-agenda-finalize . org-modern-agenda))
-
-  (use-package org-modern-indent
-    :straight (:host github :repo "jdtsmith/org-modern-indent")
-    :config
-    (add-hook 'org-mode-hook #'org-modern-indent-mode 90))
 #+end_src
 ** org-rainbow-tags
 #+begin_src emacs-lisp
@@ -2097,20 +2106,13 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     :hook
     (org-mode . org-rainbow-tags-mode))
 #+end_src
-** org-clock
-#+begin_src emacs-lisp
-  (setq org-clock-clocked-in-display 'mode-line)
-  ;; Shows in the tab-bar, if tab-bar is enabled.
-#+end_src
-
 ** org-ql
 #+BEGIN_SRC emacs-lisp
   (use-package org-ql
     :after org
-    :config
     ;; Load org-ql-search prematurely to be able to use org-ql blocks in
     ;; org-mode
-    (require 'org-ql-search))
+    :hook (org-mode . (lambda () (require 'org-ql-search))))
 #+END_SRC
 
 Here are some utility functions that I use in org-ql dynamic blocks:
@@ -2183,7 +2185,8 @@ This following trick (got it from [[https://www.reddit.com/r/emacs/comments/o68i
     (help-at-pt-cancel-timer)
     (help-at-pt-set-timer))
 
-  (add-hook 'org-mode-hook #'im-help-at-point-mode)
+  (with-eval-after-load 'org
+    (add-hook 'org-mode-hook #'im-help-at-point-mode))
 #+end_src
 
 Insert links/images more intelligently,
@@ -2400,11 +2403,12 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
          :where archive-path
          :tidy t))))
 
-  (add-to-list
-   'org-capture-templates
-   `("b" "Bookmark" entry
-     (file+headline ,bookmarks-org "Unsorted")
-     "** (call-interactively #'im-org-archive-url)"))
+  (with-eval-after-load 'org-capture
+    (add-to-list
+     'org-capture-templates
+     `("b" "Bookmark" entry
+       (file+headline ,bookmarks-org "Unsorted")
+       "** (call-interactively #'im-org-archive-url)")))
 #+end_src
 ** Convert items to TODO entries
 #+begin_src emacs-lisp :lexical t
@@ -2444,21 +2448,27 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 ** display-time-mode
 I started using Emacs in full screen (Emacs maximalism goes on), so this is helpful.
 #+begin_src emacs-lisp
-  (setq display-time-format "%b %d, %H:%M %a")
-  (setq display-time-default-load-average nil)
-  (display-time-mode)
+  (use-package display-time
+    :straight (:type built-in)
+    :hook (after-init . display-time-mode)
+    :init
+    (setq display-time-format "%b %d, %H:%M %a")
+    (setq display-time-default-load-average nil))
 #+end_src
 ** outline-mode
 This is a built-in mode for providing basic outlining features. Here are a few configurations to make the navigation a bit more like what I use in org-mode:
 
 #+begin_src emacs-lisp
-  (evil-define-key 'normal outline-mode-map
-    (kbd "[[") #'outline-previous-heading
-    (kbd "]]") #'outline-next-heading)
-
-  (im-make-repeatable outline
-    "[" outline-previous-heading
-    "]" outline-next-heading)
+  (use-package outline-mode
+    :straight (:type built-in)
+    :general
+    (:states 'normal :keymaps 'outline-mode-map
+     "[[" #'outline-previous-heading
+     "]]" #'outline-next-heading)
+    :bind
+    (:repeat-map outline-mode-repeat-map
+     ("[" . outline-previous-heading)
+     ("]" . outline-next-heading)))
 #+end_src
 
 ** debugger-mode
@@ -2467,15 +2477,25 @@ This is a built-in mode for providing basic outlining features. Here are a few c
 #+end_src
 ** eat & eshell
 #+begin_src emacs-lisp
-  (setq eshell-history-size 10000)
+  (use-package eshell
+    :straight (:type built-in)
+    :defer t
+    :hook (eshell-mode . im-disable-hl-line-mode-for-buffer)
+    :general
+    (:states 'normal
+     "M-_" #'im-eshell-vertically
+     "M-|" #'im-eshell-horizontally)
+    :config
+    (setq eshell-history-size 10000))
 
   (use-package eshell-syntax-highlighting
-    :after eshell-mode
+    :after eshell
     :config
     (eshell-syntax-highlighting-global-mode +1))
 
   (use-package eat
     :straight (:repo "https://codeberg.org/akib/emacs-eat.git")
+    :after eshell
     :config
     (eat-eshell-mode))
 
@@ -2500,10 +2520,6 @@ This is a built-in mode for providing basic outlining features. Here are a few c
     (interactive)
     (select-window (split-window-horizontally))
     (call-interactively #'im-eshell))
-
-  (evil-define-key 'insert eshell-mode-map (kbd "C-r") #'consult-history)
-  (evil-define-key 'normal 'global (kbd "M-_") #'im-eshell-vertically)
-  (evil-define-key 'normal 'global (kbd "M-|") #'im-eshell-horizontally)
 #+end_src
 
 *** Reading bash/zsh aliases into Eshell
@@ -2646,6 +2662,8 @@ You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult
 
 #+begin_src emacs-lisp
   (use-package tabulated-list
+    :straight (:type built-in)
+    :defer t
     :config
     (evil-define-key 'normal tabulated-list-mode-map
       (kbd "{") #'tabulated-list-narrow-current-column
@@ -2661,6 +2679,7 @@ Several packages are using this package to show system-level notifications. Here
 
 #+begin_src emacs-lisp
   (use-package alert
+    :defer t
     :config
     (alert-define-style
      'im-alert-posframe
@@ -2674,27 +2693,22 @@ Several packages are using this package to show system-level notifications. Here
         :duration (unless (plist-get info :persistent) alert-fade-time)
         :severity (plist-get info :severity))))
     (setq alert-fade-time 15)
-    (setq alert-default-style 'im-alert-posframe))
+    (setq alert-default-style 'im-alert-posframe)
 
-  (evil-leader/set-key
-    "yy" #'im-notify-posframe-notifications
-    "yu" #'im-notify-posframe-enable-dnd
-    "yU" #'im-notify-posframe-disable-dnd
-    "yb" #'im-notify-posframe-blacklist
-    "ys" #'im-notify-posframe-snooze-last
-    "yc" #'im-notify-posframe-clear-all
-    "yC" (λ-interactive  (im-notify-posframe-clear-all t)))
+    (evil-leader/set-key
+      "yy" #'im-notify-posframe-notifications
+      "yu" #'im-notify-posframe-enable-dnd
+      "yU" #'im-notify-posframe-disable-dnd
+      "yb" #'im-notify-posframe-blacklist
+      "ys" #'im-notify-posframe-snooze-last
+      "yc" #'im-notify-posframe-clear-all
+      "yC" (λ-interactive  (im-notify-posframe-clear-all t)))
 
-  ;; TODO check if computer is idle or not, if idle do not send this.
-  (run-with-idle-timer 600 t #'im-keep-me-in-the-moment)
-  (defun im-keep-me-in-the-moment ()
-    (alert "What are you doing bro?" :title "BRO?!" :severity 'high))
-
-  ;; org-clock sends notification if the current tasks estimated effort is met.
-  (setq
-   org-show-notification-handler
-   (lambda (notification)
-     (im-notify-posframe :title "*org-mode*" :message notification :margin t)))
+    ;; org-clock sends notification if the current tasks estimated effort is met.
+    (setq
+     org-show-notification-handler
+     (lambda (notification)
+       (im-notify-posframe :title "*org-mode*" :message notification :margin t))))
 
   (defvar im-notify-posframe-blacklist-regexp nil)
   (defvar im-notify-posframe-dnd nil)
@@ -2877,14 +2891,13 @@ Several packages are using this package to show system-level notifications. Here
 Hydra creates a menu for quickly calling/toggling functions/modes in a visually easy way. My main use case for it right now is grouping bunch of appearance related functions/modes that I use infrequently. I believe for hydra's are not very useful for commands that you use frequently, it makes things slower than a plain keybinding but it's quite useful for the stuff that you forget or use infrequently.
 
 #+begin_src emacs-lisp
-  (use-package hydra
-    :config)
-
-  (use-package use-package-hydra
-    :after hydra)
+  (use-package hydra)
 
   (use-package pretty-hydra
     :after hydra
+    :defer t
+    :init
+    (evil-leader/set-key "a" #'appearance/body)
     :config
     (pretty-hydra-define appearance
       (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
@@ -2906,10 +2919,7 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
         ("v" visual-fill-column-mode "Wrap lines at 72th col" :toggle t)
         ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
         ("f" fci-mode "Fill column" :toggle t)
-        ("<SPC>" nil "Quit" :color blue))))
-
-    (evil-leader/set-key
-      "a" #'appearance/body))
+        ("<SPC>" nil "Quit" :color blue)))))
 #+end_src
 ** wgrep
 With this package, you can make =grep= buffers editable and your edits can be applied to the files itself. Also =embark= has a feature where you can export the current completing-read results into a grep buffer, the action is called =embark-export= and it works on =consult-ripgrep= etc.
@@ -2917,7 +2927,8 @@ With this package, you can make =grep= buffers editable and your edits can be ap
 - Do ~C-j~ or ~C-k~ (enabled by evil-collection, by default you need to use =n=) to peek at next/prev instance.
 
 #+begin_src emacs-lisp
-  (use-package wgrep)
+  (use-package wgrep
+    :defer t)
 #+end_src
 ** dired/dirvish
 There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
@@ -2925,6 +2936,9 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 #+begin_src emacs-lisp
   (use-package dired
     :straight (:type built-in)
+    :defer t
+    :hook
+    (dired-mode . (lambda () (visual-line-mode -1) (toggle-truncate-lines +1)))
     :config
     (setq dired-dwim-target t)
     (setq dired-listing-switches "-l -A -h -v --group-directories-first")
@@ -2939,30 +2953,38 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
   (use-package dirvish
     :straight (:host github :repo "alexluigit/dirvish")
-    :config
-    (setq dirvish-subtree-always-show-state t)
-    (setq dirvish-attributes '(vc-state subtree-state all-the-icons collapse git-msg file-size))
-
+    :after dired
+    :general
+    (:states 'normal
+     "M-f" #'dirvish-side)
+    (:states 'normal :prefix "<SPC>"
+     "ed" #'dirvish-dwim
+     "eD" #'im-dirvish)
+    (:keymaps 'dirvish-mode-map :states 'normal
+     "\\"    #'dired-find-file-other-window
+     "h"     #'dired-up-directory
+     "l"     #'dired-find-alternate-file
+     "q"     #'dirvish-quit
+     "<tab>" #'dirvish-toggle-subtree
+     "f"     #'dirvish-file-info-menu
+     "s"     #'dirvish-setup-menu
+     "H"     #'dirvish-history-go-backward
+     "L"     #'dirvish-history-go-forward)
     ;; Other keybindings comes from dired-mode (which comes from
     ;; evil-collection)
-    (evil-define-key 'normal dirvish-mode-map
-      "h" #'dired-up-directory
-      "l" #'dired-find-alternate-file
-      "\\" #'dired-find-file-other-window
-      "q" #'dirvish-quit
-      (kbd "<tab>") #'dirvish-toggle-subtree)
+    :commands (dirvish dirvish-side)
+    :config
+    (setq dirvish-subtree-always-show-state t)
+    (setq dirvish-attributes '(vc-state subtree-state all-the-icons collapse git-msg file-time file-size))
+    (setq dirvish-side-width 55)
 
-    ;; Re-direct direct-jump calls to dirvish
     (dirvish-override-dired-mode)
-    (evil-leader/set-key
-      "ed" #'dired
-      "eD" (λ-interactive (dirvish (read-directory-name "Dirvish: "))))
+    (dirvish-side-follow-mode))
 
-    (setq dirvish-side-width 50)
-    (evil-define-key 'normal 'global
-      (kbd "M-f") #'dirvish-side)
-
-    (add-hook 'dired-mode-hook #'(lambda () (visual-line-mode -1))))
+  (defun im-dirvish ()
+    "Start dirvish in selected directory."
+    (interactive)
+    (dirvish (read-directory-name "Dirvish: ")))
 #+end_src
 *** im-dired-rsync
 Dired copies files sync. This function uses rsync to copy stuff async, especially useful while copying stuff over tramp/ssh.
@@ -2982,10 +3004,14 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
         (dired-dwim-target-directory)))))
     (let* ((files (dired-get-marked-files nil current-prefix-arg))
            (ssh-regexp "/ssh:\\([a-zA-Z0-9_-]+\\):")
-           (fix-remote-files (lambda (it)
-                               (if-let (host (nth 1 (s-match ssh-regexp it)))
-                                   (concat host ":" (string-trim-left it ssh-regexp))
-                                 it))))
+           (fix-remote-files
+            (lambda (it)
+              ;; NOTE: Not quite sure why I need to call
+              ;; `shell-quote-argument' because `im-shell-command' uses
+              ;; `start-process' and it should not invoke zsh etc.
+              (if-let (host (nth 1 (s-match ssh-regexp it)))
+                  (concat host ":" (shell-quote-argument (string-trim-left it ssh-regexp)))
+                (shell-quote-argument it)))))
       (im-shell-command
        :command "rsync"
        :args
@@ -3012,42 +3038,88 @@ I want to be able to kill image buffers with simply hitting =q=. This does that.
 #+end_src
 
 ** calendar & diary & appt
+Some tips:
+- ~.~ go to today
+- ~0,$~ beginning/end of the week
+- ~(,)~ beginning/end of the month
+- ~{,}~ prev/next month
+- ~[,]~ prev/next year
+- ~gs~ show sunrise/sunset time of date under cursor
+- ~gd~ go to a date with a wizard.
+- ~a~ to jump org-agenda for that day.
+- ~d~ to show diary entries only. (agenda already shows these)
+- ~ii~ to insert entry for that date.
+- ~iw/im/iy/ia/ib~ to insert weekly/monthly/anneversary/block (block being between the marked day and selected day) entry.
+- Set a mark by hitting ~v~, then go to another date and hit ~M-=~ which will show day count between those two dates.
 #+begin_src emacs-lisp
-  (evil-leader/set-key "ec" #'calendar)
-  (evil-define-key 'normal diary-fancy-display-mode-map
-    "q" #'evil-delete-buffer)
+  (use-package calendar
+    :straight (:type built-in)
+    ;; Enable including other diary entries using the #include "..." syntax
+    ;; I use this to separate my work and normal diary
+    :hook ((diary-list-entries . diary-include-other-diary-files)
+           (diary-list-entries . diary-sort-entries)
+           ;; Show week numbers on calendar
+           (after-init . im-calendar-week-number-mode)
+           ;; Show sunrise/sunset when calendar opens
+           (calendar-today-visible . calendar-sunrise-sunset)
+           (calendar-today-visible . calendar-mark-today))
+    :commands calendar
+    :init
+    (evil-leader/set-key "ec" #'calendar)
+    (evil-define-key 'normal diary-fancy-display-mode-map "q" #'evil-delete-buffer)
+    (evil-define-key 'normal calendar-mode-map (kbd "a") #'im-calendar-jump-org-agenda)
+    :config
+    (calendar-set-date-style 'european)
 
-  (calendar-set-date-style 'european)
+    ;; Start the week from Monday
+    (setq calendar-week-start-day 1)
 
-  ;; Start the week from Monday
-  (setq calendar-week-start-day 1)
+    ;; lng and lat for my location, to get sunrise/sunset times on my
+    ;; calendar (press `gs'). `calendar-sunrise-sunset' shows the
+    ;; sunrise/sunset times for time under the cursor which means you
+    ;; can look up sunrise/sunset times of past/future times.
+    (setq calendar-latitude 52.37403)
+    (setq calendar-longitude 4.88969)
 
-  ;; lng and lat for my location, to get sunrise/sunset times on my
-  ;; calendar (press gs)
-  (setq calendar-latitude 41.0082)
-  (setq calendar-longitude 28.9784)
+    ;; Use 24-hour format to display times
+    (setq calendar-time-display-form
+          '(24-hours ":" minutes (if time-zone " (") time-zone (if time-zone ")")))
 
-  ;; Use 24-hour format to display times
-  (setq calendar-time-display-form
-        '(24-hours ":" minutes (if time-zone " (") time-zone (if time-zone ")")))
+    (setq diary-display-function #'diary-fancy-display)
+    (setq diary-number-of-entries 7)
 
-  ;; Enable including other diary entries using the #include "..." syntax
-  ;; I use this to separate my work and normal diary
-  (add-hook 'diary-list-entries-hook #'diary-include-other-diary-files)
-  (add-hook 'diary-list-entries-hook #'diary-sort-entries t)
-  (setq diary-display-function #'diary-fancy-display)
-  (setq diary-number-of-entries 7)
+    (evil-collection-define-key 'normal 'calendar-mode-map
+      "ii" #'diary-insert-entry
+      "id" #'diary-insert-entry
+      "iw" #'diary-insert-weekly-entry
+      "im" #'diary-insert-monthly-entry
+      "iy" #'diary-insert-yearly-entry
+      "ia" #'diary-insert-anniversary-entry
+      "ib" #'diary-insert-block-entry)
 
-  ;; Show calendar at the bottom
-  (im-shackle-window "Calendar" 0.2)
+    ;; Show calendar at the bottom
+    (im-shackle-window "Calendar" 0.3))
 
-  (evil-define-key 'normal calendar-mode-map (kbd "a") #'im-calendar-jump-org-agenda)
   (defun im-calendar-jump-org-agenda ()
     "Open the currently selected calendar date on org-agenda."
     (interactive nil calendar-mode)
     (let ((org-agenda-window-setup 'other-window)
           (org-agenda-span 1))
       (org-calendar-goto-agenda)))
+
+  ;; https://www.emacswiki.org/emacs/CalendarWeekNumbers
+  (defun im-calendar-week-number-mode ()
+    "Show week numbers in M-x calendar."
+    (copy-face font-lock-constant-face 'calendar-iso-week-face)
+    (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
+    (setq
+     calendar-intermonth-text
+     '(propertize
+       (format "%2d"
+               (car
+                (calendar-iso-from-absolute
+                 (calendar-absolute-from-gregorian (list month day year)))))
+       'font-lock-face 'calendar-iso-week-face)))
 #+end_src
 
 *** Automatically syncing with remote calendars
@@ -3105,16 +3177,20 @@ To sync it automatically:
 ~appt-message-warning-time~ is the minutes before appt.el starts showing warnings and it shows warnings every ~appt-display-interval~ minutes until the event starts.
 
 #+begin_src emacs-lisp
-  (require 'appt)
+  (use-package appt
+    :defer 20
+    :straight (:type built-in)
+    ;; Automatically update `appt-time-msg-list' after editing an
+    ;; org-agenda file
+    :hook (org-mode . im-org-agenda-to-appt-on-save)
+    :config
+    ;; Use my notification function for appt notifications
+    (setq appt-disp-window-function #'im-appt-notify)
+    (setq appt-message-warning-time 10)
+    (setq appt-display-interval 4)
 
-  ;; Use my notification function for appt notifications
-  (setq appt-disp-window-function #'im-appt-notify)
-  (setq appt-message-warning-time 10)
-  (setq appt-display-interval 4)
-
-  ;; Automatically update `appt-time-msg-list' after editing an
-  ;; org-agenda file
-  (add-hook 'org-mode-hook #'im-org-agenda-to-appt-on-save)
+    (save-window-excursion
+      (appt-activate 1)))
 
   (defun im-org-agenda-to-appt-on-save ()
     (add-hook
@@ -3145,9 +3221,6 @@ To sync it automatically:
        :persistent important?
        :category 'appt
        :id appt-msg)))
-
-  (save-window-excursion
-    (appt-activate 1))
 #+end_src
 
 *** More org-mode and diary integration and utilities
@@ -3192,25 +3265,6 @@ To sync it automatically:
                    (point))))
         (im-kill (buffer-substring beg end)))))
 #+end_src
-*** Show week numbers in the calendar
-#+begin_src emacs-lisp
-  ;; https://www.emacswiki.org/emacs/CalendarWeekNumbers
-  (defun im-calendar-week-number-mode ()
-    "Show week numbers in M-x calendar."
-    (copy-face font-lock-constant-face 'calendar-iso-week-face)
-    (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
-    (setq
-     calendar-intermonth-text
-     '(propertize
-       (format "%2d"
-               (car
-                (calendar-iso-from-absolute
-                 (calendar-absolute-from-gregorian (list month day year)))))
-       'font-lock-face 'calendar-iso-week-face)))
-
-  (im-calendar-week-number-mode)
-#+end_src
-
 ** tramp
 #+begin_src emacs-lisp
   (setq tramp-default-method "ssh")
@@ -3224,6 +3278,8 @@ To sync it automatically:
 *** Installation/Keybindings
 #+begin_src emacs-lisp
   (use-package w3m
+    :commands (w3m im-w3m-open-url-dwim)
+    :hook (w3m-mode . (lambda () (setq-local scroll-margin 0)))
     :config
     (evil-define-key 'normal w3m-mode-map
       (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function w3m-current-url))
@@ -3245,7 +3301,6 @@ To sync it automatically:
     (setq w3m-default-display-inline-images t)
     (setq w3m-use-tab-line nil)
     ;; (setq w3m-display-mode 'plain)
-    (add-hook 'w3m-mode-hook #'(lambda () (setq-local scroll-margin 0)))
     (w3m-display-mode 'plain))
 
   (defun im-w3m-open-url-dwim (url &optional new-session)
@@ -3306,64 +3361,72 @@ To sync it automatically:
         (w3m-buffer-number (current-buffer))))))
 #+end_src
 
-** eww
+** eww -- web browser
 #+begin_src emacs-lisp
+  (setq browse-url-secondary-browser-function #'browse-url-firefox)
+  (setq browse-url-handlers
+        '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
+          (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
+          (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
+          (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
+          (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv--play-or-enqueue link)))
+          (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
+          (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
+          (".*github.com/.*issues/.*" . (lambda (link &rest _) (im-github-issue-view link)))
+          (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . browse-url-firefox)
+          ("." . im-eww)))
+
   (use-package eww
+    :commands eww
+    :hook (eww-mode . tab-line-mode)
+    :general
+    (:states 'normal :prefix "<SPC>"
+     "ew" #'im-eww)
+    (:keymaps 'eww-mode-map :states 'normal
+     "Y" #'eww-copy-page-url
+     "d" #'im-eww-save-image
+     "O" (λ-interactive (eww (read-string "URL: " (eww-current-url))))
+     "t" #'im-eww
+     "T" (λ-interactive (im-eww (read-string "URL: " (eww-current-url))))
+     "f" #'im-eww-avy-follow
+     "F" (λ-interactive (im-eww-avy-follow :new-session))
+     "r" #'eww-reload
+     "R" #'eww-readable
+     (kbd "<f2>") #'im-eww-open-in-xwidget-webkit
+     (kbd "<f3>") (λ-interactive (browse-url (eww-current-url)))
+     (kbd "<f4>") (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url)))
+     "&" (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url))))
     :config
+    ;; Gifs make my computer suffer, so I just disable them
     ;; (setq shr-image-animate nil)
-    ;; ^ Gifs make my computer suffer, so I just disable them
     (setq shr-max-image-proportion 0.6)
     (setq shr-discard-aria-hidden t)
     (setq shr-use-xwidgets-for-media t)
     (setq eww-auto-rename-buffer
-          (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "..."))))
+          (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "...")))))
 
-    (evil-define-key 'normal eww-mode-map
-      "Y" #'eww-copy-page-url
-      "d" #'im-eww-save-image
-      "O" (λ-interactive (eww (read-string "URL: " (eww-current-url))))
-      "t" (λ-interactive (eww (read-string "URL: ") :new-session))
-      "T" (λ-interactive (eww (read-string "URL: " (eww-current-url)) :new-session))
-      "f" #'im-eww-avy-follow
-      "F" (λ-interactive (im-eww-avy-follow :new-session))
-      "r" #'eww-reload
-      "R" #'eww-readable
-      (kbd "<f2>") #'im-eww-open-in-xwidget-webkit
-      (kbd "<f3>") (λ-interactive (browse-url (eww-current-url)))
-      (kbd "<f4>") (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url)))
-      "&" (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url))))
-    (setq browse-url-secondary-browser-function #'browse-url-firefox)
-    (setq browse-url-handlers
-          '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
-            (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
-            (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
-            (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
-            (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv--play-or-enqueue link)))
-            (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
-            (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . browse-url-firefox)
-            ("." . eww)))
+  (defun im-eww (url)
+    "Like `eww' but opens in a new eww buffer instead of reusing the same one."
+    (interactive (list (read-string "URL: ")))
+    (eww url t))
 
-    (defun im-eww-avy-follow (&optional follow-type)
-      (interactive)
-      (let ((wend (window-end))
-            (urls '()))
-        (save-excursion
-          (goto-char (window-start))
-          (while-let ((match (text-property-search-forward 'shr-tab-stop nil nil t))
-                      ((< (point) wend)))
-            (goto-char (prop-match-beginning match))
-            ;; (push (get-text-property (point) 'shr-url) urls)
-            (push (point) urls)))
-        (avy-process (nreverse urls))
-        (pcase follow-type
-          (:new-session
-           (eww (get-text-property (point) 'shr-url) :new-session))
-          (:external (eww-browse-with-external-browser  t))
-          (_ (eww-follow-link)))))
-
-    (evil-leader/set-key
-      "ew" (λ-interactive (eww (read-string "URL: ") t))
-      "eW" #'im-xwidget-webkit-open))
+  (defun im-eww-avy-follow (&optional follow-type)
+    (interactive)
+    (let ((wend (window-end))
+          (urls '()))
+      (save-excursion
+        (goto-char (window-start))
+        (while-let ((match (text-property-search-forward 'shr-tab-stop nil nil t))
+                    ((< (point) wend)))
+          (goto-char (prop-match-beginning match))
+          ;; (push (get-text-property (point) 'shr-url) urls)
+          (push (point) urls)))
+      (avy-process (nreverse urls))
+      (pcase follow-type
+        (:new-session
+         (eww (get-text-property (point) 'shr-url) :new-session))
+        (:external (eww-browse-with-external-browser  t))
+        (_ (eww-follow-link)))))
 
   (defun im-eww-save-image ()
     "Save the image at point."
@@ -3385,7 +3448,8 @@ To sync it automatically:
 #+begin_src emacs-lisp
   (use-package shell
     :straight (:type built-in)
-    :config
+    :defer t
+    :init
     (evil-define-key 'insert 'shell-mode-map (kbd "C-l") #'comint-clear-buffer))
 #+end_src
 
@@ -3394,15 +3458,14 @@ A package that shows key combinations. (for example press C-x and wait) It also 
 
 #+BEGIN_SRC emacs-lisp
   (use-package which-key
-    :diminish which-key-mode
+    :hook (after-init . which-key-mode)
     :config
     (setq which-key-min-display-lines 1)
     (setq which-key-max-display-columns 1)
     (setq which-key-max-description-length 70)
     (setq which-key-show-docstrings t)
     (setq which-key-idle-delay 0.5)
-    (setq which-key-sort-order #'which-key-prefix-then-key-order)
-    (which-key-mode))
+    (setq which-key-sort-order #'which-key-prefix-then-key-order))
 #+END_SRC
 
 ** magit & vc
@@ -3426,43 +3489,48 @@ Note that it's not possible to stage hunks with =vc=.
 
 #+BEGIN_SRC emacs-lisp
   (use-package magit
+    :defer t
+    :init
+    (evil-leader/set-key
+      "gv" #'project-vc-dir
+      "gd" #'vc-diff
+      "gD" #'vc-root-diff
+      "gn" #'vc-next-action
+      "gs" #'magit-status
+      "gS" #'magit-stash
+      "gf" #'magit-file-dispatch
+      "gp" #'vc-pull
+      "gP" #'magit-push
+      "gr" #'magit-reset
+      "gcc" #'vc-switch-branch
+      "gB" #'vc-annotate ;; Git Blame
+      "gR" #'vc-refresh-state
+      "gbc" #'vc-create-branch
+      "gL" #'vc-print-root-log
+      "gbb" #'magit-branch)
     :config
     (define-advice magit-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
     (define-advice magit-branch-and-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
     (define-advice vc-create-branch (:after (&rest _) refresh-vc-state) (vc-refresh-state))
-    (define-advice vc-switch-branch (:after (&rest _) refresh-vc-state) (vc-refresh-state))
-
-    (evil-leader/set-key
-      "gv" 'project-vc-dir
-      "gd" 'vc-diff
-      "gD" 'vc-root-diff
-      "gn" 'vc-next-action
-      "gs" 'magit-status
-      "gS" 'magit-stash
-      "gf" 'magit-file-dispatch
-      "gp" 'vc-pull
-      "gP" 'magit-push
-      "gr" 'magit-reset
-      "gcc" 'vc-switch-branch
-      "gB" 'vc-annotate ;; Git Blame
-      "gR" 'vc-refresh-state
-      "gbc" 'vc-create-branch
-      "gL" 'vc-print-root-log
-      "gbb" 'magit-branch))
+    (define-advice vc-switch-branch (:after (&rest _) refresh-vc-state) (vc-refresh-state)))
 #+END_SRC
 
 *** vc configuration
 #+begin_src emacs-lisp
-  (evil-define-key 'normal vc-dir-mode-map "r" #'vc-dir-refresh)
-
-  ;; Magit like commit interface:
-  ;; - Open commit window
-  ;; - Clear all other windows
-  ;; - Open diff
-  ;; - When committed, kill diff buffer and window.
-
-  (remove-hook 'log-edit-hook #'log-edit-show-files)
-  (add-hook 'log-edit-hook #'im-vc-show-diff)
+  (use-package vc
+    :straight (:type built-in)
+    :general
+    (:keymaps 'vc-dir-mode-map :states 'normal
+     "r" #'vc-dir-refresh)
+    :config
+    ;; Magit like commit interface:
+    ;; - Open commit window
+    ;; - Clear all other windows
+    ;; - Open diff
+    ;; - When committed, kill diff buffer and window.
+    (require 'log-edit)
+    (remove-hook 'log-edit-hook #'log-edit-show-files)
+    (add-hook 'log-edit-hook #'im-vc-show-diff))
 
   (defvar im--last-log-diff-buffer nil)
   (defun im-vc-show-diff ()
@@ -3494,10 +3562,10 @@ Note that it's not possible to stage hunks with =vc=.
 #+begin_src emacs-lisp
   (use-package git-timemachine
     :after magit
-    :config
-
+    :commands git-timemachine-toggle
+    :init
     (evil-leader/set-key  "gt" #'git-timemachine-toggle)
-
+    :config
     ;; Override completing-read function to make it use
     ;; `completing-read' no matter what
     (defun git-timemachine-completing-read-fn (&rest args)
@@ -3511,6 +3579,9 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
 #+begin_src emacs-lisp
   (use-package magit-delta
     :after magit
+    :hook
+    ((magit-mode . magit-delta-mode)
+     (magit-delta-mode . im-delta-fix-bg-colors))
     :config
     (setq magit-delta-default-light-theme "GitHub")
     (setq magit-delta-default-dark-theme "Monokai Extended Bright")
@@ -3521,10 +3592,7 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
     (set-face-attribute 'magit-diff-added-highlight nil :background "#002800")
     (set-face-attribute 'magit-diff-added nil :background "#002800")
     (set-face-attribute 'magit-diff-removed-highlight nil :background "#3f0001")
-    (set-face-attribute 'magit-diff-removed nil :background "#3f0001")
-
-    (add-hook 'magit-mode-hook (lambda () (magit-delta-mode +1)))
-    (add-hook 'magit-delta-mode-hook #'im-delta-fix-bg-colors))
+    (set-face-attribute 'magit-diff-removed nil :background "#3f0001"))
 
   (defun im-delta-fix-bg-colors ()
     (setq face-remapping-alist
@@ -3580,13 +3648,15 @@ avy is very similar to ~vim-easymotion~. It simply jumps to a visible text using
 
 #+BEGIN_SRC emacs-lisp
   (use-package avy
+    :commands (avy-goto-subword-1 avy-goto-word-1)
+    :init
+    (evil-define-key 'normal 'global
+      (kbd "S") #'avy-goto-subword-1
+      (kbd "s") #'avy-goto-word-1)
     :config
     (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)
           avy-case-fold-search nil
-          avy-all-windows t)
-    (evil-define-key 'normal 'global
-      (kbd "S") #'avy-goto-subword-1
-      (kbd "s") #'avy-goto-word-1))
+          avy-all-windows t))
 #+END_SRC
 
 ** vertico & marginalia & orderless & mini-frame
@@ -3608,6 +3678,7 @@ Some shortcuts you can use on any vertico window:
 
 #+begin_src emacs-lisp
   (use-package vertico
+    :hook ((after-init . vertico-mode))
     :config
     ;; Grow and shrink the Vertico minibuffer
     ;; (setq vertico-resize t)
@@ -3634,9 +3705,7 @@ Some shortcuts you can use on any vertico window:
     (define-key vertico-map (kbd "M-]") #'vertico-next-group)
 
     ;; Use `consult-completion-in-region' which works with vertico
-    (setq completion-in-region-function #'consult-completion-in-region)
-
-    (vertico-mode))
+    (setq completion-in-region-function #'consult-completion-in-region))
 #+end_src
 
 Here I enable a few extensions for vertico:
@@ -3647,7 +3716,6 @@ Here I enable a few extensions for vertico:
 
   ;; Enable avy style candidate selection
   (use-package vertico-quick
-    :ensure nil
     :straight nil
     :after vertico
     :config
@@ -3656,7 +3724,6 @@ Here I enable a few extensions for vertico:
     (define-key vertico-map "\M-q" #'vertico-quick-exit))
 
   (use-package vertico-repeat
-    :ensure nil
     :straight nil
     :after vertico
     :config
@@ -3665,13 +3732,11 @@ Here I enable a few extensions for vertico:
 
   ;; Enable showing vertico in a buffer instead of minibuffer
   (use-package vertico-buffer
-    :ensure nil
     :straight nil
     :after vertico)
 
   ;; Switch between different vertico display forms for different commands
   (use-package vertico-multiform
-    :ensure nil
     :straight nil
     :after vertico
     :config
@@ -3696,7 +3761,6 @@ Here I enable a few extensions for vertico:
 
   ;; Enable displaying candidates in a grid.
   (use-package vertico-grid
-    :ensure nil
     :straight nil
     :after vertico)
 #+end_src
@@ -3717,6 +3781,7 @@ Other complementary packages:
     (marginalia-mode))
 
   (use-package mini-frame
+    ;; :hook (after-init . mini-frame)
     :config
     (setq mini-frame-show-parameters
           '((top . 0.15)
@@ -3738,9 +3803,7 @@ Other complementary packages:
             jq-interactively
             im-consult-ripgrep
             consult-org-heading
-            consult-imenu))
-    ;; (mini-frame-mode +1)
-    )
+            consult-imenu)))
 #+end_src
 ** ~project.el~ and project management
 ~(project-remember-projects-under im-projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
@@ -3922,14 +3985,14 @@ Some key points:
 
     (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
     ;; ^ Shows all narrowing possibilities when you hit "?"
+    ;; If no narrowing is available, simply inserts "?"
 
-    ;; TODO move bindings
     (evil-leader/set-key "RET" #'consult-buffer)
     (evil-define-key 'normal 'global (kbd "M-i") (λ-interactive (condition-case nil
                                                                     (consult-imenu)
                                                                   (error (consult-outline)))))
-
     (evil-define-key 'normal org-mode-map (kbd "M-i") #'consult-org-heading)
+    (evil-define-key 'insert eshell-mode-map (kbd "C-r") #'consult-history)
 
     (evil-leader/set-key "fo" #'find-file)
     (evil-leader/set-key "fs" #'save-buffer)
@@ -4107,6 +4170,7 @@ Here is a nice description of the package from it's README:
   (use-package embark-consult)
 
   (use-package embark
+    :commands (embark embark-act-all)
     :config
     (bind-key (kbd "M-a") #'embark-act)
     (bind-key (kbd "M-A") #'embark-act-all)
@@ -4149,30 +4213,31 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
 
 #+BEGIN_SRC emacs-lisp
   (use-package flycheck
-    :diminish
+    :hook ((prog-mode . flycheck-mode)
+           (emacs-lisp-mode . im-flycheck-disable-checkdoc-checker-if-not-needed)
+           ;; Not quite sure why but I also need to explicitly add this
+           ;; to `org-src-mode-hook'
+           (org-src-mode . im-flycheck-disable-checkdoc-checker-if-not-needed))
     :config
     (setq flycheck-idle-change-delay 1)
     (setq flycheck-display-errors-delay 0.3)
     (setq flycheck-emacs-lisp-load-path 'inherit)
-    (setq flycheck-emacs-lisp-initialize-packages t)
-    ;; (setq-default flycheck-disabled-checkers '(emacs-lisp-checkdoc))
-    (setq flycheck-global-modes '(not org-mode jira-view-mode))
-
-    (global-flycheck-mode))
+    (setq flycheck-emacs-lisp-initialize-packages t))
 
   (use-package consult-flycheck
     :after flycheck
-    :config
-    (evil-define-minor-mode-key 'normal 'flycheck-mode
-      (kbd "ge") #'im-show-error-list))
+    :general
+    (:keymap 'flycheck-mode-map :states 'normal
+     "ge" #'im-show-error-list))
 
   (use-package flycheck-posframe
     :straight (:host github :repo "alexmurray/flycheck-posframe")
+    :after flycheck
+    :hook (flycheck-mode . flycheck-posframe-mode)
     :config
     (setq flycheck-posframe-border-width 2)
     (setq flycheck-posframe-border-use-error-face t)
     (setq flycheck-posframe-position 'window-bottom-center)
-    (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode)
     (flycheck-posframe-configure-pretty-defaults))
 
   (defun im-show-error-list (arg)
@@ -4181,6 +4246,13 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (if (bound-and-true-p lsp-mode)
         (consult-lsp-diagnostics arg)
       (consult-flycheck)))
+
+  (defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
+    "Disable checkdoc on org src, scratch and interaction buffers."
+    (when (or (eq major-mode #'lisp-interaction-mode)
+              (s-contains? "scratch" (buffer-name))
+              (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
+      (flycheck-disable-checker 'emacs-lisp-checkdoc)))
 #+END_SRC
 
 ** corfu & corfu-doc & kind-icon
@@ -4208,7 +4280,6 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
   (define-key corfu-map "\M-m" #'corfu-move-to-minibuffer)
 
   (use-package corfu-quick
-    :ensure nil
     :straight nil
     :after corfu
     :config
@@ -4223,7 +4294,6 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
   (use-package corfu-popupinfo
-    :ensure nil
     :straight nil
     :after corfu
     :config
@@ -4316,7 +4386,6 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
 #+BEGIN_SRC emacs-lisp
   (setenv "LSP_USE_PLISTS" "true")
   (use-package lsp-mode
-    :commands lsp
     :hook ((web-mode . lsp)
            (js-mode . lsp)
            (tsx-ts-mode . lsp)
@@ -4337,9 +4406,12 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
            ;; server. I'm not quite sure if this causes some loss of
            ;; candidates but we can always exit the completion and
            ;; re-trigger it to get the fresh list from lsp server.
-           (lsp-completion-mode . im-lsp-mode-setup-orderless-completion))
+           (lsp-completion-mode . im-lsp-mode-setup-orderless-completion)
+           (lsp-mode . lsp-enable-which-key-integration))
+    :commands (lsp lsp-deferred)
     :init
     (setq lsp-use-plists t)
+    (setq lsp-keymap-prefix "M-l")
     :config
     (setq lsp-completion-provider :none) ;; for corfu
     (setq lsp-enable-xref t)
@@ -4407,13 +4479,14 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
       (lsp-ui-doc-show)))
 
   (use-package lsp-ui
-    :after (lsp-mode)
+    :after lsp
     :commands lsp-ui-mode
     :config
     (setq lsp-ui-sideline-show-code-actions nil))
 
   ;; consult-lsp-diagnostics and consult-lsp-symbols
   (use-package consult-lsp
+    :after lsp
     :config
     (evil-define-key 'normal lsp-mode-map
       (kbd "M-I") 'consult-lsp-symbols))
@@ -4429,7 +4502,7 @@ Basic workflow is as follows:
 
 #+begin_src emacs-lisp
   (use-package dap-mode
-    :after (lsp-mode)
+    :after lsp
     :config
     ;; When debugger kicks-in, run dap-hydra
     (add-hook 'dap-stopped-hook (lambda (arg) (call-interactively #'dap-hydra))))
@@ -4457,28 +4530,31 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (setq-local evil-move-cursor-back nil))
 
   (use-package vterm
+    :hook ((vterm-mode . evil-collection-vterm-escape-stay)
+           (vterm-mode . im-disable-hl-line-mode-for-buffer)
+           (vterm-mode . evil-emacs-state))
+    :general
+    (:states 'normal :prefix "<SPC>"
+     "tj" #'im-jump-to-visible-term
+     "tl" #'im-run-last-command-on-visible-term
+     "ty" #'im-send-selected-text-to-visible-term
+     "tr" #'im-run-command-on-visible-term-with-history
+     "tn" #'im-vterm-project
+     "td" #'im-vterm-dir)
+    (:keymaps 'vterm-mode-map :states 'insert
+     "C-r" #'vterm--self-insert
+     "M-\\" #'vterm--self-insert
+     "M--" #'vterm--self-insert
+     "C-c" #'vterm--self-insert
+     "C-x" #'vterm--self-insert)
+    :init
     :config
-    (evil-define-key 'insert vterm-mode-map
-      (kbd "C-r") #'vterm--self-insert
-      (kbd "M-\\") #'vterm--self-insert
-      (kbd "M--") #'vterm--self-insert
-      (kbd "C-c") #'vterm--self-insert
-      (kbd "C-x") #'vterm--self-insert)
-
-    (evil-leader/set-key
-      "tj" 'im-jump-to-visible-term
-      "tl" 'im-run-last-command-on-visible-term
-      "ty" 'im-send-selected-text-to-visible-term
-      "tr" 'im-run-command-on-visible-term-with-history
-      "tn" #'im-vterm-project
-      "td" #'im-vterm-dir)
-    (setq vterm-kill-buffer-on-exit t)
-    (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
-    (add-hook 'vterm-mode-hook #'evil-emacs-state))
+    (setq vterm-kill-buffer-on-exit t))
 
   (defun im-vterm-project ()
     "Open vterm for current project."
     (interactive)
+    (require 'vterm)
     (when-let ((pname (im-current-project-name)))
       (let* ((vterm-buffer-name (format "*vterm-proj-%s*" pname))
              (default-directory (im-current-project-root))
@@ -4494,6 +4570,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
   (defun im-vterm-dir ()
     "Open vterm for `default-directory'."
     (interactive)
+    (require 'vterm)
     (let* ((vterm-buffer-name (format "*vterm-dir-%s*" (f-filename default-directory)))
            (existing (--find
                       (and
@@ -4566,11 +4643,9 @@ Light weight and nice modeline.
 
 #+begin_src emacs-lisp
   (use-package mood-line
-    :diminish
     :straight (:host gitlab :repo "jessieh/mood-line")
+    :hook (after-init . mood-line-mode)
     :config
-    (mood-line-mode)
-
     (set-face-attribute
      'mood-line-unimportant nil
      :foreground "Sky Blue")
@@ -4587,14 +4662,16 @@ When you search for something, it opens the results in an org-mode buffer. Resul
 
 #+BEGIN_SRC emacs-lisp
   (use-package howdoyou
+    :commands (howdoyou-query howdoyou--get-buffer)
+    :general
+    (:keymaps 'howdoyou-mode-keymap :states '(normal motion)
+     "gn" #'howdoyou-next-link
+     "gp" #'howdoyou-previous-link)
+    (:states 'normal :prefix "<SPC>"
+     "is" #'howdoyou-query)
     :config
     (setq howdoyou-switch-to-answer-buffer t)
-    (setq howdoyou-number-of-answers 5)
-    (evil-define-minor-mode-key '(normal motion) 'howdoyou-mode
-      "gn" #'howdoyou-next-link
-      "gp" #'howdoyou-previous-link)
-    (evil-leader/set-key
-      "is" 'howdoyou-query))
+    (setq howdoyou-number-of-answers 5))
 
   (defun im-open-stackexchange-link (link)
     "Open stackexchange LINK in a nicely formatted org buffer."
@@ -4615,43 +4692,45 @@ tldr client for Emacs.
 
 #+BEGIN_SRC emacs-lisp
   (use-package tldr
+    :commands tldr
     :config
     (evil-leader/set-key
       "it" #'tldr))
 #+END_SRC
 
 ** yasnippet & yankpad: template manager
-#+BEGIN_SRC emacs-lisp
+#+begin_src emacs-lisp
   (use-package yasnippet
-    :config
-    (yas-global-mode))
+    :hook
+    ((minibuffer-setup . yas-minor-mode)
+     ;; ^ Enable expanding in mini-buffer.
+     (after-init . yas-global-mode)))
 
   (use-package yankpad
     :after yasnippet
+    :general
+    (:states 'normal :prefix "<SPC>"
+     "sr" #'yankpad-reload
+     "sc" #'yankpad-set-category
+     "se" #'yankpad-edit
+     "ss" #'yankpad-map
+     "sm" #'yankpad-map)
+    (:states 'insert
+     (kbd "M-s") #'yankpad-insert
+     (kbd "M-e") #'hippie-expand)
+    (:keymaps 'minibuffer-local-map
+     (kbd "M-s") #'yankpad-insert
+     (kbd "M-e") #'hippie-expand)
     :config
     (setq yankpad-file snippets-org)
     (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand)
-    (evil-leader/set-key
-      "sr" #'yankpad-reload
-      "sc" #'yankpad-set-category
-      "se" #'yankpad-edit
-      "ss" #'yankpad-map
-      "sm" #'yankpad-map)
-
-    (evil-define-key 'insert 'global
-      (kbd "M-s") #'yankpad-insert
-      (kbd "M-e") #'hippie-expand)
-
-    ;; Enable expanding in minibuffer
-    (add-hook 'minibuffer-setup-hook 'yas-minor-mode)
-    (define-key minibuffer-local-map (kbd "M-e") #'hippie-expand)
 
     ;; Categories returned by the following functions will be used to
     ;; expand snippets
     (setq
      yankpad-auto-category-functions
      '(yankpad-major-mode-category im-current-project-name)))
-#+END_SRC
+#+end_src
 
 I also like to use these snippets outside of Emacs. For this, I defined =im-select-any-snippet=. It let's you select any snippet from the yankpad file (no mode restriction, shows all snippets prefixed with mode name they are defined for) through =completing-read=. Combined with [[id:30465D2E-AB40-4E53-B6EA-9D72F7242700][im-globally]], you can use this outside of Emacs.
 
@@ -4661,6 +4740,7 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
   (defun im-load-snippets-list ()
     (interactive)
     (message ">> Loading snippets...")
+    (require 'yankpad)
     (setq im--all-snippets-cache
           (-mapcat
            (lambda (category)
@@ -4671,7 +4751,8 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
 
   ;; Load snippets for the first time, after the startup
   ;; This may take a bit of time
-  (run-with-timer 30 nil #'im-load-snippets-list)
+  (with-eval-after-load 'org
+    (run-with-timer 5 nil #'im-load-snippets-list))
 
   (defun im-select-any-snippet ()
     "List all templates for all modes and return the applied template
@@ -4693,14 +4774,16 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
 ** git-link
 #+begin_src emacs-lisp
   (use-package git-link
+    :demand t
+    :general
+    (:states 'normal :prefix "<SPC>"
+     "glm" #'im-git-link-merge-requests
+     "gll" #'im-git-link-on-branch
+     "glL" #'im-git-link-commit
+     "glc" #'im-git-link-commit
+     "glh" #'git-link-homepage)
     :config
-    (setq git-link-open-in-browser t)
-    (evil-leader/set-key
-      "glm" 'im-git-link-merge-requests
-      "gll" 'im-git-link-on-branch
-      "glL" 'im-git-link-commit
-      "glc" 'im-git-link-commit
-      "glh" 'git-link-homepage))
+    (setq git-link-open-in-browser t))
 
   (defun im-git-link-homepage ()
     "Like git-link-homepage itself but it does not open in browser, simply returns the address as string."
@@ -4772,15 +4855,14 @@ Provides an interface to xref based on completing-read.
 
 #+begin_src emacs-lisp
   (use-package helpful
-    :config
     ;; Override default help bindings
-    (global-set-key (kbd "C-h f") #'helpful-callable)
-    (global-set-key (kbd "C-h v") #'helpful-variable)
-    (global-set-key (kbd "C-h k") #'helpful-key)
-    (global-set-key (kbd "C-h p") #'helpful-at-point)
-
+    :bind (("C-h f" . helpful-callable)
+           ("C-h v" . helpful-variable)
+           ("C-h k" . helpful-key)
+           ("C-h p" . helpful-at-point))
+    :config
     (evil-define-key 'normal helpful-mode-map
-          "q" 'evil-delete-buffer))
+      "q" 'evil-delete-buffer))
 
   (use-package elisp-demos
     :after helpful
@@ -4799,9 +4881,8 @@ Here, I also bind some keys for convenience. Taken from [[https://github.com/rad
 ** expand-region
 #+begin_src emacs-lisp
   (use-package expand-region
+    :bind (:map evil-normal-state-map ("M-w" . er/expand-region))
     :config
-    (evil-define-key 'normal 'global
-      (kbd "M-w") #'er/expand-region)
     (setq er/try-expand-list (append er/try-expand-list '(im-tree-sitter-mark-bigger-node))))
 
   (defun im-tree-sitter-mark-bigger-node ()
@@ -4826,9 +4907,8 @@ It keeps your indentation working all the time. Seems like a good idea but I hav
 
 #+begin_src emacs-lisp
   (use-package aggressive-indent
+    :hook (emacs-lisp-mode . aggressive-indent-mode)
     :config
-    (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
-    ;; (add-hook 'typescript-mode-hook #'aggressive-indent-mode)
     (add-to-list 'aggressive-indent-protected-commands 'evil-undo)
     (add-to-list 'aggressive-indent-protected-commands 'format-all-buffer))
 #+end_src
@@ -4849,6 +4929,7 @@ Simple mode for editing =~/.Xmodmap= file.
 #+begin_src emacs-lisp
   (use-package slack
     :straight (:host github :repo "isamert/emacs-slack")
+    :defer t
     :config
     (setq slack-log-level 'error)
     ;; ^ info level shows unnecessary stuff that distracts me
@@ -5116,8 +5197,11 @@ Simple mode for editing =~/.Xmodmap= file.
 ** prodigy
 #+begin_src emacs-lisp
   (use-package prodigy
-    :diminish
     :straight (:host github :repo "rejeep/prodigy.el")
+    :hook (after-init . im-prodigy-autostart)
+    :demand t
+    :init
+    (evil-leader/set-key "et" #'prodigy)
     :config
     (evil-define-key 'normal prodigy-mode-map
       "m" #'prodigy-mark
@@ -5130,44 +5214,40 @@ Simple mode for editing =~/.Xmodmap= file.
       "M" #'prodigy-jump-magit
       "t" #'prodigy-add-tag-filter
       "T" #'prodigy-clear-filters
-      (kbd "RET") #'prodigy-display-process)
+      (kbd "RET") #'prodigy-display-process))
 
-    (evil-leader/set-key
-      "et" #'prodigy)
-
-    (defun im-prodigy-autostart ()
-      "Start all services with the `:auto-start' set to non-nil if they
+  (defun im-prodigy-autostart ()
+    "Start all services with the `:auto-start' set to non-nil if they
   are not already started."
-      (interactive)
-      (prodigy-with-refresh
-       (--each
-           prodigy-services
-         (when (and (plist-get it :auto-start)
-                    (not (prodigy-service-started-p it)))
-           (prodigy-start-service it)))))
-
-    (add-hook
-     'after-init-hook
-     #'im-prodigy-autostart))
+    (interactive)
+    (prodigy-with-refresh
+     (--each
+         prodigy-services
+       (when (and (plist-get it :auto-start)
+                  (not (prodigy-service-started-p it)))
+         (prodigy-start-service it)))))
 #+end_src
 ** poporg
 Pop current comment section into an org (or markdown, as it's more widely used for comments) buffer and edit it there. Pretty useful for writing long comments. Use ~poporg-dwim~ on a comment/comment block.
 
 #+begin_src emacs-lisp
   (use-package poporg
+    :bind (:map evil-normal-state-map ("gm" . poporg-dwim))
     :config
     (remove-hook 'poporg-edit-hook 'org-mode)
-    (add-hook 'poporg-edit-hook 'markdown-mode))
+    (add-hook 'poporg-edit-hook 'markdown-mode)
+    (add-hook 'poporg-edit-hook (lambda () (setq header-line-format "`SPC fs' → save and quit, C-c C-c → save")) 90))
 #+end_src
 ** nov.el
 For reading epub files.
 
 #+begin_src emacs-lisp
   (use-package justify-kp
-    :diminish
+    :defer t
     :straight (:host github :repo "Fuco1/justify-kp"))
 
   (use-package nov
+    :mode "\\.epub\\'"
     :config
     ;; Just copied the configuration below from
     ;; https://depp.brause.cc/nov.el/
@@ -5179,7 +5259,6 @@ For reading epub files.
 
     (add-hook 'nov-mode-hook 'visual-line-mode)
     (add-hook 'nov-mode-hook 'visual-fill-column-mode)
-    (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
     (defun im-nov-window-configuration-change-hook ()
       (im-nov-post-html-render-hook)
@@ -5222,6 +5301,7 @@ It lets me display comments of given reddit thread in an org buffer using the =r
 
 #+begin_src emacs-lisp
   (use-package reddigg
+    :defer t
     :config
     (setq reddigg-convert-md-to-org t))
 #+end_src
@@ -5230,19 +5310,23 @@ It lets me display comments of given reddit thread in an org buffer using the =r
 A mode for editing ~jq~ scripts. Mostly using it for ~jq-interactively~ function which enables you to write a jq query and update the buffer accordingly in real time.
 
 #+begin_src emacs-lisp
-  (use-package jq-mode)
+  (use-package jq-mode
+    :mode "\\.jq\\'"
+    :commands jq-interactively)
 #+end_src
 ** imenu-list
 You can also do ~consult-imenu~ and ~embark-collect~ but it does not have a refresh feature.
 
 #+begin_src emacs-lisp
   (use-package imenu-list
-    :config
+    :defer t
+    :init
     (evil-leader/set-key "il" #'imenu-list))
 #+end_src
 ** webpaste
 #+begin_src emacs-lisp
   (use-package webpaste
+    :defer t
     :config
     (setq webpaste-open-in-browser t))
 #+end_src
@@ -5252,43 +5336,11 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
 #+begin_src emacs-lisp
   (use-package wolfram
     :straight (:host github :repo "hsjunnesson/wolfram.el")
+    :defer t
+    :init
+    (evil-leader/set-key "iw" #'wolfram-alpha)
     :config
-    (setq wolfram-alpha-app-id im-wolfram-alpha-app-id)
-    (evil-leader/set-key "iw" #'wolfram-alpha))
-#+end_src
-** xwidget-webkit & xwwp
-#+begin_src emacs-lisp
-  (use-package ctable)
-
-  (use-package xwwp
-    :straight (:host github :repo "BlueFlo0d/xwwp" :files (:defaults "*.el"))
-    :config
-    (require 'xwwp-ace)
-    (evil-define-key '(normal) xwidget-webkit-mode-map
-      ;; TODO: F → xwwp-ace-new-tab-toggle?
-      (kbd "f") #'xwwp-ace-toggle
-      (kbd "^") (λ-interactive (browse-url (xwidget-webkit-uri (xwidget-webkit-current-session))))
-      (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function (xwidget-webkit-uri (xwidget-webkit-current-session))))
-      (kbd "o") #'im-xwidget-webkit-open
-      (kbd "O") (λ-interactive (im-xwidget-webkit-open (read-string "URL: " (xwidget-webkit-uri (xwidget-webkit-current-session)))))
-      (kbd "t") (λ-interactive (im-xwidget-webkit-open (read-string "URL: ") :new-session))
-      (kbd "T") (λ-interactive (im-xwidget-webkit-open (read-string "URL: " (xwidget-webkit-uri (xwidget-webkit-current-session))) :new-session))))
-
-  (defun im-w3m-open-in-xwidget-webkit ()
-    (interactive nil w3m-mode)
-    (xwidget-webkit-browse-url w3m-current-url :new-session))
-
-  (defun im-eww-open-in-xwidget-webkit ()
-    (interactive nil eww-mode)
-    (xwidget-webkit-browse-url (eww-current-url) :new-session))
-
-  (defun im-xwidget-webkit-open (url &optional new-session)
-    (interactive "sURL: ")
-    (xwidget-webkit-browse-url
-     (if (im-url? url)
-         url
-       (concat eww-search-prefix (url-hexify-string url)))
-     new-session))
+    (setq wolfram-alpha-app-id im-wolfram-alpha-app-id))
 #+end_src
 ** org-ai
 There are bunch of Emacs-ChatGPT integrations and org-ai seems to be best as it fits my workflow quite well. Besides being useful in org-mode, it also has org-mode independent features.
@@ -5296,11 +5348,11 @@ There are bunch of Emacs-ChatGPT integrations and org-ai seems to be best as it 
 #+begin_src emacs-lisp
   (use-package org-ai
     :straight (:host github :repo "rksm/org-ai")
+    :hook (org-mode . org-ai-mode)
     :config
     ;; (setq org-ai-default-chat-model "gpt-4")
     (setq org-ai-default-max-tokens 2000)
-    (setq org-ai-openai-api-token im-openai-api-key)
-    (add-hook 'org-mode-hook #'org-ai-mode))
+    (setq org-ai-openai-api-token im-openai-api-key))
 #+end_src
 ** tmr.el -- timers, reminders etc.
 Pretty timers. I forget everything, so it's quite important for me to have a quick way to define timers. I was using ~appt-add~ for this before but it does not let you view/manipulate upcoming timers easily and tmr does this very well with ~tmr-tabulated-view~.
@@ -5310,6 +5362,9 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
 
 #+begin_src emacs-lisp
   (use-package tmr
+    :defer t
+    :init
+    (evil-leader/set-key "N" #'tmr-with-details)
     :config
     ;; Replace the notification function so that it works on my Mac
     (remove-hook 'tmr-timer-finished-functions #'tmr-notification-notify)
@@ -5331,7 +5386,9 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
       (define-key tmr-tabulated-mode-map "d" #'tmr-remove)
       (evil-set-initial-state 'tmr-tabulated-mode 'emacs))
 
-    (evil-leader/set-key "N" #'tmr-with-details))
+    ;; Show upcoming timers in global-mode-string
+    (setq global-mode-string (append global-mode-string '(im-tmr-upcoming-string)))
+    (run-with-timer 1 15 #'im-tmr-format-upcoming))
 
   (defun im-tmr-ack (timer)
     (when (tmr--timer-acknowledgep timer)
@@ -5365,54 +5422,58 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
        (s-prepend " «")
        (s-append "» ")))
     (force-mode-line-update t))
-
-  (setq global-mode-string (append global-mode-string '(im-tmr-upcoming-string)))
-  (run-with-timer 1 15 #'im-tmr-format-upcoming)
 #+end_src
 ** lab.el -- gitlab integration
 #+begin_src emacs-lisp
-  (evil-leader/set-key
-    "gmb" 'lab-list-branch-merge-requests
-    "gmm" 'lab-list-my-merge-requests
-    "gma" 'lab-list-group-merge-requests
-    "gmp" 'lab-list-project-merge-requests
-    "gmc" 'lab-create-merge-request)
-
   (use-package lab
     :straight (:host github :repo "isamert/lab.el")
+    :demand t ;; I use some functions from this package
+    :general
+    (:states 'normal :prefix "<SPC>"
+     "gmb" #'lab-list-branch-merge-requests
+     "gmm" #'lab-list-my-merge-requests
+     "gma" #'lab-list-group-merge-requests
+     "gmp" #'lab-list-project-merge-requests
+     "gmc" #'lab-create-merge-request)
+    :init
+    ;; Add advices for automatically starting to watch pipelines
+    (with-eval-after-load 'magit
+      (define-advice magit-push-current-to-pushremote (:after (&rest _) start-watching-pipeline)
+        (lab-watch-pipeline-for-last-commit)))
+    (with-eval-after-load 'vc
+      (define-advice vc-push (:after (&rest _) start-watching-pipeline)
+        (lab-watch-pipeline-for-last-commit)))
     :config
     (setq lab-main-branch-name "master")
     (setq lab-pipeline-watcher-initial-delay 45)
     (setq lab-host ty-gitlab-url)
     (setq lab-token ty-gitlab-token)
     (setq lab-group ty-gitlab-group)
-    (setq lab-should-open-pipeline-on-manual-action? t)
-
-    (define-advice magit-push-current-to-pushremote (:after (&rest _) start-watching-pipeline)
-      (lab-watch-pipeline-for-last-commit))
-
-    (define-advice vc-push (:after (&rest _) start-watching-pipeline)
-      (lab-watch-pipeline-for-last-commit)))
+    (setq lab-should-open-pipeline-on-manual-action? t))
 #+end_src
 ** activity-watch-mode
 #+begin_src emacs-lisp
   (use-package activity-watch-mode
     :straight (:host github :repo "pauldub/activity-watch-mode")
+    :hook (after-init . global-activity-watch-mode)
     :config
-    (setq activity-watch-project-name-resolvers '(im))
-    (defun activity-watch-project-name-im ()
-      (im-current-project-name))
-    (global-activity-watch-mode))
+    (setq activity-watch-project-name-resolvers '(im)))
+
+  (defun activity-watch-project-name-im ()
+    (im-current-project-name))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
-I use =M-q= (=fill-paragraph=) to break long texts into multiple
-lines. It also works well within comment sections. 80 col length is
-quite readable. See how this item is formatted, it's done
-automatically by the usage of =M-q=.
+I use =M-q= (=fill-paragraph=) to break long texts into multiple lines. It
+also works well within comment sections. 80 col length is quite
+readable. See how this item is formatted, it's done automatically by
+the usage of =M-q=.
+
 
   #+begin_src emacs-lisp
     (setq fill-column 80)
+
+
   #+end_src
 
 ** Spell checking (flyspell) & dictionaries & translation
@@ -5425,28 +5486,31 @@ automatically by the usage of =M-q=.
 See [[https://isamert.net/2021/01/31/emacs-te-turkce-imla-denetimi.html][this]] for rationale behind the following configuration.
 
 #+BEGIN_SRC emacs-lisp
-  (setq ispell-program-name "hunspell"
-        ispell-local-dictionary "en_US"
-        ispell-local-dictionary-alist
-        '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)
-          ("tr_TR" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "tr_TR") nil utf-8)))
-
-  (add-hook 'org-mode-hook 'flyspell-mode)
-  (add-hook 'markdown-mode-hook 'flyspell-mode)
-  (add-hook 'text-mode-hook 'flyspell-mode)
+  (use-package flyspell
+    :straight (:type built-in)
+    :hook ((org-mode . flyspell-mode)
+           (markdown-mode . flyspell-mode)
+           (text-mode . flyspell-mode)
+           (prog-mode . flyspell-prog-mode))
+    :config
+    (setq ispell-program-name "hunspell"
+          ispell-local-dictionary "en_US"
+          ispell-local-dictionary-alist
+          '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)
+            ("tr_TR" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "tr_TR") nil utf-8))))
 #+END_SRC
 
 *** flyspell-correct
 Better way to correct spelling mistakes. By default it uses completing-read. This also makes it easy to save words into personal dictonary or silence warnings for session because it shows these options in the correction menu.
 #+begin_src emacs-lisp
   (use-package flyspell-correct
-    :config
+    :after flyspell
     ;; Rebind default evil ispell keys to flyspell-correct ones
-    (evil-define-key 'normal 'global
-      (kbd "z=") #'flyspell-correct-at-point
-      (kbd "zw") #'flyspell-correct-wrapper))
-      ;; ^ This goes to nearest spelling mistake.
-      ;; If called with C-u, it goes into rapid mode where you correct all mistakes in order.
+    :bind ( :map evil-normal-state-map
+            ("z=" . flyspell-correct-at-point)
+            ;; This goes to nearest spelling mistake.
+            ;; If called with C-u, it goes into rapid mode where you correct all mistakes in order.
+            ("zw" . flyspell-correct-wrapper)))
 #+end_src
 
 *** synosaurus & wordnut
@@ -5455,34 +5519,34 @@ Both synosaurus and wordnut uses ~wordnet~ to work.
 
 #+begin_src emacs-lisp
   (use-package synosaurus
+    :commands synosaurus-choose-and-replace
+    :init
+    (evil-leader/set-key "/s" #'synosaurus-choose-and-replace)
     :config
-    (setq synosaurus-choose-method nil)
-    (evil-leader/set-key
-      "/s" #'synosaurus-choose-and-replace))
+    (setq synosaurus-choose-method nil))
 
   (use-package wordnut
-    :config
-    (evil-define-key 'normal 'global (kbd "K") #'wordnut-lookup-current-word))
+    :bind (:map evil-normal-state-map ("L" . wordnut-lookup-current-word)))
 #+end_src
 
 *** sozluk.el
 Turkish dictionary.
 
 #+begin_src emacs-lisp
-  ;; This is an optional dependency for sozluk.
-  (use-package turkish)
-
   (use-package sozluk
     :straight (:host github :repo "isamert/sozluk.el")
+    :defer t
     :config
     (setq sozluk-include-etymology-on-sozluk t)
     (setq sozluk-deasciify-if-not-found t))
+
+  ;; This is an optional dependency for sozluk.
+  (use-package turkish :after sozluk)
 #+end_src
 
 *** Etymology lookup inside Emacs
 #+begin_src emacs-lisp
-  (evil-leader/set-key
-    "/e" #'im-etymology-en)
+  (evil-leader/set-key "/e" #'im-etymology-en)
 
   (defun im-etymology-en (input)
     "Find and retrieve the given word etymology from etymonline.
@@ -5507,19 +5571,28 @@ Turkish dictionary.
                          (point-max))))
       (goto-char (point-min))))
 #+end_src
-*** Google translate
+*** go-translate -- Google translate
+This is a quite powerful package but implemented a bit weirdly. No
+minor/major modes etc. So it's kind of hard to bind anything in
+translation buffer without fiddling with advices etc. but I don't
+think it's really required. Only binding you need to know is ~h~ (hit it
+on either in insert or emacs mode) to list all available options. For
+example, hitting ~y~ will speak the word using the translation engine.
+
 #+begin_src emacs-lisp
   (use-package go-translate
+    :commands gts-do-translate
+    :general
+    (:states 'normal
+     "T" #'gts-do-translate)
     :config
     (setq gts-translate-list '(("en" "tr") ("tr" "en")))
     (setq gts-buffer-follow-p t)
     (setq gts-default-translator
           (gts-translator
            :picker (gts-prompt-picker)
-           :engines (list (gts-bing-engine) (gts-google-engine) (gts-stardict-engine))
+           :engines (list (gts-google-engine) (gts-bing-engine) (gts-stardict-engine))
            :render (gts-buffer-render))))
-
-  (evil-leader/set-key "T" #'gts-do-translate)
 #+end_src
 
 ** string-inflection
@@ -5530,8 +5603,7 @@ Turkish dictionary.
 
 #+begin_src emacs-lisp
   (use-package string-inflection
-    :config
-    (evil-define-key 'normal 'global (kbd "M-c") #'string-inflection-all-cycle))
+    :bind (:map evil-normal-state-map ("M-c" . string-inflection-all-cycle)))
 #+end_src
 
 ** smartparens
@@ -5540,8 +5612,7 @@ Turkish dictionary.
     :config
     (require 'smartparens-config)
 
-    (evil-define-key*
-      '(normal insert) sp-keymap
+    (evil-define-key* '(normal insert) sp-keymap
       (kbd "M-[") #'sp-forward-barf-sexp
       (kbd "M-]") #'sp-forward-slurp-sexp
       (kbd "M-{") #'sp-backward-slurp-sexp
@@ -5554,6 +5625,7 @@ Gives you a nice, uncluttered editing experience by removing all unneeded visual
 
 #+begin_src emacs-lisp
   (use-package writeroom-mode
+    :commands writeroom-mode
     :config
     (setq writeroom-fullscreen-effect 'maximized)
     (setq writeroom-global-effects nil)
@@ -5573,33 +5645,32 @@ I try to use ~lsp-mode~ and other language-specific packages for the languages I
 
 #+begin_src emacs-lisp
   (use-package dumb-jump
+    :defer t
+    :init
+    (add-hook 'xref-backend-functions #'dumb-jump-xref-activate 90)
     :config
     ;; ag is supported by nearly every rule but rg is not.
     ;; also see: https://github.com/jacktasia/dumb-jump/issues/376
     (setq dumb-jump-force-searcher 'ag)
     (setq dumb-jump-ignore-context t)
-    (setq dumb-jump-fallback-search nil)
-    (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
+    (setq dumb-jump-fallback-search nil))
 
   ;; Call treesit-auto-install-all
   (use-package  treesit-auto
     :straight (:host github :repo "renzmann/treesit-auto")
-    :config
-    (global-treesit-auto-mode))
+    :hook (after-init . global-treesit-auto-mode))
 
   (use-package hl-todo
     :hook (prog-mode . hl-todo-mode)
+    :bind ( :map evil-normal-state-map
+            ("[t" . hl-todo-previous)
+            ("]t" . hl-todo-next))
     :config
-    (setq hl-todo-keyword-faces
-          '(("TODO"   . "#FF0000")
-            ("FIXME"  . "#FF0000")
-            ("DEBUG"  . "#A020F0")
-            ("GOTCHA" . "#FF4500")
-            ("STUB"   . "#1E90FF")))
-
-    (evil-define-key 'normal 'global
-      (kbd "]t") #'hl-todo-next
-      (kbd "[t") #'hl-todo-previous))
+    (setq hl-todo-keyword-faces '(("TODO"   . "#FF0000")
+                                  ("FIXME"  . "#FF0000")
+                                  ("DEBUG"  . "#A020F0")
+                                  ("GOTCHA" . "#FF4500")
+                                  ("STUB"   . "#1E90FF"))))
 #+end_src
 
 ** Highlight thing at point manually
@@ -5646,6 +5717,30 @@ Feed reader.
   - =regex (entries that contains the regex will be shown)
   - +unread +youtube =emacs #10 @5-months-ago
 #+begin_src emacs-lisp
+  (use-package elfeed
+    :commands (elfeed im-elfeed-reload-and-open)
+    :config
+    ;; When adding tags, don't add any hierarchical tags like (blog blog-software), or (metal metal-black)
+    ;; Just use something like: (blog software) and (metal black)
+
+    (load "feeds")
+    (setq elfeed-search-title-max-width 100)
+    (setq elfeed-curl-extra-arguments '("--netrc"))
+    (setq elfeed-feeds (mapcar #'im-elfeed--expand im-feeds))
+    (im-elfeed-auto-tag-url '(("youtube\\.com" youtube)))
+    (im-elfeed-auto-tag-title '(("youtube\\.com" youtube)
+                                ("c\\+\\+"  (programming c++))
+                                ("python"   (programming python))
+                                ("haskell"  (programming haskell))))
+
+    ;; To apply hooks to all existing entries, use: elfeed-apply-hooks-now
+
+    (evil-define-key 'normal elfeed-search-mode-map
+      "o" #'elfeed-search-browse-url
+      "O" #'im-elfeed-search-browse-url-in-default-browser)
+
+    (evil-leader/set-key "ee" #'im-elfeed-reload-and-open))
+
   ;; TODO: experiment with custom faces
   ;; (defface elfeed-comic
   ;;   '((t :foreground "#BFF"))
@@ -5698,29 +5793,6 @@ Feed reader.
         (cons (format "https://github.com/%s/releases.atom" url) tags))
        (listing))))
 
-  (use-package elfeed
-    :config
-    ;; When adding tags, don't add any hierarchical tags like (blog blog-software), or (metal metal-black)
-    ;; Just use something like: (blog software) and (metal black)
-
-    (load "feeds")
-    (setq elfeed-search-title-max-width 100)
-    (setq elfeed-curl-extra-arguments '("--netrc"))
-    (setq elfeed-feeds (mapcar #'im-elfeed--expand im-feeds))
-    (im-elfeed-auto-tag-url '(("youtube\\.com" youtube)))
-    (im-elfeed-auto-tag-title '(("youtube\\.com" youtube)
-                                     ("c\\+\\+"  (programming c++))
-                                     ("python"   (programming python))
-                                     ("haskell"  (programming haskell))))
-
-    ;; To apply hooks to all existing entries, use: elfeed-apply-hooks-now
-
-    (evil-define-key 'normal elfeed-search-mode-map
-      "o" #'elfeed-search-browse-url
-      "O" #'im-elfeed-search-browse-url-in-default-browser)
-
-    (evil-leader/set-key "ee" #'im-elfeed-reload-and-open))
-
   (defun im-elfeed-reload-and-open ()
     "Reload and open elfeed.
   Useful if .elfeed directory is freshly syncned."
@@ -5736,6 +5808,9 @@ Manage media and streams through =completing-read=.
 #+begin_src emacs-lisp
   (use-package empv
     :straight (:host github :repo "isamert/empv.el")
+    :defer t
+    :init
+    (evil-leader/set-key "r" empv-map)
     :config
     (load "radio-channels")
     (setq empv-radio-channels im-radio-channels)
@@ -5750,9 +5825,10 @@ Manage media and streams through =completing-read=.
     (add-to-list 'empv-mpv-args "--save-position-on-quit")
     (add-hook 'empv-init-hook #'empv-override-quit-key)
 
-    (evil-leader/set-key "r" empv-map)
     (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
-    (with-eval-after-load 'embark (empv-embark-initialize-extra-actions)))
+    (with-eval-after-load 'embark (empv-embark-initialize-extra-actions))
+    (with-eval-after-load 'org
+      (add-to-list 'org-file-apps '("\\.\\(mp3\\|ogg\\)\\'" . (lambda (path _str) (empv--play-or-enqueue path))))))
 
   (defun im-export-radio-channels-as-m3u (file)
     "Export radio list into an M3U FILE."
@@ -5784,13 +5860,12 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
 
 #+begin_src emacs-lisp
   (use-package orgmdb
-    :diminish
     :straight (:host github :repo "isamert/orgmdb.el")
+    :bind (:map evil-normal-state-map ("go" . orgmdb-act))
     :config
     (setq orgmdb-omdb-apikey im-orgmdb-omdb-apikey)
     (setq orgmdb-poster-folder "~/Documents/notes/data/posters")
-    (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore actors poster))
-    (evil-define-key 'normal 'global (kbd "go") #'orgmdb-act))
+    (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore actors poster)))
 #+end_src
 ** erc (IRC client)
 IRC client for Emacs.
@@ -5808,6 +5883,7 @@ IRC client for Emacs.
 
 #+begin_src elisp
   (use-package erc
+    :commands erc
     :config
 
     ;; More compact and cleaner look, nicks and messages are in seperate
@@ -5953,16 +6029,17 @@ Using [w and ]w, I can jump between statements. For
 Automatically format file with ~format-all-buffer~. It recognizes most language formatters/linters.
 
 #+begin_src emacs-lisp
-  (use-package format-all)
+  (use-package format-all
+    :commands (format-all-buffer format-all-region))
 #+end_src
 
 /Apheleia/ is like ~format-all~ but works async and automatically formats on buffer save.  I keep both of them because somethimes I need ~format-all-buffer~ and it works with more formatters.
 
 #+begin_src emacs-lisp
   (use-package apheleia
-    :config
-    (apheleia-global-mode +1)
-    (defalias 'im-toggle-auto-code-format #'apheleia-mode))
+    :hook (after-init . apheleia-global-mode)
+    :init
+    (defalias 'im-toggle-auto-code-formatter #'apheleia-mode))
 #+end_src
 
 *** editorconfig -- Pick up .editorconfig settings
@@ -5970,21 +6047,37 @@ Pick up ~.editorconfig~ settings for current project automatically.
 
 #+begin_src emacs-lisp
   (use-package editorconfig
-    :config
-    (editorconfig-mode 1))
+    :hook (after-init . editorconfig-mode))
 #+end_src
 
 *** Display/get currently focused function name in modeline
 #+begin_src emacs-lisp
-  (which-function-mode)
+  (use-package which-function
+    :straight (:type built-in)
+    :hook (after-init . which-function-mode))
+#+end_src
+*** eval functions
+#+begin_src emacs-lisp
+  (defun im-eval-dwim (lastf regionf defunf)
+    "Generate an interactive function that you can bind to a key
+  which calls LASTF, REGIONF or DEFUNF."
+    (lambda ()
+      (interactive)
+      (cond
+       ((use-region-p)
+        (call-interactively regionf))
+       ((or (-contains? '(?\) ?\") (char-before))
+            (-contains? '(?\ ?\)) (char-after)))
+        (call-interactively lastf))
+       (t
+        (call-interactively defunf)))))
 #+end_src
 ** Refactoring (emr)
 #+begin_src emacs-lisp
   ;; FIXME: Somehow, the usage of  popup.el breaks tab-bar
   (use-package emr
-    :config
-    (evil-define-key 'normal prog-mode-map (kbd "gR") #'emr-show-refactor-menu)
-    (define-key popup-menu-keymap [escape] 'keyboard-quit))
+    :bind ( :map evil-normal-state-map ("gR" . emr-show-refactor-menu)
+            :map popup-menu-keymap ([escape] . keyboard-quit)))
 #+end_src
 
 ** markdown
@@ -5992,10 +6085,10 @@ Pick up ~.editorconfig~ settings for current project automatically.
   (use-package markdown-mode
     :mode
     (("README\\.md\\'" . gfm-mode)
-     ("\\.md\\'" . markdown-mode)
-     ("\\.markdown\\'" . markdown-mode)
-     ("\\.txt\\'" . markdown-mode)
-     ("qutebrowser-editor-" . markdown-mode))
+     ("\\.md\\'" . gfm-mode)
+     ("\\.markdown\\'" . gfm-mode)
+     ("\\.txt\\'" . gfm-mode)
+     ("qutebrowser-editor-" . gfm-mode))
     :config
     (setq markdown-command "multimarkdown")
     (setq markdown-fontify-code-blocks-natively t)
@@ -6013,27 +6106,26 @@ Pick up ~.editorconfig~ settings for current project automatically.
 
 ** haskell
 #+BEGIN_SRC emacs-lisp
-  (use-package haskell-mode)
+  (use-package haskell-mode
+    :mode "\\.hs\\'")
 
   (use-package lsp-haskell
+    :after (lsp haskell)
     :config
     (setq lsp-haskell-process-path-hie "ghcide"
           lsp-haskell-process-args-hie '()))
 
   (use-package ormolu
-    :hook (haskell-mode . ormolu-format-on-save-mode)
-    :bind
-    (:map haskell-mode-map
-          ("C-c r" . ormolu-format-buffer)))
+    :hook (haskell-mode . ormolu-format-on-save-mode))
 #+END_SRC
 
 ** rust
 #+BEGIN_SRC emacs-lisp
-(use-package rust-mode
-  :after (lsp-mode)
-  (setq lsp-rust-server 'rust-analyzer
-        lsp-rust-clippy-preference 'on))
-;; (setq lsp-rust-server 'rls)
+  (use-package rust-mode
+    :mode "\\.rs\\'"
+    :config
+    (setq lsp-rust-server 'rust-analyzer
+          lsp-rust-clippy-preference 'on))
 #+END_SRC
 
 ** javascript
@@ -6042,16 +6134,23 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
 
 #+begin_src emacs-lisp
   (use-package jsdoc
-    :diminish
+    :commands jsdoc
     :straight (:host github :repo "isamert/jsdoc.el"))
 #+end_src
 
-*** subword-mode
-The following enables =CamelCase= aware editing operations.
+*** Add node_modules/.bin to PATH automatically
 #+begin_src emacs-lisp
-(add-hook 'js-mode-hook #'subword-mode)
-#+end_src
+  (defun im-add-node-modules-to-path ()
+    "Add node_modules/.bin to `exec-path'."
+    (interactive)
+    (-some--> (locate-dominating-file "." "node_modules")
+      (expand-file-name it)
+      (f-join it "node_modules/.bin")
+      (setq-local exec-path `(,it ,@exec-path))))
 
+  (add-hook 'js-ts-mode-hook #'im-add-node-modules-to-path)
+  (add-hook 'eshell-mode-hook #'im-add-node-modules-to-path)
+#+end_src
 *** Helper functions
 #+begin_src emacs-lisp
   ;; TODO make this idempotent, it breaks absolute imports
@@ -6109,20 +6208,6 @@ The following enables =CamelCase= aware editing operations.
          (current-buffer)
          t)
       (user-error "Select something first")))
-#+end_src
-*** Add node_modules/.bin to PATH automatically
-#+begin_src emacs-lisp
-  (defun im-add-node-modules-to-path ()
-    "Add node_modules/.bin to `exec-path'."
-    (interactive)
-    (-some--> (locate-dominating-file "." "node_modules")
-      (expand-file-name it)
-      (f-join it "node_modules/.bin")
-      (setq-local exec-path `(,it ,@exec-path))))
-
-  (add-hook 'js-mode-hook #'im-add-node-modules-to-path)
-  (add-hook 'js2-mode-hook #'im-add-node-modules-to-path)
-  (add-hook 'eshell-mode-hook #'im-add-node-modules-to-path)
 #+end_src
 *** Debug helpers
 #+begin_src emacs-lisp
@@ -6268,7 +6353,7 @@ The following enables =CamelCase= aware editing operations.
   (defun im-deno-start-repl ()
     "Start (or restart, if already running) the Deno REPL on the background."
     (interactive)
-    (unless (im-deno-is-repl-running?)
+    (when (im-deno-is-repl-running?)
       (delete-process im-deno-repl-process))
     (let ((deno (start-process "*deno-repl*" "*deno-repl*" "deno" "repl" "--allow-net")))
       (setq im-deno-repl-process deno)
@@ -6305,10 +6390,19 @@ The following enables =CamelCase= aware editing operations.
 Here are some functions that I use while developing with Deno.
 
 #+begin_src emacs-lisp
+  ;; TODO: Generalize LSP client switching
   (defun im-lsp-switch-to-deno ()
     "Start `deno' lsp in current buffer."
     (interactive)
     (let ((lsp-enabled-clients '(deno-ls)))
+      (ignore-errors
+        (funcall-interactively #'lsp-workspace-shutdown))
+      (lsp)))
+
+  (defun im-lsp-switch-to-nodejs ()
+    "Start `deno' lsp in current buffer."
+    (interactive)
+    (let ((lsp-enabled-clients '(ts-ls)))
       (ignore-errors
         (funcall-interactively #'lsp-workspace-shutdown))
       (lsp)))
@@ -6468,21 +6562,17 @@ I work with JSON a lot. Here I have some functions that let's you run given expr
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-java
     :after lsp
+    :demand t
     :config
-    (setq-default c-basic-offset 4)
-    ;; ^ This is required for java-ts-mode, otherwise it fails for some reason.
+    ;; This is required for java-ts-mode, otherwise it fails for some reason.
     ;; https://github.com/emacs-lsp/lsp-mode/issues/3135#issuecomment-933539371
-    )
-#+END_SRC
+    (setq-default c-basic-offset 4)
+    (defun im-lsp-java-find-lombok-jar ()
+      (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>)))
 
-*** Fix LSP and Lombok interaction
-#+begin_src emacs-lisp
-  (defun im-lsp-java-find-lombok-jar ()
-    (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>)))
-
-  ;; This is required to make lsp work well with Lombok
-  (when-let (lombok (im-lsp-java-find-lombok-jar))
-    (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok))))
+    ;; This is required to make lsp work well with Lombok
+    (when-let (lombok (im-lsp-java-find-lombok-jar))
+      (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok)))))
 #+end_src
 *** Supplementary functions
 #+begin_src emacs-lisp
@@ -6562,7 +6652,7 @@ Here is the current workflow I use:
 
 #+begin_src emacs-lisp
   (use-package cider
-    :after clojure-mode
+    :after clojure
     :config
     (setq cider-inspector-page-size 50)
     (setq cider-show-error-buffer nil)
@@ -6576,44 +6666,29 @@ Here is the current workflow I use:
 
     ;; `compojure' indent
     (define-clojure-indent
-      (defroutes 'defun)
-      (GET 2)
-      (POST 2)
-      (PUT 2)
-      (DELETE 2)
-      (HEAD 2)
-      (ANY 2)
-      (OPTIONS 2)
-      (PATCH 2)
-      (rfn 2)
-      (let-routes 1)
-      (context 2)))
-
-  ;; TODO use this for all lispy langs
-  (defun im-eval-dwim (lastf regionf defunf)
-    "Generate an interactive function that you can bind to a key
-  which calls LASTF, REGIONF or DEFUNF."
-    (lambda ()
-      (interactive)
-      (cond
-       ((use-region-p)
-        (call-interactively regionf))
-       ((or (-contains? '(?\) ?\") (char-before))
-            (-contains? '(?\ ?\)) (char-after)))
-        (call-interactively lastf))
-       (t
-        (call-interactively defunf)))))
+     (defroutes 'defun)
+     (GET 2)
+     (POST 2)
+     (PUT 2)
+     (DELETE 2)
+     (HEAD 2)
+     (ANY 2)
+     (OPTIONS 2)
+     (PATCH 2)
+     (rfn 2)
+     (let-routes 1)
+     (context 2)))
 #+end_src
 
 ** common-lisp
 #+begin_src emacs-lisp
   (use-package slime
+    :hook (lisp-mode . slime-mode)
     :config
-    (setq inferior-lisp-program "sbcl"))
-
-  (evil-define-key 'normal lisp-mode-map (kbd "K") #'slime-documentation)
-  (evil-leader/set-key-for-mode 'lisp-mode
-    ";" (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region))
+    (setq inferior-lisp-program "sbcl")
+    (evil-define-key 'normal lisp-mode-map (kbd "K") #'slime-documentation)
+    (evil-leader/set-key-for-mode 'lisp-mode
+      ";" (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region)))
 #+end_src
 ** emmet-mode
 Hit <C-j> after these and get:
@@ -6625,21 +6700,23 @@ Hit <C-j> after these and get:
 - =a>b>c= ~<a href=""><b><c></c></b></a>~
 - =b*3= ~<b></b><b></b><b></b>~
 #+BEGIN_SRC emacs-lisp
-(use-package emmet-mode
-  :hook (js-mode css-mode sgml-mode web-mode tsx-mode)
-  :init
-  (setq emmet-expand-jsx-className? t
-        emmet-self-closing-tag-style " /"))
+  (use-package emmet-mode
+    :hook (js-mode css-mode sgml-mode web-mode tsx-mode)
+    :init
+    (setq emmet-expand-jsx-className? t
+          emmet-self-closing-tag-style " /"))
 #+END_SRC
 
 ** r
 #+BEGIN_SRC emacs-lisp
-(use-package ess)
+  (use-package ess
+    :mode "\\.r\\'")
 #+END_SRC
 
 ** kotlin
 #+BEGIN_SRC emacs-lisp
   (use-package kotlin-mode
+    :mode "\\.kt\\'"
     :config
     (evil-leader/set-key-for-mode 'kotlin-mode
       ";" (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line)
@@ -6651,14 +6728,14 @@ Hit <C-j> after these and get:
 
 ** gradle/groovy
 #+BEGIN_SRC emacs-lisp
-(use-package groovy-mode
-  :config
-  (add-to-list 'auto-mode-alist '("\\.gradle\\'" . groovy-mode)))
+  (use-package groovy-mode
+    :mode "\\.gradle\\'")
 #+END_SRC
 
 ** yaml
 #+begin_src emacs-lisp
-(use-package yaml-mode)
+  (use-package yaml-mode
+    :mode ("\\.yaml\\'" "\\.yml\\'"))
 #+end_src
 
 ** elisp
@@ -6679,10 +6756,9 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 
 #+begin_src emacs-lisp
   (use-package eros
-    :diminish
     :straight (:host github :repo "isamert/eros")
+    :hook (after-init . eros-mode)
     :config
-    (eros-mode 1)
     (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1)))
     (evil-leader/set-key
       ";"  (im-eval-dwim #'eros-eval-last-sexp #'eval-region #'eros-eval-defun)
@@ -6788,16 +6864,106 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 
 *** Linting & package development
 #+begin_src emacs-lisp
-  (use-package package-lint)
+  (use-package package-lint
+    :commands package-lint-current-buffer)
+
   (use-package flycheck-package
-    :after 'flycheck
+    :after flycheck
     :config (flycheck-package-setup))
 #+end_src
 
-*** Other
+*** Folding
 #+begin_src emacs-lisp
   (add-hook 'emacs-lisp-mode-hook #'hs-minor-mode)
   (add-hook 'lisp-interaction-mode-hook #'hs-minor-mode)
+#+end_src
+*** Indentation fix
+#+begin_src emacs-lisp
+  ;; Taken from: https://github.com/Fuco1/.emacs.d/blob/2c302dcbedf2722c5c412b6a6d3e3258f6ac1ccf/site-lisp/my-redef.el#LL18C1-L100C62
+  ;; Redefines the silly indent of keyword lists
+  ;; before
+  ;;   (:foo bar
+  ;;         :baz qux)
+  ;; after
+  ;;   (:foo bar
+  ;;    :baz qux)
+  (eval-after-load "lisp-mode"
+    '(defun lisp-indent-function (indent-point state)
+       "This function is the normal value of the variable `lisp-indent-function'.
+  The function `calculate-lisp-indent' calls this to determine
+  if the arguments of a Lisp function call should be indented specially.
+
+  INDENT-POINT is the position at which the line being indented begins.
+  Point is located at the point to indent under (for default indentation);
+  STATE is the `parse-partial-sexp' state for that position.
+
+  If the current line is in a call to a Lisp function that has a non-nil
+  property `lisp-indent-function' (or the deprecated `lisp-indent-hook'),
+  it specifies how to indent.  The property value can be:
+
+  ,* `defun', meaning indent `defun'-style
+    \(this is also the case if there is no property and the function
+    has a name that begins with \"def\", and three or more arguments);
+
+  ,* an integer N, meaning indent the first N arguments specially
+    (like ordinary function arguments), and then indent any further
+    arguments like a body;
+
+  ,* a function to call that returns the indentation (or nil).
+    `lisp-indent-function' calls this function with the same two arguments
+    that it itself received.
+
+  This function returns either the indentation to use, or nil if the
+  Lisp function does not specify a special indentation."
+       (let ((normal-indent (current-column))
+             (orig-point (point)))
+         (goto-char (1+ (elt state 1)))
+         (parse-partial-sexp (point) calculate-lisp-indent-last-sexp 0 t)
+         (cond
+          ;; car of form doesn't seem to be a symbol, or is a keyword
+          ((and (elt state 2)
+                (or (not (looking-at "\\sw\\|\\s_"))
+                    (looking-at ":")))
+           (if (not (> (save-excursion (forward-line 1) (point))
+                       calculate-lisp-indent-last-sexp))
+               (progn (goto-char calculate-lisp-indent-last-sexp)
+                      (beginning-of-line)
+                      (parse-partial-sexp (point)
+                                          calculate-lisp-indent-last-sexp 0 t)))
+           ;; Indent under the list or under the first sexp on the same
+           ;; line as calculate-lisp-indent-last-sexp.  Note that first
+           ;; thing on that line has to be complete sexp since we are
+           ;; inside the innermost containing sexp.
+           (backward-prefix-chars)
+           (current-column))
+          ((and (save-excursion
+                  (goto-char indent-point)
+                  (skip-syntax-forward " ")
+                  (not (looking-at ":")))
+                (save-excursion
+                  (goto-char orig-point)
+                  (looking-at ":")))
+           (save-excursion
+             (goto-char (+ 2 (elt state 1)))
+             (current-column)))
+          (t
+           (let ((function (buffer-substring (point)
+                                             (progn (forward-sexp 1) (point))))
+                 method)
+             (setq method (or (function-get (intern-soft function)
+                                            'lisp-indent-function)
+                              (get (intern-soft function) 'lisp-indent-hook)))
+             (cond ((or (eq method 'defun)
+                        (and (null method)
+                             (> (length function) 3)
+                             (string-match "\\`def" function)))
+                    (lisp-indent-defform state indent-point))
+                   ((integerp method)
+                    (lisp-indent-specform method state
+                                          indent-point normal-indent))
+                   (method
+                    (funcall method indent-point state)))))))))
+
 #+end_src
 ** Racket
 - Open a racket buffer.
@@ -6806,6 +6972,7 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 
 #+begin_src emacs-lisp
   (use-package racket-mode
+    :mode "\\.rkt\\'"
     :config
     (evil-leader/set-key-for-mode 'racket-mode
       ";" #'racket-eval-last-sexp
@@ -6815,7 +6982,6 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 ** dhall
 #+begin_src emacs-lisp
   (use-package dhall-mode
-    :diminish dhall-format-on-save-mode
     :mode "\\.dhall\\'"
     :config
     ;; I use dhall-lsp-server, so I don't need this
@@ -6845,13 +7011,13 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 
 ** swift
 #+begin_src emacs-lisp
-  (use-package swift-mode)
+  (use-package swift-mode :defer t)
 #+end_src
 
 ** scheme
 #+begin_src emacs-lisp
-  ;; Scheme
   (use-package geiser
+    :commands geiser
     :config
     (setq geiser-debug-jump-to-debug-p nil)
     (setq geiser-default-implementation 'guile)
@@ -6877,6 +7043,7 @@ A package for  managing docker.
 
 #+begin_src emacs-lisp
   (use-package docker
+    :defer t
     :config
     (evil-define-key 'normal docker-container-mode-map (kbd "a") #'docker-container-help)
     (evil-define-key 'normal docker-image-mode-map     (kbd "a") #'docker-image-help)
@@ -6891,6 +7058,7 @@ A package for  managing docker.
 
 #+begin_src emacs-lisp
   (use-package kubernetes
+    :defer t
     :config
     (setq kubernetes-poll-frequency 3600)
     (setq kubernetes-redraw-frequency 3600)
@@ -6906,18 +7074,23 @@ A package for  managing docker.
 Mostly for editing tridactyl and sometimes real vimrc.
 
 #+begin_src emacs-lisp
-  (use-package vimrc-mode)
+  (use-package vimrc-mode
+    :defer t)
 #+end_src
 
 ** Graphviz/dot
 #+begin_src emacs-lisp
-  (use-package graphviz-dot-mode)
+  (use-package graphviz-dot-mode
+    :mode ("\\.dot\\'" "\\.gv\\'"))
 #+end_src
 ** PlantUML
 #+begin_src emacs-lisp
   (use-package plantuml-mode
+    :mode "\\.\\(plantuml\\|pum\\|plu\\)\\'"
+    :init
+    (with-eval-after-load 'org
+      (add-to-list 'org-src-lang-modes '("plantuml" . plantuml)))
     :config
-    (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
     (setq plantuml-default-exec-mode 'jar)
     (setq plantuml-jar-path "/nix/store/q0v5nv70zc23fx4hjgghnqf7lvydr6fq-plantuml-1.2021.3/lib/plantuml.jar")
     (setq org-plantuml-jar-path plantuml-jar-path))
@@ -6926,8 +7099,8 @@ Mostly for editing tridactyl and sometimes real vimrc.
 Install couchbase-query package for running interactive queries inside emacs.
 #+begin_src emacs-lisp
   (use-package couchbase-query
-    :diminish
     :straight (:host github :repo "isamert/couchbase-query.el")
+    :defer t
     :config
     (setq couchbase-query-command "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/cbq"))
 #+end_src
@@ -7145,8 +7318,8 @@ For working with [[id:DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983][KMonad]] kbd files. 
 
 #+begin_src emacs-lisp
   (use-package kbd-mode
-    :diminish
     :straight (:host github :repo "kmonad/kbd-mode")
+    :mode "\\.kbd\\'"
     :config
     (setq kbd-mode-kill-kmonad "pkill -9 kmonad")
     (setq kbd-mode-start-kmonad "kmonad ~/.config/kmonad.kbd"))
@@ -7154,11 +7327,13 @@ For working with [[id:DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983][KMonad]] kbd files. 
 
 ** lua-mode
 #+begin_src emacs-lisp
-  (use-package lua-mode)
+  (use-package lua-mode
+    :mode "\\.lua\\'")
 #+end_src
 ** jsonnet-mode
 #+begin_src emacs-lisp
   (use-package jsonnet-mode
+    :mode ("\\.jsonnet\\'" "\\.libsonnet\\'")
     :config
     ;; Apheleia config, so that it automatically formats on save
     (setf (alist-get 'jsonnet apheleia-formatters) '("jsonnetfmt" "-"))
@@ -7231,7 +7406,7 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
   (setq tab-line-tabs-function #'im-tab-line-buffers)
   (setq tab-line-tab-name-function #'tab-line-tab-name-truncated-buffer)
   (setq tab-line-tab-name-truncated-max 25)
-  (global-tab-line-mode)
+  ;; (global-tab-line-mode)
 
   (defvar im-tab-line-hidden-buffer-name-regexp
     (concat
@@ -7277,22 +7452,28 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
 
 ** tabgo.el
 #+begin_src emacs-lisp
-  (use-package tabgo :straight (:host github :repo "isamert/tabgo.el"))
-  (evil-define-key 'normal 'global (kbd "M-t") #'tabgo)
-  (evil-define-key 'normal 'evil-org-mode (kbd "M-t") #'tabgo)
+  (use-package tabgo
+    :straight (:host github :repo "isamert/tabgo.el")
+    :general
+    (:states 'normal
+     "M-t" #'tabgo)
+    (:states 'normal :keymaps 'evil-org-mode-keymap
+     "M-t" #'tabgo))
 #+end_src
 ** bufler
 Good for buffer management, especially for groupped killings.
 
 #+begin_src emacs-lisp
   (use-package bufler
+    :commands (bufler)
     :config
     (evil-define-key 'normal bufler-list-mode-map
-      (kbd "q") 'quit-window
-      (kbd "x") 'bufler-list-buffer-kill
-      (kbd "<return>") 'bufler-list-buffer-switch
-      (kbd "M-,") 'bufler-list-buffer-peek
-      (kbd "p") 'bufler-list-buffer-peek))
+      (kbd "q") #'quit-window
+      (kbd "x") #'bufler-list-buffer-kill
+      (kbd "<return>") #'bufler-list-buffer-switch
+      (kbd "<tab>") #'magit-section-cycle
+      (kbd "M-,") #'bufler-list-buffer-peek
+      (kbd "p") #'bufler-list-buffer-peek))
 #+end_src
 
 ** Functions
@@ -7739,14 +7920,14 @@ Good for buffer management, especially for groupped killings.
         (let* ((action
                 (completing-read
                  (format "Act on %s: " (s-truncate 20 .fields.summary))
-                 '("Open" "View" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Raw" "[Cancel]"))))
+                 '("View" "Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Raw" "[Cancel]"))))
           (pcase action
+            ("View"
+             (im-jira-view-ticket .key)
+             (cl-return))
             ("Open"
              (with-default-browser
               (im-open-jira-issue .key))
-             (cl-return))
-            ("View"
-             (im-jira-view-ticket .key)
              (cl-return))
             ("Update"
              (im-jira-update-ticket .key .fields.summary .fields.description)
@@ -9804,6 +9985,24 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
       (abort-recursive-edit)))
 
   (define-key minibuffer-local-map (kbd "M-|") #'im-minibuffer-to-table)
+#+end_src
+** im-pair-prog-mode -- Minor mode for pair programming
+#+begin_src emacs-lisp
+  (define-minor-mode im-pair-prog-mode
+    "Pair programming mode so that everyone can enjoy the beauty of Emacs."
+    :lighter " PairProg"
+    :global t
+    (unless im-pair-prog-mode
+      (message "Restoring normal environment...")
+      (global-display-line-numbers-mode -1)
+      (default-text-scale-reset)
+      (message "Restoring normal environment...Done."))
+    (when im-pair-prog-mode
+      (message "Preparing pair programming environment...")
+      (global-display-line-numbers-mode t)
+      (default-text-scale-increment (* 2 default-text-scale-amount))
+      (message "Preparing pair programming environment...Done.")))
+
 #+end_src
 * Operating system related
 ** Sound output chooser
