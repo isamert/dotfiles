@@ -263,6 +263,7 @@ It can be installed through homebrew:
   # toggle window zoom
   lcmd - d : yabai -m window --toggle zoom-parent
   lcmd - f : yabai -m window --toggle zoom-fullscreen
+  shift + lcmd - f : yabai -m window --toggle native-fullscreen
 
   # toggle window split type
   # alt - e : yabai -m window --toggle split
