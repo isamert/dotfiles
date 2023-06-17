@@ -6164,6 +6164,14 @@ Pick up ~.editorconfig~ settings for current project automatically.
     :straight (:type built-in)
     :hook (after-init . which-function-mode))
 #+end_src
+*** origami-mode -- Folding
+I generally use the built-in hs-minor-mode but it does not work with all languages. Origami is a more generic solution that works fairly well.
+
+#+begin_src emacs-lisp
+  (use-package origami
+    :hook (yaml-mode . origami-mode)
+    :straight (:host github :repo "gregsexton/origami.el"))
+#+end_src
 *** Other
 #+begin_src emacs-lisp
   (defun im-eval-dwim (lastf regionf defunf)
@@ -6682,6 +6690,8 @@ I work with JSON a lot. Here I have some functions that let's you run given expr
 #+begin_src emacs-lisp
   ;; Set default indent to 2
   (setq java-ts-mode-indent-offset 2)
+  ;; hs-minor-mode works well with c-like languages
+  (add-hook 'java-ts-mode-hook #'hs-minor-mode)
 
   (use-package lsp-java
     :demand t
