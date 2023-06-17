@@ -2642,7 +2642,15 @@ When I enter any of the listed directories, eshell automatically prints out my n
                   (widen)
                   (org-find-exact-headline-in-buffer projdir))))
       (unless pos
-        (user-error "Doc not found directory: %s" projdir))
+        (if (y-or-n-p "Note not found for this project. Want to create?")
+            (with-current-buffer buf
+              (widen)
+              (goto-char (point-max))
+              (org-insert-heading nil nil t)
+              (org-edit-headline projdir)
+              (org-set-property "CREATED_AT" (concat "[" (im-today) "]"))
+              (setq pos (point)))
+          (user-error "Doc not found directory: %s" projdir)))
       (switch-to-buffer buf)
       (goto-char pos)
       (org-fold-show-entry)
