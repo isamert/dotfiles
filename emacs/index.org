@@ -5552,6 +5552,12 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
       (define-advice vc-push (:after (&rest _) start-watching-pipeline)
         (lab-watch-pipeline-for-last-commit)))
     :config
+    ;; Automatically refresh projects list after cloning a project
+    (add-hook 'lab-after-git-clone-functions #'im-load-projects-list)
+    ;; And jump to that project
+    (add-hook 'lab-after-git-clone-functions (lambda () (dired default-directory)))
+
+    (setq lab-projects-directory "~/Workspace/projects/")
     (setq lab-main-branch-name "master")
     (setq lab-pipeline-watcher-initial-delay 45)
     (setq lab-host ty-gitlab-url)
