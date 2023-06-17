@@ -3390,12 +3390,12 @@ To sync it automatically:
           (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
           (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
           (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
-          (".*\\(youtube.com\\|youtu.be\\)/watch.*" . (lambda (link &rest _) (empv--play-or-enqueue link)))
+          (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . (lambda (link &rest _) (empv--play-or-enqueue link)))
           (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
           (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
           (".*github.com/.*issues/.*" . (lambda (link &rest _) (im-github-issue-view link)))
           (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . browse-url-firefox)
-          ("." . im-eww)))
+          ("." . (lambda (link &rest _) (im-eww link)))))
 
   (use-package eww
     :commands eww
@@ -7571,11 +7571,12 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
 #+begin_src emacs-lisp
   (use-package tabgo
     :straight (:host github :repo "isamert/tabgo.el")
+    :demand t
     :general
     (:states 'normal
-     "M-t" #'tabgo)
+     "M-r" #'tabgo)
     (:states 'normal :keymaps 'evil-org-mode-keymap
-     "M-t" #'tabgo))
+     "M-r" #'tabgo))
 #+end_src
 ** bufler
 Good for buffer management, especially for groupped killings.
