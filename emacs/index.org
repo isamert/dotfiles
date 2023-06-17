@@ -184,12 +184,6 @@ Some basic variable and function definitions that will be used in configuration.
        (nth 0 bounds)
        (nth 1 bounds))))
 
-  (defmacro with-completing-read-exact-order (&rest body)
-    "Disable any kind of sorting in completing read."
-    `(let ((selectrum-should-sort nil)
-           (vertico-sort-function nil))
-       ,@body))
-
   (defun im-shell-command-to-string (cmd)
     "Like `shell-command-to-string' but only stdout is returned."
     (string-trim
@@ -3671,13 +3665,7 @@ Note that it's not possible to stage hunks with =vc=.
   (use-package git-timemachine
     :general
     (:states '(normal visual) :prefix "<SPC>"
-     "gt" #'git-timemachine-toggle)
-    :config
-    ;; Override completing-read function to make it use
-    ;; `completing-read' no matter what
-    (defun git-timemachine-completing-read-fn (&rest args)
-      (with-completing-read-exact-order
-       (apply 'completing-read args))))
+     "gt" #'git-timemachine-toggle))
 #+end_src
 
 *** magit-delta (for diff syntax highlighting)
@@ -5172,17 +5160,13 @@ Simple mode for editing =~/.Xmodmap= file.
   (defun im-slack-last-messages ()
     "List and open rooms that had new messages in them recently."
     (interactive)
-    (with-completing-read-exact-order
-     (let* ((rooms
-             (-uniq
-              (--map
-               (cons
-                (let-plist it
-                  (format "%s (%s: %s)" .room-name .sender-name .message-string))
-                it)
-               im-slack--last-messages)))
-            (selected (im-alist-completing-read "Select message: " rooms)))
-       (im-slack--open-message-or-thread selected))))
+    (im-slack--open-message-or-thread
+     (empv--completing-read-object
+      "Select message: "
+      im-slack--last-messages
+      :formatter
+      (lambda (it)
+        (let-plist it (format "%s (%s: %s)" .room-name .sender-name .message-string))))))
 
   (defun im-slack-send-message (msg)
     "Send given MSG or selected region as message to interactively
@@ -7849,16 +7833,18 @@ Good for buffer management, especially for groupped killings.
 
   (defun im-jira-list-issues (&optional arg)
     (interactive "P")
-    (thread-last (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban" "Board" "JQL"))
-                   ("My issues" (im-jira-get-my-issues))
-                   ("New issues" (im-jira-get-new-issues))
-                   ("Current Sprint" (im-jira-get-current-sprint-issues))
-                   ("Board" (im-jira-get-board-issues))
-                   ("Kanban" (im-jira-get-kanban-issues))
-                   ("JQL" (call-interactively #'im-jira-jql)))
-                 (--map (cons (im-jira--format-ticket-name it) it))
-                 (im-alist-completing-read "Select ticket: ")
-                 (im-jira-issue-actions)))
+    (im-jira-issue-actions
+     (empv--completing-read-object
+      "Select ticket: "
+      (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban" "Board" "JQL"))
+        ("My issues" (im-jira-get-my-issues))
+        ("New issues" (im-jira-get-new-issues))
+        ("Current Sprint" (im-jira-get-current-sprint-issues))
+        ("Board" (im-jira-get-board-issues))
+        ("Kanban" (im-jira-get-kanban-issues))
+        ("JQL" (call-interactively #'im-jira-jql)))
+      :formatter #'im-jira--format-ticket-name
+      :sort? nil)))
 
   (defun im-jira-ticket-to-branch (key summary)
     "Create a new branch from given ISSUE-NAME and switch to it."
@@ -8057,42 +8043,42 @@ Good for buffer management, especially for groupped killings.
     (interactive
      (list (jiralib2-get-issue (read-string "Jira issue: " (or (im-jira-issue-at-point) "")))))
     (cl-loop
-     (with-completing-read-exact-order
-      (let-alist issue
-        (let* ((action
-                (completing-read
-                 (format "Act on %s: " (s-truncate 20 .fields.summary))
-                 '("View" "Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Raw" "[Cancel]"))))
-          (pcase action
-            ("View"
-             (im-jira-view-ticket .key)
-             (cl-return))
-            ("Open"
-             (with-default-browser
-              (im-open-jira-issue .key))
-             (cl-return))
-            ("Update"
-             (im-jira-update-ticket .key .fields.summary .fields.description)
-             (cl-return))
-            ("To branch"
-             (im-jira-ticket-to-branch .key .fields.summary)
-             (cl-return))
-            ("To worktree"
-             (im-jira-ticket-to-worktree .key .fields.summary)
-             (cl-return))
-            ("Assign to..."
-             (jiralib2-assign-issue
-              .key
-              (alist-get 'name (im-jira--select-user))))
-            ("Change status"
-             (im-jira-change-issue-status .key))
-            ("Insert as task"
-             (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
-            ("Raw"
-             (im-json-encode-and-show issue)
-             (cl-return))
-            ("[Cancel]"
-             (cl-return))))))))
+     (let-alist issue
+       (let* ((action
+               (empv--completing-read-object
+                (format "Act on %s: " (s-truncate 20 .fields.summary))
+                '("View" "Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Raw" "[Cancel]")
+                :sort? nil)))
+         (pcase action
+           ("View"
+            (im-jira-view-ticket .key)
+            (cl-return))
+           ("Open"
+            (with-default-browser
+             (im-open-jira-issue .key))
+            (cl-return))
+           ("Update"
+            (im-jira-update-ticket .key .fields.summary .fields.description)
+            (cl-return))
+           ("To branch"
+            (im-jira-ticket-to-branch .key .fields.summary)
+            (cl-return))
+           ("To worktree"
+            (im-jira-ticket-to-worktree .key .fields.summary)
+            (cl-return))
+           ("Assign to..."
+            (jiralib2-assign-issue
+             .key
+             (alist-get 'name (im-jira--select-user))))
+           ("Change status"
+            (im-jira-change-issue-status .key))
+           ("Insert as task"
+            (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
+           ("Raw"
+            (im-json-encode-and-show issue)
+            (cl-return))
+           ("[Cancel]"
+            (cl-return)))))))
 
   (defun im-convert-jira-markup-to-org-mode (jira-markup)
     "Convert given JIRA-MARKUP string to org-mode format."
@@ -9301,23 +9287,24 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   (defun im-eksi-gundem-sirali ()
     "Eksi gundemini entry sayisina gore sirala ve `completing-read' yap."
     (interactive)
-    (with-completing-read-exact-order
-     (let ((results (->>
-                     (with-temp-buffer
-                       (insert
-                        (shell-command-to-string "curl --silent https://eksisozluk.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq"))
-                       (goto-char (point-min))
-                       (xml-parse-string))
-                     (s-trim)
-                     (s-split "\n")
-                     (--map (s-split "|||" it))
-                     (--map `(,(car it) . ,(cadr it))))))
-       (->> results
-            (completing-read "Baslik: ")
-            (funcall (-flip 'assoc-string) results)
-            (cdr)
-            (format "https://eksisozluk.com/%s")
-            (browse-url)))))
+    (let ((results (->>
+                    (with-temp-buffer
+                      (insert
+                       (shell-command-to-string "curl --silent https://eksisozluk1923.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq"))
+                      (goto-char (point-min))
+                      (xml-parse-string))
+                    (s-trim)
+                    (s-split "\n")
+                    (--map (s-split "|||" it))
+                    (--map `(,(car it) . ,(cadr it))))))
+      (->>
+       (empv--completing-read-object
+        "Baslik: " results
+        :sort? nil
+        :formatter #'car)
+       (cdr)
+       (format "https://eksisozluk1923.com/%s")
+       (browse-url))))
 #+end_src
 ** insert uuid
 #+begin_src emacs-lisp
@@ -9614,85 +9601,85 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
      :keep-order t
      :do (let ((info (s-split " " it t)))
            (im-kube-pod--act (list :name (nth 1 info) :namespace (nth 0 info) :context (im-kube--current-context))))))
+
   ;; TODO wtf is this shit
   (defun im-kube-pod--act (pod)
-    (with-completing-read-exact-order
-     (let ((namespace (plist-get pod :namespace))
-           (name (plist-get pod :name))
-           (context (plist-get pod :context)))
-       (empv--select-action "Action for"
-         "Exec into default container" →
-         (with-current-buffer (im-eshell (format "$pod: %s" name))
-           (insert
-            (im-kill (format "kubectl exec --namespace='%s' -i -t '%s' --context='%s' -- bash"
-                             namespace
-                             name
-                             context))))
-         "Exec into container" →
-         (let ((container (im-kube-pod--select-container pod)))
-           (with-current-buffer (im-eshell (format "$pod: %s" name))
-             (insert
-              (im-kill (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' --context='%s' -- bash"
-                               namespace
-                               container
-                               name
-                               context)))))
-         "Logs" →
-         (let ((container (im-kube-pod--select-container pod)))
-           (shell-command
-            (im-kill
-             (format
-              "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s'"
-              name namespace container context))
-            (format "*im-kube-logs:%s-%s*" name container)))
-         "Logs (follow)" →
-         (with-current-buffer (vterm (format "$pod: %s" name))
-           (vterm-insert
-            (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s' --context='%s'"
-                             name
-                             namespace
-                             (im-kube-pod--select-container pod)
-                             context))))
-         "Logs (to a file)" →
-         (let ((container (im-kube-pod--select-container pod))
-               (fname (expand-file-name (read-file-name
-                                         "File: "
-                                         "~/Workspace/temp/"
-                                         nil
-                                         nil
-                                         (format "%s-%s.logs" (format-time-string "%Y-%m-%d") name)))))
-           (message ">> Downloading logs for %s. Done." name)
-           (set-process-sentinel
-            (start-process-shell-command
-             "*im-kube-log-write*"
-             "*im-kube-log-write*"
-             (im-kill (format "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s' > '%s'"
+    (let ((namespace (plist-get pod :namespace))
+          (name (plist-get pod :name))
+          (context (plist-get pod :context)))
+      (empv--select-action "Action for"
+        "Exec into default container" →
+        (with-current-buffer (im-eshell (format "$pod: %s" name))
+          (insert
+           (im-kill (format "kubectl exec --namespace='%s' -i -t '%s' --context='%s' -- bash"
+                            namespace
+                            name
+                            context))))
+        "Exec into container" →
+        (let ((container (im-kube-pod--select-container pod)))
+          (with-current-buffer (im-eshell (format "$pod: %s" name))
+            (insert
+             (im-kill (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' --context='%s' -- bash"
+                              namespace
+                              container
                               name
-                              namespace
-                              container
-                              context
-                              fname)))
-            (lambda (proc event)
-              (if (eq (process-exit-status proc) 0)
-                  (progn
-                    (message ">> Downloading logs for %s. Done." name)
-                    (find-file fname))
-                (user-error "Failed to get logs.")))))
-         ;; Logs from all pods combined for given pod's app
-         "App logs" →
-         (let ((container (im-kube-pod--select-container pod)))
-           (with-current-buffer (im-eshell (format "$pod: %s" name))
-             (insert (im-kill
-                      (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s' --context='%s'"
-                              (im-kube-pod--get-app-name pod)
-                              namespace
-                              container
                               context)))))
-         "Remove" → (format "Copied: %s"
-                            (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
-                                             name
-                                             namespace
-                                             context)))))))
+        "Logs" →
+        (let ((container (im-kube-pod--select-container pod)))
+          (shell-command
+           (im-kill
+            (format
+             "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s'"
+             name namespace container context))
+           (format "*im-kube-logs:%s-%s*" name container)))
+        "Logs (follow)" →
+        (with-current-buffer (vterm (format "$pod: %s" name))
+          (vterm-insert
+           (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s' --context='%s'"
+                            name
+                            namespace
+                            (im-kube-pod--select-container pod)
+                            context))))
+        "Logs (to a file)" →
+        (let ((container (im-kube-pod--select-container pod))
+              (fname (expand-file-name (read-file-name
+                                        "File: "
+                                        "~/Workspace/temp/"
+                                        nil
+                                        nil
+                                        (format "%s-%s.logs" (format-time-string "%Y-%m-%d") name)))))
+          (message ">> Downloading logs for %s. Done." name)
+          (set-process-sentinel
+           (start-process-shell-command
+            "*im-kube-log-write*"
+            "*im-kube-log-write*"
+            (im-kill (format "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s' > '%s'"
+                             name
+                             namespace
+                             container
+                             context
+                             fname)))
+           (lambda (proc event)
+             (if (eq (process-exit-status proc) 0)
+                 (progn
+                   (message ">> Downloading logs for %s. Done." name)
+                   (find-file fname))
+               (user-error "Failed to get logs.")))))
+        ;; Logs from all pods combined for given pod's app
+        "App logs" →
+        (let ((container (im-kube-pod--select-container pod)))
+          (with-current-buffer (im-eshell (format "$pod: %s" name))
+            (insert (im-kill
+                     (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s' --context='%s'"
+                             (im-kube-pod--get-app-name pod)
+                             namespace
+                             container
+                             context)))))
+        "Remove" → (format "Copied: %s"
+                           (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
+                                            name
+                                            namespace
+                                            context))))))
 
   (defun im-kube-pod--select-container (pod)
     (im-output-select
