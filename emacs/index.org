@@ -839,11 +839,12 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
       ("~/.config/sxhkd/sxhkdrc"         . "pkill -USR1 -x sxhkd; notify-send 'sxhkd updated'")
       ("~/.config/skhd/skhdrc"           . "skhd --reload; osascript -e 'display notification \"skhd updated\"'")
       ("~/.config/kmonad-linux.kbd"      . "systemctl --user restart kmonad")
-      ("~/.ssh/config" . im-unison-sync)
-      ("~/.emacs.d/bookmarks" . im-unison-sync)
-      ("~/.emacs.d/scratch.el" . im-unison-sync)
-      ("~/.emacs.d/im-.*" . im-unison-sync)
-      ("~/.emacs.d/load/isamert.*" . im-unison-sync))
+      ;; ("~/.ssh/config" . im-unison-sync)
+      ;; ("~/.emacs.d/bookmarks" . im-unison-sync)
+      ;; ("~/.emacs.d/scratch.el" . im-unison-sync)
+      ;; ("~/.emacs.d/im-.*" . im-unison-sync)
+      ;; ("~/.emacs.d/load/isamert.*" . im-unison-sync)
+      )
     "File association list with their respective command.")
 
   (add-hook 'after-save-hook #'im-post-save-run-command)
@@ -898,6 +899,8 @@ Enables you to have repeatable keybindings.
 * Visuals
 ** General
 #+begin_src emacs-lisp
+  ;; Disable menubar
+  (menu-bar-mode 0)
   ;; Wrap long lines
   (global-visual-line-mode t)
   ;; Highlight current line
@@ -1101,7 +1104,7 @@ Some small packages that enriches editing experience visually. I don't enable al
   ;; per buffer. This scales fonts with
   ;; default-text-scale-{increase,decrease} globally.
   (use-package default-text-scale
-    :defer t)
+    :demand t)
 
   ;; Highlights changed lines in git. You need to save the buffer to see
   ;; the changes.
@@ -1327,6 +1330,7 @@ Multiple cursors for evil.
     :after evil
     :general
     (:states '(normal visual) :keymaps 'evil-mc-key-map
+     "gr" nil
      ;; Add my bindings using "gc"
      "gcc" #'evil-mc-undo-all-cursors
      "gcp" #'evil-mc-pause-cursors
@@ -1641,7 +1645,6 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
      "o1"  #'im-show-outline-only
      ;; link stuff
      "oyi" #'org-copy-id
-     "o#" #'org-insert-structure-template
      ;; src blocks etc
      "d" #'org-babel-remove-result
      "D" #'im-org-babel-remove-all-results
@@ -1649,6 +1652,8 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
      "oe" #'org-edit-special
      "ot" #'im-org-babel-tangle-current-block
      "o-" #'org-babel-demarcate-block)
+    (:keymaps 'org-mode-map :states '(normal visual) :prefix "<SPC>"
+     "o#" #'org-insert-structure-template)
     (:keymaps 'org-src-mode-map :states 'normal :prefix "<SPC>"
      "oe" #'org-edit-src-exit
      "oE" #'org-edit-src-abort)
@@ -1735,7 +1740,7 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
   (setq org-directory "~/Documents/notes")
   (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
-  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,reality-org ,life-org ,netherlands-org))
+  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org))
 #+end_src
 
 #+name: org-lob-ingest
@@ -2078,6 +2083,7 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     :custom
     (org-use-sub-superscripts nil)
     (org-modern-table nil)
+    (org-modern-hide-stars " ")
     (org-modern-list
      '(;; (?- . "-")
        (?* . "•")
@@ -2522,6 +2528,14 @@ This is a built-in mode for providing basic outlining features. Here are a few c
     (call-interactively #'im-eshell))
 #+end_src
 
+*** Proper command completion
+This package provides command, subcommand and argument completion using fish shell. You need to have fish shell installed. There is also helm version that provides argument documentation but I haven't tried it yet and I need to make it work with corfu instead of helm.
+
+#+begin_src emacs-lisp
+  (use-package fish-completion
+    :after eshell
+    :config (global-fish-completion-mode))
+#+end_src
 *** Reading bash/zsh aliases into Eshell
 #+begin_src emacs-lisp
   (defun im-eshell-load-my-aliases ()
@@ -2587,21 +2601,23 @@ When I enter any of the listed directories, eshell automatically prints out my n
     (let ((dir (file-name-as-directory (expand-file-name default-directory))))
       (setq im-autodir-last-doc
             (with-current-buffer (find-file-noselect im-autodir-file)
-              (catch 'found
-                (org-map-entries
-                 (lambda ()
-                   (when (->>
-                          (org-entry-get nil "ITEM")
-                          (s-split ":")
-                          (car)
-                          (expand-file-name)
-                          (file-name-as-directory)
-                          (equal dir))
-                     (throw 'found (buffer-substring-no-properties
-                                    (org-element-property :contents-begin (org-element-at-point))
-                                    (org-element-property :contents-end (org-element-at-point))))))
-                 "LEVEL=1")
-                nil)))
+              (save-restriction
+                (widen)
+                (catch 'found
+                  (org-map-entries
+                   (lambda ()
+                     (when (->>
+                            (org-entry-get nil "ITEM")
+                            (s-split ":")
+                            (car)
+                            (expand-file-name)
+                            (file-name-as-directory)
+                            (equal dir))
+                       (throw 'found (buffer-substring-no-properties
+                                      (org-element-property :contents-begin (org-element-at-point))
+                                      (org-element-property :contents-end (org-element-at-point))))))
+                   "LEVEL=1")
+                  nil))))
       (when im-autodir-last-doc
         (insert "im-autodir-show-doc")
         (eshell-send-input))))
@@ -2936,9 +2952,6 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 #+begin_src emacs-lisp
   (use-package dired
     :straight (:type built-in)
-    :defer t
-    :hook
-    (dired-mode . (lambda () (visual-line-mode -1) (toggle-truncate-lines +1)))
     :config
     (setq dired-dwim-target t)
     (setq dired-listing-switches "-l -A -h -v --group-directories-first")
@@ -2979,12 +2992,20 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     (setq dirvish-side-width 55)
 
     (dirvish-override-dired-mode)
-    (dirvish-side-follow-mode))
+    (dirvish-side-follow-mode)
+
+    ;; Disable wrapping lines in some modes so that full-screen dirvish looks good
+    (add-hook 'dirvish-directory-view-mode-hook #'im-disable-line-wrapping)
+    (add-hook 'dired-mode-hook #'im-disable-line-wrapping))
 
   (defun im-dirvish ()
     "Start dirvish in selected directory."
     (interactive)
     (dirvish (read-directory-name "Dirvish: ")))
+
+  (defun im-disable-line-wrapping ()
+    (visual-line-mode -1)
+    (toggle-truncate-lines +1))
 #+end_src
 *** im-dired-rsync
 Dired copies files sync. This function uses rsync to copy stuff async, especially useful while copying stuff over tramp/ssh.
@@ -3444,6 +3465,85 @@ To sync it automatically:
         (insert (plist-get (cdr image) :data))
         (save-buffer))))
 #+end_src
+*** Language detection and code highlighting in eww buffers
+#+begin_src emacs-lisp
+  (use-package language-detection)
+
+  (defun eww-tag-pre (dom)
+    (let ((shr-folding-mode 'none)
+          (shr-current-font 'default))
+      (shr-ensure-newline)
+      (insert (eww-fontify-pre dom))
+      (shr-ensure-newline)))
+
+  (defun eww-fontify-pre (dom)
+    (with-temp-buffer
+      (shr-generic dom)
+      (let ((mode (eww-buffer-auto-detect-mode)))
+        (when mode
+          (eww-fontify-buffer mode)))
+      (buffer-string)))
+
+  (defun eww-fontify-buffer (mode)
+    (delay-mode-hooks (funcall mode))
+    (font-lock-default-function mode)
+    (font-lock-default-fontify-region (point-min)
+                                      (point-max)
+                                      nil))
+
+  (defun eww-buffer-auto-detect-mode ()
+    (let* ((map '((ada ada-mode)
+                  (awk awk-mode)
+                  (c c-mode)
+                  (cpp c++-mode)
+                  (clojure clojure-mode lisp-mode)
+                  (csharp csharp-mode java-mode)
+                  (css css-mode)
+                  (dart dart-mode)
+                  (delphi delphi-mode)
+                  (emacslisp emacs-lisp-mode)
+                  (erlang erlang-mode)
+                  (fortran fortran-mode)
+                  (fsharp fsharp-mode)
+                  (go go-mode)
+                  (groovy groovy-mode)
+                  (haskell haskell-mode)
+                  (html html-mode)
+                  (java java-mode)
+                  (javascript javascript-mode)
+                  (json json-mode javascript-mode)
+                  (latex latex-mode)
+                  (lisp lisp-mode)
+                  (lua lua-mode)
+                  (matlab matlab-mode octave-mode)
+                  (objc objc-mode c-mode)
+                  (perl perl-mode)
+                  (php php-mode)
+                  (prolog prolog-mode)
+                  (python python-mode)
+                  (r r-mode)
+                  (ruby ruby-mode)
+                  (rust rust-mode)
+                  (scala scala-mode)
+                  (shell shell-script-mode)
+                  (smalltalk smalltalk-mode)
+                  (sql sql-mode)
+                  (swift swift-mode)
+                  (visualbasic visual-basic-mode)
+                  (xml sgml-mode)))
+           (language (language-detection-string
+                      (buffer-substring-no-properties (point-min) (point-max))))
+           (modes (cdr (assoc language map)))
+           (mode (cl-loop for mode in modes
+                          when (fboundp mode)
+                          return mode)))
+      (message (format "%s" language))
+      (when (fboundp mode)
+        mode)))
+
+  (setq shr-external-rendering-functions
+        '((pre . eww-tag-pre)))
+#+end_src
 ** shell-mode
 #+begin_src emacs-lisp
   (use-package shell
@@ -3561,10 +3661,9 @@ Note that it's not possible to stage hunks with =vc=.
 
 #+begin_src emacs-lisp
   (use-package git-timemachine
-    :after magit
-    :commands git-timemachine-toggle
-    :init
-    (evil-leader/set-key  "gt" #'git-timemachine-toggle)
+    :general
+    (:states '(normal visual) :prefix "<SPC>"
+     "gt" #'git-timemachine-toggle)
     :config
     ;; Override completing-read function to make it use
     ;; `completing-read' no matter what
@@ -3935,7 +4034,8 @@ Other complementary packages:
            (default-directory (if (eq type 'project) proj-dir default-directory))
            (proj-name (f-base default-directory))
            (name (format "$eshell: %s" proj-name)))
-      (if-let* ((window (--find (s-prefix? "\$eshell: " (buffer-name (window-buffer it))) (window-list)))
+      (if-let* (top?
+                (window (--find (s-prefix? "\$eshell: " (buffer-name (window-buffer it))) (window-list)))
                 (focused? (equal window (selected-window))))
           (progn
             (setq im-project-shell-last-height (window-height window))
@@ -4534,7 +4634,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
            (vterm-mode . im-disable-hl-line-mode-for-buffer)
            (vterm-mode . evil-emacs-state))
     :general
-    (:states 'normal :prefix "<SPC>"
+    (:states '(normal visual) :prefix "<SPC>"
      "tj" #'im-jump-to-visible-term
      "tl" #'im-run-last-command-on-visible-term
      "ty" #'im-send-selected-text-to-visible-term
@@ -5583,7 +5683,7 @@ example, hitting ~y~ will speak the word using the translation engine.
   (use-package go-translate
     :commands gts-do-translate
     :general
-    (:states 'normal
+    (:states 'normal :prefix "<SPC>"
      "T" #'gts-do-translate)
     :config
     (setq gts-translate-list '(("en" "tr") ("tr" "en")))
@@ -6056,7 +6156,7 @@ Pick up ~.editorconfig~ settings for current project automatically.
     :straight (:type built-in)
     :hook (after-init . which-function-mode))
 #+end_src
-*** eval functions
+*** Other
 #+begin_src emacs-lisp
   (defun im-eval-dwim (lastf regionf defunf)
     "Generate an interactive function that you can bind to a key
@@ -6071,6 +6171,14 @@ Pick up ~.editorconfig~ settings for current project automatically.
         (call-interactively lastf))
        (t
         (call-interactively defunf)))))
+
+  (defun im-use-block-comments-for-c-style-langs ()
+    "Use block style comments for C-style langs, so that poporg works properly.
+  Add this function to mode hooks."
+    (interactive)
+    (setq-local comment-start "/**")
+    (setq-local comment-end "*/")
+    (setq-local poporg-comment-skip-regexp " *\\* *"))
 #+end_src
 ** Refactoring (emr)
 #+begin_src emacs-lisp
@@ -6243,11 +6351,15 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
 #+end_src
 ** typescript
 #+begin_src emacs-lisp
+  (setq-default typescript-ts-mode-indent-offset 2)
+
   (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-ts-mode))
   (add-hook 'typescript-ts-mode-hook #'im-add-node-modules-to-path)
   (add-hook 'tsx-ts-mode-hook #'im-add-node-modules-to-path)
   (add-hook 'typescript-ts-mode-hook #'hs-minor-mode)
   (add-hook 'tsx-ts-mode-hook #'hs-minor-mode)
+  (add-hook 'typescript-ts-mode-hook #'im-use-block-comments-for-c-style-langs)
+  (add-hook 'tsx-ts-mode-hook #'im-use-block-comments-for-c-style-langs)
 #+end_src
 
 *** REPL interaction
@@ -6298,7 +6410,7 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
   (defun im-ts-send-expression-to-repl (&optional redefine)
     "Send current meaningful expression to node REPL."
     (interactive "P")
-    (let* ((proc (im-with-visible-buffer ".*eshell.*" (process-name eat--process)))
+    (let* ((proc (im-with-visible-buffer ".*\\(eshell\\|vterm\\).*" (ignore-errors (process-name eat--process))))
            (deno (s-contains? "deno" proc))
            (nodejs (s-contains? "node" proc)))
       (if-let (expression
@@ -6314,7 +6426,7 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
                 (s-replace-regexp "^[\n\t ]*export" "")
                 im-ts--import-absolute))
           (im-with-visible-buffer
-           ".*eshell.*"
+           ".*\\(eshell\\|vterm\\).*"
            (when nodejs
              (im-eshell-send-input ".editor\n"))
            (im-eshell-send-input expression)
@@ -6559,14 +6671,17 @@ I work with JSON a lot. Here I have some functions that let's you run given expr
 
 ** java
 =lsp-java= automatically installs =eclipse.jdt.ls= to get lsp.
-#+BEGIN_SRC emacs-lisp
+#+begin_src emacs-lisp
+  ;; Set default indent to 2
+  (setq java-ts-mode-indent-offset 2)
+
   (use-package lsp-java
-    :after lsp
     :demand t
     :config
     ;; This is required for java-ts-mode, otherwise it fails for some reason.
     ;; https://github.com/emacs-lsp/lsp-mode/issues/3135#issuecomment-933539371
-    (setq-default c-basic-offset 4)
+    (setq-default c-basic-offset 2)
+
     (defun im-lsp-java-find-lombok-jar ()
       (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>)))
 
@@ -6577,7 +6692,9 @@ I work with JSON a lot. Here I have some functions that let's you run given expr
 *** Supplementary functions
 #+begin_src emacs-lisp
   (defun im-jshell ()
-    "Open JShell."
+    "Open JShell with runtime dependencies of the current project loaded.
+  Please note that tab-completion for runtime dependencies *do not*
+  work.  You need to enter full path while importing by yourself."
     (interactive)
     (let* ((default-directory (im-current-project-root))
            (vterm-shell "mvn -q com.github.johnpoth:jshell-maven-plugin:1.3:run -DtestClasspath")
@@ -7406,7 +7523,7 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
   (setq tab-line-tabs-function #'im-tab-line-buffers)
   (setq tab-line-tab-name-function #'tab-line-tab-name-truncated-buffer)
   (setq tab-line-tab-name-truncated-max 25)
-  ;; (global-tab-line-mode)
+  (global-tab-line-mode)
 
   (defvar im-tab-line-hidden-buffer-name-regexp
     (concat
@@ -7970,8 +8087,11 @@ Good for buffer management, especially for groupped killings.
        (replace-regexp-in-string "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-" "\\1-\\2\n\\3-")
        (replace-regexp-in-string "^\\([ \t]*\\)-\\(.*\\)\n\n\\([ \t]*\\)-" "\\1-\\2\n\\3-")
        (replace-regexp-in-string "\\\\\\\\$" "")
+       ;; Fix deeply nested bullet points
+       (replace-regexp-in-string "---- " "- ")
        ;; Fix - [ ] markers
        (replace-regexp-in-string "- \\*=( )=\\* " "- [ ] ")
+       (replace-regexp-in-string "- \\*=(-)=\\* " "- [-] ")
        (replace-regexp-in-string "- \\*=(X)=\\* " "- [X] "))))
 
   (defun im-jira-update-ticket (key summary description)
@@ -8954,8 +9074,9 @@ Here I define two important functions and their helpers.  The following function
 ** Functions for easy indentation switching
 - http://blog.binchen.org/posts/easy-indentation-setup-in-emacs-for-web-development.html
 
-#+BEGIN_SRC emacs-lisp
+#+begin_src emacs-lisp
   (defun im-setup-indent-local (n)
+    "Set indent for current buffer."
     (interactive "nHow many spaces do you want? ")
     (setq-local tab-width n)
     (setq-local c-basic-offset n)
@@ -8969,9 +9090,12 @@ Here I define two important functions and their helpers.  The following function
     (setq-local web-mode-code-indent-offset n) ; web-mode, js code in html file
     (setq-local css-indent-offset n) ; css-mode
     (setq-local typescript-indent-level n) ; typescript-mode
+    (setq-local typescript-ts-mode-indent-offset 2)
+    (setq-local java-ts-mode-indent-offset 2)
     (message "OK!"))
 
   (defun im-setup-indent-global (n)
+    "Set indent globally."
     (interactive "nHow many spaces do you want? ")
     (setq tab-width n)
     (setq c-basic-offset n)
@@ -8985,8 +9109,10 @@ Here I define two important functions and their helpers.  The following function
     (setq web-mode-code-indent-offset n) ; web-mode, js code in html file
     (setq css-indent-offset n) ; css-mode
     (setq typescript-indent-level n) ; typescript-mode
+    (setq typescript-ts-mode-indent-offset 2)
+    (setq java-ts-mode-indent-offset 2)
     (message "OK!"))
-#+END_SRC
+#+end_src
 
 ** Current file functionality
 Sometimes I just want to delete/rename/move etc. the current file without resorting to dired or any other file manager. Here are some interactive functions to do that.
@@ -9430,7 +9556,6 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
     (interactive)
     (im-output-select
      :cmd "kubectl config get-contexts --output=name"
-     :drop 1
      :keep-order t
      :prompt (format "Select context (current=%s): " (im-kube--current-context))
      :do (shell-command-to-string (format "kubectl config use-context '%s'" it))))
