@@ -2201,7 +2201,7 @@ You can open next/previous posts with left and right keys on instagram but as fa
   set searchurls.tygs https://gitlab.trendyol.com/discovery/seller-ads?filter=%s
   set searchurls.tyg https://gitlab.trendyol.com/?name=%s
 
-  autocmd DocLoad https://gitlab.trendyol.com/.*/-/pipelines/.* emacs/gitlab-watch-pipeline
+  " autocmd DocLoad https://gitlab.trendyol.com/.*/-/pipelines/.* emacs/gitlab-watch-pipeline
 #+end_src
 
 *** userChrome.css
