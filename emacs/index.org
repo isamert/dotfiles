@@ -7730,9 +7730,12 @@ Good for buffer management, especially for groupped killings.
   (evil-leader/set-key "cm" #'im-marks-my-docs)
 
   (defun im-consult--marks-builder (input)
-    (cons
-     (list "marks" "--no-color" "--null" "--path" default-directory "--query" input)
-     nil))
+    (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
+      (list
+       :command
+       (list "marks" "--no-color" "--null" "--path" default-directory "--query" input)
+       :highlight
+       (apply-partially #'consult--highlight-regexps (list (regexp-quote arg)) t))))
 
   (defun im-marks (&optional directory)
     "Run `marks'."
