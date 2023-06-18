@@ -3025,6 +3025,9 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
   (defun im-disable-line-wrapping ()
     (visual-line-mode -1)
     (toggle-truncate-lines +1))
+
+  (defun im-disable-tab-line ()
+    (tab-line-mode -1))
 #+end_src
 *** im-dired-rsync
 Dired copies files sync. This function uses rsync to copy stuff async, especially useful while copying stuff over tramp/ssh.
