@@ -1212,7 +1212,22 @@ Some small packages that enriches editing experience visually. I don't enable al
   (use-package general
     ;; Not required to be installed after evil but loading it before
     ;; causes some problems like keys not getting bound sometimes etc.
-    :demand t)
+    :demand t
+    :config
+    (general-override-mode))
+
+  (general-create-definer im-leader
+    :prefix "<SPC>"
+    ;; This is important because if you don't set it some modes will
+    ;; fail to pick up leader bindings.  See:
+    ;; https://github.com/noctuid/general.el/issues/190
+    :keymaps 'override
+    :states 'normal)
+
+  (general-create-definer im-leader-v
+    :prefix "<SPC>"
+    :keymaps 'override
+    :states '(normal visual))
 #+end_src
 ** evil-collection
 #+begin_src emacs-lisp
@@ -1610,47 +1625,47 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
     (:keymaps 'org-mode-map :states '(normal insert)
      "<RET>" #'org-return
      "S-<return>" #'im-org-link-to-indirect-buffer)
-    (:states 'normal :prefix "<SPC>"
-     "oyy" #'im-org-store-link-dwim
-     "oa"  #'org-agenda
-     "ow"  #'widen
-     ;; org-capture
-     "og" #'org-capture
-     "oG" #'org-capture-goto-last-stored
-     ;; org-clock
-     "occ" #'org-clock-in
-     "ocC" #'org-clock-cancel
-     "ocl" #'org-clock-in-last
-     "oco" #'org-clock-out
-     "ocg" #'org-clock-goto)
-    (:keymaps 'org-mode-map :states 'normal :prefix "<SPC>"
-     ;; general
-     "op"  #'org-set-property
-     "oi"  #'org-toggle-inline-images
-     "oI"  #'org-redisplay-inline-images
-     "or"  #'org-refile
-     "oR"  #'org-mode-restart
-     "oh"  #'outline-show-only-headings
-     "os"  #'org-schedule
-     "od"  #'org-deadline
-     "ov"  #'org-babel-expand-src-block
-     "oq"  #'im-org-tree-to-indirect-buffer
-     "oQ"  #'im-org-link-to-indirect-buffer
-     "o1"  #'im-show-outline-only
-     ;; link stuff
-     "oyi" #'org-copy-id
-     ;; src blocks etc
-     "d" #'org-babel-remove-result
-     "D" #'im-org-babel-remove-all-results
-     "oo" #'im-org-babel-result-to-buffer
-     "oe" #'org-edit-special
-     "ot" #'im-org-babel-tangle-current-block
-     "o-" #'org-babel-demarcate-block)
-    (:keymaps 'org-mode-map :states '(normal visual) :prefix "<SPC>"
-     "o#" #'org-insert-structure-template)
-    (:keymaps 'org-src-mode-map :states 'normal :prefix "<SPC>"
-     "oe" #'org-edit-src-exit
-     "oE" #'org-edit-src-abort)
+    (im-leader
+      "oyy" #'im-org-store-link-dwim
+      "oa"  #'org-agenda
+      "ow"  #'widen
+      ;; org-capture
+      "og" #'org-capture
+      "oG" #'org-capture-goto-last-stored
+      ;; org-clock
+      "occ" #'org-clock-in
+      "ocC" #'org-clock-cancel
+      "ocl" #'org-clock-in-last
+      "oco" #'org-clock-out
+      "ocg" #'org-clock-goto)
+    (im-leader :keymaps 'org-mode-map
+      ;; general
+      "op"  #'org-set-property
+      "oi"  #'org-toggle-inline-images
+      "oI"  #'org-redisplay-inline-images
+      "or"  #'org-refile
+      "oR"  #'org-mode-restart
+      "oh"  #'outline-show-only-headings
+      "os"  #'org-schedule
+      "od"  #'org-deadline
+      "ov"  #'org-babel-expand-src-block
+      "oq"  #'im-org-tree-to-indirect-buffer
+      "oQ"  #'im-org-link-to-indirect-buffer
+      "o1"  #'im-show-outline-only
+      ;; link stuff
+      "oyi" #'org-copy-id
+      ;; src blocks etc
+      "d" #'org-babel-remove-result
+      "D" #'im-org-babel-remove-all-results
+      "oo" #'im-org-babel-result-to-buffer
+      "oe" #'org-edit-special
+      "ot" #'im-org-babel-tangle-current-block
+      "o-" #'org-babel-demarcate-block)
+    (im-leader-v :keymaps 'org-mode-map
+      "o#" #'org-insert-structure-template)
+    (im-leader-v :keymaps 'org-src-mode-map
+      "oe" #'org-edit-src-exit
+      "oE" #'org-edit-src-abort)
     :hook
     (org-mode . evil-org-mode)
     :config
@@ -2972,9 +2987,9 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     :general
     (:states 'normal
      "M-f" #'dirvish-side)
-    (:states 'normal :prefix "<SPC>"
-     "ed" #'dirvish-dwim
-     "eD" #'im-dirvish)
+    (im-leader
+      "ed" #'dirvish-dwim
+      "eD" #'im-dirvish)
     (:keymaps 'dirvish-mode-map :states 'normal
      "\\"    #'dired-find-file-other-window
      "h"     #'dired-up-directory
@@ -2998,7 +3013,9 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
     ;; Disable wrapping lines in some modes so that full-screen dirvish looks good
     (add-hook 'dirvish-directory-view-mode-hook #'im-disable-line-wrapping)
-    (add-hook 'dired-mode-hook #'im-disable-line-wrapping))
+    (add-hook 'dired-mode-hook #'im-disable-line-wrapping)
+    ;; Also disable tab-line in directory-view-mode as it does not makes sense
+    (add-hook 'dirvish-directory-view-mode-hook #'im-disable-tab-line))
 
   (defun im-dirvish ()
     "Start dirvish in selected directory."
@@ -3086,9 +3103,10 @@ Some tips:
            ;; Show sunrise/sunset when calendar opens
            (calendar-today-visible . calendar-sunrise-sunset)
            (calendar-today-visible . calendar-mark-today))
+    :general
+    (im-leader "ec" #'calendar)
     :commands calendar
     :init
-    (evil-leader/set-key "ec" #'calendar)
     (evil-define-key 'normal diary-fancy-display-mode-map "q" #'evil-delete-buffer)
     (evil-define-key 'normal calendar-mode-map (kbd "a") #'im-calendar-jump-org-agenda)
     :config
@@ -3403,7 +3421,7 @@ To sync it automatically:
     :commands eww
     :hook (eww-mode . tab-line-mode)
     :general
-    (:states 'normal :prefix "<SPC>"
+    (im-leader
      "ew" #'im-eww)
     (:keymaps 'eww-mode-map :states 'normal
      "Y" #'eww-copy-page-url
@@ -3664,7 +3682,7 @@ Note that it's not possible to stage hunks with =vc=.
 #+begin_src emacs-lisp
   (use-package git-timemachine
     :general
-    (:states '(normal visual) :prefix "<SPC>"
+    (im-leader-v
      "gt" #'git-timemachine-toggle))
 #+end_src
 
@@ -4630,7 +4648,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
            (vterm-mode . im-disable-hl-line-mode-for-buffer)
            (vterm-mode . evil-emacs-state))
     :general
-    (:states '(normal visual) :prefix "<SPC>"
+    (im-leader-v
      "tj" #'im-jump-to-visible-term
      "tl" #'im-run-last-command-on-visible-term
      "ty" #'im-send-selected-text-to-visible-term
@@ -4763,7 +4781,7 @@ When you search for something, it opens the results in an org-mode buffer. Resul
     (:keymaps 'howdoyou-mode-keymap :states '(normal motion)
      "gn" #'howdoyou-next-link
      "gp" #'howdoyou-previous-link)
-    (:states 'normal :prefix "<SPC>"
+    (im-leader
      "is" #'howdoyou-query)
     :config
     (setq howdoyou-switch-to-answer-buffer t)
@@ -4805,7 +4823,7 @@ tldr client for Emacs.
   (use-package yankpad
     :after yasnippet
     :general
-    (:states 'normal :prefix "<SPC>"
+    (im-leader
      "sr" #'yankpad-reload
      "sc" #'yankpad-set-category
      "se" #'yankpad-edit
@@ -4872,7 +4890,7 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
   (use-package git-link
     :demand t
     :general
-    (:states 'normal :prefix "<SPC>"
+    (im-leader
      "glm" #'im-git-link-merge-requests
      "gll" #'im-git-link-on-branch
      "glL" #'im-git-link-commit
@@ -5026,6 +5044,14 @@ Simple mode for editing =~/.Xmodmap= file.
   (use-package slack
     :straight (:host github :repo "isamert/emacs-slack")
     :defer t
+    :general
+    (im-leader
+     "ess" #'im-slack-select-rooms
+     "esS" #'slack-select-unread-rooms
+     "esm" #'im-slack-send-message
+     "esr" #'im-slack-recent-messages
+     "esl" #'im-slack-open-last-message
+     "esy" #'im-slack-yank-last-message)
     :config
     (setq slack-log-level 'error)
     ;; ^ info level shows unnecessary stuff that distracts me
@@ -5040,14 +5066,6 @@ Simple mode for editing =~/.Xmodmap= file.
     (setq lui-fill-type nil)
     (setq slack-message-custom-notifier #'im-slack-notify)
     (setq slack-message-custom-delete-notifier #'im-slack-notify)
-
-    (evil-leader/set-key
-      "ess" #'im-slack-select-rooms
-      "esS" #'slack-select-unread-rooms
-      "esm" #'im-slack-send-message
-      "esr" #'im-slack-recent-messages
-      "esl" #'im-slack-open-last-message
-      "esy" #'im-slack-yank-last-message)
 
     (defun im-slack-select-rooms ()
       (interactive)
@@ -5292,8 +5310,9 @@ Simple mode for editing =~/.Xmodmap= file.
     :straight (:host github :repo "rejeep/prodigy.el")
     :hook (after-init . im-prodigy-autostart)
     :demand t
-    :init
-    (evil-leader/set-key "et" #'prodigy)
+    :general
+    (im-leader
+     "et" #'prodigy)
     :config
     (evil-define-key 'normal prodigy-mode-map
       "m" #'prodigy-mark
@@ -5521,7 +5540,7 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
     :straight (:host github :repo "isamert/lab.el")
     :demand t ;; I use some functions from this package
     :general
-    (:states 'normal :prefix "<SPC>"
+    (im-leader
      "gmb" #'lab-list-branch-merge-requests
      "gmm" #'lab-list-my-merge-requests
      "gma" #'lab-list-group-merge-requests
@@ -5681,7 +5700,7 @@ example, hitting ~y~ will speak the word using the translation engine.
   (use-package go-translate
     :commands gts-do-translate
     :general
-    (:states 'normal :prefix "<SPC>"
+    (im-leader
      "T" #'gts-do-translate)
     :config
     (setq gts-translate-list '(("en" "tr") ("tr" "en")))
@@ -5817,6 +5836,9 @@ Feed reader.
 #+begin_src emacs-lisp
   (use-package elfeed
     :commands (elfeed im-elfeed-reload-and-open)
+    :general
+    (im-leader
+     "ee" #'im-elfeed-reload-and-open)
     :config
     ;; When adding tags, don't add any hierarchical tags like (blog blog-software), or (metal metal-black)
     ;; Just use something like: (blog software) and (metal black)
@@ -5835,9 +5857,8 @@ Feed reader.
 
     (evil-define-key 'normal elfeed-search-mode-map
       "o" #'elfeed-search-browse-url
-      "O" #'im-elfeed-search-browse-url-in-default-browser)
+      "O" #'im-elfeed-search-browse-url-in-default-browser))
 
-    (evil-leader/set-key "ee" #'im-elfeed-reload-and-open))
 
   ;; TODO: experiment with custom faces
   ;; (defface elfeed-comic
@@ -7726,9 +7747,10 @@ Good for buffer management, especially for groupped killings.
 #+end_src
 ** Jira
 #+begin_src emacs-lisp :lexical yes
-  (evil-leader/set-key "ejo" #'im-open-jira-issue-at-point)
-  (evil-leader/set-key "eji" #'im-jira-list-issues)
-  (evil-leader/set-key "ejc" #'im-jira-create-ticket)
+  (im-leader
+    "ejo" #'im-open-jira-issue-at-point
+    "eji" #'im-jira-list-issues
+    "ejc" #'im-jira-create-ticket)
 
   ;;
   ;; Install required JIRA client
@@ -8193,7 +8215,7 @@ Good for buffer management, especially for groupped killings.
 I have an Android phone that is running [[https://termux.com/][Termux]] all the time. If you install Termux through [[https://www.f-droid.org/][F-Droid]] you can also install [[https://f-droid.org/en/packages/com.termux.api/][Termux:API]] package which brings bunch of commands like =termux-clipboard-set=, =termux-sms-list= etc. Much of the commands requires to be called in foreground, so they are not very useful over SSH but you can work around that by starting a =tmux= session on the phone and executing commands on that tmux session through SSH. This way I can send arbitrary text to my phones clipboard using the commands below.
 
 #+begin_src emacs-lisp
-  (evil-leader/set-key
+  (im-leader
     "ept" #'im-send-text-to-my-phone
     "epc" #'im-send-clipboard-to-my-phone)
 
@@ -8292,9 +8314,9 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
 #+begin_src emacs-lisp
   (require 'dbus)
 
-  (evil-leader/set-key
-    "epn" #'im-signal-send-note-to-myself
-    "epm" #'im-signal-send-message)
+  (im-leader
+   "epn" #'im-signal-send-note-to-myself
+   "epm" #'im-signal-send-message)
 
   (defconst im-signal-dbus-args '(:session "org.asamk.Signal"
                                                 "/org/asamk/Signal"
@@ -10181,7 +10203,8 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
        ('darwin #'im-osx-select-audio-output)
        ('gnu/linux #'im-linux-select-audio-output))))
 
-  (evil-leader/set-key "ea" #'im-select-audio-output)
+  (im-leader
+    "ea" #'im-select-audio-output)
 #+end_src
 
 ** Bluetooth device connector
@@ -10238,7 +10261,8 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
        ('darwin #'im-osx-connect-paired-bluetooth-device)
        ('gnu/linux #'im-linux-connect-paired-bluetooth-device))))
 
-  (evil-leader/set-key "eb" #'im-connect-paired-bluetooth-device)
+  (im-leader
+    "eb" #'im-connect-paired-bluetooth-device)
 #+end_src
 ** Switch next monitor input
 #+begin_src emacs-lisp
