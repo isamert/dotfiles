@@ -3024,8 +3024,7 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     ;; Disable wrapping lines in some modes so that full-screen dirvish looks good
     (add-hook 'dirvish-directory-view-mode-hook #'im-disable-line-wrapping)
     (add-hook 'dired-mode-hook #'im-disable-line-wrapping)
-    ;; Also disable tab-line in directory-view-mode as it does not makes sense
-    (add-hook 'dirvish-directory-view-mode-hook #'im-disable-tab-line))
+    (add-hook 'dired-mode-hook #'im-disable-tab-line))
 
   (defun im-dirvish (dir)
     "Start dirvish in selected DIR."
