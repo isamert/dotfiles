@@ -2423,7 +2423,7 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
      'org-capture-templates
      `("b" "Bookmark" entry
        (file+headline ,bookmarks-org "Unsorted")
-       "** (call-interactively #'im-org-archive-url)")))
+       "** (call-interactively #'im-org-archive-url)\n-Don't forget tot TAG!")))
 #+end_src
 ** Convert items to TODO entries
 #+begin_src emacs-lisp :lexical t
@@ -2448,13 +2448,17 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
           (setq timestamp (match-string 1 line))
           (setq text (match-string 2 line))
           (delete-region (line-beginning-position) (1+ (line-end-position)))
-          (let ((buffer (current-buffer)))
+          (let* ((buffer (current-buffer))
+                 (data (s-split " :: " text))
+                 (header (nth 0 data))
+                 (body (nth 1 data)))
             (with-temp-buffer
               (insert
-               (concat "** TODO [#B] " text "\n"
+               (concat "** TODO [#B] " header "\n"
                        ":PROPERTIES:" "\n"
                        ":CREATED_AT: " timestamp "\n"
-                       ":END:" "\n"))
+                       ":END:" "\n"
+                       (if body (concat body "\n") "")))
               (org-mode)
               (let ((org-refile-targets nil))
                 (org-refile nil buffer))))))))
@@ -5716,7 +5720,7 @@ example, hitting ~y~ will speak the word using the translation engine.
   (use-package go-translate
     :commands gts-do-translate
     :general
-    (im-leader
+    (im-leader-v
      "T" #'gts-do-translate)
     :config
     (setq gts-translate-list '(("en" "tr") ("tr" "en")))
