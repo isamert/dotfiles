@@ -2500,6 +2500,8 @@ This is a built-in mode for providing basic outlining features. Here are a few c
     (:states 'normal
      "M-_" #'im-eshell-vertically
      "M-|" #'im-eshell-horizontally)
+    (:states 'insert :keymaps '(eshell-prompt-mode-map override)
+     "C-l" (λ-interactive (eshell/clear t)))
     :config
     (setq eshell-history-size 10000))
 
@@ -2990,6 +2992,8 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     (im-leader
       "ed" #'dirvish-dwim
       "eD" #'im-dirvish)
+    ;; Add a way to open dirvish in selected directory using Embark
+    (:keymaps 'embark-file-map "J" #'im-dirvish)
     (:keymaps 'dirvish-mode-map :states 'normal
      "\\"    #'dired-find-file-other-window
      "h"     #'dired-up-directory
@@ -3002,13 +3006,15 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
      "L"     #'dirvish-history-go-forward)
     ;; Other keybindings comes from dired-mode (which comes from
     ;; evil-collection)
-    :commands (dirvish dirvish-side)
+    :init
+    ;; Need to load this eagerly, otherwise `dired-jump' calls does not
+    ;; load dirvish.
+    (dirvish-override-dired-mode)
     :config
     (setq dirvish-subtree-always-show-state t)
     (setq dirvish-attributes '(vc-state subtree-state all-the-icons collapse git-msg file-time file-size))
     (setq dirvish-side-width 55)
 
-    (dirvish-override-dired-mode)
     (dirvish-side-follow-mode)
 
     ;; Disable wrapping lines in some modes so that full-screen dirvish looks good
@@ -3017,10 +3023,10 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     ;; Also disable tab-line in directory-view-mode as it does not makes sense
     (add-hook 'dirvish-directory-view-mode-hook #'im-disable-tab-line))
 
-  (defun im-dirvish ()
-    "Start dirvish in selected directory."
-    (interactive)
-    (dirvish (read-directory-name "Dirvish: ")))
+  (defun im-dirvish (dir)
+    "Start dirvish in selected DIR."
+    (interactive "DOpen Dirvish in: ")
+    (dirvish dir))
 
   (defun im-disable-line-wrapping ()
     (visual-line-mode -1)
@@ -3925,6 +3931,11 @@ Other complementary packages:
 ~(project-remember-projects-under im-projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
 
 #+begin_src emacs-lisp
+  (use-package project
+    :straight (:type built-in)
+    ;; I dynamically load projects list
+    :custom (project-list-file nil))
+
   (defconst im-projects-root "~/Workspace/projects")
 
   (defun im-current-project-root ()
@@ -3962,12 +3973,14 @@ Other complementary packages:
   (defalias 'im-import-projects #'im-load-projects-list)
   (defun im-load-projects-list ()
     (interactive)
+    (message "Loading projects....")
     ;; Ensure all projects are known by project.el
     ;; The following does not recurse as I like it to be
     ;; (project-remember-projects-under im-projects-root t)
     (setq project--list '())
     (--each (--map (project--find-in-directory it) (im-all-project-roots))
-      (project-remember-project it t)))
+      (project-remember-project it t))
+    (message "Loading projects...Done."))
 
   (run-with-timer 10 nil #'im-load-projects-list)
 #+end_src
@@ -6211,13 +6224,6 @@ I generally use the built-in hs-minor-mode but it does not work with all languag
     (setq-local comment-start "/**")
     (setq-local comment-end "*/")
     (setq-local poporg-comment-skip-regexp " *\\* *"))
-#+end_src
-** Refactoring (emr)
-#+begin_src emacs-lisp
-  ;; FIXME: Somehow, the usage of  popup.el breaks tab-bar
-  (use-package emr
-    :bind ( :map evil-normal-state-map ("gR" . emr-show-refactor-menu)
-            :map popup-menu-keymap ([escape] . keyboard-quit)))
 #+end_src
 
 ** markdown
