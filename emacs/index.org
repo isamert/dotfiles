@@ -8914,11 +8914,12 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
                         (when (org-up-heading-safe)
                           (org-entry-get nil "ITEM")))))
                    "LEVEL>1"))
-           (total-time (->> items
-                            (--filter (= (plist-get it :level) 2))
-                            (--map (plist-get it :clock))
-                            (-sum)
-                            (org-minutes-to-clocksum-string)))
+           (total-time (->>
+                        items
+                        (--filter (= (plist-get it :level) 2))
+                        (--map (plist-get it :clock))
+                        (-sum)
+                        (org-minutes-to-clocksum-string)))
            (routines (--filter (s-equals? (plist-get it :parent) "Routines") items))
            (work (--filter (-contains? (plist-get it :tags) "work") items))
            (others (--filter (not (or
@@ -8929,83 +8930,120 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
       (insert "| [Event] | [Duration] ||\n")
       (insert "|-|\n")
 
-      (->> items
-           (--find (s-equals? "Routines" (plist-get it :name)))
-           (funcall (-flip #'plist-get) :clock)
-           (org-minutes-to-clocksum-string)
-           (format "|Routines|%s||\n")
-           (insert))
+      (->>
+       items
+       (--find (s-equals? "Routines" (plist-get it :name)))
+       (funcall (-flip #'plist-get) :clock)
+       (org-minutes-to-clocksum-string)
+       (format "|Routines|%s||\n")
+       (insert))
 
-      (->> routines
-           (--filter (-contains? '("Breakfast" "Dinner") (plist-get it :name)))
-           (--map (plist-get it :clock))
-           (-sum)
-           (org-minutes-to-clocksum-string)
-           (format "|\\-- Eating||%s|\n")
-           (insert))
+      (->>
+       routines
+       (--filter (-contains? '("Breakfast" "Dinner") (plist-get it :name)))
+       (--map (plist-get it :clock))
+       (-sum)
+       (org-minutes-to-clocksum-string)
+       (format "|\\-- Eating||%s|\n")
+       (insert))
 
-      (->> routines
-           (--filter (not (-contains? '("Breakfast" "Dinner") (plist-get it :name))))
-           (--map (plist-get it :clock))
-           (-sum)
-           (org-minutes-to-clocksum-string)
-           (format "|\\-- Other||%s|\n")
-           (insert))
-
-      (insert "|-|\n")
-
-      (->> work
-           (--map (plist-get it :clock))
-           (-sum)
-           (org-minutes-to-clocksum-string)
-           (format "|Work|%s||\n")
-           (insert))
-
-      (->> work
-           (--filter (-contains? (plist-get it :tags) "meeting"))
-           (--map (plist-get it :clock))
-           (-sum)
-           (org-minutes-to-clocksum-string)
-           (format "|\\-- Meetings||%s|\n")
-           (insert))
-
-      (->> work
-           (--filter (not (-contains? (plist-get it :tags) "meeting")))
-           (--map (plist-get it :clock))
-           (-sum)
-           (org-minutes-to-clocksum-string)
-           (format "|\\-- Other||%s|\n")
-           (insert))
+      (->>
+       routines
+       (--filter (not (-contains? '("Breakfast" "Dinner") (plist-get it :name))))
+       (--map (plist-get it :clock))
+       (-sum)
+       (org-minutes-to-clocksum-string)
+       (format "|\\-- Other||%s|\n")
+       (insert))
 
       (insert "|-|\n")
 
-      (->> others
-           (--map (plist-get it :clock))
-           (-sum)
-           (org-minutes-to-clocksum-string)
-           (format "|Other|%s||\n")
-           (insert))
+      (->>
+       work
+       (--map (plist-get it :clock))
+       (-sum)
+       (org-minutes-to-clocksum-string)
+       (format "|Work|%s||\n")
+       (insert))
 
-      (->> others
-           (--filter (-contains? (plist-get it :tags) "side"))
-           (--map (plist-get it :clock))
-           (-sum)
-           (org-minutes-to-clocksum-string)
-           (format "|\\-- Side projects||%s|\n")
-           (insert))
+      (->>
+       work
+       (--filter (-contains? (plist-get it :tags) "meeting"))
+       (--map (plist-get it :clock))
+       (-sum)
+       (org-minutes-to-clocksum-string)
+       (format "|\\-- Meetings||%s|\n")
+       (insert))
 
-      (->> others
-           (--filter (not (-contains? (plist-get it :tags) "side")))
-           (--map (plist-get it :clock))
-           (-sum)
-           (org-minutes-to-clocksum-string)
-           (format "|\\-- Other||%s|\n")
-           (insert))
+      (->>
+       work
+       (--filter (not (-contains? (plist-get it :tags) "meeting")))
+       (--map (plist-get it :clock))
+       (-sum)
+       (org-minutes-to-clocksum-string)
+       (format "|\\-- Other||%s|\n")
+       (insert))
+
+      (insert "|-|\n")
+
+      (->>
+       others
+       (--map (plist-get it :clock))
+       (-sum)
+       (org-minutes-to-clocksum-string)
+       (format "|Other|%s||\n")
+       (insert))
+
+      (->>
+       others
+       (--filter (-contains? (plist-get it :tags) "side"))
+       (--map (plist-get it :clock))
+       (-sum)
+       (org-minutes-to-clocksum-string)
+       (format "|\\-- Side projects||%s|\n")
+       (insert))
+
+      (->>
+       others
+       (--filter (not (-contains? (plist-get it :tags) "side")))
+       (--map (plist-get it :clock))
+       (-sum)
+       (org-minutes-to-clocksum-string)
+       (format "|\\-- Other||%s|\n")
+       (insert))
 
       (insert "|-|\n")
       (insert (format "|Total|%s||\n" total-time))
       (delete-char 1)
       (org-table-align)))
+
+  ;;
+  ;; Misc utils
+  ;;
+
+  (defun im-bullet-schedule-all-today ()
+    "Schedule all level-2 org mode tasks that have a scheduled date in
+  the past to today's date with the same time. If the task is not
+  scheduled, schedules them to todays date."
+    (interactive)
+    (let* ((today (im-today))
+           (today-time (date-to-time today)))
+      (org-map-entries
+       (lambda ()
+         (let ((entry-date (org-entry-get nil "SCHEDULED")))
+           (when (and
+                  (org-entry-get nil "TODO")
+                  (if entry-date
+                      (time-less-p
+                       (date-to-time entry-date)
+                       today-time)
+                    t))
+             (org-schedule nil
+                           (if-let ((entry-date)
+                                    (hour-min (nth 2 (s-split " " entry-date))))
+                               (concat today " " hour-min)
+                             today)))))
+       "LEVEL=2")))
 #+end_src
 
 ** Scratch/temporary buffers in side windows
