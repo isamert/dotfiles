@@ -3050,13 +3050,14 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
 
   NOTE: Use \"rsync --version\" > 3 or something like that."
     (interactive
-     (list
-      (expand-file-name
-       (read-file-name
-        "Copy selected files to:"
-        (dired-dwim-target-directory)))))
+     (let ((target (dired-dwim-target-directory)))
+       (list
+        (expand-file-name
+         (read-file-name
+          "Copy selected files to: "
+          (if (s-contains? "ssh:" target) "~/" target))))))
     (let* ((files (dired-get-marked-files nil current-prefix-arg))
-           (ssh-regexp "/ssh:\\([a-zA-Z0-9_-]+\\):")
+           (ssh-regexp "/ssh:\\([a-zA-Z0-9_-\\.@]+\\):")
            (fix-remote-files
             (lambda (it)
               ;; NOTE: Not quite sure why I need to call
@@ -9487,8 +9488,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
          (with-current-buffer buffer-name
            (setq proc-out (concat proc-out str))
            (let ((inhibit-read-only t))
-             (goto-char (point-max))
-             (insert (ansi-color-apply (s-replace "" "\n" str)))))))
+             (save-excursion
+               (goto-char (point-max))
+               (insert (ansi-color-apply (s-replace "" "\n" str))))))))
       (with-current-buffer buffer-name
         (prog-mode)
         (im-shell-command-mode 1)
