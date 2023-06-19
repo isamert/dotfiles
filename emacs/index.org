@@ -3033,8 +3033,9 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     (dirvish dir))
 
   (defun im-disable-line-wrapping ()
-    (visual-line-mode -1)
-    (toggle-truncate-lines +1))
+    (let ((inhibit-message t))
+      (visual-line-mode -1)
+      (toggle-truncate-lines +1)))
 
   (defun im-disable-tab-line ()
     (tab-line-mode -1))
@@ -3056,6 +3057,7 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
          (read-file-name
           "Copy selected files to: "
           (if (s-contains? "ssh:" target) "~/" target))))))
+    (setq dest (expand-file-name dest))
     (let* ((files (dired-get-marked-files nil current-prefix-arg))
            (ssh-regexp "/ssh:\\([a-zA-Z0-9_-\\.@]+\\):")
            (fix-remote-files
@@ -3065,7 +3067,12 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
               ;; `start-process' and it should not invoke zsh etc.
               (if-let (host (nth 1 (s-match ssh-regexp it)))
                   (concat host ":" (shell-quote-argument (string-trim-left it ssh-regexp)))
-                (shell-quote-argument it)))))
+                (shell-quote-argument it))))
+           ;; If `default-directory' points to ssh'ed directory, that
+           ;; may cause some issues. This is just to keep things simple
+           ;; and error-free. Also it's better to use target directory
+           ;; as the `default-directory'.
+           (default-directory (if (f-dir? dest) dest (f-dirname dest))))
       (im-shell-command
        :command "rsync"
        :args
