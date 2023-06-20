@@ -8241,6 +8241,69 @@ Good for buffer management, especially for groupped killings.
         (org-set-property "REPORTER" (or .fields.reporter.name "N/A"))
         (org-set-property "ASSIGNEE" (or .fields.assignee.name "N/A"))
         (org-fold-show-all))))
+
+
+  (defun im-jira-list-current-sprint-assignee-swimlane ()
+    "Draw an org table for the current sprint that resembles assignee
+  swimlanes of JIRA.
+  It also shows how much story point each assignee has and how much
+  story points they have released. See the following figure:
+
+    | Assignee  | Total | Done | Sub-total | Status      | Issue         |
+    |-----------+-------+------+-----------+-------------+---------------|
+    | someone-1 |   8.0 |  3.0 |           |             |               |
+    |           |       |      |       3.0 | Open        | AI-483 - ...  |
+    |           |       |      |       3.0 | Done        | AI-423 -  ... |
+    |           |       |      |       2.0 | Code Review | AI-488 - ...  |
+    |-----------+-------+------+-----------+-------------+---------------|
+    | someone-2 |   7.0 |  2.0 |           |             |               |
+    |           |       |      |       2.0 | Released    | AI-485 - ...  |
+    |           |       |      |       5.0 | In Progress | AI-313 - ...  |"
+    (interactive)
+    (with-current-buffer (get-buffer-create "*jira: current-sprint-by-points*")
+      (erase-buffer)
+      (org-mode)
+      (insert "| Assignee | Total | Done | Sub-total | Status | Issue |\n|-\n")
+      (->>
+       (im-jira-get-current-sprint-issues)
+       ;; (--filter (let-alist it .fields.assignee.name))
+       (--group-by (let-alist it .fields.assignee.name))
+       (map-apply
+        (lambda (key vals)
+          (list
+           :assignee key
+           :total (-sum (--map (let-alist it .fields.customfield_10002) vals))
+           :done (->>
+                  vals
+                  (--filter (-contains? '("Done" "Released") (let-alist it .fields.status.name)))
+                  (--map (let-alist it .fields.customfield_10002))
+                  (-sum))
+           :tasks
+           (->>
+            (--map (let-alist it
+                     (list
+                      :points .fields.customfield_10002
+                      :summary (format "%s - %s" .key .fields.summary)
+                      :status .fields.status.name))
+                   vals)
+            (--sort (string> (plist-get it :status) (plist-get other :status)))))))
+       (--sort (> (plist-get it :total) (plist-get other :total)))
+       (--map (format "| %s | %s | %s | | | |\n%s"
+                      (plist-get it :assignee)
+                      (plist-get it :total)
+                      (plist-get it :done)
+                      (s-join
+                       "\n"
+                       (--map (format "| | | | %s | %s | %s |"
+                                      (plist-get it :points)
+                                      (plist-get it :status)
+                                      (s-truncate 60 (plist-get it :summary)))
+                              (plist-get it :tasks)))))
+       (s-join "\n|-\n")
+       (insert))
+      (org-table-align)
+      (goto-char (point-min))
+      (switch-to-buffer (current-buffer))))
 #+end_src
 
 ** My Android phone and Emacs
