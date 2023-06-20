@@ -2426,8 +2426,8 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
        "** (call-interactively #'im-org-archive-url)\n-Don't forget tot TAG!")))
 #+end_src
 ** Convert items to TODO entries
-#+begin_src emacs-lisp :lexical t
-  (defun im-org-convert-item-to-todo-and-refile ()
+#+begin_src emacs-lisp
+  (defun im-org-convert-item-to-todo-and-refile (&optional yank-only)
     "Convert org item to todo header and refile.
   I take notes in the following format during the day via
   org-capture template:
@@ -2437,8 +2437,11 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
   At the end of the day, I convert these notes into tasks if
   applicable. This means rewriting them into a TODO header with
   CREATED_AT property and refiling into the appropriate
-  header. This function automatizes that."
-    (interactive)
+  header. This function automatizes that.
+
+  If YANK-ONLY is non-nil (with prefix arg while calling
+  interactively), only yank the result, do not refile."
+    (interactive "P")
     (save-excursion
       (beginning-of-line)
       (let ((line (thing-at-point 'line))
@@ -2460,8 +2463,10 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
                        ":END:" "\n"
                        (if body (concat body "\n") "")))
               (org-mode)
-              (let ((org-refile-targets nil))
-                (org-refile nil buffer))))))))
+              (if yank-only
+                  (im-kill (buffer-string))
+                (let ((org-refile-targets nil))
+                  (org-refile nil buffer)))))))))
 #+end_src
 * Other packages
 ** display-time-mode
