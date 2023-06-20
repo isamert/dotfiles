@@ -3078,7 +3078,7 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
        :command "rsync"
        :eat t
        :args
-       `("--archive" "--recursive" "--verbose" "--human-readable" "--partial" "--xattrs" "--info=progress2"
+       `("-s" "--archive" "--recursive" "--verbose" "--human-readable" "--partial" "--xattrs" "--info=progress1"
          ,@(when (--any? (s-matches? ssh-regexp it) files)
              '("-e" "ssh"))
          ,@(mapcar fix-remote-files files)
