@@ -3061,11 +3061,8 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
            (ssh-regexp "/ssh:\\([a-zA-Z0-9_-\\.@]+\\):")
            (fix-remote-files
             (lambda (it)
-              ;; NOTE: Not quite sure why I need to call
-              ;; `shell-quote-argument' because `im-shell-command' uses
-              ;; `start-process' and it should not invoke zsh etc.
               (if-let (host (nth 1 (s-match ssh-regexp it)))
-                  (concat host ":" (shell-quote-argument (string-trim-left it ssh-regexp)))
+                  (concat host ":" (string-trim-left it ssh-regexp))
                 (shell-quote-argument it))))
            ;; If `default-directory' points to ssh'ed directory, that
            ;; may cause some issues. This is just to keep things simple
@@ -3074,6 +3071,7 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
            (default-directory (if (f-dir? dest) dest (f-dirname dest))))
       (im-shell-command
        :command "rsync"
+       :eat t
        :args
        `("--archive" "--recursive" "--verbose" "--human-readable" "--partial" "--xattrs" "--info=progress2"
          ,@(when (--any? (s-matches? ssh-regexp it) files)
@@ -3942,10 +3940,11 @@ Other complementary packages:
 ~(project-remember-projects-under im-projects-root t)~ does not work as I expect, so I add all of my projects using a custom function that returns all of my projects' paths.
 
 #+begin_src emacs-lisp
-  (use-package project
-    :straight (:type built-in)
-    ;; I dynamically load projects list
-    :custom (project-list-file nil))
+  ;; (use-package project
+  ;;   :straight (:type built-in)
+  ;;   ;; I dynamically load projects list
+  ;;   ;; FIXME Setting it to nil breaks project.el
+  ;;   :custom (project-list-file nil))
 
   (defconst im-projects-root "~/Workspace/projects")
 
@@ -8155,10 +8154,11 @@ Good for buffer management, especially for groupped killings.
   (defun im-jira-update-ticket (key summary description)
     (im-get-input
      :init
-     (format (concat
-              "* %s\n"
-              (im-convert-jira-markup-to-org-mode description))
-             summary)
+     (concat
+      "* "
+      summary
+      "\n"
+      (im-convert-jira-markup-to-org-mode description))
      :pre-process
      (lambda ()
        (goto-char (point-min))
@@ -8221,11 +8221,13 @@ Good for buffer management, especially for groupped killings.
     (let ((ticket (jiralib2-get-issue key)))
       (let-alist ticket
         (insert
-         (format (concat
-                  "* %s - %s\n"
-                  (im-convert-jira-markup-to-org-mode .fields.description))
-                 key
-                 .fields.summary))
+         (concat
+          "* "
+          key
+          " - "
+          .fields.summary
+          "\n"
+          (im-convert-jira-markup-to-org-mode .fields.description)))
         (jira-view-mode)
         (setq header-line-format "Hit `&' to open in browser, `ge' to edit, `gr' to reload, `ga' to see actions.")
         (setq-local jira-view-mode-ticket ticket)
@@ -9445,6 +9447,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
       (&key
        command
        args
+       eat
        (switch t)
        (buffer-name (concat "*" command "*"))
        (on-start (lambda (&rest _)))
@@ -9457,8 +9460,15 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   If ARGS is non-nil list, then use `start-process' with command as
   COMMAND and args as ARGS.
 
+  If EAT is non nil, use eat shell to display output which handles
+  terminal outputs way better.  ARGS must be a list.
+
   When called interactively, asks for a command to run (with eshell
-  completion)."
+  completion).
+
+  In BUFFER-NAME, `im-shell-command-mode' is activated and you can
+  use `im-shell-command-mode-rerun-command' or \"gr\" to replay the
+  command."
     (interactive
      (let ((command (completing-read "Command: " (im-zsh-smart-history))))
        (list
@@ -9476,9 +9486,16 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
             (when (not (frame-focus-state))
               (alert msg)))))))
     (let* ((proc
-            (if args
-                (apply #'start-process command buffer-name command args)
-              (start-process-shell-command command buffer-name command)))
+            (if eat
+                (progn
+                  (let ((buffer (apply #'eat-make command command nil args)))
+                    (setq buffer-name (buffer-name buffer))
+                    (get-buffer-process buffer)))
+              (if args
+                  (progn
+                    (message ">>>> %s" args)
+                    (apply #'start-process command buffer-name command args))
+                (start-process-shell-command command buffer-name command))))
            (proc-out ""))
       (set-process-sentinel
        proc
@@ -9488,17 +9505,19 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
          (if (= 0 (process-exit-status p))
              (funcall on-finish proc-out)
            (funcall on-fail))))
-      (set-process-filter
-       proc
-       (lambda (proc str)
-         (with-current-buffer buffer-name
-           (setq proc-out (concat proc-out str))
-           (let ((inhibit-read-only t))
-             (save-excursion
-               (goto-char (point-max))
-               (insert (ansi-color-apply (s-replace "" "\n" str))))))))
+      (unless eat
+        (set-process-filter
+         proc
+         (lambda (proc str)
+           (with-current-buffer buffer-name
+             (setq proc-out (concat proc-out str))
+             (let ((inhibit-read-only t))
+               (save-excursion
+                 (goto-char (point-max))
+                 (insert (ansi-color-apply (s-replace "" "\n" str)))))))))
       (with-current-buffer buffer-name
-        (prog-mode)
+        (unless eat
+          (prog-mode))
         (im-shell-command-mode 1)
         (evil-normal-state)
         (setq-local
