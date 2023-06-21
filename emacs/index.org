@@ -4922,11 +4922,11 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
     :demand t
     :general
     (im-leader
-     "glm" #'im-git-link-merge-requests
-     "gll" #'im-git-link-on-branch
-     "glL" #'im-git-link-commit
-     "glc" #'im-git-link-commit
-     "glh" #'git-link-homepage)
+      "glm" #'im-git-link-merge-requests
+      "gll" #'im-git-link-on-branch
+      "glL" #'im-git-link-commit
+      "glc" #'git-link-commit
+      "glh" #'git-link-homepage)
     :config
     (setq git-link-open-in-browser t))
 
