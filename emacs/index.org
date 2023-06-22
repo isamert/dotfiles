@@ -9848,6 +9848,11 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
                              namespace
                              container
                              context)))))
+        "Top" → (im-shell-command
+                 :command (format "kubectl top pod  '%s' --namespace='%s' --context='%s'"
+                                  name
+                                  namespace
+                                  context))
         "Remove" → (format "Copied: %s"
                            (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
                                             name
