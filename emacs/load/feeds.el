@@ -11,6 +11,7 @@
     ("https://t24.com.tr/rss/haber/gundem" news turkish)
     ("https://t24.com.tr/rss/haber/politika" news turkish)
     ("https://t24.com.tr/rss/haber/dunya" news turkish)
+    ("https://t24.com.tr/rss/haber/ekonomi" news turkish)
 
     ("https://hnrss.org/frontpage" news)
 
