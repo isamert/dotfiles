@@ -4921,7 +4921,7 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
   (use-package git-link
     :demand t
     :general
-    (im-leader
+    (im-leader-v
       "glm" #'im-git-link-merge-requests
       "gll" #'im-git-link-on-branch
       "glL" #'im-git-link-commit
@@ -7676,12 +7676,13 @@ Good for buffer management, especially for groupped killings.
            (proj-path (or (im-current-project-root) (expand-file-name "~/")))
            (fpath (or (buffer-file-name) (buffer-name)))
            (fpath-pretty (string-replace (expand-file-name "~") "~" fpath)))
-      (message "[%s] %s\n%s\n%s\n%s"
+      (message "[%s] %s\n%s\n%s\n%s\n%s"
                (propertize proj-name 'face 'bold)
                (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic))
                (format "%s%s" (if kill-file-path (propertize "Copied: " 'face 'bold) "") fpath-pretty)
                (format "Size: %s" (im-human-readable-size (buffer-size)))
-               (format "Current branch: %s" (lab-git-current-branch)))
+               (format "Current branch: %s" (lab-git-current-branch))
+               (im-read-time))
       (when kill-file-path
         (im-kill fpath-pretty))))
 #+end_src
@@ -10318,6 +10319,23 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
       (default-text-scale-increment (* 2 default-text-scale-amount))
       (message "Preparing pair programming environment...Done.")))
 
+#+end_src
+** im-read-time
+#+begin_src emacs-lisp
+  (defun im-read-time ()
+    "Show approximate read time of the selected area or whole buffer."
+    (interactive)
+    (funcall
+     (if (called-interactively-p 'interactive) #'message #'format)
+     "%s min read"
+     (ceiling
+      (/ (apply #'count-words
+                (if (region-active-p)
+                    (list (region-beginning) (region-end))
+                  (list (point-min) (point-max))))
+         ;; I am using a value lower than average wpm to account for other
+         ;; things (distractions etc.)
+         230.0))))
 #+end_src
 * Operating system related
 ** Sound output chooser
