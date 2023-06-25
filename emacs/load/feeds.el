@@ -41,6 +41,7 @@
     ("https://www.rousette.org.uk/index.xml" blog dev emacs essay)
     ("https://jao.io/blog/rss.xml" blog dev emacs)
     ("https://psachin.gitlab.io/index.xml" blog dev emacs lisp)
+    ("https://fuco1.github.io/rss.xml" blog dev emacs lisp)
     ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay) ;; Gwern
     ("https://www.lesswrong.com/feed.xml?view=curated-rss" blog essay)
     ("https://writings.stephenwolfram.com/feed/" blog essay)
