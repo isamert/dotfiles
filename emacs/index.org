@@ -1375,7 +1375,10 @@ Multiple cursors for evil.
     (map-put! evil-surround-pairs-alist ?\[ '("[" . "]"))
     (map-put! evil-surround-pairs-alist ?\] '("[ " . " ]"))
     (map-put! evil-surround-pairs-alist ?\{ '("{" . "}"))
-    (map-put! evil-surround-pairs-alist ?\} '("{ " . " }")))
+    (map-put! evil-surround-pairs-alist ?\} '("{ " . " }"))
+
+    ;; Convert `` to `' in emacs-lisp mode
+    (add-hook 'emacs-lisp-mode-hook (lambda () (push '(?` . ("`" . "'")) evil-surround-pairs-alist))))
 #+END_SRC
 
 ** evil-escape
@@ -2444,12 +2447,12 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
     (interactive "P")
     (save-excursion
       (beginning-of-line)
-      (let ((line (thing-at-point 'line))
+      (let ((line (substring-no-properties (thing-at-point 'line)))
             (timestamp nil)
             (text nil))
-        (when (string-match "^- \\[\\(.*\\)\\] \\(.*\\)" line)
-          (setq timestamp (match-string 1 line))
-          (setq text (match-string 2 line))
+        (when-let (match (s-match "^- \\(\\[[ X-]] \\)?\\(\\[.*]\\) \\(.*\\)" line))
+          (setq timestamp (nth 2 match))
+          (setq text (nth 3 match))
           (delete-region (line-beginning-position) (1+ (line-end-position)))
           (let* ((buffer (current-buffer))
                  (data (s-split " :: " text))
@@ -4133,13 +4136,14 @@ Some key points:
     (:keymaps 'minibuffer-mode-map
      "C-r" #'consult-history)
     (:states 'normal :keymaps 'org-mode-map
-     "M-i" #'consult-org-heading)
+     "M-i" #'consult-org-heading
+     "M-I" #'consult-org-agenda)
     (:states 'insert :keymaps 'eshell-mode-map
      "C-r" #'consult-history)
     (:states 'normal
      "M-i" (λ-interactive (condition-case nil
                               (consult-imenu)
-                            (error (consult-outline)))))
+                            (error (consult-outline))))))
     :config
     (advice-add #'register-preview :override #'consult-register-window)
 
