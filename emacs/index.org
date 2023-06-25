@@ -6948,78 +6948,84 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 #+end_src
 *** Inline/popup documentation
 #+begin_src emacs-lisp
+  (use-package quick-peek
+    :straight (:host github :repo "cpitclaudel/quick-peek"))
+
   (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'im-describe-thing-in-popup)
   (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'im-describe-thing-in-popup)
 
-  (defconst im-describe-thing-buffer-name "*im-describe*")
-
-  (defun im-describe-thing-mode-scroll-up (&optional n)
-    (interactive nil im-describe-thing-mode)
-    (with-selected-frame (posframe--find-existing-posframe (get-buffer im-describe-thing-buffer-name))
-      (with-current-buffer im-describe-thing-buffer-name
-        (scroll-up (or n 1)))))
-
-  (defun im-describe-thing-mode-scroll-down (&optional n)
-    (interactive nil im-describe-thing-mode)
-    (im-describe-thing-mode-scroll-up (- (or n 1))))
+  (defvar im-describe-thing-symbol nil)
+  (defvar im-describe-thing-string nil)
+  (defvar im-describe-thing-pos 0)
 
   (defun im-describe-thing-jump ()
     (interactive nil im-describe-thing-mode)
-    (im-describe-thing--remove-posframe :force)
-    (switch-to-buffer-other-window im-describe-thing-buffer-name))
+    (im-describe-thing--remove-quickpeek)
+    (helpful-symbol im-describe-thing-symbol))
+
+  (defun im-describe-thing-mode-scroll-down ()
+    (interactive nil im-describe-thing-mode)
+    (quick-peek-show
+     (->>
+      (s-lines im-describe-thing-string)
+      (-drop (setq im-describe-thing-pos (1+ im-describe-thing-pos)))
+      (s-join "\n"))
+     nil nil 30))
+
+  (defun im-describe-thing-mode-scroll-up ()
+    (interactive nil im-describe-thing-mode)
+    (quick-peek-show
+     (->>
+      (s-lines im-describe-thing-string)
+      (-drop (setq im-describe-thing-pos (max 0 (1- im-describe-thing-pos))))
+      (s-join "\n"))
+     nil nil 30))
+
+  (defun im-describe-thing-mode-scroll-down ()
+    (interactive nil im-describe-thing-mode)
+    (quick-peek-show
+     (->>
+      (s-lines im-describe-thing-string)
+      (-drop 1)
+      (s-join "\n"))
+     nil nil 30))
 
   (define-minor-mode im-describe-thing-mode
     "Elisp popup documentation mode."
     :lighter " ElPopDoc"
     :global t
     :keymap (let ((map (make-sparse-keymap)))
-              (define-key map (kbd "M-n") #'im-describe-thing-mode-scroll-up)
-              (define-key map (kbd "M-p") #'im-describe-thing-mode-scroll-down)
+              (define-key map (kbd "M-j") #'im-describe-thing-mode-scroll-down)
+              (define-key map (kbd "M-k") #'im-describe-thing-mode-scroll-up)
+              (define-key map (kbd "C-g") #'im-describe-thing--remove-quickpeek)
               (define-key map (kbd "M-RET") #'im-describe-thing-jump)
               map))
 
-  (defvar im-describe-thing-posframe-point nil)
-  (defvar im-describe-thing-current-buffer nil)
-  (defun im-describe-thing--remove-posframe (&optional force-remove &rest _)
-    (with-current-buffer im-describe-thing-current-buffer
-      (when (or
-             (eq this-command #'keyboard-quit)
-             (eq force-remove :force)
-             (not (eq (point) im-describe-thing-posframe-point)))
-        (posframe-hide im-describe-thing-buffer-name)
-        (remove-hook 'post-command-hook #'im-describe-thing--remove-posframe)
-        (im-describe-thing-mode -1)
-        (setq minor-mode-overriding-map-alist
-              (assq-delete-all #'im-describe-thing-mode
-                               minor-mode-overriding-map-alist)))))
+  (evil-define-key 'normal im-describe-thing-mode-map
+    (kbd "K") #'im-describe-thing--remove-quickpeek)
+
+  (defun im-describe-thing--remove-quickpeek ()
+    (interactive nil im-describe-thing-mode)
+    (setq im-describe-thing-string nil)
+    (setq im-describe-thing-pos 0)
+    (im-describe-thing-mode -1)
+    (quick-peek-hide)
+    (setq minor-mode-overriding-map-alist
+          (assq-delete-all #'im-describe-thing-mode
+                           minor-mode-overriding-map-alist)))
 
   (defun im-describe-thing-in-popup ()
     (interactive)
-    (let* ((thing (symbol-at-point))
+    (let* ((thing (setq im-describe-thing-symbol (symbol-at-point)))
            (help-xref-following t)
            (description (save-window-excursion
                           (helpful-symbol thing)
-                          (buffer-string))))
+                          (setq im-describe-thing-string (buffer-string)))))
       (im-describe-thing-mode +1)
-      (setq im-describe-thing-posframe-point (point))
-      (setq im-describe-thing-current-buffer (current-buffer))
       (setf (alist-get #'im-describe-thing-mode minor-mode-overriding-map-alist)
             im-describe-thing-mode-map)
-      (add-hook 'post-command-hook #'im-describe-thing--remove-posframe)
-      (posframe-hide-all)
-      (posframe-show
-       im-describe-thing-buffer-name
-       :string description
-       :poshandler #'posframe-poshandler-point-top-left-corner
-       :border-width 3
-       :max-width 80
-       :max-height 30
-       ;; M-n, M-p bindings only makes sense if accept-focus is
-       ;; nil. When accept-focus is non-nil, user is directly focused to
-       ;; the posframe and they can scroll using their conventional
-       ;; methods.
-       :accept-focus t
-       :border-color "gray30")))
+      (evil-normalize-keymaps)
+      (quick-peek-show description nil nil 30)))
 #+end_src
 
 *** Pretty stuff
