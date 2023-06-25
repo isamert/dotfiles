@@ -4122,6 +4122,24 @@ Some key points:
 
 #+begin_src emacs-lisp
   (use-package consult
+    :general
+    (im-leader
+      "fo" #'find-file
+      "fs" #'save-buffer
+      "fd" #'consult-dir
+      "fl" #'consult-line
+      "cr" #'consult-history
+      "RET" #'consult-buffer)
+    (:keymaps 'minibuffer-mode-map
+     "C-r" #'consult-history)
+    (:states 'normal :keymaps 'org-mode-map
+     "M-i" #'consult-org-heading)
+    (:states 'insert :keymaps 'eshell-mode-map
+     "C-r" #'consult-history)
+    (:states 'normal
+     "M-i" (λ-interactive (condition-case nil
+                              (consult-imenu)
+                            (error (consult-outline)))))
     :config
     (advice-add #'register-preview :override #'consult-register-window)
 
@@ -4131,19 +4149,6 @@ Some key points:
     (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
     ;; ^ Shows all narrowing possibilities when you hit "?"
     ;; If no narrowing is available, simply inserts "?"
-
-    (evil-leader/set-key "RET" #'consult-buffer)
-    (evil-define-key 'normal 'global (kbd "M-i") (λ-interactive (condition-case nil
-                                                                    (consult-imenu)
-                                                                  (error (consult-outline)))))
-    (evil-define-key 'normal org-mode-map (kbd "M-i") #'consult-org-heading)
-    (evil-define-key 'insert eshell-mode-map (kbd "C-r") #'consult-history)
-
-    (evil-leader/set-key "fo" #'find-file)
-    (evil-leader/set-key "fs" #'save-buffer)
-    (evil-leader/set-key "fd" #'consult-dir)
-    (evil-leader/set-key "fl" #'consult-line)
-    (evil-leader/set-key "cr" #'consult-history)
 
     ;; Hide some buffers from consult-buffer window. If you want to jump
     ;; on one of these buffers, start with a space after opening
@@ -5654,11 +5659,12 @@ Better way to correct spelling mistakes. By default it uses completing-read. Thi
   (use-package flyspell-correct
     :after flyspell
     ;; Rebind default evil ispell keys to flyspell-correct ones
-    :bind ( :map evil-normal-state-map
-            ("z=" . flyspell-correct-at-point)
-            ;; This goes to nearest spelling mistake.
-            ;; If called with C-u, it goes into rapid mode where you correct all mistakes in order.
-            ("zw" . flyspell-correct-wrapper)))
+    :general
+    (:keymaps 'evil-normal-state-map
+     "z=" #'flyspell-correct-at-point
+     ;; This goes to nearest spelling mistake.
+     ;; If called with C-u, it goes into rapid mode where you correct all mistakes in order.
+     "zw" #'flyspell-correct-wrapper))
 #+end_src
 
 *** synosaurus & wordnut
