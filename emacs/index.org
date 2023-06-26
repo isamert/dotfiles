@@ -2515,7 +2515,14 @@ This is a built-in mode for providing basic outlining features. Here are a few c
     (:states 'insert :keymaps '(eshell-prompt-mode-map override)
      "C-l" (λ-interactive (eshell/clear t)))
     :config
-    (setq eshell-history-size 10000))
+    ;; This is nil on purpose. Because `im-eshell-append-history' does
+    ;; duplication check before writing it to history and if this is
+    ;; non-nil then it fails to do the duplication check because
+    ;; duplicated items will not be inserted to history-ring at all.
+    (setq eshell-hist-ignoredups nil)
+    (setq eshell-history-size 10000)
+    ;; I manage history with `im-eshell-append-history''
+    (setq eshell-save-history-on-exit nil))
 
   (use-package eshell-syntax-highlighting
     :after eshell
@@ -2679,6 +2686,33 @@ When I enter any of the listed directories, eshell automatically prints out my n
       (org-fold-show-entry)
       (org-narrow-to-subtree)))
 #+end_src
+*** Consistent history
+Normally, if you have more than one eshell instance open and quit them consecutively, the last closed one will overwrite the ~eshell-history-file~. The following /appends/ issued command to history after each command.
+#+begin_src emacs-lisp
+  (defvar im-eshell-history-blacklist "^\\(ls\\|pwd\\|cd\\|clear\\|exit\\|rm\\|mkdir\\|mkcd\\|im-autodir\\)")
+
+  ;; Adapted from: https://emacs.stackexchange.com/questions/18564/merge-history-from-multiple-eshells
+  ;; Changes:
+  ;; - Duplication check
+  ;; - Blacklisted commands
+  ;; - Process only successful commands
+  ;;    - Not quite sure if this is a good idea though. Just experimenting.
+  (defun eshell-append-history ()
+    "Call `eshell-write-history' with the `append' parameter set to `t'."
+    (when (and eshell-history-ring (eq eshell-last-command-status 0))
+      (let ((last-elem (s-trim (car (ring-elements eshell-history-ring))))
+            (prev-elem (s-trim (nth 1 (ring-elements eshell-history-ring)))))
+        (when (and (not (string= last-elem prev-elem))
+                   (not (s-matches? im-eshell-history-blacklist last-elem)))
+          (let ((newest-cmd-ring (make-ring 1)))
+            (ring-insert newest-cmd-ring last-elem)
+            (let ((eshell-history-ring newest-cmd-ring))
+              (eshell-write-history eshell-history-file-name t)))))))
+
+  (add-hook 'eshell-post-command-hook #'eshell-append-history)
+#+end_src
+
+(add-hook 'eshell-pre-command-hook #'eshell-append-history)
 ** bookmark.el
 You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult-bookmark~ and calling ~embark-act~ on them to view/delete/edit given bookmark might be easier.
 
