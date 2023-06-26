@@ -6188,7 +6188,7 @@ Keybindings are generally set in-place, following have no context, so they are h
   (im-leader "1" (λ-interactive (call-interactively (local-key-binding (kbd "C-c C-c")))))
 #+END_SRC
 
-* Language specific
+* Programming languages
 ** General/language-agnostic functionality
 *** Jump to beginning/end of a statement
 Using [w and ]w, I can jump between statements. For
@@ -6258,6 +6258,142 @@ I generally use the built-in hs-minor-mode but it does not work with all languag
   (use-package origami
     :hook (yaml-mode . origami-mode)
     :straight (:host github :repo "gregsexton/origami.el"))
+#+end_src
+*** REPLs
+I really like being able to do my development inside REPL. It creates
+a really nice feedback loop and fastens the development process. While
+support for this type of development is not good in other languages
+than Lisps, I at least like to have the ability to run and evaluate
+pieces of code in given languages REPL. Here I created a function to
+ease up that process. For given REPL, this creates a background REPL
+process (like ~jshell~) and sends your inputs to REPL and outputs the
+result to echo area. It's like ~eval-last-sexp~ but for all languages
+that has a REPL (and with much limited execution functionality of
+course, you are limited by the REPL.) This creates only one REPL
+process per language, so you can build up a context and use that
+throughout your projects.
+
+#+begin_src emacs-lisp
+  (evil-leader/set-key-for-mode 'typescript-ts-mode ";" #'im-deno-repl-eval)
+  (evil-leader/set-key-for-mode 'java-ts-mode ";" #'im-jshell-repl-eval)
+
+  (cl-defmacro im-create-repl (&key name args prefix expr parser)
+    "Create family of functions for interacting with given REPL of NAME.
+
+  NAME is the binary name of the REPL, like jshell, deno etc. (case-insensitive)
+
+  ARGS is the arguments passed to NAME.
+
+  PREFIX is the prefix used while showing the result in echo area.
+
+  EXPR is the expression finder at point. Should return a tree-sitter node.
+
+  PARSER is result parser. Process output is sent to this function
+  and if the return value is non-nil, result is shown in the echo
+  area.
+
+  As a result, 3 functions are generated:
+
+  - im-NAME-repl-start :: Creates the process and starts the
+    repl. Process is associated with *NAME-repl* buffer.
+  - im-NAME-repl-send :: Sends given string to REPL.
+  - im-NAME-repl-eval :: Entry function. Just bind this to
+    something and it starts a REPL if needed when called and sends
+    the current expression (or the selected expression) to REPL.
+
+  It was probably a bad idea to use a macro for writing this but I
+  already had an implementation for \"deno\" and it was quite easy
+  to turn it into something generic using macros.
+
+  Version: 2023-06-26"
+    (let* ((process-var (intern (format "im-%s-repl-process" (downcase name))))
+           (repl-buffer-name (format "*%s-repl*" (downcase name)))
+           (is-repl-running `(lambda ()
+                               (and ,process-var (process-live-p ,process-var)))))
+      `(progn
+         (defvar ,process-var nil)
+
+           ;;; defun im-REPL-repl-start
+         (defun ,(intern (format "im-%s-repl-start" (downcase name))) ()
+           ,(format "Start (or restart, if already running) the %s REPL on the background." name)
+           (interactive)
+           (when (,is-repl-running)
+             (delete-process ,process-var))
+           (let ((repl (start-process ,repl-buffer-name
+                                      ,repl-buffer-name
+                                      ,(downcase name)
+                                      ,@args)))
+             (setq ,process-var repl)
+             (set-process-filter
+              repl
+              (lambda (proc out)
+                (with-current-buffer ,repl-buffer-name
+                  (goto-char (point-max))
+                  (insert (ansi-color-apply out))
+                  (insert "\n"))
+                (let* ((result ,parser))
+                  (when result
+                    (message "%s%s" ,prefix (im-kill result))
+                    ;; FIXME: Following does not work for some reason, probably
+                    ;; something related to this being a filter function
+                    (eros--eval-overlay
+                     result
+                     (point))))))
+             (set-process-sentinel
+              repl
+              (lambda (proc out)
+                (if (eq (process-exit-status proc) 0)
+                    (message ,(format ">> Closed %s REPL session." name))
+                  (message ,(format ">> %s REPL has crashed." name)))))))
+
+           ;;; defun im-REPL-repl-send
+         (defun ,(intern (format "im-%s-repl-send" (downcase name))) (expr)
+           (let ((str (concat (s-trim expr) "\n")))
+             (with-current-buffer ,repl-buffer-name
+               (insert (format ">>> %s" expr)))
+             (process-send-string ,process-var str)))
+
+           ;;; defun im-REPL-repl-eval
+         (defun ,(intern (format "im-%s-repl-eval" (downcase name))) ()
+           (interactive)
+           (unless (,is-repl-running)
+             (,(intern (format "im-%s-repl-start" (downcase name)))))
+           (let ((expr
+                  (if (use-region-p)
+                      (buffer-substring-no-properties (region-beginning)
+                                                      (region-end))
+                    (let ((curr ,expr)
+                          (this-command 'evil-paste-after))
+                      (evil-goggles--show-async-hint
+                       (treesit-node-start curr)
+                       (treesit-node-end curr))
+                      (treesit-node-text curr)))))
+             (,(intern (format "im-%s-repl-send" (downcase name))) expr))))))
+
+  (im-create-repl
+   :name "Deno"
+   :args ("repl" "--allow-net")
+   :prefix "=> "
+   :expr (im-ts-current-expression)
+   :parser
+   (->>
+    out
+    (s-split "\n")
+    (-drop-last 1)
+    (s-join "\n")
+    ansi-color-apply))
+
+  (im-create-repl
+   :name "JShell"
+   :args nil
+   :prefix ""
+   :expr (im-ts-current-expression)
+   :parser
+   (when-let* ((str (s-trim out))
+               ((and (not (s-blank-str? out))
+                     (or (s-contains? "==>" out)
+                         (s-prefix? "|" out)))))
+     str))
 #+end_src
 *** Other
 #+begin_src emacs-lisp
@@ -6531,68 +6667,6 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
            (when deno
              (im-eshell-send-key ?\n)))
         (user-error "No expression is found"))))
-#+end_src
-*** Deno REPL
-/Deno REPL/ lets you redefine any declaration. This is quite nice and /Node REPL/ does not have this. To be able get more out of the /Deno REPL/, I run it on the background and send expressions to it and then print the results back to echo area using ~im-deno-eval~ function. Like ~eval-last-sexp~ but for Deno.
-
-#+begin_src emacs-lisp
-  (defvar im-deno-repl-process nil)
-
-  (evil-leader/set-key-for-mode 'typescript-ts-mode ";" #'im-deno-eval)
-
-  (defun im-deno-eval ()
-    "Eval current or selected expression in a Deno REPL and print the result.
-  Puts the result into the `kill-ring' automatically.  See `im-deno-process-filter'."
-    (interactive)
-    (unless (im-deno-is-repl-running?)
-      (im-deno-start-repl))
-    (let ((expr
-           (if (use-region-p)
-               (buffer-substring-no-properties (region-beginning)
-                                               (region-end))
-             (let ((curr (im-ts-current-expression))
-                   (this-command 'evil-paste-after))
-               (evil-goggles--show-async-hint
-                (treesit-node-start curr)
-                (treesit-node-end curr))
-               (treesit-node-text curr)))))
-      (process-send-string im-deno-repl-process (s-concat (s-trim expr) "\n"))))
-
-  (defun im-deno-start-repl ()
-    "Start (or restart, if already running) the Deno REPL on the background."
-    (interactive)
-    (when (im-deno-is-repl-running?)
-      (delete-process im-deno-repl-process))
-    (let ((deno (start-process "*deno-repl*" "*deno-repl*" "deno" "repl" "--allow-net")))
-      (setq im-deno-repl-process deno)
-      (set-process-filter deno #'im-deno-process-filter)
-      (set-process-sentinel deno #'im-deno-process-sentinel)))
-
-  (defun im-deno-process-filter (proc out)
-    (let ((result (->>
-                   out
-                   (s-split "\n")
-                   (-drop-last 1)
-                   (s-join "\n")
-                   ansi-color-apply)))
-      (with-current-buffer "*deno-repl*"
-        (goto-char (point-max))
-        (insert (ansi-color-apply out))
-        (insert "\n"))
-      (message "=> %s" (im-kill result))
-      ;; FIXME: Following does not work for some reason, probably
-      ;; something related to this being a filter function
-      (eros--eval-overlay
-       result
-       (point))))
-
-  (defun im-deno-process-sentinel (proc out)
-    (if (eq (process-exit-status proc) 0)
-        (message ">> Closed Deno REPL session.")
-      (message ">> Deno REPL has crashed.")))
-
-  (defun im-deno-is-repl-running? ()
-    (and im-deno-repl-process (process-live-p im-deno-repl-process)))
 #+end_src
 *** Deno utils
 Here are some functions that I use while developing with Deno.
