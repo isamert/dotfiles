@@ -2214,7 +2214,7 @@ Insert links/images more intelligently,
 - otherwise call ~org-insert-link~
 
 #+begin_src emacs-lisp
-  (evil-leader/set-key "oP" #'im-org-insert-dwim)
+  (im-leader "oP" #'im-org-insert-dwim)
 
   (defun im-org-insert-dwim ()
     "Like `org-insert-link' but improved with dwim features.
@@ -2686,7 +2686,7 @@ You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult
   (setq bookmark-save-flag 1)
   ;; ^ Save bookmarks automatically
 
-  (evil-leader/set-key
+  (im-leader
     "bs" #'bookmark-set
     "bm" #'consult-bookmark)
 #+end_src
@@ -2742,7 +2742,7 @@ Several packages are using this package to show system-level notifications. Here
     (setq alert-fade-time 15)
     (setq alert-default-style 'im-alert-posframe)
 
-    (evil-leader/set-key
+    (im-leader
       "yy" #'im-notify-posframe-notifications
       "yu" #'im-notify-posframe-enable-dnd
       "yU" #'im-notify-posframe-disable-dnd
@@ -2944,7 +2944,7 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
     :after hydra
     :defer t
     :init
-    (evil-leader/set-key "a" #'appearance/body)
+    (im-leader "a" #'appearance/body)
     :config
     (pretty-hydra-define appearance
       (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
@@ -3600,7 +3600,7 @@ To sync it automatically:
 #+end_src
 
 ** which-key
-A package that shows key combinations. (for example press C-x and wait) It also works with ~evil-leader~, just press leader key and wait to see your options. I made a few adjustment so that it's more compact and you can see full function names (most of the time) and it shows up at the top center instead of bottom left corner. This mostly eliminates the need for creating a [[Hydra]].
+A package that shows key combinations. (for example press C-x and wait) It also works with ~general.el~, just press leader key and wait to see your options. I made a few adjustment so that it's more compact and you can see full function names (most of the time) and it shows up at the top center instead of bottom left corner. This mostly eliminates the need for creating a [[Hydra]].
 
 #+BEGIN_SRC emacs-lisp
   (use-package which-key
@@ -3637,7 +3637,7 @@ Note that it's not possible to stage hunks with =vc=.
   (use-package magit
     :defer t
     :init
-    (evil-leader/set-key
+    (im-leader
       "gv" #'project-vc-dir
       "gd" #'vc-diff
       "gD" #'vc-root-diff
@@ -3867,7 +3867,7 @@ Here I enable a few extensions for vertico:
     :after vertico
     :config
     (add-hook 'minibuffer-setup-hook #'vertico-repeat-save)
-    (evil-leader/set-key "0" #'vertico-repeat))
+    (im-leader "0" #'vertico-repeat))
 
   ;; Enable showing vertico in a buffer instead of minibuffer
   (use-package vertico-buffer
@@ -4007,11 +4007,10 @@ Other complementary packages:
 - After doing ~project-switch-project~, you are expected to hit a key to trigger a project action, like finding a file in the project or doing a project grep. You need to add these actions into ~project-switch-commands~ list and you need to define a key in ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by given key.
 
 #+begin_src emacs-lisp
-  (evil-leader/set-key "p" (λ-interactive
-                            (if-let (root (im-current-project-root))
-                                (project-switch-project root)
-                              (call-interactively #'project-switch-project))))
-
+  (im-leader "p" (λ-interactive
+                  (if-let (root (im-current-project-root))
+                      (project-switch-project root)
+                    (call-interactively #'project-switch-project))))
 
   (cl-defmacro im-projectelify (&key cmd desc key non-interactive dont-wrap dir-as-param)
     "If you add a command to `project-switch-commands', it will not
@@ -4174,7 +4173,7 @@ Some functionality for project management. I do some fine-tuning for =find= and 
 
 #+name: consult-project-management
 #+begin_src emacs-lisp :tangle no
-  (evil-leader/set-key
+  (im-leader
     "cf"  #'im-find-file-in
     "cG"  #'im-consult-ripgrep-in-given-directory
     "cg"  #'im-consult-ripgrep-current-directory)
@@ -4848,7 +4847,7 @@ tldr client for Emacs.
   (use-package tldr
     :commands tldr
     :config
-    (evil-leader/set-key
+    (im-leader
       "it" #'tldr))
 #+END_SRC
 
@@ -5472,7 +5471,7 @@ You can also do ~consult-imenu~ and ~embark-collect~ but it does not have a refr
   (use-package imenu-list
     :defer t
     :init
-    (evil-leader/set-key "il" #'imenu-list))
+    (im-leader "il" #'imenu-list))
 #+end_src
 ** webpaste
 #+begin_src emacs-lisp
@@ -5489,7 +5488,7 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
     :straight (:host github :repo "hsjunnesson/wolfram.el")
     :defer t
     :init
-    (evil-leader/set-key "iw" #'wolfram-alpha)
+    (im-leader "iw" #'wolfram-alpha)
     :config
     (setq wolfram-alpha-app-id im-wolfram-alpha-app-id))
 #+end_src
@@ -5515,7 +5514,7 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
   (use-package tmr
     :defer t
     :init
-    (evil-leader/set-key "N" #'tmr-with-details)
+    (im-leader "N" #'tmr-with-details)
     :config
     ;; Replace the notification function so that it works on my Mac
     (remove-hook 'tmr-timer-finished-functions #'tmr-notification-notify)
@@ -5679,7 +5678,7 @@ Both synosaurus and wordnut uses ~wordnet~ to work.
   (use-package synosaurus
     :commands synosaurus-choose-and-replace
     :init
-    (evil-leader/set-key "/s" #'synosaurus-choose-and-replace)
+    (im-leader "/s" #'synosaurus-choose-and-replace)
     :config
     (setq synosaurus-choose-method nil))
 
@@ -5704,7 +5703,7 @@ Turkish dictionary.
 
 *** Etymology lookup inside Emacs
 #+begin_src emacs-lisp
-  (evil-leader/set-key "/e" #'im-etymology-en)
+  (im-leader "/e" #'im-etymology-en)
 
   (defun im-etymology-en (input)
     "Find and retrieve the given word etymology from etymonline.
@@ -5972,7 +5971,7 @@ Manage media and streams through =completing-read=.
     :straight (:host github :repo "isamert/empv.el")
     :defer t
     :init
-    (evil-leader/set-key "r" empv-map)
+    (im-leader "r" empv-map)
     :config
     (load "radio-channels")
     (setq empv-radio-channels im-radio-channels)
@@ -6152,7 +6151,7 @@ Keybindings are generally set in-place, following have no context, so they are h
 
   (evil-define-key 'normal 'global (kbd "M-d") #'im-kill-this-buffer)
 
-  (evil-leader/set-key "1" (λ-interactive (call-interactively (local-key-binding (kbd "C-c C-c")))))
+  (im-leader "1" (λ-interactive (call-interactively (local-key-binding (kbd "C-c C-c")))))
 #+END_SRC
 
 * Language specific
@@ -7713,13 +7712,13 @@ Good for buffer management, especially for groupped killings.
     (kbd "[1") #'tab-bar-switch-to-prev-tab
     (kbd "]1") #'tab-bar-switch-to-next-tab)
 
-  (evil-leader/set-key
+  (im-leader
     "l" #'evil-window-right
     "h" #'evil-window-left
     "j" #'evil-window-down
     "k" #'evil-window-up)
 
-  (evil-leader/set-key
+  (im-leader
     ;; misc window operations
     "wo" #'other-window
     "w1" #'delete-other-windows
@@ -7770,7 +7769,7 @@ Good for buffer management, especially for groupped killings.
 [[https://github.com/im-marks][marks]] is a grep-like tool for searching org-mode and markdown files. The following snippet provides a ~consult~ support for marks.
 
 #+begin_src emacs-lisp
-  (evil-leader/set-key "cm" #'im-marks-my-docs)
+  (im-leader "cm" #'im-marks-my-docs)
 
   (defun im-consult--marks-builder (input)
     (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
@@ -8630,8 +8629,7 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
        "Googling: "
        (im-region-or 'word)))))
 
-  (evil-leader/set-key
-    "/g"   'im-google-this)
+  (im-leader "/g" #'im-google-this)
 #+end_src
 
 ** TODO org-mode enhancements
@@ -8640,7 +8638,7 @@ I need to rewrite these functions using [[https://github.com/im-marks][marks]] f
 #+begin_src emacs-lisp
   ;; Keybindings
 
-  (evil-leader/set-key
+  (im-leader
     "ol" #'im-org-link-header
     "oj" #'im-org-jump-to-header
     ;; TODO: rewrite this:
@@ -8736,7 +8734,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
 #+begin_src emacs-lisp
   ;; Keybindings
 
-  (evil-leader/set-key
+  (im-leader
     "obb" 'im-bullet-focus-non-day-header
     "oby" 'im-bullet-focus-yesterday
     "obY" 'im-bullet-focus-yesterday-indirect
@@ -9233,7 +9231,7 @@ Here I define two important functions and their helpers.  The following function
     (tmr-tabulated-mode))
 
   ;; Toggle temproary buffers
-  (evil-leader/set-key
+  (im-leader
     "ts" 'im-toggle-side-scratch-buffer
     "to" 'im-toggle-side-temp-org-buffer
     "th" 'im-toggle-side-bullet-org-buffer
@@ -9983,7 +9981,7 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
 #+end_src
 ** im-narrow-dwim
 #+begin_src emacs-lisp
-  (evil-leader/set-key "n" #'im-narrow-dwim)
+  (im-leader "n" #'im-narrow-dwim)
 
   (defun im-narrow-dwim ()
     "Smart narrowing."
