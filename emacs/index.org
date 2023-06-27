@@ -1309,17 +1309,6 @@ Following are my extensions:
   (setq evil-collection-unimpaired-want-repeat-mode-integration t)
   (evil-collection-unimpaired-setup)
 #+end_src
-** evil-leader
-Enable leader key and bind some keys.
-
-#+BEGIN_SRC emacs-lisp
-  (use-package evil-leader
-    :after evil
-    :config
-    (global-evil-leader-mode)
-    (evil-leader/set-leader "SPC"))
-#+END_SRC
-
 ** evil-mc (multiple cursors)
 Multiple cursors for evil.
 
@@ -4176,16 +4165,16 @@ Some key points:
     (:states 'normal
      "M-i" (λ-interactive (condition-case nil
                               (consult-imenu)
-                            (error (consult-outline))))))
+                            (error (consult-outline)))))
+    (:keymaps 'consult-narrow-map
+     ;; Shows all narrowing possibilities when you hit "?"
+     ;; If no narrowing is available, simply inserts "?"
+     "?" #'consult-narrow-help)
     :config
     (advice-add #'register-preview :override #'consult-register-window)
 
     (setq consult-preview-key "M-,")
     ;; ^ When you do M-, on a candidate, it previews it
-
-    (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
-    ;; ^ Shows all narrowing possibilities when you hit "?"
-    ;; If no narrowing is available, simply inserts "?"
 
     ;; Hide some buffers from consult-buffer window. If you want to jump
     ;; on one of these buffers, start with a space after opening
@@ -6274,8 +6263,8 @@ process per language, so you can build up a context and use that
 throughout your projects.
 
 #+begin_src emacs-lisp
-  (evil-leader/set-key-for-mode 'typescript-ts-mode ";" #'im-deno-repl-eval)
-  (evil-leader/set-key-for-mode 'java-ts-mode ";" #'im-jshell-repl-eval)
+  (im-leader-v :keymaps 'typescript-ts-mode-map ";" #'im-deno-repl-eval)
+  (im-leader-v :keymaps 'java-ts-mode-map ";" #'im-jshell-repl-eval)
 
   (cl-defmacro im-create-repl (&key name args prefix expr parser)
     "Create family of functions for interacting with given REPL of NAME.
@@ -6429,19 +6418,18 @@ throughout your projects.
      ("\\.markdown\\'" . gfm-mode)
      ("\\.txt\\'" . gfm-mode)
      ("qutebrowser-editor-" . gfm-mode))
+    :general
+    (:keymaps 'markdown-mode-map :states 'normal
+     "<RET>" #'markdown-follow-thing-at-point
+     "TAB" #'markdown-cycle
+     "]]" #'markdown-outline-next
+     "[[" #'markdown-outline-previous)
+    (im-leader :keymaps 'markdown-mode-map
+      "oi" #'markdown-toggle-inline-images)
     :config
     (setq markdown-command "multimarkdown")
     (setq markdown-fontify-code-blocks-natively t)
-    (setq-default markdown-hide-markup t)
-
-    (evil-leader/set-key-for-mode 'markdown-mode
-      "oi" #'markdown-toggle-inline-images)
-
-    (evil-define-key 'normal markdown-mode-map
-      (kbd "<RET>") #'markdown-follow-thing-at-point
-      (kbd "TAB") #'markdown-cycle
-      (kbd "]]") #'markdown-outline-next
-      (kbd "[[") #'markdown-outline-previous))
+    (setq-default markdown-hide-markup t))
 #+END_SRC
 
 ** haskell
@@ -6596,9 +6584,9 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
 
 *** REPL interaction
 #+begin_src emacs-lisp
-  (evil-leader/set-key-for-mode 'typescript-ts-mode
+  (im-leader-v :keymaps 'typescript-ts-mode-map
     ";" #'im-ts-send-expression-to-repl)
-  (evil-leader/set-key-for-mode 'js-mode
+  (im-leader-v :keymaps 'js-mode-map
     ";" #'im-ts-send-expression-to-repl)
 
   (defun im-treesit-find-parent-with-type (node wanted-type)
@@ -6942,42 +6930,45 @@ Here is the current workflow I use:
 #+begin_src emacs-lisp
   (use-package cider
     :after clojure
+    :general
+    (:keymaps 'clojure-mode-map :states 'normal
+     "K" #'cider-doc)
+    (:keymaps 'cider-inspector-mode-map :states 'normal
+     "RET" #'cider-inspector-operate-on-point
+     "DEL" #'cider-inspector-pop)
+    (im-leader-v :keymaps 'clojure-mode-map
+      ";" (im-eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point))
     :config
     (setq cider-inspector-page-size 50)
     (setq cider-show-error-buffer nil)
 
-    (evil-define-key 'normal clojure-mode-map (kbd "K") #'cider-doc)
-    (evil-define-key 'normal cider-inspector-mode-map
-      (kbd "RET") #'cider-inspector-operate-on-point
-      (kbd "DEL") #'cider-inspector-pop)
-    (evil-leader/set-key-for-mode 'clojure-mode
-      ";" (im-eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point))
-
     ;; `compojure' indent
     (define-clojure-indent
-     (defroutes 'defun)
-     (GET 2)
-     (POST 2)
-     (PUT 2)
-     (DELETE 2)
-     (HEAD 2)
-     (ANY 2)
-     (OPTIONS 2)
-     (PATCH 2)
-     (rfn 2)
-     (let-routes 1)
-     (context 2)))
+      (defroutes 'defun)
+      (GET 2)
+      (POST 2)
+      (PUT 2)
+      (DELETE 2)
+      (HEAD 2)
+      (ANY 2)
+      (OPTIONS 2)
+      (PATCH 2)
+      (rfn 2)
+      (let-routes 1)
+      (context 2)))
 #+end_src
 
 ** common-lisp
 #+begin_src emacs-lisp
   (use-package slime
     :hook (lisp-mode . slime-mode)
+    :general
+    (im-leader-v :keymaps 'lisp-mode-map
+      ";" (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region))
+    (:keymaps 'lisp-mode-map-map :states 'normal
+     "K" #'slime-documentation)
     :config
-    (setq inferior-lisp-program "sbcl")
-    (evil-define-key 'normal lisp-mode-map (kbd "K") #'slime-documentation)
-    (evil-leader/set-key-for-mode 'lisp-mode
-      ";" (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region)))
+    (setq inferior-lisp-program "sbcl"))
 #+end_src
 ** emmet-mode
 Hit <C-j> after these and get:
@@ -7006,11 +6997,11 @@ Hit <C-j> after these and get:
 #+BEGIN_SRC emacs-lisp
   (use-package kotlin-mode
     :mode "\\.kt\\'"
-    :config
-    (evil-leader/set-key-for-mode 'kotlin-mode
+    :general
+    (im-leader-v :keymaps 'kotlin-mode-map
       ";" (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line)
       "'" #'kotlin-repl)
-
+    :config
     ;; ki is a better REPL for Kotlin. You can save and reload your session.
     (setq kotlin-command "ki"))
 #+END_SRC
@@ -7049,7 +7040,7 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
     :hook (after-init . eros-mode)
     :config
     (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1)))
-    (evil-leader/set-key
+    (im-leader-v
       ";"  (im-eval-dwim #'eros-eval-last-sexp #'eval-region #'eros-eval-defun)
       "'" #'eros-inspect-last-result))
 #+end_src
@@ -7268,11 +7259,9 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 #+begin_src emacs-lisp
   (use-package racket-mode
     :mode "\\.rkt\\'"
-    :config
-    (evil-leader/set-key-for-mode 'racket-mode
-      ";" #'racket-eval-last-sexp
-      "'" #'racket-send-definition
-      "\\" #'racket-send-region))
+    :general
+    (im-leader-v :keymaps 'racket-mode-map
+      ";" (im-eval-dwim #'racket-eval-last-sexp #'racket-send-region #'racket-send-definition)))
 #+end_src
 ** dhall
 #+begin_src emacs-lisp
@@ -7313,13 +7302,12 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
 #+begin_src emacs-lisp
   (use-package geiser
     :commands geiser
+    :general
+    (im-leader-v :keymaps 'scheme-mode-map
+      ";" (im-eval-dwim #'geiser-eval-last-sexp #'geiser-eval-region #'geiser-eval-definition))
     :config
     (setq geiser-debug-jump-to-debug-p nil)
-    (setq geiser-default-implementation 'guile)
-    (evil-leader/set-key-for-mode 'scheme-mode
-      ";" #'geiser-eval-last-sexp
-      "'" #'geiser-eval-definition
-      "\\" #'geiser-eval-region))
+    (setq geiser-default-implementation 'guile))
 
   (use-package geiser-guile
     :after geiser)
