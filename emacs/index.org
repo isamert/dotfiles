@@ -6827,6 +6827,32 @@ I work with JSON a lot. Here I have some functions that let's you run given expr
        (node (im-run-nodejs-on-json body node)))))
 #+end_src
 
+** scala
+#+begin_src emacs-lisp
+  (use-package scala-mode
+    :interpreter
+    ("scala" . scala-mode))
+
+  (use-package lsp-metals
+    :after lsp
+    :custom
+    (lsp-metals-server-args '("-J-Dmetals.allow-multiline-string-formatting=off"
+                              "-J-Dmetals.icons=unicode"))
+    (lsp-metals-enable-semantic-highlighting t)
+    :hook (scala-mode . lsp))
+
+  ;; Enable sbt mode for executing sbt commands
+  (use-package sbt-mode
+    :commands sbt-start sbt-command
+    :config
+    ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
+    ;; allows using SPACE when in the minibuffer
+    (substitute-key-definition
+     'minibuffer-complete-word
+     'self-insert-command
+     minibuffer-local-completion-map)
+    (setq sbt:program-options '("-Dsbt.supershell=false")))
+#+end_src
 ** java
 =lsp-java= automatically installs =eclipse.jdt.ls= to get lsp.
 #+begin_src emacs-lisp
