@@ -3863,8 +3863,12 @@ Some shortcuts you can use on any vertico window:
 
     ;; Enable recursive minibuffers
     (setq enable-recursive-minibuffers t)
+
+    ;; Bindings
     (define-key vertico-map (kbd "M-[") #'vertico-previous-group)
     (define-key vertico-map (kbd "M-]") #'vertico-next-group)
+    (define-key vertico-map (kbd "M-j") #'next-line)
+    (define-key vertico-map (kbd "M-k") #'previous-line)
 
     ;; Use `consult-completion-in-region' which works with vertico
     (setq completion-in-region-function #'consult-completion-in-region))
@@ -4440,6 +4444,10 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
   (use-package corfu
     :straight (:files (:defaults "extensions/*.el"))
     :config
+    (define-key corfu-map (kbd "M-j") #'corfu-next)
+    (define-key corfu-map (kbd "M-k") #'corfu-previous)
+    (define-key corfu-map (kbd "RET") #'corfu-complete)
+
     (set-face-background 'corfu-current "dim gray")
     (setq corfu-cycle t)
     (setq corfu-auto t)
@@ -4641,7 +4649,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
       "gd" #'lsp-ui-peek-find-definitions
       "gi" #'lsp-ui-peek-find-implementation
       "ga" #'lsp-execute-code-action
-      "K"  #'im-lsp-ui-doc-focus-frame))
+      "K"  #'im-describe-thing-in-popup))
 
 
   (defun im-lsp-mode-setup-orderless-completion ()
@@ -7078,20 +7086,20 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
   (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'im-describe-thing-in-popup)
   (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'im-describe-thing-in-popup)
 
-  (defvar im-describe-thing-symbol nil)
-  (defvar im-describe-thing-string nil)
+  (defvar im-describe-thing--last-buffer nil)
+  (defvar im-describe-thing--string nil)
   (defvar im-describe-thing-pos 0)
 
   (defun im-describe-thing-jump ()
     (interactive nil im-describe-thing-mode)
     (im-describe-thing--remove-quickpeek)
-    (helpful-symbol im-describe-thing-symbol))
+    (switch-to-buffer-other-window im-describe-thing--last-buffer))
 
   (defun im-describe-thing-mode-scroll-down ()
     (interactive nil im-describe-thing-mode)
     (quick-peek-show
      (->>
-      (s-lines im-describe-thing-string)
+      (s-lines im-describe-thing--string)
       (-drop (setq im-describe-thing-pos (1+ im-describe-thing-pos)))
       (s-join "\n"))
      nil nil 30))
@@ -7100,7 +7108,7 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
     (interactive nil im-describe-thing-mode)
     (quick-peek-show
      (->>
-      (s-lines im-describe-thing-string)
+      (s-lines im-describe-thing--string)
       (-drop (setq im-describe-thing-pos (max 0 (1- im-describe-thing-pos))))
       (s-join "\n"))
      nil nil 30))
@@ -7109,7 +7117,7 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
     (interactive nil im-describe-thing-mode)
     (quick-peek-show
      (->>
-      (s-lines im-describe-thing-string)
+      (s-lines im-describe-thing--string)
       (-drop 1)
       (s-join "\n"))
      nil nil 30))
@@ -7123,14 +7131,17 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
               (define-key map (kbd "M-k") #'im-describe-thing-mode-scroll-up)
               (define-key map (kbd "C-g") #'im-describe-thing--remove-quickpeek)
               (define-key map (kbd "M-RET") #'im-describe-thing-jump)
-              map))
+              map)
+    (setf (alist-get #'im-describe-thing-mode minor-mode-overriding-map-alist)
+          im-describe-thing-mode-map)
+    (evil-normalize-keymaps))
 
   (evil-define-key 'normal im-describe-thing-mode-map
     (kbd "K") #'im-describe-thing--remove-quickpeek)
 
   (defun im-describe-thing--remove-quickpeek ()
     (interactive nil im-describe-thing-mode)
-    (setq im-describe-thing-string nil)
+    (setq im-describe-thing--string nil)
     (setq im-describe-thing-pos 0)
     (im-describe-thing-mode -1)
     (quick-peek-hide)
@@ -7138,18 +7149,43 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
           (assq-delete-all #'im-describe-thing-mode
                            minor-mode-overriding-map-alist)))
 
-  (defun im-describe-thing-in-popup ()
-    (interactive)
-    (let* ((thing (setq im-describe-thing-symbol (symbol-at-point)))
+  (defun im-describe-thing--elisp ()
+    (let* ((thing (symbol-at-point))
            (help-xref-following t)
            (description (save-window-excursion
                           (helpful-symbol thing)
-                          (setq im-describe-thing-string (buffer-string)))))
+                          (setq im-describe-thing--last-buffer (current-buffer))
+                          (setq im-describe-thing--string (buffer-string)))))
+      description))
+
+  ;; TODO: re-write this properly. Use sync lsp-request.
+  (defun im-describe-thing-in-popup ()
+    (interactive)
+    (cond
+     ((or (eq major-mode #'emacs-lisp-mode)
+          (eq major-mode #'lisp-interaction-mode))
       (im-describe-thing-mode +1)
-      (setf (alist-get #'im-describe-thing-mode minor-mode-overriding-map-alist)
-            im-describe-thing-mode-map)
-      (evil-normalize-keymaps)
-      (quick-peek-show description nil nil 30)))
+      (quick-peek-show (im-describe-thing--elisp) nil nil 30))
+     ((symbol-value 'lsp-mode)
+      (let ((buffer (current-buffer)))
+        (lsp-request-async
+         "textDocument/hover"
+         (lsp--text-document-position-params)
+         (lambda (hover)
+           (when (equal (current-buffer) buffer)
+             (im-describe-thing-mode +1)
+             (quick-peek-show
+              (with-current-buffer (get-buffer-create "*im-lsp-md-doc*")
+                (setq im-describe-thing--last-buffer (current-buffer))
+                (unless (eq major-mode #'markdown-mode)
+                  (markdown-mode))
+                (erase-buffer)
+                (insert (plist-get (plist-get hover :contents) :value))
+                (font-lock-ensure)
+                (setq im-describe-thing--string (buffer-string)))
+              nil nil 30)))
+         :mode 'tick
+         :cancel-token :lsp-ui-doc-hover)))))
 #+end_src
 
 *** Pretty stuff
