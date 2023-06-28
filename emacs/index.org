@@ -143,6 +143,48 @@ I use =s.el= and =dash.el= extensively. They already come as a dependency with o
   (use-package memoize)
 #+end_src
 
+*** emacs-async
+To be able execute elisp asynchronously. Of course this has lot's of
+limitations, the lambda passed to ~async-start~ will be executed in a
+freshly started Emacs instance and it will not have the any context of
+the currently running Emacs instance. There are ways to pass variables
+into the context of newly created Emacs instance which helps a lot.
+
+#+begin_src emacs-lisp
+  (use-package async)
+
+  (cl-defmacro im-async-lambda ((&key require inject) &body body)
+    "Utility macro for easily creating lambdas for `async-start'.
+  First argument must be a plist whose keys are:
+
+  - REQUIRE: List of libraries to import while calling the BODY.
+  - INJECT: Regular expression to find variables that matches which
+    will be injected to BODY.
+
+  Rest of the arguments will be treated as lambda BODY.
+
+    (im-async-lambda
+      (:require (dash)
+       :inject \"^im-feeds$\")
+     (--map (upcase it) im-feeds))
+
+  will be expanded into
+
+    (lambda ()
+      (setq load-path <LOAD-PATH>)
+      (require 'dash)
+      (setq im-feeds <IM-FEEDS>)
+      (--map (upcase it) im-feeds))"
+    `(lambda ()
+       ,(when require
+          (async-inject-variables "^load-path$"))
+       ,@(when require
+           (--map `(require ',it) require))
+       ,(when inject
+          (async-inject-variables inject))
+       ,@body))
+#+end_src
+
 ** Variables and functions
 Some basic variable and function definitions that will be used in configuration.
 
@@ -4949,14 +4991,25 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
   (defun im-load-snippets-list ()
     (interactive)
     (message ">> Loading snippets...")
-    (require 'yankpad)
-    (setq im--all-snippets-cache
-          (-mapcat
-           (lambda (category)
-             (--map (cons (format "%s :: %s" category (car it)) it)
-                    (ignore-errors (yankpad--snippets category))))
-           (yankpad--categories)))
-    (message ">> Loading snippets... Done"))
+    (async-start
+     (im-async-lambda
+      (:require (dash yankpad) :inject "^yankpad-file$")
+      (-mapcat
+       (lambda (category)
+         (--map (cons (format "%s :: %s" category (car it)) it)
+                ;; Clear some sections of the data that causes
+                ;; issues with emacs-async. It prints out some data
+                ;; like #3 #5 etc. which can't be `read'.
+                (--map
+                 (if (alist-get 'src-block (nth 2 it))
+                     `(,@(-take 2 it) nil ,@(-take-last 2 it))
+                   it)
+                 (ignore-errors
+                   (yankpad--snippets category)))))
+       (yankpad--categories)))
+     (lambda (result)
+       (message ">> Loading snippets... Done")
+       (setq im--all-snippets-cache result))))
 
   ;; Load snippets for the first time, after the startup
   ;; This may take a bit of time
@@ -4977,7 +5030,6 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
           (yas-minor-mode-on))
         (yankpad--run-snippet snippet)
         (im-kill (buffer-string)))))
-
 #+end_src
 
 ** git-link
