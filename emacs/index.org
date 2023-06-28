@@ -2432,7 +2432,31 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
   header. This function automatizes that.
 
   If YANK-ONLY is non-nil (with prefix arg while calling
-  interactively), only yank the result, do not refile."
+  interactively), only yank the result, do not refile.
+
+  >> (with-temp-buffer
+      (insert \"- [2023-06-28 Wed 10:13] Test\\n\")
+      (beginning-of-buffer)
+      (im-org-convert-item-to-todo-and-refile t))
+  => \"** TODO [#B] Test
+  :PROPERTIES:
+  :CREATED_AT: [2023-06-28 Wed 10:13]
+  :END:
+  \"
+
+  >> (with-temp-buffer
+      (insert \"- [2023-06-28 Wed 10:13] Test :: The body.\\n\")
+      (beginning-of-buffer)
+      (im-org-convert-item-to-todo-and-refile t))
+  => \"** TODO [#B] Test
+  :PROPERTIES:
+  :CREATED_AT: [2023-06-28 Wed 10:13]
+  :END:
+  The body.
+  \"
+
+  Version: 2023-06-28
+  - Initial version."
     (interactive "P")
     (save-excursion
       (beginning-of-line)
@@ -2454,6 +2478,7 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
                        ":CREATED_AT: " timestamp "\n"
                        ":END:" "\n"
                        (if body (concat body "\n") "")))
+              ;; To be able to refile
               (org-mode)
               (if yank-only
                   (im-kill (buffer-string))
@@ -7312,6 +7337,12 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
                    (method
                     (funcall method indent-point state)))))))))
 
+#+end_src
+*** doctest.el
+See this: [[https://ag91.github.io/blog/2023/03/20/doctestel-or-testing-your-pure-elisp-functions-in-your-docstring/][Doctest.el or testing your pure Elisp functions in your docstring - Where parallels cross]]
+#+begin_src emacs-lisp
+  (use-package doctest
+    :straight (:host github :repo "ag91/doctest"))
 #+end_src
 ** Racket
 - Open a racket buffer.
