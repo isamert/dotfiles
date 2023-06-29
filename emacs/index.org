@@ -7162,109 +7162,158 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
   (use-package quick-peek
     :straight (:host github :repo "cpitclaudel/quick-peek"))
 
-  (evil-define-key 'normal emacs-lisp-mode-map (kbd "K") #'im-describe-thing-in-popup)
-  (evil-define-key 'normal lisp-interaction-mode-map (kbd "K") #'im-describe-thing-in-popup)
+  (im-leader-v
+    "T" #'im-peek-translate)
 
-  (defvar im-describe-thing--last-buffer nil)
-  (defvar im-describe-thing--string nil)
-  (defvar im-describe-thing-pos 0)
+  (general-def
+    :states 'normal
+    :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map lsp-mode-map)
+    "K" #'im-peek-doc)
 
-  (defun im-describe-thing-jump ()
-    (interactive nil im-describe-thing-mode)
-    (im-describe-thing--remove-quickpeek)
-    (switch-to-buffer-other-window im-describe-thing--last-buffer))
+  (general-def
+    :states 'normal
+    :keymaps 'im-peek-mode-map
+    (kbd "K") #'im-peek--remove)
 
-  (defun im-describe-thing-mode-scroll-down ()
-    (interactive nil im-describe-thing-mode)
+  (defvar im-peek--buffer nil)
+  (defvar im-peek--string nil)
+  (defvar im-peek--pos 0)
+  (defconst im-peek--line-count 30)
+
+  (defun im-peek-jump ()
+    (interactive nil im-peek-mode)
+    (im-peek--remove)
+    (switch-to-buffer-other-window im-peek--buffer))
+
+  (defun im-peek-mode-scroll-down ()
+    (interactive nil im-peek-mode)
+    (when (<
+           ;; FIXME: don't use private function
+           (+ (quick-peek--compute-height nil 0 im-peek--line-count)
+              im-peek--pos)
+           ;; (+ im-peek--line-count im-peek--pos)
+           (length (s-lines im-peek--string)))
+      (quick-peek-hide)
+      (quick-peek-show
+       (->>
+        (s-lines im-peek--string)
+        (-drop (setq im-peek--pos (1+ im-peek--pos)))
+        (s-join "\n"))
+       nil nil im-peek--line-count)))
+
+  (defun im-peek-mode-scroll-up ()
+    (interactive nil im-peek-mode)
+    (quick-peek-hide)
     (quick-peek-show
      (->>
-      (s-lines im-describe-thing--string)
-      (-drop (setq im-describe-thing-pos (1+ im-describe-thing-pos)))
+      (s-lines im-peek--string)
+      (-drop (setq im-peek--pos (max 0 (1- im-peek--pos))))
       (s-join "\n"))
-     nil nil 30))
+     nil nil im-peek--line-count))
 
-  (defun im-describe-thing-mode-scroll-up ()
-    (interactive nil im-describe-thing-mode)
+  (defun im-peek-mode-scroll-down ()
+    (interactive nil im-peek-mode)
     (quick-peek-show
      (->>
-      (s-lines im-describe-thing--string)
-      (-drop (setq im-describe-thing-pos (max 0 (1- im-describe-thing-pos))))
-      (s-join "\n"))
-     nil nil 30))
-
-  (defun im-describe-thing-mode-scroll-down ()
-    (interactive nil im-describe-thing-mode)
-    (quick-peek-show
-     (->>
-      (s-lines im-describe-thing--string)
+      (s-lines im-peek--string)
       (-drop 1)
       (s-join "\n"))
-     nil nil 30))
+     nil nil im-peek--line-count))
 
-  (define-minor-mode im-describe-thing-mode
+  (define-minor-mode im-peek-mode
     "Elisp popup documentation mode."
     :lighter " ElPopDoc"
     :global t
     :keymap (let ((map (make-sparse-keymap)))
-              (define-key map (kbd "M-j") #'im-describe-thing-mode-scroll-down)
-              (define-key map (kbd "M-k") #'im-describe-thing-mode-scroll-up)
-              (define-key map (kbd "C-g") #'im-describe-thing--remove-quickpeek)
-              (define-key map (kbd "M-RET") #'im-describe-thing-jump)
+              (define-key map (kbd "M-j") #'im-peek-mode-scroll-down)
+              (define-key map (kbd "M-k") #'im-peek-mode-scroll-up)
+              (define-key map (kbd "C-g") #'im-peek--remove)
+              (define-key map (kbd "M-RET") #'im-peek-jump)
               map)
-    (setf (alist-get #'im-describe-thing-mode minor-mode-overriding-map-alist)
-          im-describe-thing-mode-map)
+    (setf (alist-get #'im-peek-mode minor-mode-overriding-map-alist)
+          im-peek-mode-map)
     (evil-normalize-keymaps))
 
-  (evil-define-key 'normal im-describe-thing-mode-map
-    (kbd "K") #'im-describe-thing--remove-quickpeek)
-
-  (defun im-describe-thing--remove-quickpeek ()
-    (interactive nil im-describe-thing-mode)
-    (setq im-describe-thing--string nil)
-    (setq im-describe-thing-pos 0)
-    (im-describe-thing-mode -1)
+  (defun im-peek--remove ()
+    (interactive nil im-peek-mode)
+    (setq im-peek--pos 0)
+    (im-peek-mode -1)
     (quick-peek-hide)
     (setq minor-mode-overriding-map-alist
-          (assq-delete-all #'im-describe-thing-mode
+          (assq-delete-all #'im-peek-mode
                            minor-mode-overriding-map-alist)))
 
-  (defun im-describe-thing--elisp ()
-    (let* ((thing (symbol-at-point))
-           (help-xref-following t)
-           (description (save-window-excursion
-                          (helpful-symbol thing)
-                          (setq im-describe-thing--last-buffer (current-buffer))
-                          (setq im-describe-thing--string (buffer-string)))))
-      description))
+  (defun im-peek-doc--elisp ()
+    (let ((help-xref-following t))
+      (helpful-symbol (symbol-at-point))
+      (current-buffer)))
 
-  ;; TODO: re-write this properly. Use sync lsp-request.
-  (defun im-describe-thing-in-popup ()
+  (defun im-peek-doc--lsp ()
+    (let ((result (lsp-request "textDocument/hover" (lsp--text-document-position-params))))
+      (with-current-buffer (get-buffer-create "*im-lsp-md-doc*")
+        (unless (eq major-mode #'markdown-mode)
+          (markdown-mode))
+        (erase-buffer)
+        (insert (plist-get (plist-get result :contents) :value))
+        (current-buffer))))
+
+  ;; TODO support fn returning a string instead of a buffer. Create a
+  ;; temp buffer when jump is called
+  (defun im-peek (fn)
+    "TODO: document this"
+    (let ((buffer (save-window-excursion (funcall fn))))
+      (setq im-peek--buffer buffer)
+      (quick-peek-show
+       (setq im-peek--string
+             (with-current-buffer buffer
+               (font-lock-ensure)
+               (buffer-string)))
+       nil nil im-peek--line-count)
+      (im-peek-mode +1)))
+
+  ;; Special peek functions
+
+  (use-package google-translate)
+
+  (defun im-peek-translate (source target str)
+    "Translate STR from SOURCE to TARGET.
+
+  When called interactively, it expects input in form of :
+
+    source:target thing to translate
+
+  source:target part can appear anywhere in the input.
+
+  A future history is already provided so that you can change SOURCE and
+  TARGET quickly."
+    (interactive
+     (let* ((s (if (use-region-p)
+                   (buffer-substring-no-properties (region-beginning) (region-end))
+                 (thing-at-point 'word)))
+            (match (s-match
+                    "\\(.*\\)\\([a-z]\\{2\\}\\):\\([a-z]\\{2\\}\\)\\(.*\\)"
+                    (read-string
+                     "Translate: "
+                     (concat "en:tr " s)
+                     nil
+                     (concat "tr:en " s)))))
+       (list
+        (nth 2 match)
+        (nth 3 match)
+        (concat (s-trim (nth 1 match)) " " (s-trim (nth 4 match))))))
+    (im-peek (lambda ()
+               (let ((google-translate-pop-up-buffer-set-focus t))
+                 (google-translate-translate source target str)
+                 (current-buffer)))))
+
+  ;; TODO: If org mode, show link's text as peek
+  (defun im-peek-doc ()
+    "Show documentation at point."
     (interactive)
-    (cond
-     ((or (eq major-mode #'emacs-lisp-mode)
-          (eq major-mode #'lisp-interaction-mode))
-      (im-describe-thing-mode +1)
-      (quick-peek-show (im-describe-thing--elisp) nil nil 30))
-     ((symbol-value 'lsp-mode)
-      (let ((buffer (current-buffer)))
-        (lsp-request-async
-         "textDocument/hover"
-         (lsp--text-document-position-params)
-         (lambda (hover)
-           (when (equal (current-buffer) buffer)
-             (im-describe-thing-mode +1)
-             (quick-peek-show
-              (with-current-buffer (get-buffer-create "*im-lsp-md-doc*")
-                (setq im-describe-thing--last-buffer (current-buffer))
-                (unless (eq major-mode #'markdown-mode)
-                  (markdown-mode))
-                (erase-buffer)
-                (insert (plist-get (plist-get hover :contents) :value))
-                (font-lock-ensure)
-                (setq im-describe-thing--string (buffer-string)))
-              nil nil 30)))
-         :mode 'tick
-         :cancel-token :lsp-ui-doc-hover)))))
+    (im-peek
+     (cond
+      ((symbol-value 'lsp-mode) #'im-peek-doc--lsp)
+      ((-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'im-peek-doc--elisp))))
 #+end_src
 
 *** Pretty stuff
