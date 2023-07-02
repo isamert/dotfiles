@@ -10688,6 +10688,15 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
       (im-peek-mode-scroll-down (- pos 2))))
 #+end_src
 
+** im-weather
+Just a wttr.in wrapper. Another piece in the name of using a web browser even less.
+#+begin_src emacs-lisp
+  (defun im-weather ()
+    (interactive)
+    (im-shell-command
+     :command "curl wttr.in"
+     :buffer-name "*im-weather*"))
+#+end_src
 * Operating system related
 ** Sound output chooser
 #+begin_src emacs-lisp
