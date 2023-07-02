@@ -1742,6 +1742,7 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
   f cycle fullscreen
   p cycle pause
   m cycle mute
+  b cycle-values loop-file "inf" "no"
 
   0 add volume 2
   9 add volume -2
