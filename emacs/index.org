@@ -1705,7 +1705,8 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
     :config
     (require 'evil-org-agenda)
     (evil-org-agenda-set-keys)
-    (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading)))
+    (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading))
+    (add-hook 'org-src-mode-hook #'evil-normalize-keymaps))
 
   (defun im-org-tree-to-indirect-buffer ()
     "Same as `org-tree-to-indirect-buffer' but let's you open
@@ -2245,7 +2246,7 @@ Insert links/images more intelligently,
 - otherwise call ~org-insert-link~
 
 #+begin_src emacs-lisp
-  (im-leader "oP" #'im-org-insert-dwim)
+  (im-leader-v "oP" #'im-org-insert-dwim)
 
   (defun im-org-insert-dwim ()
     "Like `org-insert-link' but improved with dwim features.
@@ -3361,7 +3362,7 @@ To sync it automatically:
 
   (defun im-appt-notify (min-to-appt new-time appt-msg)
     (if (listp min-to-appt)
-        (--each (-zip min-to-appt appt-msg)
+        (--each (-zip-pair min-to-appt appt-msg)
           (im-appt-notify--helper (car it) new-time (cdr it)))
       (im-appt-notify--helper min-to-appt new-time appt-msg)))
 
@@ -4461,17 +4462,24 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
   - Write ~i SPC~, ~w SPC~, ~e SPC~ to show infos, warnings, errors only in the =consult-flycheck=
 
 #+BEGIN_SRC emacs-lisp
+  (defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
+    "Disable checkdoc on org src, scratch and interaction buffers."
+    (when (or (eq major-mode #'lisp-interaction-mode)
+              (s-contains? "scratch" (buffer-name))
+              (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
+      (flycheck-disable-checker 'emacs-lisp-checkdoc)))
+
   (use-package flycheck
-    :hook ((prog-mode . flycheck-mode)
-           (emacs-lisp-mode . im-flycheck-disable-checkdoc-checker-if-not-needed)
-           ;; Not quite sure why but I also need to explicitly add this
-           ;; to `org-src-mode-hook'
-           (org-src-mode . im-flycheck-disable-checkdoc-checker-if-not-needed))
+    :hook ((prog-mode . flycheck-mode))
     :config
     (setq flycheck-idle-change-delay 1)
     (setq flycheck-display-errors-delay 0.3)
     (setq flycheck-emacs-lisp-load-path 'inherit)
-    (setq flycheck-emacs-lisp-initialize-packages t))
+    (setq flycheck-emacs-lisp-initialize-packages t)
+    (add-hook 'emacs-lisp-mode-hook #'im-flycheck-disable-checkdoc-checker-if-not-needed)
+    ;; Not quite sure why but I also need to explicitly add this
+    ;; to `org-src-mode-hook'
+    (add-hook 'org-src-mode-hook #'im-flycheck-disable-checkdoc-checker-if-not-needed))
 
   (use-package consult-flycheck
     :after flycheck
@@ -4495,13 +4503,6 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (if (bound-and-true-p lsp-mode)
         (consult-lsp-diagnostics arg)
       (consult-flycheck)))
-
-  (defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
-    "Disable checkdoc on org src, scratch and interaction buffers."
-    (when (or (eq major-mode #'lisp-interaction-mode)
-              (s-contains? "scratch" (buffer-name))
-              (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
-      (flycheck-disable-checker 'emacs-lisp-checkdoc)))
 #+END_SRC
 
 ** corfu & corfu-doc & kind-icon
@@ -5885,7 +5886,7 @@ example, hitting ~y~ will speak the word using the translation engine.
       (kbd "M-]") #'sp-slurp-hybrid-sexp
       (kbd "M-{") #'sp-backward-slurp-sexp
       (kbd "M-}") #'sp-backward-barf-sexp
-      (kbd "M-h") #'sp-splice-sexp)
+      (kbd "M-k") #'sp-splice-sexp)
     (smartparens-global-mode))
 #+end_src
 
@@ -10114,7 +10115,7 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
 #+end_src
 ** im-narrow-dwim
 #+begin_src emacs-lisp
-  (im-leader "n" #'im-narrow-dwim)
+  (im-leader-v "n" #'im-narrow-dwim)
 
   (defun im-narrow-dwim ()
     "Smart narrowing."
