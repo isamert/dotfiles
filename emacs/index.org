@@ -2509,11 +2509,11 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
         (when-let (match (s-match "^- \\(\\[[ X-]] \\)?\\(\\[.*]\\) \\(.*\\)" line))
           (setq timestamp (nth 2 match))
           (setq text (nth 3 match))
-          (delete-region (line-beginning-position) (1+ (line-end-position)))
           (let* ((buffer (current-buffer))
                  (data (s-split " :: " text))
                  (header (nth 0 data))
-                 (body (nth 1 data)))
+                 (body (nth 1 data))
+                 result)
             (with-temp-buffer
               (insert
                (concat "** TODO [#B] " header "\n"
@@ -2521,12 +2521,17 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
                        ":CREATED_AT: " timestamp "\n"
                        ":END:" "\n"
                        (if body (concat body "\n") "")))
+              (setq result (buffer-string))
               ;; To be able to refile
               (org-mode)
               (if yank-only
-                  (im-kill (buffer-string))
+                  (im-kill result)
                 (let ((org-refile-targets nil))
-                  (org-refile nil buffer)))))))))
+                  (org-refile nil buffer))
+                ;; Remove the line after everything to prevent loss of data
+                (with-current-buffer buffer
+                  (delete-region (line-beginning-position) (1+ (line-end-position))))
+                result)))))))
 #+end_src
 * Other packages
 ** display-time-mode
@@ -2621,7 +2626,7 @@ This package provides command, subcommand and argument completion using fish she
 #+begin_src emacs-lisp
   (use-package fish-completion
     :after eshell
-    :config (global-fish-completion-mode))
+    :hook (eshell-mode . fish-completion-mode))
 #+end_src
 *** Reading bash/zsh aliases into Eshell
 #+begin_src emacs-lisp
@@ -4999,19 +5004,22 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
     (async-start
      (im-async-lambda
       (:require (dash yankpad) :inject "^yankpad-file$")
-      (-mapcat
-       (lambda (category)
-         (--map (cons (format "%s :: %s" category (car it)) it)
-                ;; Clear some sections of the data that causes
-                ;; issues with emacs-async. It prints out some data
-                ;; like #3 #5 etc. which can't be `read'.
-                (--map
-                 (if (alist-get 'src-block (nth 2 it))
-                     `(,@(-take 2 it) nil ,@(-take-last 2 it))
-                   it)
-                 (ignore-errors
-                   (yankpad--snippets category)))))
-       (yankpad--categories)))
+      ;; For some reason, I need to this let. Something is chaning the
+      ;; path during the execution.
+      (let ((yankpad-file yankpad-file))
+        (-mapcat
+         (lambda (category)
+           (--map (cons (format "%s :: %s" category (car it)) it)
+                  ;; Clear some sections of the data that causes
+                  ;; issues with emacs-async. It prints out some data
+                  ;; like #3 #5 etc. which can't be `read'.
+                  (--map
+                   (if (alist-get 'src-block (nth 2 it))
+                       `(,@(-take 2 it) nil ,@(-take-last 2 it))
+                     it)
+                   (ignore-errors
+                     (yankpad--snippets category)))))
+         (yankpad--categories))))
      (lambda (result)
        (message ">> Loading snippets... Done")
        (setq im--all-snippets-cache result))))
@@ -10699,7 +10707,7 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
             (im-alist-completing-read "Select sink: ")
             car)))
       ;; Set default sink
-      (shell-command-to-string (format "pacmd set-default-sink %s" sink))
+      (shell-command-to-string (format "pactl set-default-sink %s" sink))
       ;; Move inputs to the new sink
       (->>
        (shell-command-to-string "pactl list short sink-inputs | cut -d'\t' -f1")
