@@ -7297,6 +7297,12 @@ See this: [[https://ag91.github.io/blog/2023/03/20/doctestel-or-testing-your-pur
   (use-package doctest
     :straight (:host github :repo "ag91/doctest"))
 #+end_src
+*** suggest.el -- Function suggestions
+Do ~M-x suggest~, enter the inputs and the expected output and it'll suggest you some functions. Quite nice and useful, I used it plenty of time.
+
+#+begin_src emacs-lisp
+  (use-package suggest)
+#+end_src
 ** Racket
 - Open a racket buffer.
 - Do C-c C-c (racket-run)
