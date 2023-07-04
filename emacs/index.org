@@ -4751,6 +4751,26 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
       (kbd "M-I") 'consult-lsp-symbols))
 #+END_SRC
 
+*** lsp-mode & org-mode
+#+begin_src emacs-lisp
+  (define-advice lsp-org (:before (&rest _) prevent-if-block-is-not-tangled)
+    "Error out if current block is not tangled.
+  If `lsp-org' is started on a block that has no `:tangle'
+  directive, it may mess up files.  Hence I added this advice to
+  not fall into this trap."
+    (let ((tangle
+           (thread-last
+             (org-babel-get-src-block-info)
+             ;; Get header plist
+             (nth 2)
+             (alist-get :tangle))))
+      (when (or
+             (not tangle)
+             (s-equals? tangle "no"))
+        (user-error ">> Block is not tangled. Not starting LSP. Add :tangle <...> so that LSP mode can work"))))
+
+  (defalias 'im-lsp-org-disconnect #'lsp-virtual-buffer-disconnect)
+#+end_src
 ** dap-mode
 Basic workflow is as follows:
 - ~dap-breakpoint-add~
@@ -7670,6 +7690,29 @@ For working with [[id:DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983][KMonad]] kbd files. 
     ;; Apheleia config, so that it automatically formats on save
     (setf (alist-get 'jsonnet apheleia-formatters) '("jsonnetfmt" "-"))
     (setf (alist-get 'jsonnet-mode apheleia-mode-alist) 'jsonnet))
+#+end_src
+** sql
+
+I generally do not edit ~.sql~ files but instead I do SQL through code blocks in org-mode. /lsp-mode/ offers ~lsp-org~ command to help using LSP features inside org-mode code blocks. It synergzes well with lsp-sqls. One important thing to remember is that you need to have a ~:tangle <file>~ in the code blocks so that LSP mode can actually have the tangled file to send to the corresponding LSP.
+
+- ~lsp-org~ :: Start LSP mode. Must be executed with cursor being source block.
+- ~lsp-virtual-buffer-disconnect~ :: Turn off lsp-mode.
+
+#+begin_src emacs-lisp
+  (defun im-sql-setup-lsp ()
+    "Set `lsp-sqls-connections' using `sql-connection-alist'.
+  Only works for PostgreSQL connections right now."
+    (setq
+     lsp-sqls-connections
+     (--map
+      `((driver . "postgresql")
+        (dataSourceName . ,(format "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable"
+                                   (car (alist-get 'sql-server it))
+                                   (car (alist-get 'sql-port it))
+                                   (car (alist-get 'sql-user it))
+                                   (car (alist-get 'sql-password it))
+                                   (car (alist-get 'sql-database it)))))
+      sql-connection-alist)))
 #+end_src
 * Window and buffer management
 ** tab-bar-mode
