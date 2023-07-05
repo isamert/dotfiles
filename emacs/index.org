@@ -152,37 +152,6 @@ into the context of newly created Emacs instance which helps a lot.
 
 #+begin_src emacs-lisp
   (use-package async)
-
-  (cl-defmacro im-async-lambda ((&key require inject) &body body)
-    "Utility macro for easily creating lambdas for `async-start'.
-  First argument must be a plist whose keys are:
-
-  - REQUIRE: List of libraries to import while calling the BODY.
-  - INJECT: Regular expression to find variables that matches which
-    will be injected to BODY.
-
-  Rest of the arguments will be treated as lambda BODY.
-
-    (im-async-lambda
-      (:require (dash)
-       :inject \"^im-feeds$\")
-     (--map (upcase it) im-feeds))
-
-  will be expanded into
-
-    (lambda ()
-      (setq load-path <LOAD-PATH>)
-      (require 'dash)
-      (setq im-feeds <IM-FEEDS>)
-      (--map (upcase it) im-feeds))"
-    `(lambda ()
-       ,(when require
-          (async-inject-variables "^load-path$"))
-       ,@(when require
-           (--map `(require ',it) require))
-       ,(when inject
-          (async-inject-variables inject))
-       ,@body))
 #+end_src
 
 ** Variables and functions
@@ -4987,13 +4956,14 @@ tldr client for Emacs.
 
   (use-package yankpad
     :after yasnippet
+    :demand t
     :general
     (im-leader
-     "sr" #'yankpad-reload
-     "sc" #'yankpad-set-category
-     "se" #'yankpad-edit
-     "ss" #'yankpad-map
-     "sm" #'yankpad-map)
+      "sr" #'yankpad-reload
+      "sc" #'yankpad-set-category
+      "se" #'yankpad-edit
+      "ss" #'yankpad-map
+      "sm" #'yankpad-map)
     (:states 'insert
      (kbd "M-s") #'yankpad-insert
      (kbd "M-e") #'hippie-expand)
@@ -5019,14 +4989,12 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
   (defun im-load-snippets-list ()
     (interactive)
     (message ">> Loading snippets...")
-    ;; So that yanpad gets loaded and yankpad-file is set
-    (require 'yankpad)
     (async-start
-     (im-async-lambda
-      (:require (dash yankpad) :inject "^yankpad-file$")
-      ;; For some reason, I need to this let. Something is chaning the
-      ;; path during the execution.
-      (let ((yankpad-file yankpad-file))
+     `(lambda ()
+        ,(async-inject-variables "^load-path$")
+        (require 'dash)
+        (require 'yankpad)
+        ,(async-inject-variables "^yankpad-file$")
         (-mapcat
          (lambda (category)
            (--map (cons (format "%s :: %s" category (car it)) it)
@@ -5039,7 +5007,7 @@ I also like to use these snippets outside of Emacs. For this, I defined =im-sele
                      it)
                    (ignore-errors
                      (yankpad--snippets category)))))
-         (yankpad--categories))))
+         (yankpad--categories)))
      (lambda (result)
        (message ">> Loading snippets... Done")
        (setq im--all-snippets-cache result))))
