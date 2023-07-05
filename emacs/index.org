@@ -5880,6 +5880,10 @@ example, hitting ~y~ will speak the word using the translation engine.
       (kbd "M-{") #'sp-backward-slurp-sexp
       (kbd "M-}") #'sp-backward-barf-sexp
       (kbd "M-k") #'sp-splice-sexp)
+    (general-def
+      :states 'insert
+      :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map override)
+      "M-]" #'sp-forward-slurp-sexp)
     (smartparens-global-mode))
 #+end_src
 
