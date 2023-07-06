@@ -4941,7 +4941,7 @@ tldr client for Emacs.
 #+BEGIN_SRC emacs-lisp
   (use-package tldr
     :commands tldr
-    :config
+    :general
     (im-leader
       "it" #'tldr))
 #+END_SRC
@@ -6348,8 +6348,29 @@ process per language, so you can build up a context and use that
 throughout your projects.
 
 #+begin_src emacs-lisp
-  (im-leader-v :keymaps 'typescript-ts-mode-map ";" #'im-deno-repl-eval)
-  (im-leader-v :keymaps 'java-ts-mode-map ";" #'im-jshell-repl-eval)
+  (im-leader-v
+    ";" (general-predicate-dispatch (im-eval-dwim #'eros-eval-last-sexp #'eval-region #'eros-eval-defun)
+          (eq major-mode 'java-ts-mode) #'im-jshell-repl-eval
+          (eq major-mode 'typescript-ts-mode) #'im-deno-repl-eval
+          (eq major-mode  'clojure-mode) (im-eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point)
+          (eq major-mode  'lisp-mode) (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region)
+          (eq major-mode  'racket-mode) (im-eval-dwim #'racket-eval-last-sexp #'racket-send-region #'racket-send-definition)
+          (eq major-mode  'scheme-mode) (im-eval-dwim #'geiser-eval-last-sexp #'geiser-eval-region #'geiser-eval-definition)
+          (eq major-mode  'kotlin-mode) (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line)))
+
+  (defun im-eval-dwim (lastf regionf defunf)
+    "Generate an interactive function that you can bind to a key
+    which calls LASTF, REGIONF or DEFUNF."
+    (lambda ()
+      (interactive)
+      (cond
+       ((use-region-p)
+        (call-interactively regionf))
+       ((or (-contains? '(?\) ?\") (char-before))
+            (-contains? '(?\ ?\)) (char-after)))
+        (call-interactively lastf))
+       (t
+        (call-interactively defunf)))))
 
   (cl-defmacro im-create-repl (&key name args prefix expr parser)
     "Create family of functions for interacting with given REPL of NAME.
@@ -6471,20 +6492,6 @@ throughout your projects.
 #+end_src
 *** Other
 #+begin_src emacs-lisp
-  (defun im-eval-dwim (lastf regionf defunf)
-    "Generate an interactive function that you can bind to a key
-  which calls LASTF, REGIONF or DEFUNF."
-    (lambda ()
-      (interactive)
-      (cond
-       ((use-region-p)
-        (call-interactively regionf))
-       ((or (-contains? '(?\) ?\") (char-before))
-            (-contains? '(?\ ?\)) (char-after)))
-        (call-interactively lastf))
-       (t
-        (call-interactively defunf)))))
-
   (defun im-use-block-comments-for-c-style-langs ()
     "Use block style comments for C-style langs, so that poporg works properly.
   Add this function to mode hooks."
@@ -6669,11 +6676,6 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
 
 *** REPL interaction
 #+begin_src emacs-lisp
-  (im-leader-v :keymaps 'typescript-ts-mode-map
-    ";" #'im-ts-send-expression-to-repl)
-  (im-leader-v :keymaps 'js-mode-map
-    ";" #'im-ts-send-expression-to-repl)
-
   (defun im-treesit-find-parent-with-type (node wanted-type)
     "Get first parent of NODE where parents type is WANTED-TYPE."
     (let ((curr-node node)
@@ -6702,44 +6704,6 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
          ("class_declaration"))
        (-find getter)
        (funcall getter))))
-
-  (defun im-ts--import-absolute (expr)
-    (if-let ((matches (s-match "^\\(import .* \\)'\\.\\(.*\\)'\\(;\\)?$" expr)))
-        (format "%s'%s'"
-                (nth 1 matches)
-                (s-chop-prefix
-                 (im-current-project-root)
-                 (expand-file-name (format ".%s" (nth 2 matches)))))
-      expr))
-
-  (defun im-ts-send-expression-to-repl (&optional redefine)
-    "Send current meaningful expression to node REPL."
-    (interactive "P")
-    (let* ((proc (im-with-visible-buffer ".*\\(eshell\\|vterm\\).*" (ignore-errors (process-name eat--process))))
-           (deno (s-contains? "deno" proc))
-           (nodejs (s-contains? "node" proc)))
-      (if-let (expression
-               (->>
-                (if (use-region-p)
-                    (buffer-substring-no-properties (region-beginning)
-                                                    (region-end))
-                  (im-ts-current-expression))
-                ;; Replace const with let so that we can redefine this
-                ;; thing later if we need to.
-                (s-replace-regexp "^[\n\t ]*\\(let\\|const\\)" (if redefine "" "let"))
-                ;; Replace relative imports with absolute ones
-                (s-replace-regexp "^[\n\t ]*export" "")
-                im-ts--import-absolute))
-          (im-with-visible-buffer
-           ".*\\(eshell\\|vterm\\).*"
-           (when nodejs
-             (im-eshell-send-input ".editor\n"))
-           (im-eshell-send-input expression)
-           (when nodejs
-             (im-eshell-send-key ?\C-d))
-           (when deno
-             (im-eshell-send-key ?\n)))
-        (user-error "No expression is found"))))
 #+end_src
 *** Deno utils
 Here are some functions that I use while developing with Deno.
@@ -7047,8 +7011,6 @@ Here is the current workflow I use:
     (:keymaps 'cider-inspector-mode-map :states 'normal
      "RET" #'cider-inspector-operate-on-point
      "DEL" #'cider-inspector-pop)
-    (im-leader-v :keymaps 'clojure-mode-map
-      ";" (im-eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point))
     :config
     (setq cider-inspector-page-size 50)
     (setq cider-show-error-buffer nil)
@@ -7074,8 +7036,6 @@ Here is the current workflow I use:
   (use-package slime
     :hook (lisp-mode . slime-mode)
     :general
-    (im-leader-v :keymaps 'lisp-mode-map
-      ";" (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region))
     (:keymaps 'lisp-mode-map-map :states 'normal
      "K" #'slime-documentation)
     :config
@@ -7108,10 +7068,6 @@ Hit <C-j> after these and get:
 #+BEGIN_SRC emacs-lisp
   (use-package kotlin-mode
     :mode "\\.kt\\'"
-    :general
-    (im-leader-v :keymaps 'kotlin-mode-map
-      ";" (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line)
-      "'" #'kotlin-repl)
     :config
     ;; ki is a better REPL for Kotlin. You can save and reload your session.
     (setq kotlin-command "ki"))
@@ -7152,7 +7108,6 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
     :config
     (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1)))
     (im-leader-v
-      ";"  (im-eval-dwim #'eros-eval-last-sexp #'eval-region #'eros-eval-defun)
       "'" #'eros-inspect-last-result))
 #+end_src
 *** Pretty stuff
@@ -7299,10 +7254,7 @@ Do ~M-x suggest~, enter the inputs and the expected output and it'll suggest you
 
 #+begin_src emacs-lisp
   (use-package racket-mode
-    :mode "\\.rkt\\'"
-    :general
-    (im-leader-v :keymaps 'racket-mode-map
-      ";" (im-eval-dwim #'racket-eval-last-sexp #'racket-send-region #'racket-send-definition)))
+    :mode "\\.rkt\\'")
 #+end_src
 ** dhall
 #+begin_src emacs-lisp
@@ -7343,9 +7295,6 @@ Do ~M-x suggest~, enter the inputs and the expected output and it'll suggest you
 #+begin_src emacs-lisp
   (use-package geiser
     :commands geiser
-    :general
-    (im-leader-v :keymaps 'scheme-mode-map
-      ";" (im-eval-dwim #'geiser-eval-last-sexp #'geiser-eval-region #'geiser-eval-definition))
     :config
     (setq geiser-debug-jump-to-debug-p nil)
     (setq geiser-default-implementation 'guile))
@@ -10511,6 +10460,7 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
          ;; things (distractions etc.)
          230.0))))
 #+end_src
+
 ** im-peek -- Inline/popup documentation/translate/dictionary etc.
 #+begin_src emacs-lisp
   (use-package quick-peek
@@ -10594,12 +10544,18 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
       (current-buffer)))
 
   (defun im-peek-doc--lsp ()
-    (let ((result (lsp-request "textDocument/hover" (lsp--text-document-position-params))))
+    (let ((result
+           ;; Taken from lsp-describe-thing-at-point
+           (-some->> (lsp--text-document-position-params)
+             (lsp--make-request "textDocument/hover")
+             (lsp--send-request)
+             (lsp:hover-contents)
+             ((-flip #'lsp--render-on-hover-content) t)
+             (string-trim-right))))
+      (unless result
+        (user-error "No doc at point"))
       (with-current-buffer (get-buffer-create "*im-lsp-md-doc*")
-        (unless (eq major-mode #'markdown-mode)
-          (markdown-mode))
-        (erase-buffer)
-        (insert (plist-get (plist-get result :contents) :value))
+        (insert result)
         (current-buffer))))
 
   ;; TODO support fn returning a string instead of a buffer. Create a
