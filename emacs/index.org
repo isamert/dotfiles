@@ -4688,6 +4688,8 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     ;; Number Boolean Array Object Key Null Struct Event Operator
     ;; TypeParameter
 
+    (defalias 'im-lsp-list-workspaces #'lsp-describe-session)
+
     (evil-define-minor-mode-key 'normal 'lsp-mode
       "gr" #'lsp-ui-peek-find-references
       "gd" #'lsp-ui-peek-find-definitions
