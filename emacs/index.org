@@ -10552,11 +10552,12 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
              (lsp--make-request "textDocument/hover")
              (lsp--send-request)
              (lsp:hover-contents)
-             ((-flip #'lsp--render-on-hover-content) t)
+             (funcall (-flip #'lsp--render-on-hover-content) t)
              (string-trim-right))))
       (unless result
         (user-error "No doc at point"))
       (with-current-buffer (get-buffer-create "*im-lsp-md-doc*")
+        (erase-buffer)
         (insert result)
         (current-buffer))))
 
