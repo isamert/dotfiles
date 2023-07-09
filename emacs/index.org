@@ -5789,7 +5789,7 @@ Both synosaurus and wordnut uses ~wordnet~ to work.
   (use-package synosaurus
     :commands synosaurus-choose-and-replace
     :init
-    (im-leader "/s" #'synosaurus-choose-and-replace)
+    (im-leader "mr" #'synosaurus-choose-and-replace)
     :config
     (setq synosaurus-choose-method nil))
 
@@ -8740,7 +8740,7 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
        "Googling: "
        (im-region-or 'word)))))
 
-  (im-leader "/g" #'im-google-this)
+  (im-leader "mg" #'im-google-this)
 #+end_src
 
 ** TODO org-mode enhancements
