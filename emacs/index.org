@@ -6068,6 +6068,7 @@ Feed reader.
     "Reload and open elfeed.
   Useful if .elfeed directory is freshly syncned."
     (interactive)
+    (require 'elfeed)
     (elfeed-db-load)
     (elfeed)
     (elfeed-search-update--force))
