@@ -3008,20 +3008,25 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
   (use-package pretty-hydra
     :after hydra
     :defer t
-    :init
-    (im-leader "a" #'appearance/body)
+    :general
+    (im-leader "a" #'im-appearance/body)
     :config
-    (pretty-hydra-define appearance
+    (pretty-hydra-define im-appearance
       (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
       ("Display"
        (("W" writeroom-mode "Writeroom mode" :toggle t)
+        (">" writeroom-increase-width "Writeroom width increase")
+        ("<" writeroom-decrease-width "Writeroom width decrease")
         ("n" display-line-numbers-mode "Line numbers" :toggle t)
-        ("+" default-text-scale-increase "Zoom In")
-        ("-" default-text-scale-decrease "Zoom Out"))
+        ("0" text-scale-increase "Zoom In (Buffer)")
+        ("9" text-scale-decrease "Zoom Out (Buffer)")
+        ("+" default-text-scale-increase "Zoom In (All)")
+        ("-" default-text-scale-decrease "Zoom Out (All)")
+        ("=" default-text-scale-reset "Zoom Reset (All)"))
        "Highlighting"
        (("g" diff-hl-mode "Highlight git diff" :toggle t)
         ("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
-        ("=" global-hl-line-mode "Highlight current line" :toggle t)
+        ("h" global-hl-line-mode "Highlight current line" :toggle t)
         ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
         ("w" im-whitespace-mode-toggle "Whitespaces" :toggle t)
         ("t" highlight-thing-mode "Highlight current symbol" :toggle t))
