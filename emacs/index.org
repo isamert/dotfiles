@@ -727,6 +727,10 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 
 * Basics
 ** Overriding some defaults
+#+begin_src emacs-lisp
+  ;; Feels better
+  (setq switch-to-prev-buffer-skip t)
+#+end_src
 *** M-Backspace should delete, instead of killing
 #+begin_src emacs-lisp
   ;; https://www.emacswiki.org/emacs/BackwardDeleteWord
@@ -2826,7 +2830,7 @@ Several packages are using this package to show system-level notifications. Here
   (defvar im-notify-posframe-dnd nil)
   (defvar im-notify-posframe--active '())
   (defvar-local im-notify-posframe--notification-data nil)
-  (cl-defun im-notify-posframe (&rest data &key id title message (duration 15) margin (severity 'normal) &allow-other-keys)
+  (cl-defun im-notify-posframe (&rest data &key id title message duration margin (severity 'normal) &allow-other-keys)
     (setq title (propertize title 'face '(:weight bold)))
     (let ((bname (format "*im-notify-%s*"
                          (or id (format "%s-%s" (if title (im-string-url-case title) "") (random))))))
@@ -2901,10 +2905,7 @@ Several packages are using this package to show system-level notifications. Here
                       (>= (time-to-seconds (current-idle-time)) 60))
              (im-send-notification-to-my-phone
               :title (or title "Emacs")
-              :content message)))))
-
-      ;; Also show it as a message
-      (message ">> %s :: %s" title message)))
+              :content message)))))))
 
   (defun im-notify-posframe-clear-all (&optional delete?)
     (interactive "P")
@@ -3013,25 +3014,31 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
     :config
     (pretty-hydra-define im-appearance
       (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
-      ("Display"
+      ("Writeroom"
        (("W" writeroom-mode "Writeroom mode" :toggle t)
-        (">" writeroom-increase-width "Writeroom width increase")
-        ("<" writeroom-decrease-width "Writeroom width decrease")
-        ("n" display-line-numbers-mode "Line numbers" :toggle t)
-        ("0" text-scale-increase "Zoom In (Buffer)")
+        (">" writeroom-increase-width "Width +")
+        ("<" writeroom-decrease-width "Width -")
+        ("m" writeroom-toggle-mode-line "Toggle modeline" :toggle t))
+       "Zoom"
+       (("0" text-scale-increase "Zoom In (Buffer)")
         ("9" text-scale-decrease "Zoom Out (Buffer)")
         ("+" default-text-scale-increase "Zoom In (All)")
         ("-" default-text-scale-decrease "Zoom Out (All)")
         ("=" default-text-scale-reset "Zoom Reset (All)"))
+       "Tabs"
+       (("tl" tab-line-mode "Tab Line mode (buffer)" :toggle t)
+        ("tL" global-tab-line-mode "Tab Line mode (global)" :toggle t)
+        ("tb" tab-bar-mode "Tab Line mode (global)" :toggle t))
        "Highlighting"
-       (("g" diff-hl-mode "Highlight git diff" :toggle t)
-        ("d" rainbow-delimiters-mode "Rainbow parens" :toggle t)
-        ("h" global-hl-line-mode "Highlight current line" :toggle t)
-        ("b" beacon-mode "Cursor trailer (baecon)" :toggle t)
-        ("w" im-whitespace-mode-toggle "Whitespaces" :toggle t)
-        ("t" highlight-thing-mode "Highlight current symbol" :toggle t))
+       (("hg" diff-hl-mode "Highlight git diff" :toggle t)
+        ("hd" rainbow-delimiters-mode "Rainbow parens" :toggle t)
+        ("hl" global-hl-line-mode "Highlight current line" :toggle t)
+        ("hb" beacon-mode "Cursor trailer (baecon)" :toggle t)
+        ("hw" im-whitespace-mode-toggle "Whitespaces" :toggle t)
+        ("ht" highlight-thing-mode "Highlight current symbol" :toggle t))
        "Miscellaneous"
-       (("l" visual-line-mode "Wrap lines" :toggle t)
+       (("n" display-line-numbers-mode "Line numbers" :toggle t)
+        ("l" visual-line-mode "Wrap lines" :toggle t)
         ("T" toggle-truncate-lines "Truncate lines")
         ("v" visual-fill-column-mode "Wrap lines at 72th col" :toggle t)
         ("i" highlight-indent-guides-mode "Indent Guides" :toggle t)
@@ -5337,6 +5344,7 @@ Simple mode for editing =~/.Xmodmap= file.
      (empv--completing-read-object
       "Select message: "
       im-slack--last-messages
+      :sort? nil
       :formatter
       (lambda (it)
         (let-plist it (format "%s (%s: %s)" .room-name .sender-name .message-string))))))
@@ -6380,6 +6388,18 @@ throughout your projects.
        (t
         (call-interactively defunf)))))
 
+  (defconst im-repl-result-buffer "*im-repl-result*")
+  (defconst im-repl-last-result "")
+
+  (defun im-repl-inspect-last-result ()
+    (interactive)
+    (with-current-buffer (get-buffer-create im-repl-result-buffer)
+      (erase-buffer)
+      (insert im-repl-last-result)
+      (goto-char (point-min))
+      (unless (im-buffer-visible-p (current-buffer))
+        (switch-to-buffer-other-window (current-buffer)))))
+
   (cl-defmacro im-create-repl (&key name args prefix expr parser)
     "Create family of functions for interacting with given REPL of NAME.
 
@@ -6422,6 +6442,7 @@ throughout your projects.
            (interactive)
            (when (,is-repl-running)
              (delete-process ,process-var))
+           (setq im-repl-last-result "")
            (let ((repl (start-process ,repl-buffer-name
                                       ,repl-buffer-name
                                       ,(downcase name)
@@ -6434,14 +6455,21 @@ throughout your projects.
                   (goto-char (point-max))
                   (insert (ansi-color-apply out))
                   (insert "\n"))
-                (let* ((result ,parser))
-                  (when result
-                    (message "%s%s" ,prefix (im-kill result))
-                    ;; FIXME: Following does not work for some reason, probably
-                    ;; something related to this being a filter function
-                    (eros--eval-overlay
-                     result
-                     (point))))))
+                (setq im-repl-last-result (concat im-repl-last-result (ansi-color-apply out)))
+                ;; TODO: change "^> $" per REPL type
+                (when (s-matches? "^> $" out)
+                  (let* ((result (,parser im-repl-last-result)))
+                    (setq im-repl-last-result result)
+                    (when result
+                      (when-let (get-buffer im-repl-result-buffer)
+                        (im-repl-inspect-last-result))
+                      ;; FIXME: Following does not work for some reason, probably
+                      ;; something related to this being a filter function
+                      (unless (get-buffer im-repl-last-result)
+                        (message "%s%s" ,prefix (im-kill result))
+                        (eros--eval-overlay
+                         result
+                         (point))))))))
              (set-process-sentinel
               repl
               (lambda (proc out)
@@ -6451,6 +6479,7 @@ throughout your projects.
 
            ;;; defun im-REPL-repl-send
          (defun ,(intern (format "im-%s-repl-send" (downcase name))) (expr)
+           (setq im-repl-last-result "")
            (let ((str (concat (s-trim expr) "\n")))
              (with-current-buffer ,repl-buffer-name
                (insert (format ">>> %s" expr)))
@@ -6479,12 +6508,12 @@ throughout your projects.
    :prefix "=> "
    :expr (im-ts-current-expression)
    :parser
-   (->>
-    out
-    (s-split "\n")
-    (-drop-last 1)
-    (s-join "\n")
-    ansi-color-apply))
+   (lambda (out)
+     (->>
+      out
+      (s-split "\n")
+      (-drop-last 1)
+      (s-join "\n"))))
 
   (im-create-repl
    :name "JShell"
