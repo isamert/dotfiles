@@ -2926,7 +2926,7 @@ Several packages are using this package to show system-level notifications. Here
       (empv--select-action "Act on notification"
         "Open" → (switch-to-buffer-other-window (plist-get notification :buffer-name))
         "Delete" → (progn (posframe-delete (plist-get notification :buffer-name)) (message ">> Deleted."))
-        "Snooze" → (im-notify-posframe-snooze (im-read-seconds) notification))))
+        "Snooze" → (im-notify-posframe-snooze notification (im-read-duration)))))
 
   (defun im-notify-posframe-enable-dnd (seconds)
     "Enable DND mode for SECONDS."
@@ -5884,21 +5884,21 @@ example, hitting ~y~ will speak the word using the translation engine.
 ** smartparens
 #+begin_src emacs-lisp
   (use-package smartparens
-    :config
-    (require 'smartparens-config)
-
-    (evil-define-key* 'insert sp-keymap
-      (kbd "M-[") #'sp-forward-barf-sexp
-      ;; sp-forward-slurp-sexp does not work well with C-like languages,
-      ;; hence I use sp-slurp-hybrid-sexp
-      (kbd "M-]") #'sp-slurp-hybrid-sexp
-      (kbd "M-{") #'sp-backward-slurp-sexp
-      (kbd "M-}") #'sp-backward-barf-sexp
-      (kbd "M-k") #'sp-splice-sexp)
+    :general
     (general-def
       :states 'insert
-      :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map override)
-      "M-]" #'sp-forward-slurp-sexp)
+      :keymaps '(override)
+      "M-[" #'sp-forward-barf-sexp
+      ;; sp-forward-slurp-sexp does not work well with C-like languages,
+      ;; hence I use sp-slurp-hybrid-sexp
+      "M-]" #'sp-slurp-hybrid-sexp
+      "M-{" #'sp-backward-slurp-sexp
+      "M-}" #'sp-backward-barf-sexp
+      "M-k" #'sp-splice-sexp
+      "M-]" (general-predicate-dispatch #'sp-slurp-hybrid-sexp
+              (-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'sp-forward-slurp-sexp))
+    :config
+    (require 'smartparens-config)
     (smartparens-global-mode))
 #+end_src
 
@@ -6465,7 +6465,7 @@ throughout your projects.
                         (im-repl-inspect-last-result))
                       ;; FIXME: Following does not work for some reason, probably
                       ;; something related to this being a filter function
-                      (unless (get-buffer im-repl-last-result)
+                      (unless (get-buffer im-repl-result-buffer)
                         (message "%s%s" ,prefix (im-kill result))
                         (eros--eval-overlay
                          result
@@ -6504,7 +6504,7 @@ throughout your projects.
 
   (im-create-repl
    :name "Deno"
-   :args ("repl" "--allow-net")
+   :args ()
    :prefix "=> "
    :expr (im-ts-current-expression)
    :parser
