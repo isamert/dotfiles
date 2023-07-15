@@ -3962,9 +3962,9 @@ Here I enable a few extensions for vertico:
     :straight nil
     :after vertico
     :config
-    ;; Toggle grid mode by hitting M-G while in vertico
+    ;; Toggle grid mode by hitting M-g while in vertico
     ;; Toggling grid mode does not work well with mini-frame.
-    (define-key vertico-map "\M-G" #'vertico-multiform-grid)
+    (define-key vertico-map "\M-g" #'vertico-multiform-grid)
 
     ;; '(command display-type... (buffer-local-variable . value))
     ;; vertico README explains this very well
@@ -6463,13 +6463,12 @@ throughout your projects.
                     (when result
                       (when-let (get-buffer im-repl-result-buffer)
                         (im-repl-inspect-last-result))
-                      ;; FIXME: Following does not work for some reason, probably
-                      ;; something related to this being a filter function
                       (unless (get-buffer im-repl-result-buffer)
                         (message "%s%s" ,prefix (im-kill result))
-                        (eros--eval-overlay
-                         result
-                         (point))))))))
+                        (run-at-time 0 nil (lambda ()
+                                             (eros--eval-overlay
+                                              result
+                                              (point))))))))))
              (set-process-sentinel
               repl
               (lambda (proc out)
@@ -10602,13 +10601,19 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
     "TODO: document this"
     (let ((buffer (save-window-excursion (funcall fn))))
       (setq im-peek--buffer buffer)
-      (quick-peek-show
-       (setq im-peek--string
-             (with-current-buffer buffer
-               (font-lock-ensure)
-               (buffer-string)))
-       nil nil im-peek--line-count)
-      (im-peek-mode +1)))
+      ;; `run-at-time' function is useful for forcing the following code
+      ;; to run in main event loop. This helps when `im-peek' is called
+      ;; in an async context.
+      (run-at-time
+       0 nil
+       (lambda ()
+         (quick-peek-show
+          (setq im-peek--string
+                (with-current-buffer buffer
+                  (font-lock-ensure)
+                  (buffer-string)))
+          nil nil im-peek--line-count)
+         (im-peek-mode +1)))))
 
   ;; Special peek functions
 
