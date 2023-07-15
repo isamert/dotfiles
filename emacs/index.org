@@ -3028,7 +3028,7 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
        "Tabs"
        (("tl" tab-line-mode "Tab Line mode (buffer)" :toggle t)
         ("tL" global-tab-line-mode "Tab Line mode (global)" :toggle t)
-        ("tb" tab-bar-mode "Tab Line mode (global)" :toggle t))
+        ("tb" tab-bar-mode "Tab Bar mode (global)" :toggle t))
        "Highlighting"
        (("hg" diff-hl-mode "Highlight git diff" :toggle t)
         ("hd" rainbow-delimiters-mode "Rainbow parens" :toggle t)
