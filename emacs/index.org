@@ -10759,6 +10759,73 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
      :command "curl wttr.in"
      :buffer-name "*im-weather*"))
 #+end_src
+** im-gpt
+#+begin_src emacs-lisp
+  (defvar im-gpt-prompts
+    '((:prompt "Summarize following section." :region t)
+      (:prompt "Add documentation to the following code." :region t)
+      (:prompt "Add documentation to the following Elisp code."
+       :system "You are an Emacs lisp and documentation expert. You add inline documentation to given code by complying with Emacs lisp documentation conventions. You point out usage differences when the function is called normally vs interactively (if applicable). Only return the documentation string itself."
+       :region t)
+      (:prompt "Explain following code." :region t))
+    "A list of prompts for the `im-gpt' function.
+
+  Each element is a property list with the following keys:
+  - PROMPT: The user prompt.
+  - SYSTEM: (Optional) The system prompt for the AI assistant.
+  - REGION: (Optional) A boolean indicating whether to include the
+    selected region when calling `im-gpt' with the prompt.")
+
+  (cl-defun im-gpt (prompt
+                    &key
+                    (system "You are an AI assistant living inside Emacs. You answer concisely.")
+                    (callback (lambda (prompt result)
+                                (with-current-buffer (get-buffer-create "*im-gpt*")
+                                  ;; (erase-buffer)
+                                  (goto-char (point-max))
+                                  (insert "\n---\n")
+                                  (insert "[PROMPT]: %s\n\n" prompt)
+                                  (insert result)
+                                  (insert "\n")
+                                  (markdown-mode)
+                                  (switch-to-buffer-other-window (current-buffer))))))
+    "Use the ChatGPT to generate responses to user prompts.
+
+  - PROMPT is the user input to generate a response for.
+  - SYSTEM is the system prompt for the AI assistant.
+  - CALLBACK is a function that takes the prompt and the generated
+    response as an argument and performs custom actions with it. It
+    defaults to a function that displays the response in a separate
+    buffer using `markdown-mode' and switches to that buffer.
+
+  When called interactively, this function prompts for PROMPT and
+  lets you customize SYSTEM and CALLBACK. See `im-gpt-prompts' for
+  predefined prompts.
+
+  Version: 2023-07-16"
+    (interactive
+     (let* ((selection (im-completing-read
+                        "Prompt: "
+                        (--filter (if (use-region-p)
+                                      (plist-get it :region)
+                                    (not (plist-get it :region)))
+                                  im-gpt-prompts)
+                        :formatter (lambda (it) (plist-get it :prompt))))
+            (prompt (or (plist-get selection :prompt) selection))
+            (system (plist-get prompt :system)))
+       (list
+        (im-tap (if-let (region (im-region-or nil))
+                    (format "%s\n\n```\n%s\n```\n" prompt region)
+                  prompt))
+        :system (or system
+                    "You are an AI assistant living inside Emacs. You answer concisely."))))
+    (org-ai-chat-request
+     :messages `[(:role system :content ,system)
+                 (:role user :content ,prompt)]
+     :model "gpt-3.5-turbo"
+     :callback (lambda (content role usage)
+                 (funcall callback prompt content))))
+#+end_src
 * Operating system related
 ** Sound output chooser
 #+begin_src emacs-lisp
