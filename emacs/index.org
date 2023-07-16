@@ -10657,12 +10657,16 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
       (run-at-time
        0 nil
        (lambda ()
-         (quick-peek-show
-          (setq im-peek--string
-                (with-current-buffer buffer
-                  (font-lock-ensure)
-                  (buffer-string)))
-          nil nil im-peek--line-count)
+         (let ((str (setq im-peek--string
+                          (with-current-buffer buffer
+                            (font-lock-ensure)
+                            (buffer-string)))))
+           ;; Center the current point if the remaining line count is low
+           (when (and
+                  (< (im-line-count-below-cursor) (length (s-lines str)))
+                  (< (im-line-count-below-cursor) (- (window-height) 10)))
+             (recenter 10))
+           (quick-peek-show str nil nil im-peek--line-count))
          (im-peek-mode +1)))))
 
   ;; Special peek functions
