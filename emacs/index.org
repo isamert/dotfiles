@@ -10779,19 +10779,14 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
   - REGION: (Optional) A boolean indicating whether to include the
     selected region when calling `im-gpt' with the prompt.")
 
+  (defconst im-gpt--buffer "*im-gpt*")
+
+  ;; TODO: save to a file automatically?
   (cl-defun im-gpt (prompt
                     &key
                     (system "You are an AI assistant living inside Emacs. You answer concisely.")
-                    (callback (lambda (prompt result)
-                                (with-current-buffer (get-buffer-create "*im-gpt*")
-                                  ;; (erase-buffer)
-                                  (goto-char (point-max))
-                                  (insert "\n---\n")
-                                  (insert "[PROMPT]: %s\n\n" prompt)
-                                  (insert result)
-                                  (insert "\n")
-                                  (markdown-mode)
-                                  (switch-to-buffer-other-window (current-buffer))))))
+                    (model "gpt-3.5-turbo")
+                    (callback))
     "Use the ChatGPT to generate responses to user prompts.
 
   - PROMPT is the user input to generate a response for.
@@ -10817,17 +10812,49 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
             (prompt (or (plist-get selection :prompt) selection))
             (system (plist-get prompt :system)))
        (list
-        (im-tap (if-let (region (im-region-or nil))
-                    (format "%s\n\n```\n%s\n```\n" prompt region)
-                  prompt))
+        (if-let (region (im-region-or nil))
+            (format "%s\n\n```\n%s\n```\n" prompt region)
+          prompt)
         :system (or system
                     "You are an AI assistant living inside Emacs. You answer concisely."))))
-    (org-ai-chat-request
-     :messages `[(:role system :content ,system)
-                 (:role user :content ,prompt)]
-     :model "gpt-3.5-turbo"
-     :callback (lambda (content role usage)
-                 (funcall callback prompt content))))
+    (cond
+     ;; If called interactively, delegate to `org-ai-prompt' with given
+     ;; prompt and system prompt. This automatically streams to
+     ;; `im-gpt--buffer'.
+     ((called-interactively-p 'interactive)
+      (org-ai-prompt
+       prompt
+       :follow t
+       :sys-prompt system
+       :output-buffer (let ((buffer (get-buffer-create im-gpt--buffer)))
+                        (with-current-buffer buffer
+                          (goto-char (point-max))
+                          (insert (format "* %s\n" (format-time-string "%Y-%m-%d %a %H:%M")))
+                          (insert "#+begin_ai markdown\n")
+                          (insert (format "[SYS]: %s\n\n" system))
+                          (insert (format "[ME]: %s\n" prompt))
+                          (insert (format "[AI]: " prompt))
+                          (let ((pt (point)))
+                            (insert "\n#+end_ai\n")
+                            (if-let (window (get-buffer-window im-gpt--buffer))
+                                (set-window-point window pt)
+                              (goto-char pt))))
+                        (switch-to-buffer-other-window buffer)
+                        buffer)
+       :callback (lambda ()
+                   (with-current-buffer (get-buffer-create im-gpt--buffer)
+                     (if-let (window (get-buffer-window im-gpt--buffer))
+                         (set-window-point window (point-max))
+                       (goto-char (point-max)))
+                     (insert "\n")
+                     (font-lock-ensure)))))
+     (t
+      (org-ai-chat-request
+       :messages `[(:role system :content ,system)
+                   (:role user :content ,prompt)]
+       :model model
+       :callback (lambda (content role usage)
+                   (funcall callback prompt content))))))
 #+end_src
 * Operating system related
 ** Sound output chooser
