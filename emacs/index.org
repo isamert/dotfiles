@@ -412,6 +412,57 @@ Some basic variable and function definitions that will be used in configuration.
      (completing-read prompt alist nil nil initial)
      alist nil nil #'equal))
 
+  (cl-defun im-completing-read
+      (prompt objects &key (formatter #'identity) category (sort? t) def multiple?)
+    "Provide an interactive completion interface for selecting an item from a list of objects.
+
+  - PROMPT: The prompt string to display to the user.
+  - OBJECTS: A list of objects to choose from.
+  - FORMATTER: (Optional) A function that formats each object
+    before displaying it to the user. The default is `'identity',
+    which means no formatting.
+  - CATEGORY: (Optional) A category symbol associated with the
+    completion. This can be used to provide additional completion
+    behavior.
+  - SORT?: (Optional) A boolean value indicating whether the
+    completion list should be sorted. The default is t.
+  - DEF: (Optional) The default value to return if no selection is
+    made. If multiple selections are allowed, this value will be
+    returned as a list.
+  - MULTIPLE?: (Optional) A boolean value indicating whether
+    multiple selections are allowed. The default is `nil`.
+
+  If MULTIPLE? is nil, this function returns the selected object
+  from the completion list. If MULTIPLE? is t, this function
+  returns a list of selected objects. If no selection is made, the
+  DEF value is returned."
+    (let* ((object-table
+            (make-hash-table :test 'equal :size (length objects)))
+           (object-strings
+            (mapcar
+             (lambda (object)
+               (let ((formatted-object (funcall formatter object)))
+                 (puthash formatted-object object object-table)
+                 (propertize formatted-object 'empv-item object)))
+             objects))
+           (selected
+            (funcall
+             (if multiple? #'completing-read-multiple #'completing-read)
+             (format "%s " prompt)
+             (lambda (string predicate action)
+               (if (eq action 'metadata)
+                   `(metadata
+                     ,(when category (cons 'category category))
+                     ,@(unless sort?
+                         '((display-sort-function . identity)
+                           (cycle-sort-function . identity))))
+                 (complete-with-action
+                  action object-strings string predicate))))))
+      (if multiple?
+          (or (mapcar (lambda (it) (gethash it object-table)) selected) def)
+        (gethash selected object-table (or def selected)))))
+
+
   (defun im-dmenu (prompt items &rest ignored)
     "Like `completing-read' but instead use dmenu.
   Useful for system-wide scripts."
@@ -444,7 +495,7 @@ Some basic variable and function definitions that will be used in configuration.
   the result in another context, possibly on another shell
   command."
     `((lambda (it) ,do)
-      (empv--completing-read-object
+      (im-completing-read
        ,prompt
        (seq-map-indexed
         (lambda (it idx) ,map)
@@ -2987,7 +3038,7 @@ Several packages are using this package to show system-level notifications. Here
             (plist-get it :message)))
 
   (defun im-notify-posframe--select ()
-    (empv--completing-read-object
+    (im-completing-read
      "Select notification: "
      (im-notify-posframe-notifications-list)
      :formatter #'im-notify-posframe--format-notification
@@ -5341,7 +5392,7 @@ Simple mode for editing =~/.Xmodmap= file.
     "List and open rooms that had new messages in them recently."
     (interactive)
     (im-slack--open-message-or-thread
-     (empv--completing-read-object
+     (im-completing-read
       "Select message: "
       im-slack--last-messages
       :sort? nil
@@ -8046,7 +8097,7 @@ Good for buffer management, especially for groupped killings.
   (defun im-jira-list-issues (&optional arg)
     (interactive "P")
     (im-jira-issue-actions
-     (empv--completing-read-object
+     (im-completing-read
       "Select ticket: "
       (pcase (completing-read "Issue list: " '("My issues" "Current Sprint" "New issues" "Kanban" "Board" "JQL"))
         ("My issues" (im-jira-get-my-issues))
@@ -8257,7 +8308,7 @@ Good for buffer management, especially for groupped killings.
     (cl-loop
      (let-alist issue
        (let* ((action
-               (empv--completing-read-object
+               (im-completing-read
                 (format "Act on %s: " (s-truncate 20 .fields.summary))
                 '("View" "Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Raw" "[Cancel]")
                 :sort? nil)))
@@ -9613,7 +9664,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
                     (--map (s-split "|||" it))
                     (--map `(,(car it) . ,(cadr it))))))
       (->>
-       (empv--completing-read-object
+       (im-completing-read
         "Baslik: " results
         :sort? nil
         :formatter #'car)
