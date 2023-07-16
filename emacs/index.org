@@ -6607,8 +6607,7 @@ throughout your projects.
       "oi" #'markdown-toggle-inline-images)
     :config
     (setq markdown-command "multimarkdown")
-    (setq markdown-fontify-code-blocks-natively t)
-    (setq-default markdown-hide-markup t))
+    (setq markdown-fontify-code-blocks-natively t))
 #+END_SRC
 
 ** haskell
