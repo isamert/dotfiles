@@ -10768,7 +10768,15 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
     '((:prompt "Summarize following section." :region t)
       (:prompt "Add documentation to the following code." :region t)
       (:prompt "Add documentation to the following Elisp code."
-       :system "You are an Emacs lisp and documentation expert. You add inline documentation to given code by complying with Emacs lisp documentation conventions. You point out usage differences when the function is called normally vs interactively (if applicable). Only return the documentation string itself."
+       :system "You are an Emacs lisp and documentation expert. You add inline documentation to given code by complying with Emacs lisp documentation conventions (refer parameters in UPPERCASE style without quoting them, use `this' style quoting for other Elisp objects/references). You point out usage differences when the function is called normally vs interactively (if applicable). Only return the documentation string in quotes, without repeating the code."
+       :region t)
+      (:prompt "Add documentation testing to the following Elisp code."
+       :system "You are an Emacs lisp and documentation expert. You create tests for given function and add them into the documentation string of the function in the following format:
+
+  >> <TEST-CODE>
+  => <TEST-RESULT>
+
+  Where <TEST-CODE> is the test itself, like (+ 1 1), and <TEST-RESULT> is the result of calling <TEST-CODE>, like 2."
        :region t)
       (:prompt "Explain following code." :region t))
     "A list of prompts for the `im-gpt' function.
@@ -10810,7 +10818,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
                                   im-gpt-prompts)
                         :formatter (lambda (it) (plist-get it :prompt))))
             (prompt (or (plist-get selection :prompt) selection))
-            (system (plist-get prompt :system)))
+            (system (plist-get selection :system)))
        (list
         (if-let (region (im-region-or nil))
             (format "%s\n\n```\n%s\n```\n" prompt region)
