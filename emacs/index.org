@@ -5316,7 +5316,12 @@ Simple mode for editing =~/.Xmodmap= file.
     (slack-change-current-team)
     (im-slack-initialize-keymaps))
 
+  (defvar im-slack-dnd nil)
   (defvar im-slack--last-messages '())
+
+  (defun im-slack-toggle-dnd ()
+    (interactive)
+    (message "slack :: DND is %s." (setq im-slack-dnd (not im-slack-dnd))))
 
   (defun im-slack-notify (message room team)
     (when (or
@@ -5353,14 +5358,16 @@ Simple mode for editing =~/.Xmodmap= file.
             ;; msg-str sometimes causes errors with `alert'. Thats why I
             ;; used `ignore-errors'.
             (ignore-errors
-              (alert
-               msg-str
-               :title title
-               :category "slack")))
-          (message
-           ">> Slack: %s // %s"
-           title
-           (car (s-split "\n" msg-str)))))))
+              (unless im-slack-dnd
+                (alert
+                 msg-str
+                 :title title
+                 :category "slack"))))
+          (unless im-slack-dnd
+            (message
+             ">> Slack: %s // %s"
+             title
+             (car (s-split "\n" msg-str))))))))
 
   (defun im-slack-yank-last-message ()
     "Yank the contents of the last received message as text."
