@@ -323,6 +323,13 @@ Some basic variable and function definitions that will be used in configuration.
           "osascript -e 'tell application \"System Events\" to click UI element \"Emacs\" of list 1 of application process \"Dock\"'"))
         ('gnu/linux
          (user-error "Implement this: im-force-focus-emacs")))))
+
+  (defun im-line-count-below-cursor ()
+    "Return the number of lines displayed below the cursor in the current window."
+    (let ((line (line-number-at-pos)))
+      (save-excursion
+        (move-to-window-line 0)
+        (- (window-height) (- line (line-number-at-pos))))))
 #+end_src
 
 *** Elisp utils
