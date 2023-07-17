@@ -10773,7 +10773,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
     '((:prompt "Summarize following section." :region t)
       (:prompt "Add documentation to the following code." :region t)
       (:prompt "Add documentation to the following Elisp code."
-       :system "You are an Emacs lisp and documentation expert. You add inline documentation to given code by complying with Emacs lisp documentation conventions (refer parameters in UPPERCASE style without quoting them, use `this' style quoting for other Elisp objects/references). You point out usage differences when the function is called normally vs interactively (if applicable). Only return the documentation string in quotes, without repeating the code."
+       :system "You are an Emacs lisp and documentation expert. You add inline documentation to given code by complying with Emacs lisp documentation conventions (refer parameters in UPPERCASE style without quoting them, use `this' style quoting for other Elisp objects/references). Refer to \"Tips for Documentation Strings\" in Emacs manual. ONLY return the documentation string in quotes, without repeating the code."
        :region t)
       (:prompt "Add documentation testing to the following Elisp code."
        :system "You are an Emacs lisp and documentation expert. You create tests for given function and add them into the documentation string of the function in the following format:
@@ -10798,12 +10798,16 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
   (cl-defun im-gpt (prompt
                     &key
                     (system "You are an AI assistant living inside Emacs. You answer concisely.")
+                    (include-system t)
                     (model "gpt-3.5-turbo")
                     (callback))
     "Use the ChatGPT to generate responses to user prompts.
 
   - PROMPT is the user input to generate a response for.
   - SYSTEM is the system prompt for the AI assistant.
+  - INCLUDE-SYSTEM, if non-nil, includes SYSTEM prompt to PROMPT.
+    I found that it's more reliable to include system prompt to
+    every message.
   - CALLBACK is a function that takes the prompt and the generated
     response as an argument and performs custom actions with it. It
     defaults to a function that displays the response in a separate
@@ -10830,6 +10834,10 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
           prompt)
         :system (or system
                     "You are an AI assistant living inside Emacs. You answer concisely."))))
+    (setq prompt
+          (if include-system
+              (concat system "\n\n" prompt)
+            prompt))
     (cond
      ;; If called interactively, delegate to `org-ai-prompt' with given
      ;; prompt and system prompt. This automatically streams to
