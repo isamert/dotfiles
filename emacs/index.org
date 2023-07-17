@@ -6470,7 +6470,7 @@ throughout your projects.
       (unless (im-buffer-visible-p (current-buffer))
         (switch-to-buffer-other-window (current-buffer)))))
 
-  (cl-defmacro im-create-repl (&key name args prefix expr parser)
+  (cl-defmacro im-create-repl (&key name args prefix expr parser (process-region #'identity))
     "Create family of functions for interacting with given REPL of NAME.
 
   NAME is the binary name of the REPL, like jshell, deno etc. (case-insensitive)
@@ -6561,8 +6561,10 @@ throughout your projects.
              (,(intern (format "im-%s-repl-start" (downcase name)))))
            (let ((expr
                   (if (use-region-p)
-                      (buffer-substring-no-properties (region-beginning)
-                                                      (region-end))
+                      (funcall
+                       ,process-region
+                       (buffer-substring-no-properties (region-beginning)
+                                                       (region-end)))
                     (let ((curr ,expr)
                           (this-command 'evil-paste-after))
                       (evil-goggles--show-async-hint
@@ -6575,6 +6577,13 @@ throughout your projects.
    :name "Deno"
    :args ()
    :prefix "=> "
+   ;; Remove block comments before sending, because Deno repl cant
+   ;; handle them properly.
+   :process-region
+   (lambda (str)
+     (while (string-match "/\\*\\([^*]\\|\\*[^/]\\)*\\*/" str)
+       (setq str (replace-match "" t t str)))
+     str)
    :expr (im-ts-current-expression)
    :parser
    (lambda (out)
