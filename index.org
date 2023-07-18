@@ -2025,8 +2025,10 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
   command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(lab-watch-pipeline "${JS_ARG}")'`)
-  command meme-downloader withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}")'`)
-  command meme-downloader-with-title withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
+  command emacs/open withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(progn (browse-url "${JS_ARG}") (im-force-focus-emacs))'`)
+  command emacs/eww withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(progn (eww "${JS_ARG}") (im-force-focus-emacs))'`)
+  command emacs/meme-downloader withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}")'`)
+  command emacs/meme-downloader-with-title withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
 
   " quick search
   set searchurls.g https://www.google.com/search?q=%s
