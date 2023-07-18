@@ -6000,6 +6000,8 @@ example, hitting ~y~ will speak the word using the translation engine.
               (-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'sp-forward-slurp-sexp))
     :config
     (require 'smartparens-config)
+    ;; Fix ts-ts mode
+    (add-to-list 'sp-sexp-suffix (list 'typescript-ts-mode 'regexp ""))
     (smartparens-global-mode))
 #+end_src
 
