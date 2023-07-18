@@ -5703,7 +5703,7 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
   (use-package tmr
     :defer t
     :init
-    (im-leader "N" #'tmr-with-details)
+    (im-leader "T" #'tmr-with-details)
     :config
     ;; Replace the notification function so that it works on my Mac
     (remove-hook 'tmr-timer-finished-functions #'tmr-notification-notify)
@@ -5887,7 +5887,7 @@ Turkish dictionary.
     :straight (:host github :repo "isamert/sozluk.el")
     :defer t
     :config
-    (setq sozluk-include-etymology-on-sozluk t)
+    ;; (setq sozluk-include-etymology-on-sozluk t)
     (setq sozluk-deasciify-if-not-found t))
 
   ;; This is an optional dependency for sozluk.
@@ -8092,7 +8092,7 @@ Good for buffer management, especially for groupped killings.
     (jiralib2-board-issues im-jira-board-id nil))
 
   (defun im-jira-jql (jql)
-    (interactive "sEnter JQL: ")
+    (interactive (list (read-string "Enter JQL: " "text ~ \"...\" AND statusCategory = \"To Do|In Progress|Done\"")) "sEnter JQL: ")
     (jiralib2-jql-search jql))
 
   (defmemoize im-jira-get-current-sprint-issues ()
@@ -10202,9 +10202,17 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
            (kill-new command))
          (and on-fail (funcall on-fail 'abnormal-exit))))))
 #+end_src
-** im-narrow-dwim
+** narrow-indirect & im-narrow-dwim
 #+begin_src emacs-lisp
-  (im-leader-v "n" #'im-narrow-dwim)
+  (use-package narrow-indirect)
+
+  (im-leader-v
+    "n" #'im-narrow-dwim
+    "N" (im-eval-dwim
+         #'ni-narrow-to-defun-indirect-other-window
+         #'ni-narrow-to-region-indirect-other-window
+         #'ni-narrow-to-page-indirect-other-window))
+
 
   (defun im-narrow-dwim ()
     "Smart narrowing."
