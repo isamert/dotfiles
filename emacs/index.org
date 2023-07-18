@@ -10741,7 +10741,10 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
   (defun im-peek-sozluk ()
     "Show definition of the word at point (tr)."
     (interactive)
-    (im-peek (lambda () (call-interactively #'sozluk))))
+    (im-peek
+     (lambda ()
+       (call-interactively #'sozluk)
+       (current-buffer))))
 
   (defun im-peek-dictionary ()
     "Show definition of the word at point (en)."
