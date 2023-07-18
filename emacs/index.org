@@ -1647,6 +1647,8 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
     ;; ^ Don't ask permissions for evaluating code blocks
     (setq org-clock-clocked-in-display 'mode-line)
     ;; ^ Shows in the tab-bar, if tab-bar is enabled.
+    (setq org-habit-show-habits nil)
+    ;; ^ Speeds up agenda a bit
 
     ;; TODO Remove when upstream fixes this
     ;; https://github.com/minad/consult/issues/563#issuecomment-1186612641
