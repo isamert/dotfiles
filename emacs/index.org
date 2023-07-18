@@ -5812,6 +5812,35 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
   (use-package swagg
     :straight (:host github :repo "isamert/swagg.el"))
 #+end_src
+** whisper -- Recording and transcribing audio locally
+#+begin_src emacs-lisp
+  (use-package whisper
+    :straight (:host github :repo "natrys/whisper.el")
+    :bind ("C-M-r" . whisper-run)
+    :config
+    (setq whisper-install-directory "/tmp/"
+          whisper-model "medium"
+          whisper-language "en"
+          whisper-translate nil))
+
+  (define-advice whisper-run (:before (&rest _) set-microphone)
+    (unless whisper--ffmpeg-input-device
+      (im-whisper-select-microphone)))
+
+  (defun im-whisper-select-microphone ()
+    (interactive)
+    (setq
+     whisper--ffmpeg-input-device
+     (->>
+      (im-output-select
+       :prompt "Select mic: "
+       :cmd "/opt/homebrew/bin/ffmpeg -f avfoundation -list_devices true -i ''"
+       :keep-order t
+       :filter (s-prefix? "[AVFound" it))
+      (s-match "\\[\\([0-9]+\\)\\]")
+      (nth 1)
+      (s-prepend ":"))))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple lines. It
