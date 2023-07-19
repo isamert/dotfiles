@@ -10744,7 +10744,9 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
   ;; Special peek functions
 
   (use-package google-translate
-    :custom (google-translate-listen-program "mpv"))
+    :custom
+    (google-translate-listen-program "mpv")
+    (google-translate-backend-method 'curl))
 
   (defun im-peek-translate (source target str)
     "Translate STR from SOURCE to TARGET.
