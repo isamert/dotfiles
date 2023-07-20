@@ -9815,7 +9815,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
 
   In BUFFER-NAME, `im-shell-command-mode' is activated and you can
   use `im-shell-command-mode-rerun-command' or \"gr\" to replay the
-  command."
+  command.
+
+  Returns process buffer."
     (interactive
      (let ((command (completing-read "Command: " (im-zsh-smart-history))))
        (list
@@ -9878,7 +9880,8 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
           :on-fail on-fail))
         (funcall on-start))
       (when switch
-        (switch-to-buffer buffer-name))))
+        (switch-to-buffer buffer-name))
+      (get-buffer buffer-name)))
 #+end_src
 
 ** Copy current/buffers filename into clipboard
