@@ -3207,6 +3207,7 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
     (setq dest (expand-file-name dest))
     (let* ((files (dired-get-marked-files nil current-prefix-arg))
            (ssh-regexp "/ssh:\\([a-zA-Z0-9_-\\.@]+\\):")
+           (resolve-dir (lambda (it) (if (f-dir? it) it (f-dirname it))))
            (fix-remote-files
             (lambda (it)
               (if-let (host (nth 1 (s-match ssh-regexp it)))
@@ -3214,9 +3215,11 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
                 (shell-quote-argument it))))
            ;; If `default-directory' points to ssh'ed directory, that
            ;; may cause some issues. This is just to keep things simple
-           ;; and error-free. Also it's better to use target directory
-           ;; as the `default-directory'.
-           (default-directory (if (f-dir? dest) dest (f-dirname dest))))
+           ;; and error-free.
+           (default-directory
+             (funcall resolve-dir (if (s-matches? ssh-regexp dest)
+                                      (car files)
+                                    dest))))
       (im-shell-command
        :command "rsync"
        :eat t
@@ -3225,7 +3228,9 @@ Dired copies files sync. This function uses rsync to copy stuff async, especiall
          ,@(when (--any? (s-matches? ssh-regexp it) files)
              '("-e" "ssh"))
          ,@(mapcar fix-remote-files files)
-         ,dest)
+         ,@(when (s-matches? ssh-regexp dest)
+             '("-e" "ssh"))
+         ,(funcall fix-remote-files dest))
        :on-finish
        (lambda (&rest _)
          (message ">> Files copied successfully."))
