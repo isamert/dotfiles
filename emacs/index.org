@@ -5888,6 +5888,12 @@ Very cool and the nice thing is it integrates itself with the built-in bookmarki
     ;; Load Org link support
     (with-eval-after-load 'org (require 'osm-ol)))
 #+end_src
+** reveal-in-finder
+Well, sometimes you need to open that pesky program.
+#+begin_src emacs-lisp
+  (use-package reveal-in-osx-finder
+    :if (eq system-type 'darwin))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple lines. It
