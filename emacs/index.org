@@ -5851,6 +5851,43 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
       (nth 1)
       (s-prepend ":"))))
 #+end_src
+** osm -- OpenStreetMaps in Emacs
+Very cool and the nice thing is it integrates itself with the built-in bookmarking system. So you can bookmark places (or store them as org links) and jump to them whenever needed.
+#+begin_src emacs-lisp
+  (use-package osm
+    :general
+    ;; TODO: Maybe add this to evil-collection
+    (:keymaps 'osm-mode-map :states 'normal
+     ;; Navigation
+     "h" #'osm-left
+     "l" #'osm-right
+     "j" #'osm-down
+     "k" #'osm-up
+     "H" #'osm-left-left
+     "L" #'osm-right-right
+     "J" #'osm-down-down
+     "K" #'osm-up-up
+     ;; Positioning
+     "+" #'osm-zoom-in
+     "-" #'osm-zoom-out
+     "c" #'osm-center
+     "g"  #'osm-home
+     "r" #'revert-buffer
+     ;; Url
+     "u" #'osm-save-url
+     "y" #'org-store-link
+     ;; Other
+     "s" #'osm-search
+     "X" #'osm-gpx-hide
+     "q" #'quit-window)
+    :custom
+    (osm-server 'default)
+    (osm-copyright nil)
+    :init
+    (add-hook 'osm-mode-hook #'im-disable-line-wrapping)
+    ;; Load Org link support
+    (with-eval-after-load 'org (require 'osm-ol)))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple lines. It
