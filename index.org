@@ -1273,7 +1273,7 @@ Easily switch between contexts with completion.
 ** Emacs configuration
 #+begin_src bash :tangle ~/.zshrc
   function is-emacs {
-    [[ '$INSIDE_EMACS' = 'vterm' ]];
+    [[ $INSIDE_EMACS = 'vterm' ]];
   }
 
   if is-emacs; then
