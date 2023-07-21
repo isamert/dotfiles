@@ -10894,6 +10894,8 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
 #+end_src
 ** im-gpt
 #+begin_src emacs-lisp
+  (im-leader-v "eg" #'im-gpt)
+
   (defvar im-gpt-prompts
     '((:prompt "Summarize the following section:" :region t)
       (:prompt "Add documentation to the following code:" :region t)
