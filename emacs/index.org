@@ -988,7 +988,7 @@ Enables you to have repeatable keybindings.
   (use-package ef-themes)
 
   (defconst im-theme 'modus-vivendi)
-  (defconst im-fonts '("Iosevka Comfy" "Iosevka Nerd Font"))
+  (defconst im-fonts '("Iosevka Comfy Motion" "Iosevka Comfy" "Iosevka Nerd Font"))
   (defconst im-font-height (pcase system-type ('gnu/linux 138) ('darwin 160)))
 
   (defun im-set-font-and-theme-config ()
