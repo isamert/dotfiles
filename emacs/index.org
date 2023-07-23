@@ -786,8 +786,6 @@ Also load ~isamert-secrets~ from =load-path=. I'll be utilizing some variables d
 * Basics
 ** Overriding some defaults
 #+begin_src emacs-lisp
-  ;; Feels better
-  (setq switch-to-prev-buffer-skip t)
 #+end_src
 *** M-Backspace should delete, instead of killing
 #+begin_src emacs-lisp
@@ -9465,7 +9463,7 @@ Here I define two important functions and their helpers.  The following function
       (tab-line-mode -1)
       (display-buffer-other-frame (current-buffer))))
 
-  (defun im-display-buffer-in-side-window (buffer)
+  (defun im-display-buffer-in-side-window (buffer &optional width)
     "Just like `display-buffer-in-side-window` but only takes a BUFFER and rest of the parameters are for my taste."
     (set-window-dedicated-p
      ;; ^ Setting this to nil so that `pop-to-buffer-same-window' calls works in this window
@@ -9474,9 +9472,9 @@ Here I define two important functions and their helpers.  The following function
      (select-window
       (display-buffer-in-side-window
        buffer
-       '((side . right)
+       `((side . right)
          (slot . 0)
-         (window-width . 84)
+         (window-width . ,(or width 84))
          (window-parameters
           (no-delete-other-windows . t)
           (no-other-window . nil)))))
