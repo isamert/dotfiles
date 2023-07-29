@@ -903,13 +903,7 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
       ("~/.Xresources.d/.*"              . "xrdb ~/.Xresources; notify-send 'xrdb updated'")
       ("~/.config/sxhkd/sxhkdrc"         . "pkill -USR1 -x sxhkd; notify-send 'sxhkd updated'")
       ("~/.config/skhd/skhdrc"           . "skhd --reload; osascript -e 'display notification \"skhd updated\"'")
-      ("~/.config/kmonad-linux.kbd"      . "systemctl --user restart kmonad")
-      ;; ("~/.ssh/config" . im-unison-sync)
-      ;; ("~/.emacs.d/bookmarks" . im-unison-sync)
-      ;; ("~/.emacs.d/scratch.el" . im-unison-sync)
-      ;; ("~/.emacs.d/im-.*" . im-unison-sync)
-      ;; ("~/.emacs.d/load/isamert.*" . im-unison-sync)
-      )
+      ("~/.config/kmonad-linux.kbd"      . "systemctl --user restart kmonad"))
     "File association list with their respective command.")
 
   (add-hook 'after-save-hook #'im-post-save-run-command)
@@ -930,13 +924,6 @@ This is like =autocmd BufWritePost= of vim. When a particular file is edited, I 
           (t
            (message ">> Wrong specification in `im-run-after-save-alist' for %s" fname))))
        match)))
-
-  (defun im-unison-sync (&optional _)
-    (interactive)
-    (save-window-excursion
-      (async-shell-command
-       (format "DISPLAY= unison sync -ui text -batch -root ~ -root ssh://%s"
-               (if (workpc?) "x220" "mac")))))
 #+END_SRC
 
 ** repeat-mode
@@ -1681,10 +1668,14 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
     <<org-faces>>
     <<org-refile>>
     <<org-capture>>
-    <<org-icalendar>>)
+    <<org-icalendar>>
+    <<org-babel-configuration>>
+  )
 
   (use-package org-contrib :after org)
 #+end_src
+
+#+RESULTS:
 
 ** Keybindings
 #+begin_src emacs-lisp
@@ -1704,6 +1695,7 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
       ;; org-clock
       "occ" #'org-clock-in
       "ocC" #'org-clock-cancel
+      "ocr" #'org-clock-in-last
       "ocl" #'org-clock-in-last
       "oco" #'org-clock-out
       "ocg" #'org-clock-goto)
@@ -3149,6 +3141,8 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
      "\\"    #'dired-find-file-other-window
      "h"     #'dired-up-directory
      "l"     #'dired-find-alternate-file
+     "T"     #'dirvish-layout-toggle
+     "e"     #'dirvish-dispatch
      "q"     #'dirvish-quit
      "<tab>" #'dirvish-toggle-subtree
      "f"     #'dirvish-file-info-menu
@@ -3408,7 +3402,11 @@ To sync it automatically:
      'after-save-hook
      (lambda ()
        (when (-contains? (org-agenda-files 'unrestricted) (buffer-file-name))
-         (org-agenda-to-appt)
+         ;; When REFRESH is non-nil, it removes all appts and
+         ;; re-parses. This means appts that are manually added using
+         ;; `appt-add' are removed. I used to use `appt-add' but now I
+         ;; use `tmr' which supports both HH:MM and relative timers.
+         (org-agenda-to-appt 'refresh)
          (appt-check)
          (message ">> appt updated.")))
      nil t))
@@ -4114,14 +4112,21 @@ Other complementary packages:
   ;; (when-let (path (locate-dominating-file default-directory ".git"))
   ;;   (expand-file-name path)))
 
+  (defvar im-project-name-transformers '()
+    "List of functions to do transformations on the function name.
+  Like shortening it in some form etc.")
+
   (defun im-current-project-name ()
     "Return current projects name."
-    (if-let ((curr-proj (im-current-project-root))
-             (projects-root (expand-file-name im-projects-root)))
-        (if (string-prefix-p projects-root curr-proj)
-            (string-trim (string-remove-prefix projects-root curr-proj) "/" "/")
-          (file-name-nondirectory (directory-file-name curr-proj)))
-      (file-name-nondirectory (directory-file-name default-directory))))
+    (seq-reduce
+     (lambda (acc it) (funcall it acc))
+     im-project-name-transformers
+     (if-let ((curr-proj (im-current-project-root))
+              (projects-root (expand-file-name im-projects-root)))
+         (if (string-prefix-p projects-root curr-proj)
+             (string-trim (string-remove-prefix projects-root curr-proj) "/" "/")
+           (file-name-nondirectory (directory-file-name curr-proj)))
+       (file-name-nondirectory (directory-file-name default-directory)))))
 
   (defun im-is-git-dir (dir)
     (file-directory-p (concat dir "/.git")))
@@ -5275,12 +5280,13 @@ Simple mode for editing =~/.Xmodmap= file.
     :defer t
     :general
     (im-leader
-     "ess" #'im-slack-select-rooms
-     "esS" #'slack-select-unread-rooms
-     "esm" #'im-slack-send-message
-     "esr" #'im-slack-recent-messages
-     "esl" #'im-slack-open-last-message
-     "esy" #'im-slack-yank-last-message)
+      "ess" #'im-slack-select-rooms
+      "esS" #'slack-select-unread-rooms
+      "esm" #'im-slack-send-message
+      "esr" #'im-slack-last-messages-alternative
+      "esR" #'im-slack-last-messages
+      "esl" #'im-slack-open-last-message
+      "esy" #'im-slack-yank-last-message)
     :config
     (setq slack-log-level 'error)
     ;; ^ info level shows unnecessary stuff that distracts me
@@ -5330,7 +5336,8 @@ Simple mode for editing =~/.Xmodmap= file.
      :subscribed-channels ty-slack-channels)
     (slack-start)
     (slack-change-current-team)
-    (im-slack-initialize-keymaps))
+    (im-slack-initialize-keymaps)
+    (run-at-time nil 3600 #'im-slack-check))
 
   (defvar im-slack-dnd nil)
   (defvar im-slack--last-messages '())
@@ -5338,6 +5345,17 @@ Simple mode for editing =~/.Xmodmap= file.
   (defun im-slack-toggle-dnd ()
     (interactive)
     (message "slack :: DND is %s." (setq im-slack-dnd (not im-slack-dnd))))
+
+  (defun im-slack-check ()
+    (interactive)
+    (let* ((one-hour-ago (- (string-to-number (format-time-string "%s")) 3600))
+           (msg-count (->>
+                       (im-slack-last-messages-per-room)
+                       (--filter (> (im-slack--message-ts it) one-hour-ago))
+                       (length))))
+      (when (> msg-count 0)
+        (message ">> Check slack. %s messages in last hour."
+                 (propertize (number-to-string msg-count) 'face '(:weight bold))))))
 
   (defun im-slack-notify (message room team)
     (when (or
@@ -5370,7 +5388,8 @@ Simple mode for editing =~/.Xmodmap= file.
                       (--map (buffer-name (window-buffer it)) (window-list)))))
           ;; Only send desktop notifications for the things I'im interested
           ;; mpim || group || in subscribed channels
-          (when (slack-message-notify-p message room team)
+          (when (or (slack-mpim-p room)
+                    (slack-message-notify-p message room team))
             ;; msg-str sometimes causes errors with `alert'. Thats why I
             ;; used `ignore-errors'.
             (ignore-errors
@@ -5411,6 +5430,26 @@ Simple mode for editing =~/.Xmodmap= file.
 
   (defalias 'im-slack-recent-messages #'im-slack-last-messages)
 
+
+  (defun im-slack-last-messages-per-room ()
+    (->>
+     im-slack--last-messages
+     (--map (list :room-name (plist-get it :room-name)
+                  :room (plist-get it :room)
+                  :team (plist-get it :team)))
+     (-uniq)
+     (-map (lambda (room) (--find (equal (plist-get room :room-name)
+                                    (plist-get it :room-name))
+                             im-slack--last-messages)))))
+
+  (defun im-slack--message-ts (message)
+    (->>
+     (plist-get message :message)
+     slack-ts
+     (s-split "\\.")
+     car
+     string-to-number))
+
   (defun im-slack-last-messages ()
     "List and open rooms that had new messages in them recently."
     (interactive)
@@ -5422,6 +5461,26 @@ Simple mode for editing =~/.Xmodmap= file.
       :formatter
       (lambda (it)
         (let-plist it (format "%s (%s: %s)" .room-name .sender-name .message-string))))))
+
+  (defun im-slack-last-messages-alternative ()
+    "Like `im-slack-last-messages' but only show the last message per room."
+    (interactive)
+    (let ((selected
+           (im-completing-read
+            "Select room: "
+            (im-slack-last-messages-per-room)
+            :formatter (lambda (it) (let-plist it
+                                 (format "%s (%s) - %s"
+                                         (propertize .room-name 'face '(:weight bold))
+                                         (when .message
+                                           (lab--time-ago
+                                            (im-slack--message-ts it)))
+                                         (propertize .message-string 'face 'italic))))
+            :sort? nil)))
+      (let-plist selected
+        (slack-room-display
+         .room
+         .team))))
 
   (defun im-slack-send-message (msg)
     "Send given MSG or selected region as message to interactively
@@ -5686,7 +5745,7 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
     :straight (:host github :repo "hsjunnesson/wolfram.el")
     :defer t
     :init
-    (im-leader "iw" #'wolfram-alpha)
+    (im-leader-v "iw" #'wolfram-alpha)
     :config
     (setq wolfram-alpha-app-id im-wolfram-alpha-app-id))
 #+end_src
@@ -6554,7 +6613,7 @@ throughout your projects.
       (unless (im-buffer-visible-p (current-buffer))
         (switch-to-buffer-other-window (current-buffer)))))
 
-  (cl-defmacro im-create-repl (&key name args prefix expr parser (process-region #'identity))
+  (cl-defmacro im-create-repl (&key name args prefix expr parser input-regexp process-region)
     "Create family of functions for interacting with given REPL of NAME.
 
   NAME is the binary name of the REPL, like jshell, deno etc. (case-insensitive)
@@ -6611,7 +6670,7 @@ throughout your projects.
                   (insert "\n"))
                 (setq im-repl-last-result (concat im-repl-last-result (ansi-color-apply out)))
                 ;; TODO: change "^> $" per REPL type
-                (when (s-matches? "^> $" out)
+                (when (s-matches? ,input-regexp out)
                   (let* ((result (,parser im-repl-last-result)))
                     (setq im-repl-last-result result)
                     (when result
@@ -6661,6 +6720,7 @@ throughout your projects.
    :name "Deno"
    :args ()
    :prefix "=> "
+   :input-regexp "^> $"
    ;; Remove block comments before sending, because Deno repl cant
    ;; handle them properly.
    :process-region
@@ -6681,13 +6741,16 @@ throughout your projects.
    :name "JShell"
    :args nil
    :prefix ""
+   :process-region 'identity
+   :input-regexp "jshell>"
    :expr (im-ts-current-expression)
    :parser
-   (when-let* ((str (s-trim out))
-               ((and (not (s-blank-str? out))
-                     (or (s-contains? "==>" out)
-                         (s-prefix? "|" out)))))
-     str))
+   (lambda (out)
+     (->>
+      out
+      (s-split "\n")
+      (-drop-last 1)
+      (s-join "\n"))))
 #+end_src
 *** Other
 #+begin_src emacs-lisp
@@ -7552,6 +7615,7 @@ Mostly for editing tridactyl and sometimes real vimrc.
 ** Graphviz/dot
 #+begin_src emacs-lisp
   (use-package graphviz-dot-mode
+    :demand t ;; Otherwise it won't work on org-mode buffers
     :mode ("\\.dot\\'" "\\.gv\\'"))
 #+end_src
 ** PlantUML
@@ -8059,7 +8123,9 @@ Good for buffer management, especially for groupped killings.
     (kbd "M-2") (λ-interactive (tab-bar-select-tab 2))
     (kbd "M-3") (λ-interactive (tab-bar-select-tab 3))
     (kbd "M-4") (λ-interactive (tab-bar-select-tab 4))
-    (kbd "M-5") (λ-interactive (tab-bar-select-tab 5)))
+    (kbd "M-5") (λ-interactive (tab-bar-select-tab 5))
+    (kbd "M-6") (λ-interactive (tab-bar-select-tab 6))
+    (kbd "M-7") (λ-interactive (tab-bar-select-tab 7)))
 
   (im-make-repeatable winner
     "u" tab-bar-history-back
@@ -8198,7 +8264,7 @@ Good for buffer management, especially for groupped killings.
        (lambda (project)
          (setq
           issues
-          (thread-last (format "project = \"%s\" AND created > -7d"
+          (thread-last (format "project = \"%s\" AND created > -10d"
                                (car project))
                        (jiralib2-jql-search)
                        (append issues))))
@@ -8389,9 +8455,7 @@ Good for buffer management, especially for groupped killings.
     "Create a branch name from given Jira ISSUE-NAME"
     (thread-last
       issue-name
-      (s-replace-all '((" " . "-") (":" . "-") ("\"" . "") ("/" . "-") ("&" . "") ("(" . "-") (")" . "-")))
-      (s-replace "---" "-")
-      (s-replace "--" "-")
+      (im-string-url-case)
       (s-downcase)
       (im-s-upcase-until "-")
       (s-prepend im-jira-feature-branch-prefix)
