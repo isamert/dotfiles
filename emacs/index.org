@@ -9902,6 +9902,7 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
        command
        args
        eat
+       env
        (switch t)
        (buffer-name (concat "*" command "*"))
        (on-start (lambda (&rest _)))
@@ -9914,6 +9915,11 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   If ARGS is non-nil list, then use `start-process' with command as
   COMMAND and args as ARGS.
 
+  ENV is a list of environment variables and values in the
+  following form:
+
+      '(\"DISPLAY=\" \"X=5\" \"Y=6\")
+
   If EAT is non nil, use eat shell to display output which handles
   terminal outputs way better.  ARGS must be a list.
 
@@ -9923,6 +9929,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
   In BUFFER-NAME, `im-shell-command-mode' is activated and you can
   use `im-shell-command-mode-rerun-command' or \"gr\" to replay the
   command.
+
+  If EAT is non-nil and BUFFER-NAME does not contain \"*...*\", the
+  asterisks will be added automatically by eat.
 
   Returns process buffer."
     (interactive
@@ -9941,10 +9950,14 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
             (message msg)
             (when (not (frame-focus-state))
               (alert msg)))))))
-    (let* ((proc
+    (let* ((process-environment (append env process-environment))
+           (proc
             (if eat
                 (progn
-                  (let ((buffer (apply #'eat-make command command nil args)))
+                  (let ((buffer (apply #'eat-make (->> buffer-name
+                                                     (s-chop-prefix "*")
+                                                     (s-chop-suffix "*"))
+                                       command nil args)))
                     (setq buffer-name (buffer-name buffer))
                     (get-buffer-process buffer)))
               (if args
@@ -9956,11 +9969,12 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
       (set-process-sentinel
        proc
        (lambda (p e)
-         (with-current-buffer buffer-name
+         (with-current-buffer (get-buffer-create buffer-name)
            (read-only-mode -1))
-         (if (= 0 (process-exit-status p))
-             (funcall on-finish proc-out)
-           (funcall on-fail))))
+         (let ((exit-code (process-exit-status p)))
+           (if (= 0 exit-code)
+               (funcall on-finish proc-out)
+             (funcall on-fail exit-code)))))
       (unless eat
         (set-process-filter
          proc
@@ -10347,7 +10361,7 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
              (shell-command (format "tidy -q -w 120 -m '%s'" created-file)))
            (and on-finish (funcall on-finish created-file))))
        :on-fail
-       (lambda ()
+       (lambda (&rest _)
          (when (called-interactively-p 'any)
            (message "Archiving failed: '%s'. Command is copied to your kill ring." url)
            (kill-new command))
@@ -11030,7 +11044,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
     (when (functionp prompt)
       (setq prompt (funcall prompt)))
     (when-let (region (im-region-or nil))
-      (setq (format "%s\n\n```\n%s\n```\n" prompt region)))
+      (setq prompt (format "%s\n\n```\n%s\n```\n" prompt region)))
     (setq prompt
           (if include-system
               (concat system "\n\n" prompt)
