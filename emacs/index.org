@@ -4454,6 +4454,7 @@ Here is a nice description of the package from it's README:
     :bind (("C-x C-d" . consult-dir)
            :map vertico-map
            ("M-d" . consult-dir))
+    :demand t
     :config
     (setq consult-dir-sources '(consult-dir--my-dirs
                                 consult-dir--source-bookmark
