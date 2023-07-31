@@ -8067,7 +8067,7 @@ Good for buffer management, especially for groupped killings.
                (propertize proj-name 'face 'bold)
                (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic))
                (format "%s%s" (if kill-file-path (propertize "Copied: " 'face 'bold) "") fpath-pretty)
-               (format "Size: %s" (im-human-readable-size (buffer-size)))
+               (format "Size: %s" (im-human-readable-size (- (point-max) (point-min))))
                (format "Current branch: %s" (lab-git-current-branch))
                (im-read-time))
       (when kill-file-path
