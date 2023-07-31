@@ -4275,8 +4275,20 @@ Other complementary packages:
                   (slot . 1))))
               (select-window (get-buffer-window term))))))))
 
-  (bind-key "M-`" #'im-shell-for)
-  (bind-key "M-~" (λ-interactive (im-shell-for 'dir)))
+  (defun im-term ()
+    (interactive)
+    "Select a term and open: "
+    (empv--select-action "Term: "
+      "eshell project" → (im-shell-for)
+      "eshell dir" → (im-shell-for 'dir)
+      "vterm project" → (im-vterm-project)
+      "vterm dir" → (im-vterm-dir)
+      "nushell project" → (let ((vterm-shell "nu")) (im-vterm-project))
+      "nushell dir" → (let ((vterm-shell "nu")) (im-vterm-dir))))
+
+  (im-leader "2" #'im-term)
+  (bind-key "M-`" (λ-interactive (im-shell-for 'project t)))
+  (bind-key "M-~" (λ-interactive (im-shell-for 'dir t)))
 #+end_src
 
 ** consult
