@@ -5913,10 +5913,9 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
     :bind ("C-M-r" . whisper-run)
     :config
     (setq whisper-install-directory "/tmp/"
-          whisper-model "medium"
+          whisper-model "small"
           whisper-language "en"
           whisper-translate nil))
-
   (define-advice whisper-run (:before (&rest _) set-microphone)
     (unless whisper--ffmpeg-input-device
       (im-whisper-select-microphone)))
@@ -10999,9 +10998,9 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
   (im-leader-v "eg" #'im-gpt)
 
   (defvar im-gpt-prompts
-    '((:prompt "Summarize the following section:" :region t)
-      (:prompt "Add documentation to the following code:" :region t)
-      (:prompt "Add documentation to the following Elisp code:"
+    '((:prompt "Summarize the following section: #{region}" :region t)
+      (:prompt "Add documentation to the following code: #{region}" :region t)
+      (:prompt "Add documentation to the following Elisp code: #{region}"
        :system "You are an Emacs lisp and documentation expert. You add inline documentation to given code by complying with Emacs lisp documentation conventions (refer parameters in UPPERCASE style without quoting them, use `this' style quoting for other Elisp objects/references). Refer to \"Tips for Documentation Strings\" in Emacs manual. ONLY return the documentation string in quotes, without repeating the code."
        :region t)
       (:display "Add documentation testing to the following Elisp code."
@@ -11010,14 +11009,19 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
   >> <TEST-CODE>
   => <TEST-RESULT>
 
-  Where <TEST-CODE> is the test itself, like (+ 1 1), and <TEST-RESULT> is the result of calling <TEST-CODE>, like 2."
+  Where <TEST-CODE> is the test itself, like (+ 1 1), and <TEST-RESULT> is the result of calling <TEST-CODE>, like 2.
+
+  Here is the function:
+  #{code-region}"
        :region t)
-      (:prompt "Explain following code." :region t)
+      (:prompt "Explain following code: #{code}" :region t)
       (:display "Grammar, spelling fix/improve"
-       :prompt "The sentence is: "
+       :prompt "The sentence is:  #{region}"
        :system "I want you to act as an English translator, spelling corrector and improver. I will speak to you in any language and you will detect the language, translate it and answer in the corrected and improved version of my text, in English. I want you to replace my simplified words and sentences with more beautiful and elegant, upper level English words and sentences. Keep the meaning same, but make them more literary. I want you to only reply the correction, the improvements and nothing else, do not write explanations.")
       (:display "Rambling"
-       :prompt (lambda () (format "I will give you my ramblings about a topic. I want you to turn it into a coherent piece of text. Remove unnecessary parts (like if I changed my mind during the text, only include the latest idea). Fix grammatical errors and misspellings. Make it easy to read and understand. Summarize the points without loosing important details. Turn them into bullet points. Here is your first input: \n\n %s" (read-string "Ramble: " (im-region-or ""))))))
+       :prompt
+       (lambda ()
+         (format "I will give you my ramblings about a topic. I want you to turn it into a coherent piece of text. Remove unnecessary parts (like if I changed my mind during the text, only include the latest idea). Fix grammatical errors and misspellings. Make it easy to read and understand. Summarize the points without loosing important details. Turn them into bullet points. Here is your first input: \n\n %s" (read-string "Ramble: " (im-region-or ""))))))
     "A list of prompts for the `im-gpt' function.
 
   Each element is a property list with the following keys:
@@ -11069,8 +11073,9 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
         :include-system (or include-system system))))
     (when (functionp prompt)
       (setq prompt (funcall prompt)))
-    (when-let (region (im-region-or nil))
-      (setq prompt (format "%s\n\n```\n%s\n```\n" prompt region)))
+    (when-let ((region (im-region-or nil)))
+      (setq prompt (s-replace "#{region}" region prompt))
+      (setq prompt (s-replace "#{code}" (format "\n```\n%s\n```\n" region) prompt)))
     (setq prompt
           (if include-system
               (concat system "\n\n" prompt)
@@ -11114,6 +11119,33 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
        :model model
        :callback (lambda (content role usage)
                    (funcall callback prompt content))))))
+#+end_src
+** im-extract
+#+begin_src emacs-lisp
+  ;; TODO Extract into a folder
+  (defun im-extract (files)
+    (interactive (list (dired-get-marked-files)))
+    (--each files
+      (let ((cmds '((".tar.bz2" . ("tar" "xjf" file))
+                    (".tar.gz" . ("tar" "xzf" file))
+                    (".bz2" . ("bunzip2" file))
+                    (".rar" . ("unrar" "x" file))
+                    (".gz" . ("gunzip" file))
+                    (".tar" . ("tar" "xf" file))
+                    (".tbz2" . ("tar" "xjf" file))
+                    (".tgz" . ("tar" "xzf" file))
+                    (".zip" . ("unzip" file))
+                    (".Z" . ("uncompress" file))
+                    (".7z" . ("7z" "x" file)))))
+        (when-let* ((key (-find (lambda (ext) (s-ends-with? ext it)) (map-keys cmds)))
+                    (cmd (map-elt cmds key)))
+          (im-shell-command
+           :command (car cmd)
+           :args (-map (lambda (arg) (if (eq arg 'file) it arg)) (-drop 1 cmd))
+           :eat t
+           :on-finish (lambda (&rest _) (message ">> Extracted: %s" it))
+           :on-fail (lambda (&rest _) (user-error ">> Failed while extracting: %s" it))
+           :buffer-name "*im-extract*")))))
 #+end_src
 * Operating system related
 ** Sound output chooser
