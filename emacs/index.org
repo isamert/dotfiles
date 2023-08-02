@@ -5912,10 +5912,11 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
     :straight (:host github :repo "natrys/whisper.el")
     :bind ("C-M-r" . whisper-run)
     :config
-    (setq whisper-install-directory "/tmp/"
+    (setq whisper-install-directory (expand-file-name "~/Workspace/apps/whisper/")
           whisper-model "small"
           whisper-language "en"
           whisper-translate nil))
+
   (define-advice whisper-run (:before (&rest _) set-microphone)
     (unless whisper--ffmpeg-input-device
       (im-whisper-select-microphone)))
