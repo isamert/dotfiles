@@ -2828,12 +2828,16 @@ You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult
 #+end_src
 ** process-menu-mode
 #+begin_src emacs-lisp
-  (evil-define-key 'normal process-menu-mode
+  (general-def :keymaps 'process-menu-mode-map :states 'normal
+    "r" #'revert-buffer
+    "d" #'process-menu-delete-process
     "x" #'process-menu-delete-process)
 #+end_src
 ** timer-list-mode
 #+begin_src emacs-lisp
-  (evil-define-key 'normal timer-list-mode-map
+  (general-def :keymaps 'timer-list-mode-map :states 'normal
+    "r" #'revert-buffer
+    "d" #'timer-list-cancel
     "x" #'timer-list-cancel)
 #+end_src
 ** tabulated-list-mode
