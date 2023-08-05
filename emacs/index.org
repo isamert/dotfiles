@@ -2899,7 +2899,7 @@ Several packages are using this package to show system-level notifications. Here
   (defvar-local im-notify-posframe--notification-data nil)
   (cl-defun im-notify-posframe (&rest data &key id title message duration margin (severity 'normal) &allow-other-keys)
     (setq title (propertize title 'face '(:weight bold)))
-    (let ((bname (format "*im-notify-%s*"
+    (let ((bname (format "*notif-%s*"
                          (or id (format "%s-%s" (if title (im-string-url-case title) "") (random))))))
       (when (and (not im-notify-posframe-dnd)
                  (not (and im-notify-posframe-blacklist-regexp
@@ -2977,7 +2977,7 @@ Several packages are using this package to show system-level notifications. Here
   (defun im-notify-posframe-clear-all (&optional delete?)
     (interactive "P")
     (--each
-        (--filter (s-prefix? "*im-notify" (buffer-name it)) (buffer-list))
+        (--filter (s-prefix? "*notif" (buffer-name it)) (buffer-list))
       (if delete?
           (posframe-delete it)
         (posframe-hide it)))
@@ -3042,7 +3042,7 @@ Several packages are using this package to show system-level notifications. Here
   First one is the latest one."
     (thread-last
       (buffer-list)
-      (--filter (string-prefix-p "*im-notify" (buffer-name it)))
+      (--filter (string-prefix-p "*notif" (buffer-name it)))
       (--map (with-current-buffer it (when-let (x im-notify-posframe--notification-data) (map-insert x :buffer-name (buffer-name)))))
       (--filter it)
       (--sort (> (plist-get it :time) (plist-get other :time)))))
@@ -3591,7 +3591,7 @@ To sync it automatically:
           (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
           (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
           (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
-          (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . (lambda (link &rest _) (empv--play-or-enqueue link)))
+          (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . (lambda (link &rest _) (empv-play-or-enqueue link)))
           (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
           (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
           (".*github.com/.*issues/.*" . (lambda (link &rest _) (im-github-issue-view link)))
@@ -4281,10 +4281,14 @@ Other complementary packages:
     (empv--select-action "Term: "
       "eshell project" → (im-shell-for)
       "eshell dir" → (im-shell-for 'dir)
+      "eshell new" → (call-interactively #'im-eshell)
       "vterm project" → (im-vterm-project)
       "vterm dir" → (im-vterm-dir)
+      ;; "vterm new" → (call-interactively #'vterm)
       "nushell project" → (let ((vterm-shell "nu")) (im-vterm-project))
-      "nushell dir" → (let ((vterm-shell "nu")) (im-vterm-dir))))
+      "nushell dir" → (let ((vterm-shell "nu")) (im-vterm-dir))
+      ;; "nushell new" → (call-interactively #'vterm)
+      ))
 
   (im-leader "2" #'im-term)
   (bind-key "M-`" (λ-interactive (im-shell-for 'project t)))
@@ -5863,11 +5867,11 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
     :demand t ;; I use some functions from this package
     :general
     (im-leader
-     "gmb" #'lab-list-branch-merge-requests
-     "gmm" #'lab-list-my-merge-requests
-     "gma" #'lab-list-group-merge-requests
-     "gmp" #'lab-list-project-merge-requests
-     "gmc" #'lab-create-merge-request)
+      "gmb" #'lab-list-branch-merge-requests
+      "gmm" #'lab-list-my-merge-requests
+      "gma" #'lab-list-group-merge-requests
+      "gmp" #'lab-list-project-merge-requests
+      "gmc" #'lab-create-merge-request)
     :init
     ;; Add advices for automatically starting to watch pipelines
     (with-eval-after-load 'magit
@@ -5885,6 +5889,7 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
     (setq lab-projects-directory "~/Workspace/projects/")
     (setq lab-main-branch-name "master")
     (setq lab-pipeline-watcher-initial-delay 45)
+    (setq lab-pipeline-watcher-debounce-time 15)
     (setq lab-host ty-gitlab-url)
     (setq lab-token ty-gitlab-token)
     (setq lab-group ty-gitlab-group)
