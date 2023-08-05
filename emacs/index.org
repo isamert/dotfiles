@@ -9542,6 +9542,27 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
                                (concat today " " hour-min)
                              today)))))
        "LEVEL=2")))
+
+  (defun im-bullet-open-weekly-plan ()
+    "Open weekly planning entry in an indirect buffer."
+    (interactive)
+    (with-current-buffer "bullet.org"
+      (save-restriction
+        (save-excursion
+          (when (or
+                 (ignore-errors
+                   (org-link-open
+                    `(link
+                      (:type "fuzzy"
+                       :path ,(format "W%s" (im-V))
+                       :application nil :search-option nil :begin 0 :end 0))))
+                 (ignore-errors
+                   (org-link-open
+                    `(link
+                      (:type "fuzzy"
+                       :path ,(format "W%s" (1- (im-V)))
+                       :application nil :search-option nil :begin 0 :end 0)))))
+            (im-org-tree-to-indirect-buffer))))))
 #+end_src
 
 ** Scratch/temporary buffers in side windows
