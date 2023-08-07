@@ -243,12 +243,13 @@ Some basic variable and function definitions that will be used in configuration.
   (defun im-select-window-with-buffer (buffer-name)
     "Select the first visible window that matches given BUFFER-NAME."
     (declare (indent 1))
-    (--first
-     (-as-> (window-buffer it) buffer
-            (buffer-name buffer)
-            (when (string-match buffer-name buffer)
-              (select-window it)))
-     (window-list)))
+    (let ((curr (buffer-name (current-buffer))))
+      (--first
+       (-as-> (window-buffer it) buffer
+              (buffer-name buffer)
+              (when (and (string-match buffer-name buffer) (not (equal curr buffer)))
+                (select-window it)))
+       (window-list))))
 
   (defmacro im-with-visible-buffer (buffer-name &rest body)
     "Evaluate BODY within the BUFFER-NAME that is currently visible."
@@ -1772,6 +1773,13 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
        (pcase (org-element-property :type (org-element-context))
          ((or "http" "https") (org-open-at-point))
          (_ (im-org-focused-tree-to-indirect-buffer
+             ;; If we are in an indirect buffer, then find the real
+             ;; buffer and widen it so that org-open-at-point
+             ;; works. This does not restore narrowing but whatever.
+             (when-let (base (buffer-base-buffer))
+               (with-current-buffer base
+                 (switch-to-buffer (current-buffer))
+                 (widen)))
              (org-open-at-point)))))))
 
   (defun im-show-outline-only ()
