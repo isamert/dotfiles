@@ -19,6 +19,23 @@ This is my emacs configuration. My main focus is sanity. I'm a person who get fr
   ;;; Code:
 #+end_src
 
+** Emacs installation
+I use my distributions package manager to install Emacs. However, in MacOS (my work computer) I use /homebrew/ and /emacs-plus/ formula. Here is how you install it:
+
+#+begin_src sh
+  brew tap d12frosted/emacs-plus
+  brew install emacs-plus@29 \
+       --with-dragon-icon \
+       --with-dbus \
+       --with-no-frame-refocus \
+       --with-native-comp \
+       --with-imagemagick \
+       --with-poll \
+       --with-xwidgets
+#+end_src
+
+You can read about the options [[https://github.com/d12frosted/homebrew-emacs-plus#options][here]], but the most important one is ~--with-poll~. Otherwise you'll get lot's of /no file descriptors left, too many files are open/ errors, especially if you are using LSP etc..
+
 * Usage notes
 ** General notes and conventions
 - This configuration is meant to be used with /emacs daemon/, so I don't really care about the startup time etc.
