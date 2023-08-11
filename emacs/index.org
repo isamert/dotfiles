@@ -57,11 +57,7 @@ You can read about the options [[https://github.com/d12frosted/homebrew-emacs-pl
   - =w= :: is for windows. I also use =C-w= for this, which is default prefix for window-related functions in vim.
   - =o= :: is for org-mode/outline mode.
 ** Updating packages
-Currently, I don't use an external package manager, =package.el= satisfies my needs. Here is how I do the updates:
-- =package-refresh-contents=
-- =list-packages=
-- Hit =U= to mark all packages that needs updating.
-- Hit =X= to update all those packages.
+Just do ~M-x straight-pull-all~.
 
 I do this quite infrequently. If everything is working fine as it is, I tend to not update anything.
 
@@ -2465,7 +2461,11 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
       ;; just want to update/initialize the archive for current
       ;; heading. Otherwise we are creating a new archive.
       (if-let ((_ (org-at-heading-p))
-               (old-url (org-entry-get nil "URL")))
+               (old-url (or (org-entry-get nil "URL")
+                            ;; There might not be an URL property but
+                            ;; the header itself might be a link, try to
+                            ;; extract it
+                            (or (plist-get (cadr (org-element-context)) :raw-link)))))
           (progn
             (setq url old-url)
             (setq update? t))
@@ -5392,7 +5392,8 @@ Simple mode for editing =~/.Xmodmap= file.
      :name ty-slack-name
      :token ty-slack-token
      :cookie ty-slack-cookie
-     :subscribed-channels ty-slack-channels)
+     :subscribed-channels ty-slack-channels
+     :mark-as-read-immediately nil)
     (slack-start)
     (slack-change-current-team)
     (im-slack-initialize-keymaps)
@@ -11073,7 +11074,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
       (:prompt "Explain following code: #{code}" :region t)
       (:display "Grammar, spelling fix/improve"
        :prompt "The sentence is:  #{region}"
-       :system "I want you to act as an English translator, spelling corrector and improver. I will speak to you in any language and you will detect the language, translate it and answer in the corrected and improved version of my text, in English. I want you to replace my simplified words and sentences with more beautiful and elegant, upper level English words and sentences. Keep the meaning same, but make them more literary. I want you to only reply the correction, the improvements and nothing else, do not write explanations.")
+       :system "I want you to act as an English translator, spelling corrector and improver. I will speak to you in any language and you will detect the language, translate it and answer in the corrected and improved version of my text, in English. I want you to replace my simplified words and sentences with more upper level English words and sentences. Keep the meaning same. I want you to only reply the correction, the improvements and nothing else, do not write explanations. Keep the text to the point, don't add too many mumbo-jumbo. Also do corrections based on the context, like using proper abbreviations etc.")
       (:display "Rambling"
        :prompt
        (lambda ()
@@ -11094,7 +11095,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
                     &key
                     (system "You are an AI assistant living inside Emacs. You answer concisely.")
                     (include-system)
-                    (model "gpt-3.5-turbo")
+                    (model)
                     (callback))
     "Use the ChatGPT to generate responses to user prompts.
 
@@ -11172,7 +11173,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
       (org-ai-chat-request
        :messages `[(:role system :content ,system)
                    (:role user :content ,prompt)]
-       :model model
+       :model (or model org-ai-default-chat-model)
        :callback (lambda (content role usage)
                    (funcall callback prompt content))))))
 #+end_src
