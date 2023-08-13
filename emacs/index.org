@@ -577,20 +577,23 @@ Some basic variable and function definitions that will be used in configuration.
 
   (defun im-string-url-case (str)
     "Convert STR to something like `a-string-appropriate-for-urls'."
-    (->> (downcase str)
-         (s-replace-all
-          '(("," . "")
-            ("'" . "")
-            ("ö" . "o")
-            ("ı" . "i")
-            ("ğ" . "g")
-            ("ü" . "u")
-            ("ş" . "s")
-            ("ö" . "o")
-            ("ç" . "c")))
-         (s-trim)
-         (replace-regexp-in-string "[^a-zA-Z0-9]" "-" str)
-         (replace-regexp-in-string "-+" "-")))
+    (->>
+     str
+     downcase
+     (s-replace-all
+      '(("'" . "")
+        ("ö" . "o")
+        ("ı" . "i")
+        ("ğ" . "g")
+        ("ü" . "u")
+        ("ş" . "s")
+        ("ö" . "o")
+        ("ç" . "c")))
+     (s-trim)
+     (replace-regexp-in-string "[^a-zA-Z0-9]" "-")
+     (replace-regexp-in-string "-+" "-")
+     (s-chop-prefix "-")
+     (s-chop-suffix "-")))
 
   (defun im-human-readable-size (size-in-bytes)
     (let* ((units '("B" "KB" "MB" "GB" "TB" "PB" "EB" "ZB" "YB"))
