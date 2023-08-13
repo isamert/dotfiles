@@ -349,6 +349,14 @@ Some basic variable and function definitions that will be used in configuration.
 *** Elisp utils
 #+begin_src emacs-lisp
   (defmacro im-tap (form)
+    "Evaluate FORM and return its result.
+  Additionally, print a message to the *Messages* buffer showing
+  the form and its result.
+
+  This macro is useful for debugging and inspecting the
+  intermediate results of Elisp code without changing your code
+  structure. Just wrap the form with `im-tap' that you want to see
+  it's output without introducing an intermediate let-form."
     `(let ((result ,form))
        (message "[im-tap :: %s] → %s" ,(prin1-to-string form) result)
        result))
