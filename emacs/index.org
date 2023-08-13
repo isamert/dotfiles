@@ -11131,8 +11131,12 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
     (when (functionp prompt)
       (setq prompt (funcall prompt)))
     (when-let ((region (im-region-or nil)))
-      (setq prompt (s-replace "#{region}" region prompt))
-      (setq prompt (s-replace "#{code}" (format "\n```\n%s\n```\n" region) prompt)))
+      (cond
+       ((s-matches? "#{\\(code\\|region\\)" prompt)
+        (setq prompt (s-replace "#{region}" region prompt))
+        (setq prompt (s-replace "#{code}" (format "\n```\n%s\n```\n" region) prompt)))
+       ((use-region-p)
+        (setq prompt (concat prompt "\n\n" region)))))
     (setq prompt
           (if include-system
               (concat system "\n\n" prompt)
