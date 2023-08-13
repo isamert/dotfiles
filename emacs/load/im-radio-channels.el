@@ -1,3 +1,9 @@
+;;; im-radio-channels.el --- My radio channel list -*- lexical-binding: t; -*-
+
+;;; Commentary:
+
+;;; Code:
+
 (defvar im-radio-channels
   '(("SomaFM // Groove Salad"            . "https://somafm.com/groovesalad.pls")
     ("SomaFM // Drone Zone"              . "https://somafm.com/dronezone.pls")
@@ -458,4 +464,5 @@
     ("radcap.ru // vocal"               . "http://79.120.77.11:8002/vocal")
     ("radcap.ru // witchhouse"          . "http://79.120.77.11:8002/witchhouse")))
 
-(provide 'isamert-radio-channels)
+(provide 'im-radio-channels)
+;;; im-radio-channels.el ends here

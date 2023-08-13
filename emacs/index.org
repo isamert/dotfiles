@@ -402,7 +402,7 @@ Some basic variable and function definitions that will be used in configuration.
                                     on-reject
                                     pre-process)
     "Display a buffer to user to enter some input."
-    (let* ((buffer (get-buffer-create "*isamert-input*"))
+    (let* ((buffer (get-buffer-create "*im-input*"))
            (success-handler (lambda ()
                               (interactive)
                               (let ((pre-proc-result (when pre-process
@@ -6282,7 +6282,7 @@ Feed reader.
     ;; When adding tags, don't add any hierarchical tags like (blog blog-software), or (metal metal-black)
     ;; Just use something like: (blog software) and (metal black)
 
-    (load "feeds")
+    (require 'im-feeds)
     (setq elfeed-search-title-max-width 100)
     (setq elfeed-curl-extra-arguments '("--netrc"))
     (setq elfeed-feeds (mapcar #'im-elfeed--expand im-feeds))
@@ -6371,7 +6371,7 @@ Manage media and streams through =completing-read=.
     :init
     (im-leader "r" empv-map)
     :config
-    (load "radio-channels")
+    (require 'im-radio-channels)
     (setq empv-radio-channels im-radio-channels)
     (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music/")

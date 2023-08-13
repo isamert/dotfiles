@@ -1,6 +1,14 @@
+;;; im-feeds.el --- My feed/rss list -*- lexical-binding: t; -*-
+
+;;; Commentary:
+
 ;; I don't endorse anything below, I just follow them because either I
-;; like them or I'm just curious. There are some stuff that I hate but
-;; I also like to know what's been going on
+;; like them or I'm just curious.  There are some stuff that I hate
+;; but I also like to know what's been going on.
+
+;;; Code:
+
+(require 'im-secrets)
 
 (defvar im-feeds
   `((,im-github-feed-link personal)
@@ -47,6 +55,7 @@
     ("https://writings.stephenwolfram.com/feed/" blog essay)
     ("http://explosm.net/rss" comic)
     ("https://astralcodexten.substack.com/feed" blog essay) ;; Scott Alexander
+    ("https://escapingflatland.substack.com/feed" blog essay) ;; Henrik Karlsson
     ("https://www.theinsight.org/feed" blog essay) ;; Zeynep Tufekci
     ("https://medium.com/feed/incerto" blog essay) ;; Nassim Nicholas Taleb
     ("https://www.cold-takes.com/rss" blog essay)
@@ -117,4 +126,5 @@
     ("alphapapa/org-ql" gh-release app)
     ))
 
-(provide 'isamert-feeds)
+(provide 'im-feeds)
+;;; im-feeds.el ends here
