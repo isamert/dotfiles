@@ -6382,6 +6382,7 @@ Manage media and streams through =completing-read=.
     ;; ^ see https://api.invidious.io/
     (add-to-list 'empv-mpv-args "--ytdl-format=best")
     (add-to-list 'empv-mpv-args "--save-position-on-quit")
+    (setq empv-reset-playback-speed-on-quit t)
     (add-hook 'empv-init-hook #'empv-override-quit-key)
 
     (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
