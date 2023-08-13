@@ -3812,12 +3812,14 @@ Sometimes I use =vc= for pure speed. Because it supports multiple backends, the 
 
 Note that it's not possible to stage hunks with =vc=.
 
-*** Installation
+*** Installation/feature summary
 - Read this for some useful status mode keymaps: https://endlessparentheses.com/it-s-magit-and-you-re-the-magician.html
   - y :: Branch viewer (delete branches with ~k~)
   - ll :: Log current
   - bs :: Branch spin-off; create and checkout to a new branch, carry over the ongoing changes. It also undoes the changes in the current branch
   - bc :: Branch create; you can directly create new branch from *origin/develop* for instance
+  - Fe :: (magit-pull) and then e. This makes it possible to pull from a different remote to your current branch. You can do git fetch and then ~Fe~ to pull main into your current branch, for example. So that you don't need to switch master to be able to rebase your branch against master.
+  - cF :: Add your currently staged changes to a commit you made earlier.
 
 #+BEGIN_SRC emacs-lisp
   (use-package magit
