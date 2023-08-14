@@ -576,7 +576,9 @@ Some basic variable and function definitions that will be used in configuration.
        (substring s end))))
 
   (defun im-string-url-case (str)
-    "Convert STR to something like `a-string-appropriate-for-urls'."
+    "Convert STR to something like `a-string-appropriate-for-urls'.
+  >> (im-string-url-case \" test: test! şeyler ÜPPERCaSE   vs.\")
+  => \"test-test-seyler-uppercase-vs\""
     (->>
      str
      downcase
