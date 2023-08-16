@@ -8768,6 +8768,28 @@ Good for buffer management, especially for groupped killings.
       (org-table-align)
       (goto-char (point-min))
       (switch-to-buffer (current-buffer))))
+
+  (defun im-jira-create-quick-issue (arg)
+    "Quickly create an issue and act on it.
+  If ARG is non-nil, insert the issue number to current buffer
+  instead of acting on issue."
+    (interactive "P")
+    (let ((issue (jiralib2-create-issue
+                  (im-jira--select-project)
+                  (im-jira--select-issue-type)
+                  (read-string "Issue summary: ")
+                  "This is an automatically generated small issue."
+                  (cons
+                   (im-jira-get-issue-field-id-for "Sprint")
+                   (alist-get 'id (im-jira-find-sprint "future"))))))
+      (let-alist issue
+        (save-window-excursion
+          (im-jira-view-ticket .key)
+          (message ">> Opened issue in a buffer."))
+        (im-kill .key)
+        (if arg
+            (insert .key " - ")
+          (im-jira-issue-actions issue)))))
 #+end_src
 
 ** My Android phone and Emacs
