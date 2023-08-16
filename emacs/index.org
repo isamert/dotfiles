@@ -2747,6 +2747,9 @@ Also here are some aliases/functions for eshell defined in elisp:
   (defun eshell/mkcd (&rest args)
     (eshell/mkdir args)
     (eshell/cd args))
+
+  (defun eshell/project-root (&rest args)
+    (eshell/cd (im-current-project-root)))
 #+end_src
 
 *** Automatically print notes for given directory
