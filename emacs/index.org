@@ -4021,6 +4021,7 @@ Some shortcuts you can use on any vertico window:
 
 #+begin_src emacs-lisp
   (use-package vertico
+    :demand t
     :hook ((after-init . vertico-mode))
     :config
     ;; Grow and shrink the Vertico minibuffer
