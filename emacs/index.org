@@ -9631,6 +9631,10 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
                        :path ,(format "W%s" (1- (im-V)))
                        :application nil :search-option nil :begin 0 :end 0)))))
             (im-org-tree-to-indirect-buffer))))))
+
+  (defun im-listen-voice-recordings ()
+    (interactive)
+    (mapcar #'empv-enqueue (file-expand-wildcards "~/Music/Sound Recordings/*/*.m4a")))
 #+end_src
 
 ** Scratch/temporary buffers in side windows
