@@ -2,20 +2,31 @@
 
 set -euo pipefail
 
+FRESH=0
+EMACS_LOAD_DIR="${HOME}/.emacs.d/load/"
+
 case ${1:-""} in
 -h | --help)
-    echo "./install.sh [--force] [--help]"
+    echo "./install.sh [--fresh] [--help]"
+    echo
+    echo "  --fresh will install everything from scratch."
+    echo "  To simply update, run without arguments."
     exit 0
     ;;
--f | --force)
-    echo "=> Cleaning old files..."
-    rm -f ~/.emacs.d/index.org
-    rm -f ~/.emacs.d/index.el
-    for file in "${PWD}/emacs/load"/*.el; do
-        [[ ! $file = *secrets* ]] && rm -f "${HOME}/.emacs.d/load/$(basename "${file}")"
-    done
+--fresh)
+    FRESH=1
     ;;
 esac
+
+echo "=> Remove broken symlinks..."
+find "${EMACS_LOAD_DIR}" -xtype l -exec unlink {} \;
+
+echo "=> Cleaning old files..."
+rm -f ~/.emacs.d/index.org
+rm -f ~/.emacs.d/index.el
+for file in "${PWD}/emacs/load"/*.el; do
+    [[ ! $file = *secrets* ]] && rm -f "${EMACS_LOAD_DIR}/$(basename "${file}")"
+done
 
 echo "=> Installing Emacs configuration..."
 ln -s "${PWD}/emacs/index.org" ~/.emacs.d/index.org
@@ -25,6 +36,11 @@ mkdir -p ~/.emacs.d/load/
 for file in "${PWD}/emacs/load"/*.el; do
     ln -s "${file}" "$HOME/.emacs.d/load/$(basename "${file}")"
 done
+
+if [[ $FRESH != 1 ]]; then
+    echo "If you want to install from scratch, run this script with --fresh parameter."
+    exit 0
+fi
 
 set +e
 read -rd '' EMACS_EVAL <<EOF
