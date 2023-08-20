@@ -42,6 +42,32 @@ if [[ $FRESH != 1 ]]; then
     exit 0
 fi
 
+if which emacs; then
+    echo ""
+    read -r -p ">> Emacs is not installed, want to install it? [y/n]" choice
+    if [[ $choice =~ ^[Yy]$ ]]; then
+        case $(uname) in
+        Darwin*)
+            brew tap d12frosted/emacs-plus
+            brew install emacs-plus@29 \
+                --with-dragon-icon \
+                --with-dbus \
+                --with-no-frame-refocus \
+                --with-native-comp \
+                --with-imagemagick \
+                --with-poll \
+                --with-xwidgets
+            ;;
+        Linux*)
+            sudo pacman -S emacs
+            ;;
+        esac
+    else
+        echo "Exiting..."
+        exit 1
+    fi
+fi
+
 set +e
 read -rd '' EMACS_EVAL <<EOF
 (progn
