@@ -2840,7 +2840,7 @@ Normally, if you have more than one eshell instance open and quit them consecuti
   ;; - Blacklisted commands
   ;; - Process only successful commands
   ;;    - Not quite sure if this is a good idea though. Just experimenting.
-  (defun eshell-append-history ()
+  (defun im-eshell-append-history ()
     "Call `eshell-write-history' with the `append' parameter set to `t'."
     (when (and eshell-history-ring (eq eshell-last-command-status 0))
       (let ((last-elem (s-trim (car (ring-elements eshell-history-ring))))
@@ -2852,10 +2852,14 @@ Normally, if you have more than one eshell instance open and quit them consecuti
             (let ((eshell-history-ring newest-cmd-ring))
               (eshell-write-history eshell-history-file-name t)))))))
 
-  (add-hook 'eshell-post-command-hook #'eshell-append-history)
-#+end_src
+  (add-hook 'eshell-post-command-hook #'im-eshell-append-history)
 
-(add-hook 'eshell-pre-command-hook #'eshell-append-history)
+  (define-advice eshell-write-history (:around (old-func &optional filename append) skip-writing-history)
+    "Skip writing history if append is nil.
+  This is for preventing eshell overriding my appended history."
+    (when append
+      (funcall old-func filename append)))
+#+end_src
 ** bookmark.el
 You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult-bookmark~ and calling ~embark-act~ on them to view/delete/edit given bookmark might be easier.
 
