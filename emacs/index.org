@@ -2907,7 +2907,7 @@ Several packages are using this package to show system-level notifications. Here
 
 #+begin_src emacs-lisp
   (use-package alert
-    :defer t
+    :demand t
     :config
     (alert-define-style
      'im-alert-posframe
@@ -8225,13 +8225,12 @@ Good for buffer management, especially for groupped killings.
 #+begin_src emacs-lisp
   (im-leader "cm" #'im-marks-my-docs)
 
-  (defun im-consult--marks-builder (input)
-    (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
-      (list
-       :command
-       (list "marks" "--no-color" "--null" "--path" default-directory "--query" input)
-       :highlight
-       (apply-partially #'consult--highlight-regexps (list (regexp-quote arg)) t))))
+  (defun im-consult--marks-builder (paths)
+    (lambda (input)
+      (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
+        (cons
+         (list "marks" "--no-color" "--null" "--path" default-directory "--query" (s-trim arg))
+         (apply-partially #'consult--highlight-regexps (list (regexp-quote arg)) t)))))
 
   (defun im-marks (&optional directory)
     "Run `marks'."
@@ -11210,7 +11209,8 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
                             (if-let (window (get-buffer-window im-gpt--buffer))
                                 (set-window-point window pt)
                               (goto-char pt))))
-                        (switch-to-buffer-other-window buffer)
+                        (unless (im-buffer-visible-p buffer)
+                          (switch-to-buffer-other-window buffer))
                         buffer)
        :callback (lambda ()
                    (with-current-buffer (get-buffer-create im-gpt--buffer)
