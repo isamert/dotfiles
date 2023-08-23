@@ -7968,6 +7968,10 @@ I generally do not edit ~.sql~ files but instead I do SQL through code blocks in
 - ~lsp-org~ :: Start LSP mode. Must be executed with cursor being source block.
 - ~lsp-virtual-buffer-disconnect~ :: Turn off lsp-mode.
 
+~sql-connect~ also works fairly well, except for code completion. But you can always list the tables and columns with SQL and afterwards dabbrev helps you like you have code completion.
+
+I initialize ~sql-connection-alist~ in another file that is not checked out to this repository and afterwards I call the ~im-sql-setup-lsp~ function.
+
 #+begin_src emacs-lisp
   (defun im-sql-setup-lsp ()
     "Set `lsp-sqls-connections' using `sql-connection-alist'.
@@ -7983,6 +7987,46 @@ I generally do not edit ~.sql~ files but instead I do SQL through code blocks in
                                    (car (alist-get 'sql-password it))
                                    (car (alist-get 'sql-database it)))))
       sql-connection-alist)))
+
+  (defun im-sql-run-query ()
+    (interactive)
+    "Open a new scratch buffer with code completion to run a query, using org-mode."
+    (let ((buff (format-time-string "sql_%Y-%m-%d.org")))
+      (unless (get-buffer buff)
+        (with-current-buffer (get-buffer-create buff)
+          (insert (im-s-interpolated
+                   "#+TITLE: #{(format-time-string \"%Y-%m-%d\")}-sql
+  ,#+PROPERTY: header-args:sql :noweb yes :tangle .#{(format-time-string \"%Y%m%d\")}.sql
+  ,#+PROPERTY: header-args:bqsql :noweb yes\n
+  You can always use ~sql-connect~ to get a simple REPL. It is
+  faster for longer outputs.
+
+  Use ~lsp-sql-switch-connection~ to switch between different
+  connections, to make code completion work for your current
+  context.
+
+  Don't forget about snippets too."))
+          (org-mode)
+          (im-disable-line-wrapping)
+          (write-file (format "~/Documents/notes/temp/%s" buff))))
+      (with-current-buffer buff
+        (goto-char (point-max))
+        (insert
+         (im-s-interpolated
+          "\n\n* #{(format-time-string \"%Y-%m-%d %a %H:%M\")}
+  ,#+begin_src sql :engine postgresql :dbconnection #{(sql-read-connection \"Select DB: \")}
+  SELECT * FROM _ LIMIT 1;
+  ,#+end_src\n\n"))
+        (forward-line -3)
+        (unless lsp-mode
+          (lsp-org))
+        ;; I wasn't able to find a way to retrieve current
+        ;; connection. If I was able to, then I would compare it with
+        ;; the selected dbconnection from above and show the following
+        ;; selection only if needed
+        (lsp-sql-switch-connection))
+      (switch-to-buffer buff)))
+
 #+end_src
 * Window and buffer management
 ** tab-bar-mode
