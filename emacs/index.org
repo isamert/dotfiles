@@ -1709,7 +1709,7 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
   (use-package evil-org
     :after (org org-agenda)
     :general
-    (:keymaps 'org-mode-map :states '(normal insert)
+    (:keymaps 'org-mode-map :states 'normal
      "<RET>" #'org-return
      "S-<return>" #'im-org-link-to-indirect-buffer)
     (im-leader
