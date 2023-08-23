@@ -3845,8 +3845,8 @@ Note that it's not possible to stage hunks with =vc=.
 
 #+BEGIN_SRC emacs-lisp
   (use-package magit
-    :defer t
-    :init
+    :demand t
+    :general
     (im-leader
       "gv" #'project-vc-dir
       "gd" #'vc-diff
