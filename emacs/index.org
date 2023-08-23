@@ -10391,7 +10391,17 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
                            (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
                                             name
                                             namespace
-                                            context))))))
+                                            context)))
+        "Info" →
+        (progn
+          (with-current-buffer (get-buffer-create (format "*im-kube-pod-info-%s*" name))
+            (insert
+             (shell-command-to-string (format "kubectl get pod '%s' --namespace='%s' --context='%s' --output=json"
+                                              name
+                                              namespace
+                                              context)))
+            (json-ts-mode)
+            (switch-to-buffer (current-buffer)))))))
 
   (defun im-kube-pod--select-container (pod)
     (im-output-select
