@@ -1938,7 +1938,9 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
   (use-package verb
     :straight (:host github :repo "federicotdn/verb")
     :after org
-    :hook (org-mode . verb-mode))
+    :hook (org-mode . verb-mode)
+    :config
+    (im-leader "ur" #'verb-send-request-on-point))
 
   (defun im-curl-to-org-http (curl-str)
     "Convert CURL-STR into an ob-http block.
@@ -11154,7 +11156,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
                     &key
                     (system "You are an AI assistant living inside Emacs. You answer concisely.")
                     (include-system)
-                    (model)
+                    (model org-ai-default-chat-model)
                     (callback))
     "Use the ChatGPT to generate responses to user prompts.
 
@@ -11188,7 +11190,8 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
         :system (or system "You are an AI assistant living inside Emacs. You answer concisely.")
         :include-system (or include-system system))))
     (when (functionp prompt)
-      (setq prompt (funcall prompt)))
+      (setq prompt (funcall prompt))
+      (deactivate-mark))
     (when-let ((region (im-region-or nil)))
       (cond
        ((s-matches? "#{\\(code\\|region\\)" prompt)
@@ -11213,7 +11216,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
                         (with-current-buffer buffer
                           (goto-char (point-max))
                           (insert (format "* %s\n" (format-time-string "%Y-%m-%d %a %H:%M")))
-                          (insert "#+begin_ai markdown\n")
+                          (insert (format "#+begin_ai markdown :model \"%s\"\n" model))
                           (insert (format "[SYS]: %s\n\n" system))
                           (insert (format "[ME]: %s\n" prompt))
                           (insert (format "[AI]: " prompt))
@@ -11237,7 +11240,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
       (org-ai-chat-request
        :messages `[(:role system :content ,system)
                    (:role user :content ,prompt)]
-       :model (or model org-ai-default-chat-model)
+       :model model
        :callback (lambda (content role usage)
                    (funcall callback prompt content))))))
 #+end_src
