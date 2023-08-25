@@ -2811,6 +2811,8 @@ When I enter any of the listed directories, eshell automatically prints out my n
   (defun im-org-jump-to-project-documentation ()
     "Jump to *my* documentation for current project."
     (interactive)
+    (unless (im-current-project-root)
+      (switch-to-buffer (find-file-noselect directory-notes-org)))
     (let* ((projdir (abbreviate-file-name (im-current-project-root)))
            (buf (find-file-noselect directory-notes-org))
            (pos (with-current-buffer buf
@@ -4338,7 +4340,7 @@ Other complementary packages:
       "eshell new" → (call-interactively #'im-eshell)
       "vterm project" → (im-vterm-project)
       "vterm dir" → (im-vterm-dir)
-      ;; "vterm new" → (call-interactively #'vterm)
+      "vterm new" → (call-interactively #'im-vterm)
       "nushell project" → (let ((vterm-shell "nu")) (im-vterm-project))
       "nushell dir" → (let ((vterm-shell "nu")) (im-vterm-dir))
       ;; "nushell new" → (call-interactively #'vterm)
@@ -4998,6 +5000,12 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
       (if existing
           (switch-to-buffer existing)
         (vterm t))))
+
+  (defun im-vterm (name)
+    "Like `im-eshell'."
+    (interactive (list (read-string "Bufffer name: " "$vterm: ")))
+    (let* ((vterm-buffer-name name))
+      (vterm t)))
 #+END_SRC
 
 *** Utility functions
