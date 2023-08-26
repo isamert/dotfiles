@@ -346,6 +346,33 @@ Some basic variable and function definitions that will be used in configuration.
         (- (window-height) (- line (line-number-at-pos))))))
 #+end_src
 
+*** Configuration utilities
+#+begin_src emacs-lisp
+  (defun im-apply-patch-from-src-block (block-point-or-name target-folder)
+    "Apply the patch at src block BLOCK-POINT-OR-NAME to TARGET-FOLDER.
+  I keep some of my changes to packages as in patch format and this
+  simplifies applying those patches.  I try to utilize advices most
+  of the time but this is for those times where advices either
+  complicates things or not sufficient."
+    (interactive (list
+        (if-let (x (org-babel-where-is-src-block-head))
+            x
+          (save-excursion
+            (org-babel-goto-named-src-block (read-string "Block name: "))
+            (point)))))
+    (save-excursion
+      (if (stringp block-point-or-name)
+          (org-babel-goto-named-result block-point-or-name)
+        (goto-char block-point-or-name))
+      (let* ((block-content (org-element-property :value (org-element-at-point)))
+             (filename (make-temp-file "temp" nil ".patch" block-content))
+             (default-directory target-folder)
+             (patch-command (format "patch -p1 < %s" filename))
+             (patch-command-result (shell-command-to-string patch-command)))
+        (if (string-match-p "^patching file" patch-command-result)
+            (message "Patch applied successfully:\n%s" patch-command-result)
+          (error "Error applying patch:\n%s" patch-command-result)))))
+#+end_src
 *** Elisp utils
 #+begin_src emacs-lisp
   (defmacro im-tap (form)
