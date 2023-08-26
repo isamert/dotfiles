@@ -11316,7 +11316,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
   Where <TEST-CODE> is the test itself, like (+ 1 1), and <TEST-RESULT> is the result of calling <TEST-CODE>, like 2.
 
   Here is the function:
-  #{code-region}"
+  #{code}"
        :region t)
       (:prompt "Explain following code: #{code}" :region t)
       (:display "Grammar, spelling fix/improve"
@@ -11333,7 +11333,8 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
   - DISPLAY (Optional) The text to show to the user while selecting prompts.
   - SYSTEM: (Optional) The system prompt for the AI assistant.
   - REGION: (Optional) A boolean indicating whether to include the
-    selected region when calling `im-gpt' with the prompt.")
+    selected region when calling `im-gpt' with the prompt.
+  - MODEL: (Optional) Model to use with this prompt. (Default=`org-ai-default-chat-model')")
 
   (defconst im-gpt--buffer "*im-gpt*")
 
@@ -11360,6 +11361,9 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
   lets you customize SYSTEM and CALLBACK. See `im-gpt-prompts' for
   predefined prompts.
 
+  Version: 2023-08-26
+  - Defer interactive usage to org-ai as much as possible.
+  - Ask for model to use if called with C-u.
   Version: 2023-07-16"
     (interactive
      (let* ((selection (im-completing-read
@@ -11370,9 +11374,15 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
                                                (plist-get it :prompt)))))
             (prompt (or (plist-get selection :prompt) selection))
             (system (plist-get selection :system))
+            (model (plist-get selection :model))
             (include-system (plist-get selection :include-system)))
        (list
         prompt
+        :model (cond
+                (current-prefix-arg
+                 (completing-read (format "Model [current=%s]: " org-ai-default-chat-model) org-ai-chat-models))
+                (model model)
+                (t nil))
         :system (or system "You are an AI assistant living inside Emacs. You answer concisely.")
         :include-system (or include-system system))))
     (when (functionp prompt)
@@ -11385,44 +11395,30 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
         (setq prompt (s-replace "#{code}" (format "\n```\n%s\n```\n" region) prompt)))
        ((use-region-p)
         (setq prompt (concat prompt "\n\n" region)))))
-    (setq prompt
-          (if include-system
-              (concat system "\n\n" prompt)
-            prompt))
     (cond
      ;; If called interactively, delegate to `org-ai-prompt' with given
      ;; prompt and system prompt. This automatically streams to
      ;; `im-gpt--buffer'.
      ((called-interactively-p 'interactive)
-      (org-ai-prompt
-       prompt
-       :follow t
-       :sys-prompt system
-       :output-buffer (let ((buffer (get-buffer-create im-gpt--buffer)))
-                        (with-current-buffer buffer
-                          (goto-char (point-max))
-                          (insert (format "* %s\n" (format-time-string "%Y-%m-%d %a %H:%M")))
-                          (insert (format "#+begin_ai markdown :model \"%s\"\n" model))
-                          (insert (format "[SYS]: %s\n\n" system))
-                          (insert (format "[ME]: %s\n" prompt))
-                          (insert (format "[AI]: " prompt))
-                          (let ((pt (point)))
-                            (insert "\n[ME]:")
-                            (insert "\n#+end_ai\n")
-                            (if-let (window (get-buffer-window im-gpt--buffer))
-                                (set-window-point window pt)
-                              (goto-char pt))))
-                        (unless (im-buffer-visible-p buffer)
-                          (switch-to-buffer-other-window buffer))
-                        buffer)
-       :callback (lambda ()
-                   (with-current-buffer (get-buffer-create im-gpt--buffer)
-                     (if-let (window (get-buffer-window im-gpt--buffer))
-                         (set-window-point window (point-max))
-                       (goto-char (point-max)))
-                     (insert "\n")
-                     (font-lock-ensure)))))
+      (let ((buffer (get-buffer-create im-gpt--buffer)))
+        (with-current-buffer buffer
+          (goto-char (point-max))
+          (insert (format "* %s -- %s\n" (format-time-string "%Y-%m-%d %a %H:%M") (s-truncate 30 prompt)))
+          (insert (format "#+begin_ai markdown :model \"%s\" :sys-everywhere %s\n" model include-system))
+          (when system
+            (insert (format "[SYS]: %s\n\n" system)))
+          (insert (format "[ME]: %s\n" prompt))
+          (insert "#+end_ai\n")
+          (unless (eq major-mode 'org-mode)
+            (org-mode))
+          (unless org-ai-mode
+            (org-ai-mode))
+          (org-ai-complete-block))
+        (unless (im-buffer-visible-p buffer)
+          (switch-to-buffer-other-window buffer))
+        buffer))
      (t
+      (setq prompt (if include-system (concat system "\n\n" prompt) prompt))
       (org-ai-chat-request
        :messages `[(:role system :content ,system)
                    (:role user :content ,prompt)]
