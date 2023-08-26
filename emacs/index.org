@@ -3720,6 +3720,14 @@ To sync it automatically:
               (read-file-name "Save to: "  nil default-directory nil))
         (insert (plist-get (cdr image) :data))
         (save-buffer))))
+
+  (defun im-eww-open-in-xwidget-webkit ()
+    (interactive nil eww-mode)
+    (xwidget-webkit-browse-url (plist-get eww-data :url) t))
+
+  (defun im-xwidget-webkit-open-in-eww ()
+    (interactive nil xwidget-webkit-mode)
+    (eww (xwidget-webkit-uri (xwidget-webkit-current-session)) t))
 #+end_src
 *** Language detection and code highlighting in eww buffers
 #+begin_src emacs-lisp
@@ -6046,6 +6054,84 @@ Well, sometimes you need to open that pesky program.
 #+begin_src emacs-lisp
   (use-package reveal-in-osx-finder
     :if (eq system-type 'darwin))
+#+end_src
+** xwidget-webkit & xwwp
+#+begin_src emacs-lisp
+  ;; Dependency of xwwp
+  (use-package ctable
+    :straight (:host github :repo "kiwanami/emacs-ctable"  :files (:defaults "*.el")))
+
+  (use-package xwwp
+    :straight (:host github :repo "kchanqvq/xwwp"  :files (:defaults "*"))
+    :general
+    (:keymaps 'xwidget-webkit-mode-map
+     :states 'normal
+     "f" #'xwwp-ace-toggle
+     "b" #'evil-collection-xwidget-webkit-search-tabs
+     "o" #'xwwp
+     "O" #'xwidget-webkit-browse-url
+     "<f2>" #'im-xwidget-webkit-open-in-eww)
+    :config
+    (require 'xwwp-full))
+#+end_src
+
+I made some changes to xwwp to make it work:
+
+#+begin_src diff
+diff --git a/xwwp-history.el b/xwwp-history.el
+index 29afa20..6e311af 100644
+--- a/xwwp-history.el
++++ b/xwwp-history.el
+@@ -65,7 +65,7 @@
+          (existed (gethash url xwwp-history-table)))
+     (when existed
+       (setq item existed)
+-      (incf (xwwp-history-item-visit-count existed)))
++      (cl-incf (xwwp-history-item-visit-count existed)))
+     (puthash url item xwwp-history-table)
+     (when existed
+       (setq xwwp-history-visualization-list
+@@ -160,16 +160,19 @@
+   ""
+   (cond
+    ((eq xwwp-follow-link-completion-system 'default)
+-    (completing-read prompt xwwp-history-completion-list nil nil default))
++    (let ((result (completing-read prompt xwwp-history-completion-list nil nil default)))
++      (if-let (data (assoc result xwwp-history-completion-list #'equal))
++          (cdr data)
++        result)))
+    ((eq xwwp-follow-link-completion-system 'helm)
+     (helm :sources
+-          (helm-make-source "Xwidget Plus"  'helm-source-sync
+-            :candidates xwwp-history-completion-list
+-            :filtered-candidate-transformer
+-            '(helm-cr-default-transformer))
+-          :prompt prompt
+-          :default default
+-          :truncate-lines t))
++      (helm-make-source "Xwidget Plus"  'helm-source-sync
++                        :candidates xwwp-history-completion-list
++                        :filtered-candidate-transformer
++                        '(helm-cr-default-transformer))
++      :prompt prompt
++      :default default
++      :truncate-lines t))
+    ((eq xwwp-follow-link-completion-system 'ivy)
+     (let (result)
+       (ivy-read prompt xwwp-history-completion-list
+diff --git a/xwwp.el b/xwwp.el
+index acd4ea2..00b6cff 100644
+--- a/xwwp.el
++++ b/xwwp.el
+@@ -161,7 +161,7 @@ Interactively, URL defaults to the string looking like a url around point."
+     (if new-session
+         (xwidget-webkit-new-session url)
+       (progn (xwidget-webkit-goto-url url)
+-             (switch-to-buffer-other-window (xwidget-buffer (xwidget-webkit-current-session)))))))
++             (switch-to-buffer (xwidget-buffer (xwidget-webkit-current-session)))))))
+
+ ;;; Adapted from EWW code to provide a DWIM style XWWP command
+ (require 'eww)
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
