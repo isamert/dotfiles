@@ -6323,6 +6323,7 @@ example, hitting ~y~ will speak the word using the translation engine.
 ** smartparens
 #+begin_src emacs-lisp
   (use-package smartparens
+    :hook ((after-init . smartparens-global-mode))
     :general
     (general-def
       :states 'insert
@@ -6339,8 +6340,7 @@ example, hitting ~y~ will speak the word using the translation engine.
     :config
     (require 'smartparens-config)
     ;; Fix ts-ts mode
-    (add-to-list 'sp-sexp-suffix (list 'typescript-ts-mode 'regexp ""))
-    (smartparens-global-mode))
+    (add-to-list 'sp-sexp-suffix (list 'typescript-ts-mode 'regexp "")))
 #+end_src
 
 ** writeroom-mode
