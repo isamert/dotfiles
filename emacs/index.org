@@ -3665,7 +3665,7 @@ To sync it automatically:
 
 ** eww -- web browser
 #+begin_src emacs-lisp
-  (setq browse-url-secondary-browser-function #'browse-url-firefox)
+  (setq browse-url-secondary-browser-function #'xwwp)
   (setq browse-url-handlers
         '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
           (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
@@ -3675,7 +3675,7 @@ To sync it automatically:
           (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
           (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
           (".*github.com/.*issues/.*" . (lambda (link &rest _) (im-github-issue-view link)))
-          (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . browse-url-firefox)
+          (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . xwwp)
           ("." . (lambda (link &rest _) (im-eww link)))))
 
   (use-package eww
@@ -3694,9 +3694,9 @@ To sync it automatically:
      "F" (λ-interactive (im-eww-avy-follow :new-session))
      "r" #'eww-reload
      "R" #'eww-readable
-     (kbd "<f2>") #'im-eww-open-in-xwidget-webkit
-     (kbd "<f3>") (λ-interactive (browse-url (eww-current-url)))
-     (kbd "<f4>") (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url)))
+     "<f2>" #'im-eww-open-in-xwidget-webkit
+     "<f3>" (λ-interactive (browse-url (eww-current-url)))
+     "<f4>" (λ-interactive (browse-url-default-browser (eww-current-url)))
      "&" (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url))))
     :config
     ;; Gifs make my computer suffer, so I just disable them
@@ -6091,6 +6091,8 @@ Well, sometimes you need to open that pesky program.
   (use-package xwwp
     :straight (:host github :repo "kchanqvq/xwwp"  :files (:defaults "*"))
     :general
+    (im-leader
+      "eW" #'xwwp)
     (:keymaps 'xwidget-webkit-mode-map
      :states 'normal
      "f" #'xwwp-ace-toggle
@@ -6098,15 +6100,19 @@ Well, sometimes you need to open that pesky program.
      "o" #'xwwp
      "O" #'xwidget-webkit-browse-url
      "i" #'xwidget-webkit-insert-string
+     "e" #'xwidget-webkit-edit-mode
      "v" #'im-xwidget-webkit-visual-mode
-     "<f2>" #'im-xwidget-webkit-open-in-eww)
+     "<f2>" #'im-xwidget-webkit-open-in-eww
+     "<f3>" (λ-interactive (browse-url (xwidget-webkit-uri (xwidget-webkit-current-session))))
+     "<f4>" (λ-interactive (browse-url-default-browser (xwidget-webkit-uri (xwidget-webkit-current-session)))))
     :config
-    (require 'xwwp-full))
+    (require 'xwwp-full)
+    (setq xwidget-webkit-buffer-name-format "*webkit: %T*")
+    (setq xwidget-webkit-cookie-file "~/.cache/emacs-webkit-cookies"))
 
   (define-advice xwidget-webkit-begin-edit-textarea (:after (&rest _) fix)
     "Now doing `C-c C-c' sends the text to webkit."
     (with-current-buffer "textarea"
-      (text-mode)
       (use-local-map (copy-keymap text-mode-map))
       (local-set-key (kbd "C-c C-c") #'xwidget-webkit-end-edit-textarea)))
 
@@ -6115,6 +6121,7 @@ Well, sometimes you need to open that pesky program.
   Also this is required for the above advice to work."
     (kill-buffer "textarea"))
 
+  ;; TODO: scroll to the same section that is open in webkit
   (defun im-xwidget-webkit-visual-mode ()
     "Gather the page source, render it with `shr' and display it.
   This is a simple trick for being able to easily copy stuff from
@@ -6137,6 +6144,13 @@ Well, sometimes you need to open that pesky program.
              (shr-render-buffer (current-buffer))))
          (switch-to-buffer "*html*")
          (rename-buffer (format "*webkit-visual: %s*" title))))))
+
+  (define-advice xwidget-at (:around (original &rest args) handle-errors)
+    "Sometimes `xwidget-at' fails for no real reason, this fixes that.
+  This happens to me on org-buffers, xwidget-at tries to get
+  `display' property of `point-min' but this fails"
+    (ignore-errors
+      (apply original args)))
 #+end_src
 
 I made some changes to xwwp to make it work. [[elisp:(im-apply-patch-from-src-block "xwwp-patch" (f-join straight-base-dir "straight/repos/xwwp"))][Apply the following patch]].
