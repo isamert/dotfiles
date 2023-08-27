@@ -5893,6 +5893,32 @@ There are bunch of Emacs-ChatGPT integrations and org-ai seems to be best as it 
     ;; (setq org-ai-default-chat-model "gpt-4")
     (setq org-ai-default-max-tokens 2000)
     (setq org-ai-openai-api-token im-openai-api-key))
+
+  (defun im-org-ai-toggle-gpt-model ()
+    "Toggle GPT model of current org-ai block.
+  Also removes the answers, if user wants it."
+    (interactive)
+    (save-excursion
+      (when (re-search-backward "#\\+begin_ai markdown :model \"\\(gpt-3.5-turbo\\|gpt-4\\)\"" nil t)
+        (let* ((match-start (match-beginning 0))
+               (match-end (match-end 0))
+               (current-model (match-string 1)))
+          (cond ((string= current-model "gpt-3.5-turbo")
+                 (replace-match "#+begin_ai markdown :model \"gpt-4\"" nil nil))
+                ((string= current-model "gpt-4")
+                 (replace-match "#+begin_ai markdown :model \"gpt-3.5-turbo\"" nil nil)))
+          (when (y-or-n-p "Want to remove AI answers?")
+            (let ((start (progn
+                           (goto-char match-start)
+                           (re-search-forward "^\\[AI]: ")
+                           (beginning-of-line)
+                           (point)))
+                  (end (progn
+                         (re-search-forward "^#\\+end_ai")
+                         (beginning-of-line)
+                         (point))))
+              (when (and start end)
+                (delete-region start end))))))))
 #+end_src
 ** tmr.el -- timers, reminders etc.
 Pretty timers. I forget everything, so it's quite important for me to have a quick way to define timers. I was using ~appt-add~ for this before but it does not let you view/manipulate upcoming timers easily and tmr does this very well with ~tmr-tabulated-view~.
