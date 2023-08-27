@@ -4636,6 +4636,11 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
   (define-key embark-file-map (kbd "#") 'im-sudo-find-file)
 #+end_src
 
+*** search actions
+#+begin_src emacs-lisp
+  (define-key embark-general-map (kbd "G") #'im-google-this)
+  (define-key embark-general-map (kbd "C") #'im-gpt)
+#+end_src
 ** flycheck
 - Use =ge= (=consult-flycheck=) to list and jump any of the errors/warnings in the buffer.
   - Write ~i SPC~, ~w SPC~, ~e SPC~ to show infos, warnings, errors only in the =consult-flycheck=
@@ -9298,15 +9303,16 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
 #+end_src
 ** Google search
 #+begin_src emacs-lisp
-  (defun im-google-this ()
+  (defun im-google-this (input)
     "Search selected region or current word in Google. Let's you edit the query beforehand."
-    (interactive)
+    (interactive
+     (read-string
+      "Googling: "
+      (im-region-or 'word)))
     (browse-url
      (format
       "https://google.com/search?q=%s"
-      (read-string
-       "Googling: "
-       (im-region-or 'word)))))
+      input)))
 
   (im-leader "mg" #'im-google-this)
 #+end_src
