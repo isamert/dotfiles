@@ -11348,7 +11348,9 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
   (im-leader-v "eg" #'im-gpt)
 
   (defvar im-gpt-prompts
-    '((:prompt "Summarize the following section: #{region}" :region t)
+    '((:display "[EMPTY]"
+       :empty t)
+      (:prompt "Summarize the following section: #{region}" :region t)
       (:prompt "Add documentation to the following code: #{region}" :region t)
       (:prompt "Add documentation to the following Elisp code: #{region}"
        :system "You are an Emacs lisp and documentation expert. You add inline documentation to given code by complying with Emacs lisp documentation conventions (refer parameters in UPPERCASE style without quoting them, use `this' style quoting for other Elisp objects/references). Refer to \"Tips for Documentation Strings\" in Emacs manual. ONLY return the documentation string in quotes, without repeating the code."
@@ -11390,7 +11392,8 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
                     (system "You are an AI assistant living inside Emacs. You answer concisely.")
                     (include-system)
                     (model org-ai-default-chat-model)
-                    (callback))
+                    (callback)
+                    (empty))
     "Use the ChatGPT to generate responses to user prompts.
 
   - PROMPT is the user input to generate a response for.
@@ -11421,6 +11424,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
             (prompt (or (plist-get selection :prompt) selection))
             (system (plist-get selection :system))
             (model (plist-get selection :model))
+            (empty (plist-get selection :empty))
             (include-system (plist-get selection :include-system)))
        (list
         prompt
@@ -11428,12 +11432,15 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
                 (current-prefix-arg
                  (completing-read (format "Model [current=%s]: " org-ai-default-chat-model) org-ai-chat-models))
                 (model model)
-                (t nil))
+                (t org-ai-default-chat-model))
         :system (or system "You are an AI assistant living inside Emacs. You answer concisely.")
-        :include-system (or include-system system))))
+        :include-system (or include-system system)
+        :empty empty)))
     (when (functionp prompt)
       (setq prompt (funcall prompt))
       (deactivate-mark))
+    (when empty
+      (setq prompt (im-region-or "")))
     (when-let ((region (im-region-or nil)))
       (cond
        ((s-matches? "#{\\(code\\|region\\)" prompt)
@@ -11449,17 +11456,24 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
       (let ((buffer (get-buffer-create im-gpt--buffer)))
         (with-current-buffer buffer
           (goto-char (point-max))
-          (insert (format "* %s -- %s\n" (format-time-string "%Y-%m-%d %a %H:%M") (s-truncate 30 prompt)))
+          (insert "* " (format-time-string "%Y-%m-%d %a %H:%M"))
+          (unless empty
+            (insert " -- " (s-truncate 30 prompt)))
+          (insert "\n")
           (insert (format "#+begin_ai markdown :model \"%s\" :sys-everywhere %s\n" model include-system))
           (when system
             (insert (format "[SYS]: %s\n\n" system)))
           (insert (format "[ME]: %s\n" prompt))
           (insert "#+end_ai\n")
+          (when empty
+            (forward-line -2)
+            (end-of-line))
           (unless (eq major-mode 'org-mode)
             (org-mode))
           (unless org-ai-mode
             (org-ai-mode))
-          (org-ai-complete-block))
+          (unless empty
+            (org-ai-complete-block)))
         (unless (im-buffer-visible-p buffer)
           (switch-to-buffer-other-window buffer))
         buffer))
