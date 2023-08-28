@@ -9230,10 +9230,15 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
          (shell-command-to-string (s-chop-prefix "run " msg))))
        ((string= "help" msg)
         (im-signal-send-note-to-myself
-         (concat "run <shell-command>\n"
-                 "grab <file-path>\n"
-                 "note <note-details>\n"
-                 "help")))
+         (concat "- run <shell-command>\n"
+                 "- grab <file-path>\n"
+                 "- note <note-details>\n"
+                 "- clip :: get computer clipboard\n"
+                 "- gpt <prompt>"
+                 "- gpt4 <prompt>"
+                 "- bus|tram|ovchipkaart\n"
+                 "- send a link and it will copied to clipboard\n"
+                 "- help")))
        ((s-prefix? "grab" msg)
         (im-signal-send-note-to-myself
          "" (list (s-chop-prefix "grab " msg))))
@@ -9247,6 +9252,17 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
         (kill-new msg))
        ((s-equals? "clip" msg)
         (im-signal-send-note-to-myself (car kill-ring)))
+       ((s-prefix? "gpt" msg)
+        (im-gpt
+         (s-chop-prefix "gpt " msg)
+         :callback (lambda (_ response) (im-signal-send-note-to-myself response))))
+       ((s-prefix? "gpt4" msg)
+        (im-gpt
+         (s-chop-prefix "gpt4 " msg)
+         :model "gpt-4"
+         :callback (lambda (_ response) (im-signal-send-note-to-myself response))))
+       ((s-matches? "^\\(bus\\|ovchip.*\\|tram\\)" msg)
+        (im-signal-send-note-to-myself (im-ovchipkaart)))
        (attchs
         (--each attchs
           (let ((mime (im-mimetype it)))
