@@ -4641,6 +4641,17 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
   (define-key embark-general-map (kbd "G") #'im-google-this)
   (define-key embark-general-map (kbd "C") #'im-gpt)
 #+end_src
+*** URI-encode/hexify action
+#+begin_src emacs-lisp
+  (defun im-embark-hexify/uri-encode (start end)
+    "Properly URI-encode the region between START and END in current buffer."
+    (interactive "r")
+    (let ((encoded (url-hexify-string (buffer-substring-no-properties start end))))
+      (delete-region start end)
+      (insert encoded)))
+
+  (define-key embark-general-map (kbd "U") #'im-embark-hexify/uri-encode)
+#+end_src
 ** flycheck
 - Use =ge= (=consult-flycheck=) to list and jump any of the errors/warnings in the buffer.
   - Write ~i SPC~, ~w SPC~, ~e SPC~ to show infos, warnings, errors only in the =consult-flycheck=
