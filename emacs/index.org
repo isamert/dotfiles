@@ -1776,6 +1776,8 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
       "oe" #'org-edit-special
       "ot" #'im-org-babel-tangle-current-block
       "o-" #'org-babel-demarcate-block)
+    (im-leader :keymaps 'org-src-mode-map
+      "ot" #'im-org-babel-tangle-current-block)
     (im-leader-v :keymaps 'org-mode-map
       "o#" #'org-insert-structure-template)
     (im-leader-v :keymaps 'org-src-mode-map
@@ -6648,7 +6650,7 @@ I have a file called ~watchlist.org~ where I keep list of movies and shows that 
     :config
     (setq orgmdb-omdb-apikey im-orgmdb-omdb-apikey)
     (setq orgmdb-poster-folder "~/Documents/notes/data/posters")
-    (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore actors poster)))
+    (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore actors poster plot)))
 #+end_src
 ** erc (IRC client)
 IRC client for Emacs.
@@ -9359,15 +9361,16 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
   (defun im-google-this (input)
     "Search selected region or current word in Google. Let's you edit the query beforehand."
     (interactive
-     (read-string
-      "Googling: "
-      (im-region-or 'word)))
+     (list
+      (read-string
+       "Googling: "
+       (im-region-or 'word))))
     (browse-url
      (format
       "https://google.com/search?q=%s"
       input)))
 
-  (im-leader "mg" #'im-google-this)
+  (im-leader-v "mg" #'im-google-this)
 #+end_src
 
 ** TODO org-mode enhancements
@@ -11411,9 +11414,10 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
     selected region when calling `im-gpt' with the prompt.
   - MODEL: (Optional) Model to use with this prompt. (Default=`org-ai-default-chat-model')")
 
+  (defvar im-gpt-file "~/Documents/notes/extra/gpt.org"
+    "If non-nil, use this file to output interactive `im-gpt' requests.")
   (defconst im-gpt--buffer "*im-gpt*")
 
-  ;; TODO: save to a file automatically?
   (cl-defun im-gpt (prompt
                     &key
                     (system "You are an AI assistant living inside Emacs. You answer concisely.")
@@ -11480,12 +11484,15 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
      ;; prompt and system prompt. This automatically streams to
      ;; `im-gpt--buffer'.
      ((called-interactively-p 'interactive)
-      (let ((buffer (get-buffer-create im-gpt--buffer)))
+      (let ((buffer
+             (if im-gpt-file
+                 (find-file-noselect im-gpt-file)
+               (get-buffer-create im-gpt--buffer))))
         (with-current-buffer buffer
           (goto-char (point-max))
           (insert "* " (format-time-string "%Y-%m-%d %a %H:%M"))
           (unless empty
-            (insert " -- " (s-truncate 30 prompt)))
+            (insert " -- " (s-truncate 50 prompt)))
           (insert "\n")
           (insert (format "#+begin_ai markdown :model \"%s\" :sys-everywhere %s\n" model include-system))
           (when system
