@@ -2642,6 +2642,64 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
                   (delete-region (line-beginning-position) (1+ (line-end-position))))
                 result)))))))
 #+end_src
+** Remembering to clock in
+I forget to clock in (and out) most of the time, so I want Emacs to remind clocking to me. This function regularly checks if I'm clocked in or not and tries to remind me to take the appropriate action.
+
+#+begin_src emacs-lisp
+  (defun im-bullet-clock-in-a-task ()
+    "Display today's tasks and require user to select one to clock in."
+    (interactive)
+    (with-current-buffer (find-file-noselect "~/Documents/notes/bullet.org")
+      (save-restriction
+        (im-bullet-focus-today)
+        (let ((task (cdr
+                     (im-completing-read
+                      "Select task: "
+                      (->>
+                       (org-map-entries (lambda () (let ((props (org-entry-properties)))
+                                                (when-let* ((todo (alist-get "TODO" props nil nil #'equal))
+                                                            (_ (not (equal "DONE" todo))))
+                                                  (let ((bounds (bounds-of-thing-at-point 'line)))
+                                                    (cons (buffer-substring (car bounds) (cdr bounds)) (point)))))))
+                       (-filter #'identity))
+                      :formatter #'car))))
+          (when task
+            (widen)
+            (goto-char task)
+            (let ((elapsed-minutes (read-number "How may minutes you've already spent?" 1)))
+              (org-clock-in nil (time-subtract (current-time) (seconds-to-time (* elapsed-minutes 60))))))))))
+
+  (im-leader "ocb" #'im-bullet-clock-in-a-task)
+
+  (defun im-org-check-clock ()
+    "Check if are we currently clocked in or not.
+    If not, prompt user to clock in."
+    (cond
+     ;; If we are clocked in and we have been clocking longer than the
+     ;; effort or allocated time, ask if we want to clock out.
+     ((org-clocking-p)
+      (with-current-buffer (find-file-noselect "~/Documents/notes/bullet.org")
+        (save-window-excursion
+          (save-restriction
+            (org-clock-goto)
+            (org-narrow-to-subtree)
+            (let* ((effort (when-let (e (org-entry-get nil "EFFORT"))
+                             (im-svgcal--time-diff "0:00" e)))
+                   (allocated-time
+                    (-sum (-map (-lambda ((range start end)) (im-svgcal--time-diff start end)) (im-svgcal--org-entry-timestamps)))))
+              (when (and
+                     (> (org-clock-get-clocked-time) (or allocated-time effort))
+                     (y-or-n-p (format ">> You are still clocked in to '%s'! Want to clock out now?" (org-entry-get nil "ITEM"))))
+                ;; TODO: Maybe ask how many minutes have been elapsed since the
+                ;; task is done.
+                (org-clock-out)))))))
+     (t
+      (alert "You are not clocked in!" :title "CLOCKING")
+      (when (y-or-n-p "Want to clock in?")
+        (im-bullet-clock-in-a-task)))))
+
+  (run-with-timer 60 600 #'im-org-check-clock)
+#+end_src
 * Other packages
 ** display-time-mode
 I started using Emacs in full screen (Emacs maximalism goes on), so this is helpful.
