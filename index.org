@@ -740,6 +740,36 @@ Here is the systemd service entry:
   [Install]
   WantedBy=xdg-desktop-autostart.target
 #+end_src
+** i3 & KDE
+- See: https://github.com/heckelson/i3-and-kde-plasma
+
+#+begin_src conf :tangle (when-linux "~/.config/systemd/user/plasma-i3.service")
+  [Unit]
+  Description=Launch Plasma with i3
+  Before=plasma-workspace.target
+
+  [Service]
+  ExecStart=/usr/bin/i3
+  Restart=on-failure
+
+  [Install]
+  WantedBy=plasma-workspace.target
+#+end_src
+
+To activate i3:
+
+#+begin_src sh
+systemctl mask plasma-kwin_x11.service # Disable kwin
+systemctl enable plasma-i3 # Enable i3
+#+end_src
+
+To return back to kwin:
+
+#+begin_src sh
+systemctl --user enable plasma-kwin_x11.service # Enable kwin
+systemctl --user mask plasma-i3 # Disable i3
+#+end_src
+
 ** i3 config
 #+begin_src conf :tangle (when-linux "~/.config/i3/config")
   set $mod Mod4
@@ -784,7 +814,7 @@ Here is the systemd service entry:
 
   bindsym $mod+s layout stacking
   bindsym $mod+t layout tabbed
-  bindsym $hyper+backslash layout toggle split
+  bindsym $mod+i layout toggle split
 
   # Define names for default workspaces for which we configure key bindings later on.
   # We use variables to avoid repeating the names in multiple places.
