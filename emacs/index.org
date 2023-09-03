@@ -11308,6 +11308,30 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
         (insert result)
         (current-buffer))))
 
+  (defun im-unfold-if-folded (&optional pt)
+    (setq pt (or pt (point)))
+    (when (and
+           ;; Check if org-fold is enabled or not first
+           (alist-get 'org-fold-outline buffer-invisibility-spec)
+           (org-fold-folded-p pt))
+      (save-excursion
+        (goto-char pt)
+        (org-fold-show-entry)))
+    (when (and
+           (alist-get 'outline buffer-invisibility-spec)
+           (outline-invisible-p pt))
+      (save-excursion
+        (goto-char pt)
+        (outline-show-entry)))
+    (when (and
+           (alist-get 'hs buffer-invisibility-spec)
+           (save-excursion
+             (goto-char pt)
+             (hs-already-hidden-p)))
+      (save-excursion
+        (goto-char pt)
+        (hs-toggle-hiding))))
+
   ;; TODO support fn returning a string instead of a buffer. Create a
   ;; temp buffer when jump is called
   (defun im-peek (fn)
@@ -11329,7 +11353,8 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
                   (< (im-line-count-below-cursor) (length (s-lines str)))
                   (< (im-line-count-below-cursor) (- (window-height) 10)))
              (recenter 10))
-           (quick-peek-show str nil nil im-peek--line-count))
+           (quick-peek-show str nil nil im-peek--line-count)
+           (im-unfold-if-folded (save-excursion (end-of-line) (1+ (point)))))
          (im-peek-mode +1)))))
 
   ;; Special peek functions
