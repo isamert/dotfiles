@@ -11353,7 +11353,7 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
     (interactive
      (let* ((s (im-region-or 'word))
             (match (s-match
-                    "\\(.*\\)\\([a-z]\\{2\\}\\):\\([a-z]\\{2\\}\\)\\(.*\\)"
+                    "\\(.*\\)\\([a-z]\\{2\\}\\):\\([a-z]\\{2\\}\\)\\(\\(.\\|\n\\)*\\)"
                     (read-string
                      "Translate: "
                      (concat "en:tr " s)
