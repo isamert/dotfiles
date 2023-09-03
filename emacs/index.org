@@ -9277,7 +9277,7 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
         (list :group (dbus-string-to-byte-array (dbus-byte-array-to-string selected))))))
 
   (defun im-signal-sync-message-received-handler (ts source receiver _ msg attchs)
-    (message ">> [signal] sender=%s, receiver=%s, msg=%s, attach=%s" source receiver msg attchs)
+    (message ">> [signal] sender=%s, receiver=%s, msg=%s, attach=%s, _=%s" source receiver msg attchs _)
     (when (and (string= im-my-phone-number source)
                (or
                 (string= receiver im-my-phone-number)
@@ -9285,20 +9285,31 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
                  (--map (alist-get 'uuid it) (alist-get 'accounts (json-read-file (expand-file-name "~/.local/share/signal-cli/data/accounts.json"))))
                  receiver)))
       (cond
+       ((or (string= "hey" msg)
+            (string= "ping" msg))
+        (im-signal-send-note-to-myself (format ">> %s" (shell-command-to-string "hostname"))))
+       ((s-prefix? "stop " msg)
+        (when (string= (s-chop-prefix "stop " msg) (shell-command-to-string "hostname"))
+          (im-signal-send-note-to-myself (format ">> Closing signal bot." (shell-command-to-string "hostname")))
+          (im-stop-signal-bot)))
        ((s-prefix? "run" msg)
         (im-signal-send-note-to-myself
          (shell-command-to-string (s-chop-prefix "run " msg))))
        ((string= "help" msg)
         (im-signal-send-note-to-myself
-         (concat "- run <shell-command>\n"
-                 "- grab <file-path>\n"
-                 "- note <note-details>\n"
-                 "- clip :: get computer clipboard\n"
-                 "- gpt <prompt>"
-                 "- gpt4 <prompt>"
-                 "- bus|tram|ovchipkaart\n"
-                 "- send a link and it will copied to clipboard\n"
-                 "- help")))
+         (concat
+          "- hey/ping"
+          "- stop <hostname>"
+          "- run <shell-command>\n"
+          "- grab <file-path>\n"
+          "- note <note-details>\n"
+          "- clip :: get computer clipboard\n"
+          "- gpt <prompt>\n"
+          "- gpt4 <prompt>\n"
+          "- bus|tram|ovchipkaart\n"
+          "\n"
+          "- send a link and it will copied to clipboard\n"
+          "- help")))
        ((s-prefix? "grab" msg)
         (im-signal-send-note-to-myself
          "" (list (s-chop-prefix "grab " msg))))
