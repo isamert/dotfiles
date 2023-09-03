@@ -7853,6 +7853,12 @@ Do ~M-x suggest~, enter the inputs and the expected output and it'll suggest you
 #+begin_src emacs-lisp
   (use-package suggest)
 #+end_src
+*** emr & redshank -- refactoring tools
+#+begin_src emacs-lisp
+  (use-package redshank)
+  (use-package emr :straight
+    (:host github :repo "isamert/emacs-refactor"))
+#+end_src
 ** Racket
 - Open a racket buffer.
 - Do C-c C-c (racket-run)
