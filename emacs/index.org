@@ -4049,6 +4049,28 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
                             (magit-diff-added-highlight . default)))))
 #+end_src
 
+** forge
+#+begin_src emacs-lisp
+  (use-package forge
+    :custom
+    ;; I set this for the following commands:
+    ;; - `forge-list-owned-issues'
+    ;; - `forge-list-owned-pullreqs'
+    (forge-owned-accounts '(("isamert"))))
+#+end_src
+
+To configure:
+
+#+begin_src sh
+  git config --global github.user isamert
+#+end_src
+
+Then I created and added the API key from here to =~/.authinfo= file, in the following syntax:
+
+#+begin_src authinfo
+  machine api.github.com login isamert^forge password <GH_API_KEY>
+#+end_src
+
 ** diff-mode
 Some small enhancments to diff mode:
 - Cycle hunks with TAB, SHIFTTAB.
@@ -6191,6 +6213,7 @@ Well, sometimes you need to open that pesky program.
     :straight (:host github :repo "kiwanami/emacs-ctable"  :files (:defaults "*.el")))
 
   (use-package xwwp
+    :demand t
     :straight (:host github :repo "kchanqvq/xwwp"  :files (:defaults "*"))
     :general
     (im-leader
