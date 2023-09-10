@@ -1256,6 +1256,8 @@ Some small packages that enriches editing experience visually. I don't enable al
     ;; Disable evil bindings in insert mode. This needs to be called
     ;; before loading evil mode...
     (setq evil-disable-insert-state-bindings t)
+    ;; This seems to be the most relaible undo system.  Also see `vundo'
+    ;; package down below for undo-tree like functionality
     (setq evil-undo-system 'undo-redo)
     :config
     ;; ...but I want some default evil bindings in insert mode, so just
@@ -6360,6 +6362,15 @@ I made some changes to xwwp to make it work. [[elisp:(im-apply-patch-from-src-bl
 
    ;;; Adapted from EWW code to provide a DWIM style XWWP command
    (require 'eww)
+#+end_src
+** vundo -- unto-tree like branching undo
+The interface is pretty intuitive. Go {back,forward} with {b,f} or {left,right} and branch out with {n,p} or {up,down}.
+
+#+begin_src emacs-lisp
+  (use-package vundo
+    :general
+    (:states 'normal
+     "U" #'vundo))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
