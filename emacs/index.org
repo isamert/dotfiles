@@ -4070,7 +4070,17 @@ Then I created and added the API key from here to =~/.authinfo= file, in the fol
 #+begin_src authinfo
   machine api.github.com login isamert^forge password <GH_API_KEY>
 #+end_src
-
+** consult-gh
+#+begin_src emacs-lisp
+  (use-package consult-gh
+    :straight (:host github :repo "armindarvish/consult-gh")
+    :custom
+    (require 'consult-gh-embark)
+    ;; Previews are triggered with `consult-preview-key'
+    (consult-gh-show-preview t)
+    (consult-gh-default-orgs-list '("isamert"))
+    (consult-gh-default-clone-directory "~/Workspace/temp"))
+#+end_src
 ** diff-mode
 Some small enhancments to diff mode:
 - Cycle hunks with TAB, SHIFTTAB.
