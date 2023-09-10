@@ -3906,21 +3906,6 @@ To sync it automatically:
     (evil-define-key 'insert 'shell-mode-map (kbd "C-l") #'comint-clear-buffer))
 #+end_src
 
-** which-key
-A package that shows key combinations. (for example press C-x and wait) It also works with ~general.el~, just press leader key and wait to see your options. I made a few adjustment so that it's more compact and you can see full function names (most of the time) and it shows up at the top center instead of bottom left corner. This mostly eliminates the need for creating a [[Hydra]].
-
-#+BEGIN_SRC emacs-lisp
-  (use-package which-key
-    :hook (after-init . which-key-mode)
-    :config
-    (setq which-key-min-display-lines 1)
-    (setq which-key-max-display-columns 1)
-    (setq which-key-max-description-length 70)
-    (setq which-key-show-docstrings t)
-    (setq which-key-idle-delay 0.5)
-    (setq which-key-sort-order #'which-key-prefix-then-key-order))
-#+END_SRC
-
 ** magit & vc
 While I mainly use magit for version control stuff, ~vc~ has some nicer parts that I make use of. Like
 - =vc-annotate= :: Faster and simpler alternative to =magit-blame=. (Bound to ~SPC gB~). Use =L= on line to show commit message.
@@ -4705,6 +4690,11 @@ Here is a nice description of the package from it's README:
     ;; ^ I removed embark-mixed-indicator from the list because I'm
     ;; using embark-completing-read-prompter by default which already
     ;; provides same functionality
+
+    ;; Hitting C-h after any prefix command will open a completing-read
+    ;; interface to select a command that prefix has. Much better than
+    ;; which-key.
+    (setq prefix-help-command 'embark-prefix-help-command)
 
     ;; Replace describe-symbol with helpful-symbol
     (define-key embark-symbol-map "h" #'helpful-symbol))
