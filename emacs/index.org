@@ -4749,12 +4749,9 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
   - Write ~i SPC~, ~w SPC~, ~e SPC~ to show infos, warnings, errors only in the =consult-flycheck=
 
 #+BEGIN_SRC emacs-lisp
-  (defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
-    "Disable checkdoc on org src, scratch and interaction buffers."
-    (when (or (eq major-mode #'lisp-interaction-mode)
-              (s-contains? "scratch" (buffer-name))
-              (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
-      (flycheck-disable-checker 'emacs-lisp-checkdoc)))
+  (general-def
+    :states 'normal
+    "ge" #'im-show-diagnostic-list)
 
   (use-package flycheck
     :hook ((prog-mode . flycheck-mode))
@@ -4768,11 +4765,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     ;; to `org-src-mode-hook'
     (add-hook 'org-src-mode-hook #'im-flycheck-disable-checkdoc-checker-if-not-needed))
 
-  (use-package consult-flycheck
-    :after flycheck
-    :general
-    (:keymap 'flycheck-mode-map :states 'normal
-     "ge" #'im-show-error-list))
+  (use-package consult-flycheck :after flycheck)
 
   (use-package flycheck-posframe
     :straight (:host github :repo "alexmurray/flycheck-posframe")
@@ -4784,14 +4777,52 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
     (setq flycheck-posframe-position 'window-bottom-center)
     (flycheck-posframe-configure-pretty-defaults))
 
-  (defun im-show-error-list (arg)
-    "Show all lsp errors or flycheck erros, depending on which is available."
+  (defun im-show-diagnostic-list (arg)
+    "Show all lsp errors or flycheck/flymake errors, depending on which is available."
     (interactive "P")
-    (if (bound-and-true-p lsp-mode)
-        (consult-lsp-diagnostics arg)
-      (consult-flycheck)))
+    (cond
+     ((bound-and-true-p lsp-mode)
+      (consult-lsp-diagnostics arg))
+     ((bound-and-true-p flymake-mode)
+      (consult-flymake arg))
+     ((bound-and-true-p flycheck-mode)
+      (consult-flycheck))
+     (t (user-error "No diagnostic provider found"))))
+
+  (defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
+    "Disable checkdoc on org src, scratch and interaction buffers."
+    (when (or (eq major-mode #'lisp-interaction-mode)
+              (s-contains? "scratch" (buffer-name))
+              (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
+      (flycheck-disable-checker 'emacs-lisp-checkdoc)))
 #+END_SRC
 
+** flymake & flymake-languagetool
+It is nonsensical to use =flymake= and =flycheck= at the same time. I mainly use =flycheck= but I configure =flymake= to be able to use =flymake-languagetool= because it's better than =flycheck-languagetool=. I may migrate to =flymake= fully in the future but some things are still a little bit off.
+
+#+begin_src emacs-lisp
+  ;; (use-package flymake
+  ;;   :straight (:type built-in)
+  ;;   :hook (prog-mode . flymake-mode))
+
+  (use-package flymake-popon
+    :straight (:type git :repo "https://codeberg.org/akib/emacs-flymake-popon.git")
+    :hook (flymake-mode . flymake-popon-mode)
+    :custom
+    (flymake-popon-posframe-extra-arguments
+     '(:poshandler posframe-poshandler-window-bottom-center)))
+
+  (use-package flymake-languagetool
+    :hook
+    ((text-mode       . flymake-languagetool-load)
+     (org-mode        . flymake-languagetool-load)
+     (markdown-mode   . flymake-languagetool-load))
+    :init
+    ;; If you have installed through pacman, this is the way to start the server
+    (setq flymake-languagetool-server-command '("languagetool" "--http"))
+    (add-to-list 'flymake-languagetool-ignore-faces-alist 'org-modern-block-name)
+    (add-to-list 'flymake-languagetool-disabled-rules "WHITESPACE_RULE"))
+#+end_src
 ** corfu & corfu-doc & kind-icon
 - When corfu popup is open
   - ~M-SPC~ to insert a space to be able to filter with orderless.
