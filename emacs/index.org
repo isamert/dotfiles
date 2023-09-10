@@ -7,7 +7,7 @@
 #+OPTIONS: toc:3
 
 * Introduction
-This is my emacs configuration. My main focus is sanity. I'm a person who get frustrated pretty easily. So instead of optimizing the time spent on doing things, I try to find ways of doing things that does not make me frustrated. Most of the time you get speed boost as a byproduct.
+This is my Emacs configuration. My main focus is sanity. I'm a person who get frustrated pretty easily. So instead of optimizing the time spent on doing things, I try to find ways of doing things that does not make me frustrated. Most of the time you get speed boost as a byproduct.
 
 #+begin_src emacs-lisp
   ;;; index.el --- isamert's configuration -*- lexical-binding: t; -*-
@@ -6344,45 +6344,7 @@ the usage of =M-q=.
 
   #+end_src
 
-** Spell checking (flyspell) & dictionaries & translation
-- Use =flyspell-mode= to start spell checking.
-- Use =ispell-change-dictonary= to change dictionaries.
-- ~z=~ or ~zw~ to correct current spelling mistake.
-  - ~C-u zw~ to correct all mistakes in order.
-
-*** Configuration
-See [[https://isamert.net/2021/01/31/emacs-te-turkce-imla-denetimi.html][this]] for rationale behind the following configuration.
-
-#+BEGIN_SRC emacs-lisp
-  (use-package flyspell
-    :straight (:type built-in)
-    :hook ((org-mode . flyspell-mode)
-           (markdown-mode . flyspell-mode)
-           (text-mode . flyspell-mode)
-           (prog-mode . flyspell-prog-mode))
-    :config
-    (setq ispell-program-name "hunspell"
-          ispell-local-dictionary "en_US"
-          ispell-local-dictionary-alist
-          '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)
-            ("tr_TR" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "tr_TR") nil utf-8))))
-#+END_SRC
-
-*** flyspell-correct
-Better way to correct spelling mistakes. By default it uses completing-read. This also makes it easy to save words into personal dictonary or silence warnings for session because it shows these options in the correction menu.
-#+begin_src emacs-lisp
-  (use-package flyspell-correct
-    :after flyspell
-    ;; Rebind default evil ispell keys to flyspell-correct ones
-    :general
-    (:keymaps 'evil-normal-state-map
-     "z=" #'flyspell-correct-at-point
-     ;; This goes to nearest spelling mistake.
-     ;; If called with C-u, it goes into rapid mode where you correct all mistakes in order.
-     "zw" #'flyspell-correct-wrapper))
-#+end_src
-
-*** synosaurus & wordnut
+** synosaurus & wordnut
 Both synosaurus and wordnut uses ~wordnet~ to work.
 - Use ~synosaurus-choose-and-replace~ to replace the current word with one of it's synonyms.
 
@@ -6397,9 +6359,7 @@ Both synosaurus and wordnut uses ~wordnet~ to work.
   (use-package wordnut)
 #+end_src
 
-*** sozluk.el
-Turkish dictionary.
-
+** sozluk.el -- Turkish dictionary
 #+begin_src emacs-lisp
   (use-package sozluk
     :straight (:host github :repo "isamert/sozluk.el")
@@ -6412,32 +6372,7 @@ Turkish dictionary.
   (use-package turkish :after sozluk)
 #+end_src
 
-*** Etymology lookup inside Emacs
-#+begin_src emacs-lisp
-  (defun im-etymology-en (input)
-    "Find and retrieve the given word etymology from etymonline.
-  Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
-    (interactive
-     (list (read-string "Word: " (im-region-or 'word))))
-    (let* ((buffer (generate-new-buffer (format "*etymology: %s*" input))))
-      (switch-to-buffer buffer)
-      (insert (shell-command-to-string (concat "links -dump http://www.etymonline.com/word/" input)))
-      (goto-char (point-min))
-      (if (re-search-forward "Error 404 (Not Found)" nil t)
-          (progn
-            (kill-buffer)
-            (user-error "Word not found: %s" input))
-        (progn
-          (delete-region (point-min) (progn
-                                       (goto-char (point-min))
-                                       (search-forward "[\s\s]")))
-          (delete-region (progn
-                           (goto-char (point-max))
-                           (search-backward-regexp "See all related words"))
-                         (point-max))))
-      (goto-char (point-min))))
-#+end_src
-*** go-translate -- Google translate
+** go-translate -- Google translate
 This is a quite powerful package but implemented a bit weirdly. No
 minor/major modes etc. So it's kind of hard to bind anything in
 translation buffer without fiddling with advices etc. but I don't
@@ -6458,6 +6393,19 @@ example, hitting ~y~ will speak the word using the translation engine.
            :render (gts-buffer-render))))
 #+end_src
 
+** jinx -- spellchecker, flyspell alternative
+I was using ~flyspell~ and ~flyspell-correct~ before but Jinx works much better & faster out-of-the-box. It automatically works nicely in code buffers too!
+
+#+begin_src emacs-lisp
+  (use-package jinx
+    :hook (emacs-startup . global-jinx-mode)
+    :general
+    (:keymaps 'evil-normal-state-map
+     "z=" #'jinx-correct
+     ;; Override flyspell bindings from evil-commands with jinx ones
+     "[s" #'jinx-previous
+     "]s" #'jinx-next))
+#+end_src
 ** string-inflection
 - In the case of =string-inflection-ruby-style-cycle=   : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacs_lisp~
 - In the case of =string-inflection-python-style-cycle= : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacs_lisp~
@@ -11679,6 +11627,31 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
            :on-finish (lambda (&rest _) (message ">> Extracted: %s" it))
            :on-fail (lambda (&rest _) (user-error ">> Failed while extracting: %s" it))
            :buffer-name "*im-extract*")))))
+#+end_src
+** Etymology lookup inside Emacs
+#+begin_src emacs-lisp
+  (defun im-etymology-en (input)
+    "Find and retrieve the given word etymology from etymonline.
+  Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
+    (interactive
+     (list (read-string "Word: " (im-region-or 'word))))
+    (let* ((buffer (generate-new-buffer (format "*etymology: %s*" input))))
+      (switch-to-buffer buffer)
+      (insert (shell-command-to-string (concat "links -dump http://www.etymonline.com/word/" input)))
+      (goto-char (point-min))
+      (if (re-search-forward "Error 404 (Not Found)" nil t)
+          (progn
+            (kill-buffer)
+            (user-error "Word not found: %s" input))
+        (progn
+          (delete-region (point-min) (progn
+                                       (goto-char (point-min))
+                                       (search-forward "[\s\s]")))
+          (delete-region (progn
+                           (goto-char (point-max))
+                           (search-backward-regexp "See all related words"))
+                         (point-max))))
+      (goto-char (point-min))))
 #+end_src
 * Operating system related
 ** Sound output chooser
