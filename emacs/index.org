@@ -4822,9 +4822,10 @@ It is nonsensical to use =flymake= and =flycheck= at the same time. I mainly use
     ((text-mode       . flymake-languagetool-load)
      (org-mode        . flymake-languagetool-load)
      (markdown-mode   . flymake-languagetool-load))
-    :init
+    :custom
+    (flymake-languagetool-server-command . '("languagetool" "--http"))
+    :config
     ;; If you have installed through pacman, this is the way to start the server
-    (setq flymake-languagetool-server-command '("languagetool" "--http"))
     (add-to-list 'flymake-languagetool-ignore-faces-alist 'org-modern-block-name)
     (add-to-list 'flymake-languagetool-disabled-rules "WHITESPACE_RULE"))
 #+end_src
