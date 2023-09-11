@@ -6376,6 +6376,15 @@ The interface is pretty intuitive. Go {back,forward} with {b,f} or {left,right} 
     (:states 'normal
      "U" #'vundo))
 #+end_src
+** deadgrep
+~consult-ripgrep~ is nice but having a dedicated search buffer where I can tinker with options is sometimes better
+
+#+begin_src emacs-lisp
+  (use-package deadgrep
+    :custom
+    (deadgrep-display-buffer-function #'switch-to-buffer)
+    (deadgrep-project-root-function #'im-current-project-root))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple lines. It
