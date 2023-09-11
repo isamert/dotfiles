@@ -2703,6 +2703,13 @@ I forget to clock in (and out) most of the time, so I want Emacs to remind clock
   (run-with-timer 60 600 #'im-org-check-clock)
 #+end_src
 * Other packages
+** eldoc
+#+begin_src emacs-lisp
+  (use-package eldoc
+    :straight (:type built-in)
+    :custom
+    (eldoc-documentation-strategy . #'eldoc-documentation-compose-eagerly))
+#+end_src
 ** display-time-mode
 I started using Emacs in full screen (Emacs maximalism goes on), so this is helpful.
 #+begin_src emacs-lisp
