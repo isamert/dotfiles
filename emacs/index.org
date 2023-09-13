@@ -6380,6 +6380,8 @@ The interface is pretty intuitive. Go {back,forward} with {b,f} or {left,right} 
     :custom
     (deadgrep-display-buffer-function #'switch-to-buffer)
     (deadgrep-project-root-function #'im-current-project-root))
+#+end_src
+
 ** consult-gh
 #+begin_src emacs-lisp
   (use-package consult-gh
@@ -6402,8 +6404,6 @@ the usage of =M-q=.
 
   #+begin_src emacs-lisp
     (setq fill-column 80)
-
-
   #+end_src
 
 ** synosaurus & wordnut
