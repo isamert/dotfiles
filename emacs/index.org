@@ -7778,10 +7778,15 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
   (im-prettify-mode emacs-lisp-mode-hook im-elisp-pretty-symbols)
   (im-prettify-mode lisp-interaction-mode-hook im-elisp-pretty-symbols)
 
-
   ;; Highlights quotes. Surprisingly useful
   (use-package highlight-quoted
     :hook (emacs-lisp-mode . highlight-quoted-mode))
+
+  ;; Replace package name prefixes with given character.
+  (use-package nameless
+    :straight (:host github :repo "Malabarba/Nameless")
+    :custom (nameless-prefix "⟩")
+    :hook (emacs-lisp-mode . nameless-mode))
 #+end_src
 
 *** Linting & package development
