@@ -2708,7 +2708,7 @@ I forget to clock in (and out) most of the time, so I want Emacs to remind clock
   (use-package eldoc
     :straight (:type built-in)
     :custom
-    (eldoc-documentation-strategy . #'eldoc-documentation-compose-eagerly))
+    (eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly))
 #+end_src
 ** display-time-mode
 I started using Emacs in full screen (Emacs maximalism goes on), so this is helpful.
@@ -2766,6 +2766,9 @@ This is a built-in mode for providing basic outlining features. Here are a few c
     :after eshell
     :config
     (eshell-syntax-highlighting-global-mode +1))
+
+  ;; I make use of this function
+  (autoload 'eat-make "eat")
 
   (use-package eat
     :straight (:repo "https://codeberg.org/akib/emacs-eat.git")
@@ -4046,6 +4049,7 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
 ** forge
 #+begin_src emacs-lisp
   (use-package forge
+    :after magit
     :custom
     ;; I set this for the following commands:
     ;; - `forge-list-owned-issues'
@@ -4063,17 +4067,6 @@ Then I created and added the API key from here to =~/.authinfo= file, in the fol
 
 #+begin_src authinfo
   machine api.github.com login isamert^forge password <GH_API_KEY>
-#+end_src
-** consult-gh
-#+begin_src emacs-lisp
-  (use-package consult-gh
-    :straight (:host github :repo "armindarvish/consult-gh")
-    :custom
-    (require 'consult-gh-embark)
-    ;; Previews are triggered with `consult-preview-key'
-    (consult-gh-show-preview t)
-    (consult-gh-default-orgs-list '("isamert"))
-    (consult-gh-default-clone-directory "~/Workspace/temp"))
 #+end_src
 ** diff-mode
 Some small enhancments to diff mode:
@@ -4822,8 +4815,10 @@ It is nonsensical to use =flymake= and =flycheck= at the same time. I mainly use
     ((text-mode       . flymake-languagetool-load)
      (org-mode        . flymake-languagetool-load)
      (markdown-mode   . flymake-languagetool-load))
-    :custom
-    (flymake-languagetool-server-command . '("languagetool" "--http"))
+    :init
+    (setq flymake-languagetool-server-command (cl-case system-type
+                                                (darwin '("languagetool-http-server"))
+                                                (linux '("languagetool" "--http"))))
     :config
     ;; If you have installed through pacman, this is the way to start the server
     (add-to-list 'flymake-languagetool-ignore-faces-alist 'org-modern-block-name)
@@ -4985,7 +4980,8 @@ It is nonsensical to use =flymake= and =flycheck= at the same time. I mainly use
            ;; candidates but we can always exit the completion and
            ;; re-trigger it to get the fresh list from lsp server.
            (lsp-completion-mode . im-lsp-mode-setup-orderless-completion)
-           (lsp-mode . lsp-enable-which-key-integration))
+           ;; (lsp-mode . lsp-enable-which-key-integration)
+           )
     :commands (lsp lsp-deferred)
     :init
     (setq lsp-use-plists t)
@@ -6384,6 +6380,17 @@ The interface is pretty intuitive. Go {back,forward} with {b,f} or {left,right} 
     :custom
     (deadgrep-display-buffer-function #'switch-to-buffer)
     (deadgrep-project-root-function #'im-current-project-root))
+** consult-gh
+#+begin_src emacs-lisp
+  (use-package consult-gh
+    :straight (:host github :repo "armindarvish/consult-gh")
+    :after consult
+    :custom
+    (require 'consult-gh-embark)
+    ;; Previews are triggered with `consult-preview-key'
+    (consult-gh-show-preview t)
+    (consult-gh-default-orgs-list '("isamert"))
+    (consult-gh-default-clone-directory "~/Workspace/temp"))
 #+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
@@ -6451,9 +6458,12 @@ example, hitting ~y~ will speak the word using the translation engine.
 ** jinx -- spellchecker, flyspell alternative
 I was using ~flyspell~ and ~flyspell-correct~ before but Jinx works much better & faster out-of-the-box. It automatically works nicely in code buffers too!
 
+You need to install ~enchant~ to make Jinx work (and compile).
+
 #+begin_src emacs-lisp
   (use-package jinx
     :hook (emacs-startup . global-jinx-mode)
+    :custom (jinx-languages "en_US tr_TR")
     :general
     (:keymaps 'evil-normal-state-map
      "z=" #'jinx-correct
@@ -10564,7 +10574,6 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
     "Return matching accounts for given URL.
   If there are multiple accounts registered for one entry, then
   list them as seperate entries."
-    (interactive)
     (let ((urlobj (url-generic-parse-url url)))
       (setq url (url-host urlobj))
       (when-let ((port (url-port-if-non-default urlobj)))
@@ -10579,9 +10588,9 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
        (-map (lambda (info)
                (let ((unames (s-split " " (plist-get info :username)))
                      (pwds (s-split " " (plist-get info :password))))
-                 (-zip  (--map (format "%s - %s" (plist-get info :title) it) unames)
-                        (--map (list :info info :acc it)
-                               (-zip unames pwds)))))
+                 (-zip-pair  (--map (format "%s - %s" (plist-get info :title) it) unames)
+                             (--map (list :info info :acc it)
+                                    (-zip-pair unames pwds)))))
              candidates))))
 
   (defun im-password-qutebrowser (url fifo)
@@ -10637,7 +10646,6 @@ This is better than =find-file-at-point= because it takes line numbers etc. into
            (kill-new
             (format ":host %s :username %s :password %s"
                     .host .username .password)))))))
-
 #+end_src
 ** Kubernetes
 My main use case is drop into a shell of a pod. The code below makes it quite easy. Use ~im-kube-select-pod~ to select a pod and do some actions on it.
@@ -10757,16 +10765,18 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
                              namespace
                              container
                              context)))))
-        "Top" → (im-shell-command
-                 :command (format "kubectl top pod  '%s' --namespace='%s' --context='%s'"
-                                  name
-                                  namespace
-                                  context))
-        "Remove" → (format "Copied: %s"
-                           (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
-                                            name
-                                            namespace
-                                            context)))
+        "Top" →
+        (im-shell-command
+         :command (format "kubectl top pod  '%s' --namespace='%s' --context='%s'"
+                          name
+                          namespace
+                          context))
+        "Remove" →
+        (im-shell-command
+         :command (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
+                                   name
+                                   namespace
+                                   context)))
         "Info" →
         (progn
           (with-current-buffer (get-buffer-create (format "*im-kube-pod-info-%s*" name))
