@@ -8563,13 +8563,16 @@ Good for buffer management, especially for groupped killings.
     "wt" #'im-tab-bar-new-tab ;; tab
     "wn" #'tab-bar-rename-tab ;; name
     "wm" #'tab-move ;; move
-    "ws" #'tab-bar-switch-to-tab ;; switch
+    ;; "ws" #'tab-bar-switch-to-tab ;; switch
     "wl" #'tab-bar-switch-to-recent-tab ;; last
     "wk" #'tab-close ;; kill
     ;; extra
     "wi" #'im-print-buffer-file-info
     ;; buffer
-    "wb" #'bufler)
+    "wb" #'bufler
+    ;; ace-window
+    "wa" #'ace-window
+    "ws" #'ace-swap-window)
 
   (evil-define-key '(normal insert motion) 'global
     (kbd "M-1") (λ-interactive (tab-bar-select-tab 1))
