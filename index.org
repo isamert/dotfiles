@@ -243,12 +243,12 @@ It can be installed through homebrew:
 
   # focus monitor
   # lcmd + , and lcmd + .
-  lcmd - 0x2F  : yabai -m display --focus 1
-  lcmd - 0x2B  : yabai -m display --focus 2
+  lcmd - 0x2B  : yabai -m display --focus west
+  lcmd - 0x2F  : yabai -m display --focus east
 
   # send window to monitor
-  shift + lcmd - 0x2F  : yabai -m window --display 1; # yabai -m display --focus 1
-  shift + lcmd - 0x2B  : yabai -m window --display 2; # yabai -m display --focus 1
+  shift + lcmd - 0x2F  : yabai -m window --display east; # yabai -m display --focus 1
+  shift + lcmd - 0x2B  : yabai -m window --display west; # yabai -m display --focus 1
 
   # resize windows
   lcmd + alt - l : yabai -m window --resize right:20:0
