@@ -1371,6 +1371,8 @@ Easily switch between contexts with completion.
       # ^ fzf history search keybindings
       $HOME/.nix-profile/share/fzf/key-bindings.zsh
       # ^ fzf history search keybindings
+      $HOME/.config/zsh/*.sh
+      # ^ Stuff that I tangle from other files
       $HOME/.extrarc
       # ^ Contains stuff that I don't want to commit to git
   )

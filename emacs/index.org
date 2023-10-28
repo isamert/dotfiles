@@ -2770,9 +2770,16 @@ This is a built-in mode for providing basic outlining features. Here are a few c
   ;; I make use of this function
   (autoload 'eat-make "eat")
 
+  ;; You may need to call `eat-compile-terminfo' after installing eat.
   (use-package eat
-    :straight (:repo "https://codeberg.org/akib/emacs-eat.git")
-    :after eshell
+    :straight (:type git
+               :host codeberg
+               :repo "akib/emacs-eat"
+               :files ("*.el" ("term" "term/*.el") "*.texi"
+                       "*.ti" ("terminfo/e" "terminfo/e/*")
+                       ("terminfo/65" "terminfo/65/*")
+                       ("integration" "integration/*")
+                       (:exclude ".dir-locals.el" "*-tests.el")))
     :config
     (eat-eshell-mode))
 
@@ -2799,6 +2806,12 @@ This is a built-in mode for providing basic outlining features. Here are a few c
     (call-interactively #'im-eshell))
 #+end_src
 
+*** Integrate EAT with ZSH
+This will be automatically sourced within .zshrc.
+
+#+begin_src sh :tangle ~/.config/zsh/eat-zsh-integration.sh
+  [[ -n "$EAT_SHELL_INTEGRATION_DIR" ]] && source "$EAT_SHELL_INTEGRATION_DIR/zsh"
+#+end_src
 *** Proper command completion
 This package provides command, subcommand and argument completion using fish shell. You need to have fish shell installed. There is also helm version that provides argument documentation but I haven't tried it yet and I need to make it work with corfu instead of helm.
 
