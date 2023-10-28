@@ -8170,7 +8170,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
            (vars (org-babel--get-vars params)))
       (setq query (org-babel-expand-body:bqsql query params))
       (with-current-buffer buf (erase-buffer))
-      (setq process (start-process "query" buf "bq" "query" "--quiet" "--nouse_legacy_sql" "--format" format "--job_id" job-id query))
+      (setq process (start-process "query" buf "bq" "query" "--quiet" "--max_rows" "100000" "--nouse_legacy_sql" "--format" format "--job_id" job-id query))
       (set-process-sentinel
        process
        (lambda (p m)
