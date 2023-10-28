@@ -4389,7 +4389,7 @@ Other complementary packages:
          (when ,desc
            (add-to-list 'project-switch-commands '(,(intern fn) ,desc)))
          (when ,key
-           (define-key project-prefix-map ,key #',(intern fn))))))
+           (define-key project-prefix-map ,(kbd key) #',(intern fn))))))
 
   (setq project-switch-commands '())
   (im-projectelify :cmd im-shell-for :desc "Eshell" :key "e")
@@ -4398,7 +4398,7 @@ Other complementary packages:
   (im-projectelify :cmd im-term :desc "terminal" :key "t" :dont-wrap t)
   (im-projectelify :cmd im-shell-command :desc "Run shell command" :key "!")
   (im-projectelify :cmd im-find-file-in :desc "Files" :key "f" :non-interactive t)
-  (im-projectelify :cmd dired :desc "Dired" :key "D" :dir-as-param t)
+  (im-projectelify :cmd dired :desc "Dired" :key "RET" :dir-as-param t)
   (im-projectelify :cmd magit-status :desc "Magit" :key "m")
   (im-projectelify :cmd consult-ripgrep :desc "Grep" :key "g")
   (im-projectelify :cmd lab-list-project-merge-requests :desc "Merge requests" :key "M"  :dont-wrap t)
