@@ -2945,9 +2945,11 @@ Normally, if you have more than one eshell instance open and quit them consecuti
   ;;    - Not quite sure if this is a good idea though. Just experimenting.
   (defun im-eshell-append-history ()
     "Call `eshell-write-history' with the `append' parameter set to `t'."
-    (when (and eshell-history-ring (eq eshell-last-command-status 0))
+    (when (and eshell-history-ring
+               (eq eshell-last-command-status 0)
+               (ring-elements eshell-history-ring))
       (let ((last-elem (s-trim (car (ring-elements eshell-history-ring))))
-            (prev-elem (s-trim (nth 1 (ring-elements eshell-history-ring)))))
+            (prev-elem (or (ignore-errors (s-trim (nth 1 (ring-elements eshell-history-ring)))) "")))
         (when (and (not (string= last-elem prev-elem))
                    (not (s-matches? im-eshell-history-blacklist last-elem)))
           (let ((newest-cmd-ring (make-ring 1)))
