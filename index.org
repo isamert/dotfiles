@@ -2554,6 +2554,79 @@ Enabling uBlock [[https://github.com/gorhill/uBlock/wiki/Cloud-storage][cloud st
   eksisozluk.com##.main-left-frame.robots-nocontent
   ||seyler.eksisozluk.com/sozluk/baslik/294386?style=dark$subdocument
 #+end_src
+** QuteBrowser
+#+begin_src python :tangle (when-on :darwin "~/.qutebrowser/config.py" :linux "~/.config/qutebrowser/config.py")
+  c.content.blocking.adblock.lists = ['https://easylist.to/easylist/easylist.txt', 'https://easylist.to/easylist/easyprivacy.txt']
+  c.content.blocking.method = 'both'
+  c.content.blocking.enabled = True
+  c.content.pdfjs = True
+  c.fonts.default_family = ['Iosevka Nerd Font']
+  c.fonts.default_size = '14pt'
+  c.hints.chars = 'asdfghjklqweuio'
+  c.fonts.hints = 'normal 16pt Helvetica'
+  c.hints.uppercase = True
+  c.input.insert_mode.auto_load = True
+  c.input.mouse.rocker_gestures = True
+  c.statusbar.position = 'top'
+  c.statusbar.show = 'never'
+  c.completion.shrink = True
+  c.url.default_page = 'https://start.duckduckgo.com/'
+  c.url.searchengines = {
+      'DEFAULT': 'https://google.com/search?q={}',
+      'g': 'https://google.com/search?q={}',
+      'd': 'https://duckduckgo.com/?q={}',
+      'yt': 'https://www.youtube.com/results?search_query={}',
+      'r': 'https://reddit.com/r/{}',
+      'a': 'https://web.archive.org/web/{}',
+      'nix': 'https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query={}',
+  }
+  c.url.yank_ignored_parameters = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+  c.editor.command = ['emacsclient', '-c', '{}']
+  c.fonts.hints = 'normal 16pt Helvetica'
+  c.window.hide_decoration = True
+
+  config.bind('t', 'cmd-set-text -s :open -t')
+  config.bind('T', 'cmd-set-text :open -t -r {url:pretty}')
+  config.bind('O', 'cmd-set-text :open {url:pretty}')
+
+  config.bind('b', 'cmd-set-text -sr :tab-focus')
+  config.bind('B', 'cmd-set-text -s :quickmark-load -t')
+
+  config.bind('j', 'scroll-px 0 200')
+  config.bind('k', 'scroll-px 0 -200')
+  config.bind('J', 'tab-next')
+  config.bind('K', 'tab-prev')
+  config.bind('<Alt-J>', 'tab-move -')
+  config.bind('<Alt-K>', 'tab-move +')
+
+  config.bind('<Alt-x>', 'cmd-set-text :')
+
+  config.bind(',m', 'spawn mpv {url}')
+  config.bind(',M', 'hint links spawn mpv {hint-url}')
+
+  config.bind(';i', 'hint images tab')
+  config.bind(';I', 'hint images yank')
+
+  # Ctrl-E is the go-to EOL binding and I don't want qutebrowser to
+  # override it
+  config.unbind('<Ctrl-E>', mode='insert')
+  config.bind('<Alt-A>', 'edit-text', mode='insert')
+  config.bind('<Alt-E>', 'edit-text', mode='insert')
+
+  c.content.blocking.whitelist = ['https://*.trendyol.com']
+
+  config.bind('P', 'spawn --userscript org-pass')
+
+  c.aliases = {
+      'w': 'session-save',
+      'q': 'close',
+      'qa': 'quit',
+      'wq': 'quit --save',
+      'wqa': 'quit --save',
+  }
+
+  config.load_autoconfig(False)
+#+end_src
 * Some desktop files
 ** .local/share/applications/jaro.desktop
 #+begin_src conf :tangle (when-linux "~/.local/share/applications/jaro.desktop")
