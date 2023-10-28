@@ -284,7 +284,6 @@ It can be installed through homebrew:
   hyper - p : emacsclient --eval "(im-globally (im-password-act))"
   hyper - v : emacsclient --eval "(empv-toggle-video)"
   hyper - g : emacsclient --eval "(im-globally (im-gitlab-select-project))"
-  hyper - y : osascript -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
   hyper - return : open -n -a 'Alacritty.app'
 #+end_src
 
@@ -330,6 +329,18 @@ To enable it, run this:
 
 #+begin_src sh
   launchctl load -w ~/Library/LaunchAgents/net.isamert.kdeconnect.plist
+#+end_src
+
+** Clear all notifications with a keypress
+Save the script by running the next code block:
+#+begin_src sh
+  curl 'https://gist.githubusercontent.com/lancethomps/a5ac103f334b171f70ce2ff983220b4f/raw/50a04a65f16349a70884f490f856f27021ac396e/close_notifications_applescript.js' > ~/.local/bin/macos-clear-all-notifications.js
+#+end_src
+
+And here is the skhd binding:
+
+#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
+  hyper - y : osascript -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
 #+end_src
 
 * Linux
