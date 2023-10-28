@@ -182,13 +182,8 @@ Installation and enabling are done through homebrew:
 
 #+begin_src sh
   brew install koekeishiya/formulae/yabai
-
-  # stop, and upgrade yabai
-  brew services stop yabai
-  brew upgrade yabai
-
-  # finally, start yabai
-  brew services start yabai
+  yabai --install-service
+  yabai --start-service
 #+end_src
 
 #+begin_src sh :tangle (when-darwin "~/.config/yabai/yabairc")
@@ -215,7 +210,8 @@ It can be installed through homebrew:
 
 #+begin_src sh
   brew install koekeishiya/formulae/skhd
-  brew services start skhd
+  skhd --install-service
+  skhd --start-service
 #+end_src
 
 *** Window manager
@@ -424,7 +420,7 @@ Some references for editing this configuration:
 - https://github.com/kmonad/kmonad/blob/master/src/KMonad/Keyboard/Keycode.hs
 - https://old.reddit.com/r/emacs/comments/oyzfz9/kmonad_and_the_power_of_infinite_leader_keys/
 
-*** Installation
+*** Installation, Linux
 I use the AUR package ~kmonad-git~ for my Linux machine and compile it manually on Mac. Following configuration is needed for Linux and taken from [[https://github.com/kmonad/kmonad/blob/master/doc/faq.md#q-how-do-i-get-uinput-permissions][here]].
 
 #+begin_src sh
@@ -441,6 +437,12 @@ I use the AUR package ~kmonad-git~ for my Linux machine and compile it manually 
 
 Restart your machine.
 
+*** Installation, MacOS
+#+begin_src sh
+  git clone --recursive https://github.com/kmonad/kmonad.git
+  cd kmonad
+  nix build "./nix?submodules=1"
+#+end_src
 *** Generic configuration
 #+name: kmonad-device
 #+begin_src emacs-lisp
@@ -678,7 +680,7 @@ This is the configuration for the embedded keyboard on mac.
     tab  q    w    e    r    t    y    u    i    o    p    [    ]
     @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
     lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
-    lctl fn   lalt lmet           spc            @sym cmp  rmet rctl)
+    lctl fn   lalt lmet           spc            @sym ralt rctrl rctl)
 
   «kmonad-layers»
 #+end_src
