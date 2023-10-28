@@ -42,7 +42,7 @@ if [[ $FRESH != 1 ]]; then
     exit 0
 fi
 
-if which emacs; then
+if ! which emacs; then
     echo ""
     read -r -p ">> Emacs is not installed, want to install it? [y/n]" choice
     if [[ $choice =~ ^[Yy]$ ]]; then
