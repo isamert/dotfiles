@@ -4382,7 +4382,7 @@ Other complementary packages:
   (im-projectelify :cmd im-shell-for :desc "Eshell" :key "e")
   (im-projectelify :cmd project-query-replace-regexp :desc "Replace in project (regexp)" :key "r" :dont-wrap t)
   (im-projectelify :cmd project-kill-buffers :desc "Kill buffers" :key "k" :dont-wrap t)
-  (im-projectelify :cmd im-vterm-project :desc "vterm" :key "t" :dont-wrap t)
+  (im-projectelify :cmd im-term :desc "terminal" :key "t" :dont-wrap t)
   (im-projectelify :cmd im-shell-command :desc "Run shell command" :key "!")
   (im-projectelify :cmd im-find-file-in :desc "Files" :key "f" :non-interactive t)
   (im-projectelify :cmd dired :desc "Dired" :key "D" :dir-as-param t)
