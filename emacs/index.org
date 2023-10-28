@@ -9076,12 +9076,12 @@ Good for buffer management, especially for groupped killings.
     (interactive "sIssue key: ")
     (when-let (match (s-match "browse/\\([a-zA-Z0-9-]+\\)/?" key))
       (setq key (nth 1 match)))
-    (let ((buffer (get-buffer-create (format "*jira:%s*" key))))
-      (unless (eq (current-buffer) buffer)
-        (switch-to-buffer-other-window buffer)))
-    (erase-buffer)
     (let ((ticket (jiralib2-get-issue key)))
       (let-alist ticket
+        (let ((buffer (get-buffer-create (format "*jira:%s:%s*" key .fields.summary))))
+          (unless (eq (current-buffer) buffer)
+            (switch-to-buffer-other-window buffer)))
+        (erase-buffer)
         (insert
          (concat
           "* "
