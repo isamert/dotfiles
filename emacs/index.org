@@ -2700,7 +2700,7 @@ I forget to clock in (and out) most of the time, so I want Emacs to remind clock
       (when (y-or-n-p "Want to clock in?")
         (im-bullet-clock-in-a-task)))))
 
-  (run-with-timer 60 600 #'im-org-check-clock)
+  ;; (run-with-timer 60 600 #'im-org-check-clock)
 #+end_src
 * Other packages
 ** eldoc
