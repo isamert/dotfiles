@@ -8419,7 +8419,7 @@ I want to show ~consult-buffer~ when I open a new tab to be able to quickly jump
   (setq tab-line-tabs-function #'im-tab-line-buffers)
   (setq tab-line-tab-name-function #'tab-line-tab-name-truncated-buffer)
   (setq tab-line-tab-name-truncated-max 25)
-  (global-tab-line-mode)
+  ;; (global-tab-line-mode)
 
   (defvar im-tab-line-hidden-buffer-name-regexp
     (concat
