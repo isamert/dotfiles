@@ -7805,10 +7805,10 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
     :hook (emacs-lisp-mode . highlight-quoted-mode))
 
   ;; Replace package name prefixes with given character.
-  (use-package nameless
-    :straight (:host github :repo "Malabarba/Nameless")
-    :custom (nameless-prefix "⟩")
-    :hook (emacs-lisp-mode . nameless-mode))
+  ;; (use-package nameless
+  ;;   :straight (:host github :repo "Malabarba/Nameless")
+  ;;   :custom (nameless-prefix "⟩")
+  ;;   :hook (emacs-lisp-mode . nameless-mode))
 #+end_src
 
 *** Linting & package development
