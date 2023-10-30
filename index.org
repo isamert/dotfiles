@@ -1771,6 +1771,22 @@ After issuing the command above, you need to do ~PREFIX I~ to install all plugin
   run '~/.tmux/plugins/tpm/tpm'
 #+end_src
 * Utilities
+** git
+#+begin_src conf :tangle ~/.gitconfig
+  [user]
+    email = isamertgurbuz@gmail.com
+    name = Isa Mert Gurbuz
+  [github]
+    user = isamert
+  [rebase]
+    autoStash = true
+  [pull]
+    rebase = true
+  [fetch]
+    prune = true
+  [status]
+    short = true
+#+end_src
 ** jaro
 *** Configuration
 In this file I define some file associations. Please refer to [[https://github.com/isamert/jaro][jaro]] README for more info. It's simply an =xdg-open= alternative.
