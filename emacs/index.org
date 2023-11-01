@@ -7400,14 +7400,18 @@ Here are some functions that I use while developing with Deno.
         (funcall-interactively #'lsp-workspace-shutdown))
       (lsp)))
 
-  (defun im-deno-cache-buffer-dependencies ()
-    "Install and cache dependencies stated in current Deno file."
-    (interactive)
+  (defun im-deno-cache-buffer-dependencies (invalidate?)
+    "Install and cache dependencies stated in current Deno file.
+  If INVALIDATE? is non-nil, then force reload dependencies instead
+  of just pulling non-cached ones."
+    (interactive "P")
     ;; TODO reload lsp on file on save?
     (let ((buf (current-buffer)))
       (save-buffer)
       (im-shell-command
-       :command (format "deno cache %s" (f-relative (buffer-file-name)))
+       :command (format "deno cache %s %s"
+                        (if invalidate? "-r" "")
+                        (f-relative (buffer-file-name)))
        :on-start
        (lambda (&rest _)
          (message ">> Downloading deps..."))
