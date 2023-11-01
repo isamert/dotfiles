@@ -8165,6 +8165,8 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
   of the results drawer."
     (let* ((job-id (im-uuid))
            (format (or (alist-get :format params) "pretty"))
+           (api (alist-get :api params))
+           (project-id (alist-get :project-id params))
            (buffer? (alist-get :buffer params))
            (json-out? (s-matches? "json" format))
            (buf (get-buffer-create "*im-bqsql*"))
@@ -8174,7 +8176,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
            (vars (org-babel--get-vars params)))
       (setq query (org-babel-expand-body:bqsql query params))
       (with-current-buffer buf (erase-buffer))
-      (setq process (start-process "query" buf "bq" "query" "--quiet" "--max_rows" "100000" "--nouse_legacy_sql" "--format" format "--job_id" job-id query))
+      (setq process (apply #'start-process `("query" ,buf "bq" "query" ,@(when api `("--api" ,api)) ,@(when project-id `("--project_id" ,project-id)) "--quiet" "--max_rows" "100000" "--nouse_legacy_sql" "--format" ,format "--job_id" ,job-id ,query)))
       (set-process-sentinel
        process
        (lambda (p m)
