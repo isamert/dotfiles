@@ -3752,7 +3752,7 @@ To sync it automatically:
 
 ** eww -- web browser
 #+begin_src emacs-lisp
-  (setq browse-url-secondary-browser-function #'xwwp)
+  (setq browse-url-secondary-browser-function #'browse-url-firefox)
   (setq browse-url-handlers
         '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
           (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
@@ -3762,7 +3762,7 @@ To sync it automatically:
           (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
           (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
           (".*github.com/.*issues/.*" . (lambda (link &rest _) (im-github-issue-view link)))
-          (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . xwwp)
+          (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . browse-url-firefox)
           ("." . (lambda (link &rest _) (im-eww link)))))
 
   (use-package eww
