@@ -11754,6 +11754,16 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
                          (point-max))))
       (goto-char (point-min))))
 #+end_src
+** My git configuration
+#+begin_src emacs-lisp
+  (defun im-git-use/apply-my/personal-config ()
+    "Configure current repo to use my personal (non-work) git info."
+    (interactive)
+    (lab-git-origin-switch-to-ssh)
+    (shell-command-to-string "git config user.name \"Isa Mert Gurbuz\"")
+    (shell-command-to-string "git config user.email \"isamertgurbuz@gmail.com\"")
+    (message "Done."))
+#+end_src
 * Operating system related
 ** Sound output chooser
 #+begin_src emacs-lisp
