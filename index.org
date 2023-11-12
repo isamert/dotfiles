@@ -1074,10 +1074,6 @@ To rebuild completions, if something is not right, use the following:
   # Disable auto-escape-on-insert functionality
   DISABLE_MAGIC_FUNCTIONS=true
 
-  # Required some plugins (like fzf-tab) to work
-  autoload -Uz compinit
-  compinit
-
   ### Added by Zinit's installer
   if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
       print -P "%F{33} %F{220}Installing %F{33}ZDHARMA-CONTINUUM%F{220} Initiative Plugin Manager (%F{33}zdharma-continuum/zinit%F{220})‚Ä¶%f"
@@ -1104,6 +1100,10 @@ To rebuild completions, if something is not right, use the following:
         zsh-users/zsh-history-substring-search \
         kutsan/zsh-system-clipboard \
         Aloxaf/fzf-tab
+
+  # Required some plugins (like fzf-tab) to work
+  autoload -Uz compinit
+  compinit
 #+end_src
 
 ** Key bindings
