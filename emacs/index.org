@@ -8579,12 +8579,13 @@ Good for buffer management, especially for groupped killings.
     "w>" #'enlarge-window-horizontally
     "w<" #'shrink-window-horizontally
     ;; workspace (tab-bar-mode)
+    "W" #'tab-bar-switch-to-tab
     "wu" #'tab-bar-history-back ;; undo
     "wr" #'tab-bar-history-forward ;; redo
     "wt" #'im-tab-bar-new-tab ;; tab
     "wn" #'tab-bar-rename-tab ;; name
     "wm" #'tab-move ;; move
-    ;; "ws" #'tab-bar-switch-to-tab ;; switch
+    "ws" #'tab-bar-switch-to-tab ;; switch
     "wl" #'tab-bar-switch-to-recent-tab ;; last
     "wk" #'tab-close ;; kill
     ;; extra
@@ -8594,6 +8595,10 @@ Good for buffer management, especially for groupped killings.
     ;; ace-window
     "wa" #'ace-window
     "ws" #'ace-swap-window)
+
+  ;; Buffer related bindings
+  (im-leader
+    "b0" #'erase-buffer)
 
   (evil-define-key '(normal insert motion) 'global
     (kbd "M-1") (λ-interactive (tab-bar-select-tab 1))
