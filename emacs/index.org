@@ -7108,7 +7108,9 @@ throughout your projects.
            (let ((str (concat (s-trim expr) "\n")))
              (with-current-buffer ,repl-buffer-name
                (insert (format ">>> %s" expr)))
-             (process-send-string ,process-var str)))
+             (process-send-string ,process-var str)
+             (when (evil-visual-state-p)
+               (evil-force-normal-state))))
 
            ;;; defun im-REPL-repl-eval
          (defun ,(intern (format "im-%s-repl-eval" (downcase name))) ()
@@ -7140,7 +7142,7 @@ throughout your projects.
    (lambda (str)
      (while (string-match "/\\*\\([^*]\\|\\*[^/]\\)*\\*/" str)
        (setq str (replace-match "" t t str)))
-     str)
+     (s-join "" (s-split "\n" str)))
    :expr (im-ts-current-expression)
    :parser
    (lambda (out)
