@@ -2519,6 +2519,10 @@ Also need to enable following config to make userChrome.css work:
 
 #+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/user.js")
   user_pref("browser.toolbars.bookmarks.visibility", "never");
+
+  // Don't show password suggestions from other subdomains
+  user_pref("signon.includeOtherSubdomainsInLookup", false);
+
   // Enable syncing of UI customizations
   user_pref("services.sync.prefs.sync.browser.uiCustomization.state", true);
 
