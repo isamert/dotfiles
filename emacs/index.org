@@ -1731,8 +1731,6 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
   (use-package org-contrib :after org)
 #+end_src
 
-#+RESULTS:
-
 ** Keybindings
 #+begin_src emacs-lisp
   (use-package evil-org
@@ -3784,7 +3782,7 @@ To sync it automatically:
     :commands eww
     :hook (eww-mode . tab-line-mode)
     :general
-    (im-leader
+    (im-leader-v
       "ew" #'im-eww)
     (:keymaps 'eww-mode-map :states 'normal
      "Y" #'eww-copy-page-url
@@ -3813,7 +3811,7 @@ To sync it automatically:
 
   (defun im-eww (url)
     "Like `eww' but opens in a new eww buffer instead of reusing the same one."
-    (interactive (list (read-string "URL: ")))
+    (interactive (list (read-string "URL: " (im-region-or ""))))
     (eww url t))
 
   (defun im-eww-avy-follow (&optional follow-type)
@@ -7213,6 +7211,9 @@ throughout your projects.
     :config
     (setq markdown-command "multimarkdown")
     (setq markdown-fontify-code-blocks-natively t))
+
+  (use-package edit-indirect
+    :after markdown-mode)
 #+END_SRC
 
 ** haskell
@@ -8387,6 +8388,10 @@ I initialize ~sql-connection-alist~ in another file that is not checked out to t
         (lsp-sql-switch-connection))
       (switch-to-buffer buff)))
 
+#+end_src
+** go
+#+begin_src emacs-lisp
+  (use-package go-mode)
 #+end_src
 * Window and buffer management
 ** tab-bar-mode
