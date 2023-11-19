@@ -1741,6 +1741,8 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
     (:keymaps 'org-mode-map :states 'normal
      "<RET>" #'org-return
      "S-<return>" #'im-org-link-to-indirect-buffer)
+    (:keymaps 'org-mode-map :states '(insert normal)
+     "M-Q" #'im-org-unfill-paragraph)
     (im-leader
       "oyy" #'im-org-store-link-dwim
       "oa"  #'org-agenda
@@ -2701,6 +2703,19 @@ I forget to clock in (and out) most of the time, so I want Emacs to remind clock
         (im-bullet-clock-in-a-task)))))
 
   ;; (run-with-timer 60 600 #'im-org-check-clock)
+#+end_src
+** im-org-unfill-paragraph
+#+begin_src emacs-lisp
+  (defun im-org-unfill-paragraph (&optional justify region)
+    "Unfill the paragraph at point.
+  This function unfills the paragraph at point, removing line
+  breaks and joining the lines together. This function relies on
+  `org-fill-paragraph' to perform the actual unfilling."
+    (interactive (progn
+         (barf-if-buffer-read-only)
+         (list (when current-prefix-arg 'full) t)))
+    (let ((fill-column 9999))
+      (org-fill-paragraph justify region)))
 #+end_src
 * Other packages
 ** eldoc
