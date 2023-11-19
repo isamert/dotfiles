@@ -4618,7 +4618,8 @@ I use =(consult-buffer)= function for switching between buffers/files/marks etc.
 
   (defun im-my-files ()
     "Return list of all files I frequently use."
-    `(,@(directory-files org-directory t "^\\w+.*.org$")
+    `(,@(directory-files im-scratch-project-path t)
+      ,@(directory-files org-directory t "^\\w+.*.org$")
       ,@(directory-files im-load-path t "\\.el$")))
 
   (im-append! consult-buffer-sources 'im-consult-source-files)
@@ -4991,20 +4992,21 @@ It is nonsensical to use =flymake= and =flycheck= at the same time. I mainly use
 #+end_src
 ** lsp-mode
 - See: https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
+- Using ~lsp-deferred~ instead of ~lsp~ is important because otherwise lsp kicks in before reading dir-local or buffer-local variables.
 #+BEGIN_SRC emacs-lisp
   (setenv "LSP_USE_PLISTS" "true")
   (use-package lsp-mode
-    :hook ((web-mode . lsp)
-           (js-mode . lsp)
-           (tsx-ts-mode . lsp)
-           (typescript-ts-mode . lsp)
-           (dhall-mode . lsp)
-           (haskell-mode . lsp)
-           (kotlin-mode . lsp)
-           (rust-mode . lsp)
-           (go-mode . lsp)
-           (java-mode . lsp)
-           (java-ts-mode . lsp)
+    :hook ((web-mode . lsp-deferred)
+           (js-mode . lsp-deferred)
+           (tsx-ts-mode . lsp-deferred)
+           (typescript-ts-mode . lsp-deferred)
+           (dhall-mode . lsp-deferred)
+           (haskell-mode . lsp-deferred)
+           (kotlin-mode . lsp-deferred)
+           (rust-mode . lsp-deferred)
+           (go-mode . lsp-deferred)
+           (java-mode . lsp-deferred)
+           (java-ts-mode . lsp-deferred)
            ;; See:
            ;; https://github.com/minad/corfu/wiki#configuring-corfu-for-lsp-mode
            ;; Lsp-mode filters candide using the server each time you
@@ -11791,6 +11793,29 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
     (shell-command-to-string "git config user.name \"Isa Mert Gurbuz\"")
     (shell-command-to-string "git config user.email \"isamertgurbuz@gmail.com\"")
     (message "Done."))
+#+end_src
+** Scratch project
+I have a project pre-configured for scratch files. Like default scratch buffer, I also have different files for different languages that I use similarly to the scratch buffer. Due to the nature of other languages, it's not possible to have a simple buffer. Rather, I have to have a concrete file.
+#+begin_src emacs-lisp
+  (defvar im-scratch-project-path "~/workspace/temp/scratch/")
+
+  (defun im-initialize-scratch-project ()
+    "Initialize a project where scratch files are kept."
+    (unless (f-exists? im-scratch-project-path)
+      (f-mkdir im-scratch-project-path)
+      ;; Create scratch.ts
+      (f-write-text "import * as R from 'npm:ramda';" 'utf-8 (f-join im-scratch-project-path "scratch.ts"))
+      (f-write-text ";;; Directory Local Variables            -*- no-byte-compile: t -*-
+  ;;; For more information see (info \"(emacs) Directory Variables\")
+
+  ((typescript-ts-mode . ((lsp-enabled-clients . (deno-ls)))))"
+                    'utf-8 (f-join im-scratch-project-path ".dir-locals.el"))
+      ;; Configure the project
+      (let ((default-directory im-scratch-project-path))
+        (shell-command-to-string "git init"))
+      (message ">> scratch project is ready!")))
+
+  (add-hook 'after-init-hook #'im-initialize-scratch-project)
 #+end_src
 * Operating system related
 ** Sound output chooser
