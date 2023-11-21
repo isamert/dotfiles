@@ -7399,6 +7399,16 @@ This is a package I wrote for inserting JSDoc comments easily. Check out the [[h
        (-find getter)
        (funcall getter))))
 #+end_src
+*** ob-deno
+#+begin_src emacs-lisp
+  (use-package ob-deno
+    :straight
+    (:host github
+     :repo "jflatow/ob-deno"
+     :branch "jflatow/async"))
+
+  (add-to-list 'org-src-lang-modes '("deno" . typescript-ts))
+#+end_src
 *** Deno utils
 Here are some functions that I use while developing with Deno.
 
