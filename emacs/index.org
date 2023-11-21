@@ -6211,7 +6211,14 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
 ** swagg.el -- Swagger UI
 #+begin_src emacs-lisp
   (use-package swagg
-    :straight (:host github :repo "isamert/swagg.el"))
+    :straight (:host github :repo "isamert/swagg.el")
+    :general
+    (im-leader
+      "us" #'swagg-request-with-rest-block
+      "uS" #'swagg-request)
+    :config
+    (setq swagg-rest-block-org-header-tags "verb")
+    (setq swagg-fetch-lang "deno :allow net"))
 #+end_src
 ** whisper -- Recording and transcribing audio locally
 #+begin_src emacs-lisp
