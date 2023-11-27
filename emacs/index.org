@@ -7091,20 +7091,20 @@ throughout your projects.
            (when (,is-repl-running)
              (delete-process ,process-var))
            (setq im-repl-last-result "")
-           (let ((repl (start-process ,repl-buffer-name
-                                      ,repl-buffer-name
-                                      ,(downcase name)
-                                      ,@args)))
+           ;; See this: https://emacs.stackexchange.com/questions/40603/process-input-seems-buggy-in-emacs-on-os-x
+           (let* ((process-connection-type nil)
+                  (repl (start-process ,repl-buffer-name
+                                       ,repl-buffer-name
+                                       ,(downcase name)
+                                       ,@args)))
              (setq ,process-var repl)
              (set-process-filter
               repl
               (lambda (proc out)
                 (with-current-buffer ,repl-buffer-name
                   (goto-char (point-max))
-                  (insert (ansi-color-apply out))
-                  (insert "\n"))
+                  (insert (ansi-color-apply out)))
                 (setq im-repl-last-result (concat im-repl-last-result (ansi-color-apply out)))
-                ;; TODO: change "^> $" per REPL type
                 (when (s-matches? ,input-regexp out)
                   (let* ((result (,parser im-repl-last-result)))
                     (setq im-repl-last-result result)
@@ -7129,7 +7129,8 @@ throughout your projects.
            (setq im-repl-last-result "")
            (let ((str (concat (s-trim expr) "\n")))
              (with-current-buffer ,repl-buffer-name
-               (insert (format ">>> %s" expr)))
+               (goto-char (point-max))
+               (insert str))
              (process-send-string ,process-var str)
              (when (evil-visual-state-p)
                (evil-force-normal-state))))
@@ -7157,14 +7158,16 @@ throughout your projects.
    :name "Deno"
    :args ()
    :prefix "=> "
-   :input-regexp "^> $"
+   :input-regexp "^> "
    ;; Remove block comments before sending, because Deno repl cant
    ;; handle them properly.
    :process-region
    (lambda (str)
      (while (string-match "/\\*\\([^*]\\|\\*[^/]\\)*\\*/" str)
        (setq str (replace-match "" t t str)))
-     (s-join "" (s-split "\n" str)))
+     (s-join "" (->>
+                 (s-split "\n" str)
+                 (--filter (not (s-matches? "^[ ]*//" it))))))
    :expr (im-ts-current-expression)
    :parser
    (lambda (out)
