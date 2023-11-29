@@ -33,7 +33,7 @@
     ("https://karthinks.com/index.xml" blog dev emacs)
     ("https://eli.thegreenplace.net/feeds/all.atom.xml" blog dev)
     ("https://drewdevault.com/feed.xml" blog dev)
-    ("https://haskell-explained.gitlab.io/blog/feeds/rss.xml" blog dev haskell)
+    ;; DOWN: ("https://haskell-explained.gitlab.io/blog/feeds/rss.xml" blog dev haskell)
     ("http://www.haskellforall.com/feeds/posts/default" blog dev haskell)
     ("https://chrispenner.ca/atom.xml" blog dev haskell)
     ("https://emacsredux.com/atom.xml" blog emacs)
@@ -43,17 +43,17 @@
     ("http://xion.io/feeds/atom.xml" blog dev rust)
     ("https://ag91.github.io/rss.xml" blog dev emacs)
     ("https://chrisdone.com/rss.xml" blog dev haskell)
-    ("https://notes.srid.ca/blog.xml" blog dev haskell)
+    ;; DOWN: ("https://notes.srid.ca/blog.xml" blog dev haskell)
     ("https://two-wrongs.com/feed" blog dev)
     ("https://beepb00p.xyz/rss.xml" blog dev)
     ("https://www.rousette.org.uk/index.xml" blog dev emacs essay)
     ("https://jao.io/blog/rss.xml" blog dev emacs)
-    ("https://psachin.gitlab.io/index.xml" blog dev emacs lisp)
+    ;; DOWN: ("https://psachin.gitlab.io/index.xml" blog dev emacs lisp)
     ("https://fuco1.github.io/rss.xml" blog dev emacs lisp)
-    ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay) ;; Gwern
+    ;; DOWN: ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay) ;; Gwern
     ("https://www.lesswrong.com/feed.xml?view=curated-rss" blog essay)
     ("https://writings.stephenwolfram.com/feed/" blog essay)
-    ("http://explosm.net/rss" comic)
+    ("https://explosm.net/rss.xml" comic)
     ("https://astralcodexten.substack.com/feed" blog essay) ;; Scott Alexander
     ("https://escapingflatland.substack.com/feed" blog essay) ;; Henrik Karlsson
     ("https://www.theinsight.org/feed" blog essay) ;; Zeynep Tufekci
@@ -98,8 +98,7 @@
     ("MentalOutlawStudios" youtube cli linux)
     ("UCbnGhYfkxiZdOPrZg4RBevw" youtube emacs cli linux) ;; Ravar's Path
     ("polyglut" youtube emacs) ;; Xah Lee
-    ("karthikchikmagalur" youtube dev emacs)
-    ("babyWOGUE" youtube linux fun)
+    ("UCZWadyLVO4ZnMgLrRVtS6VA" youtube linux fun) ;; babyWOGUE
     ("UC8ENHE5xdFSwx71u3fDH5Xw" youtube vim cli dev) ;; ThePrimeagen
     ("UCS4FAVeYW_IaZqAbqhlvxlA" youtube dev) ;; Context-Free
     ("UCkf4VIqu3Acnfzuk3kRIFwA" youtube cli) ;; gotbletu
@@ -117,14 +116,23 @@
     ("UCGSGPehp0RWfca-kENgBJ9Q" youtube fun skit) ;; jREG
     ("codyko69" youtube fun commentary)
     ("conmech" youtube fun turkish) ;; Efe Aydal
-    ("tvMisha" youtube fun turkish vlog)
-    ("KALTChannel" youtube fun turkish)
+    ("UCZRVHEVslkXoqXEYwJhlTxg" youtube fun turkish vlog) ;; Misha Defne
+    ("UCB12vt2obajvkegtlpb_F8Q" youtube fun turkish) ;; Kalt
     ("UCMixjxEx6t663lIf0aQBeSg" youtube turkish) ;; Sevan Nisanyan
     ("UCWXCrItCF6ZgXrdozUS-Idw" youtube fun animation) ; ExplosmEntertainment
 
     ;; Software tracking
-    ("alphapapa/org-ql" gh-release app)
-    ))
+    ("alphapapa/org-ql" gh-release app)))
+
+(defun im-get-youtube-channel-id-from-video-link (link-or-id)
+  "Get YouTube channel id from given video LINK-OR-ID.
+Using channel id is more reliable for retrieving videos with RSS."
+  (interactive "sVideo link/id: ")
+  (message
+   "Copied: %s"
+   (im-kill
+    (let-alist (im-request (format "%s/videos/%s" empv-invidious-instance (im-youtube-link-extract-id link-or-id)))
+      .authorId))))
 
 (provide 'im-feeds)
 ;;; im-feeds.el ends here
