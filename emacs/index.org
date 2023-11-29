@@ -5190,7 +5190,7 @@ Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files contains som
     (require 'vterm)
     (when-let ((pname (im-current-project-name)))
       (let* ((vterm-buffer-name (format "*vterm-proj-%s*" pname))
-             (default-directory (im-current-project-root))
+             (default-directory (or (im-current-project-root) default-directory))
              (existing (--find
                         (and
                          (s-prefix? "*vterm-proj" (buffer-name it))
@@ -8449,7 +8449,11 @@ Use a slightly modified version of ~tab-bar-tab-name-format~.
   (setq tab-bar-auto-width-max t)
   ;; ^ Hmmm
   (setq tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
-  (setq tab-bar-tab-name-function #'im-current-project-name)
+
+  (setq tab-bar-tab-name-function #'tab-bar-tab-name-current)
+  ;; FIXME: For some reason, my function gets slower over time. Dunno
+  ;; why, will investigate later.
+  ;; (setq tab-bar-tab-name-function #'im-current-project-name)
 #+end_src
 
 Evil has a default binding for switching between tabs with ~gt~ and ~gT~, switching forward and backward respectively. I just make them repeatable so that after first ~gt~ (~gT~) I can hammer down ~t~ (or ~T~) to switch next/prev tab quickly instead of doing ~gt~ (or ~gT~) again and again.
