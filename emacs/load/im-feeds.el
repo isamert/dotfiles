@@ -124,6 +124,9 @@
     ;; Software tracking
     ("alphapapa/org-ql" gh-release app)))
 
+;; For easy updating:
+;; (setq elfeed-feeds (mapcar #'im-elfeed--expand im-feeds))
+
 (defun im-get-youtube-channel-id-from-video-link (link-or-id)
   "Get YouTube channel id from given video LINK-OR-ID.
 Using channel id is more reliable for retrieving videos with RSS."
