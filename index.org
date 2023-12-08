@@ -2277,6 +2277,9 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
 * Browsers
 ** Firefox
 *** tridactyl
+:PROPERTIES:
+:ID:       1239046F-4A4A-4F33-B48A-1D9D6281AD62
+:END:
 - =:undo= has autocompletion, ie. lists all tabs that are closed.
 - =:tabopen= can (~t~ binding) can take =-c container-name= parameter, which opens tab in given container. Like =:tabopen -c work ...=. You don't need to write container name fully, first letter also suffices if it does not clash with any other container name.
 
@@ -2313,6 +2316,7 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   command emacs/eww withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(progn (eww "${JS_ARG}") (im-force-focus-emacs))'`)
   command emacs/meme-downloader withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}")'`)
   command emacs/meme-downloader-with-title withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
+  command emacs/visual-mode js (() => {tri.native.write("/tmp/tridactyl.source", document.documentElement.outerHTML); tri.native.run(`«sh("which emacsclient")» --eval '(progn (im-firefox-visual-mode) (im-force-focus-emacs))'`)})();
 
   " quick search
   set searchurls.g https://www.google.com/search?q=%s
