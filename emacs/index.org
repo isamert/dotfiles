@@ -1240,6 +1240,12 @@ Some small packages that enriches editing experience visually. I don't enable al
     (setq highlight-indent-guides-bitmap-function 'highlight-indent-guides--bitmap-line))
 #+end_src
 
+** Spacious padding
+Add some padding to Emacs frame to freshen things up.
+#+begin_src emacs-lisp
+  (use-package spacious-padding
+    :hook (after-init . spacious-padding-mode))
+#+end_src
 * evil-mode
 ** Basic configuration
 #+BEGIN_SRC emacs-lisp
@@ -3295,7 +3301,8 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
        (("W" writeroom-mode "Writeroom mode" :toggle t)
         (">" writeroom-increase-width "Width +")
         ("<" writeroom-decrease-width "Width -")
-        ("m" writeroom-toggle-mode-line "Toggle modeline" :toggle t))
+        ("m" writeroom-toggle-mode-line "Toggle modeline" :toggle t)
+        ("p" spacious-padding-mode "Spacious padding" :toggle t))
        "Zoom"
        (("0" text-scale-increase "Zoom In (Buffer)")
         ("9" text-scale-decrease "Zoom Out (Buffer)")
