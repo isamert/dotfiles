@@ -2306,6 +2306,9 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   bind ;2 recontain p
   bind ;3 recontain s
 
+  " editor
+  bind --mode=insert <C-i> composite emacs/visual-mode; editor
+
   " commands
   command withUrl composite get_current_url |
 
