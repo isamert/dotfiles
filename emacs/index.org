@@ -6475,6 +6475,22 @@ The interface is pretty intuitive. Go {back,forward} with {b,f} or {left,right} 
     (consult-gh-default-orgs-list '("isamert"))
     (consult-gh-default-clone-directory "~/Workspace/temp"))
 #+end_src
+** copilot
+- Do ~copilot-login~ to activate.
+- Turn on ~copilot-mode~ to use it.
+
+#+begin_src emacs-lisp
+  (use-package copilot
+    :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
+    :general
+    (:keymaps 'copilot-completion-map
+     "<right>" #'copilot-accept-completion
+     "<left>" #'copilot-cancel-completion
+     "<up>" #'copilot-previous-completion
+     "<down>" #'copilot-next-completion)
+    (:modes 'insert
+     "M-o z" #'copilot-complete))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple lines. It
