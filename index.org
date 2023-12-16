@@ -95,6 +95,12 @@ The following enables ~nix search~ command.
   experimental-features = nix-command flakes
 #+end_src
 * macOS
+** General configuration
+#+begin_src sh
+  # Disable gatekeeper, allows you to install apps from unidentified developers
+  sudo spctl --master-disable
+#+end_src
+
 ** Start applications at boot
 #+name: mac-launchagent-template
 #+begin_src xml
