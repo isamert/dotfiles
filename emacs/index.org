@@ -2133,20 +2133,20 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 #+begin_src emacs-lisp :tangle no
   (setq
    org-capture-templates
-   '(("g" "General todo/note")
+   `(("g" "General todo/note")
      ("gi" "Study later" item
       (file+olp bullet-org "Life backlog" "Investigate")
       "- [ ] %U %(im-org-make-link-string (read-string \"URL: \"))"
       :prepend t)
-     ("gt" "Life todo" entry
-      (file+headline bullet-org "Life backlog")
-      "** %?")
-     ("gc" "Computer todo" entry
-      (file+headline bullet-org "Computer backlog")
-      "**  %?" :prepend t)
-     ("gw" "Work todo" entry
-      (file+headline bullet-org "Work backlog")
-      "** TODO [#B] %?" :prepend t)
+     ("gt" "Life todo" plain
+      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Life backlog"))
+      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n")
+     ("gc" "Computer todo" plain
+      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Computer backlog"))
+      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n" :prepend t)
+     ("gw" "Work todo" plain
+      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Work backlog"))
+      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n" :prepend t)
      ("gb" "Free time backlog" item
       (file+headline bullet-org "Free time backlog")
       "- %U %?" :prepend t)
@@ -2154,7 +2154,7 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
      ("d" "Daily todo/summary/note")
      ("dt" "Daily TODO" plain
       (file+function bullet-org im-org-capture--find-daily-last-entry)
-      "** TODO [#B] %?")
+      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n")
      ("ds" "Daily summary" item
       (file+function bullet-org im-org-capture--find-daily-summary)
       "- %U %?")
@@ -2163,11 +2163,6 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
       (file+headline bullet-org "Inbox")
       "- %U %?"
       :prepend t)
-     ("I" "Inbox (for capturing from Signal, send \"note ...\" as text to myself)" item
-      (file+headline bullet-org "Inbox")
-      "- %U %c"
-      :prepend t
-      :immediate-finish t)
 
      ("s" "Snippets")
      ("ss" "Snippet" entry
@@ -2182,7 +2177,10 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
       "* %u\n"
       :prepend t)
      ("c" "Meeting/clock note" item
-      (clock))))
+      (clock))
+     ("m" "Watchlist item" plain
+      (file+function watchlist-org im-org-capture--find-first-top-level-todo-entry)
+      "* TODO %?\n:PROPERTIES:\n:CREATED_AT: %U\n:WHY: FILLME!\n:END:\n\n")))
 
   (defun im-org-capture--find-daily-last-entry ()
     (im-bullet-focus-today)
@@ -2191,6 +2189,32 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
   (defun im-org-capture--find-daily-summary ()
     (im-bullet-focus-today)
     (re-search-forward "^** Summary" nil t))
+
+  (defun im-org-capture--find-first-top-level-todo-entry ()
+    "Find first top-level TODO entry in current buffer.
+  This way you can insert new entry right after other non-TODO
+  entries."
+    (goto-char (point-min))
+    (re-search-forward "^\\* TODO" nil t)
+    (beginning-of-line))
+
+  (defun im-org-capture--find-first-second-level-todo-entry ()
+    "Find first second-level TODO entry in current buffer.
+  This way you can insert new entry right after other non-TODO
+  entries."
+    (goto-char (point-min))
+    (re-search-forward "^\\*\\* TODO" nil t)
+    (beginning-of-line))
+
+  (defun im-org-capture--find-first-top-level-todo-entry-within-header (header)
+    "Find first top-level TODO entry in under HEADER in current buffer."
+    (lambda ()
+      (goto-char (point-min))
+      (unless (re-search-forward (format "^\\*+ %s" header) nil t)
+        (user-error "Cannot find header %s" header))
+      (save-restriction
+        (org-narrow-to-subtree)
+        (im-org-capture--find-first-second-level-todo-entry))))
 
   (defun im-org-capture--find-snippet ()
     (let* ((mode-name (with-current-buffer (org-capture-get :original-buffer)
@@ -2212,7 +2236,13 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 ** org-refile
 #+name: org-refile
 #+begin_src emacs-lisp :tangle no
-  (setq org-refile-targets '((nil . (:maxlevel . 2))))
+  (setq org-refile-targets '((org-agenda-files . (:maxlevel . 3))))
+  ;; Show the full path of the header
+  (setq org-refile-use-outline-path 'file)
+  ;; Make the refile completion work with vertico
+  (setq org-outline-path-complete-in-steps nil)
+  ;; Add new headers by appending "/new header name" and refile creates it for you
+  (setq org-refile-allow-creating-parent-nodes 'confirm)
 #+end_src
 ** org-modern
 #+begin_src emacs-lisp
@@ -2556,7 +2586,7 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
      'org-capture-templates
      `("b" "Bookmark" entry
        (file+headline ,bookmarks-org "Unsorted")
-       "** (call-interactively #'im-org-archive-url)\n-Don't forget tot TAG!")))
+       "** (call-interactively #'im-org-archive-url)\n- Don't forget to TAG!")))
 #+end_src
 ** Convert items to TODO entries
 #+begin_src emacs-lisp
