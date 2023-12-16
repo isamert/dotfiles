@@ -2390,8 +2390,9 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
 I want to redirect some websites to their better alternatives (for example twitter to nitter so that I can read twitter without logging in).
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  autocmd DocStart .*twitter.com js tri.excmds.urlmodify("-r", /(mobile\.)?twitter\.com/, "nitter.42l.fr")
-  autocmd DocStart .*www.reddit.com js tri.excmds.urlmodify("-t", "www", "old")
+  " Nitter is non-functional anymore
+  " autocmd DocStart .*twitter.com js tri.excmds.urlmodify("-r", /(mobile\.)?twitter\.com/, "nitter.42l.fr")
+  autocmd DocStart https://.*www.reddit.com js tri.excmds.urlmodify("-t", "www", "old")
 #+end_src
 
 When I open a useless website that I spent meaningless time on, I want to show open a random page that I marked as /read it later/. Here is the script that fetches a random page:
@@ -2403,7 +2404,7 @@ When I open a useless website that I spent meaningless time on, I want to show o
 ...and here is the tridactyl directive:
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  command randomlink js -d€ tri.native.run("randomlink").then(link => window.location.replace(link.content.trim()))€
+  command randomlink js -d€ tri.native.run("«sh("which randomlink")»").then(link => window.location.replace(link.content.trim()))€
   autocmd DocStart .*(eksisozluk|ensonhaber).* randomlink
 #+end_src
 
