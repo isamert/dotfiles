@@ -823,6 +823,23 @@ This function is for doing easy REST calls and it uses plists for everything bec
      (s-trim)
      (s-split "\n")))
 #+end_src
+** Extra functionality
+*** im-open-thing-at-point
+#+begin_src emacs-lisp
+  (defvar im-open-thing-at-point-alist '()
+    "List of (thing-detector . thing-opener) pairs.")
+
+  (im-leader
+    "eo" #'im-open-thing-at-point)
+
+  (defun im-open-thing-at-point ()
+    "Detect and open the thing at point."
+    (interactive)
+    (--any
+     (when (funcall (car it))
+       (funcall (cdr it)))
+     im-open-thing-at-point-alist))
+#+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
 
@@ -8857,6 +8874,8 @@ Good for buffer management, especially for groupped killings.
     (im-jira-open-issue
      (or (im-jira-issue-at-point)
          (read-string "Enter issue number: "))))
+
+  (add-to-list 'im-open-thing-at-point-alist '(im-jira-issue-at-point . im-jira-open-issue-at-point))
 
   (defmemoize im-jira-get-my-issues ()
     (jiralib2-jql-search im-jira-my-issues-query))
