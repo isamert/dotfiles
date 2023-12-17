@@ -9569,7 +9569,7 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
        (org-entry-properties)
        (--filter (s-matches? (s-replace "$1" ".*" contact-property) (car it)))
        (--map (let ((subprop (nth 1 (s-match (s-replace "$1" "\\([a-zA-Z0-9_-]+\\)" contact-property) (car it)))))
-            (concat (format (s-replace "$1" subprop template-string) (cdr it)) "\n")))))
+                (concat (format (s-replace "$1" subprop template-string) (cdr it)) "\n")))))
      (t (if-let ((stuff (org-entry-get nil contact-property)))
             (concat (format template-string stuff) "\n")
           ""))))
@@ -9608,6 +9608,16 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
                   (im-contacts--build-contact-item "BDAY:%s" "SCHEDULED")
                   (s-replace-regexp "BDAY:<[0-9]\\{4\\}\\(.*\\) \\(\\w+\\)>" "BDAY:1900\\1")
                   (s-replace "-" ""))
+               ;; vcard supports multiple anniversaries but there is no
+               ;; way to name them as far as I understand. So I just
+               ;; drop anniversary names and add all of them.
+               ,@(thread-last
+                   (im-contacts--build-contact-item "ANNIVERSARY:%s" "ANNIVERSARY_$1")
+                   (--map (->>
+                           it
+                           (s-replace-all '((" " . "") ("-" . "") ("[" . "") ("]" . "") ("<" . "") (">" . "")))
+                           (s-trim)
+                           (s-replace-regexp "[a-zA-Z]+$" "\n"))))
                ;;,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
                ;; TODO: add notes
                ;; Be careful while exporting and sending contact to other people
