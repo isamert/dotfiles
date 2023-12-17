@@ -3829,7 +3829,7 @@ To sync it automatically:
           (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . (lambda (link &rest _) (empv-play-or-enqueue link)))
           (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
           (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
-          (".*github.com/.*issues/.*" . (lambda (link &rest _) (im-github-issue-view link)))
+          (".*github.com/.*issues/.*" . (lambda (link &rest _) (lab-github-issue-view link)))
           (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . browse-url-firefox)
           ("." . (lambda (link &rest _) (im-eww link)))))
 
@@ -8793,7 +8793,6 @@ Good for buffer management, especially for groupped killings.
 ** Jira
 #+begin_src emacs-lisp :lexical yes
   (im-leader
-    "ejo" #'im-open-jira-issue-at-point
     "eji" #'im-jira-list-issues
     "ejc" #'im-jira-create-ticket)
 
@@ -8840,7 +8839,7 @@ Good for buffer management, especially for groupped killings.
     "1332"
     "Interested board id. TODO: make this a list so that I can access to multiple boards by `im-jira-list-issues'.")
 
-  (defun im-open-jira-issue (issue-number)
+  (defun im-jira-open-issue (issue-number)
     "Open given Jira ISSUE-NUMBER."
     (interactive "sIssue: ")
     (let ((url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number)))))
@@ -8852,10 +8851,10 @@ Good for buffer management, especially for groupped killings.
       (when (s-matches? "[a-zA-Z]+-[0-9]+" sym)
         sym)))
 
-  (defun im-open-jira-issue-at-point ()
+  (defun im-jira-open-issue-at-point ()
     "Open issue at point."
     (interactive)
-    (im-open-jira-issue
+    (im-jira-open-issue
      (or (im-jira-issue-at-point)
          (read-string "Enter issue number: "))))
 
@@ -9120,7 +9119,7 @@ Good for buffer management, especially for groupped killings.
             (cl-return))
            ("Open"
             (with-default-browser
-             (im-open-jira-issue .key))
+             (im-jira-open-issue .key))
             (cl-return))
            ("Update"
             (im-jira-update-ticket .key .fields.summary .fields.description)
@@ -9206,7 +9205,7 @@ Good for buffer management, especially for groupped killings.
     (interactive)
     (with-default-browser
      (let-alist jira-view-mode-ticket
-       (im-open-jira-issue .key))))
+       (im-jira-open-issue .key))))
 
   (defun jira-view-mode-edit ()
     (interactive)
