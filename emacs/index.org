@@ -9833,6 +9833,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
 
   (defun im-bullet-focus-a-day (day)
     "Focus to given DAY."
+    (im-bullet-org-ensure)
     (widen)
     (when-let ((day-entry (im-bullet-find-a-day day)))
       (goto-char day-entry)
@@ -9885,6 +9886,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
 
   (defun im-bullet-focus-heading (heading)
     (interactive)
+    (im-bullet-org-ensure)
     (widen)
     (goto-char (point-min))
     (when (re-search-forward (format "^*+ %s" heading))
@@ -10154,7 +10156,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   (defun im-bullet-open-weekly-plan ()
     "Open weekly planning entry in an indirect buffer."
     (interactive)
-    (with-current-buffer "bullet.org"
+    (with-current-buffer (find-buffer-visiting bullet-org)
       (save-restriction
         (save-excursion
           (when (or
@@ -10175,6 +10177,11 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
   (defun im-listen-voice-recordings ()
     (interactive)
     (mapcar #'empv-enqueue (file-expand-wildcards "~/Music/Sound Recordings/*/*.m4a")))
+
+  (defun im-bullet-org-ensure ()
+    (if-let ((buffer (find-buffer-visiting bullet-org)))
+        (switch-to-buffer buffer)
+      (find-file bullet-org)))
 #+end_src
 
 ** Scratch/temporary buffers in side windows
