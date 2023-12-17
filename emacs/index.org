@@ -7094,6 +7094,7 @@ throughout your projects.
 
   (defun im-repl-inspect-last-result ()
     (interactive)
+    (im-peek-remove)
     (with-current-buffer (get-buffer-create im-repl-result-buffer)
       (erase-buffer)
       (insert im-repl-last-result)
@@ -7162,14 +7163,17 @@ throughout your projects.
                   (let* ((result (,parser im-repl-last-result)))
                     (setq im-repl-last-result result)
                     (when result
-                      (when-let (get-buffer im-repl-result-buffer)
-                        (im-repl-inspect-last-result))
-                      (unless (get-buffer im-repl-result-buffer)
-                        (message "%s%s" ,prefix (im-kill result))
-                        (run-at-time 0 nil (lambda ()
-                                             (eros--eval-overlay
-                                              result
-                                              (point))))))))))
+                      (if (get-buffer im-repl-result-buffer)
+                          (im-repl-inspect-last-result)
+                        (progn
+                          (message "%s%s" ,prefix (im-kill result))
+                          ;; Show it inline
+                          (im-peek
+                           (lambda ()
+                             (with-current-buffer (get-buffer-create "*im-repl-result-inline*")
+                               (erase-buffer)
+                               (insert im-repl-last-result)
+                               (current-buffer)))))))))))
              (set-process-sentinel
               repl
               (lambda (proc out)
