@@ -6066,6 +6066,7 @@ It lets me display comments of given reddit thread in an org buffer using the =r
 #+begin_src emacs-lisp
   (use-package reddigg
     :defer t
+    :straight (:host github :repo "isamert/emacs-reddigg")
     :config
     (setq reddigg-convert-md-to-org t))
 #+end_src
@@ -6796,9 +6797,13 @@ Feed reader.
   Useful if .elfeed directory is freshly syncned."
     (interactive)
     (require 'elfeed)
-    (elfeed-db-load)
-    (elfeed)
-    (elfeed-search-update--force))
+    (let* ((buffer (get-buffer "*elfeed-search*"))
+           (jump? (and buffer (y-or-n-p "Elfeed is already open, do you want to jump without reloading?"))))
+      (unless jump?
+        (elfeed-db-load))
+      (elfeed)
+      (unless jump?
+        (elfeed-search-update--force))))
 #+end_src
 
 ** empv (music/media/radio/youtube management)
