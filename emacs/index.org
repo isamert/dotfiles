@@ -4808,6 +4808,20 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
 
   (define-key embark-general-map (kbd "U") #'im-embark-hexify/uri-encode)
 #+end_src
+*** Bind command to a leader key action
+#+begin_src emacs-lisp
+  (define-key embark-command-map  (kbd "m") #'im-embark-bind-leader-command)
+
+  (defun im-embark-bind-leader-command (command key)
+    "Bind KEY to COMMAND in im-leader map.
+  KEY should not contain the leader key."
+    (interactive
+     (list
+      (read-command "Set key to command: ")
+      (read-string "Bind key (SPC<key>): ")))
+    (im-leader :states '(normal)
+      key command))
+#+end_src
 *** Fix =embark-org-copy-as-markdown=
 #+begin_src emacs-lisp
   (define-advice embark-org-copy-as-markdown (:before (&rest _) load-required-libs)
