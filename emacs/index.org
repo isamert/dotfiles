@@ -1729,6 +1729,7 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
     <<org-lob-ingest>>
     <<org-faces>>
     <<org-refile>>
+    <<org-capture-functions>>
     <<org-capture>>
     <<org-icalendar>>
     <<org-babel-configuration>>
@@ -2139,55 +2140,70 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
 #+begin_src emacs-lisp :tangle no
   (setq
    org-capture-templates
-   `(("g" "General todo/note")
-     ("gi" "Study later" item
-      (file+olp bullet-org "Life backlog" "Investigate")
-      "- [ ] %U %(im-org-make-link-string (read-string \"URL: \"))"
-      :prepend t)
-     ("gt" "Life todo" plain
-      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Life backlog"))
-      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n")
-     ("gc" "Computer todo" plain
-      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Computer backlog"))
-      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n" :prepend t)
-     ("gw" "Work todo" plain
-      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Work backlog"))
-      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n" :prepend t)
-     ("gb" "Free time backlog" item
-      (file+headline bullet-org "Free time backlog")
-      "- %U %?" :prepend t)
-
-     ("d" "Daily todo/summary/note")
-     ("dt" "Daily TODO" plain
-      (file+function bullet-org im-org-capture--find-daily-last-entry)
-      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n")
-     ("ds" "Daily summary" item
-      (file+function bullet-org im-org-capture--find-daily-summary)
-      "- %U %?")
-
-     ("i" "Inbox" item
+   `(("i" "Inbox" item
       (file+headline bullet-org "Inbox")
       "- %U %?"
       :prepend t)
 
-     ("s" "Snippets")
-     ("ss" "Snippet" entry
-      (file+function snippets-org im-org-capture--find-snippet)
-      "** ")
-     ("so" "One liner snippet" item
-      (file+function snippets-org im-org-capture--find-snippet-one-liner)
-      "- %? :: ")
+     ("n" "Meeting/clock note" item
+      (clock))
+
+     ("t" "Study/investigate later" item
+      (file+olp bullet-org "Life backlog" "Investigate")
+      "- [ ] %U %(im-org-make-link-string (read-string \"URL: \"))"
+      :prepend t)
+
+     ("l" "Life todo" plain
+      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Life backlog"))
+      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n")
+
+     ("w" "Work todo" plain
+      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Work backlog"))
+      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n" :prepend t)
+
+     ("c" "Computer todo" plain
+      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Computer backlog"))
+      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n" :prepend t)
+
+     ("f" "Free time backlog" item
+      (file+headline bullet-org "Free time backlog")
+      "- %U %?" :prepend t)
+
+     ("T" "Daily TODO" plain
+      (file+function bullet-org im-org-capture--find-daily-last-entry)
+      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n")
+
+     ("S" "Daily summary" item
+      (file+function bullet-org im-org-capture--find-daily-summary)
+      "- %U %?")
+
+     ("a" "Shopping" plain
+      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Alisveris"))
+      "*** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n"
+      :prepend t)
+
+     ("m" "Watchlist item" plain
+      (file+function watchlist-org im-org-capture--find-first-top-level-todo-entry)
+      "* TODO %?\n:PROPERTIES:\n:CREATED_AT: %U\n:WHY: FILLME!\n:END:\n\n")
 
      ("D" "Diary" entry
       (file diary-org)
       "* %u\n"
       :prepend t)
-     ("c" "Meeting/clock note" item
-      (clock))
-     ("m" "Watchlist item" plain
-      (file+function watchlist-org im-org-capture--find-first-top-level-todo-entry)
-      "* TODO %?\n:PROPERTIES:\n:CREATED_AT: %U\n:WHY: FILLME!\n:END:\n\n")))
 
+     ("s" "Snippets")
+
+     ("ss" "Snippet" entry
+      (file+function snippets-org im-org-capture--find-snippet)
+      "** ")
+
+     ("so" "One liner snippet" item
+      (file+function snippets-org im-org-capture--find-snippet-one-liner)
+      "- %? :: ")))
+#+end_src
+
+#+name: org-capture-functions
+#+begin_src emacs-lisp :tangle no
   (defun im-org-capture--find-daily-last-entry ()
     (im-bullet-focus-today)
     (end-of-buffer))
@@ -2204,23 +2220,25 @@ See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this 
     (re-search-forward "^\\* TODO" nil t)
     (beginning-of-line))
 
-  (defun im-org-capture--find-first-second-level-todo-entry ()
-    "Find first second-level TODO entry in current buffer.
+  (defun im-org-capture--find-first-N-level-todo-entry (n)
+    "Find first N-level TODO entry in current buffer.
   This way you can insert new entry right after other non-TODO
   entries."
     (goto-char (point-min))
-    (re-search-forward "^\\*\\* TODO" nil t)
+    (re-search-forward (format "^\\*\\{%s\\} TODO" n) nil t)
     (beginning-of-line))
 
   (defun im-org-capture--find-first-top-level-todo-entry-within-header (header)
     "Find first top-level TODO entry in under HEADER in current buffer."
     (lambda ()
       (goto-char (point-min))
-      (unless (re-search-forward (format "^\\*+ %s" header) nil t)
-        (user-error "Cannot find header %s" header))
-      (save-restriction
-        (org-narrow-to-subtree)
-        (im-org-capture--find-first-second-level-todo-entry))))
+      (let (n)
+        (if (re-search-forward (format "^\\(\\*+\\) %s" header) nil t)
+            (setq n (1+ (length (match-string 1))))
+          (user-error "Cannot find header %s" header))
+        (save-restriction
+          (org-narrow-to-subtree)
+          (im-org-capture--find-first-N-level-todo-entry n)))))
 
   (defun im-org-capture--find-snippet ()
     (let* ((mode-name (with-current-buffer (org-capture-get :original-buffer)
