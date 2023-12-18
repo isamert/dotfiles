@@ -3129,6 +3129,14 @@ Several packages are using this package to show system-level notifications. Here
     (setq alert-fade-time 15)
     (setq alert-default-style 'im-alert-posframe)
 
+    (when (eq system-type 'darwin)
+      ;; Re-define osx-notifier to handle strings better.
+      (defun alert-osx-notifier-notify (info)
+        (do-applescript (format "display notification %S with title %S"
+                                (substring-no-properties (plist-get info :message))
+                                (substring-no-properties (plist-get info :title))))
+        (alert-message-notify info)))
+
     (im-leader
       "yy" #'im-notify-posframe-notifications
       "yu" #'im-notify-posframe-enable-dnd
@@ -3209,8 +3217,6 @@ Several packages are using this package to show system-level notifications. Here
           (let ((alert-default-style
                  (pcase system-type
                    ('gnu/linux 'libnotify)
-                   ;; TODO osx-notifier having troubles showing messages
-                   ;; with Turkish characters.
                    ('darwin 'osx-notifier)
                    (_ 'message))))
             (alert message :title title :severity severity)))
