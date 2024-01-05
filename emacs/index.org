@@ -1039,11 +1039,18 @@ Enables you to have repeatable keybindings.
 
 ** Fonts and theme
 #+BEGIN_SRC emacs-lisp
-  (use-package doom-themes)
+  (use-package doom-themes
+    :config
+    ;; Fix for https://github.com/doomemacs/themes/issues/720
+    (custom-set-faces
+     `(tab-bar
+       ((t (:background ,(doom-color 'bg-alt) :foreground ,(doom-color 'fg-alt)))))))
+
   (use-package modus-themes)
   (use-package ef-themes)
 
-  (defconst im-theme 'modus-vivendi)
+  ;; (defconst im-theme 'modus-vivendi)
+  (defconst im-theme 'doom-one)
   (defconst im-fonts '("Iosevka Comfy Motion" "Iosevka Comfy" "Iosevka Nerd Font"))
   (defconst im-font-height (pcase system-type ('gnu/linux 138) ('darwin 160)))
 
