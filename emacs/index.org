@@ -6719,6 +6719,25 @@ Gives you a nice, uncluttered editing experience by removing all unneeded visual
     (setq writeroom-width 81))
 #+end_src
 
+** combobulate
+Structral editing for some languages, here are the bindings that I find useful (which are enabled by ~combobulate-key-map~):
+- M-P :: combobulate-drag-up
+- M-N :: combobulate-drag-down
+- M-a :: combobulate-navigate-logical-previous
+- M-e :: combobulate-navigate-logical-next
+
+#+begin_src emacs-lisp
+  (use-package combobulate
+    :straight (combobulate :type git :host github :repo "mickeynp/combobulate")
+    :general
+    :hook ((python-ts-mode . combobulate-mode)
+           (js-ts-mode . combobulate-mode)
+           (css-ts-mode . combobulate-mode)
+           (yaml-ts-mode . combobulate-mode)
+           (json-ts-mode . combobulate-mode)
+           (typescript-ts-mode . combobulate-mode)
+           (tsx-ts-mode . combobulate-mode)))
+#+end_src
 * Dummy IDE mode
 I try to use ~lsp-mode~ and other language-specific packages for the languages I use (see [[Language specific]]), but sometimes either they are too slow or the computer I'm currently working on requires some extra setup or I just don't want to use them for some reason. For those cases, I use a collection of packages that gives you the power of IDEs but in some dummy/restricted way.
 
