@@ -100,6 +100,12 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   (defconst im-init-file (expand-file-name "~/.emacs.d/scratch.el"))
   (setq initial-buffer-choice im-init-file)
   (add-to-list 'default-frame-alist '(undecorated . t))
+
+
+  ;; On MacOS, native fullscreen fucks with ESC, so I simply don't use
+  ;; it. Native fullscreen is also quite bad in itself, I can't assign
+  ;; keybindings to switch to a dedicated fullscreen app.
+  (setq ns-use-native-fullscreen nil)
 #+end_src
 * Preparation
 ** straight.el and use-package
