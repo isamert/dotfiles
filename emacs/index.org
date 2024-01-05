@@ -5667,6 +5667,7 @@ Here, I also bind some keys for convenience. Taken from [[https://github.com/rad
 ** expand-region
 #+begin_src emacs-lisp
   (use-package expand-region
+    :straight (:host github :repo "karthink/expand-region.el")
     :bind (:map evil-normal-state-map ("M-w" . er/expand-region))
     :config
     (setq er/try-expand-list (append er/try-expand-list '(im-tree-sitter-mark-bigger-node))))
