@@ -2803,6 +2803,30 @@ My main use case for [[https://github.com/nobiot/org-transclusion][org-transclus
        (funcall (cdr it)))
      im-open-thing-at-point-alist))
 #+end_src
+** im-ensure-binary
+#+begin_src emacs-lisp
+  (cl-defun im-ensure-binary (command &key package installer)
+    "Ensures that the binary COMMAND is installed.
+    If not, alerts the user and copies the installation instructions
+    to the kill ring.
+
+    COMMAND can be a string or a list. If it's a string, it will be
+    split and the first element will be used as the binary name.  If
+    it's a list, the first element will be used as the binary name."
+    (let ((binary (cond
+                   ((stringp command) (car (split-string command " ")))
+                   ((listp command) (car command))
+                   (t (error ">> Invalid command: '%s'" command)))))
+      (if (not (executable-find binary))
+          (let* ((installer (or installer
+                                (when-on :linux "pacman -S" :darwin "brew install")))
+                 (package (or package binary))
+                 (install-cmd (format "%s %s" installer package)))
+            (kill-new install-cmd)
+            (error (format "Binary '%s' not found. Do `%s'" binary install-cmd)))
+        command)))
+
+#+end_src
 * Other packages
 ** eldoc
 #+begin_src emacs-lisp
@@ -8354,6 +8378,7 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
            (vars (org-babel--get-vars params)))
       (setq query (org-babel-expand-body:bqsql query params))
       (with-current-buffer buf (erase-buffer))
+      (im-ensure-binary "bq" :package "google-cloud-sdk" :installer "nix-env -iA")
       (setq process (apply #'start-process `("query" ,buf "bq" "query" ,@(when api `("--api" ,api)) ,@(when project-id `("--project_id" ,project-id)) "--quiet" "--max_rows" "100000" "--nouse_legacy_sql" "--format" ,format "--job_id" ,job-id ,query)))
       (set-process-sentinel
        process
@@ -11434,7 +11459,9 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
      (--mapcat
       (plist-get it :Keywords)
       (json-parse-string
-       (shell-command-to-string (format "exiftool -m -quiet -json -keywords '%s'" (expand-file-name (or directory default-directory))))
+       (shell-command-to-string
+        (im-ensure-binary
+         (format "exiftool -m -quiet -json -keywords '%s'" (expand-file-name (or directory default-directory)))))
        :object-type 'plist :array-type 'list))))
 
   (defun im-get-file-attribute (file name)
@@ -12019,7 +12046,7 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
     ;; This is required: https://github.com/deweller/switchaudio-osx
     ;; brew install switchaudio-osx
     (im-output-select
-     :cmd "SwitchAudioSource -a"
+     :cmd (im-ensure-binary "SwitchAudioSource -a" :package "switchaudio-osx")
      :prompt (let ((current (im-shell-command-to-string "SwitchAudioSource -c")))
                (format "Select audio source (%s): " current))
      :do (shell-command-to-string (format "SwitchAudioSource -s '%s'" it))))
@@ -12062,7 +12089,7 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
     (interactive)
     (im-output-select
      :prompt "Select Bluetooth device: "
-     :cmd "blueutil --paired"
+     :cmd (im-ensure-binary "blueutil --paired")
      :formatter (->> it
                    (s-split ", ")
                    (--map (s-split ":" it))
@@ -12080,7 +12107,8 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
   (defun im-linux-connect-paired-bluetooth-device ()
     (interactive)
     (let* ((paired-devices (->>
-                            (shell-command-to-string "bluetoothctl devices Paired")
+                            (im-ensure-binary "bluetoothctl devices Paired" :package "bluez-utils")
+                            (shell-command-to-string)
                             (s-trim)
                             (s-split "\n")))
            (connected-devices (->>
