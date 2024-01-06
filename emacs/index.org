@@ -203,6 +203,7 @@ Some basic variable and function definitions that will be used in configuration.
   can be 'symbol 'word or a function that returns string etc."
     (cond
      ((use-region-p) (buffer-substring-no-properties (region-beginning) (region-end)))
+     ((equal what 'string) (read-string "Enter value: "))
      ((functionp what) (funcall what))
      ((symbolp what) (thing-at-point what t))
      (t what)))
@@ -413,6 +414,15 @@ Some basic variable and function definitions that will be used in configuration.
           (when (search-forward-regexp ":prefix \"\\(.*\\)\"" nil t)
             (match-string 1)))
         "im-"))
+#+end_src
+*** Emacs utils
+#+begin_src emacs-lisp
+  (defun im-open-region-in-temp-buffer (content)
+    "Open CONTENT (selected region or given string) in a temporary buffer."
+    (interactive (list (im-region-or 'string)))
+    (switch-to-buffer (generate-new-buffer "*temp-region*"))
+    (insert content)
+    (switch-to-buffer (current-buffer)))
 #+end_src
 *** Clipboard functions
 #+begin_src emacs-lisp
