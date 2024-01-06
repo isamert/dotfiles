@@ -12114,6 +12114,28 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
     (switch-to-buffer "*html*")
     (rename-buffer (format "*firefox-visual*")))
 #+end_src
+** YAML <-> JSON conversation
+#+begin_src emacs-lisp
+  (defun im-yaml-to-json (yaml &optional replace?)
+    "Convert YAML to JSON."
+    (interactive (list (im-region-or 'string)))
+    (let ((json (im-kill (json-encode (yaml-parse-string yaml)))))
+      (when (and replace? (use-region-p))
+        (replace-region-contents
+         (region-beginning)
+         (region-end)
+         (lambda () json)))))
+
+  (defun im-json-to-yaml (json &optional replace?)
+    "Convert JSON to YAML."
+    (interactive (list (im-region-or 'string)))
+    (let ((yaml (im-kill (yaml-encode (json-parse-string yaml)))))
+      (when (and replace? (use-region-p))
+        (replace-region-contents
+         (region-beginning)
+         (region-end)
+         (lambda () yaml)))))
+#+end_src
 * Operating system related
 ** Sound output chooser
 #+begin_src emacs-lisp
