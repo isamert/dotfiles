@@ -290,6 +290,7 @@ It can be installed through homebrew:
   hyper - p : emacsclient --eval "(im-globally (im-password-act))"
   hyper - v : emacsclient --eval "(empv-toggle-video)"
   hyper - g : emacsclient --eval "(im-globally (im-gitlab-select-project))"
+  hyper - l : emacsclient --eval "(im-globally (im-people))"
   hyper - return : open -n -a 'Alacritty.app'
 #+end_src
 

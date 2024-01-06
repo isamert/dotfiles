@@ -9786,6 +9786,35 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
      nil
      file-name))
 #+end_src
+** people.org - Quick info selection
+#+begin_src emacs-lisp
+  (defun im-people ()
+    "Select and kill people info.
+  people.org should contain the following snippet on it's `after-save-hook':
+    (im-serialize-into-file \"~/.emacs.d/sync/people\"
+      (org-map-entries #'org-entry-properties \"LEVEL=1\"))"
+    (interactive)
+    (->>
+     (empv--completing-read-object
+      "Select info"
+      (-mapcat
+       (lambda (info)
+         (--map
+          (cons (format
+                 "%s/%s = %s"
+                 (alist-get "ITEM" info nil nil #'equal)
+                 (car it)
+                 (cdr it))
+                (cdr it))
+          (--filter (not (s-blank? (cdr it))) info)))
+       (im-deserialize-from-file "~/.emacs.d/sync/people"))
+      :formatter (lambda (it) (car it)))
+     (cdr)
+     (im-kill)))
+
+  (im-leader
+    "ou" #'im-people)
+#+end_src
 ** Google search
 #+begin_src emacs-lisp
   (defun im-google-this (input)
