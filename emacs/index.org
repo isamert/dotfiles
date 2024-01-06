@@ -829,6 +829,16 @@ This function is for doing easy REST calls and it uses plists for everything bec
      (s-trim)
      (s-split "\n")))
 #+end_src
+*** OS Utils
+#+begin_src emacs-lisp
+  (defun im-ssh-host-list ()
+    "Return all host names defined in ~/.ssh/config."
+    (->> (f-read-text "~/.ssh/config")
+       (s-lines)
+       (--map (nth 1 (s-match "^Host \\(.*\\)" it)))
+       (-filter #'identity)
+       (-remove-item "*")))
+#+end_src
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
 
@@ -12180,7 +12190,7 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
                  (alist-get monitor addresses))))
       (shell-command-to-string
        (if (workpc?)
-           (format "ssh x220 '%s'" cmd)
+           (format "ssh %s '%s'" (completing-read "Select linux machine: " (im-ssh-host-list)) cmd)
          cmd))))
 #+end_src
 * Postamble
