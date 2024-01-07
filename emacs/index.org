@@ -8039,9 +8039,7 @@ Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an overlay, right n
     :straight (:host github :repo "isamert/eros")
     :hook (after-init . eros-mode)
     :config
-    (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1)))
-    (im-leader-v
-      "'" #'eros-inspect-last-result))
+    (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1))))
 #+end_src
 *** Pretty stuff
 #+begin_src  emacs-lisp
