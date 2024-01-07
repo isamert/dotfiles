@@ -838,6 +838,15 @@ This function is for doing easy REST calls and it uses plists for everything bec
      (shell-command-to-string)
      (s-trim)
      (s-split "\n")))
+
+  (defun im-encode-image-base64 (path)
+    (let* ((type (nth 1 (s-match ".*\\.\\(jpg\\|jpeg\\|png\\)" path)))
+           (base64 (with-temp-buffer
+                     (let ((coding-system-for-read 'no-conversion))
+                       (insert-file-contents path)
+                       (base64-encode-region (point-min) (point-max) t)
+                       (buffer-string)))))
+      (format "data:image/%s;base64,%s" type base64)))
 #+end_src
 *** OS Utils
 #+begin_src emacs-lisp
@@ -9755,7 +9764,9 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
              `("BEGIN:VCARD\nVERSION:4.0\nPRODID:ez-vcard 0.11.3\n"
                ,(format "UID:urn:uuid:%s\n" (org-id-get nil t))
                ,(im-contacts--build-contact-item "FN:%s" "ITEM")
-               ,(im-contacts--build-contact-item "N:;%s;;;" "ITEM")
+               ,(if (org-entry-get nil "DISPLAY_NAME")
+                    (im-contacts--build-contact-item "N:;%s;;;" "DISPLAY_NAME")
+                  (im-contacts--build-contact-item "N:;%s;;;" "ITEM"))
                ,@(im-contacts--build-contact-item "TEL;TYPE=$1:%s" "PHONE_$1")
                ,@(im-contacts--build-contact-item "EMAIL;TYPE=$1:%s" "EMAIL_$1")
                ,@(im-contacts--build-contact-item "ADR;TYPE=$1:;;%s;;;;" "ADDRESS_$1")
@@ -9778,6 +9789,14 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
                ;;,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
                ;; TODO: add notes
                ;; Be careful while exporting and sending contact to other people
+               ,(when-let (image-base64
+                           (-some->>
+                               (org-agenda-get-some-entry-text (point-marker) most-positive-fixnum)
+                             (substring-no-properties)
+                             (s-match "^\\[\\[file:\\(.+\\(\\.jpg\\|jpeg\\|png\\)\\)]]")
+                             (nth 1)
+                             (im-encode-image-base64)))
+                  (format "PHOTO:%s\n" image-base64))
                "TITLE:\nEND:VCARD")
              "")))
         "LEVEL=1")
