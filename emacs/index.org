@@ -423,6 +423,20 @@ Some basic variable and function definitions that will be used in configuration.
     (switch-to-buffer (generate-new-buffer "*temp-region*"))
     (insert content)
     (switch-to-buffer (current-buffer)))
+
+  (defun im-kill-this-buffer ()
+    "Kill current buffer.
+    Function `kill-this-buffer' does not work reliably.  See
+    documentation of it."
+    (interactive)
+    (kill-buffer (current-buffer)))
+
+  (defun im-add-to-path (path)
+    "Add given PATH to PATH variable.
+    Useful for adding something to Emacs' PATH without restarting it."
+    (interactive "sPath: ")
+    (add-to-list 'exec-path (expand-file-name path))
+    (setenv "PATH" (concat (getenv "PATH") ":" (expand-file-name path))))
 #+end_src
 *** Clipboard functions
 #+begin_src emacs-lisp
@@ -805,22 +819,6 @@ This function is for doing easy REST calls and it uses plists for everything bec
     "Check if given URL is really an URL or not."
     (or (s-match "^\\(https?\\|file\\)://\\|www." url)
         (s-match "\\.\\(org\\|net\\|com\\)$" url)))
-#+end_src
-*** Other
-#+begin_src emacs-lisp
-  (defun im-kill-this-buffer ()
-    "Kill current buffer.
-  Function `kill-this-buffer' does not work reliably.  See
-  documentation of it."
-    (interactive)
-    (kill-buffer (current-buffer)))
-
-  (defun im-add-to-path (path)
-    "Add given PATH to PATH variable.
-  Useful for adding something to Emacs' PATH without restarting it."
-    (interactive "sPath: ")
-    (add-to-list 'exec-path (expand-file-name path))
-    (setenv "PATH" (concat (getenv "PATH") ":" (expand-file-name path))))
 #+end_src
 *** File operations
 #+begin_src emacs-lisp
