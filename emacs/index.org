@@ -8015,7 +8015,10 @@ Hit <C-j> after these and get:
 ** yaml
 #+begin_src emacs-lisp
   (use-package yaml-mode
-    :mode ("\\.yaml\\'" "\\.yml\\'"))
+    :mode ("\\.yaml\\'" "\\.yml\\'")
+    :config
+    (add-hook 'yaml-ts-mode-hook #'origami-mode)
+    (add-hook 'yaml-ts-mode-hook #'highlight-indent-guides-mode))
 #+end_src
 
 ** elisp
