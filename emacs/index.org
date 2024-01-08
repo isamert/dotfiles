@@ -4248,6 +4248,15 @@ Then I created and added the API key from here to =~/.authinfo= file, in the fol
 #+begin_src authinfo
   machine api.github.com login isamert^forge password <GH_API_KEY>
 #+end_src
+** blamer -- git blame
+#+begin_src emacs-lisp
+  (use-package blamer
+    :ensure t
+    :general
+    (im-leader
+      "gi" #'blamer-show-posframe-commit-info)
+    :defer 20)
+#+end_src
 ** diff-mode
 Some small enhancments to diff mode:
 - Cycle hunks with TAB, SHIFTTAB.
