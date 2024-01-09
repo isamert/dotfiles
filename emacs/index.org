@@ -12106,7 +12106,7 @@ Just a wttr.in wrapper. Another piece in the name of using a web browser even le
 ** Scratch project
 I have a project pre-configured for scratch files. Like default scratch buffer, I also have different files for different languages that I use similarly to the scratch buffer. Due to the nature of other languages, it's not possible to have a simple buffer. Rather, I have to have a concrete file.
 #+begin_src emacs-lisp
-  (defvar im-scratch-project-path "~/workspace/temp/scratch/")
+  (defvar im-scratch-project-path "~/Workspace/temp/scratch/")
 
   (defun im-initialize-scratch-project ()
     "Initialize a project where scratch files are kept."
