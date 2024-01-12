@@ -12163,6 +12163,39 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
          (region-end)
          (lambda () yaml)))))
 #+end_src
+** ai snippets
+#+begin_src emacs-lisp
+  (defconst im-org-ai-snippet-buffer "*im-org-ai-snippet-buffer*")
+  (defun im-ai-snippet (prompt)
+    "Ask for a snippet and get it directly inside your buffer."
+    (interactive "sQuestion: ")
+    (with-current-buffer im-org-ai-snippet-buffer
+      (erase-buffer))
+    (let ((cb (current-buffer)))
+      (org-ai-prompt
+       (format
+        "%s
+  - ONLY answer with the snippet required.
+  - Do NOT provide any extra explanations.
+  - Try to incorporate explanations inside the snippet in MOST CONCISE WAY POSSIBLE.
+  - ONLY provide code."
+        prompt)
+       :sys-prompt "You are an assistant living inside Emacs. You answer concisely."
+       :output-buffer (get-buffer-create im-org-ai-snippet-buffer)
+       :follow t
+       :callback
+       (lambda ()
+         (with-current-buffer im-org-ai-snippet-buffer
+           (let* ((str (-> (buffer-string)
+                          (s-trim)
+                          (string-trim-left "```.*\n")
+                          (string-trim-right "\n```")
+                          (string-trim-left "`")
+                          (string-trim-right "`")
+                          (s-trim))))
+             (with-current-buffer cb
+               (insert str))))))))
+#+end_src
 * Operating system related
 ** Sound output chooser
 #+begin_src emacs-lisp
