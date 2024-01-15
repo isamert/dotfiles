@@ -2529,7 +2529,21 @@ This function is especially useful when used in combination with =embark-act-all
             (fname (read-file-name "New name: "
                                    (expand-file-name
                                     (file-name-directory path))
-                                   path)))
+                                   nil nil
+                                   ;; Handle bullet.org differently. Try
+                                   ;; to guess intelligently
+                                   (if (and (equal
+                                             (expand-file-name (buffer-file-name))
+                                             (expand-file-name bullet-org))
+                                            (not (s-prefix? "bullet_" (f-filename path))))
+                                       (f-join
+                                        (format "bullet_%s_%s"
+                                                (ignore-errors
+                                                  (car (s-split
+                                                        " "
+                                                        (im-bullet-current-date))))
+                                                (f-filename path)))
+                                     (f-filename path)))))
         (when use-relative?
           (setq fname (concat "./" (file-relative-name fname))))
         (save-excursion
