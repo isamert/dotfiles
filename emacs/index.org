@@ -2459,9 +2459,13 @@ Insert links/images more intelligently,
 
   (defun im-org-attach-image-from-clipboard (&optional file-path)
     "Attach the image in the clipboard into your org-buffer.
-      This function saves the image file into the FILE-PATH or
-      if it's not provided then it saves the image into ~/.cache."
-    (interactive "FSave file to (leave empty to create a temp file): ")
+  This function saves the image file into the FILE-PATH or if it's
+  not provided then it saves the image into ~/.cache."
+    (interactive
+     (list
+      (read-file-name
+       "Save file to (leave empty to create a temp file): "
+       nil nil nil (im-org-suggest-filename nil ".png"))))
     (let ((file (if (and file-path (not (string-empty-p file-path)))
                     (file-relative-name file-path)
                   (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
@@ -2530,20 +2534,7 @@ This function is especially useful when used in combination with =embark-act-all
                                    (expand-file-name
                                     (file-name-directory path))
                                    nil nil
-                                   ;; Handle bullet.org differently. Try
-                                   ;; to guess intelligently
-                                   (if (and (equal
-                                             (expand-file-name (buffer-file-name))
-                                             (expand-file-name bullet-org))
-                                            (not (s-prefix? "bullet_" (f-filename path))))
-                                       (f-join
-                                        (format "bullet_%s_%s"
-                                                (ignore-errors
-                                                  (car (s-split
-                                                        " "
-                                                        (im-bullet-current-date))))
-                                                (f-filename path)))
-                                     (f-filename path)))))
+                                   (im-org-suggest-filename path))))
         (when use-relative?
           (setq fname (concat "./" (file-relative-name fname))))
         (save-excursion
@@ -10411,6 +10402,27 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (if-let ((buffer (find-buffer-visiting bullet-org)))
         (switch-to-buffer buffer)
       (find-file bullet-org)))
+
+  (defun im-org-suggest-filename (&optional path ext)
+    "Intelligently suggest a filename for the current context."
+    (let ((fname (if path (f-filename path) "")))
+      (if (and (equal
+                (expand-file-name (buffer-file-name))
+                (expand-file-name bullet-org))
+               (not (s-prefix? "bullet_" fname)))
+          (f-join
+           (format "bullet_%s_%s%s"
+                   (ignore-errors
+                     (car (s-split
+                           " "
+                           (im-bullet-current-date))))
+                   (if ext
+                       (s-chop-suffix (f-ext fname) fname)
+                     fname)
+                   (if ext
+                       ext
+                     "")))
+        fname)))
 #+end_src
 
 ** Scratch/temporary buffers in side windows
