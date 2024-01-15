@@ -10179,14 +10179,16 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
 
   (defun im-bullet-current-date ()
     "Return current date."
-    (save-excursion
-      (when (re-search-backward "^* \\[" nil t)
-        (-some->> (org-get-heading t t t t)
-          (s-match "\\[.*?\\]")
-          (car)
-          (substring-no-properties)
-          (s-chop-prefix "[")
-          (s-chop-suffix "]")))))
+    (save-restriction
+      (save-excursion
+        (widen)
+        (when (re-search-backward "^* \\[" nil t)
+          (-some->> (org-get-heading t t t t)
+            (s-match "\\[.*?\\]")
+            (car)
+            (substring-no-properties)
+            (s-chop-prefix "[")
+            (s-chop-suffix "]"))))))
 
   (defmacro im-when-weekday (template &rest template-args)
     `(when (<= (im-u) 5)
