@@ -1631,6 +1631,7 @@ This file is sourced by both =zsh= and =bash=.
   alias df='df -H'
   alias du='ncdu'
   alias fastssh='ssh -Y -C -c chacha20-poly1305@openssh.com'
+  alias cdd='cd $(fd -t d -d 8 | fzf)'
 
   alias ls='lsd --group-dirs first --classify'
   alias ll='lsd --group-dirs first --classify --oneline'
