@@ -172,7 +172,15 @@ into the context of newly created Emacs instance which helps a lot.
 #+begin_src emacs-lisp
   (use-package async)
 #+end_src
+*** midnight-mode
+I run some functions periodically using midnight-mode. Runs once a day
+at the specified time. Simply add your function via ~add-hook~ to
+~midnight-hook~.
 
+#+begin_src emacs-lisp
+  (require 'midnight)
+  (midnight-delay-set 'midnight-delay "10:30am")
+#+end_src
 ** Variables and functions
 Some basic variable and function definitions that will be used in configuration.
 
