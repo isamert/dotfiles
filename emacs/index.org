@@ -869,6 +869,21 @@ This function is for doing easy REST calls and it uses plists for everything bec
        (-filter #'identity)
        (-remove-item "*")))
 #+end_src
+*** Git
+#+begin_src emacs-lisp
+  (cl-defun im-git-temp-clone (url &key on-success (on-fail (lambda () (alert "Cloning failed!"))))
+    "Clone URL into a temp directory and run ON-SUCCESS inside it."
+    (let ((dir (make-temp-file "im_temp_git_dir" t)))
+      (lab-git-clone
+       url
+       dir
+       (lambda (success?)
+         (if success?
+             (let ((default-directory (f-join dir (file-name-base url))))
+               (funcall on-success))
+           (funcall on-fail))))))
+#+end_src
+
 ** Load path
 Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
 
