@@ -666,6 +666,11 @@ Some basic variable and function definitions that will be used in configuration.
         (setq unit (car units))
         (setq units (cdr units)))
       (format "%.2f %s" bytes unit)))
+
+  (defun im-non-blank-or-nil (x)
+    (if (and x (s-blank-str? x))
+        nil
+      x))
 #+end_src
 *** List/hash-table/vector utils
 #+begin_src emacs-lisp
@@ -2568,7 +2573,7 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
 
   `:regexp' - Regexp to grep in given folder. If it's skipped it
   searches for TODO/FIXME items in given folder."
-    (let* ((root (or (plist-get params :root) default-directory))
+    (let* ((root (expand-file-name (or (plist-get params :root) default-directory)))
            (regexp (or (plist-get params :regexp) "(//|#|--|;)+ ?(TODO|FIXME)"))
            (default-directory root))
       (--map (insert (format "%s | " it)) '("" "ID" "File" "Content"))
@@ -2581,7 +2586,7 @@ When you invoke =C-c C-c= on that block, it will automatically run given REGEXP 
            'omit-nulls)
         (let* ((data (s-split-up-to ":" it 2))
                (file (s-join ":" (-take 2 data)))
-               (file-link (concat "[[file:" default-directory "/" (s-replace ":" "::" file) "][" file "]]"))
+               (file-link (concat "[[file:" (f-join default-directory (s-replace ":" "::" file)) "][" file "]]"))
                (content (s-replace "|" " \\vert " (-last-item data))))
           (insert "| ")
           (insert (format "%s" it-index))
@@ -2822,11 +2827,17 @@ I forget to clock in (and out) most of the time, so I want Emacs to remind clock
     (org-insert-heading '(4))
     (insert
      (concat
-      (format "TODO [#%s] %s "
-              (or priority
-                  (completing-read
-                   "Select priority:"
-                   (mapcar #'char-to-string (number-sequence org-priority-highest (1+ org-priority-lowest)))))
+      (format "TODO%s %s "
+              (if-let (priority
+                       (im-non-blank-or-nil
+                        (or priority
+                            (completing-read
+                             "Select priority:"
+                             (mapcar #'char-to-string (number-sequence
+                                                       org-priority-highest
+                                                       (1+ org-priority-lowest)))))))
+                  (format " [#%s]" priority)
+                "")
               (read-string "Header: "))
       (when-let ((date (im-bullet-current-date)))
         (format "\nSCHEDULED: <%s>" date))
@@ -8975,7 +8986,7 @@ Good for buffer management, especially for groupped killings.
   (defvar im-git-main-branch "master"
     "Main branch name.")
 
-  (defvar im-jira-projects '(("AI"))
+  (defvar im-jira-projects '(("AI" "SAT"))
     "List of projects that I enrolled in JIRA.")
 
   (defvar im-jira-base-branch "origin/master"
@@ -9557,23 +9568,22 @@ I have an Android phone that is running [[https://termux.com/][Termux]] all the 
      (list :title (im-read-string "Title: ")
            :content (im-read-string "Content: ")
            :url-to-open (im-read-string "URL(?): ")))
-    ;; I used to use Gotify but not using right now
-    ;; (set-process-sentinel
-    ;;  (start-process
-    ;;   "gotify" "*gotify-out*"
-    ;;   "gotify" "push" (format "--title='%s'" title) (format "--clickUrl='%s'" url-to-open) content)
-    ;;  (lambda (proc text)
-    ;;    ;; Try sending notification through termux if gotify fails
-    ;;    (unless (eq (process-exit-status proc) 0)
-    (im-send-termux-command-async
-     "termux-notification"
-     (lambda (_out) ">> Sent notification to phone.")
-     "--title"
-     title
-     "--content"
-     (or content "")
-     "--action"
-     (format "termux-open %s" url-to-open)))
+    (set-process-sentinel
+     (start-process
+      "gotify" "*gotify-out*"
+      "gotify" "push" (format "--title=%s" title) (format "--clickUrl=%s" url-to-open) content)
+     (lambda (proc text)
+       ;; Try sending notification through termux if gotify fails
+       (unless (eq (process-exit-status proc) 0)
+         (im-send-termux-command-async
+          "termux-notification"
+          (lambda (_out) ">> Sent notification to phone.")
+          "--title"
+          title
+          "--content"
+          (or content "")
+          "--action"
+          (format "termux-open %s" url-to-open))))))
 
   (defun im-send-text-to-my-phone (text)
     "Send TEXT to my phones clipboard. This only works if the phone
@@ -10212,7 +10222,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     (save-restriction
       (save-excursion
         (widen)
-        (when (re-search-backward "^* \\[" nil t)
+        (when (re-search-backward "^* \\[202" nil t)
           (-some->> (org-get-heading t t t t)
             (s-match "\\[.*?\\]")
             (car)
@@ -12222,7 +12232,7 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
   (defun im-ai-snippet (prompt)
     "Ask for a snippet and get it directly inside your buffer."
     (interactive "sQuestion: ")
-    (with-current-buffer im-org-ai-snippet-buffer
+    (with-current-buffer (get-buffer-create im-org-ai-snippet-buffer)
       (erase-buffer))
     (let ((cb (current-buffer)))
       (org-ai-prompt
