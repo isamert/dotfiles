@@ -12258,6 +12258,7 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
   (defun im-ai-snippet (prompt)
     "Ask for a snippet and get it directly inside your buffer."
     (interactive "sQuestion: ")
+    (org-ai-interrupt-current-request)
     (with-current-buffer (get-buffer-create im-org-ai-snippet-buffer)
       (erase-buffer))
     (let ((cb (current-buffer)))
@@ -12284,6 +12285,9 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
                           (s-trim))))
              (with-current-buffer cb
                (insert str))))))))
+
+  (im-leader
+    "sa" #'im-ai-snippet)
 #+end_src
 * Operating system related
 ** Sound output chooser
