@@ -8873,17 +8873,41 @@ Good for buffer management, especially for groupped killings.
 
   (defun im-print-buffer-file-info (&optional kill-file-path)
     (interactive "P")
-    (let* ((proj-name (im-current-project-name))
+    (let* ((region? (use-region-p))
+           (point-min (if region? (region-beginning) (point-min)))
+           (point-max (if region? (region-end) (point-max)))
+           (proj-name (im-current-project-name))
            (proj-path (or (im-current-project-root) (expand-file-name "~/")))
            (fpath (or (buffer-file-name) (buffer-name)))
-           (fpath-pretty (string-replace (expand-file-name "~") "~" fpath)))
-      (message "[%s] %s\n%s\n%s\n%s\n%s"
-               (propertize proj-name 'face 'bold)
-               (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic))
-               (format "%s%s" (if kill-file-path (propertize "Copied: " 'face 'bold) "") fpath-pretty)
-               (format "Size: %s" (im-human-readable-size (- (point-max) (point-min))))
-               (format "Current branch: %s" (lab-git-current-branch))
-               (im-read-time))
+           (fpath-pretty (string-replace (expand-file-name "~") "~" fpath))
+           (prop (lambda (x) (propertize x 'face 'bold)))
+           (text
+            (format
+             "[%s] %s\n%s\n%s\n%s\n%s%s\n%s"
+             (propertize proj-name 'face 'bold)
+             (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic))
+             (if region? "*region*" "")
+             (format "%s%s" (if kill-file-path (propertize "Copied: " 'face 'bold) "") fpath-pretty)
+             (format "%s: %s" (funcall prop "Size") (im-human-readable-size (- point-max point-min)))
+             (if (file-exists-p (expand-file-name ".git" (im-current-project-root)))
+                 (format "%s: %s\n" (funcall prop "Current branch") (lab-git-current-branch))
+               "")
+             (format
+              "%s: %s, %s: %s, %s: %s"
+              (funcall prop "Lines")
+              (count-lines point-min point-max)
+              (funcall prop "Words")
+              (length (split-string (buffer-substring-no-properties point-min point-max) "\\W+" 'omit-nulls))
+              (funcall prop "Chars")
+              (- point-max point-min))
+             (format "%s: %s" (funcall prop "Major Mode") major-mode)
+             (im-read-time))))
+      (im-peek
+       (lambda ()
+         (with-current-buffer (get-buffer-create "*im-buffer-info*")
+           (erase-buffer)
+           (insert text)
+           (current-buffer))))
       (when kill-file-path
         (im-kill fpath-pretty))))
 #+end_src
