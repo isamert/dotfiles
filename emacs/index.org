@@ -179,7 +179,10 @@ at the specified time. Simply add your function via ~add-hook~ to
 
 #+begin_src emacs-lisp
   (require 'midnight)
-  (midnight-delay-set 'midnight-delay "10:30am")
+
+  ;; From: https://old.reddit.com/r/emacs/comments/y4nc0e/help_needed_with_midnightmode/
+  ;; To make it *not* work at each emacs startup, use numbers instead of "10:30am"
+  (midnight-delay-set 'midnight-delay (truncate (* 10.5 60 60))) ;; 10:30am
 #+end_src
 ** Variables and functions
 Some basic variable and function definitions that will be used in configuration.
