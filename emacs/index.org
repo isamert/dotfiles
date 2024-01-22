@@ -12285,33 +12285,43 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
     (org-ai-interrupt-current-request)
     (with-current-buffer (get-buffer-create im-org-ai-snippet-buffer)
       (erase-buffer))
-    (let ((cb (current-buffer)))
+    (let ((cb (current-buffer))
+          (region? (use-region-p))
+          (rb (region-beginning))
+          (re (region-end)))
       (org-ai-prompt
        (format
-        "%s
-  - ONLY answer with the snippet required.
+        "- ONLY answer with the snippet required.
   - Do NOT provide any extra explanations.
   - Try to incorporate explanations inside the snippet in MOST CONCISE WAY POSSIBLE.
-  - ONLY provide code."
-        prompt)
+  - ONLY provide code.
+
+  %s
+  %s"
+        prompt
+        (if (use-region-p)
+            (buffer-substring-no-properties (region-beginning) (region-end))
+          ""))
        :sys-prompt "You are an assistant living inside Emacs. You answer concisely."
        :output-buffer (get-buffer-create im-org-ai-snippet-buffer)
        :follow t
        :callback
        (lambda ()
          (with-current-buffer im-org-ai-snippet-buffer
-           (let* ((str (-> (buffer-string)
-                          (s-trim)
-                          (string-trim-left "```.*\n")
-                          (string-trim-right "\n```")
-                          (string-trim-left "`")
-                          (string-trim-right "`")
-                          (s-trim))))
+           (let* ((str (->
+                        (buffer-string)
+                        (s-trim)
+                        (string-trim-left "```.*\n")
+                        (string-trim-right "\n```")
+                        (string-trim-left "`")
+                        (string-trim-right "`")
+                        (s-trim))))
              (with-current-buffer cb
+               (when region?
+                 (delete-region rb re))
                (insert str))))))))
 
-  (im-leader
-    "sa" #'im-ai-snippet)
+  (im-leader-v "sa" #'im-ai-snippet)
 #+end_src
 * Operating system related
 ** Sound output chooser
