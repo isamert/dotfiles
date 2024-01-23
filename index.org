@@ -1663,6 +1663,10 @@ This file is sourced by both =zsh= and =bash=.
   # highlight streams with bat
   alias hjson='bat --language=json --paging=never --style=plain'
   alias hlog='bat --language=log --paging=never --style=plain'
+
+  # higlight json parts of the stream and print other lines plain
+  # ./program_that_may_output_json | logjson
+  alias logjson='jq -R -r ". as \$line | try fromjson catch \$line"'
 #+end_src
 
 * Tmux
