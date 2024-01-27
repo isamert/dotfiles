@@ -1283,11 +1283,6 @@ Some small packages that enriches editing experience visually. I don't enable al
   (use-package default-text-scale
     :demand t)
 
-  ;; Highlights changed lines in git. You need to save the buffer to see
-  ;; the changes.
-  (use-package diff-hl
-    :hook (prog-mode . diff-hl-mode))
-
   ;; It helps you to find your cursor when you change buffers/windows
   ;; etc with a little animation.
   ;; hl-line-mode helsp with finding the cursor. Disabled for now.
@@ -4292,7 +4287,12 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
                             (magit-diff-added . default)
                             (magit-diff-added-highlight . default)))))
 #+end_src
-
+** git-gutter
+Highlights changed lines in git. You can also stage hunks directly in the buffer.
+#+begin_src emacs-lisp
+  (use-package git-gutter
+    :hook (prog-mode . diff-hl-mode))
+#+end_src
 ** forge
 #+begin_src emacs-lisp
   (use-package forge
