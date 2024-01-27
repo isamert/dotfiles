@@ -100,12 +100,6 @@ I do this quite infrequently. If everything is working fine as it is, I tend to 
   (defconst im-init-file (expand-file-name "~/.emacs.d/scratch.el"))
   (setq initial-buffer-choice im-init-file)
   (add-to-list 'default-frame-alist '(undecorated . t))
-
-
-  ;; On MacOS, native fullscreen fucks with ESC, so I simply don't use
-  ;; it. Native fullscreen is also quite bad in itself, I can't assign
-  ;; keybindings to switch to a dedicated fullscreen app.
-  (setq ns-use-native-fullscreen nil)
 #+end_src
 * Preparation
 ** straight.el and use-package
@@ -8983,6 +8977,29 @@ Good for buffer management, especially for groupped killings.
     "-" shrink-window
     ">" enlarge-window-horizontally
     "<" shrink-window-horizontally)
+#+end_src
+** Fix macOS fullscreen
+#+begin_src emacs-lisp
+  ;; On MacOS, native fullscreen fucks with ESC, so I simply don't use
+  ;; it. Native fullscreen is also quite bad in itself, I can't assign
+  ;; keybindings to switch to a dedicated fullscreen app.
+  (setq ns-use-native-fullscreen nil)
+
+  ;; But non-native fullscreen does not play well with posframes for
+  ;; some reason. It creates some visual artifacts. So I simply remove
+  ;; them each time fullscreen is toggled.
+
+  (define-advice toggle-frame-fullscreen (:after (&rest _) fix-fullscreen-artifacts)
+    (when (eq this-command '1)
+      (ignore-errors (im-notify-posframe-clear-all t))
+      (ignore-errors (kill-buffer "*blamer*"))
+      (ignore-errors (kill-buffer "*blamer*"))
+      (ignore-errors (kill-buffer "*lsp-ui-doc-1*"))
+      (ignore-errors (kill-buffer "*flycheck-posframe-buffer*"))
+      (ignore-errors (kill-buffer " *lsp-ui-doc-1*"))
+      (ignore-errors (kill-buffer "*lsp-documentation*"))
+      (ignore-errors (kill-buffer " *corfu-popupinfo*"))
+      (ignore-errors (kill-buffer " *corfu*"))))
 #+end_src
 * Misc functions
 ** marks integration
