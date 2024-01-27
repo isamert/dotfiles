@@ -8899,7 +8899,7 @@ Good for buffer management, especially for groupped killings.
            (prop (lambda (x) (propertize x 'face 'bold)))
            (text
             (format
-             "[%s] %s\n%s\n%s\n%s\n%s%s\n%s"
+             "[%s] %s\n%s\n%s\n%s\n%s%s\n%s\n%s"
              (propertize proj-name 'face 'bold)
              (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic))
              (if region? "*region*" "")
