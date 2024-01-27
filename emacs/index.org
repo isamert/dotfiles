@@ -12610,5 +12610,5 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
 #+end_src
 
 ;; Local Variables:
-;; eval: (add-hook 'after-save-hook (lambda () (if (y-or-n-p "Tangle?") (org-babel-tangle))) nil t)
+;; eval: (add-hook 'after-save-hook (lambda () (async-start `(lambda () (find-file ,(buffer-file-name)) (org-babel-tangle)) (lambda (_) (alert ">> Tangled!")))) nil t)
 ;; End:
