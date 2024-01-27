@@ -4298,7 +4298,17 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
 Highlights changed lines in git. You can also stage hunks directly in the buffer.
 #+begin_src emacs-lisp
   (use-package git-gutter
-    :hook (prog-mode . diff-hl-mode))
+    :hook (prog-mode . diff-hl-mode)
+    :config
+    (im-leader
+      "Gn" #'git-gutter:next-hunk
+      "Gp" #'git-gutter:previous-hunk
+      "Gs" #'git-gutter:stage-hunk)
+
+    (im-make-repeatable "git-gutter"
+      "n" git-gutter:next-hunk
+      "N" git-gutter:previous-hunk
+      "p" git-gutter:previous-hunk))
 #+end_src
 ** forge
 #+begin_src emacs-lisp
