@@ -2974,7 +2974,14 @@ This is a built-in mode for providing basic outlining features. Here are a few c
     (setq eshell-hist-ignoredups nil)
     (setq eshell-history-size 10000)
     ;; I manage history with `im-eshell-append-history''
-    (setq eshell-save-history-on-exit nil))
+    (setq eshell-save-history-on-exit nil)
+
+
+    (defun im-eshell-prompt ()
+      (concat (abbreviate-file-name (eshell/pwd))
+              (if (= (user-uid) 0) " # " " \n$ ")))
+    (setq eshell-prompt-regexp "^$ ")
+    (setq eshell-prompt-function #'im-eshell-prompt))
 
   (use-package eshell-syntax-highlighting
     :after eshell
@@ -3561,7 +3568,13 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     (setq dirvish-attributes '(vc-state subtree-state all-the-icons collapse git-msg file-time file-size))
     (setq dirvish-side-width 55)
 
+
     (dirvish-side-follow-mode)
+    ;; dirvish-side-follow-mode breaks tramp in minibuffer
+    (defun im-dirvish-disable-side-follow-mode () (dirvish-side-follow-mode -1))
+    (defun im-dirvish-enable-side-follow-mode () (dirvish-side-follow-mode +1))
+    (add-hook 'minibuffer-setup-hook #'im-dirvish-disable-side-follow-mode)
+    (add-hook 'minibuffer-exit-hook #'im-dirvish-enable-side-follow-mode)
 
     ;; Disable wrapping lines in some modes so that full-screen dirvish looks good
     (add-hook 'dirvish-directory-view-mode-hook #'im-disable-line-wrapping)
@@ -7187,7 +7200,6 @@ Keybindings are generally set in-place, following have no context, so they are h
 ** Some general keybindings
 
 #+BEGIN_SRC emacs-lisp
-  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
   (global-set-key (kbd "C-x <escape>") 'keyboard-escape-quit)
   (global-set-key (kbd "C-c <escape>") 'keyboard-escape-quit)
 
@@ -8947,13 +8959,15 @@ Good for buffer management, especially for groupped killings.
     "ws" #'tab-bar-switch-to-tab ;; switch
     "wl" #'tab-bar-switch-to-recent-tab ;; last
     "wk" #'tab-close ;; kill
-    ;; extra
-    "wi" #'im-print-buffer-file-info
     ;; buffer
     "wb" #'bufler
     ;; ace-window
     "wa" #'ace-window
     "ws" #'ace-swap-window)
+
+  (im-leader-v
+    ;; extra
+    "wi" #'im-print-buffer-file-info)
 
   ;; Buffer related bindings
   (im-leader
