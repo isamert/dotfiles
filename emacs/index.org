@@ -12354,6 +12354,116 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
 
   (im-leader-v "sa" #'im-ai-snippet)
 #+end_src
+** im-test -- test related utility functions
+#+begin_src emacs-lisp
+  (defun im-test-run-code-coverage-report ()
+    "Run all tests and then open coverage."
+    (interactive)
+    (im-open-test-code-coverage-report t))
+
+  (defun im-test-run-current-test-only ()
+    "Run currently focused test only."
+    (interactive)
+    (im-test-run-current-test-file t))
+
+  (defun im-test-open-code-coverage-report (run-test-before)
+    "Open code coverage report for current project.
+  With RUN-TEST-BEFORE is non-nil, then run tests before and then
+  open coverage.  You can simply call \"gf\" or
+  `xah-open-file-at-cursor' to navigate to a file shown on the
+  output."
+    (interactive "P")
+    (let ((default-directory (im-current-project-root))
+          (cov-file (format "file://%s/coverage/lcov-report/index.html" (im-current-project-root))))
+      (if run-test-before
+          (im-shell-command
+           :command (pcase (im-test-get-nodejs-test-program)
+                      ('jest "yarn jest --coverage --colors")
+                      ('vitest "FORCE_COLOR=1 yarn vitest --coverage --run"))
+           :buffer-name (format "%s-test-cov" (im-current-project-name))
+           :on-finish (lambda (&rest _) (browse-url-default-browser cov-file))
+           :on-fail (lambda (&rest _) (user-error ">> Tests are failed!")))
+        (browse-url-default-browser cov-file))))
+
+  (defun im-test-run-current-test-file (run-only-focused-test)
+    "Run the current test file."
+    (interactive "P")
+    (cond
+     ((locate-dominating-file "." "yarn.lock") (im-test-run-current-file--yarn run-only-focused-test))
+     ((locate-dominating-file "." "pom.xml") (im-test-run-current-file--mvn run-only-focused-test))
+     (t (user-error "This project type is not recognized"))))
+
+  (defun im-test-get-nodejs-test-program ()
+    "Return either `vitest' or `yarn'.
+  Throw error otherwise."
+    (let-alist (json-read-file (f-join (im-current-project-root) "package.json"))
+      (or (and .devDependencies.vitest 'vitest)
+          (and .devDependencies.jest 'jest)
+          (user-error "Not a jest or vitest file project!"))))
+
+  (defun im-test-run-current-file--yarn (run-only-focused-test)
+    (let* ((test-file (file-relative-name buffer-file-name (im-current-project-root)))
+           (default-directory (im-current-project-root))
+           (program (im-test-get-nodejs-test-program))
+           (current-test-name
+            (ignore-errors
+              (save-excursion
+                (end-of-line)
+                (re-search-backward "it(['\"]" nil t)
+                (nth 1 (s-match "it(['\"]\\(.*\\)['\"]," (substring-no-properties (thing-at-point 'line))))))))
+      (pcase program
+        ('vitest
+         (switch-to-buffer-other-window
+          (apply
+           #'eat-make
+           (format
+            "yarn test: %s%s" test-file
+            (if run-only-focused-test (concat "::" current-test-name) ""))
+           "yarn"
+           nil
+           "vitest"
+           test-file
+           (when (and run-only-focused-test current-test-name)
+             (list "--testNamePattern" current-test-name)))))
+        ('jest
+         (switch-to-buffer-other-window
+          (apply
+           #'eat-make
+           (format
+            "yarn test: %s%s" test-file
+            (if run-only-focused-test (concat "::" current-test-name) ""))
+           "yarn"
+           nil
+           "jest"
+           "--colors"
+           "--runTestsByPath"
+           test-file
+           (when (and run-only-focused-test current-test-name)
+             (list current-test-name))))))))
+
+  (defun im-test-run-current-file--mvn (run-only-focused-test)
+    (let* ((test-file buffer-file-name)
+           (default-directory (im-current-project-root))
+           (current-test-class
+            (save-excursion
+              (goto-char (point-min))
+              (search-forward-regexp "^\\(public \\)?class \\([A-Za-z0-9_]+\\) " nil t)
+              (beginning-of-line)
+              (nth 1 (s-match "class \\([A-Za-z0-9_]+\\) " (substring-no-properties (thing-at-point 'line))))))
+           (current-test-name
+            (ignore-errors
+              (save-excursion
+                (end-of-line)
+                (re-search-backward "@Test" nil t)
+                (forward-line)
+                (nth 1 (s-match " \\([A-Za-z0-9_]+\\)(" (substring-no-properties (thing-at-point 'line))))))))
+      (im-shell-command
+       :command (format "./mvnw test --offline -Dstyle.color=always -Djansi.force=true -Dtest='%s%s'"
+                        current-test-class
+                        (if (and run-only-focused-test current-test-name)
+                            (format "#%s" current-test-name)
+                          "")))))
+#+end_src
 * Operating system related
 ** Sound output chooser
 #+begin_src emacs-lisp
