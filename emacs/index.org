@@ -3492,7 +3492,7 @@ Hydra creates a menu for quickly calling/toggling functions/modes in a visually 
         ("tL" global-tab-line-mode "Tab Line mode (global)" :toggle t)
         ("tb" tab-bar-mode "Tab Bar mode (global)" :toggle t))
        "Highlighting"
-       (("hg" diff-hl-mode "Highlight git diff" :toggle t)
+       (("hg" git-gutter-mode "Highlight git diff" :toggle t)
         ("hd" rainbow-delimiters-mode "Rainbow parens" :toggle t)
         ("hl" global-hl-line-mode "Highlight current line" :toggle t)
         ("hb" beacon-mode "Cursor trailer (baecon)" :toggle t)
@@ -4298,7 +4298,7 @@ You need to install ~delta~ (or ~git-delta~) before to get this working. See [[h
 Highlights changed lines in git. You can also stage hunks directly in the buffer.
 #+begin_src emacs-lisp
   (use-package git-gutter
-    :hook (prog-mode . diff-hl-mode)
+    :hook (prog-mode . git-gutter-mode)
     :config
     (im-leader
       "Gn" #'git-gutter:next-hunk
@@ -7210,6 +7210,7 @@ Keybindings are generally set in-place, following have no context, so they are h
 ** Some general keybindings
 
 #+BEGIN_SRC emacs-lisp
+  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
   (global-set-key (kbd "C-x <escape>") 'keyboard-escape-quit)
   (global-set-key (kbd "C-c <escape>") 'keyboard-escape-quit)
 
@@ -9014,16 +9015,15 @@ Good for buffer management, especially for groupped killings.
   ;; them each time fullscreen is toggled.
 
   (define-advice toggle-frame-fullscreen (:after (&rest _) fix-fullscreen-artifacts)
-    (when (eq this-command '1)
-      (ignore-errors (im-notify-posframe-clear-all t))
-      (ignore-errors (kill-buffer "*blamer*"))
-      (ignore-errors (kill-buffer "*blamer*"))
-      (ignore-errors (kill-buffer "*lsp-ui-doc-1*"))
-      (ignore-errors (kill-buffer "*flycheck-posframe-buffer*"))
-      (ignore-errors (kill-buffer " *lsp-ui-doc-1*"))
-      (ignore-errors (kill-buffer "*lsp-documentation*"))
-      (ignore-errors (kill-buffer " *corfu-popupinfo*"))
-      (ignore-errors (kill-buffer " *corfu*"))))
+    (posframe-delete-all)
+    (ignore-errors (im-notify-posframe-clear-all t))
+    (ignore-errors (kill-buffer "*blamer*"))
+    (ignore-errors (kill-buffer "*lsp-ui-doc-1*"))
+    (ignore-errors (kill-buffer "*flycheck-posframe-buffer*"))
+    (ignore-errors (kill-buffer " *lsp-ui-doc-1*"))
+    (ignore-errors (kill-buffer "*lsp-documentation*"))
+    (ignore-errors (kill-buffer " *corfu-popupinfo*"))
+    (ignore-errors (kill-buffer " *corfu*")))
 #+end_src
 * Misc functions
 ** marks integration
