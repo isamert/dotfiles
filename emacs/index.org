@@ -2455,6 +2455,7 @@ Insert links/images more intelligently,
 
 #+begin_src emacs-lisp
   (im-leader-v "oP" #'im-org-insert-dwim)
+  (general-def :keymaps 'minibuffer-mode-map "C-o" #'im-org-insert-dwim)
 
   (defun im-org-insert-dwim ()
     "Like `org-insert-link' but improved with dwim features.
@@ -4303,7 +4304,8 @@ Highlights changed lines in git. You can also stage hunks directly in the buffer
     (im-leader
       "Gn" #'git-gutter:next-hunk
       "Gp" #'git-gutter:previous-hunk
-      "Gs" #'git-gutter:stage-hunk)
+      "Gs" #'git-gutter:stage-hunk
+      "Gr" #'git-gutter:revert-hunk)
 
     (im-make-repeatable "git-gutter"
       "n" git-gutter:next-hunk
@@ -4524,7 +4526,7 @@ Other complementary packages:
     (marginalia-mode))
 
   (use-package mini-frame
-    ;; :hook (after-init . mini-frame)
+    :hook (after-init . mini-frame)
     :config
     (setq mini-frame-show-parameters
           '((top . 0.15)
@@ -6687,7 +6689,7 @@ The interface is pretty intuitive. Go {back,forward} with {b,f} or {left,right} 
     (deadgrep-project-root-function #'im-current-project-root))
 #+end_src
 
-** consult-gh
+** consult-gh (GitHub interface for consult)
 #+begin_src emacs-lisp
   (use-package consult-gh
     :straight (:host github :repo "armindarvish/consult-gh")
