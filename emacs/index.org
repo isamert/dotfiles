@@ -5133,6 +5133,7 @@ It is nonsensical to use =flymake= and =flycheck= at the same time. I mainly use
     (define-key corfu-map (kbd "M-j") #'corfu-next)
     (define-key corfu-map (kbd "M-k") #'corfu-previous)
     (define-key corfu-map (kbd "RET") #'corfu-complete)
+    (define-key corfu-map (kbd "<tab>") nil)
 
     (set-face-background 'corfu-current "dim gray")
     (setq corfu-cycle t)
