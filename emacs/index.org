@@ -7051,7 +7051,7 @@ Manage media and streams through =completing-read=.
     (setq empv-radio-channels im-radio-channels)
     (setq empv-radio-log-file "~/Documents/notes/songs.org")
     (setq empv-base-directory "~/Music/")
-    (setq empv-video-dir `("~/Videos" ,(format "/run/media/%s/BINGUS/Videos" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Videos" (user-login-name))))
+    (setq empv-video-dir `("~/Videos" "~/Movies" ,(format "/run/media/%s/BINGUS/Videos" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Videos" (user-login-name))))
     (setq empv-audio-dir `("~/Music" ,(format "/run/media/%s/BINGUS/Music" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Music" (user-login-name))))
     (setq empv-allow-insecure-connections t)
     (setq empv-invidious-instance "https://inv.zzls.xyz/api/v1")
