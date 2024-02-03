@@ -868,7 +868,7 @@ This function is for doing easy REST calls and it uses plists for everything bec
 #+end_src
 *** Git
 #+begin_src emacs-lisp
-  (cl-defun im-git-temp-clone (url &key on-success (on-fail (lambda () (alert "Cloning failed!"))))
+  (cl-defun im-git-temp-clone (url &key on-success (on-fail (lambda () (alert "Cloning failed!" :title "im-git-temp-clone"))))
     "Clone URL into a temp directory and run ON-SUCCESS inside it."
     (let ((dir (make-temp-file "im_temp_git_dir" t)))
       (lab-git-clone
