@@ -8562,22 +8562,42 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
   org table, other one outputs the result as json.
 
   If `:buffer' is non-nil, then output results to a buffer, instead
-  of the results drawer."
+  of the results drawer.
+
+  If `:cmd' is non-nil, then instead of executing query, print out
+  the resulting bq command."
     (let* ((job-id (im-uuid))
            (format (or (alist-get :format params) "pretty"))
            (api (alist-get :api params))
            (project-id (alist-get :project-id params))
            (buffer? (alist-get :buffer params))
+           (cmd? (alist-get :cmd params))
            (json-out? (s-matches? "json" format))
            (buf (get-buffer-create "*im-bqsql*"))
            (org-buffer (current-buffer))
            (start-time (float-time))
+           cmd cmd-str
            process
            (vars (org-babel--get-vars params)))
       (setq query (org-babel-expand-body:bqsql query params))
+      (setq cmd `("query" ,buf "bq" "query"
+                  ,@(when api `("--api" ,api))
+                  ,@(when project-id `("--project_id" ,project-id))
+                  "--quiet" "--max_rows" "100000" "--nouse_legacy_sql"
+                  "--format" ,format
+                  "--job_id" ,job-id ,query))
+      (setq cmd-str (s-join
+                     " "
+                     (--map (if (not (s-prefix? "--" it))
+                                (format "\"%s\"" (s-replace "\"" "\\\"" it))
+                              it)
+                            (-drop 2 cmd))))
+      (when cmd?
+        (org-babel-insert-result cmd-str)
+        (user-error "Done."))
       (with-current-buffer buf (erase-buffer))
       (im-ensure-binary "bq" :package "google-cloud-sdk" :installer "nix-env -iA")
-      (setq process (apply #'start-process `("query" ,buf "bq" "query" ,@(when api `("--api" ,api)) ,@(when project-id `("--project_id" ,project-id)) "--quiet" "--max_rows" "100000" "--nouse_legacy_sql" "--format" ,format "--job_id" ,job-id ,query)))
+      (setq process (apply #'start-process cmd))
       (set-process-sentinel
        process
        (lambda (p m)
@@ -8598,7 +8618,9 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
                    (insert result)
                    (if json-out?
                        (json-ts-mode)
-                     (org-mode))
+                     (progn
+                       (org-mode)
+                       (im-disable-line-wrapping)))
                    (setq header-line-format msg))
                  (unless found?
                    (user-error "Org-block is gone.  Result inserted to the buffer %s" bname)))
