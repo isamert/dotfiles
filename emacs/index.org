@@ -12399,13 +12399,13 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
     (org-ai-interrupt-current-request)
     (with-current-buffer (get-buffer-create im-org-ai-snippet-buffer)
       (erase-buffer))
-    (let ((cb (current-buffer))
-          (region? (use-region-p))
-          (rb (region-beginning))
-          (re (region-end)))
+    (let* ((cb (current-buffer))
+           (region? (use-region-p))
+           (rb (and region? (region-beginning)))
+           (re (and region? (region-end))))
       (org-ai-prompt
        (format
-        "- ONLY answer with the snippet required.
+        "- ONLY answer with snippet.
   - Do NOT provide any extra explanations.
   - Try to incorporate explanations inside the snippet in MOST CONCISE WAY POSSIBLE.
   - ONLY provide code.
