@@ -1711,6 +1711,12 @@ Pretty useful for macros. Increment or decrement number at point with ~+,-~ in n
             (setq down-pos (point)))))
       (list up-pos down-pos)))
 #+end_src
+** Extra repeatable keys for evil
+#+begin_src emacs-lisp
+  (im-make-repeatable evil-section
+    "[" evil-backward-section-begin
+    "]" evil-forward-section-begin)
+#+end_src
 * org-mode
 ** Tips etc.
 - Some lesser known functions:
