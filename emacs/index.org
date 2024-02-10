@@ -10612,7 +10612,7 @@ I have a ~bullet.org~ file that I keep my daily journal and here are some utilit
     "Intelligently suggest a filename for the current context."
     (let ((fname (if path (f-filename path) "")))
       (if (and (equal
-                (expand-file-name (buffer-file-name))
+                (expand-file-name (buffer-file-name (buffer-base-buffer (current-buffer))))
                 (expand-file-name bullet-org))
                (not (s-prefix? "bullet_" fname)))
           (f-join
