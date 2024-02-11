@@ -5026,11 +5026,8 @@ Here is a nice description of the package from it's README:
     ;; which-key.
     (setq prefix-help-command 'embark-prefix-help-command)
 
-    ;; It is also possible to control which commands exit after action
-    ;; and which to not etc. but for now I am experimenting with not
-    ;; quitting at all. It is not that hard to hit C-g afterward if I
-    ;; want to quit.
-    (setq embark-quit-after-action nil)
+    (setq embark-quit-after-action '((kill-buffer . nil)
+                                     (t . t)))
 
     ;; Replace describe-symbol with helpful-symbol
     (define-key embark-symbol-map "h" #'helpful-symbol))
@@ -11566,13 +11563,13 @@ Simply use ~im-dmenu~ function instead of the default ~completing-read~ function
   literate config instead of tangled real definition. Pretty dumb
   but works most of the time."
     (interactive (list (read-string "Symbol: " (im-region-or 'symbol))))
-    (with-current-buffer (find-file-noselect "~/Workspace/projects/dotfiles/emacs/index.org")
+    (with-current-buffer (find-file-noselect "~/Workspace/projects/personal/dotfiles/emacs/index.org")
       (org-save-outline-visibility nil
         (save-restriction
           (save-excursion
             (org-show-all)
             (goto-char (point-min))
-            (when (re-search-forward (format "\\((def.*\\) %s" symbol nil t))
+            (when (re-search-forward (format "\\((\\(cl-\\)?def.*\\) %s" symbol) nil t)
               (call-interactively #'org-edit-special)))))))
 
   (define-key embark-symbol-map (kbd "J") 'im-jump-to-definition-at-config)
