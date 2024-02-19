@@ -10028,26 +10028,52 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
     (im-serialize-into-file \"~/.emacs.d/sync/people\"
       (org-map-entries #'org-entry-properties \"LEVEL=1\"))"
     (interactive)
-    (->>
-     (empv--completing-read-object
-      "Select info"
-      (-mapcat
-       (lambda (info)
-         (--map
-          (cons (format
-                 "%s/%s = %s"
-                 (alist-get "ITEM" info nil nil #'equal)
-                 (car it)
-                 (cdr it))
-                (cdr it))
-          (--filter (not (s-blank? (cdr it))) info)))
-       (im-deserialize-from-file "~/.emacs.d/sync/people"))
-      :formatter (lambda (it) (car it)))
-     (cdr)
-     (im-kill)))
+    (let* ((selected
+            (->>
+             (empv--completing-read-object
+              "Select info"
+              (-mapcat
+               (lambda (info)
+                 (--map
+                  (list
+                   :format
+                   (format
+                    "%s >> %s → %s"
+                    (propertize (alist-get "ITEM" info nil nil #'equal) 'face '(:weight bold))
+                    (propertize (car it) 'face '(:foreground "yellow"))
+                    (propertize (cdr it) 'face '(:weight bold :foreground "green")))
+                   :item it :info info)
+                  (--filter
+                   (and
+                    (not (-contains? '("PRIORITY" "CATEGORY") (car it)))
+                    (not (s-blank? (cdr it))))
+                   info)))
+               (im-deserialize-from-file "~/.emacs.d/sync/people"))
+              :formatter (lambda (it) (plist-get it :format)))))
+           (prop (car (plist-get selected :item)))
+           (val (cdr (plist-get selected :item)))
+           (info (cdr (plist-get selected :info))))
+      (im-kill val)
+      (cond
+       ;; Insert link to person if we are in org-mode
+       ((and (frame-focus-state)
+             (derived-mode-p 'org-mode)
+             (equal prop "ID"))
+        (insert (format "[[id:%s][%s]]"
+                        val
+                        (alist-get "ITEM" info nil nil #'equal))))
+       ;; Strip out links from addresses
+       ((s-prefix? "ADDRESS" prop)
+        (if-let (x (s-match "\\[\\[\\(.*\\)\\]\\[\\(.*\\)\\]\\]" val))
+            (im-kill (nth 2 x))
+          (im-kill val)))
+       (t (im-kill val)))))
 
   (im-leader
     "ou" #'im-people)
+
+  (general-def :keymaps 'org-mode-map :states 'insert
+    "M-p" #'im-people)
 #+end_src
 ** Google search
 #+begin_src emacs-lisp
