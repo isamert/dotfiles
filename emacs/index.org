@@ -2546,7 +2546,7 @@ This following trick (got it from [[https://www.reddit.com/r/emacs/comments/o68i
          (let* ((infos (--map (-take 2 (s-split-up-to ":" it 2)) (s-split "\n" out t)))
                 (backlinks (->>
                             (--map
-                             (with-current-buffer (find-file-noselect (f-join default-directory (im-tap (car it))))
+                             (with-current-buffer (find-file-noselect (f-join default-directory (car it)))
                                (save-excursion
                                  (save-restriction
                                    (widen)
@@ -4580,7 +4580,7 @@ Other complementary packages:
     (marginalia-mode))
 
   (use-package mini-frame
-    :hook (after-init . mini-frame)
+    :hook (after-init . mini-frame-mode)
     :config
     (setq mini-frame-show-parameters
           '((top . 0.15)
