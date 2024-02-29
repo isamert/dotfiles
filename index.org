@@ -47,8 +47,15 @@ These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs con
 You can run arbitrary shell commands inside a code block like this: ~«sh("which git")»~. This can be useful where an output of a command needs to be statically placed in an exported file.
 
 #+name: sh
-#+begin_src elisp :var code=""
-  (string-trim (shell-command-to-string code))
+#+begin_src elisp :var code="" default=""
+  (let (output status)
+    (with-temp-buffer
+      (setq status (call-process-shell-command code nil (current-buffer)))
+      (setq output (string-trim (buffer-substring-no-properties (point-min) (point-max)))))
+    (if (or (not (eq status 0))
+            (eq (length output) 0))
+        default
+      output))
 #+end_src
 
 ...and because I use ~«sh("which X")»~ a lot, I also have this:
@@ -1779,8 +1786,8 @@ After issuing the command above, you need to do ~PREFIX I~ to install all plugin
 ** git
 #+begin_src conf :tangle ~/.gitconfig
   [user]
-    email = isamertgurbuz@gmail.com
-    name = Isa Mert Gurbuz
+    name = «sh("git config --global --get user.name", "Isa Mert Gurbuz")»
+    email = «sh("git config --global --get user.email", "isamertgurbuz@gmail.com")»
   [github]
     user = isamert
   [rebase]
@@ -2315,7 +2322,7 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   sanitise tridactyllocal tridactylsync
 
   colors midnight
-  set editorcmd «sh("which emacsclient")»
+  set editorcmd «which("emacsclient")»
   set searchengine g
   set hintfiltermode vimperator-reflow
   set smoothscroll true
@@ -2342,12 +2349,12 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
   command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
   command copyimageurl composite hint -pipe img src | yank
-  command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(lab-watch-pipeline "${JS_ARG}")'`)
-  command emacs/open withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(progn (browse-url "${JS_ARG}") (im-force-focus-emacs))'`)
-  command emacs/eww withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(progn (eww "${JS_ARG}") (im-force-focus-emacs))'`)
-  command emacs/meme-downloader withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}")'`)
-  command emacs/meme-downloader-with-title withUrl js -p tri.native.run(`«sh("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
-  command emacs/visual-mode js (() => {tri.native.write("/tmp/tridactyl.source", document.documentElement.outerHTML); tri.native.run(`«sh("which emacsclient")» --eval '(progn (im-firefox-visual-mode) (im-force-focus-emacs))'`)})();
+  command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(lab-watch-pipeline "${JS_ARG}")'`)
+  command emacs/open withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(progn (browse-url "${JS_ARG}") (im-force-focus-emacs))'`)
+  command emacs/eww withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(progn (eww "${JS_ARG}") (im-force-focus-emacs))'`)
+  command emacs/meme-downloader withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}")'`)
+  command emacs/meme-downloader-with-title withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
+  command emacs/visual-mode js (() => {tri.native.write("/tmp/tridactyl.source", document.documentElement.outerHTML); tri.native.run(`«which("emacsclient")» --eval '(progn (im-firefox-visual-mode) (im-force-focus-emacs))'`)})();
 
   " quick search
   set searchurls.g https://www.google.com/search?q=%s
@@ -2426,7 +2433,7 @@ When I open a useless website that I spent meaningless time on, I want to show o
 ...and here is the tridactyl directive:
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  command randomlink js -d€ tri.native.run("«sh("which randomlink")»").then(link => window.location.replace(link.content.trim()))€
+  command randomlink js -d€ tri.native.run("("which randomlink")»").then(link => window.location.replace(link.content.trim()))€
   autocmd DocStart .*(eksisozluk|ensonhaber).* randomlink
 #+end_src
 
