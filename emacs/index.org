@@ -10061,7 +10061,7 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
              (equal prop "ID"))
         (insert (format "[[id:%s][%s]]"
                         val
-                        (alist-get "ITEM" info nil nil #'equal))))
+                        (s-trim (read-string "Name: " (alist-get "ITEM" info nil nil #'equal))))))
        ;; Strip out links from addresses
        ((s-prefix? "ADDRESS" prop)
         (if-let (x (s-match "\\[\\[\\(.*\\)\\]\\[\\(.*\\)\\]\\]" val))
