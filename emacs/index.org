@@ -10065,7 +10065,10 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
        ;; Strip out links from addresses
        ((s-prefix? "ADDRESS" prop)
         (if-let (x (s-match "\\[\\[\\(.*\\)\\]\\[\\(.*\\)\\]\\]" val))
-            (im-kill (nth 2 x))
+            (progn
+              ;; Put them both in clipboard
+              (im-kill (car x))
+              (im-kill (nth 2 x)))
           (im-kill val)))
        (t (im-kill val)))))
 
