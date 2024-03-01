@@ -874,6 +874,8 @@ This function is for doing easy REST calls and it uses plists for everything bec
       (lab-git-clone
        url
        dir
+       :shallow t
+       :callback
        (lambda (success?)
          (if success?
              (let ((default-directory (f-join dir (file-name-base url))))
@@ -10789,8 +10791,9 @@ Here I define two important functions and their helpers.  The following function
     (setq-local web-mode-code-indent-offset n) ; web-mode, js code in html file
     (setq-local css-indent-offset n) ; css-mode
     (setq-local typescript-indent-level n) ; typescript-mode
-    (setq-local typescript-ts-mode-indent-offset 2)
-    (setq-local java-ts-mode-indent-offset 2)
+    (setq-local typescript-ts-mode-indent-offset n)
+    (setq-local java-ts-mode-indent-offset n)
+    (setq-local go-ts-mode-indent-offset n)
     (message "OK!"))
 
   (defun im-setup-indent-global (n)
@@ -10808,8 +10811,9 @@ Here I define two important functions and their helpers.  The following function
     (setq web-mode-code-indent-offset n) ; web-mode, js code in html file
     (setq css-indent-offset n) ; css-mode
     (setq typescript-indent-level n) ; typescript-mode
-    (setq typescript-ts-mode-indent-offset 2)
-    (setq java-ts-mode-indent-offset 2)
+    (setq typescript-ts-mode-indent-offset n)
+    (setq java-ts-mode-indent-offset n)
+    (setq go-ts-mode-indent-offset n)
     (message "OK!"))
 #+end_src
 
