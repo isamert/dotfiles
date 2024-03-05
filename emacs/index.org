@@ -6377,11 +6377,15 @@ Easy way to interact with WolframAlpha. I generally use it for unit conversions 
 There are bunch of Emacs-ChatGPT integrations and org-ai seems to be best as it fits my workflow quite well. Besides being useful in org-mode, it also has org-mode independent features.
 
 #+begin_src emacs-lisp
+  (defvar im-org-ai-default-model "gpt-3.5-turbo-0125")
+  (defvar im-org-ai-powerful-model "gpt-4-0125-preview")
+
   (use-package org-ai
     :straight (:host github :repo "rksm/org-ai")
     :hook (org-mode . org-ai-mode)
     :config
-    ;; (setq org-ai-default-chat-model "gpt-4")
+    ;; (setq org-ai-default-chat-model "gpt-4-0125-preview")
+    (setq org-ai-default-chat-model im-org-ai-default-model)
     (setq org-ai-default-max-tokens 2000)
     (setq org-ai-openai-api-token im-openai-api-key))
 
@@ -6390,14 +6394,18 @@ There are bunch of Emacs-ChatGPT integrations and org-ai seems to be best as it 
   Also removes the answers, if user wants it."
     (interactive)
     (save-excursion
-      (when (re-search-backward "#\\+begin_ai markdown :model \"\\(gpt-3.5-turbo\\|gpt-4\\)\"" nil t)
+      (when (re-search-backward
+             (format "#\\+begin_ai markdown :model \"\\(%s\\|%s\\)\""
+                     im-org-ai-default-model
+                     im-org-ai-powerful-model)
+             nil t)
         (let* ((match-start (match-beginning 0))
                (match-end (match-end 0))
                (current-model (match-string 1)))
-          (cond ((string= current-model "gpt-3.5-turbo")
-                 (replace-match "#+begin_ai markdown :model \"gpt-4\"" nil nil))
-                ((string= current-model "gpt-4")
-                 (replace-match "#+begin_ai markdown :model \"gpt-3.5-turbo\"" nil nil)))
+          (cond ((string-prefix-p current-model im-org-ai-default-model)
+                 (replace-match (format "#+begin_ai markdown :model \"%s\"" im-org-ai-powerful-model) nil nil))
+                ((string= current-model im-org-ai-powerful-model)
+                 (replace-match (format "#+begin_ai markdown :model \"%s\"" im-org-ai-default-model) nil nil)))
           (when (y-or-n-p "Want to remove AI answers?")
             (let ((start (progn
                            (goto-char match-start)
@@ -12448,21 +12456,30 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
     (let* ((cb (current-buffer))
            (region? (use-region-p))
            (rb (and region? (region-beginning)))
-           (re (and region? (region-end))))
+           (re (and region? (region-end)))
+           (org-ai-default-chat-model im-org-ai-powerful-model))
       (org-ai-prompt
        (format
-        "- ONLY answer with snippet.
-  - Do NOT provide any extra explanations.
+        "I will ask you to provide a code snippet that suits my needs. Follow these rules while answering:
+  - ONLY answer with snippet.
+  - Do NOT provide any unnecessary explanations.
   - Try to incorporate explanations inside the snippet in MOST CONCISE WAY POSSIBLE.
-  - ONLY provide code.
+  - ONLY provide code snippet and nothing else.
+  - The language I want the snippet in is: %s
 
   %s
   %s"
-        prompt
+        (->>
+         (string-trim-right (symbol-name major-mode) "-mode")
+         (s-replace-all '(("-" . " ")
+                          ("interaction" . "")))
+         (s-titleize))
         (if (use-region-p)
-            (buffer-substring-no-properties (region-beginning) (region-end))
+            (format "Here is my request: %s" prompt)
+          prompt)
+        (if (use-region-p)
+            (format "I want you to edit following section with my request:\n%s" (buffer-substring-no-properties (region-beginning) (region-end)))
           ""))
-       :sys-prompt "You are an assistant living inside Emacs. You answer concisely."
        :output-buffer (get-buffer-create im-org-ai-snippet-buffer)
        :follow t
        :callback
