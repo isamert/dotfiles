@@ -400,6 +400,7 @@ Some basic variable and function definitions that will be used in configuration.
        (message "[im-tap :: %s] → %s" ,(prin1-to-string form) result)
        result))
 
+  (defalias 'im-inspect #'im-debug)
   (defun im-debug (thing)
     "Like `im-tap' but uses `pp-display-expression' to display the
   result instead of `message'."
