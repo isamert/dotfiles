@@ -11391,6 +11391,14 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
                    (message ">> Downloading logs for %s. Done." name)
                    (find-file fname))
                (user-error "Failed to get logs.")))))
+        "Logs (previous pod)" →
+        (let ((container (im-kube-pod--select-container pod)))
+          (shell-command
+           (im-kill
+            (format
+             "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s' -p"
+             name namespace container context))
+           (format "*im-kube-logs:%s-%s-PREVIOUS*" name container)))
         ;; Logs from all pods combined for given pod's app
         "App logs" →
         (let ((container (im-kube-pod--select-container pod)))
