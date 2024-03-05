@@ -12469,11 +12469,15 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
 
   %s
   %s"
-        (->>
-         (string-trim-right (symbol-name major-mode) "-mode")
-         (s-replace-all '(("-" . " ")
-                          ("interaction" . "")))
-         (s-titleize))
+        (let ((mode-name
+               (if (and (derived-mode-p 'org-mode) (org-in-src-block-p))
+                   (org-element-property :language (org-element-at-point))
+                 (symbol-name major-mode))))
+          (->>
+           (string-trim-right mode-name "-mode")
+           (s-replace-all '(("-" . " ")
+                            ("interaction" . "")))
+           (s-titleize)))
         (if (use-region-p)
             (format "Here is my request: %s" prompt)
           prompt)
