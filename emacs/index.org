@@ -6780,6 +6780,21 @@ The interface is pretty intuitive. Go {back,forward} with {b,f} or {left,right} 
     (:modes 'insert
      "M-o z" #'copilot-complete))
 #+end_src
+** artist-mode
+Here I simply add some bindings form artist-mode and a cheatsheet in the header line.
+
+#+begin_src emacs-lisp
+  (add-hook
+   'artist-mode-hook
+   #'im-artist-mode-hook)
+
+  (defun im-artist-mode-hook ()
+    (local-set-key (kbd "<f2>") 'artist-select-op-pen-line) ; f2 = pen mode
+    (local-set-key (kbd "<f3>") 'artist-select-op-line)     ; f3 = line
+    (local-set-key (kbd "<f4>") 'artist-select-op-square)   ; f4 = rectangle
+    (local-set-key (kbd "<f5>") 'artist-select-op-ellipse)  ; f5 = ellipse
+    (setq-local header-line-format "f2 → pen, f3 → line, f4 → square, f5 → ellipse"))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple lines. It
@@ -11337,7 +11352,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
            (im-kube-pod--act (list :name (nth 1 info) :namespace (nth 0 info) :context (im-kube--current-context))))))
 
   ;; TODO wtf is this shit
-  (defun im-kube-pod--act (pod)
+  (defun im-kube-pod--act (pod &optional container)
     (let ((namespace (plist-get pod :namespace))
           (name (plist-get pod :name))
           (context (plist-get pod :context)))
@@ -11350,7 +11365,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
                             name
                             context))))
         "Exec into container" →
-        (let ((container (im-kube-pod--select-container pod)))
+        (let ((container (or container (im-kube-pod--select-container pod))))
           (with-current-buffer (im-eshell (format "$pod: %s" name))
             (insert
              (im-kill (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' --context='%s' -- bash"
@@ -11359,7 +11374,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
                               name
                               context)))))
         "Logs" →
-        (let ((container (im-kube-pod--select-container pod)))
+        (let ((container (or container (im-kube-pod--select-container pod))))
           (shell-command
            (im-kill
             (format
@@ -11372,10 +11387,10 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
            (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s' --context='%s'"
                             name
                             namespace
-                            (im-kube-pod--select-container pod)
+                            (or container (im-kube-pod--select-container pod))
                             context))))
         "Logs (to a file)" →
-        (let ((container (im-kube-pod--select-container pod))
+        (let ((container (or container (im-kube-pod--select-container pod)))
               (fname (expand-file-name (read-file-name
                                         "File: "
                                         "~/Workspace/temp/"
@@ -11400,7 +11415,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
                    (find-file fname))
                (user-error "Failed to get logs.")))))
         "Logs (previous pod)" →
-        (let ((container (im-kube-pod--select-container pod)))
+        (let ((container (or container (im-kube-pod--select-container pod))))
           (shell-command
            (im-kill
             (format
@@ -11409,7 +11424,7 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
            (format "*im-kube-logs:%s-%s-PREVIOUS*" name container)))
         ;; Logs from all pods combined for given pod's app
         "App logs" →
-        (let ((container (im-kube-pod--select-container pod)))
+        (let ((container (or container (im-kube-pod--select-container pod))))
           (with-current-buffer (im-eshell (format "$pod: %s" name))
             (insert (im-kill
                      (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s' --context='%s'"
