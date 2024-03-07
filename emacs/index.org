@@ -3303,6 +3303,27 @@ You can use ~list-bookmarks~ command to view/edit/delete them but using ~consult
       (kbd "r") #'tabulated-list-revert))
 #+end_src
 
+** vtable-mode
+Here are mostly used keys in vtable-map:
+- S :: Sort by column.
+- r :: Refresh the table
+- {,} :: narrow/widen column
+#+begin_src emacs-lisp
+  (general-def
+    :keymaps 'vtable-map
+    :states 'normal
+    "r" #'vtable-revert-command
+    "H" #'vtable-previous-column
+    "L" #'vtable-next-column)
+#+end_src
+*** Helper functions
+#+begin_src emacs-lisp
+  (defun im-vtable--pretty-colors ()
+    "Return a (color color) list that can be used with :column-colors and :row-colors.
+  Makes the tables more readable."
+    ;; Mini-frame dependency is not cool bot ok. Rest of the config is still look like hell.
+    `(,(alist-get 'background-color (frame-parameters)) ,(mini-frame-get-background-color)))
+#+end_src
 ** alert & im-notify-posframe
 Several packages are using this package to show system-level notifications. Here I set some defaults/fallback values.
 
