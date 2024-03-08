@@ -11559,9 +11559,10 @@ My main use case is drop into a shell of a pod. The code below makes it quite ea
     (s-trim
      (shell-command-to-string
       (format
-       "kubectl get pod %s --namespace='%s' -o custom-columns=:metadata.labels.app"
+       "kubectl get pod '%s' --namespace='%s' --context='%s' -o custom-columns=:metadata.labels.app"
        (plist-get pod :name)
-       (plist-get pod :namespace)))))
+       (plist-get pod :namespace)
+       (plist-get pod :context)))))
 #+end_src
 ** Kafka
 #+begin_src emacs-lisp
