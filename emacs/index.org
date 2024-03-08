@@ -5922,7 +5922,7 @@ Simple mode for editing =~/.Xmodmap= file.
     :straight (:host github :repo "isamert/emacs-slack")
     :defer t
     :general
-    (im-leader
+    (im-leader-v
       "ess" #'im-slack-select-rooms
       "esS" #'slack-select-unread-rooms
       "esm" #'im-slack-send-message
@@ -5944,6 +5944,8 @@ Simple mode for editing =~/.Xmodmap= file.
     (setq lui-fill-type nil)
     (setq slack-message-custom-notifier #'im-slack-notify)
     (setq slack-message-custom-delete-notifier #'im-slack-notify)
+
+    (setq slack-visible-thread-sign "╚═> ")
 
     (defun im-slack-select-rooms ()
       (interactive)
@@ -5977,6 +5979,7 @@ Simple mode for editing =~/.Xmodmap= file.
      :token ty-slack-token
      :cookie ty-slack-cookie
      :subscribed-channels ty-slack-channels
+     :visible-threads t
      :mark-as-read-immediately nil)
     (slack-start)
     (slack-change-current-team)
@@ -6102,9 +6105,18 @@ Simple mode for editing =~/.Xmodmap= file.
       "Select message: "
       im-slack--last-messages
       :sort? nil
-      :formatter
-      (lambda (it)
-        (let-plist it (format "%s (%s: %s)" .room-name .sender-name .message-string))))))
+      :formatter #'im-slack--format-message)))
+
+  (defun im-slack--format-message (it)
+    (let-plist it
+      (format "%s (%s) - %s"
+              (propertize .room-name 'face '(:weight bold :foreground "systemPinkColor"))
+              (when .message
+                (propertize
+                 (lab--time-ago
+                  (im-slack--message-ts it))
+                 'face '(:slant italic :foreground "systemGrayColor")))
+              (s-truncate 50 .message-string))))
 
   (defun im-slack-last-messages-alternative ()
     "Like `im-slack-last-messages' but only show the last message per room."
@@ -6113,13 +6125,7 @@ Simple mode for editing =~/.Xmodmap= file.
            (im-completing-read
             "Select room: "
             (im-slack-last-messages-per-room)
-            :formatter (lambda (it) (let-plist it
-                                 (format "%s (%s) - %s"
-                                         (propertize .room-name 'face '(:weight bold))
-                                         (when .message
-                                           (lab--time-ago
-                                            (im-slack--message-ts it)))
-                                         (propertize .message-string 'face 'italic))))
+            :formatter #'im-slack--format-message
             :sort? nil)))
       (let-plist selected
         (slack-room-display
@@ -6128,7 +6134,7 @@ Simple mode for editing =~/.Xmodmap= file.
 
   (defun im-slack-send-message (msg)
     "Send given MSG or selected region as message to interactively
-    selected user."
+  selected user."
     (interactive
      (list
       (if (use-region-p)
@@ -6145,8 +6151,8 @@ Simple mode for editing =~/.Xmodmap= file.
   (defun im-slack-clipboard-image-upload ()
     "Uploads png image from clipboard.
 
-    The default `slack-clipboard-image-upload' was not working
-    properly in MacOS."
+  The default `slack-clipboard-image-upload' was not working
+  properly in MacOS."
     (interactive)
     (unless (im-clipboard-contains-image-p)
       (user-error "No image in clipboard."))
