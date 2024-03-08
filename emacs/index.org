@@ -12562,6 +12562,8 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
            (rb (and region? (region-beginning)))
            (re (and region? (region-end)))
            (org-ai-default-chat-model im-org-ai-powerful-model))
+      (when region?
+        (delete-region rb re))
       (org-ai-prompt
        (format
         "I will ask you to provide a code snippet that suits my needs. Follow these rules while answering:
@@ -12569,6 +12571,8 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
   - Do NOT provide any unnecessary explanations.
   - Try to incorporate explanations inside the snippet in MOST CONCISE WAY POSSIBLE.
   - ONLY provide code snippet and nothing else.
+  - Output only plain text, do not use markdown. Do not use markdown code fences.
+  - This is really important for my career.
   - The language I want the snippet in is: %s
 
   %s
@@ -12588,23 +12592,8 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
         (if (use-region-p)
             (format "I want you to edit following section with my request:\n%s" (buffer-substring-no-properties (region-beginning) (region-end)))
           ""))
-       :output-buffer (get-buffer-create im-org-ai-snippet-buffer)
-       :follow t
-       :callback
-       (lambda ()
-         (with-current-buffer im-org-ai-snippet-buffer
-           (let* ((str (->
-                        (buffer-string)
-                        (s-trim)
-                        (string-trim-left "```.*\n")
-                        (string-trim-right "\n```")
-                        (string-trim-left "`")
-                        (string-trim-right "`")
-                        (s-trim))))
-             (with-current-buffer cb
-               (when region?
-                 (delete-region rb re))
-               (insert str))))))))
+       :output-buffer (current-buffer)
+       :follow t)))
 
   (im-leader-v "sa" #'im-ai-snippet)
 #+end_src
