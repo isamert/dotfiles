@@ -580,7 +580,12 @@ Some basic variable and function definitions that will be used in configuration.
       (string-trim (buffer-string))))
 
   (cl-defmacro im-output-select
-      (&key cmd prompt keep-order (formatter 'it) (split "\n") (drop 0) (filter t) (map 'it) (do 'it) category)
+      (&key cmd prompt keep-order
+            (formatter 'it)
+            (split "\n")
+            (drop 0)
+            (filter t)
+            (map 'it) (do 'it) category)
     "Run given CMD and do a `completing-read' on it.
   This macro is intended to quicken up the process of running a
   shell command and doing a completing-read on it and then using
@@ -589,10 +594,10 @@ Some basic variable and function definitions that will be used in configuration.
     `((lambda (it) ,do)
       (im-completing-read
        ,prompt
-       (seq-map-indexed
-        (lambda (it idx) ,map)
-        (seq-filter
-         (lambda (it) ,filter)
+       (seq-filter
+        (lambda (it) ,filter)
+        (seq-map-indexed
+         (lambda (it idx) ,map)
          (seq-drop
           (s-split
            ,split
