@@ -12720,16 +12720,26 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
                           "")))))
 #+end_src
 * Operating system related
-** Sound output chooser
+** Sound/audio output chooser
 #+begin_src emacs-lisp
   (defun im-osx-select-audio-output ()
-    ;; This is required: https://github.com/deweller/switchaudio-osx
-    ;; brew install switchaudio-osx
     (im-output-select
-     :cmd (im-ensure-binary "SwitchAudioSource -a" :package "switchaudio-osx")
-     :prompt (let ((current (im-shell-command-to-string "SwitchAudioSource -c")))
-               (format "Select audio source (%s): " current))
-     :do (shell-command-to-string (format "SwitchAudioSource -s '%s'" it))))
+     :cmd (im-ensure-binary "SwitchAudioSource -t output -a" :package "switchaudio-osx")
+     :prompt (let ((current (im-shell-command-to-string "SwitchAudioSource -t output -c")))
+               (format "Select audio output (%s): " current))
+     :do (progn
+           (shell-command-to-string (format "SwitchAudioSource -t output -s '%s'" it))
+           (when-let (out (-find (lambda (out) (equal it out))
+                                 (s-split "\n" (shell-command-to-string "SwitchAudioSource -t input -a"))))
+             (when (y-or-n-p (format "Found an output with the same name (%s), switch to it?" out))
+               (shell-command-to-string (format "SwitchAudioSource -t input -s '%s'" out)))))))
+
+  (defun im-osx-select-audio-input ()
+    (im-output-select
+     :cmd (im-ensure-binary "SwitchAudioSource -t input -a" :package "switchaudio-osx")
+     :prompt (let ((current (im-shell-command-to-string "SwitchAudioSource -t input -c")))
+               (format "Select audio input (%s): " current))
+     :do (shell-command-to-string (format "SwitchAudioSource -t input -s '%s'" it))))
 
   (defun im-linux-select-audio-output ()
     (let ((sink
@@ -12759,8 +12769,16 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
        ('darwin #'im-osx-select-audio-output)
        ('gnu/linux #'im-linux-select-audio-output))))
 
+  (defun im-select-audio-input ()
+    (interactive)
+    (funcall
+     (pcase system-type
+       ('darwin #'im-osx-select-audio-input)
+       ('gnu/linux #'im-linux-select-audio-input))))
+
   (im-leader
-    "ea" #'im-select-audio-output)
+    "ea" #'im-select-audio-output
+    "eA" #'im-select-audio-input)
 #+end_src
 
 ** Bluetooth device connector
