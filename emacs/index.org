@@ -154,6 +154,12 @@ I use =s.el= and =dash.el= extensively. They already come as a dependency with o
   ;; Following provides defmemoize macro. Use (memoize-restore
   ;; 'fn-name) to restore the original function.
   (use-package memoize)
+
+  ;; JS-like async/await. Simply return a promise from a function with
+  ;; (promise-new (lambda (resolve reject) (funcall resolve arg)))
+  ;; and then
+  ;; (async-defun some-function () (message "Result is %s" (await promise-returned-function)))
+  (use-package async-await)
 #+end_src
 
 *** emacs-async
@@ -3377,10 +3383,11 @@ Several packages are using this package to show system-level notifications. Here
   (defvar im-notify-posframe-dnd nil)
   (defvar im-notify-posframe--active '())
   (defvar-local im-notify-posframe--notification-data nil)
-  (cl-defun im-notify-posframe (&rest data &key id title message duration margin (severity 'normal) &allow-other-keys)
+  (async-cl-defun im-notify-posframe (&rest data &key id title message duration margin (severity 'normal) &allow-other-keys)
     (setq title (propertize title 'face '(:weight bold)))
     (let ((bname (format "*notif-%s*"
                          (or id (format "%s-%s" (if title (im-string-url-case title) "") (random))))))
+
       (when (and (not im-notify-posframe-dnd)
                  (not (and im-notify-posframe-blacklist-regexp
                            (s-matches?
@@ -3388,69 +3395,77 @@ Several packages are using this package to show system-level notifications. Here
                                 im-notify-posframe-blacklist-regexp
                               (eval im-notify-posframe-blacklist-regexp))
                             (concat (or title "") "\n" message)))))
-        (posframe-show
-         (with-current-buffer (get-buffer-create bname)
-           (setq im-notify-posframe--notification-data
-                 (thread-first
-                   data
-                   (map-insert :time (float-time))
-                   (map-insert :id (substring-no-properties bname))))
-           (current-buffer))
-         :string
-         (if margin
-             (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
-           (format "%s\n%s" title message))
-         :poshandler
-         (lambda (info)
-           (let ((posy (* (line-pixel-height)
-                          (--reduce-from (+ acc
-                                            (with-current-buffer it
-                                              (count-lines (point-min) (point-max))))
-                                         0
-                                         (remove bname im-notify-posframe--active)))))
-             (cons (/ (- (plist-get info :parent-frame-width)
-                         (plist-get info :posframe-width))
-                      2)
-                   (if (> posy 0)
-                       (+ posy (+ 3 3 15))
-                     15))))
-         :border-width 3
-         :max-height 10
-         :min-width 30
-         :max-width 80
-         :border-color (pcase severity
-                         ((or 'high 'urgent) "red3")
-                         ('normal "yellow3")
-                         (_ nil)))
-        (push bname im-notify-posframe--active)
 
-        ;; Clear the notification after a certain time, if requested
-        (when duration
-          (run-with-timer
-           duration nil
-           (lambda ()
-             (posframe-hide bname)
-             (push bname im-notify-posframe--active)
-             (setq im-notify-posframe--active (delete bname im-notify-posframe--active)))))
+        (let ((message (if (await (im-screen-sharing-now?))
+                           "[REDACTED due to screensharing]"
+                         message)))
+          (posframe-show
+           (with-current-buffer (get-buffer-create bname)
+             (setq im-notify-posframe--notification-data
+                   (thread-first
+                     data
+                     (map-insert :time (float-time))
+                     (map-insert :id (substring-no-properties bname))))
+             (current-buffer))
+           :string
+           (if margin
+               (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
+             (format "%s\n%s" title message))
+           :poshandler
+           (lambda (info)
+             (let ((posy (* (line-pixel-height)
+                            (--reduce-from (+ acc
+                                              (with-current-buffer it
+                                                (count-lines (point-min) (point-max))))
+                                           0
+                                           (remove bname im-notify-posframe--active)))))
+               (cons (/ (- (plist-get info :parent-frame-width)
+                           (plist-get info :posframe-width))
+                        2)
+                     (if (> posy 0)
+                         (+ posy (+ 3 3 15))
+                       15))))
+           :border-width 3
+           :max-height 10
+           :min-width 30
+           :max-width 80
+           :border-color (pcase severity
+                           ((or 'high 'urgent) "red3")
+                           ('normal "yellow3")
+                           (_ nil)))
+          (push bname im-notify-posframe--active)
 
-        ;; Also use native notifications if Emacs is not focused
-        (unless (frame-focus-state)
-          (let ((alert-default-style
-                 (pcase system-type
-                   ('gnu/linux 'libnotify)
-                   ('darwin 'osx-notifier)
-                   (_ 'message))))
-            (alert message :title title :severity severity)))
+          ;; Clear the notification after a certain time, if requested
+          (when duration
+            (run-with-timer
+             duration nil
+             (lambda ()
+               (posframe-hide bname)
+               (push bname im-notify-posframe--active)
+               (setq im-notify-posframe--active (delete bname im-notify-posframe--active)))))
 
-        ;; Based on the severity, send it to my phone but only if Emacs is
-        ;; idle for a certain time
-        (pcase severity
-          ((or 'urgent 'high)
-           (when (and (current-idle-time)
-                      (>= (time-to-seconds (current-idle-time)) 60))
-             (im-send-notification-to-my-phone
-              :title (or title "Emacs")
-              :content message)))))))
+          ;; Also use native notifications if Emacs is not focused
+          (unless (frame-focus-state)
+            (let ((alert-default-style
+                   (pcase system-type
+                     ('gnu/linux 'libnotify)
+                     ('darwin 'osx-notifier)
+                     (_ 'message))))
+              (ignore-errors
+                (alert message :title title :severity severity)))))
+
+        ;; Send it to my phone but only if Emacs is idle for a certain
+        ;; time
+        (when (or (and (current-idle-time)
+                       (>= (time-to-seconds (current-idle-time)) 30))
+                  ;; If we are sharing a screen, that means the
+                  ;; notification will only show REDACTED. Then send it
+                  ;; to my phone so that I can see it privately through
+                  ;; my watch.
+                  (await (im-screen-sharing-now?)))
+          (im-send-notification-to-my-phone
+           :title (or title "Emacs")
+           :content message)))))
 
   (defun im-notify-posframe-clear-all (&optional delete?)
     (interactive "P")
@@ -3504,8 +3519,8 @@ Several packages are using this package to show system-level notifications. Here
   ;; itself and call with ack within this function
   (defun im-notify-posframe-snooze (notification seconds)
     (interactive (list
-        (im-notify-posframe--select)
-        (im-read-duration)))
+                  (im-notify-posframe--select)
+                  (im-read-duration)))
     (run-with-timer
      seconds nil
      (lambda () (apply #'im-notify-posframe notification)))
@@ -6009,7 +6024,7 @@ Simple mode for editing =~/.Xmodmap= file.
         (message ">> Check slack. %s messages in last hour."
                  (propertize (number-to-string msg-count) 'face '(:weight bold))))))
 
-  (defun im-slack-notify (message room team)
+  (async-defun im-slack-notify (message room team)
     (when (or
            (slack-message-minep message team)
            (slack-mpim-p room)
@@ -6054,7 +6069,9 @@ Simple mode for editing =~/.Xmodmap= file.
             (message
              ">> Slack: %s // %s"
              title
-             (car (s-split "\n" msg-str))))))))
+             (if (await (im-screen-sharing-now?))
+                 "[REDACTED due to screensharing]"
+               (s-truncate 60 msg-str))))))))
 
   (defun im-slack-yank-last-message ()
     "Yank the contents of the last received message as text."
@@ -6091,8 +6108,8 @@ Simple mode for editing =~/.Xmodmap= file.
                   :team (plist-get it :team)))
      (-uniq)
      (-map (lambda (room) (--find (equal (plist-get room :room-name)
-                                    (plist-get it :room-name))
-                             im-slack--last-messages)))))
+                                         (plist-get it :room-name))
+                                  im-slack--last-messages)))))
 
   (defun im-slack--message-ts (message)
     (->>
@@ -12854,6 +12871,43 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
        (if (workpc?)
            (format "ssh %s '%s'" (completing-read "Select linux machine: " (im-ssh-host-list)) cmd)
          cmd))))
+#+end_src
+** Check if screen is shared by Zoom/Chrome etc.
+#+begin_src emacs-lisp
+  (defun im-screen-sharing-now? ()
+    "Check if screen is being shared by Zoom or Google Chrome.
+  Return a `promise', meant to be used in a async- function.
+  Only works for OSX right now."
+    (pcase system-type
+      ('darwin
+       (let ((script "
+  tell application \"System Events\"
+      set listOfProcesses to every process whose visible is true
+      set output to \"\"
+      repeat with aProcess in listOfProcesses
+          tell aProcess
+              set windowList to every window where its name is not \"\"
+              repeat with aWindow in windowList
+                  set windowName to name of aWindow
+                  if windowName contains \"zoom share\" or windowName contains \"is sharing your screen\" then
+                      return true
+                  end if
+              end repeat
+          end tell
+      end repeat
+      return false
+  end tell"))
+         (promise-new
+          (lambda (resolve _reject)
+            (make-process :name "check-screen-sharing"
+                          :command `("osascript" "-e" ,script)
+                          :noquery t
+                          :filter
+                          (lambda (proc string)
+                            (funcall resolve (equal "true" (s-trim string)))))))))
+      ('gnu/linux
+       (message ">> im-screen-sharing-now? is not implemented for gnu/linux system-type")
+       nil)))
 #+end_src
 * Postamble
 #+begin_src emacs-lisp
