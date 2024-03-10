@@ -12793,7 +12793,34 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
        ('darwin #'im-osx-select-audio-input)
        ('gnu/linux #'im-linux-select-audio-input))))
 
+  (defun im-set-mic-status (status)
+    "Set mic status to STATUS.
+  STATUS is either mute, unmute or toggle.
+
+  Asks for STATUS if called interactively."
+    (interactive
+     (list
+      (s-chop-suffix
+       "d" (cadr (read-multiple-choice "Your mic should be " '((?m "muted") (?u "unmuted") (?t "toggled")))))))
+    (pcase system-type
+      ('darwin
+       (set-process-filter
+        (start-process "*SwitchAudioSourceMic*" "*SwitchAudioSourceMic*"
+                       "SwitchAudioSource" "-t" "input" "-m" status)
+        (lambda (proc out)
+          (message
+           "Your mic is %s"
+           (propertize (car (s-match "\\(\\(un\\)?muted\\)" (s-trim out))) 'face 'bold)))))
+      ('gnu/linux (user-error "Not implemented for gnu/linux"))))
+
+  (defun im-toggle-mic ()
+    "Toggle the mute status of your microphone."
+    (interactive)
+    (im-set-mic-status "toggle"))
+
   (im-leader
+    "em" #'im-toggle-mic
+    "eM" #'im-set-mic-status
     "ea" #'im-select-audio-output
     "eA" #'im-select-audio-input)
 #+end_src
