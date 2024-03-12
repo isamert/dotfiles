@@ -914,6 +914,7 @@ Also load ~im-secrets~ from =load-path=. I'll be utilizing some variables define
 * Basics
 ** Overriding some defaults
 #+begin_src emacs-lisp
+  (setq save-silently t)
 #+end_src
 *** M-Backspace should delete, instead of killing
 #+begin_src emacs-lisp
