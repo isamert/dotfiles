@@ -410,7 +410,9 @@ Some basic variable and function definitions that will be used in configuration.
   (defun im-debug (thing)
     "Like `im-tap' but uses `pp-display-expression' to display the
   result instead of `message'."
-    (pp-display-expression thing "*im-debug*")
+    (let ((print-length nil)
+          (print-level nil))
+      (pp-display-expression thing "*im-debug*"))
     thing)
 
   (defmacro im-append! (lst item)
@@ -12612,7 +12614,9 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
                    (org-element-property :language (org-element-at-point))
                  (symbol-name major-mode))))
           (->>
-           (string-trim-right mode-name "-mode")
+           mode-name
+           (s-chop-suffix "-mode")
+           (s-chop-suffix "-ts")
            (s-replace-all '(("-" . " ")
                             ("interaction" . "")))
            (s-titleize)))
