@@ -2588,6 +2588,94 @@ This following trick (got it from [[https://www.reddit.com/r/emacs/comments/o68i
                 (current-buffer)))))))))
 #+end_src
 
+*** Jump to a header or link a header
+#+begin_src emacs-lisp
+  ;; Keybindings
+
+  (im-leader-v
+    "ol" #'im-org-link-header
+    "oj" #'im-org-jump-to-header)
+
+  ;;
+  ;; Utility
+  ;;
+
+  (defun im-org-header-line-to-title (line)
+    "Remove TODO/*/unnecessary whitespace from given LINE.
+  Then return the title of given `org-mode` header.
+  Just like (org-entry-get nil \"ITEM\") but works on given string."
+    (->> line
+      (s-replace-regexp "\\(\\*\\|TODO\\|PROG\\|DONE\\|WAIT\\)" "") ;; Remove TODO states
+      (s-replace-regexp "\\(\\[#.\\{1\\}\\]\\\)" "") ;; Remove priorities
+      (s-replace-regexp ":\\(\\w+:\\)+$"  "") ;; Remove tags
+      (replace-regexp-in-string "\\[\\[.*\\]\\[\\(.*\\)\\]\\]"  "\\1") ;; Fix links
+      (replace-regexp-in-string "\\[\\[\\(.*\\)\\]\\]"  "\\1") ;; Fix links
+      (s-trim)))
+
+  (defun im-org-file-get-header-id (file-path header-line)
+    "Return the id of given header at HEADER-LINE in FILE-PATH."
+    (interactive)
+    (save-excursion
+      (with-current-buffer (let ((enable-local-variables nil)) (find-file-noselect file-path))
+        (save-restriction
+          (save-excursion
+            (widen)
+            (goto-char 0)
+            (forward-line header-line)
+            (org-id-get nil 'create)
+            (save-buffer)
+            (org-id-get nil 'create))))))
+
+  (defun im-org-all-headers ()
+    "Return all headers in `org-directory'."
+    (->> (concat "cd " org-directory "; "
+                 "rg"
+                 " --no-heading" " --with-filename"
+                 " --line-number" " -t org"
+                 " " "\"^\\*+ \" ")
+      (shell-command-to-string)
+      (s-split "\n")
+      (--filter (not (s-blank? it)))
+      (--map
+       (-let* (((fname line . content) (split-string it ":"))
+               (header (im-org-header-line-to-title (string-join content ":"))))
+         `(,(format
+             "%s:%s %s %s"
+             (propertize fname 'face '(:foreground "plum"  :slant italic))
+             (propertize line 'face '(:slant italic :weight thin))
+             (propertize "»" 'face '(:foreground "green"))
+             (propertize header 'face '(:foreground "sky blue" :weight bold)))
+           .
+           (:fname ,(concat org-directory "/" fname) :line ,(1- (string-to-number line)) :header ,header))))))
+
+  (defun im-org-link-header ()
+    "Interactively select a header and insert it as a link into the buffer.
+  Headers are gathered from all the org files found in `org-directory'."
+    (interactive)
+    (save-some-buffers)
+    (let* ((selected (im-alist-completing-read
+                      "Select header: "
+                      (im-org-all-headers)
+                      (when (use-region-p)
+                        (buffer-substring-no-properties (region-beginning) (region-end)))))
+           (header-id (im-org-file-get-header-id (plist-get selected :fname) (plist-get selected :line))))
+      (org-insert-link
+       nil
+       (concat "id:" header-id)
+       (unless (use-region-p)
+         (read-string "Enter link text: " (plist-get selected :header))))))
+
+
+  (defun im-org-jump-to-header ()
+    "Jump to selected header."
+    (interactive)
+    (let* ((selected (im-alist-completing-read "Select header:" (im-org-all-headers))))
+      (with-current-buffer (find-file-other-window (plist-get selected :fname))
+        (widen)
+        (goto-char 0)
+        (forward-line (plist-get selected :line)))))
+#+end_src
+
 ** Insert image with width
 This function is especially useful when used in combination with =embark-act-all=. The workflow is as follows:
 - =M-x= =im-org-insert-image-file-with-width=
@@ -10239,102 +10327,6 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
       input)))
 
   (im-leader-v "mg" #'im-google-this)
-#+end_src
-
-** TODO org-mode enhancements
-I need to rewrite these functions using [[https://github.com/im-marks][marks]] for both speed and accuracy.
-
-#+begin_src emacs-lisp
-  ;; Keybindings
-
-  (im-leader-v
-    "ol" #'im-org-link-header
-    "oj" #'im-org-jump-to-header
-    ;; TODO: rewrite this:
-    ;;"oL" 'im-org-backlinks
-  )
-
-  ;;
-  ;; Utility
-  ;;
-
-  (defun im-org-header-line-to-title (line)
-    "Remove TODO/*/unnecessary whitespace from given LINE.
-  Then return the title of given `org-mode` header.
-  Just like (org-entry-get nil \"ITEM\") but works on given string."
-    (->> line
-      (s-replace-regexp "\\(\\*\\|TODO\\|PROG\\|DONE\\|WAIT\\)" "") ;; Remove TODO states
-      (s-replace-regexp "\\(\\[#.\\{1\\}\\]\\\)" "") ;; Remove priorities
-      (s-replace-regexp ":\\(\\w+:\\)+$"  "") ;; Remove tags
-      (replace-regexp-in-string "\\[\\[.*\\]\\[\\(.*\\)\\]\\]"  "\\1") ;; Fix links
-      (replace-regexp-in-string "\\[\\[\\(.*\\)\\]\\]"  "\\1") ;; Fix links
-      (s-trim)))
-
-  (defun im-org-file-get-header-id (file-path header-line)
-    "Return the id of given header at HEADER-LINE in FILE-PATH."
-    (interactive)
-    (save-excursion
-      (with-current-buffer (let ((enable-local-variables nil)) (find-file-noselect file-path))
-        (save-restriction
-          (save-excursion
-            (widen)
-            (goto-char 0)
-            (forward-line header-line)
-            (org-id-get nil 'create)
-            (save-buffer)
-            (org-id-get nil 'create))))))
-
-  (defun im-org-all-headers ()
-    "Return all headers in `org-directory'."
-    (->> (concat "cd " org-directory "; "
-                 "rg"
-                 " --no-heading" " --with-filename"
-                 " --line-number" " -t org"
-                 " " "\"^\\*+ \" ")
-      (shell-command-to-string)
-      (s-split "\n")
-      (--filter (not (s-blank? it)))
-      (--map
-       (-let* (((fname line . content) (split-string it ":"))
-               (header (im-org-header-line-to-title (string-join content ":"))))
-         `(,(format
-             "%s:%s %s %s"
-             (propertize fname 'face '(:foreground "plum"  :slant italic))
-             (propertize line 'face '(:slant italic :weight thin))
-             (propertize "»" 'face '(:foreground "green"))
-             (propertize header 'face '(:foreground "sky blue" :weight bold)))
-           .
-           (:fname ,(concat org-directory "/" fname) :line ,(1- (string-to-number line)) :header ,header))))))
-
-  (defun im-org-link-header ()
-    "Interactively select a header and insert it as a link into the buffer.
-  Headers are gathered from all the org files found in `org-directory'."
-    (interactive)
-    (save-some-buffers)
-    (let* ((selected (im-alist-completing-read
-                      "Select header: "
-                      (im-org-all-headers)
-                      (when (use-region-p)
-                        (buffer-substring-no-properties (region-beginning) (region-end)))))
-           (header-id (im-org-file-get-header-id (plist-get selected :fname) (plist-get selected :line))))
-      (org-insert-link
-       nil
-       (concat "id:" header-id)
-       (unless (use-region-p)
-         (read-string "Enter link text: " (plist-get selected :header))))))
-
-
-  (defun im-org-jump-to-header ()
-    "Jump to selected header."
-    (interactive)
-    (let* ((selected (im-alist-completing-read "Select header:" (im-org-all-headers))))
-      (with-current-buffer (find-file-other-window (plist-get selected :fname))
-        (widen)
-        (goto-char 0)
-        (forward-line (plist-get selected :line)))))
-
-  ;; TODO Removed backlinks implementation, I will implement it once
-  ;; minimal functionality within "marks" is done
 #+end_src
 
 ** bullet.org
