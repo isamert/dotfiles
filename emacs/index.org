@@ -3077,6 +3077,18 @@ My main use case for [[https://github.com/nobiot/org-transclusion][org-transclus
 
 #+end_src
 * Other packages
+** world-clock
+- Simply do ~M-x world-clock~.
+
+#+begin_src emacs-lisp
+  (setq world-clock-list
+        '(("Europe/Amsterdam" "Amsterdam")
+          ("Europe/Istanbul" "Istanbul")
+          ("Asia/Tokyo" "Tokyo")
+          ("America/Los_Angeles" "Seattle")))
+
+  (setq world-clock-time-format "%a %d %b %R %Z")
+#+end_src
 ** eldoc
 #+begin_src emacs-lisp
   (use-package eldoc
