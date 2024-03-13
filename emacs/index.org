@@ -3040,7 +3040,13 @@ My main use case for [[https://github.com/nobiot/org-transclusion][org-transclus
 ** im-open-thing-at-point
 #+begin_src emacs-lisp
   (defvar im-open-thing-at-point-alist '()
-    "List of (thing-detector . thing-opener) pairs.")
+    "List of (THING-DETECTOR . THING-OPENER) pairs.
+  THING-DETECTOR should be a no-arg function that returns the
+  thing, if found. Otherwise it should return nil.
+
+  THING-OPENER should be a function with 1 arg, which should take
+  the thing (which is the thing return by the THING-DETECTOR) and
+  open.")
 
   (im-leader
     "eo" #'im-open-thing-at-point)
@@ -3049,9 +3055,11 @@ My main use case for [[https://github.com/nobiot/org-transclusion][org-transclus
     "Detect and open the thing at point."
     (interactive)
     (--any
-     (when (funcall (car it))
-       (funcall (cdr it)))
+     (when-let (result (funcall (car it)))
+       (funcall (cdr it) result))
      im-open-thing-at-point-alist))
+
+  (add-to-list 'im-open-thing-at-point-alist `(,(apply-partially #'thing-at-point 'url) . browse-url))
 #+end_src
 ** im-ensure-binary
 #+begin_src emacs-lisp
