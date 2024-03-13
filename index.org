@@ -357,6 +357,26 @@ And here is the skhd binding:
   hyper - y : osascript -l JavaScript "$HOME/.local/bin/macos-clear-all-notifications.js"
 #+end_src
 
+** hammerspoon
+I use it minimally for some quality-of-life improvements.
+#+begin_src sh
+  brew install hammerspoon
+#+end_src
+*** Mouse follows focus
+To install it:
+#+begin_src sh
+  mkdir -p ~/.hammerspoon/Spoons
+  curl -L "https://github.com/Hammerspoon/Spoons/raw/master/Spoons/MouseFollowsFocus.spoon.zip" -o /tmp/mff.zip
+  cd ~/.hammerspoon/Spoons
+  unzip /tmp/mff.zip
+#+end_src
+
+The configuration:
+#+begin_src lua :tangle ~/hammerspoon/init.lua
+  mouse_follows_focus = hs.loadSpoon("MouseFollowsFocus")
+  mouse_follows_focus:configure({})
+  mouse_follows_focus:start()
+#+end_src
 * Linux
 ** systemd
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
