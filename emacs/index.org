@@ -12500,30 +12500,54 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
 #+end_src
 ** im-extract
 #+begin_src emacs-lisp
-  ;; TODO Extract into a folder
-  (defun im-extract (files)
-    (interactive (list (dired-get-marked-files)))
+  (cl-defun im-extract (files
+                        &key
+                        use-subdir
+                        (on-finish (lambda (file) (message ">> Extracted")))
+                        (on-fail (lambda (file) (user-error ">> Failed while extracting"))))
+    "Extract the FILES into a folder.
+  FILES should NOT be relative paths, rather absolute paths.
+  ON-FINISH is called for each file, not after every file is
+  extracted."
+    (interactive (list
+                  (dired-get-marked-files)
+                  :use-subdir (y-or-n-p "Want to extract to a subfolder?")))
     (--each files
-      (let ((cmds '((".tar.bz2" . ("tar" "xjf" file))
-                    (".tar.gz" . ("tar" "xzf" file))
-                    (".bz2" . ("bunzip2" file))
-                    (".rar" . ("unrar" "x" file))
-                    (".gz" . ("gunzip" file))
-                    (".tar" . ("tar" "xf" file))
-                    (".tbz2" . ("tar" "xjf" file))
-                    (".tgz" . ("tar" "xzf" file))
-                    (".zip" . ("unzip" file))
-                    (".Z" . ("uncompress" file))
-                    (".7z" . ("7z" "x" file)))))
-        (when-let* ((key (-find (lambda (ext) (s-ends-with? ext it)) (map-keys cmds)))
-                    (cmd (map-elt cmds key)))
-          (im-shell-command
-           :command (car cmd)
-           :args (-map (lambda (arg) (if (eq arg 'file) it arg)) (-drop 1 cmd))
-           :eat t
-           :on-finish (lambda (&rest _) (message ">> Extracted: %s" it))
-           :on-fail (lambda (&rest _) (user-error ">> Failed while extracting: %s" it))
-           :buffer-name "*im-extract*")))))
+      (let* ((cmds `((".tar.bz2" . ("tar" "-xjf" file))
+                     (".tar.gz" . ("tar" "-xzf" file))
+                     (".bz2" . ("bunzip2" file))
+                     (".rar" . ("unrar" "x" file))
+                     (".gz" . ("gunzip" file))
+                     (".tar" . ("tar" "-xf" file))
+                     (".tbz2" . ("tar" "-xjf" file))
+                     (".tgz" . ("tar" "-xzf" file))
+                     (".zip" . ("unzip" file))
+                     (".Z" . ("uncompress" file))
+                     (".7z" . ("7z" "x" file))))
+             (subfolder (s-replace-regexp (format "\\(%s\\)$" (s-join "\\|" (map-keys cmds))) "" (f-filename it)))
+             (default-directory (if use-subdir
+                                    (progn
+                                      (mkdir subfolder)
+                                      (f-join default-directory subfolder))
+                                  default-directory)))
+        (if-let* ((key (-find (lambda (ext) (s-ends-with? ext it)) (map-keys cmds)))
+                  (cmd (map-elt cmds key)))
+            (im-shell-command
+             :command (car cmd)
+             :args (->>
+                    cmd
+                    (-drop 1)
+                    (-non-nil)
+                    (-map (lambda (arg)
+                            (pcase arg
+                              ('file it)
+                              (_ arg)))))
+             :eat t
+             :switch (called-interactively-p)
+             :on-finish (lambda (&rest _) (funcall on-finish it))
+             :on-fail (lambda (&rest _) (funcall on-fail it))
+             :buffer-name "*im-extract*")
+          (error "Archive format is not supported: %s" it)))))
 #+end_src
 ** Etymology lookup inside Emacs
 #+begin_src emacs-lisp
