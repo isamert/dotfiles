@@ -9456,6 +9456,9 @@ Good for buffer management, especially for groupped killings.
   Consider using origin/something to create the branch from latest
   something.")
 
+  (defvar im-jira-story-points-field-name 'customfield_10002
+    "Which field describes the story points in JIRA response.")
+
   (defvar im-jira-feature-branch-prefix "feature/"
     "Prefix to prepend feature branch names.")
 
@@ -9482,14 +9485,7 @@ Good for buffer management, especially for groupped killings.
       (when (s-matches? "[a-zA-Z]+-[0-9]+" sym)
         sym)))
 
-  (defun im-jira-open-issue-at-point ()
-    "Open issue at point."
-    (interactive)
-    (im-jira-open-issue
-     (or (im-jira-issue-at-point)
-         (read-string "Enter issue number: "))))
-
-  (add-to-list 'im-open-thing-at-point-alist '(im-jira-issue-at-point . im-jira-open-issue-at-point))
+  (add-to-list 'im-open-thing-at-point-alist '(im-jira-issue-at-point . im-jira-open-issue))
 
   (defmemoize im-jira-get-my-issues ()
     (jiralib2-jql-search im-jira-my-issues-query))
@@ -9886,6 +9882,7 @@ Good for buffer management, especially for groupped killings.
         (org-set-property "STATUS" (or .fields.status.name "N/A"))
         (org-set-property "REPORTER" (or .fields.reporter.name "N/A"))
         (org-set-property "ASSIGNEE" (or .fields.assignee.name "N/A"))
+        (org-set-property "STORY_POINTS" (format "%s" (or (alist-get im-jira-story-points-field-name .fields) "N/A")))
         (org-fold-show-all))))
 
 
@@ -9918,17 +9915,17 @@ Good for buffer management, especially for groupped killings.
         (lambda (key vals)
           (list
            :assignee key
-           :total (-sum (--map (let-alist it (or .fields.customfield_10002 0)) vals))
+           :total (-sum (--map (let-alist it (or (alist-get im-jira-story-points-field-name .fields) 0)) vals))
            :done (->>
                   vals
                   (--filter (-contains? '("Done" "Released") (let-alist it .fields.status.name)))
-                  (--map (let-alist it (or .fields.customfield_10002 0)))
+                  (--map (let-alist it (or (alist-get im-jira-story-points-field-name .fields) 0)))
                   (-sum))
            :tasks
            (->>
             (--map (let-alist it
                      (list
-                      :points .fields.customfield_10002
+                      :points (alist-get im-jira-story-points-field-name .fields)
                       :summary (format "%s - %s" .key .fields.summary)
                       :status .fields.status.name))
                    vals)
