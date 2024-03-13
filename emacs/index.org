@@ -7016,6 +7016,54 @@ Here I simply add some bindings form artist-mode and a cheatsheet in the header 
     (local-set-key (kbd "<f5>") 'artist-select-op-ellipse)  ; f5 = ellipse
     (setq-local header-line-format "f2 → pen, f3 → line, f4 → square, f5 → ellipse"))
 #+end_src
+** biome -- weather information
+#+begin_src emacs-lisp
+  (use-package biome
+    :straight (:host github :repo "SqrtMinusOne/biome")
+    :config
+    (setq biome-query-coords
+          `(("Amsterdam, Netherlands" ,im-amsterdam-lat ,im-amsterdam-long)
+            ("Ankara, Turkey" ,im-ankara-lat ,im-ankara-long)
+            ("Istanbul, Turkey" ,im-istanbul-lat ,im-istanbul-long)))
+
+    (setq biome-grid-highlight-current t)
+
+    (setq
+     biome-query-override-column-names
+     '(("apparent_temperature_max" . "Max feel")
+       ("apparent_temperature_min" . "Min feel")
+       ("temperature_2m_min" . "Min temp")
+       ("temperature_2m_max" . "Max temp")
+       ("precipitation_probability_max" . "🌧️ %%")
+       ("precipitation_hours" . "🌧️ hours")
+       ("precipitation_sum" . "🌧️ sum")
+       ("weathercode" . " Code")
+       ("precipitation_probability_max" . "")
+       ("shortwave_radiation_sum" . "Radiation")
+       ("time" . "📅 ")))
+
+    ;; Generate a preset for each city in biome-query-coords
+
+    (--each (map-keys biome-query-coords)
+      (eval
+       `(biome-def-preset ,(intern (concat "im-weather-daily-" (downcase (car (s-split ", " it)))))
+          ((:name . "Weather Forecast")
+           (:group . "daily")
+           (:params
+            ("daily" "shortwave_radiation_sum" "precipitation_probability_max" "precipitation_hours" "precipitation_sum" "uv_index_clear_sky_max" "uv_index_max" "sunset" "sunrise" "apparent_temperature_min" "apparent_temperature_max" "temperature_2m_min" "temperature_2m_max" "weathercode")
+            ("latitude" . ,(car (map-elt biome-query-coords it)))
+            ("longitude" . ,(cadr (map-elt biome-query-coords it))))))))
+
+    (--each (map-keys biome-query-coords)
+      (eval
+       `(biome-def-preset ,(intern (concat "im-weather-hourly-" (downcase (car (s-split ", " it)))))
+          ((:name . "Weather Forecast")
+           (:group . "hourly")
+           (:params
+            ("hourly" "uv_index_clear_sky" "uv_index" "relativehumidity_2m" "precipitation" "precipitation_probability" "apparent_temperature" "temperature_2m" "is_day"  "weathercode")
+            ("latitude" . ,(car (map-elt biome-query-coords it)))
+            ("longitude" . ,(cadr (map-elt biome-query-coords it)))))))))
+#+end_src
 * Editing
 ** Breaking long texts/comments into multiple lines
 I use =M-q= (=fill-paragraph=) to break long texts into multiple lines. It
@@ -12306,15 +12354,6 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
       (im-peek-mode-scroll-down (- pos 2))))
 #+end_src
 
-** im-weather
-Just a wttr.in wrapper. Another piece in the name of using a web browser even less.
-#+begin_src emacs-lisp
-  (defun im-weather ()
-    (interactive)
-    (im-shell-command
-     :command "curl wttr.in"
-     :buffer-name "*im-weather*"))
-#+end_src
 ** im-gpt
 #+begin_src emacs-lisp
   (im-leader-v "eg" #'im-gpt)
