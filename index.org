@@ -1646,6 +1646,10 @@ This file is sourced by both =zsh= and =bash=.
   alias lla='lsd --group-dirs first --classify --long --all'
   alias tree='lsd --tree'
 
+  alias gcm='git commit -m'
+  alias gds='git diff --staged'
+  alias gs='git status'
+
   # abbrv
   alias n='nvim'
   alias v='jaro --method=view'
