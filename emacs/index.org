@@ -159,7 +159,26 @@ I use =s.el= and =dash.el= extensively. They already come as a dependency with o
   ;; (promise-new (lambda (resolve reject) (funcall resolve arg)))
   ;; and then
   ;; (async-defun some-function () (message "Result is %s" (await promise-returned-function)))
-  (use-package async-await)
+  (use-package async-await :demand t)
+
+  (require 'async-await)
+
+  (defmacro async-cl-defun (name arglist &rest body)
+    "Same as `async-defun' but uses `cl-defun' to define the function."
+    (declare (doc-string 3) (indent 2))
+    (cl-assert lexical-binding)
+    (let* ((parsed-body (macroexp-parse-body body))
+           (declarations (car parsed-body))
+           (exps (macroexpand-all
+                  `(cl-macrolet
+                       ((await (value)
+                               `(async-await--check-return-value (iter-yield ,value))))
+                     ,@(cdr parsed-body))
+                  macroexpand-all-environment)))
+      `(cl-defun ,name ,arglist
+         ,@declarations
+         (async-await--awaiter
+          (funcall (iter2-lambda () ,exps))))))
 #+end_src
 
 *** emacs-async
@@ -6079,6 +6098,9 @@ Simple mode for editing =~/.Xmodmap= file.
 
     (setq slack-visible-thread-sign "╚═> ")
 
+    (add-hook 'slack-message-buffer-mode-hook #'tab-line-mode)
+    (add-hook 'slack-thread-message-buffer-mode-hook #'tab-line-mode)
+
     (defun im-slack-select-rooms ()
       (interactive)
       (let ((slack-buffer-function #'switch-to-buffer))
@@ -6111,7 +6133,7 @@ Simple mode for editing =~/.Xmodmap= file.
      :token ty-slack-token
      :cookie ty-slack-cookie
      :subscribed-channels ty-slack-channels
-     :visible-threads t
+     :visible-threads nil
      :mark-as-read-immediately nil)
     (slack-start)
     (slack-change-current-team)
