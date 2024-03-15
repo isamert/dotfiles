@@ -7068,7 +7068,6 @@ Here I simply add some bindings form artist-mode and a cheatsheet in the header 
        ("precipitation_hours" . "🌧️ hours")
        ("precipitation_sum" . "🌧️ sum")
        ("weathercode" . " Code")
-       ("precipitation_probability_max" . "")
        ("shortwave_radiation_sum" . "Radiation")
        ("time" . "📅 ")))
 
@@ -7080,7 +7079,7 @@ Here I simply add some bindings form artist-mode and a cheatsheet in the header 
           ((:name . "Weather Forecast")
            (:group . "daily")
            (:params
-            ("daily" "shortwave_radiation_sum" "precipitation_probability_max" "precipitation_hours" "precipitation_sum" "uv_index_clear_sky_max" "uv_index_max" "sunset" "sunrise" "apparent_temperature_min" "apparent_temperature_max" "temperature_2m_min" "temperature_2m_max" "weathercode")
+            ("daily" "shortwave_radiation_sum" "uv_index_clear_sky_max" "uv_index_max" "precipitation_probability_max" "precipitation_hours" "precipitation_sum" "sunset" "sunrise" "apparent_temperature_min" "apparent_temperature_max" "temperature_2m_min" "temperature_2m_max" "weathercode")
             ("latitude" . ,(car (map-elt biome-query-coords it)))
             ("longitude" . ,(cadr (map-elt biome-query-coords it))))))))
 
