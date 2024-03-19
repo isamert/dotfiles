@@ -732,7 +732,7 @@ This is the configuration for the embedded keyboard on mac.
     tab  q    w    e    r    t    y    u    i    o    p    [    ]
     @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
     lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
-    lctl fn   lalt lmet           spc            @sym ralt rctrl rctl)
+    lctl fn   lalt lmet           spc            @sym rmet rctrl rctl)
 
   «kmonad-layers»
 #+end_src

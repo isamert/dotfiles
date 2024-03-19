@@ -1126,9 +1126,12 @@ Enables you to have repeatable keybindings.
   (use-package modus-themes)
   (use-package ef-themes)
 
-  ;; (defconst im-theme 'modus-vivendi)
-  ;; (defconst im-theme 'doom-one)
-  (defconst im-theme 'ef-melissa-dark)
+  (defconst im-theme 'ef-cherie
+    "My current theme.
+  The themes I used over time and liked are:
+  - modus-vivendi
+  - doom-one
+  - ef-melissa-dark")
   (defconst im-fonts '("Iosevka Comfy Motion" "Iosevka Comfy" "Iosevka Nerd Font"))
   (defconst im-font-height (pcase system-type ('gnu/linux 138) ('darwin 190)))
 
@@ -3105,6 +3108,14 @@ My main use case for [[https://github.com/nobiot/org-transclusion][org-transclus
 
 #+end_src
 * Other packages
+** which-key
+#+begin_src emacs-lisp
+  (use-package which-key
+    :config
+    (setq which-key-max-display-columns 4)
+    (which-key-setup-minibuffer)
+    (which-key-mode))
+#+end_src
 ** world-clock
 - Simply do ~M-x world-clock~.
 
@@ -5197,7 +5208,7 @@ Here is a nice description of the package from it's README:
     ;; provides same functionality
 
     ;; Hitting C-h after any prefix command will open a completing-read
-    ;; interface to select a command that prefix has. Much better than
+    ;; interface to select a command that prefix has. Complements
     ;; which-key.
     (setq prefix-help-command 'embark-prefix-help-command)
 
@@ -6766,7 +6777,6 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
     (add-hook 'lab-after-git-clone-functions (lambda () (dired default-directory)))
 
     (setq lab-projects-directory "~/Workspace/projects/")
-    (setq lab-main-branch-name "master")
     (setq lab-pipeline-watcher-initial-delay 45)
     (setq lab-pipeline-watcher-debounce-time 15)
     (setq lab-host ty-gitlab-url)
@@ -12471,7 +12481,7 @@ My work computer is a Mac. I synchronize my work calendar into my local by using
                  (completing-read (format "Model [current=%s]: " org-ai-default-chat-model) org-ai-chat-models))
                 (model model)
                 (t org-ai-default-chat-model))
-        :system (or system "You are an AI assistant living inside Emacs. You answer concisely.")
+        :system (or system "You are a code assistant that helps developers. You answer concisely.")
         :include-system (or include-system system)
         :empty empty)))
     (when (functionp prompt)
