@@ -3062,6 +3062,71 @@ My main use case for [[https://github.com/nobiot/org-transclusion][org-transclus
       "of" #'org-transclusion-add
       "oF" #'org-transclusion-remove))
 #+end_src
+** Capture changed headings on save
+Sometimes, I want to capture which headings are changed on save and do some actions on those headings. Following code accomplishes that, but only for top level headings (which is mostly what I want to capture). To do so add a function to ~im-org-header-changed-hook~. This function will be called for each changed heading, with ~(begin-point end-point (heading-title . heading-contents))~ arguments.
+
+#+begin_src emacs-lisp
+  (defvar-local im--org-heading-prev-state nil
+    "Holds the previous state of the top-level headers.")
+
+  (defvar im-org-header-changed-hook '())
+
+  (defun im-org-store-heading-state ()
+    "Store the state of the top-level headers for later comparison."
+    (when (derived-mode-p 'org-mode)
+      (let ((file (buffer-file-name)))
+        (when (file-exists-p file)
+          (setq im--org-heading-prev-state
+                (with-temp-buffer
+                  (insert-file-contents file)
+                  (delay-mode-hooks (org-mode))
+                  ;; Save only :data because one line added/removed will
+                  ;; invalidate all headers by changing :begin and :end
+                  (--map (plist-get it :data) (im-org-get-top-level-headers))))))))
+
+  (defun im-org-get-top-level-headers ()
+    "Extract top-level headers and their content from the current Org buffer."
+    (let ((headers '()))
+      (save-restriction
+        (widen)
+        (org-map-entries
+         (lambda ()
+           (let* ((header (org-get-heading t t t t))
+                  (elem (org-element-at-point))
+                  (body (org-element-property :contents-begin elem)))
+             (push
+              (list
+               :begin (org-element-property :begin elem)
+               :end (org-element-property :end elem)
+               :data
+               (cons
+                header
+                (when body
+                  (buffer-substring-no-properties
+                   body
+                   (org-element-property :contents-end (org-element-at-point))))))
+              headers)))
+
+         "LEVEL=1"))
+      headers))
+
+  (defun im-org-compare-heading-state ()
+    "Compare current top-level headers with the stored state to detect changes."
+    (when (and (derived-mode-p 'org-mode))
+      (-each (--remove (member (plist-get it :data) im--org-heading-prev-state)
+                       (im-org-get-top-level-headers))
+        (lambda (header)
+          (--each im-org-header-changed-hook
+            (funcall
+             it
+             (plist-get header :begin)
+             (plist-get header :end)
+             (car (plist-get header :data))
+             (cdr (plist-get header :data))))))))
+
+  (add-hook 'before-save-hook 'im-org-store-heading-state)
+  (add-hook 'after-save-hook 'im-org-compare-heading-state)
+#+end_src
 * Extra functionality
 ** im-open-thing-at-point
 #+begin_src emacs-lisp
@@ -10300,6 +10365,49 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
       (-map #'car)
       (--any (s-prefix? "PHONE" it))))
 
+  (defun im-contacts-build-vcard-for-heading ()
+    "Build a VCARD for the current heading and return it as string."
+    (when (im-contacts--contact-entry?)
+      (string-join
+       `("BEGIN:VCARD\nVERSION:4.0\nPRODID:ez-vcard 0.11.3\n"
+         ,(format "UID:urn:uuid:%s\n" (org-id-get nil t))
+         ,(im-contacts--build-contact-item "FN:%s" "ITEM")
+         ,(if (org-entry-get nil "DISPLAY_NAME")
+              (im-contacts--build-contact-item "N:;%s;;;" "DISPLAY_NAME")
+            (im-contacts--build-contact-item "N:;%s;;;" "ITEM"))
+         ,@(im-contacts--build-contact-item "TEL;TYPE=$1:%s" "PHONE_$1")
+         ,@(im-contacts--build-contact-item "EMAIL;TYPE=$1:%s" "EMAIL_$1")
+         ,@(im-contacts--build-contact-item "ADR;TYPE=$1:;;%s;;;;" "ADDRESS_$1")
+         ,(im-contacts--build-contact-item "ORG:%s" "GROUP")
+         ,(im-contacts--build-contact-item "CATEGORIES:%s" "GROUP")
+         ,(thread-last
+            (im-contacts--build-contact-item "BDAY:%s" "SCHEDULED")
+            (s-replace-regexp "BDAY:<[0-9]\\{4\\}\\(.*\\) \\(\\w+\\)>" "BDAY:1900\\1")
+            (s-replace "-" ""))
+         ;; vcard supports multiple anniversaries but there is no
+         ;; way to name them as far as I understand. So I just
+         ;; drop anniversary names and add all of them.
+         ,@(thread-last
+             (im-contacts--build-contact-item "ANNIVERSARY:%s" "ANNIVERSARY_$1")
+             (--map (->>
+                     it
+                     (s-replace-all '((" " . "") ("-" . "") ("[" . "") ("]" . "") ("<" . "") (">" . "")))
+                     (s-trim)
+                     (s-replace-regexp "[a-zA-Z]+$" "\n"))))
+         ;;,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
+         ;; TODO: add notes
+         ;; Be careful while exporting and sending contact to other people
+         ,(when-let (image-base64
+                     (-some->>
+                         (org-agenda-get-some-entry-text (point-marker) most-positive-fixnum)
+                       (substring-no-properties)
+                       (s-match "^\\[\\[file:\\(.+\\(\\.jpg\\|jpeg\\|png\\)\\)]]")
+                       (nth 1)
+                       (im-encode-image-base64)))
+            (format "PHOTO:%s\n" image-base64))
+         "TITLE:\nEND:VCARD")
+       "")))
+
   (defun im-contacts-export-as-vcard (&optional file-name)
     "Create a .vcf FILE-NAME containing all contact information.
   I use \"Simple Contacts Pro\" to import contacts to my phone."
@@ -10311,53 +10419,37 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
        "contacts.vcf")))
     (write-region
      (thread-last
-       (org-map-entries
-        (lambda ()
-          (when (im-contacts--contact-entry?)
-            (string-join
-             `("BEGIN:VCARD\nVERSION:4.0\nPRODID:ez-vcard 0.11.3\n"
-               ,(format "UID:urn:uuid:%s\n" (org-id-get nil t))
-               ,(im-contacts--build-contact-item "FN:%s" "ITEM")
-               ,(if (org-entry-get nil "DISPLAY_NAME")
-                    (im-contacts--build-contact-item "N:;%s;;;" "DISPLAY_NAME")
-                  (im-contacts--build-contact-item "N:;%s;;;" "ITEM"))
-               ,@(im-contacts--build-contact-item "TEL;TYPE=$1:%s" "PHONE_$1")
-               ,@(im-contacts--build-contact-item "EMAIL;TYPE=$1:%s" "EMAIL_$1")
-               ,@(im-contacts--build-contact-item "ADR;TYPE=$1:;;%s;;;;" "ADDRESS_$1")
-               ,(im-contacts--build-contact-item "ORG:%s" "GROUP")
-               ,(im-contacts--build-contact-item "CATEGORIES:%s" "GROUP")
-               ,(thread-last
-                  (im-contacts--build-contact-item "BDAY:%s" "SCHEDULED")
-                  (s-replace-regexp "BDAY:<[0-9]\\{4\\}\\(.*\\) \\(\\w+\\)>" "BDAY:1900\\1")
-                  (s-replace "-" ""))
-               ;; vcard supports multiple anniversaries but there is no
-               ;; way to name them as far as I understand. So I just
-               ;; drop anniversary names and add all of them.
-               ,@(thread-last
-                   (im-contacts--build-contact-item "ANNIVERSARY:%s" "ANNIVERSARY_$1")
-                   (--map (->>
-                           it
-                           (s-replace-all '((" " . "") ("-" . "") ("[" . "") ("]" . "") ("<" . "") (">" . "")))
-                           (s-trim)
-                           (s-replace-regexp "[a-zA-Z]+$" "\n"))))
-               ;;,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
-               ;; TODO: add notes
-               ;; Be careful while exporting and sending contact to other people
-               ,(when-let (image-base64
-                           (-some->>
-                               (org-agenda-get-some-entry-text (point-marker) most-positive-fixnum)
-                             (substring-no-properties)
-                             (s-match "^\\[\\[file:\\(.+\\(\\.jpg\\|jpeg\\|png\\)\\)]]")
-                             (nth 1)
-                             (im-encode-image-base64)))
-                  (format "PHOTO:%s\n" image-base64))
-               "TITLE:\nEND:VCARD")
-             "")))
-        "LEVEL=1")
-       (-filter #'identity)
+       (org-map-entries #'im-contacts-build-vcard-for-heading "LEVEL=1")
+       (-non-nil)
        (s-join "\n"))
      nil
      file-name))
+
+  ;; TODO: This does not delete the contact if header is removed
+  ;; completely. I probably need something like
+  ;; `im-org-header-deleted-hook', akin to `im-org-header-changed-hook'.
+  (defun im-contacts--update-contact-on-change (begin end heading contents)
+    "Whenever a contact changes in people.org, push changes to Nextcloud.
+  This is done by adding this function to
+  `im-org-header-changed-hook'.  See down below."
+    (when (s-contains? "people.org" (buffer-file-name))
+      (save-excursion
+        (save-restriction
+          (widen)
+          (goto-char begin)
+          (when-let (contact (im-contacts-build-vcard-for-heading))
+            ;; Save buffer in case of
+            ;; `im-contacts-build-vcard-for-heading' adds an ID to the
+            ;; heading
+            (let ((before-save-hook nil)
+                  (after-save-hook nil))
+              (save-buffer))
+            (im-nextcloud-put-contact
+             contact
+             :on-success (lambda (&rest _) (message ">> Contact updated: %s" heading))
+             :on-error (lambda (&rest _) (message "!! Failed to update contact: %s" heading))))))))
+
+  (add-hook 'im-org-header-changed-hook #'im-contacts--update-contact-on-change)
 #+end_src
 ** people.org - Quick info selection
 #+begin_src emacs-lisp
@@ -12852,6 +12944,26 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
                         (if (and run-only-focused-test current-test-name)
                             (format "#%s" current-test-name)
                           "")))))
+#+end_src
+** NextCloud integration
+#+begin_src emacs-lisp
+  (cl-defun im-nextcloud-put-contact (vcard &key on-success on-error)
+    "Add given VCARD definition to my Nextcloud contacts."
+    (let ((uuid (->>
+                 vcard
+                 (s-split "\n")
+                 (--find (s-prefix? "UID" it))
+                 (s-split ":")
+                 -last-item)))
+      (request (format "%s/remote.php/dav/addressbooks/users/admin/contacts/%s.vcf"
+                       im-nextcloud-url
+                       uuid)
+        :headers `(("Content-Type" . "text/vcard; charset=utf-8;")
+                   ("Authorization" . ,(concat "Basic " im-nextcloud-auth)))
+        :type "PUT"
+        :data vcard
+        :success (lambda (&rest _) (when on-success (funcall on-success)))
+        :error (lambda (&rest _) (when on-error (funcall on-error))))))
 #+end_src
 * Operating system related
 ** Sound/audio output chooser
