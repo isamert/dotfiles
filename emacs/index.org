@@ -1384,6 +1384,7 @@ Add some padding to Emacs frame to freshen things up.
     ;; over the kill ring I also use evil-exchange, which eliminates the
     ;; need for this totally
     (setq evil-kill-on-visual-paste nil)
+
     ;; Over the time I found myself utilizing emacs C-u more and more,
     ;; so disable this
     (setq evil-want-C-u-scroll nil)
@@ -1404,6 +1405,9 @@ Add some padding to Emacs frame to freshen things up.
 
     ;; Makes # and * search for symbols instead of words.
     (setq evil-symbol-word-search t)
+
+    ;; Search does not wrap at the end. Wrapping is confusing.
+    (setq evil-search-wrap nil)
 
     ;; Move between visual lines instead of real lines
     (evil-define-key 'normal 'global
@@ -6100,7 +6104,7 @@ Simple mode for editing =~/.Xmodmap= file.
     (setq slack-image-max-height nil)
     (setq slack-prefer-current-team t)
     ;; ^ Set current team with `slack-change-current-team'
-    (setq slack-buffer-function #'switch-to-buffer-other-window)
+    (setq slack-buffer-function #'switch-to-buffer)
 
     ;; Disable filling as it fucks with copying stuff
     (setq lui-fill-type nil)
@@ -7075,9 +7079,13 @@ Here I simply add some bindings form artist-mode and a cheatsheet in the header 
        ("temperature_2m_min" . "Min temp")
        ("temperature_2m_max" . "Max temp")
        ("precipitation_probability_max" . "🌧️ %%")
+       ("precipitation_probability" . "🌧️ %%")
        ("precipitation_hours" . "🌧️ hours")
        ("precipitation_sum" . "🌧️ sum")
+       ("precipitation" . "🌧️ ")
+       ("relativehumidity_2m" . "Humid")
        ("weathercode" . " Code")
+       ("is_day" . "Zone     ")
        ("shortwave_radiation_sum" . "Radiation")
        ("time" . "📅 ")))
 
