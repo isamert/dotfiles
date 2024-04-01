@@ -2437,6 +2437,10 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   bind --mode=ex <A-n> ex.next_history
   bind --mode=ex <A-π> ex.prev_history
   bind --mode=ex <A-˜> ex.next_history
+
+  " Fixes
+  " https://github.com/tridactyl/tridactyl/issues/4870
+  bind <C-6> tab #
 #+end_src
 
 **** Redirect URLs
