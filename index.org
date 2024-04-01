@@ -737,6 +737,30 @@ This is the configuration for the embedded keyboard on mac.
   «kmonad-layers»
 #+end_src
 
+#+begin_src kbd :tangle (when-darwin "~/.config/kmonad-mac-magic.kbd")
+  «kmonad-cfg»
+  «kmonad-unicode»
+  «kmonad-macros»
+
+  (defsrc
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
+    lctl lmet lalt fn             spc            rmet ralt  cmp  rctl)
+
+  (deflayer main
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
+    lctl lalt lmet fn             spc            @sym rmet rctrl rctl)
+
+  «kmonad-layers»
+#+end_src
+
 ** sxhkd
 This is the global keybinding manager. I don't use GNOME's own keybinding manager as it's clumsy to use.
 
