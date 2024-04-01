@@ -3848,8 +3848,6 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     :straight (:host github :repo "alexluigit/dirvish")
     :after dired
     :general
-    (:states 'normal
-     "M-f" #'dirvish-side)
     (im-leader
       "ed" #'dirvish-dwim
       "eD" #'im-dirvish)
@@ -3876,15 +3874,6 @@ There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
     :config
     (setq dirvish-subtree-always-show-state t)
     (setq dirvish-attributes '(vc-state subtree-state all-the-icons collapse git-msg file-time file-size))
-    (setq dirvish-side-width 55)
-
-
-    (dirvish-side-follow-mode)
-    ;; dirvish-side-follow-mode breaks tramp in minibuffer
-    (defun im-dirvish-disable-side-follow-mode () (dirvish-side-follow-mode -1))
-    (defun im-dirvish-enable-side-follow-mode () (dirvish-side-follow-mode +1))
-    (add-hook 'minibuffer-setup-hook #'im-dirvish-disable-side-follow-mode)
-    (add-hook 'minibuffer-exit-hook #'im-dirvish-enable-side-follow-mode)
 
     ;; Disable wrapping lines in some modes so that full-screen dirvish looks good
     (add-hook 'dirvish-directory-view-mode-hook #'im-disable-line-wrapping)
