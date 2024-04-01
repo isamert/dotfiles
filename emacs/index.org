@@ -6786,7 +6786,8 @@ Pretty timers. I forget everything, so it's quite important for me to have a qui
     (alert
      (tmr--long-description-for-finished-timer timer)
      :title "TMR"
-     :severity tmr-notification-urgency))
+     ;; TMR events are high priority for me
+     :severity 'high))
 
   (defvar im-tmr-upcoming-string nil)
   (put 'im-tmr-upcoming-string 'risky-local-variable t) ;; This is required to make propertize work
