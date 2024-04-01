@@ -256,7 +256,9 @@ Some basic variable and function definitions that will be used in configuration.
 
   (defun im-serialize-into-file (file data)
     (with-temp-file (expand-file-name file)
-      (prin1 data (current-buffer))))
+      (let ((print-length nil)
+            (print-level nil))
+        (prin1 data (current-buffer)))))
 
   (defun im-deserialize-from-file (file)
     (let ((fpath (expand-file-name file)))
