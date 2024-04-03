@@ -828,6 +828,25 @@ This function is for doing easy REST calls and it uses plists for everything bec
           (switch-to-buffer-other-window (current-buffer))
           (goto-char (point-min))))
       json))
+
+  (cl-defun im-request-json-async (url &key headers type data)
+    "Async `request'."
+    (promise-new
+     (lambda (resolve reject)
+       (request
+         url
+         :headers `(("Content-Type" . "application/json")
+                    ,@headers)
+         :type (or type "GET")
+         :data data
+         :parser (apply-partially #'json-parse-buffer :object-type 'alist :array-type 'list)
+         :success (cl-function
+                   (lambda (&key data &allow-other-keys)
+                     (funcall resolve data)))
+         :error (cl-function
+                 (lambda (&key data error-thrown &allow-other-keys)
+                   (message "request failed :: %s | %s" data error-thrown)
+                   (funcall reject data)))))))
 #+end_src
 *** URL/web utils
 #+begin_src emacs-lisp
@@ -2582,13 +2601,12 @@ This following trick (got it from [[https://www.reddit.com/r/emacs/comments/o68i
           (id (or id (org-id-get))))
       (unless id
         (user-error "No ID found for current heading"))
-      (set-process-filter
-       (start-process
-        "*im-org-backlinks*"
-        nil
-        "rg" (format "\\[\\[id:%s\\]" id)
-        "--color=never" "--no-heading")
-       (lambda (proc out)
+      (im-shell-command
+       :command "rg"
+       :args `(,(format "\\[\\[id:%s\\]" id) "--color=never" "--no-heading")
+       :switch nil
+       :on-finish
+       (lambda (out)
          (let* ((infos (--map (-take 2 (s-split-up-to ":" it 2)) (s-split "\n" out t)))
                 (backlinks (->>
                             (--map
@@ -2597,13 +2615,13 @@ This following trick (got it from [[https://www.reddit.com/r/emacs/comments/o68i
                                  (save-restriction
                                    (widen)
                                    (goto-char (point-min))
-                                   (forward-line (string-to-number (nth 1 it)))
+                                   (forward-line (1- (string-to-number (nth 1 it))))
                                    (format
-                                    "- [[file:%s][%s]] :: %s / [[id:%s][%s]]"
+                                    "- [[file:%s][%s]] :: %s / %s"
                                     (car it)
                                     (car it)
                                     (s-join " → " (--map (format "*%s*" it) (org-get-outline-path)))
-                                    (org-id-get-create)
+                                    (substring-no-properties (org-store-link nil))
                                     (im-org-header-line-to-title (org-entry-get nil "ITEM"))))))
                              infos)
                             (-uniq))))
@@ -3080,13 +3098,19 @@ My main use case for [[https://github.com/nobiot/org-transclusion][org-transclus
       "oF" #'org-transclusion-remove))
 #+end_src
 ** Capture changed headings on save
-Sometimes, I want to capture which headings are changed on save and do some actions on those headings. Following code accomplishes that, but only for top level headings (which is mostly what I want to capture). To do so add a function to ~im-org-header-changed-hook~. This function will be called for each changed heading, with ~(begin-point end-point (heading-title . heading-contents))~ arguments.
+Sometimes, I want to capture which headings are changed on save and do some actions on those headings. Following code accomplishes that, but only for top and second level headings. To do so add a function to ~im-org-header-changed-hook~.
 
 #+begin_src emacs-lisp
+  (defvar im-org-header-changed-hook '()
+    "Functions run after an entry is changed.
+
+  Functions are called with one argument which is the following plist:
+      (:begin ... :end ... :level ... :properties ... :header... :body ...)
+
+  Functions are called separately for each changed entry/header.")
+
   (defvar-local im--org-heading-prev-state nil
     "Holds the previous state of the top-level headers.")
-
-  (defvar im-org-header-changed-hook '())
 
   (defun im-org-store-heading-state ()
     "Store the state of the top-level headers for later comparison."
@@ -3097,11 +3121,22 @@ Sometimes, I want to capture which headings are changed on save and do some acti
                 (with-temp-buffer
                   (insert-file-contents file)
                   (delay-mode-hooks (org-mode))
-                  ;; Save only :data because one line added/removed will
-                  ;; invalidate all headers by changing :begin and :end
-                  (--map (plist-get it :data) (im-org-get-top-level-headers))))))))
+                  ;; Save only :body & :header because one line
+                  ;; added/removed will invalidate all headers by
+                  ;; changing :begin and :end
+                  (--map (cons (plist-get it :header) (plist-get it :body)) (im-org-get-some-headers))))))))
 
-  (defun im-org-get-top-level-headers ()
+  (defun im-org-compare-heading-state ()
+    "Compare current top-level headers with the stored state to detect changes."
+    (when (and (derived-mode-p 'org-mode))
+      (-each (--remove
+              (member (cons (plist-get it :header) (plist-get it :body)) im--org-heading-prev-state)
+              (im-org-get-some-headers))
+        (lambda (header-plist)
+          (--each im-org-header-changed-hook
+            (funcall it header-plist))))))
+
+  (defun im-org-get-some-headers ()
     "Extract top-level headers and their content from the current Org buffer."
     (let ((headers '()))
       (save-restriction
@@ -3109,37 +3144,22 @@ Sometimes, I want to capture which headings are changed on save and do some acti
         (org-map-entries
          (lambda ()
            (let* ((header (org-get-heading t t t t))
-                  (elem (org-element-at-point))
-                  (body (org-element-property :contents-begin elem)))
+                  (elem (org-element-at-point)))
              (push
               (list
                :begin (org-element-property :begin elem)
                :end (org-element-property :end elem)
-               :data
-               (cons
-                header
-                (when body
-                  (buffer-substring-no-properties
-                   body
-                   (org-element-property :contents-end (org-element-at-point))))))
+               :level (org-element-property :level elem)
+               :properties (org-entry-properties)
+               :header header
+               :body
+               (when-let (start (org-element-property :contents-begin elem))
+                 (buffer-substring-no-properties
+                  start
+                  (org-element-property :contents-end elem))))
               headers)))
-
-         "LEVEL=1"))
+         "LEVEL<3"))
       headers))
-
-  (defun im-org-compare-heading-state ()
-    "Compare current top-level headers with the stored state to detect changes."
-    (when (and (derived-mode-p 'org-mode))
-      (-each (--remove (member (plist-get it :data) im--org-heading-prev-state)
-                       (im-org-get-top-level-headers))
-        (lambda (header)
-          (--each im-org-header-changed-hook
-            (funcall
-             it
-             (plist-get header :begin)
-             (plist-get header :end)
-             (car (plist-get header :data))
-             (cdr (plist-get header :data))))))))
 
   (add-hook 'before-save-hook 'im-org-store-heading-state)
   (add-hook 'after-save-hook 'im-org-compare-heading-state)
@@ -5319,6 +5339,7 @@ Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
   (define-key embark-general-map (kbd "G") #'im-google-this)
   (define-key embark-general-map (kbd "C") #'im-gpt)
 #+end_src
+
 *** URI-encode/hexify action
 #+begin_src emacs-lisp
   (defun im-embark-hexify/uri-encode (start end)
@@ -9071,15 +9092,15 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
     (interactive
      (list (read-string
             "Table: "
-            ;; Replace first `.' with `:'
-            (s-replace-regexp
-             "^\\([A-Za-z0-9_-]+\\)\\." "\\1:"
-             (im-region-or
-              (lambda () (im-inner-back-quote-at-point)))))))
+            (ignore-errors
+              (im-region-or
+               (lambda () (im-inner-back-quote-at-point)))))))
+    ;; Replace first `.' with `:'
+    (setq table-name (s-replace-regexp "^\\([A-Za-z0-9_-]+\\)\\." "\\1:" table-name))
     (let ((buffer-name (format "*bq table info: %s*" table-name)))
       (im-shell-command
        :buffer-name buffer-name
-       :command (format "bq show '%s'" table-name)
+       :command (format "bq show '%s'" (im-tap table-name))
        :on-start
        (lambda (&rest _)
          (toggle-truncate-lines +1)
@@ -9105,17 +9126,31 @@ Create a mode for cbc binary and make cbc-mode code blocks runnable inside emacs
     (->>
      (im-big-query-get-all-datasets im-bq-project-id)
      (--map (alist-get 'id it))
-     (--mapcat (im-big-query-get-all-tables it))))
+     (--mapcat (ignore-errors (im-big-query-get-all-tables it)))))
 
   (defun im-bq-all-table-names ()
     (--map (alist-get 'id it) (im-bq-all-tables)))
 
-  (im-cape
-   :name bq-tables
-   :generator (lambda (&rest _) (--map (s-replace ":" "." it) (im-bq-all-table-names)))
-   :bound symbol
-   :category symbol
-   :key "M-o B")
+  ;; TODO: Act on it
+  (defun im-bq-select-table ()
+    "Select a BigQuery table and insert it."
+    (interactive)
+    (insert
+     (im-completing-read
+      "Table: "
+      (--map (s-replace ":" "." it) (im-bq-all-table-names))
+      :category 'im-bq-table-name)))
+
+  (with-eval-after-load 'embark
+    (defvar-keymap im-bq-table-name
+      :doc "Actions for BQ tables"
+      :parent embark-general-map
+      ;; Define the first binding as the default action
+      "i" #'im-big-query-table-info)
+
+    (add-to-list 'embark-keymap-alist '(im-bq-table-name . im-bq-table-name)))
+
+  (bind-key "M-o B" #'im-bq-select-table)
 #+end_src
 
 ** kbd-mode
@@ -10435,15 +10470,15 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
   ;; TODO: This does not delete the contact if header is removed
   ;; completely. I probably need something like
   ;; `im-org-header-deleted-hook', akin to `im-org-header-changed-hook'.
-  (defun im-contacts--update-contact-on-change (begin end heading contents)
+  (defun im-contacts--update-contact-on-change (info)
     "Whenever a contact changes in people.org, push changes to Nextcloud.
   This is done by adding this function to
   `im-org-header-changed-hook'.  See down below."
-    (when (s-contains? "people.org" (buffer-file-name))
+    (when (s-ends-with? "people.org" (buffer-file-name))
       (save-excursion
         (save-restriction
           (widen)
-          (goto-char begin)
+          (goto-char (plist-get info :begin))
           (when-let (contact (im-contacts-build-vcard-for-heading))
             ;; Save buffer in case of
             ;; `im-contacts-build-vcard-for-heading' adds an ID to the
@@ -10453,8 +10488,8 @@ Please see [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-a
               (save-buffer))
             (im-nextcloud-put-contact
              contact
-             :on-success (lambda (&rest _) (message ">> Contact updated: %s" heading))
-             :on-error (lambda (&rest _) (message "!! Failed to update contact: %s" heading))))))))
+             :on-success (lambda (&rest _) (message ">> Contact updated: %s" (plist-get info :header)))
+             :on-error (lambda (&rest _) (message "!! Failed to update contact: %s" (plist-get info :header)))))))))
 
   (add-hook 'im-org-header-changed-hook #'im-contacts--update-contact-on-change)
 #+end_src
@@ -12953,6 +12988,7 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
                           "")))))
 #+end_src
 ** NextCloud integration
+*** Contacts
 #+begin_src emacs-lisp
   (cl-defun im-nextcloud-put-contact (vcard &key on-success on-error)
     "Add given VCARD definition to my Nextcloud contacts."
@@ -12962,9 +12998,9 @@ See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
                  (--find (s-prefix? "UID" it))
                  (s-split ":")
                  -last-item)))
-      (request (format "%s/remote.php/dav/addressbooks/users/admin/contacts/%s.vcf"
-                       im-nextcloud-url
-                       uuid)
+      (request (format
+                "%s/remote.php/dav/addressbooks/users/%s/contacts/%s.vcf"
+                im-nextcloud-url im-nextcloud-user uuid)
         :headers `(("Content-Type" . "text/vcard; charset=utf-8;")
                    ("Authorization" . ,(concat "Basic " im-nextcloud-auth)))
         :type "PUT"
