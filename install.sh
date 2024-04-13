@@ -22,15 +22,15 @@ echo "=> Remove broken symlinks..."
 find "${EMACS_LOAD_DIR}" -xtype l -exec unlink {} \;
 
 echo "=> Cleaning old files..."
-rm -f ~/.emacs.d/index.org
-rm -f ~/.emacs.d/index.el
+rm -f ~/.emacs.d/init.el
+rm -f ~/.emacs.d/early-init.el
 for file in "${PWD}/emacs/load"/*.el; do
     [[ ! $file = *secrets* ]] && rm -f "${EMACS_LOAD_DIR}/$(basename "${file}")"
 done
 
 echo "=> Installing Emacs configuration..."
-ln -s "${PWD}/emacs/index.org" ~/.emacs.d/index.org
-ln -s "${PWD}/emacs/index.el" ~/.emacs.d/index.el
+ln -s "${PWD}/emacs/init.el" ~/.emacs.d/init.el
+ln -s "${PWD}/emacs/index.el" ~/.emacs.d/early-init.el
 
 mkdir -p ~/.emacs.d/load/
 for file in "${PWD}/emacs/load"/*.el; do
@@ -109,15 +109,6 @@ read -rd '' EMACS_EVAL <<EOF
   (org-babel-tangle-file "./index.org"))
 EOF
 set -e
-
-cd emacs
-
-echo "=> Tangling Emacs config..."
-emacs -Q \
-    --batch \
-    --eval "$EMACS_EVAL"
-
-cd ..
 
 echo "=> Installing dotfiles..."
 emacs -Q \
