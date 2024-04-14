@@ -105,8 +105,13 @@
 ;; dependency with other packages but I may use them before loading
 ;; any package, so:
 
-(use-package dash)
-(use-package s)
+(use-package dash
+  :demand t
+  :config (require 'dash))
+
+(use-package s
+  :demand t
+  :config (require 's))
 
 ;; For parsing yaml.
 (use-package yaml)
@@ -119,9 +124,10 @@
 ;; (promise-new (lambda (resolve reject) (funcall resolve arg)))
 ;; and then
 ;; (async-defun some-function () (message "Result is %s" (await promise-returned-function)))
-(use-package async-await :demand t)
-
-(require 'async-await)
+(use-package async-await
+  :demand t
+  :config
+  (require 'async-await))
 
 (defmacro async-cl-defun (name arglist &rest body)
   "Same as `async-defun' but uses `cl-defun' to define the function."
@@ -190,7 +196,7 @@ the keys before matching, if present."
 
 (defun im-region-or (what)
   "Returns currently selected string or WHAT-at-point string. WHAT
-can be 'symbol 'word or a function that returns string etc."
+can be \\='symbol \\='word or a function that returns string etc."
   (cond
    ((use-region-p) (buffer-substring-no-properties (region-beginning) (region-end)))
    ((equal what 'string) (read-string "Enter value: "))
@@ -876,10 +882,10 @@ Async request:
 (defun im-ssh-host-list ()
   "Return all host names defined in ~/.ssh/config."
   (->> (f-read-text "~/.ssh/config")
-       (s-lines)
-       (--map (nth 1 (s-match "^Host \\(.*\\)" it)))
-       (-filter #'identity)
-       (-remove-item "*")))
+     (s-lines)
+     (--map (nth 1 (s-match "^Host \\(.*\\)" it)))
+     (-filter #'identity)
+     (-remove-item "*")))
 
 ;;;;;; Git
 
@@ -1049,18 +1055,22 @@ With argument, do this that many times."
   :straight (:type built-in)
   :hook (after-init . repeat-mode))
 
-(defmacro im-make-repeatable (name &rest rest)
-  "Put given pairs in a keymap and mark them as repeatable."
+
+(defmacro im-make-repeatable (name &rest pairs)
+  "Put given PAIRS in a keymap named NAME and mark them as repeatable."
   (declare (indent 1))
-  (let ((pairs (-partition 2 rest))
+  (let ((pairs (cl-loop for (a b) on pairs by #'cddr collect (list a b)))
         (map-name (intern (format "im-repeat-map-for-%s" name))))
     `(progn
        (defvar ,map-name
          (let ((map (make-sparse-keymap)))
-           ,@(--map `(define-key map (kbd ,(car it)) ',(cadr it)) pairs)
+           ,@(mapcar (lambda (it) `(define-key map (kbd ,(car it)) ',(cadr it))) pairs)
            map))
-       (--each ',(-map #'cadr pairs)
-         (put it 'repeat-map ',map-name)))))
+       (-each ',(mapcar #'cadr pairs)
+         (lambda (it) (put it 'repeat-map ',map-name))))))
+
+(im-make-repeatable evil-goto-chg
+  ";" evil-goto-last-change)
 
 ;;;; Visuals
 ;;;;; General
@@ -1140,7 +1150,7 @@ Just a simple wrapper around `prettify-symbols-mode`"
   (let ((hook (intern (concat (symbol-name mode) "-prettify-symbols-hook"))))
     `(progn
        (defun ,hook ()
-         (setq prettify-symbols-alist `(,@prettify-symbols-alist ,@',(eval pairs)))
+         (setq prettify-symbols-alist (append prettify-symbols-alist ,pairs))
          (prettify-symbols-mode 1))
        (add-hook ',mode #',hook))))
 
@@ -1270,7 +1280,9 @@ side window the only window'"
 ;; Add some padding to Emacs frame to freshen things up.
 
 (use-package spacious-padding
-  :hook (after-init . spacious-padding-mode))
+  ;; Disabled for now.
+  ;; :hook (after-init . spacious-padding-mode)
+  )
 
 ;;;; evil-mode
 ;;;;; Basic configuration
@@ -1410,7 +1422,10 @@ side window the only window'"
   (evil-collection-init 'Custom)
   (evil-collection-init 'imenu-list)
   (evil-collection-init 'custom)
-  (evil-collection-init 'xwidget))
+  (evil-collection-init 'xwidget)
+
+  (define-advice evil-collection-unimpaired-previous-error (:after (&rest _) recenter) (recenter))
+  (define-advice evil-collection-unimpaired-next-error (:after (&rest _) recenter) (recenter)))
 
 ;;;;; evil-unimpaired
 ;; Apparently [[evil-collection]] has a vim-unimpaired implementation
@@ -1615,7 +1630,9 @@ side window the only window'"
 ;; this package, it's a default functionality but I wanted to mention.
 
 (use-package goto-chg
-  :after evil)
+  :after evil
+  :config
+  (define-advice evil-goto-last-change (:after (&rest _) recenter) (recenter)))
 
 (im-make-repeatable evil-goto-chg
   ";" evil-goto-last-change)
@@ -1752,7 +1769,7 @@ side window the only window'"
 
   ;; TODO Remove when upstream fixes this
   ;; https://github.com/minad/consult/issues/563#issuecomment-1186612641
-  (defun org-show-entry-consult-a (fn &rest _args)
+  (defun org-show-entry-consult-a (fn &rest args)
     (when-let ((pos (apply fn args)))
       (org-fold-show-entry)))
   (advice-add 'consult-line :around #'org-show-entry-consult-a)
@@ -4432,7 +4449,7 @@ anchor points in the buffer."
 
 (defvar im--last-log-diff-buffer nil)
 (defun im-vc-show-diff ()
-  "Same as log-edit-show-diff but do not focus to the diff window."
+  "Same as `log-edit-show-diff' but do not focus to the diff window."
   (let ((bname (buffer-name (current-buffer))))
     (delete-other-windows)
     (log-edit-show-diff)
@@ -4717,7 +4734,8 @@ anchor points in the buffer."
   (marginalia-mode))
 
 (use-package mini-frame
-  :hook (after-init . mini-frame-mode)
+  ;; Disabled for now.
+  ;; :hook (after-init . mini-frame-mode)
   :config
   (setq mini-frame-show-parameters
         '((top . 0.15)
@@ -5006,9 +5024,9 @@ non-nil so that you only add it to `project-prefix-map'."
   "cg"  #'im-consult-ripgrep-current-directory)
 
 (defun im-consult-ripgrep (&optional path)
-  "`consult-ripgrep' in current project.
-  `consult-ripgrep' with `consult-project-root-function' shows full path of the
-  file in the results.  I don't want that."
+  "`consult-ripgrep' in PATH (or in current project, if path is nil).
+`consult-ripgrep' with `consult-project-root-function' shows full
+path of the file in the results.  I don't want that."
   (interactive)
   (consult-ripgrep (or path (im-current-project-root))))
 
@@ -5022,8 +5040,9 @@ non-nil so that you only add it to `project-prefix-map'."
   (consult-ripgrep dir))
 
 (defun im-find-file-in (&optional dir)
-  "Find file in DIR. `fd' is already fast enough, no need for
-  `consult-find's async approach."
+  "Find file in DIR.
+`fd' is already fast enough, no need for `consult-find's async
+approach."
   (interactive "DFind files in: ")
   (let ((default-directory (or dir default-directory)))
     (im-output-select
@@ -5076,7 +5095,7 @@ non-nil so that you only add it to `project-prefix-map'."
    :category 'file
    :action  (lambda (it &rest _) (project-switch-project it))
    :items   (lambda () (mapcar #'car project--list)))
-  "Projects source for consult-buffer.")
+  "Projects source for `consult-buffer'.")
 
 (with-eval-after-load 'consult
   (im-append! consult-buffer-sources 'im-consult-source-projects))
@@ -5209,7 +5228,7 @@ non-nil so that you only add it to `project-prefix-map'."
 (define-key embark-command-map  (kbd "m") #'im-embark-bind-leader-command)
 
 (defun im-embark-bind-leader-command (command key)
-  "Bind KEY to COMMAND in im-leader map.
+  "Bind KEY to COMMAND in `im-leader' map.
 KEY should not contain the leader key."
   (interactive
    (list
@@ -5224,75 +5243,22 @@ KEY should not contain the leader key."
   "Load required libs."
   (require 'ox-md nil t))
 
-;;;;; flycheck
-;; - Use =ge= (=consult-flycheck=) to list and jump any of the errors/warnings in the buffer.
-;; - Write ~i SPC~, ~w SPC~, ~e SPC~ to show infos, warnings, errors only in the =consult-flycheck=
-
-(general-def
-  :states 'normal
-  "ge" #'im-show-diagnostic-list)
-
-(use-package flycheck
-  :hook ((prog-mode . flycheck-mode))
-  :config
-  (setq flycheck-idle-change-delay 1)
-  (setq flycheck-display-errors-delay 0.3)
-  (setq flycheck-emacs-lisp-load-path 'inherit)
-  (setq flycheck-emacs-lisp-initialize-packages t)
-  (add-hook 'emacs-lisp-mode-hook #'im-flycheck-disable-checkdoc-checker-if-not-needed)
-  ;; Not quite sure why but I also need to explicitly add this
-  ;; to `org-src-mode-hook'
-  (add-hook 'org-src-mode-hook #'im-flycheck-disable-checkdoc-checker-if-not-needed))
-
-(use-package consult-flycheck :after flycheck)
-
-(use-package flycheck-posframe
-  :straight (:host github :repo "alexmurray/flycheck-posframe")
-  :after flycheck
-  :hook (flycheck-mode . flycheck-posframe-mode)
-  :config
-  (setq flycheck-posframe-border-width 2)
-  (setq flycheck-posframe-border-use-error-face t)
-  (setq flycheck-posframe-position 'window-bottom-center)
-  (flycheck-posframe-configure-pretty-defaults))
-
-(defun im-show-diagnostic-list (arg)
-  "Show all lsp errors or flycheck/flymake errors, depending on which is available."
-  (interactive "P")
-  (cond
-   ((bound-and-true-p lsp-mode)
-    (consult-lsp-diagnostics arg))
-   ((bound-and-true-p flymake-mode)
-    (consult-flymake arg))
-   ((bound-and-true-p flycheck-mode)
-    (consult-flycheck))
-   (t (user-error "No diagnostic provider found"))))
-
-(defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
-  "Disable checkdoc on org src, scratch and interaction buffers."
-  (when (or (eq major-mode #'lisp-interaction-mode)
-            (s-contains? "scratch" (buffer-name))
-            (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
-    (flycheck-disable-checker 'emacs-lisp-checkdoc)))
-
 ;;;;; flymake & flymake-languagetool
-;; It is nonsensical to use =flymake= and =flycheck= at the same
-;; time. I mainly use =flycheck= but I configure =flymake= to be able
-;; to use =flymake-languagetool= because it's better than
-;; =flycheck-languagetool=. I may migrate to =flymake= fully in the
-;; future but some things are still a little bit off.
 
-
-;; (use-package flymake
-;;   :straight (:type built-in)
-;;   :hook (prog-mode . flymake-mode))
+(use-package flymake
+  :straight (:type built-in)
+  :hook (prog-mode . flymake-mode))
 
 (use-package flymake-popon
   :straight (:type git :repo "https://codeberg.org/akib/emacs-flymake-popon.git")
   :hook (flymake-mode . flymake-popon-mode)
   :custom
   (flymake-popon-posframe-extra-arguments
-   '(:poshandler posframe-poshandler-window-bottom-center)))
+   '(:poshandler posframe-poshandler-window-bottom-center))
+  :config
+  ;; Disable showing diagnostics in eldoc (in echo area) as we already
+  ;; show diagnostics in a posframe.
+  (add-hook 'flymake-mode-hook (lambda () (remove-hook 'eldoc-documentation-functions 'flymake-eldoc-function t))))
 
 (use-package flymake-languagetool
   :hook
@@ -5300,13 +5266,41 @@ KEY should not contain the leader key."
    (org-mode        . flymake-languagetool-load)
    (markdown-mode   . flymake-languagetool-load))
   :init
-  (setq flymake-languagetool-server-command (cl-case system-type
-                                              (darwin '("languagetool-http-server"))
-                                              (linux '("languagetool" "--http"))))
+  (setq
+   flymake-languagetool-server-command
+   (pcase system-type
+     ;; Installed it through brew
+     (darwin '("languagetool-server"))
+     (linux '("languagetool" "--http"))))
   :config
-  ;; If you have installed through pacman, this is the way to start the server
   (add-to-list 'flymake-languagetool-ignore-faces-alist 'org-modern-block-name)
   (add-to-list 'flymake-languagetool-disabled-rules "WHITESPACE_RULE"))
+
+;; - Use =ge= (=consult-flymake=) to list and jump any of the errors/warnings in the buffer.
+;; - Write ~n SPC~, ~w SPC~, ~e SPC~ to show notes, warnings, errors only in the =consult-flymake=
+
+(general-def
+  :states 'normal
+  "ge" #'im-show-diagnostic-list)
+
+(defun im-show-diagnostic-list (arg)
+  "Show all lsp errors or flycheck/flymake errors, depending on which is available.
+When ARG is non-nil, query the whole workspace/project."
+  (interactive "P")
+  (cond
+   ((bound-and-true-p lsp-mode)
+    (consult-lsp-diagnostics arg))
+   ((bound-and-true-p flymake-mode)
+    (consult-flymake arg))
+   ;; ((bound-and-true-p flycheck-mode)
+   ;;  (consult-flycheck))
+   (t (user-error "No diagnostic provider found"))))
+
+(defun im-flymake-yank-diagnostics-at-point ()
+  "Copy the flymake diagnostics at point."
+  (interactive)
+  (im-kill
+   (mapconcat #'flymake-diagnostic-text (flymake-diagnostics (point)) "\n")))
 
 ;;;;; corfu & corfu-doc & kind-icon
 ;; - When corfu popup is open
@@ -5472,6 +5466,7 @@ symbol."
   (setq lsp-use-plists t)
   (setq lsp-keymap-prefix "M-l")
   :config
+  (setq lsp-diagnostics-provider :flymake)
   (setq lsp-completion-provider :none) ;; for corfu
   (setq lsp-enable-xref t)
   (setq lsp-enable-links t)
@@ -6267,7 +6262,7 @@ The default `slack-clipboard-image-upload' was not working
 properly in MacOS."
   (interactive)
   (unless (im-clipboard-contains-image-p)
-    (user-error "No image in clipboard."))
+    (user-error "No image in clipboard"))
   (let* ((file (make-temp-file "clip" nil ".png")))
     (im-save-clipboard-image-to-file file)
     (slack-file-upload file "png" "image.png")))
@@ -6292,7 +6287,7 @@ properly in MacOS."
                   (team (slack-buffer-team buf))
                   (room (slack-buffer-room buf))
                   (message (slack-room-find-message room (slack-get-ts))))
-      (slack-message-to-string message team)))
+                 (slack-message-to-string message team)))
 
 (defun im-slack-open-link (link)
   (interactive
@@ -7073,7 +7068,8 @@ This happens to me on org-buffers, xwidget-at tries to get
    "gj" #'outline-forward-same-level)
   :config
   ;; Add h as narrow prefix for headings in consult-imenu
-  (push '(?h "Headings") (plist-get (cdr (assoc 'emacs-lisp-mode consult-imenu-config)) :types)))
+  (with-eval-after-load 'consult-imenu
+    (push '(?h "Headings") (plist-get (cdr (assoc 'emacs-lisp-mode consult-imenu-config)) :types))))
 
 ;;;;; epkg
 
@@ -8879,7 +8875,7 @@ the resulting bq command."
                           (-drop 2 cmd))))
     (when cmd?
       (org-babel-insert-result cmd-str)
-      (user-error "Done."))
+      (user-error "Done"))
     (with-current-buffer buf (erase-buffer))
     (im-ensure-binary "bq" :package "google-cloud-sdk" :installer "nix-env -iA")
     (setq process (apply #'start-process cmd))
@@ -11624,7 +11620,7 @@ selecting a pod."
                (progn
                  (message ">> Downloading logs for %s. Done." name)
                  (find-file fname))
-             (user-error "Failed to get logs.")))))
+             (user-error "Failed to get logs")))))
       "Logs (previous pod)" →
       (let ((container (or container (im-kube-pod--select-container pod))))
         (shell-command
@@ -11838,24 +11834,6 @@ WHERE is interpreted as a file name."
      (lambda (&rest _)
        (alert (format "Error while downloading: %s!" url))))))
 
-;;;;; im-jump-to-definition-at-config
-
-(defun im-jump-to-definition-at-config (symbol)
-  "Like normal jump-to-definition functionality but jumps to my
-  literate config instead of tangled real definition. Pretty dumb
-  but works most of the time."
-  (interactive (list (read-string "Symbol: " (im-region-or 'symbol))))
-  (with-current-buffer (find-file-noselect "~/Workspace/projects/personal/dotfiles/emacs/index.org")
-    (org-save-outline-visibility nil
-      (save-restriction
-        (save-excursion
-          (org-show-all)
-          (goto-char (point-min))
-          (when (re-search-forward (format "\\((\\(cl-\\)?def.*\\) %s" symbol) nil t)
-            (call-interactively #'org-edit-special)))))))
-
-(define-key embark-symbol-map (kbd "J") 'im-jump-to-definition-at-config)
-
 ;;;;; zoom
 
 (defun im-open-zoom-meeting-dwim (&optional link)
@@ -11877,7 +11855,6 @@ WHERE is interpreted as a file name."
 ;; local by using macOS' Calendar app and I utilize
 ;; [[https://hasseg.org/icalBuddy/][icalBuddy]] to interact with that
 ;; calendar from Emacs.
-
 
 (defun im-calendar-now ()
   "Show the current calendar item details in a buffer and open the
@@ -13167,6 +13144,10 @@ end tell"))
 (--each
     (directory-files im-load-path t (rx ".el" eos))
   (load it))
+
+(setq custom-file (concat user-emacs-directory "custom.el"))
+(when (file-exists-p custom-file)
+  (load custom-file))
 
 (unless (daemonp)
   ;; This is good for the cases where emacsclient may be called inside

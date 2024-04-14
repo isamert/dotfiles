@@ -30,7 +30,7 @@ done
 
 echo "=> Installing Emacs configuration..."
 ln -s "${PWD}/emacs/init.el" ~/.emacs.d/init.el
-ln -s "${PWD}/emacs/index.el" ~/.emacs.d/early-init.el
+ln -s "${PWD}/emacs/early-init.el" ~/.emacs.d/early-init.el
 
 mkdir -p ~/.emacs.d/load/
 for file in "${PWD}/emacs/load"/*.el; do
