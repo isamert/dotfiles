@@ -1344,9 +1344,6 @@ side window the only window'"
   ;; Makes # and * search for symbols instead of words.
   (setq evil-symbol-word-search t)
 
-  ;; Search does not wrap at the end. Wrapping is confusing.
-  (setq evil-search-wrap nil)
-
   ;; Move between visual lines instead of real lines
   (evil-define-key 'normal 'global
     (kbd "<remap> <evil-next-line>") #'evil-next-visual-line
