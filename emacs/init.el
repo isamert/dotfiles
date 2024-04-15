@@ -881,11 +881,12 @@ Async request:
 
 (defun im-ssh-host-list ()
   "Return all host names defined in ~/.ssh/config."
-  (->> (f-read-text "~/.ssh/config")
-     (s-lines)
-     (--map (nth 1 (s-match "^Host \\(.*\\)" it)))
-     (-filter #'identity)
-     (-remove-item "*")))
+  (->>
+   (f-read-text "~/.ssh/config")
+   (s-lines)
+   (--map (nth 1 (s-match "^Host \\(.*\\)" it)))
+   (-filter #'identity)
+   (-remove-item "*")))
 
 ;;;;;; Git
 
@@ -6309,7 +6310,7 @@ properly in MacOS."
                   (team (slack-buffer-team buf))
                   (room (slack-buffer-room buf))
                   (message (slack-room-find-message room (slack-get-ts))))
-                 (slack-message-to-string message team)))
+      (slack-message-to-string message team)))
 
 (defun im-slack-open-link (link)
   (interactive
@@ -9269,7 +9270,9 @@ SELECT * FROM _ LIMIT 1;
   "Quit current window or buffer.
 Inspired by `meow-quit' but I changed it in a way to make it work with side windows properly."
   (interactive)
-  (if (> (seq-length (seq-filter (lambda (it) (not (window-parameter it 'window-side))) (window-list (selected-frame)))) 1)
+  (if (or
+       (window-parameter (selected-window) 'window-side)
+       (> (seq-length (seq-filter (lambda (it) (not (window-parameter it 'window-side))) (window-list (selected-frame)))) 1))
       (delete-window)
     (previous-buffer)))
 
@@ -11359,16 +11362,15 @@ Returns process buffer."
          (proc
           (if eat
               (progn
-                (let ((buffer (apply #'eat-make (->> buffer-name
-                                                     (s-chop-prefix "*")
-                                                     (s-chop-suffix "*"))
+                (let ((buffer (apply #'eat-make (->>
+                                                 buffer-name
+                                                 (s-chop-prefix "*")
+                                                 (s-chop-suffix "*"))
                                      command nil args)))
                   (setq buffer-name (buffer-name buffer))
                   (get-buffer-process buffer)))
             (if args
-                (progn
-                  (message ">>>> %s" args)
-                  (apply #'start-process command buffer-name command args))
+                (apply #'start-process command buffer-name command args)
               (start-process-shell-command command buffer-name command))))
          (proc-out ""))
     (set-process-sentinel
