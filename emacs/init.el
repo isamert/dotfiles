@@ -9244,9 +9244,10 @@ SELECT * FROM _ LIMIT 1;
 ;;;;; Functions
 
 (defun im-quit ()
-  "Quit current window or buffer. Source: meow-quit"
+  "Quit current window or buffer.
+Inspired by `meow-quit' but I changed it in a way to make it work with side windows properly."
   (interactive)
-  (if (> (seq-length (window-list (selected-frame))) 1)
+  (if (> (seq-length (seq-filter (lambda (it) (not (window-parameter it 'window-side))) (window-list (selected-frame)))) 1)
       (delete-window)
     (previous-buffer)))
 
