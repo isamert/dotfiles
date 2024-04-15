@@ -4578,43 +4578,6 @@ anchor points in the buffer."
     "gi" #'blamer-show-posframe-commit-info)
   :defer 20)
 
-;;;;; diff-mode
-;; Some small enhancments to diff mode:
-;; - Cycle hunks with TAB, SHIFTTAB.
-;; - Reverse hunks with "x" (like magit diff).
-;; - Split hunks with "-", which enables you to split and then reverse so that you can reverse individual lines/portions etc.
-;; - TODO: maybe add ability to stage hunks
-
-
-(add-hook 'diff-mode-hook #'outline-minor-mode)
-
-(evil-define-key 'normal diff-mode-map
-  "r" #'vc-diff
-  "x" #'im-diff-reverse-hunk
-  "-" #'diff-split-hunk
-  (kbd "RET") #'diff-goto-source
-  (kbd "<tab>") #'outline-cycle
-  (kbd "<backtab>") #'outline-cycle-buffer
-  ;; Add ability to exit from commit window (log-edit) of vc from the
-  ;; diff buffer. Because it automatically opens, sometimes I decide
-  ;; to discard what I'm currently doing inside the diff buffer
-  (kbd "C-c C-k") (λ-interactive
-                   (when (im-select-window-with-buffer "*vc-log*")
-                     (call-interactively #'log-edit-kill-buffer))))
-
-(defun im-diff-reverse-hunk ()
-  "Reverse hunk at point."
-  (interactive)
-  (pcase-let ((`(,buf ,_line-offset ,_pos ,_src ,_dst ,_switched)
-               (diff-find-source-location nil nil)))
-    (when (y-or-n-p "Really want to revert?")
-      (save-window-excursion
-        (save-excursion
-          (diff-apply-hunk :reverse)
-          (with-current-buffer buf
-            (save-buffer))))
-      (diff-hunk-kill))))
-
 ;;;;; avy
 ;; avy is very similar to ~vim-easymotion~. It simply jumps to a
 ;; visible text using a given char.
@@ -12963,6 +12926,235 @@ NC_ID property is set to the entry."
       (im-nextcloud-maps-put-favorite-from-org))))
 
 (add-hook 'im-org-header-changed-hook #'im-nextcloud-maps--on-org-entry-changed)
+
+;;;;; im-status & im-commit my git stage & commit workflow
+
+;; This is meant to be used as a replacement for Magit workflow. In my
+;; work computer magit is quite slow due to some management apps
+;; intertwining with external process calls.
+
+;; I use either `git-gutter' or `im-git-status' to stage/revert hunks
+;; in the file and then I use `im-commit' to commit.
+
+;; When using `git-gutter', I simply stage hunks in-file. I can also
+;; use `im-git-stage-region' to stage all hunks in a region.
+
+;; With `im-git-status', I can also stage hunks or full files.
+
+;; `im-commit' has a convenient way to do configure a commit through
+;; in buffer buttons. When you do `im-commit', you'll get a markdown
+;; buffer that you write your commit message into, like below:
+
+;; <message goes here>
+;;
+;; ⚙ Amend: no
+;; ⚙ No Verify: no
+;; ⚙ Author: Your Name <your@mail>
+
+;; Clicking/hitting RET on no will toggle no to yes and it will bring
+;; old commits message to buffer. Changing the author line will change
+;; the author for the commit.
+
+;;;;;; diff-mode improvements
+
+(add-hook 'diff-mode-hook #'outline-minor-mode)
+
+(evil-define-key 'normal diff-mode-map
+  (kbd "RET") #'diff-goto-source
+  (kbd "<tab>") #'outline-cycle
+  (kbd "<backtab>") #'outline-cycle-buffer)
+
+;;;;;; im-git-status
+
+;; TODO: Show staged changes in a separate window. After staging an
+;; unstaged change (or unstaging a staged change), it should be
+;; automatically updated.
+
+;; TODO: Add "r" binding to reload the diff. For both, staged and
+;; unstaged diffs.
+
+;; TODO: Arguments should persist (except amend?). When I toggle No
+;; Verify, it should stay toggled for the next im-commit call.
+
+;; TODO: Stage whole file
+(defvar-keymap im-diff-mode-map
+  "s" #'im-git-stage-hunk ;; TODO: this should stage whole file if cursor is on a file
+  "x" #'im-git-reverse-hunk
+  "c" #'im-commit)
+
+(general-def
+  :keymaps 'im-diff-mode-map
+  :states 'normal
+  "s" #'im-git-stage-hunk
+  "x" #'im-git-reverse-hunk
+  "c" #'im-git-status-commit)
+
+(define-derived-mode im-diff-mode diff-mode "DS"
+  "TODO: ....")
+
+(defvar im-git-status--old-window-conf nil)
+
+(defun im-git-status ()
+  (interactive)
+  (let* ((default-directory (im-current-project-root))
+         (diff (shell-command-to-string "git diff"))
+         (dbuff (get-buffer-create "*im-git-diff*")))
+    (setq im-git-status--old-window-conf (current-window-configuration))
+    (with-current-buffer dbuff
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (insert diff)
+      (setq buffer-read-only t)
+      (im-diff-mode)
+      (setq-local diff-vc-backend 'Git)
+      (switch-to-buffer dbuff)
+      (goto-char (point-min))
+      (delete-other-windows))))
+
+(defun im-git-status-commit ()
+  "Like `im-commit' but restores the right window configuration when commit finishes."
+  (interactive nil 'im-diff-mode)
+  (im-commit :window-conf im-git-status--old-window-conf))
+
+;; FIXME: splitting hunks and applying them does not work for some
+;; reason I don't understand
+(defun im-git-stage-hunk ()
+  "Stage the currently selected hunk."
+  (interactive nil 'im-diff-mode)
+  (-let* (((start end) (diff-bounds-of-hunk))
+          (hunk (buffer-substring-no-properties start end))
+          (header (save-excursion
+                    (buffer-substring-no-properties
+                     (diff-beginning-of-file)
+                     (progn
+                       (diff-hunk-next)
+                       (point)))))
+          (pt (point))
+          (file (make-temp-file "hunk" nil  ".patch" (concat header hunk))))
+    (message ">> Wrote hunk to %s" file)
+    (set-process-sentinel
+     (start-process "*im-stage-hunk*" "*im-stage-hunk*" "git" "apply" file "--cached" "--verbose")
+     (lambda (proc event)
+       (if (eq (process-exit-status proc) 0)
+           (progn
+             (save-excursion
+               (goto-char pt)
+               (diff-hunk-kill))
+             (message ">> Hunk applied successfully!"))
+         (user-error ">> Failed to apply the hunk!"))))))
+
+(defun im-git-reverse-hunk ()
+  "Reverse hunk at point."
+  (interactive nil 'im-diff-mode)
+  (pcase-let ((`(,buf ,_line-offset ,_pos ,_src ,_dst ,_switched)
+               (diff-find-source-location nil nil)))
+    (when (y-or-n-p "Really want to revert?")
+      (save-window-excursion
+        (save-excursion
+          (diff-apply-hunk :reverse)
+          (with-current-buffer buf
+            (save-buffer))))
+      (diff-hunk-kill))))
+
+;;;;;; im-commit
+
+(defconst im-commit-message-buffer "*im-git-commit-message*")
+(defconst im-commit-diff-buffer "*im-git-diff-staged*")
+(defconst im-commit-config-prefix "⚙")
+(defvar im-commit--prev-window-conf nil)
+
+(cl-defun im-commit (&key window-conf)
+  "Commit staged changes.
+If commit is called from another command, and when commit
+finishes or discard you want to restore an older window
+configuration, pass it as WINDOW-CONF."
+  (interactive)
+  (let* ((default-directory (im-current-project-root))
+         (diff (shell-command-to-string "git diff --staged"))
+         (commit-buffer (get-buffer-create im-commit-message-buffer))
+         (diff-buffer (get-buffer-create im-commit-diff-buffer)))
+    (when (s-blank? diff)
+      (user-error "Nothing is staged"))
+    (setq im-commit--prev-window-conf (or window-conf (current-window-configuration)))
+    (switch-to-buffer commit-buffer)
+    (im-commit-mode)
+    (delete-other-windows)
+    (split-window-right)
+    (switch-to-buffer-other-window diff-buffer)
+    (insert diff)
+    (setq buffer-read-only t)
+    (diff-mode)
+    (setq-local diff-vc-backend 'Git)
+    (other-window 1)))
+
+(defun im-commit-finalize ()
+  "Finalize the commit in progress."
+  (interactive)
+  (let* ((lines (s-split
+                 "\n"
+                 (with-current-buffer im-commit-message-buffer
+                   (buffer-substring-no-properties (point-min) (point-max)))))
+         (msg (->>
+               lines
+               (--filter (not (s-starts-with? im-commit-config-prefix it)))
+               (s-join "\n")
+               (s-trim)))
+         (args (->>
+                lines
+                (--filter (s-starts-with? im-commit-config-prefix it))
+                (--mapcat (-let [(key val) (s-split-up-to ":" (s-chop-left 1 it) 1)]
+                            (setq key (concat "--" (s-dashed-words (s-trim key))))
+                            (setq val (s-trim val))
+                            (pcase val
+                              ("yes" (list key))
+                              ("no" '())
+                              (_ (list key val))))))))
+    (set-process-sentinel
+     (apply #'start-process "*im-commit*" "*im-commit*" "git" "commit" "-m" msg args)
+     (lambda (proc event)
+       (if (eq (process-exit-status proc) 0)
+           (message "im-commit :: Committed")
+         (message "im-commit :: Failed. See buffer *im-commit*"))))
+    (im-commit-cancel)))
+
+(defun im-commit-cancel ()
+  "Cancel the commit in progress."
+  (interactive)
+  (kill-buffer im-commit-message-buffer)
+  (kill-buffer im-commit-diff-buffer)
+  (set-window-configuration im-commit--prev-window-conf))
+
+(defvar-keymap im-commit-mode-map
+  "C-c C-c" #'im-commit-finalize
+  "C-c C-k" #'im-commit-cancel)
+
+(define-derived-mode im-commit-mode markdown-mode "CM"
+  "Commit message editing mode."
+  ;; TODO: Add header for keybindings.
+  (insert "\n\n")
+  (insert im-commit-config-prefix " No Verify: ")
+  (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
+  (insert im-commit-config-prefix " Amend: ")
+  (im-insert-toggle-button
+   "no" "yes"
+   :help "RET: Toggle amend"
+   :on-toggle
+   (lambda (state)
+     (when (and (equal state "yes") (y-or-n-p "Use old commit message?"))
+       (goto-char (point-min))
+       (insert (shell-command-to-string "git log -1 --pretty=format:'%s'"))
+       (delete-region (point) (- (search-forward im-commit-config-prefix) 3)))))
+  (insert "\n")
+  (insert im-commit-config-prefix " Author: AUTHOR_NAME <AUTHOR_MAIL>\n")
+  (goto-char (point-min))
+  (im-help-at-point-mode)
+  (im-commit--setup))
+
+(async-defun im-commit--setup ()
+  "Fill the commit buffer without blocking."
+  (replace-regexp "AUTHOR_NAME" (await (lab--git "config" "--get" "user.name")) nil (point-min) (point-max))
+  (replace-regexp "AUTHOR_MAIL" (await (lab--git "config" "--get" "user.email")) nil (point-min) (point-max))
+  (goto-char (point-min)))
 
 ;;;; Operating system related
 ;;;;; Sound/audio output chooser
