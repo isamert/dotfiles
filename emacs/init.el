@@ -710,6 +710,29 @@ this only for debugging."
       (tabulated-list-print t))
     (switch-to-buffer buffer)))
 
+;;;;;; UI utilities
+
+(cl-defun im-insert-toggle-button (state1 state2 &key help on-toggle)
+  "Insert a button that change it's text from STATE1 to STATE2 when clicked.
+HELP is displayed when cursor is on the button and
+`im-help-at-point-mode' is enabled.
+
+ON-TOGGLE is called when user toggles the button.  It will be
+called with the current state of the button."
+  (insert-text-button
+   state1 'action
+   (lambda (button)
+     (let ((start (button-start button))
+           (end (button-end button))
+           (cursor (point)))
+       (delete-region start end)
+       (im-insert-toggle-button state2 state1 :help help :on-toggle on-toggle)
+       (goto-char (if (< cursor (+ start (length state2))) cursor start))
+       (when on-toggle
+         (funcall on-toggle state2))))
+   'kbd-help help
+   'follow-link t))
+
 ;;;;;; API call
 ;; This function is for doing easy REST calls and it uses plists for everything because it's more readable and easier to type than alists (but you can still use alists if you want or need to). I use this to quickly prototype stuff in elisp.
 
