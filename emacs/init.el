@@ -927,6 +927,19 @@ Async request:
              (funcall on-success))
          (funcall on-fail))))))
 
+;;;;;; Interactive utilities
+
+(defalias 'im-generate-random-string #'im-insert-random-string)
+(defalias 'im-generate-random-id #'im-insert-random-string)
+(defun im-insert-random-string ()
+  "Generate a 7 character random string."
+  (interactive)
+  (let ((chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+        (string ""))
+    (dotimes (_ 7 string)
+      (setq string (concat string (string (aref chars (random (length chars)))))))
+    (insert string)))
+
 ;;;;; Load path
 ;; Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
 
