@@ -4429,22 +4429,17 @@ anchor points in the buffer."
   :demand t
   :general
   (im-leader
-    "gv" #'project-vc-dir
-    "gd" #'vc-diff
-    "gD" #'vc-root-diff
-    "gn" #'vc-next-action
-    "gs" #'magit-status
-    "gS" #'magit-stash
+    "gS" #'magit-status
     "gf" #'magit-file-dispatch
     "gp" #'vc-pull
     "gP" #'magit-push
     "gr" #'magit-reset
-    "gcc" #'vc-switch-branch
     "gB" #'vc-annotate ;; Git Blame
     "gR" #'vc-refresh-state
     "gbc" #'vc-create-branch
-    "gL" #'vc-print-root-log
-    "gbb" #'magit-branch)
+    "gbs" #'vc-switch-branch
+    "gbb" #'magit-branch
+    "gL" #'vc-print-root-log)
   :config
   (define-advice magit-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
   (define-advice magit-branch-and-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
@@ -12978,6 +12973,10 @@ NC_ID property is set to the entry."
 ;; Clicking/hitting RET on no will toggle no to yes and it will bring
 ;; old commits message to buffer. Changing the author line will change
 ;; the author for the commit etc.
+
+(im-leader
+  "gs" #'im-git-status
+  "gc" #'im-git-commit)
 
 ;;;;;; diff-mode improvements
 
