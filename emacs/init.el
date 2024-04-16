@@ -13124,21 +13124,31 @@ configuration, pass it as WINDOW-CONF."
                (--filter (not (s-starts-with? im-commit-config-prefix it)))
                (s-join "\n")
                (s-trim)))
-         (args (->>
-                lines
-                (--filter (s-starts-with? im-commit-config-prefix it))
-                (--mapcat (-let [(key val) (s-split-up-to ":" (s-chop-left 1 it) 1)]
-                            (setq key (concat "--" (s-dashed-words (s-trim key))))
-                            (setq val (s-trim val))
-                            (pcase val
-                              ("yes" (list key))
-                              ("no" '())
-                              (_ (list key val))))))))
+         (props (->>
+                 lines
+                 (--filter (s-starts-with? im-commit-config-prefix it))
+                 (--map (-let [(key val) (s-split-up-to ":" (s-chop-left 1 it) 1)]
+                          (setq key (concat "--" (s-dashed-words (s-trim key))))
+                          (setq val (s-trim val))
+                          (pcase val
+                            ("yes" (list key))
+                            ("no" '())
+                            (_ (list key val)))))))
+         (args (-flatten (--filter (not (-contains? '("--tag") (car it))) props))))
     (set-process-sentinel
      (apply #'start-process "*im-commit*" "*im-commit*" "git" "commit" "-m" msg args)
      (lambda (proc event)
        (if (eq (process-exit-status proc) 0)
-           (message "im-commit :: Committed")
+           (progn
+             (message "im-commit :: Committed")
+             (when-let ((tag? (cadr (--find (equal (car it) "--tag") props))))
+               (unless (equal tag? "no")
+                 (set-process-sentinel
+                  (start-process "*im-git-tag*" "*im-git-tag*" "git" "tag" tag?)
+                  (lambda (proc event)
+                    (if (eq (process-exit-status proc) 0)
+                        (message ">> im-commit :: Tag created")
+                      (message "Failed")))))))
          (message "im-commit :: Failed. See buffer *im-commit*"))))
     (im-commit-cancel)))
 
@@ -13159,6 +13169,7 @@ configuration, pass it as WINDOW-CONF."
   (insert "\n\n")
   (insert im-commit-config-prefix " No Verify: ")
   (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
+  (insert "\n")
   (insert im-commit-config-prefix " Amend: ")
   (im-insert-toggle-button
    "no" "yes"
@@ -13171,6 +13182,9 @@ configuration, pass it as WINDOW-CONF."
        (delete-region (point) (- (search-forward im-commit-config-prefix) 3)))))
   (insert "\n")
   (insert im-commit-config-prefix " Author: AUTHOR_NAME <AUTHOR_MAIL>\n")
+  (insert im-commit-config-prefix " Tag: ")
+  (im-insert-toggle-button "no" (lambda () (read-string "Tag: ")) :help "RET: Toggle tagging")
+  (insert "\n")
   (goto-char (point-min))
   (im-help-at-point-mode)
   (im-commit--setup))
