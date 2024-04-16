@@ -12945,7 +12945,7 @@ NC_ID property is set to the entry."
 
 (add-hook 'im-org-header-changed-hook #'im-nextcloud-maps--on-org-entry-changed)
 
-;;;;; im-status & im-git-commit my git stage & commit workflow
+;;;;; im-git-status & im-git-commit my git stage & commit workflow
 
 ;; This is meant to be used as a replacement for Magit workflow. In my
 ;; work computer magit is quite slow due to some management apps
@@ -12972,7 +12972,8 @@ NC_ID property is set to the entry."
 
 ;; Clicking/hitting RET on no will toggle no to yes and it will bring
 ;; old commits message to buffer. Changing the author line will change
-;; the author for the commit etc.
+;; the author for the commit. Tag automatically tags your commit with
+;; given string etc..
 
 (im-leader
   "gs" #'im-git-status
@@ -13002,28 +13003,45 @@ NC_ID property is set to the entry."
 (defvar-keymap im-git-unstaged-diff-mode-map
   "s" #'im-git-stage-hunk-or-file
   "x" #'im-git-reverse-hunk
-  "c" #'im-git-commit)
+  "c" #'im-git-commit
+  "q" #'im-git-status-cancel
+  "C-c C-k" #'im-git-status-cancel
+  "1" (λ-interactive (outline-hide-sublevels 1))
+  "2" (λ-interactive
+       (outline-show-all)
+       (outline-hide-body))
+  "3" #'outline-show-all)
 
 (general-def
   :keymaps 'im-git-unstaged-diff-mode-map
   :states 'normal
   "s" #'im-git-stage-hunk-or-file
   "x" #'im-git-reverse-hunk
-  "c" #'im-git-status-commit)
+  "c" #'im-git-status-commit
+  "q" #'im-git-status-cancel
+  "1" (λ-interactive (outline-hide-sublevels 1))
+  "2" (λ-interactive
+       (outline-show-all)
+       (outline-hide-body))
+  "3" #'outline-show-all)
 
 (define-derived-mode im-git-unstaged-diff-mode diff-mode "DS"
   "Mode to show unstaged git diff.")
 
 (defvar im-git-status--old-window-conf nil)
 
-(defun im-git-status ()
+(cl-defun im-git-status ()
   (interactive)
   (let* ((default-directory (im-current-project-root))
          (diff (shell-command-to-string "git diff"))
          (dbuff (get-buffer-create "*im-git-diff*")))
-    (when (s-blank? diff)
-      (user-error ">> Nothing changed"))
     (setq im-git-status--old-window-conf (current-window-configuration))
+    (when (s-blank? diff)
+      (if (s-blank? (shell-command-to-string "git diff --staged"))
+          (message ">> Nothing changed")
+        (when (y-or-n-p ">> All changes are staged.  Commit?")
+          (im-git-commit :window-conf im-git-status--old-window-conf)))
+      (cl-return-from im-git-status))
     (with-current-buffer dbuff
       (setq buffer-read-only nil)
       (erase-buffer)
@@ -13039,6 +13057,12 @@ NC_ID property is set to the entry."
   "Like `im-git-commit' but restore the right window configuration when commit finishes."
   (interactive nil 'im-git-unstaged-diff-mode)
   (im-git-commit :window-conf im-git-status--old-window-conf))
+
+(defun im-git-status-cancel ()
+  "Cancel."
+  (interactive nil 'im-git-unstaged-diff-mode)
+  (kill-buffer (current-buffer))
+  (set-window-configuration im-git-status--old-window-conf))
 
 (defun im-git-diff-at-file? ()
   "Return if cursor is on somewhere around the start of file diff."
@@ -13105,9 +13129,12 @@ Call CALLBACK when successful."
   (im-git-stage-hunk-or-file :reverse))
 
 ;; FIXME: If buffer is narrowed, reversing will fail
+;; FIXME(1OKAkW): It does not work in im-git-staged-diff-mode because
+;; we need to unstage it first and then reverse (or reverse and stage
+;; the reversed diff)
 (defun im-git-reverse-hunk ()
   "Reverse hunk at point."
-  (interactive nil 'im-git-unstaged-diff-mode 'im-git-staged-diff-mode)
+  (interactive nil 'im-git-unstaged-diff-mode)
   (pcase-let ((`(,buf ,_line-offset ,_pos ,_src ,_dst ,_switched)
                (diff-find-source-location nil nil)))
     (when (y-or-n-p "Really want to revert?")
@@ -13136,7 +13163,7 @@ configuration, pass it as WINDOW-CONF."
          (commit-buffer (get-buffer-create im-git-commit-message-buffer))
          (diff-buffer (get-buffer-create im-git-commit-diff-buffer)))
     (when (s-blank? diff)
-      (user-error "Nothing is staged"))
+      (user-error ">> Nothing is staged"))
     (setq im-git-commit--prev-window-conf (or window-conf (current-window-configuration)))
     (switch-to-buffer commit-buffer)
     (im-git-commit-mode)
@@ -13146,6 +13173,7 @@ configuration, pass it as WINDOW-CONF."
     (insert diff)
     (setq buffer-read-only t)
     (im-git-staged-diff-mode)
+    (goto-char (point-min))
     (setq-local diff-vc-backend 'Git)
     (other-window 1)))
 
@@ -13204,8 +13232,11 @@ configuration, pass it as WINDOW-CONF."
   "Commit message editing mode."
   (require 'whitespace)
   (setq-local header-line-format "`C-c C-c' to commit, `C-c C-k' to discard.")
+  (setq-local whitespace-line-column 72)
   (setq-local whitespace-style '(face empty tabs lines-tail trailing))
+  ;; FIXME: First line should not exceed 50 chars, how to indicate that?
   (whitespace-mode +1)
+  (display-fill-column-indicator-mode +1)
   (insert "\n\n")
   (insert im-git-commit-config-prefix " No Verify: ")
   (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
@@ -13240,7 +13271,14 @@ configuration, pass it as WINDOW-CONF."
 
 (defvar-keymap im-git-staged-diff-mode-map
   "x" #'im-git-reverse-hunk
-  "u" #'im-git-unstage-hunk-or-file)
+  "u" #'im-git-unstage-hunk-or-file
+  "C-c C-c" #'im-git-commit-finalize
+  "C-c C-k" #'im-git-commit-cancel
+  "1" (λ-interactive (outline-hide-sublevels 1))
+  "2" (λ-interactive
+       (outline-show-all)
+       (outline-hide-body))
+  "3" #'outline-show-all)
 
 (define-derived-mode im-git-staged-diff-mode diff-mode "SD"
   "Mode for showing staged changes.")
@@ -13249,7 +13287,13 @@ configuration, pass it as WINDOW-CONF."
   :keymaps 'im-git-staged-diff-mode-map
   :states 'normal
   "u" #'im-git-unstage-hunk-or-file
-  "x" #'im-git-reverse-hunk)
+  ;; FIXME: see 1OKAkW
+  ;; "x" #'im-git-reverse-hunk
+  "1" (λ-interactive (outline-hide-sublevels 1))
+  "2" (λ-interactive
+       (outline-show-all)
+       (outline-hide-body))
+  "3" #'outline-show-all)
 
 ;;;; Operating system related
 ;;;;; Sound/audio output chooser
