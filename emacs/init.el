@@ -720,7 +720,7 @@ HELP is displayed when cursor is on the button and
 ON-TOGGLE is called when user toggles the button.  It will be
 called with the current state of the button."
   (insert-text-button
-   state1 'action
+   (if (functionp state1) (funcall state1) state1) 'action
    (lambda (button)
      (let ((start (button-start button))
            (end (button-end button))
