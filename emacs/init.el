@@ -12999,6 +12999,8 @@ NC_ID property is set to the entry."
   (let* ((default-directory (im-current-project-root))
          (diff (shell-command-to-string "git diff"))
          (dbuff (get-buffer-create "*im-git-diff*")))
+    (when (s-blank? diff)
+      (user-error ">> Nothing changed"))
     (setq im-git-status--old-window-conf (current-window-configuration))
     (with-current-buffer dbuff
       (setq buffer-read-only nil)
