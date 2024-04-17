@@ -6406,18 +6406,32 @@ properly in MacOS."
                 (not (prodigy-service-started-p it)))
        (prodigy-start-service it)))))
 
-;;;;; poporg
-;; Pop current comment section into an org (or markdown, as it's more
-;; widely used for comments) buffer and edit it there. Pretty useful
-;; for writing long comments. Use ~poporg-dwim~ on a comment/comment
-;; block.
+;;;;; separaedit -- edit comment blocks/multiline strings etc. indirectly
 
-(use-package poporg
-  :bind (:map evil-normal-state-map ("gm" . poporg-dwim))
+;; Pop current comment section OR a multiline string into a markdown
+;; buffer and edit it there. Pretty useful for writing long
+;; comments/strings.
+
+;; It also supports editing code blocks inside comment blocks in their
+;; language, like
+;; ```c
+;; int main () {
+;;    int x = 3; // Do M-x `separedit' here.
+;; }
+;; ```
+
+;; If the code block does not have a language marker, then it's
+;; assumed to be in the same language of the buffer.
+;; ```
+;; (progn
+;;   (+ 1 2))
+;; ```
+
+(use-package separedit
+  :bind (:map evil-normal-state-map ("gm" . separedit))
   :config
-  (remove-hook 'poporg-edit-hook 'org-mode)
-  (add-hook 'poporg-edit-hook 'markdown-mode)
-  (add-hook 'poporg-edit-hook (lambda () (setq header-line-format "`SPC fs' → save and quit, C-c C-c → save")) 90))
+  (setq separedit-default-mode 'markdown-mode)
+  (setq separedit-continue-fill-column t))
 
 ;;;;; nov.el
 ;; For reading epub files.
@@ -7870,16 +7884,6 @@ Version: 2023-06-26"
     (-drop-last 1)
     (s-join "\n"))))
 
-;;;;;; Other
-
-(defun im-use-block-comments-for-c-style-langs ()
-  "Use block style comments for C-style langs, so that poporg works properly.
-Add this function to mode hooks."
-  (interactive)
-  (setq-local comment-start "/**")
-  (setq-local comment-end "*/")
-  (setq-local poporg-comment-skip-regexp " *\\* *"))
-
 ;;;;; markdown
 
 (use-package markdown-mode
@@ -8044,8 +8048,6 @@ This is used in my snippets."
 (add-hook 'tsx-ts-mode-hook #'im-add-node-modules-to-path)
 (add-hook 'typescript-ts-mode-hook #'hs-minor-mode)
 (add-hook 'tsx-ts-mode-hook #'hs-minor-mode)
-(add-hook 'typescript-ts-mode-hook #'im-use-block-comments-for-c-style-langs)
-(add-hook 'tsx-ts-mode-hook #'im-use-block-comments-for-c-style-langs)
 
 ;;;;;; REPL interaction
 
