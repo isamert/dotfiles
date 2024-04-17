@@ -539,6 +539,10 @@ Also see these:
     ≠ (cmd-button "xtype ≠")
     « (cmd-button "xtype «")
     » (cmd-button "xtype »")
+    ⇒ (cmd-button "xtype ⇒")
+    ↣ (cmd-button "xtype ↣")
+    ↢ (cmd-button "xtype ↢")
+    ⇄ (cmd-button "xtype ⇄")
 
     ;; Turkish chars
     ş (cmd-button "xtype ş")
@@ -642,7 +646,7 @@ Run this to install it:
 
   (deflayer symbols
     _   _    _    _    _    _    _    _    _    _    _    _    _
-    _   @«   @»   "    _    _    _    _    _    _    _    _    @≠   _
+    _   @«   @»   "    @⇒    @↢    @↣    @⇄    _    _    _    _    @≠   _
     _   \(   @↑   \)  @la  @✓   _    @ü   @ı   @ö   _    \(   \)
     _   @←   @ş   @→   @fa  @ğ   left down up   rght _    _    _    _
     _   _    _    @↓   @ç   _    @λ   @¬   _    @≤   @≥   _    _
