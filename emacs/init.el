@@ -8041,6 +8041,7 @@ This is used in my snippets."
        (s-join " "))))))
 
 ;;;;; typescript
+
 (setq-default typescript-ts-mode-indent-offset 2)
 
 (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-ts-mode))
@@ -8061,8 +8062,7 @@ This is used in my snippets."
     curr-node))
 
 (defun im-ts-current-expression ()
-  "Get smallest meaningful expression (as something that can be
-  sent to REPL)."
+  "Get smallest meaningful expression (as something that can be sent to REPL)."
   (let* ((current-node (treesit-node-at (point)))
          (getter (lambda (it)
                    (when-let (node (im-treesit-find-parent-with-type current-node (car it)))
