@@ -7083,7 +7083,7 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 (use-package outli
   :straight (:host github :repo "jdtsmith/outli")
-  :hook ((emacs-lisp-mode lisp-interaction-mode) . outli-mode)
+  :hook (prog-mode . outli-mode)
   :general
   ;; You can jump between /pages/ by using ~C-x [~ and ~C-x ]~. See
   ;; [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Pages.html][this]]
@@ -13058,6 +13058,7 @@ NC_ID property is set to the entry."
           (im-git-commit :window-conf im-git-status--old-window-conf)))
       (cl-return-from im-git-status))
     (with-current-buffer dbuff
+      (setq default-directory default-directory)
       (setq buffer-read-only nil)
       (erase-buffer)
       (insert diff)
