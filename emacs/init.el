@@ -3478,6 +3478,10 @@ This is for preventing eshell overriding my appended history."
 ;; - r :: Refresh the table
 ;; - {,} :: narrow/widen column
 
+;; Unbind g first
+(general-def :keymaps 'vtable-map "g" nil)
+
+;; Add evil bindings for vtable mode
 (general-def
   :keymaps 'vtable-map
   :states 'normal
