@@ -1349,12 +1349,18 @@ side window the only window'"
   :config
   ;; ...but I want some default evil bindings in insert mode, so just
   ;; remap them
+
   (evil-define-key 'insert 'global
     (kbd "C-d") #'evil-shift-left-line
     (kbd "C-t") #'evil-shift-right-line
     (kbd "C-n") #'evil-complete-next
     (kbd "C-p") #'evil-complete-previous
     (kbd "C-o") #'evil-execute-in-normal-state)
+
+  ;; C-a is `completion-at-point' but I like to be standard Emacs
+  ;; beginning-of-line. I already bind `M-o p' to
+  ;; `completion-at-point'
+  (define-key evil-command-line-map "C-a" #'beginning-of-line)
 
   ;; C-i interferes with TAB key, so disable it
   (setq evil-want-C-i-jump nil)
