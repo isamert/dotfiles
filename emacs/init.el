@@ -442,6 +442,12 @@ Useful for adding something to Emacs' PATH without restarting it."
   (add-to-list 'exec-path (expand-file-name path))
   (setenv "PATH" (concat (getenv "PATH") ":" (expand-file-name path))))
 
+(defun im-get-reset-buffer (buffer)
+  "Create BUFFER and return it.
+If it exists, it's killed first and return a new buffer."
+  (ignore-errors (kill-buffer buffer))
+  (get-buffer-create buffer))
+
 ;;;;;; Clipboard functions
 
 (defun im-clipboard-command ()
@@ -13053,7 +13059,7 @@ NC_ID property is set to the entry."
   (interactive)
   (let* ((default-directory (im-current-project-root))
          (diff (shell-command-to-string "git diff"))
-         (dbuff (get-buffer-create "*im-git-diff*")))
+         (dbuff (im-get-reset-buffer "*im-git-diff*")))
     (setq im-git-status--old-window-conf (current-window-configuration))
     (when (s-blank? diff)
       (if (s-blank? (shell-command-to-string "git diff --staged"))
@@ -13062,7 +13068,6 @@ NC_ID property is set to the entry."
           (im-git-commit :window-conf im-git-status--old-window-conf)))
       (cl-return-from im-git-status))
     (with-current-buffer dbuff
-      (setq default-directory default-directory)
       (setq buffer-read-only nil)
       (erase-buffer)
       (insert diff)
@@ -13180,8 +13185,8 @@ configuration, pass it as WINDOW-CONF."
   (interactive)
   (let* ((default-directory (im-current-project-root))
          (diff (shell-command-to-string "git diff --staged"))
-         (commit-buffer (get-buffer-create im-git-commit-message-buffer))
-         (diff-buffer (get-buffer-create im-git-commit-diff-buffer)))
+         (commit-buffer (im-get-reset-buffer im-git-commit-message-buffer))
+         (diff-buffer (im-get-reset-buffer im-git-commit-diff-buffer)))
     (when (s-blank? diff)
       (user-error ">> Nothing is staged"))
     (setq im-git-commit--prev-window-conf (or window-conf (current-window-configuration)))
