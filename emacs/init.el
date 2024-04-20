@@ -13186,7 +13186,6 @@ Call CALLBACK when successful."
   (interactive nil 'im-git-staged-diff-mode)
   (im-git-stage-hunk-or-file :reverse))
 
-;; FIXME: If buffer is narrowed, reversing will fail
 ;; FIXME(1OKAkW): It does not work in im-git-staged-diff-mode because
 ;; we need to unstage it first and then reverse (or reverse and stage
 ;; the reversed diff)
@@ -13198,6 +13197,15 @@ Call CALLBACK when successful."
     (when (y-or-n-p "Really want to revert?")
       (save-window-excursion
         (save-excursion
+          ;; Widen the buffer if there is a restriction so that
+          ;; `diff-apply-hunk' can work.  We can't easily restore
+          ;; the restriction because the restriction bounds may
+          ;; have been changed by `diff-apply-hunk'.  Sure, we can
+          ;; calculate but as of now, I don't need it.
+          (ignore-errors
+            (with-current-buffer (find-file-noselect (diff-find-file-name))
+              (when (buffer-narrowed-p)
+                (widen))))
           (diff-apply-hunk :reverse)
           (with-current-buffer buf
             (save-buffer))))
