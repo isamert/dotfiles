@@ -156,6 +156,27 @@
 
 (use-package async)
 
+;;;;;; parse-csv
+
+(use-package parse-csv)
+
+(defun im-parse-csv (csv)
+  "Parse CSV into an elisp object.
+
+CSV is a string that contains the csv data.  The first line should be
+the header line."
+  (let* ((parsed (parse-csv-string-rows csv ?\, ?\" "\n"))
+         (headers (car (-take 1 parsed)))
+         (data (-drop 1 parsed)))
+    (--map (-zip-pair headers it) data)))
+
+(defun im-parse-csv-buffer ()
+  "Parse a CSV buffer into an elisp list and inspect it."
+  (interactive)
+  (im-inspect (im-parse-csv (buffer-substring-no-properties (point-min) (point-max)))))
+
+(autoload 'parse-csv-string-rows "parse-csv")
+
 ;;;;;; midnight-mode
 ;; I run some functions periodically using midnight-mode. Runs once a
 ;; day at the specified time. Simply add your function via ~add-hook~
