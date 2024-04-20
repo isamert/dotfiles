@@ -93,7 +93,7 @@
 ;; line. Either pass ~:diminish t~ to use-package while installing or
 ;; just call ~(diminish 'x-mode)~.
 
-(use-package diminish)
+;; (use-package diminish)
 
 ;; Currently I use [[mini-modeline]] as my modeline and it already
 ;; hides minor mode indicators from the modeline. So this package is
@@ -113,7 +113,6 @@
   :demand t
   :config (require 's))
 
-;; For parsing yaml.
 (use-package yaml)
 
 ;; Following provides defmemoize macro. Use (memoize-restore
