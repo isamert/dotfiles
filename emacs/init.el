@@ -6342,7 +6342,7 @@ properly in MacOS."
                   (team (slack-buffer-team buf))
                   (room (slack-buffer-room buf))
                   (message (slack-room-find-message room (slack-get-ts))))
-      (slack-message-to-string message team)))
+                 (slack-message-to-string message team)))
 
 (defun im-slack-open-link (link)
   (interactive
@@ -13217,6 +13217,9 @@ Call CALLBACK when successful."
 (defconst im-git-commit-diff-buffer "*im-git-diff-staged*")
 (defconst im-git-commit-config-prefix "⚙")
 (defvar im-git-commit--prev-window-conf nil)
+(defvar im-git-commit-message-history (make-ring 100))
+(defvar-local im-git-commit--current-message-ref nil)
+(defvar-local im-git-commit--template nil)
 
 (cl-defun im-git-commit (&key window-conf)
   "Commit staged changes.
@@ -13266,6 +13269,11 @@ configuration, pass it as WINDOW-CONF."
                             ("no" '())
                             (_ (list key val)))))))
          (args (-flatten (--filter (not (-contains? '("--tag") (car it))) props))))
+    (ring-insert
+     im-git-commit-message-history
+     ;; This command is supposed to run at project root, so the
+     ;; `default-directory' is assumed to be the project root.
+     (list :project default-directory :msg msg))
     (set-process-sentinel
      (apply #'start-process "*im-git-commit*" "*im-git-commit*" "git" "commit" "-m" msg args)
      (lambda (proc event)
@@ -13290,9 +13298,35 @@ configuration, pass it as WINDOW-CONF."
   (kill-buffer im-git-commit-diff-buffer)
   (set-window-configuration im-git-commit--prev-window-conf))
 
+(defun im-git-commit-prev-message ()
+  (interactive nil im-git-commit-mode)
+  (let ((curr (1+ (or im-git-commit--current-message-ref -1))))
+    (when (>= curr (ring-length im-git-commit-message-history))
+      (user-error "End of history"))
+    (when-let ((old (im-git-commit--reset-message (plist-get (ring-ref im-git-commit-message-history curr) :msg))))
+      (when (= curr 0)
+        (setq im-git-commit--template old)))
+    (setq im-git-commit--current-message-ref curr)))
+
+(defun im-git-commit-next-message ()
+  (interactive nil im-git-commit-mode)
+  (let ((curr (1- (or im-git-commit--current-message-ref 0))))
+    (im-git-commit--reset-message
+     (case curr
+       (-1 im-git-commit--template)
+       (-2 (user-error "Beginning of history"))
+       (otherwise (plist-get (ring-ref im-git-commit-message-history curr) :msg))))
+    (setq im-git-commit--current-message-ref curr)))
+
 (defvar-keymap im-git-commit-mode-map
   "C-c C-c" #'im-git-commit-finalize
-  "C-c C-k" #'im-git-commit-cancel)
+  "C-c C-k" #'im-git-commit-cancel
+  "C-c C-p" #'im-git-commit-prev-message
+  "C-c C-n" #'im-git-commit-next-message)
+
+(general-def :keymaps 'im-git-commit-mode-map :states 'normal
+  "gj" #'im-git-commit-next-message
+  "gk" #'im-git-commit-prev-message)
 
 (define-derived-mode im-git-commit-mode markdown-mode "CM"
   "Commit message editing mode."
@@ -13314,9 +13348,7 @@ configuration, pass it as WINDOW-CONF."
    :on-toggle
    (lambda (state)
      (when (and (equal state "yes") (y-or-n-p "Use old commit message?"))
-       (goto-char (point-min))
-       (insert (shell-command-to-string "git log -1 --pretty=format:'%s'"))
-       (delete-region (point) (- (search-forward im-git-commit-config-prefix) 3)))))
+       (im-git-commit--reset-message (shell-command-to-string "git log -1 --pretty=format:'%s'")))))
   (insert "\n")
   (insert im-git-commit-config-prefix " Author: AUTHOR_NAME <AUTHOR_MAIL>\n")
   (insert im-git-commit-config-prefix " Tag: ")
@@ -13334,6 +13366,18 @@ configuration, pass it as WINDOW-CONF."
       (replace-regexp "AUTHOR_NAME" name  nil (point-min) (point-max))
       (replace-regexp "AUTHOR_MAIL" email nil (point-min) (point-max))
       (goto-char (point-min)))))
+
+(defun im-git-commit--reset-message (str)
+  "Clear the current message in the buffer and set it to STR.
+Return old message."
+  (goto-char (point-min))
+  (insert str)
+  (let* ((s (point))
+         (e (- (search-forward im-git-commit-config-prefix) 3))
+         (old (buffer-substring s e)))
+    (delete-region s e)
+    (goto-char (point-min))
+    old))
 
 (defvar-keymap im-git-staged-diff-mode-map
   "x" #'im-git-reverse-hunk
