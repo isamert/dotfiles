@@ -1020,6 +1020,8 @@ With argument, do this that many times."
 ;; mode does that.
 
 (global-reveal-mode)
+(setq reveal-auto-hide nil)
+
 ;;;;; Save minibuffer, kill-ring, search-ring history
 
 (use-package savehist
@@ -8268,6 +8270,9 @@ When called with prefix argument, REPLACE becomes non-nil."
    (read-string "Expression: ")
    current-prefix-arg))
 
+(im-leader-v
+  "qj" #'im-run-deno-on-json)
+
 ;;;;;; Extra functionality
 
 (defun im-jsons-print-path-python ()
@@ -9414,7 +9419,9 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
 
 ;; Buffer related bindings
 (im-leader
-  "b0" #'erase-buffer)
+  "b0" #'erase-buffer
+  "br" #'rename-buffer
+  "bo" #'im-open-region-in-temp-buffer)
 
 (evil-define-key '(normal insert motion) 'global
   (kbd "M-1") (λ-interactive (tab-bar-select-tab 1))
