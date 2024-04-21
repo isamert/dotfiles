@@ -13052,9 +13052,6 @@ NC_ID property is set to the entry."
 ;; unstaged change (or unstaging a staged change), it should be
 ;; automatically updated.
 
-;; TODO: Add "r" binding to reload the diff. For both, staged and
-;; unstaged diffs.
-
 ;; TODO: Arguments should persist (except amend?). When I toggle No
 ;; Verify, it should stay toggled for the next im-git-commit call.
 
@@ -13062,6 +13059,7 @@ NC_ID property is set to the entry."
   "s" #'im-git-stage-hunk-or-file
   "x" #'im-git-reverse-hunk
   "c" #'im-git-commit
+  "r" #'im-git-status-reload
   "q" #'im-git-status-cancel
   "C-c C-k" #'im-git-status-cancel
   "1" (λ-interactive (outline-hide-sublevels 1))
@@ -13076,6 +13074,7 @@ NC_ID property is set to the entry."
   "s" #'im-git-stage-hunk-or-file
   "x" #'im-git-reverse-hunk
   "c" #'im-git-status-commit
+  "r" #'im-git-status-reload
   "q" #'im-git-status-cancel
   "1" (λ-interactive (outline-hide-sublevels 1))
   "2" (λ-interactive
@@ -13088,12 +13087,17 @@ NC_ID property is set to the entry."
 
 (defvar im-git-status--old-window-conf nil)
 
-(cl-defun im-git-status ()
+(defun im-git-status-reload ()
+  (interactive nil im-git-unstaged-diff-mode)
+  (im-git-status :window-conf im-git-status--old-window-conf)
+  (message ">> Reloaded."))
+
+(cl-defun im-git-status (&key window-conf)
   (interactive)
   (let* ((default-directory (im-current-project-root))
          (diff (shell-command-to-string "git diff"))
          (dbuff (im-get-reset-buffer "*im-git-diff*")))
-    (setq im-git-status--old-window-conf (current-window-configuration))
+    (setq im-git-status--old-window-conf (or window-conf (current-window-configuration)))
     (when (s-blank? diff)
       (if (s-blank? (shell-command-to-string "git diff --staged"))
           (message ">> Nothing changed")
@@ -13246,6 +13250,11 @@ configuration, pass it as WINDOW-CONF."
     (setq-local diff-vc-backend 'Git)
     (other-window 1)))
 
+(defun im-git-commit-reload ()
+  (interactive nil im-git-commit-mode)
+  (im-git-commit :window-conf im-git-commit--prev-window-conf)
+  (message ">> Reloaded."))
+
 (defun im-git-commit-finalize ()
   "Finalize the commit in progress."
   (interactive)
@@ -13321,10 +13330,12 @@ configuration, pass it as WINDOW-CONF."
 (defvar-keymap im-git-commit-mode-map
   "C-c C-c" #'im-git-commit-finalize
   "C-c C-k" #'im-git-commit-cancel
+  "C-c C-r" #'im-git-commit-reload
   "C-c C-p" #'im-git-commit-prev-message
   "C-c C-n" #'im-git-commit-next-message)
 
 (general-def :keymaps 'im-git-commit-mode-map :states 'normal
+  "gr" #'im-git-commit-reload
   "gj" #'im-git-commit-next-message
   "gk" #'im-git-commit-prev-message)
 
