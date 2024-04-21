@@ -13142,7 +13142,7 @@ NC_ID property is set to the entry."
       (and (< cursor (point))
            (> cursor fstart)))))
 
-(defun im-git-diff-stage-diff (diff reverse? callback)
+(cl-defun im-git-diff-apply (diff &key reverse cached callback)
   "Stage the DIFF.
 Call CALLBACK when successful."
   (-let* ((file (make-temp-file "diff_" nil  ".patch" diff)))
@@ -13150,8 +13150,11 @@ Call CALLBACK when successful."
      (apply
       #'start-process
       "*im-stage-diff*" "*im-stage-diff*"
-      "git" "apply" file "--cached" "--verbose"
-      (when reverse? '("--reverse")))
+      "git" "apply" file "--verbose"
+      (-non-nil
+       (list
+        (when reverse "--reverse")
+        (when cached "--cached"))))
      (lambda (proc event)
        (if (eq (process-exit-status proc) 0)
            (funcall callback)
@@ -13159,19 +13162,21 @@ Call CALLBACK when successful."
 
 ;; FIXME: splitting hunks and applying them does not work for some
 ;; reason I don't understand
-(cl-defun im-git-stage-hunk-or-file (&optional reverse)
+(cl-defun im-git-stage-hunk-or-file (&optional reverse callback)
   "Stage the currently selected hunk or file."
   (interactive nil 'im-git-unstaged-diff-mode)
   (-when-let* ((_ (im-git-diff-at-file?))
                ((file) (diff-find-source-location))
                ((fstart fend) (diff-bounds-of-file)))
-    (when (y-or-n-p (format "Stage whole file: %s?" file))
-      (im-git-diff-stage-diff
+    (when (y-or-n-p (format "%sStage whole file: %s?" (if reverse "Un" "") file))
+      (im-git-diff-apply
        (buffer-substring-no-properties fstart fend)
-       reverse
+       :cached t
+       :reverse reverse
+       :callback
        (lambda ()
          (diff-file-kill)
-         (message ">> File staged successfully!"))))
+         (message ">> File %sstaged successfully!" (if reverse "un" "")))))
     (cl-return-from im-git-stage-hunk-or-file))
   (-let* (((hstart hend) (diff-bounds-of-hunk))
           (hunk (buffer-substring-no-properties hstart hend))
@@ -13182,9 +13187,11 @@ Call CALLBACK when successful."
                        (diff-hunk-next)
                        (point)))))
           (pt (point)))
-    (im-git-diff-stage-diff
+    (im-git-diff-apply
      (concat header hunk)
-     reverse
+     :cached t
+     :reverse reverse
+     :callback
      (lambda ()
        (save-excursion
          (goto-char pt)
@@ -13199,9 +13206,21 @@ Call CALLBACK when successful."
 ;; FIXME(1OKAkW): It does not work in im-git-staged-diff-mode because
 ;; we need to unstage it first and then reverse (or reverse and stage
 ;; the reversed diff)
-(defun im-git-reverse-hunk ()
+(cl-defun im-git-reverse-hunk ()
   "Reverse hunk at point."
   (interactive nil 'im-git-unstaged-diff-mode)
+  (-when-let* ((_ (im-git-diff-at-file?))
+               ((file) (diff-find-source-location))
+               ((fstart fend) (diff-bounds-of-file)))
+    (when (y-or-n-p (format "Revert whole file: %s?" file))
+      (im-git-diff-apply
+       (buffer-substring-no-properties fstart fend)
+       :reverse t
+       :callback
+       (lambda ()
+         (diff-file-kill)
+         (message ">> Reverted: %s" file))))
+    (cl-return-from im-git-reverse-hunk))
   (pcase-let ((`(,buf ,_line-offset ,_pos ,_src ,_dst ,_switched)
                (diff-find-source-location nil nil)))
     (when (y-or-n-p "Really want to revert?")
