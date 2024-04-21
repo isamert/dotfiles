@@ -4714,6 +4714,9 @@ anchor points in the buffer."
   (define-key vertico-map (kbd "M-]") #'vertico-next-group)
   (define-key vertico-map (kbd "M-j") #'next-line)
   (define-key vertico-map (kbd "M-k") #'previous-line)
+  (define-key vertico-map (kbd "C-d") #'vertico-scroll-up)
+  (define-key vertico-map (kbd "C-b") #'vertico-scroll-down)
+  (define-key vertico-map (kbd "C-w") #'evil-window-map)
 
   ;; Use `consult-completion-in-region' which works with vertico
   (setq completion-in-region-function #'consult-completion-in-region))
@@ -7022,11 +7025,14 @@ This happens to me on org-buffers, xwidget-at tries to get
   :straight (:host github :repo "armindarvish/consult-gh")
   :after consult
   :custom
-  (require 'consult-gh-embark)
   ;; Previews are triggered with `consult-preview-key'
   (consult-gh-show-preview t)
+  (consult-gh-issues-state-to-show "all")
+  (setq consult-gh-issue-maxnum 500)
   (consult-gh-default-orgs-list '("isamert"))
-  (consult-gh-default-clone-directory "~/Workspace/temp"))
+  (consult-gh-default-clone-directory "~/Workspace/temp")
+  :config
+  (require 'consult-gh-embark))
 
 ;;;;; copilot
 ;; - Do ~copilot-login~ to activate.
@@ -9418,7 +9424,7 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   "wi" #'im-print-buffer-file-info)
 
 ;; Buffer related bindings
-(im-leader
+(im-leader-v
   "b0" #'erase-buffer
   "br" #'rename-buffer
   "bo" #'im-open-region-in-temp-buffer)
