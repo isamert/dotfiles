@@ -13083,6 +13083,7 @@ NC_ID property is set to the entry."
   "c" #'im-git-status-commit
   "r" #'im-git-status-reload
   "q" #'im-git-status-cancel
+  "-" #'diff-split-hunk
   "1" (λ-interactive (outline-hide-sublevels 1))
   "2" (λ-interactive
        (outline-show-all)
@@ -13161,8 +13162,6 @@ Call CALLBACK when successful."
            (funcall callback)
          (user-error ">> Failed to apply the diff!"))))))
 
-;; FIXME: splitting hunks and applying them does not work for some
-;; reason I don't understand
 (cl-defun im-git-stage-hunk-or-file (&optional reverse callback)
   "Stage the currently selected hunk or file."
   (interactive nil 'im-git-unstaged-diff-mode)
@@ -13421,6 +13420,7 @@ Return old message."
   "u" #'im-git-unstage-hunk-or-file
   "C-c C-c" #'im-git-commit-finalize
   "C-c C-k" #'im-git-commit-cancel
+  "-" #'diff-split-hunk
   "1" (λ-interactive (outline-hide-sublevels 1))
   "2" (λ-interactive
        (outline-show-all)
