@@ -7495,6 +7495,7 @@ Useful if .elfeed directory is freshly syncned."
   (add-to-list 'empv-mpv-args "--save-position-on-quit")
   (setq empv-reset-playback-speed-on-quit t)
   (add-hook 'empv-init-hook #'empv-override-quit-key)
+  (add-hook 'empv-youtube-results-mode-hook #'im-disable-line-wrapping)
 
   (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
   (with-eval-after-load 'embark (empv-embark-initialize-extra-actions))
