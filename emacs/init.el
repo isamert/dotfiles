@@ -3856,7 +3856,8 @@ Return parsed seconds from users answer."
    "f"     #'dirvish-file-info-menu
    "s"     #'dirvish-setup-menu
    "H"     #'dirvish-history-go-backward
-   "L"     #'dirvish-history-go-forward)
+   "L"     #'dirvish-history-go-forward
+   "Q"     #'im-quit)
   ;; Other keybindings comes from dired-mode (which comes from
   ;; evil-collection)
   :init
@@ -4285,9 +4286,11 @@ anchor points in the buffer."
         (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . (lambda (link &rest _) (empv-play-or-enqueue link)))
         (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
+        (".*github.com/.*issues/.*" . (lambda (link &rest _) (lab-github-issue-view link)))
+        (".*github.com/[A-Za-z0-9\\. _-]+/[A-Za-z0-9\\. _-]+$" . (lambda (link &rest _) (lab-github-view-repo-readme link)))
         (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
         (".*github.com/.*issues/.*" . (lambda (link &rest _) (lab-github-issue-view link)))
-        (".*\\(trendyol\\|gitlab\\|github\\|slack\\|docs.google\\).*" . browse-url-firefox)
+        (".*\\(trendyol\\|gitlab\\|slack\\|docs.google\\).*" . browse-url-firefox)
         ("." . (lambda (link &rest _) (im-eww link)))))
 
 (use-package eww
@@ -4716,7 +4719,7 @@ anchor points in the buffer."
   (define-key vertico-map (kbd "M-k") #'previous-line)
   (define-key vertico-map (kbd "C-d") #'vertico-scroll-up)
   (define-key vertico-map (kbd "C-b") #'vertico-scroll-down)
-  (define-key vertico-map (kbd "C-w") #'evil-window-map)
+  (define-key minibuffer-mode-map (kbd "C-w") #'evil-window-map)
 
   ;; Use `consult-completion-in-region' which works with vertico
   (setq completion-in-region-function #'consult-completion-in-region))
@@ -7003,6 +7006,7 @@ This happens to me on org-buffers, xwidget-at tries to get
 ;;    (require 'eww)
 
 ;;;;; vundo -- unto-tree like branching undo
+
 ;; The interface is pretty intuitive. Go {back,forward} with {b,f} or {left,right} and branch out with {n,p} or {up,down}.
 
 (use-package vundo
@@ -7011,6 +7015,7 @@ This happens to me on org-buffers, xwidget-at tries to get
    "U" #'vundo))
 
 ;;;;; deadgrep
+
 ;; ~consult-ripgrep~ is nice but having a dedicated search buffer
 ;; where I can tinker with options is sometimes better
 
@@ -7028,13 +7033,27 @@ This happens to me on org-buffers, xwidget-at tries to get
   ;; Previews are triggered with `consult-preview-key'
   (consult-gh-show-preview t)
   (consult-gh-issues-state-to-show "all")
-  (setq consult-gh-issue-maxnum 500)
+  (consult-gh-issue-maxnum 100)
   (consult-gh-default-orgs-list '("isamert"))
   (consult-gh-default-clone-directory "~/Workspace/temp")
+  (consult-gh-issue-action
+   (lambda (it)
+     (browse-url (format "https://github.com/%s/issues/%s" (plist-get (cdr it) :repo) (plist-get (cdr it) :issue)))))
   :config
+  (setq
+   consult-gh-repo-action
+   (lambda (it)
+     (empv--select-action "Action: "
+       "View README" => (browse-url (format "https://github.com/%s.git" (car it)))
+       "Files" => (consult-gh--repo-browse-files-action it)
+       "Issues" => (consult-gh-issue-list (car it))
+       "Clone" => (lab-git-clone
+                   (format "https://github.com/%s.git" (car it))
+                   (read-directory-name "Directory to clone in: " lab-projects-directory)))))
   (require 'consult-gh-embark))
 
 ;;;;; copilot
+
 ;; - Do ~copilot-login~ to activate.
 ;; - Turn on ~copilot-mode~ to use it.
 
@@ -7054,8 +7073,8 @@ This happens to me on org-buffers, xwidget-at tries to get
 ;;    "M-o z" #'copilot-complete))
 
 ;;;;; artist-mode
-;; Here I simply add some bindings form artist-mode and a cheatsheet in the header line.
 
+;; Here I simply add some bindings form artist-mode and a cheatsheet in the header line.
 
 (add-hook
  'artist-mode-hook
@@ -13260,8 +13279,8 @@ configuration, pass it as WINDOW-CONF."
          (diff (shell-command-to-string "git diff --staged"))
          (commit-buffer (im-get-reset-buffer im-git-commit-message-buffer))
          (diff-buffer (im-get-reset-buffer im-git-commit-diff-buffer)))
-    (when (s-blank? diff)
-      (user-error ">> Nothing is staged"))
+    (when (and (s-blank? diff) (not (y-or-n-p "> Nothing staged. Still want to commit?")))
+      (user-error ">> Commit aborted"))
     (setq im-git-commit--prev-window-conf (or window-conf (current-window-configuration)))
     (switch-to-buffer commit-buffer)
     (im-git-commit-mode)
