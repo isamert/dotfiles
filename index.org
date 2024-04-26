@@ -2465,10 +2465,6 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
   bind --mode=ex <A-n> ex.next_history
   bind --mode=ex <A-π> ex.prev_history
   bind --mode=ex <A-˜> ex.next_history
-
-  " Fixes
-  " https://github.com/tridactyl/tridactyl/issues/4870
-  bind <C-6> tab #
 #+end_src
 
 **** Redirect URLs
@@ -2537,6 +2533,9 @@ I use TreeStyleTabs and it's perfect. This is just cherry on top.
 Neither Slack web app nor the desktop app lets you define your own custom keybindings but using the web app in combination with Tridactyl we can create our own shortcuts. I also created [[https://github.com/tridactyl/tridactyl/wiki/Slack][this tridactyl wiki page]] based on the bindings I created here. It might contain more details.
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
+  " https://github.com/tridactyl/tridactyl/issues/4870
+  bind <C-6> tab #
+
   command slack-top js -d€ document.querySelector('[data-qa="slack_kit_scrollbar"]').scrollTop = 0€
   command slack-top-then composite slack-top;
 
