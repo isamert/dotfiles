@@ -13272,6 +13272,7 @@ Call CALLBACK when successful."
 (defconst im-git-commit-config-prefix "⚙")
 (defvar im-git-commit--prev-window-conf nil)
 (defvar im-git-commit-message-history (make-ring 100))
+(add-to-list 'savehist-additional-variables 'im-git-commit-message-history)
 (defvar-local im-git-commit--current-message-ref nil)
 (defvar-local im-git-commit--template nil)
 
