@@ -414,7 +414,9 @@ This macro is useful for debugging and inspecting the
 intermediate results of Elisp code without changing your code
 structure. Just wrap the form with `im-tap' that you want to see
 it's output without introducing an intermediate let-form."
-  `(let ((result ,form))
+  `(let ((result ,form)
+         (print-length nil)
+         (print-level nil))
      (message "[im-tap :: %s] → %s" ,(prin1-to-string form) result)
      result))
 
@@ -3116,7 +3118,7 @@ THING-OPENER should be a function with 1 arg, which should take
 the thing (which is the thing return by the THING-DETECTOR) and
 open.")
 
-(im-leader
+(im-leader-v
   "eo" #'im-open-thing-at-point)
 
 (defun im-open-thing-at-point ()
@@ -4275,7 +4277,6 @@ anchor points in the buffer."
       ;; it here. Ugly but not worth dealing with
       (w3m-buffer-number (current-buffer))))))
 
-
 ;;;;; eww -- web browser
 
 (setq browse-url-secondary-browser-function #'browse-url-firefox)
@@ -4325,8 +4326,8 @@ anchor points in the buffer."
         (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "...")))))
 
 (defun im-eww (url)
-  "Like `eww' but opens in a new eww buffer instead of reusing the same one."
-  (interactive (list (read-string "URL: " (im-region-or ""))))
+  "Like `eww' but open URL in a new eww buffer instead of reusing the same one."
+  (interactive (list (read-string "URL: " (im-region-or "") 'eww-prompt-history)))
   (eww url t))
 
 (defun im-eww-avy-follow (&optional follow-type)
@@ -5308,7 +5309,8 @@ KEY should not contain the leader key."
 
 (use-package flymake
   :straight (:type built-in)
-  :hook (prog-mode . flymake-mode))
+  :hook ((prog-mode . flymake-mode)
+         (after-init . (lambda () (setq elisp-flymake-byte-compile-load-path load-path)))))
 
 (use-package flymake-popon
   :straight (:type git :repo "https://codeberg.org/akib/emacs-flymake-popon.git")
@@ -6033,30 +6035,16 @@ this command is invoked from."
 
 ;;;;; expand-region
 
+;; Also see combobulate package. I use it instead
+;; (`combobulate-mark-node-dwim') whenever possible instead of
+;; expand-region.
+
 (use-package expand-region
   :straight (:host github :repo "karthink/expand-region.el")
-  :bind (:map evil-normal-state-map ("M-w" . er/expand-region))
-  :config
-  (setq er/try-expand-list (append er/try-expand-list '(im-tree-sitter-mark-bigger-node))))
-
-(defun im-tree-sitter-mark-bigger-node ()
-  "Select the next parent node.
-Adapted to emacs 29 treesit from: https://github.com/emacs-tree-sitter/elisp-tree-sitter/issues/20"
-  (interactive)
-  (let* ((node (treesit-node-descendant-for-range
-                (treesit-buffer-root-node) (region-beginning)
-                (if (use-region-p) (region-end) (point))))
-         (node-start (treesit-node-start node))
-         (node-end (treesit-node-end node)))
-    ;; Node fits the region exactly. Try its parent node instead.
-    (when (and (= (region-beginning) node-start) (= (region-end) node-end))
-      (when-let ((node (treesit-node-parent node)))
-        (setq node-start (treesit-node-start node)
-              node-end (treesit-node-end node))))
-    (set-mark node-end)
-    (goto-char node-start)))
+  :bind (:map evil-normal-state-map ("M-w" . er/expand-region)))
 
 ;;;;; aggressive-indent
+
 ;; It keeps your indentation working all the time. Seems like a good
 ;; idea but I have some concerns about it, so I just use it with elisp
 ;; for the time being.
@@ -6113,20 +6101,6 @@ Adapted to emacs 29 treesit from: https://github.com/emacs-tree-sitter/elisp-tre
   (add-hook 'slack-message-buffer-mode-hook #'tab-line-mode)
   (add-hook 'slack-thread-message-buffer-mode-hook #'tab-line-mode)
 
-  (defun im-slack-select-rooms ()
-    (interactive)
-    (let ((slack-buffer-function #'switch-to-buffer))
-      (slack-select-rooms)))
-
-  (defun im-slack--add-reaction-to-message (reaction)
-    (defalias (intern (concat "react-" reaction))
-      `(lambda ()
-         (interactive)
-         (slack-buffer-add-reaction-to-message
-          slack-current-buffer
-          ,reaction
-          (slack-get-ts)))))
-
   (evil-set-initial-state 'slack-mode-map 'normal)
 
   (evil-define-key 'normal slack-message-edit-buffer-mode-map
@@ -6149,8 +6123,21 @@ Adapted to emacs 29 treesit from: https://github.com/emacs-tree-sitter/elisp-tre
    :mark-as-read-immediately nil)
   (slack-start)
   (slack-change-current-team)
-  (im-slack-initialize-keymaps)
   (run-at-time nil 3600 #'im-slack-check))
+
+(defun im-slack-select-rooms ()
+  (interactive)
+  (let ((slack-buffer-function #'switch-to-buffer))
+    (slack-select-rooms)))
+
+(defun im-slack--add-reaction-to-message (reaction)
+  (defalias (intern (concat "react-" reaction))
+    `(lambda ()
+       (interactive)
+       (slack-buffer-add-reaction-to-message
+        slack-current-buffer
+        ,reaction
+        (slack-get-ts)))))
 
 (defvar im-slack-dnd nil)
 (defvar im-slack--last-messages '())
@@ -6301,8 +6288,7 @@ Adapted to emacs 29 treesit from: https://github.com/emacs-tree-sitter/elisp-tre
        .team))))
 
 (defun im-slack-send-message (msg)
-  "Send given MSG or selected region as message to interactively
-  selected user."
+  "Send given MSG or region as message to interactively selected user."
   (interactive
    (list
     (if (use-region-p)
@@ -6311,7 +6297,6 @@ Adapted to emacs 29 treesit from: https://github.com/emacs-tree-sitter/elisp-tre
               (format "```\n%s\n```" text)
             text))
       (read-string "Enter message: "))))
-  "Send MSG to interactively selected room."
   (-let* (((room team) (im-slack--select-room)))
     (slack-message-send-internal
      msg room team)))
@@ -6348,7 +6333,7 @@ properly in MacOS."
                   (team (slack-buffer-team buf))
                   (room (slack-buffer-room buf))
                   (message (slack-room-find-message room (slack-get-ts))))
-                 (slack-message-to-string message team)))
+      (slack-message-to-string message team)))
 
 (defun im-slack-open-link (link)
   (interactive
@@ -6389,33 +6374,30 @@ properly in MacOS."
                 team)))
     (list room team)))
 
-(defun im-slack-initialize-keymaps ()
-  (interactive)
-  (dolist (mode-map (list slack-message-buffer-mode-map slack-thread-message-buffer-mode-map))
-    (evil-define-key* '(normal motion) mode-map
-      "q" #'im-quit
+(general-def :keymaps '(slack-message-buffer-mode-map slack-thread-message-buffer-mode-map slack-all-threads-buffer-mode-map) :states '(normal motion)
+  "q" #'im-quit
 
-      "@" 'slack-message-embed-mention
-      "mc" 'slack-message-embed-channel ;
-      "mm" 'slack-message-write-another-buffer
-      "md" 'slack-message-delete
-      "ml" 'slack-message-copy-link
-      "me" 'slack-message-edit
-      "mt" 'slack-thread-show-or-create
-      "mq" 'im-slack-quote-message
+  "@" 'slack-message-embed-mention
+  "mc" 'slack-message-embed-channel ;
+  "mm" 'slack-message-write-another-buffer
+  "md" 'slack-message-delete
+  "ml" 'slack-message-copy-link
+  "me" 'slack-message-edit
+  "mt" 'slack-thread-show-or-create
+  "mq" 'im-slack-quote-message
 
-      "mrr" 'slack-message-add-reaction
-      "mR" 'slack-message-remove-reaction
-      "mrs" (im-slack--add-reaction-to-message "seen")
-      "mr1" (im-slack--add-reaction-to-message "+1")
-      "mr2" (im-slack--add-reaction-to-message "ok_hand")
-      "mr3" (im-slack--add-reaction-to-message "eyes")
-      "mr4" (im-slack--add-reaction-to-message "ultrafastparrot")
-      "mr5" (im-slack--add-reaction-to-message "pepedance")
-      "mrp" (im-slack--add-reaction-to-message "pray")
+  "mrr" 'slack-message-add-reaction
+  "mR" 'slack-message-remove-reaction
+  "mrs" (im-slack--add-reaction-to-message "seen")
+  "mr1" (im-slack--add-reaction-to-message "+1")
+  "mr2" (im-slack--add-reaction-to-message "ok_hand")
+  "mr3" (im-slack--add-reaction-to-message "eyes")
+  "mr4" (im-slack--add-reaction-to-message "ultrafastparrot")
+  "mr5" (im-slack--add-reaction-to-message "pepedance")
+  "mrp" (im-slack--add-reaction-to-message "pray")
 
-      "[[" 'slack-buffer-goto-prev-message
-      "]]" 'slack-buffer-goto-next-message)))
+  "[[" 'slack-buffer-goto-prev-message
+  "]]" 'slack-buffer-goto-next-message)
 
 ;;;;; prodigy
 
@@ -7022,7 +7004,21 @@ This happens to me on org-buffers, xwidget-at tries to get
 (use-package deadgrep
   :custom
   (deadgrep-display-buffer-function #'switch-to-buffer)
-  (deadgrep-project-root-function #'im-current-project-root))
+  (deadgrep-project-root-function #'im-current-project-root)
+  :general
+  (:keymaps 'deadgrep-mode-map :states 'normal
+   "RET" #'deadgrep-visit-result
+   "o" #'deadgrep-visit-result-other-window
+   "TAB" #'deadgrep-toggle-file-results
+   "S" #'deadgrep-search-term
+   "T" #'deadgrep-cycle-search-type
+   "C" #'deadgrep-cycle-search-case
+   "F" #'deadgrep-cycle-files
+   "D" #'deadgrep-directory
+   "^" #'deadgrep-parent-directory
+   "r" #'deadgrep-restart
+   "I" #'deadgrep-incremental
+   "i" #'deadgrep-edit-mode))
 
 ;;;;; consult-gh (GitHub interface for consult)
 
@@ -7247,11 +7243,11 @@ This happens to me on org-buffers, xwidget-at tries to get
    "]s" #'jinx-next))
 
 ;;;;; string-inflection
+
 ;; - In the case of =string-inflection-ruby-style-cycle=   : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacs_lisp~
 ;; - In the case of =string-inflection-python-style-cycle= : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacs_lisp~
 ;; - In the case of =string-inflection-java-style-cycle=   : ~emacsLisp => EMACS_LISP => EmacsLisp => emacsLisp~
 ;; - In the case of =string-inflection-all-cycle=          : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacsLisp => emacs-lisp => Emacs_Lisp => emacs_lisp~
-
 
 (use-package string-inflection
   :bind (:map evil-normal-state-map ("M-c" . string-inflection-all-cycle)))
@@ -7270,7 +7266,7 @@ This happens to me on org-buffers, xwidget-at tries to get
     "M-]" #'sp-slurp-hybrid-sexp
     "M-{" #'sp-backward-slurp-sexp
     "M-}" #'sp-backward-barf-sexp
-    "M-k" #'sp-splice-sexp
+    "M-h" #'sp-splice-sexp
     "M-]" (general-predicate-dispatch #'sp-slurp-hybrid-sexp
             (-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'sp-forward-slurp-sexp))
   :config
@@ -7279,6 +7275,7 @@ This happens to me on org-buffers, xwidget-at tries to get
   (add-to-list 'sp-sexp-suffix (list 'typescript-ts-mode 'regexp "")))
 
 ;;;;; writeroom-mode
+
 ;; Gives you a nice, uncluttered editing experience by removing all
 ;; unneeded visual clutter and by justifying the text in the middle.
 
@@ -7292,6 +7289,7 @@ This happens to me on org-buffers, xwidget-at tries to get
   (setq writeroom-width 81))
 
 ;;;;; combobulate
+
 ;; Structral editing for some languages, here are the bindings that I
 ;; find useful (which are enabled by ~combobulate-key-map~):
 
@@ -7302,14 +7300,22 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 (use-package combobulate
   :straight (combobulate :type git :host github :repo "mickeynp/combobulate")
-  :general
   :hook ((python-ts-mode . combobulate-mode)
          (js-ts-mode . combobulate-mode)
          (css-ts-mode . combobulate-mode)
          (yaml-ts-mode . combobulate-mode)
          (json-ts-mode . combobulate-mode)
          (typescript-ts-mode . combobulate-mode)
-         (tsx-ts-mode . combobulate-mode)))
+         (tsx-ts-mode . combobulate-mode))
+  :config
+  ;; Use combobulate instead of expand-region when possible.
+  (define-key combobulate-key-map (kbd "M-w") #'combobulate-mark-node-dwim)
+  (general-def :keymaps 'combobulate-key-map :states 'normal
+    "M-w" #'combobulate-mark-node-dwim)
+  (define-advice combobulate-mark-node-dwim (:before (&rest _) visual-mode)
+    "Activate visual mode before marking."
+    (evil-visual-char)))
+
 
 ;;;; Dummy IDE mode
 ;; I try to use ~lsp-mode~ and other language-specific packages for
