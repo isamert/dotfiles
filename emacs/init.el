@@ -12763,44 +12763,40 @@ Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
   (with-current-buffer (get-buffer-create im-org-ai-snippet-buffer)
     (erase-buffer))
   (let* ((cb (current-buffer))
-         (region? (use-region-p))
-         (rb (and region? (region-beginning)))
-         (re (and region? (region-end)))
+         (region (when (use-region-p)
+                   (prog1
+                       (buffer-substring-no-properties (region-beginning) (region-end))
+                     (delete-region (region-beginning) (region-end)))))
          (org-ai-default-chat-model im-org-ai-powerful-model))
-    (when region?
-      (delete-region rb re))
     (org-ai-prompt
-     (format
-      "I will ask you to provide a code snippet that suits my needs. Follow these rules while answering:
-- ONLY answer with snippet.
-- Do NOT provide any unnecessary explanations.
-- Try to incorporate explanations inside the snippet in MOST CONCISE WAY POSSIBLE.
-- ONLY provide code snippet and nothing else.
-- Output only plain text, do not use markdown. Do not use markdown code fences.
-- This is really important for my career.
-- The language I want the snippet in is: %s
+     (s-trim
+      (format
+       "Provide a code snippet based on the following instructions:
+- Respond ONLY with the code snippet.
+- Present the code in plain text; avoid markdown or any extra formatting.
+- Include NO explanations or additional text.
+- Use ONLY the programming language specified.
 
-%s
+Language: %s
+Task: %s
+
 %s"
-      (let ((mode-name
-             (if (and (derived-mode-p 'org-mode) (org-in-src-block-p))
-                 (org-element-property :language (org-element-at-point))
-               (symbol-name major-mode))))
-        (->>
-         mode-name
-         (s-chop-suffix "-mode")
-         (s-chop-suffix "-ts")
-         (s-replace-all '(("-" . " ")
-                          ("interaction" . "")))
-         (s-titleize)))
-      (if (use-region-p)
-          (format "Here is my request: %s" prompt)
-        prompt)
-      (if (use-region-p)
-          (format "I want you to edit following section with my request:\n%s" (buffer-substring-no-properties (region-beginning) (region-end)))
-        ""))
+       (let ((mode-name
+              (if (and (derived-mode-p 'org-mode) (org-in-src-block-p))
+                  (org-element-property :language (org-element-at-point))
+                (symbol-name major-mode))))
+         (->>
+          mode-name
+          (s-chop-suffix "-mode")
+          (s-chop-suffix "-ts")
+          (s-replace-all '(("-" . " ")
+                           ("interaction" . "")))
+          (s-titleize)))
+       prompt
+       (if region region "")))
      :output-buffer (current-buffer)
-     :follow t)))
+     :follow nil
+     :callback (lambda () (message ">> AI request finished.")))))
 
 (im-leader-v "sa" #'im-ai-snippet)
 
