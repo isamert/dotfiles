@@ -101,6 +101,7 @@
 ;; future.
 
 ;;;;; Essential packages
+
 ;; I use =s.el= and =dash.el= extensively. They already come as a
 ;; dependency with other packages but I may use them before loading
 ;; any package, so:
@@ -1026,8 +1027,8 @@ With argument, do this that many times."
 ;; does jumping does not reveal the text if it's hidden and reveal
 ;; mode does that.
 
-(global-reveal-mode)
-(setq reveal-auto-hide nil)
+;; (global-reveal-mode)
+;; (setq reveal-auto-hide t)
 
 ;;;;; Save minibuffer, kill-ring, search-ring history
 
