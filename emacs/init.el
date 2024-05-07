@@ -1203,13 +1203,24 @@ The themes I used over time and liked are:
   (with-selected-frame frame
     (im-set-font-and-theme-config)))
 
-(if (daemonp)
-    ;; Following sets font/font-size for each emacsclients frame
-    (add-hook
-     'after-make-frame-functions
-     #'im-set-font-and-theme-config-in-frame)
-  ;; Not in daemon mode, set theme etc directly
-  (im-set-font-and-theme-config))
+;; Theme should be set automatically below by `change-theme', so no
+;; need for this:
+
+;; (if (daemonp)
+;;     ;; Following sets font/font-size for each emacsclients frame
+;;     (add-hook
+;;      'after-make-frame-functions
+;;      #'im-set-font-and-theme-config-in-frame)
+;;   ;; Not in daemon mode, set theme etc directly
+;;   (im-set-font-and-theme-config))
+
+;;;;; Change theme by day and night automatically
+
+(use-package theme-changer
+	:straight (:host github :repo "hadronzoo/theme-changer")
+  :config
+  (require 'theme-changer)
+  (change-theme 'ef-summer 'ef-cherie))
 
 ;;;;; prettify-symbols-mode
 ;; I make use of this mode quite frequently throughout the configuration.
