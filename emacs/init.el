@@ -1368,6 +1368,15 @@ side window the only window'"
   ;; :hook (after-init . spacious-padding-mode)
   )
 
+;;;;; page-break-lines
+
+;; I used to separate files using  but then I discovered [[outli]]
+;; and it did the same job but better. I still use page-break-lines
+;; mode in some cases where I need to draw a horizontal line in the
+;; buffer to separate some stuff.
+
+(use-package page-break-lines)
+
 ;;;; evil-mode
 ;;;;; Basic configuration
 
