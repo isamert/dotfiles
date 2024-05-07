@@ -4972,7 +4972,8 @@ non-nil so that you only add it to `project-prefix-map'."
 (im-projectelify :cmd project-vc-dir :desc "VC dir" :key "v" :dont-wrap t)
 (im-projectelify :cmd im-select-any-project-file :desc "Files (all projects)" :key "F" :dont-wrap t)
 (im-projectelify :cmd im-consult-ripgrep-all-projects :desc "Grep (all projects)" :key "G" :dont-wrap t)
-(im-projectelify :cmd git-link-homepage :desc "Homepage" :key "H")
+(im-projectelify :cmd git-link-homepage :desc "Link (homepage)" :key "H")
+(im-projectelify :cmd im-git-link-homepage :desc "Link (copy)" :key "l")
 
 ;; All-projects commands
 
@@ -5883,6 +5884,8 @@ this command is invoked from."
     "se" #'yankpad-edit
     "ss" #'yankpad-map
     "sm" #'yankpad-map)
+  (:states 'normal
+   (kbd "M-s") #'yankpad-insert)
   (:states 'insert
    (kbd "M-s") #'yankpad-insert
    (kbd "M-e") #'hippie-expand)
@@ -6031,11 +6034,11 @@ this command is invoked from."
   (setq xref-show-definitions-function #'completing-read-xref-show-defs))
 
 ;;;;; helpful and elisp-demos
+
 ;; - helpful :: Better help dialogs with syntax highlighting, references, source etc.
 ;; - elisp-demos :: Adds code examples into function help buffers.
 ;; - Code examples are maintained [[https://github.com/xuchunyang/elisp-demos/blob/master/elisp-demos.org][here]], don't forget to contribute!
 ;; - Call ~elisp-demos-add-demo~ to add a demo locally.
-
 
 (use-package helpful
   ;; Override default help bindings
@@ -6067,7 +6070,9 @@ this command is invoked from."
 
 (use-package expand-region
   :straight (:host github :repo "karthink/expand-region.el")
-  :bind (:map evil-normal-state-map ("M-w" . er/expand-region)))
+  :general
+  (:states '(insert normal)
+   "M-w" #'er/expand-region))
 
 ;;;;; aggressive-indent
 
@@ -6103,6 +6108,7 @@ this command is invoked from."
     "ess" #'im-slack-select-rooms
     "esS" #'slack-select-unread-rooms
     "esm" #'im-slack-send-message
+    "est" #'slack-all-threads
     "esr" #'im-slack-last-messages-alternative
     "esR" #'im-slack-last-messages
     "esl" #'im-slack-open-last-message
@@ -7336,7 +7342,7 @@ This happens to me on org-buffers, xwidget-at tries to get
   :config
   ;; Use combobulate instead of expand-region when possible.
   (define-key combobulate-key-map (kbd "M-w") #'combobulate-mark-node-dwim)
-  (general-def :keymaps 'combobulate-key-map :states 'normal
+  (general-def :keymaps 'combobulate-key-map :states '(normal insert)
     "M-w" #'combobulate-mark-node-dwim)
   (define-advice combobulate-mark-node-dwim (:before (&rest _) visual-mode)
     "Activate visual mode before marking."
@@ -8177,6 +8183,11 @@ This is used in my snippets."
      (funcall getter))))
 
 ;;;;;; ob-deno
+
+;; To allow net access (--allow-net), use ":allow net" in the src
+;; block header.
+
+;; Use "return ..." to get the object.
 
 (use-package ob-deno
   :straight
