@@ -119,6 +119,11 @@
 ;; 'fn-name) to restore the original function.
 (use-package memoize)
 
+;; Web server stuff.  `elnode-make-webserver' is very useful for
+;; starting a webserver in given directory.  Use `elnode-server-list'
+;; to list active webservers.
+(use-package elnode)
+
 ;; JS-like async/await. Simply return a promise from a function with
 ;; (promise-new (lambda (resolve reject) (funcall resolve arg)))
 ;; and then
