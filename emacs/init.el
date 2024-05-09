@@ -8025,7 +8025,8 @@ Version: 2023-06-26"
     "oi" #'markdown-toggle-inline-images)
   :config
   (setq markdown-command "multimarkdown")
-  (setq markdown-fontify-code-blocks-natively t))
+  (setq markdown-fontify-code-blocks-natively t)
+  (setq markdown-display-remote-images t))
 
 (use-package edit-indirect
   :after markdown-mode)
