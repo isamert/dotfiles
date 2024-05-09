@@ -4579,6 +4579,46 @@ anchor points in the buffer."
   (kill-buffer im--last-log-diff-buffer)
   (tab-bar-history-back))
 
+(defun im-vc-diff-open-file-at-revision-dwim ()
+  (interactive nil diff-mode)
+  "Open the file at revision.
+Simply works like you hit enter on a magit diff window.  Useful
+when displaying old diffs and you want to jump to the full file
+of that revision."
+  (pcase-let* ((`(,old ,new) diff-vc-revisions)
+               (file-path (s-trim
+                           (s-chop-prefixes
+                            '("--- a/" "+++ a/")
+                            (save-excursion
+                              (diff-beginning-of-file)
+                              (thing-at-point 'line)))))
+               (old? (equal "-" (char-to-string (char-after (point-at-bol)))))
+               (rev (if old? old new))
+               (line-info (save-excursion
+                            (diff-beginning-of-hunk)
+                            (s-split " " (s-trim (nth 1 (s-split "@@" (thing-at-point 'line)))))))
+               (line (string-to-number
+                      (car (s-split
+                            ","
+                            (s-chop-prefixes
+                             '("-" "+")
+                             (if old? (car line-info) (nth 1 line-info))))))))
+    (with-current-buffer (get-buffer-create (format "%s.%s" file-path rev))
+      (insert
+       (shell-command-to-string
+        (format
+         "git show %s:%s" rev file-path)))
+      (switch-to-buffer (current-buffer))
+      (goto-char (point-min))
+      (delay-mode-hooks
+        (funcall (assoc-default file-path auto-mode-alist 'string-match))
+        (reveal-mode))
+      (forward-line line))))
+
+
+(general-def :keymaps 'diff-mode-map :states 'normal
+  "o" #'im-vc-diff-open-file-at-revision-dwim)
+
 ;;;;;; git-timemachine
 ;; - Toggle with ~git-timemachine~ (SPC gt).
 ;; - When in timemachine mode,
