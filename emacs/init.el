@@ -2931,6 +2931,22 @@ Version: 2023-06-28
                 (delete-region (line-beginning-position) (1+ (line-end-position))))
               result)))))))
 
+;;;;; Sort entries intelligently
+
+(defun im-org-sort-entries-best ()
+  "Best sorting mechanism for your backlog.
+Entries are sorted by priority, with least effort entries being
+on top in their priority range.  Also entries are sorted by their
+TODO state."
+  (interactive)
+  (progn
+    ;; Sort by Effort, the one with least effort is at top
+    (org-sort-entries nil ?R nil nil "Effort")
+    ;; Sort by priority
+    (org-sort-entries nil ?p)
+    ;; Sort by TODO state
+    (org-sort-entries nil ?o)))
+
 ;;;;; Remembering to clock in
 ;; I forget to clock in (and out) most of the time, so I want Emacs to
 ;; remind clocking to me. This function regularly checks if I'm
