@@ -6116,9 +6116,10 @@ this command is invoked from."
   :config
   (setq slack-log-level 'error)
   ;; ^ info level shows unnecessary stuff that distracts me
+  (setq slack-block-highlight-source t)
   (setq slack-buffer-emojify nil)
   (setq slack-render-image-p t)
-  (setq slack-image-max-height nil)
+  (setq slack-image-max-height 150)
   (setq slack-prefer-current-team t)
   ;; ^ Set current team with `slack-change-current-team'
   (setq slack-buffer-function #'switch-to-buffer)
@@ -6140,7 +6141,10 @@ this command is invoked from."
     "mc" #'slack-message-embed-channel)
   (evil-define-key 'normal slack-message-compose-buffer-mode-map
     "@"  #'slack-message-embed-mention
-    "mc" #'slack-message-embed-channel))
+    "mc" #'slack-message-embed-channel)
+
+  ;; Fix for/from yuya373/emacs-slack#547-1542119271
+  (advice-add 'lui-buttonize-urls :before-until (lambda () (derived-mode-p 'slack-mode))))
 
 (defun im-slack-initialize ()
   (interactive)
@@ -6152,7 +6156,7 @@ this command is invoked from."
    :cookie ty-slack-cookie
    :subscribed-channels ty-slack-channels
    :visible-threads nil
-   :mark-as-read-immediately nil)
+   :mark-as-read-immediately t)
   (slack-start)
   (slack-change-current-team)
   (run-at-time nil 3600 #'im-slack-check))
