@@ -7608,6 +7608,7 @@ Useful if .elfeed directory is freshly syncned."
   (setq empv-allow-insecure-connections t)
   (setq empv-invidious-instance "https://inv.zzls.xyz/api/v1")
   ;; ^ see https://api.invidious.io/
+  (setq empv-youtube-use-tabulated-results t)
   (add-to-list 'empv-mpv-args "--ytdl-format=best")
   (add-to-list 'empv-mpv-args "--save-position-on-quit")
   (setq empv-reset-playback-speed-on-quit t)
