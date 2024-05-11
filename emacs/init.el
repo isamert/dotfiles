@@ -13401,6 +13401,7 @@ configuration, pass it as WINDOW-CONF."
 
 (defun im-git-commit-reload ()
   (interactive nil im-git-commit-mode)
+  "Reload the diff."
   (im-git-commit :window-conf im-git-commit--prev-window-conf)
   (message ">> Reloaded."))
 
@@ -13470,7 +13471,7 @@ configuration, pass it as WINDOW-CONF."
   (interactive nil im-git-commit-mode)
   (let ((curr (1- (or im-git-commit--current-message-ref 0))))
     (im-git-commit--reset-message
-     (case curr
+     (cl-case curr
        (-1 im-git-commit--template)
        (-2 (user-error "Beginning of history"))
        (otherwise (plist-get (ring-ref im-git-commit-message-history curr) :msg))))
@@ -13484,6 +13485,7 @@ configuration, pass it as WINDOW-CONF."
   "C-c C-n" #'im-git-commit-next-message)
 
 (general-def :keymaps 'im-git-commit-mode-map :states 'normal
+  "gr" #'im-git-commit-reload
   "gr" #'im-git-commit-reload
   "gj" #'im-git-commit-next-message
   "gk" #'im-git-commit-prev-message)
