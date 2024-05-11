@@ -7908,18 +7908,23 @@ ARGS is the arguments passed to NAME.
 
 PREFIX is the prefix used while showing the result in echo area.
 
-EXPR is the expression finder at point. Should return a tree-sitter node.
+INPUT-REGEXP is used to detect the input line of the REPL.
 
-PARSER is result parser. Process output is sent to this function
+EXPR is the expression finder at point.  Should return a
+tree-sitter node.
+
+PARSER is result parser.  Process output is sent to this function
 and if the return value is non-nil, result is shown in the echo
 area.
 
 As a result, 3 functions are generated:
 
-- im-NAME-repl-start :: Creates the process and starts the
-  repl. Process is associated with *NAME-repl* buffer.
+- im-NAME-repl-start :: Creates the process and starts the repl.
+  Process is associated with *NAME-repl* buffer.
+
 - im-NAME-repl-send :: Sends given string to REPL.
-- im-NAME-repl-eval :: Entry function. Just bind this to
+
+- im-NAME-repl-eval :: Entry function.  Just bind this to
   something and it starts a REPL if needed when called and sends
   the current expression (or the selected expression) to REPL.
 
@@ -7935,7 +7940,7 @@ Version: 2023-06-26"
     `(progn
        (defvar ,process-var nil)
 
-           ;;; defun im-REPL-repl-start
+       ;;; defun im-REPL-repl-start
        (defun ,(intern (format "im-%s-repl-start" (downcase name))) ()
          ,(format "Start (or restart, if already running) the %s REPL on the background." name)
          (interactive)
@@ -7978,7 +7983,7 @@ Version: 2023-06-26"
                   (message ,(format ">> Closed %s REPL session." name))
                 (message ,(format ">> %s REPL has crashed." name)))))))
 
-           ;;; defun im-REPL-repl-send
+       ;;; defun im-REPL-repl-send
        (defun ,(intern (format "im-%s-repl-send" (downcase name))) (expr)
          (setq im-repl-last-result "")
          (let ((str (concat (s-trim expr) "\n")))
@@ -8013,10 +8018,10 @@ Version: 2023-06-26"
  :args ()
  :prefix "=> "
  :input-regexp "^> "
- ;; Remove block comments before sending, because Deno repl cant
- ;; handle them properly.
  :process-region
  (lambda (str)
+   ;; Remove block comments before sending, because Deno repl cant
+   ;; handle them properly.
    (while (string-match "/\\*\\([^*]\\|\\*[^/]\\)*\\*/" str)
      (setq str (replace-match "" t t str)))
    (s-join "" (->>
