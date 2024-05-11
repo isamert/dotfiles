@@ -8024,9 +8024,7 @@ Version: 2023-06-26"
    ;; handle them properly.
    (while (string-match "/\\*\\([^*]\\|\\*[^/]\\)*\\*/" str)
      (setq str (replace-match "" t t str)))
-   (s-join "" (->>
-               (s-split "\n" str)
-               (--filter (not (s-matches? "^[ ]*//" it))))))
+   str)
  :expr (im-ts-current-expression)
  :parser
  (lambda (out)
