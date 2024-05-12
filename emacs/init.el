@@ -3185,7 +3185,7 @@ it's a list, the first element will be used as the binary name."
                  (t (error ">> Invalid command: '%s'" command)))))
     (if (not (executable-find binary))
         (let* ((installer (or installer
-                              (when-on :linux "pacman -S" :darwin "brew install")))
+                              (pcase system-type ('darwin "brew install") ('gnu/linux "pacman -S"))))
                (package (or package binary))
                (install-cmd (format "%s %s" installer package)))
           (kill-new install-cmd)
@@ -4328,7 +4328,6 @@ anchor points in the buffer."
         (".*github.com/.*issues/.*" . (lambda (link &rest _) (lab-github-issue-view link)))
         (".*github.com/[A-Za-z0-9\\. _-]+/[A-Za-z0-9\\. _-]+$" . (lambda (link &rest _) (lab-github-view-repo-readme link)))
         (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
-        (".*github.com/.*issues/.*" . (lambda (link &rest _) (lab-github-issue-view link)))
         (".*\\(trendyol\\|gitlab\\|slack\\|docs.google\\).*" . browse-url-firefox)
         ("." . (lambda (link &rest _) (im-eww link)))))
 
@@ -12743,54 +12742,33 @@ Version: 2023-07-16"
 
 ;;;;; im-extract
 
-(cl-defun im-extract (files
-                      &key
-                      use-subdir
-                      (on-finish (lambda (file) (message ">> Extracted")))
-                      (on-fail (lambda (file) (user-error ">> Failed while extracting"))))
-  "Extract the FILES into a folder.
-FILES should NOT be relative paths, rather absolute paths.
-ON-FINISH is called for each file, not after every file is
-extracted."
-  (interactive (list
-                (dired-get-marked-files)
-                :use-subdir (y-or-n-p "Want to extract to a subfolder?")))
-  (--each files
-    (let* ((cmds `((".tar.bz2" . ("tar" "-xjf" file))
-                   (".tar.gz" . ("tar" "-xzf" file))
-                   (".bz2" . ("bunzip2" file))
-                   (".rar" . ("unrar" "x" file))
-                   (".gz" . ("gunzip" file))
-                   (".tar" . ("tar" "-xf" file))
-                   (".tbz2" . ("tar" "-xjf" file))
-                   (".tgz" . ("tar" "-xzf" file))
-                   (".zip" . ("unzip" file))
-                   (".Z" . ("uncompress" file))
-                   (".7z" . ("7z" "x" file))))
-           (subfolder (s-replace-regexp (format "\\(%s\\)$" (s-join "\\|" (map-keys cmds))) "" (f-filename it)))
-           (default-directory (if use-subdir
-                                  (progn
-                                    (mkdir subfolder)
-                                    (f-join default-directory subfolder))
-                                default-directory)))
-      (if-let* ((key (-find (lambda (ext) (s-ends-with? ext it)) (map-keys cmds)))
-                (cmd (map-elt cmds key)))
-          (im-shell-command
-           :command (car cmd)
-           :args (->>
-                  cmd
-                  (-drop 1)
-                  (-non-nil)
-                  (-map (lambda (arg)
-                          (pcase arg
-                            ('file it)
-                            (_ arg)))))
-           :eat t
-           :switch (called-interactively-p)
-           :on-finish (lambda (&rest _) (funcall on-finish it))
-           :on-fail (lambda (&rest _) (funcall on-fail it))
-           :buffer-name "*im-extract*")
-        (error "Archive format is not supported: %s" it)))))
+(cl-defun im-extract (files)
+  "Extract each FILES into a folder.
+This is a simple wrapper around `aunpack' binary.  It simply
+finds the best way to extract and does not overwrite anything."
+  (interactive (list (dired-get-marked-files)))
+  (let ((buff (current-buffer)))
+    (im-shell-command
+     :command (im-ensure-binary "aunpack" :package "atool")
+     :args (append '("--each") files)
+     :switch nil
+     :on-finish
+     (lambda (out)
+       (let ((extracted (--keep
+                         (s-match "\\(.*\\): extracted to `\\(.*\\)'\\( (.*)\\)?" it)
+                         (s-split "\n" out t))))
+         (with-current-buffer buff
+           ;; Dirvish does not kick in after doing the following, I
+           ;; don't know why. Doing anything on the buffer fixes the
+           ;; buffer tho.
+           (when (derived-mode-p 'dired-mode)
+             (revert-buffer)
+             (dired-goto-file (expand-file-name (nth 2 (car extracted))))))
+         (message (s-join "\n" (-map #'car extracted)))))
+     :on-fail
+     (lambda (&rest _)
+       (error ">> Extraction failed! See *im-extract* buffer."))
+     :buffer-name "*im-extract*")))
 
 ;;;;; Etymology lookup inside Emacs
 
