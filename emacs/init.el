@@ -7843,6 +7843,7 @@ Useful if .elfeed directory is freshly syncned."
   :straight (:host github :repo "gregsexton/origami.el"))
 
 ;;;;;; REPLs
+
 ;; I really like being able to do my development inside REPL. It
 ;; creates a really nice feedback loop and fastens the development
 ;; process. While support for this type of development is not good in
@@ -7873,9 +7874,20 @@ Useful if .elfeed directory is freshly syncned."
         (eq major-mode 'typescript-ts-mode) #'im-repl-inspect-last-result
         (eq major-mode  'clojure-mode) #'cider-inspect-last-result))
 
+(defconst im-repl-result-buffer "*im-repl-result*")
+(defconst im-repl-last-result "")
+(defvar-local im-repl-send-command nil
+  "REPL send command associated with the buffer.
+This helps some functions to work independent of the REPL itself.")
+(defvar im-registered-repls '()
+  "All available REPLs.
+Through this, we can select interactively which REPL to use if
+it's ambiguous.")
+
 (defun im-eval-dwim (lastf regionf defunf)
-  "Generate an interactive function that you can bind to a key
-    which calls LASTF, REGIONF or DEFUNF."
+  "Generate an interactive function that you can bind to a key.
+It calls LASTF, REGIONF or DEFUNF depending on the context.  Only
+works for Lispy languages."
   (lambda ()
     (interactive)
     (cond
@@ -7887,10 +7899,18 @@ Useful if .elfeed directory is freshly syncned."
      (t
       (call-interactively defunf)))))
 
-(defconst im-repl-result-buffer "*im-repl-result*")
-(defconst im-repl-last-result "")
+
+(defun im-repl-send (code)
+  "Send CODE to REPL.
+If no REPL session is associated with buffer, then let user
+select one interactively."
+  (funcall
+   (or im-repl-send-command
+       (intern (concat "im-" (downcase (completing-read "Select a REPL: " im-registered-repls)) "-repl-send")))
+   code))
 
 (defun im-repl-inspect-last-result ()
+  "Inspect last REPL result in a separate buffer."
   (interactive)
   (im-peek-remove)
   (with-current-buffer (get-buffer-create im-repl-result-buffer)
@@ -7899,6 +7919,27 @@ Useful if .elfeed directory is freshly syncned."
     (goto-char (point-min))
     (unless (im-buffer-visible-p (current-buffer))
       (switch-to-buffer-other-window (current-buffer)))))
+
+(defun im-repl-eval-buffer-top-level-forms ()
+  "Eval buffer but only some selected types of forms.
+Only tested with JS/TS."
+  (interactive)
+  (let ((top-level-forms '("import_statement"
+                           "type_alias_declaration"
+                           "function_declaration"
+                           ;; TODO: lexical_declaration → Run only
+                           ;; if function declarations or a
+                           ;; constant?
+                           "lexical_declaration"
+                           "export_statement"
+                           "interface_declaration"
+                           "class_declaration")))
+    (->>
+     (treesit-buffer-root-node)
+     (treesit-node-children)
+     (--filter (-contains? top-level-forms (treesit-node-type it)))
+     (--map (substring-no-properties (treesit-node-text it)))
+     (-map #'im-repl-send))))
 
 (cl-defmacro im-create-repl (&key name args prefix expr parser input-regexp process-region)
   "Create family of functions for interacting with given REPL of NAME.
@@ -7931,22 +7972,25 @@ As a result, 3 functions are generated:
 
 It was probably a bad idea to use a macro for writing this but I
 already had an implementation for \"deno\" and it was quite easy
-to turn it into something generic using macros.
-
-Version: 2023-06-26"
+to turn it into something generic using macros."
   (let* ((process-var (intern (format "im-%s-repl-process" (downcase name))))
          (repl-buffer-name (format "*%s-repl*" (downcase name)))
          (is-repl-running `(lambda ()
-                             (and ,process-var (process-live-p ,process-var)))))
+                             (and ,process-var (process-live-p ,process-var))))
+         (repl-send-command (intern (format "im-%s-repl-send" (downcase name))))
+         (repl-eval-command (intern (format "im-%s-repl-eval" (downcase name))))
+         (repl-start-command (intern (format "im-%s-repl-start" (downcase name)))))
     `(progn
        (defvar ,process-var nil)
+       (add-to-list 'im-registered-repls ,name)
 
        ;;; defun im-REPL-repl-start
-       (defun ,(intern (format "im-%s-repl-start" (downcase name))) ()
+       (defun ,repl-start-command ()
          ,(format "Start (or restart, if already running) the %s REPL on the background." name)
          (interactive)
          (when (,is-repl-running)
            (delete-process ,process-var))
+         (setq-local im-repl-send-command #',repl-send-command)
          (setq im-repl-last-result "")
          ;; See this: https://emacs.stackexchange.com/questions/40603/process-input-seems-buggy-in-emacs-on-os-x
          (let* ((process-connection-type nil)
@@ -7985,7 +8029,7 @@ Version: 2023-06-26"
                 (message ,(format ">> %s REPL has crashed." name)))))))
 
        ;;; defun im-REPL-repl-send
-       (defun ,(intern (format "im-%s-repl-send" (downcase name))) (expr)
+       (defun ,repl-send-command (expr)
          (setq im-repl-last-result "")
          (let ((str (concat (s-trim expr) "\n")))
            (with-current-buffer ,repl-buffer-name
@@ -7996,10 +8040,10 @@ Version: 2023-06-26"
              (evil-force-normal-state))))
 
        ;;; defun im-REPL-repl-eval
-       (defun ,(intern (format "im-%s-repl-eval" (downcase name))) ()
+       (defun ,repl-eval-command ()
          (interactive)
          (unless (,is-repl-running)
-           (,(intern (format "im-%s-repl-start" (downcase name)))))
+           (,repl-start-command))
          (let ((expr
                 (if (use-region-p)
                     (funcall
@@ -8012,7 +8056,7 @@ Version: 2023-06-26"
                      (treesit-node-start curr)
                      (treesit-node-end curr))
                     (treesit-node-text curr)))))
-           (,(intern (format "im-%s-repl-send" (downcase name))) expr))))))
+           (,repl-send-command expr))))))
 
 (im-create-repl
  :name "Deno"
