@@ -1163,56 +1163,51 @@ using this function."
 
 ;;;;; Fonts and theme
 
+;; The themes I used over time and liked are:
+;; - doom-one → Grayish theme with great colors.
+;; - modus-vivendi → A regular black theme with nice amount of contrast.
+;; - ef-melissa-dark → Like solarized but much nicer colors.
+;; - ef-summer → Pinkish white theme, really nice to look at.
+;; - ef-cherie → For me, like ef-summer but dark. Black and purple.
+
+(use-package modus-themes)
+(use-package ef-themes)
 (use-package doom-themes
   :config
-  ;; Fix for https://github.com/doomemacs/themes/issues/720
+  ;; Fix for doomemacs/themes#720
   (custom-set-faces
    `(tab-bar
      ((t (:background ,(doom-color 'bg-alt) :foreground ,(doom-color 'fg-alt)))))))
 
-(use-package modus-themes)
-(use-package ef-themes)
+(defconst im-theme-day 'ef-summer
+  "Theme for the day.")
 
-(defconst im-theme 'ef-cherie
-  "My current theme.
-The themes I used over time and liked are:
-- modus-vivendi
-- doom-one
-- ef-melissa-dark")
-(defconst im-fonts '("Iosevka Comfy Motion" "Iosevka Comfy" "Iosevka Nerd Font"))
-(defconst im-font-height (pcase system-type ('gnu/linux 138) ('darwin 190)))
+(defconst im-theme-night 'ef-cherie
+  "Theme for the night.")
 
-(defun im-set-font-and-theme-config ()
-  "Configure font and theme."
-  (interactive)
-  ;; Set the first available font from the `im-fonts' list
-  (ignore-errors
-    (let ((font (->>
-                 im-fonts
-                 (-filter #'im-font-exists-p)
-                 car)))
-      (set-face-attribute 'default nil
-                          :font font
-                          :weight 'normal
-                          :width 'normal
-                          :height im-font-height))
-    ;; ...and load the theme
-    (load-theme im-theme t)))
+(defconst im-fonts '("IBM Plex Mono" "Iosevka Comfy Motion" "Iosevka Comfy" "Iosevka Nerd Font")
+  "Fonts that I use.")
 
-(defun im-set-font-and-theme-config-in-frame (frame)
-  (with-selected-frame frame
-    (im-set-font-and-theme-config)))
+(defvar im-current-font nil
+  "Holds the currently used font name.
+One of `im-fonts'.")
 
-;; Theme should be set automatically below by `change-theme', so no
-;; need for this:
+(defconst im-font-height (pcase system-type ('gnu/linux 138) ('darwin 170)))
 
-;; (if (daemonp)
-;;     ;; Following sets font/font-size for each emacsclients frame
-;;     (add-hook
-;;      'after-make-frame-functions
-;;      #'im-set-font-and-theme-config-in-frame)
-;;   ;; Not in daemon mode, set theme etc directly
-;;   (im-set-font-and-theme-config))
+(defun im-set-font (&optional next)
+  "Set the first available font from the `im-fonts' list.
+If NEXT is non-nil, then use the next font."
+  (interactive "P")
+  (let* ((fonts (-filter #'im-font-exists-p im-fonts))
+         (font (if next
+                   (or (cadr (member im-current-font fonts)) (car fonts))
+                 (car fonts))))
+    (set-face-attribute 'default nil
+                        :font font
+                        :weight 'normal
+                        :width 'normal
+                        :height im-font-height)
+    (setq im-current-font font)))
 
 ;;;;; Change theme by day and night automatically
 
@@ -1220,7 +1215,7 @@ The themes I used over time and liked are:
 	:straight (:host github :repo "hadronzoo/theme-changer")
   :config
   (require 'theme-changer)
-  (change-theme 'ef-summer 'ef-cherie))
+  (change-theme im-theme-day im-theme-night))
 
 ;;;;; prettify-symbols-mode
 ;; I make use of this mode quite frequently throughout the configuration.
@@ -1515,6 +1510,7 @@ side window the only window'"
   (evil-collection-init 'log-edit)
   (evil-collection-init 'vc-annotate)
   (evil-collection-init 'help)
+  (evil-collection-init 'info)
   (evil-collection-init 'Custom)
   (evil-collection-init 'imenu-list)
   (evil-collection-init 'custom)
