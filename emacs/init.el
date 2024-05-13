@@ -7601,7 +7601,7 @@ Useful if .elfeed directory is freshly syncned."
   (setq empv-video-dir `("~/Videos" "~/Movies" ,(format "/run/media/%s/BINGUS/Videos" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Videos" (user-login-name))))
   (setq empv-audio-dir `("~/Music" ,(format "/run/media/%s/BINGUS/Music" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Music" (user-login-name))))
   (setq empv-allow-insecure-connections t)
-  (setq empv-invidious-instance "https://inv.zzls.xyz/api/v1")
+  (setq empv-invidious-instance im-empv-invidious-instance)
   ;; ^ see https://api.invidious.io/
   (setq empv-youtube-use-tabulated-results t)
   (add-to-list 'empv-mpv-args "--ytdl-format=best")
