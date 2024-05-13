@@ -5607,8 +5607,6 @@ symbol."
   (setq lsp-use-plists t)
   (setq lsp-keymap-prefix "M-l")
   :config
-  (setq lsp-diagnostics-provider :flymake)
-  (setq lsp-completion-provider :none) ;; for corfu
   (setq lsp-enable-xref t)
   (setq lsp-enable-links t)
   (setq lsp-enable-folding t)
@@ -5621,15 +5619,6 @@ symbol."
   (setq lsp-headerline-breadcrumb-enable nil)
   (setq lsp-enable-snippet nil)
   ;; ^ I handle snippets myself with yasnippet
-  (setq lsp-ui-doc-include-signature t)
-  ;; ^ Show the signature in the doc posframe. This shows the
-  ;; posframe even if there is no documentation for the function
-  ;; etc.
-  (setq lsp-ui-doc-position 'at-point)
-  (setq lsp-ui-sideline-show-diagnostics nil)
-  ;; ^ Disable showing errors on sideline, because I use
-  ;; flycheck-inline already and it does a better job showing
-  ;; errors inline
   (setq lsp-modeline-code-actions-enable nil)
   (setq lsp-modeline-diagnostics-enable nil)
   (setq lsp-modeline-workspace-status-enable nil)
@@ -5664,6 +5653,21 @@ symbol."
     "ga" #'lsp-execute-code-action
     "K"  #'im-peek-doc)
 
+  ;; TODO: Find a way to automate this?
+  ;; Instead of advising json-parse-buffer as suggested by
+  ;; lsp-booster, I simply changed lsp-json-read-buffer macro with the
+  ;; following in the lsp-mode.el:
+
+  ;; (defun lsp-json-read-buffer ()
+  ;;   "`lsp-json-read-buffer' but for lsp-booster."
+  ;;   (if (equal (following-char) ?#)
+  ;;       (let ((bytecode (read (current-buffer))))
+  ;;         (when (byte-code-function-p bytecode)
+  ;;           (funcall bytecode))))
+  ;;   (json-parse-buffer :object-type 'plist
+  ;;                      :null-object nil
+  ;;                      :false-object nil))
+
   (define-advice lsp-resolve-final-command (:around (old-fn cmd &optional test?) lsp-booster)
     "Prepend emacs-lsp-booster command to lsp CMD."
     (let ((orig-result (funcall old-fn cmd test?)))
@@ -5675,16 +5679,7 @@ symbol."
           (progn
             (message "Using emacs-lsp-booster for %s!" orig-result)
             (cons "emacs-lsp-booster" orig-result))
-        orig-result)))
-
-  (define-advice json-parse-buffer (:around (old-fn &rest args) lsp-booster)
-    "Try to parse bytecode instead of json."
-    (or
-     (when (equal (following-char) ?#)
-       (let ((bytecode (read (current-buffer))))
-         (when (byte-code-function-p bytecode)
-           (funcall bytecode))))
-     (apply old-fn args))))
+        orig-result))))
 
 
 (defun im-lsp-mode-setup-orderless-completion ()
