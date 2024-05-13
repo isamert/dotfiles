@@ -1212,7 +1212,7 @@ If NEXT is non-nil, then use the next font."
 ;;;;; Change theme by day and night automatically
 
 (use-package theme-changer
-	:straight (:host github :repo "hadronzoo/theme-changer")
+  :straight (:host github :repo "hadronzoo/theme-changer")
   :config
   (require 'theme-changer)
   (change-theme im-theme-day im-theme-night))
