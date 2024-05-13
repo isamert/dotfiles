@@ -5624,6 +5624,18 @@ symbol."
   (setq lsp-modeline-workspace-status-enable nil)
   ;; ^ Disable modeline stuff because it's distracting
 
+  (setq lsp-diagnostics-provider :flymake)
+  (setq lsp-completion-provider :none) ;; for corfu
+  (setq lsp-ui-doc-include-signature t)
+  ;; ^ Show the signature in the doc posframe. This shows the
+  ;; posframe even if there is no documentation for the function
+  ;; etc.
+  (setq lsp-ui-doc-position 'at-point)
+  (setq lsp-ui-sideline-show-diagnostics nil)
+  ;; ^ Disable showing errors on sideline, because I use
+  ;; flycheck-inline already and it does a better job showing
+  ;; errors inline
+
   (setq
    lsp-imenu-index-symbol-kinds
    '(Module
