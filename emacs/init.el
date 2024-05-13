@@ -5662,7 +5662,29 @@ symbol."
     "gd" #'lsp-ui-peek-find-definitions
     "gi" #'lsp-ui-peek-find-implementation
     "ga" #'lsp-execute-code-action
-    "K"  #'im-peek-doc))
+    "K"  #'im-peek-doc)
+
+  (define-advice lsp-resolve-final-command (:around (old-fn cmd &optional test?) lsp-booster)
+    "Prepend emacs-lsp-booster command to lsp CMD."
+    (let ((orig-result (funcall old-fn cmd test?)))
+      (if (and (not test?)                             ;; for check lsp-server-present?
+               (not (file-remote-p default-directory)) ;; see lsp-resolve-final-command, it would add extra shell wrapper
+               lsp-use-plists
+               (not (functionp 'json-rpc-connection))  ;; native json-rpc
+               (executable-find (im-ensure-binary "emacs-lsp-booster" :installer "blahgeek/emacs-lsp-booster")))
+          (progn
+            (message "Using emacs-lsp-booster for %s!" orig-result)
+            (cons "emacs-lsp-booster" orig-result))
+        orig-result)))
+
+  (define-advice json-parse-buffer (:around (old-fn &rest args) lsp-booster)
+    "Try to parse bytecode instead of json."
+    (or
+     (when (equal (following-char) ?#)
+       (let ((bytecode (read (current-buffer))))
+         (when (byte-code-function-p bytecode)
+           (funcall bytecode))))
+     (apply old-fn args))))
 
 
 (defun im-lsp-mode-setup-orderless-completion ()
