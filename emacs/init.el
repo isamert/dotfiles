@@ -7833,7 +7833,12 @@ Useful if .elfeed directory is freshly syncned."
 (use-package apheleia
   :hook (after-init . apheleia-global-mode)
   :init
-  (defalias 'im-toggle-auto-code-formatter #'apheleia-mode))
+  (defalias 'im-toggle-auto-code-formatter #'apheleia-mode)
+
+  ;; Disable it inside `emacs-lisp-mode' as I already use
+  ;; `aggressive-indent-mode' for that.
+  (add-hook 'emacs-lisp-mode-hook (lambda () (apheleia-mode -1))))
+
 
 ;;;;;; editorconfig -- Pick up .editorconfig settings
 ;; Pick up ~.editorconfig~ settings for current project automatically.
