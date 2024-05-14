@@ -6682,7 +6682,7 @@ properly in MacOS."
 ;; org-mode, it also has org-mode independent features.
 
 (defvar im-org-ai-default-model "gpt-3.5-turbo-0125")
-(defvar im-org-ai-powerful-model "gpt-4-0125-preview")
+(defvar im-org-ai-powerful-model "gpt-4o")
 
 (use-package org-ai
   :straight (:host github :repo "rksm/org-ai")
