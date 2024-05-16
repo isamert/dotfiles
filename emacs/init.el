@@ -13843,4 +13843,10 @@ end tell"))
 (message ">>> Started in %s" (emacs-init-time))
 
 (provide 'init)
+
+;; Local Variables:
+;; byte-compile-warnings: (not unresolved free-vars)
+;; checkdoc-force-docstrings-flag: nil
+;; checkdoc--argument-missing-flag: nil
+;; End:
 ;;; init.el ends here
