@@ -212,7 +212,7 @@ the header line."
 
 (defun im-assoc-regexp (key list &optional fn)
   "Like `assoc` but uses `string-match (car pair) KEY` for
-comparasion and returns all the matching pairs. FN is applied to
+comparison and returns all the matching pairs.  FN is applied to
 the keys before matching, if present."
   (seq-filter
    (lambda (pair)
@@ -221,8 +221,9 @@ the keys before matching, if present."
    list))
 
 (defun im-region-or (what)
-  "Returns currently selected string or WHAT-at-point string. WHAT
-can be \\='symbol \\='word or a function that returns string etc."
+  "Return currently selected string or WHAT-at-point string.
+WHAT can be \\='symbol \\='word or a function that returns string
+etc."
   (cond
    ((use-region-p) (buffer-substring-no-properties (region-beginning) (region-end)))
    ((equal what 'string) (read-string "Enter value: "))
@@ -362,12 +363,12 @@ This function is taken from `mm-decode.el' and modified."
 (defun im-force-focus-emacs ()
   "Focus Emacs frame if not focused already."
   (unless (frame-focus-state)
-    (pcase system-type
-      ('darwin
-       (shell-command-to-string
-        "osascript -e 'tell application \"System Events\" to click UI element \"Emacs\" of list 1 of application process \"Dock\"'"))
-      ('gnu/linux
-       (user-error "Implement this: im-force-focus-emacs")))))
+    (im-when-on
+     :darwin
+     (shell-command-to-string
+      "osascript -e 'tell application \"System Events\" to click UI element \"Emacs\" of list 1 of application process \"Dock\"'")
+     :linux
+     (user-error "Implement this: im-force-focus-emacs"))))
 
 (defun im-line-count-below-cursor ()
   "Return the number of lines displayed below the cursor in the current window."
@@ -487,9 +488,9 @@ If it exists, it's killed first and return a new buffer."
 
 (defun im-clipboard-contains-image-p ()
   "Check whether the clipboard has image or not."
-  (pcase system-type
-    ('gnu/linux (s-contains? "image/" (im-sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS")))
-    ('darwin (eq (shell-command "pngpaste - &>/dev/null") 0))))
+  (im-when-on
+   :linux (s-contains? "image/" (im-sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS"))
+   :darwin (eq (shell-command "pngpaste - &>/dev/null") 0)))
 
 (defun im-save-clipboard-image-to-file (file)
   "Save the image in clipboard (if there is any) to given FILE.
@@ -605,9 +606,9 @@ Useful for system-wide scripts."
     (shell-command-on-region
      (point-min)
      (point-max)
-     (pcase system-type
-       ('gnu/linux (format "rofi -dmenu -fuzzy -i -p '%s'" prompt))
-       ('darwin "choose"))
+     (im-when-on
+      :linux (format "rofi -dmenu -fuzzy -i -p '%s'" prompt)
+      :darwin "choose")
      nil t "*im-dmenu error*" nil)
     (string-trim (buffer-string))))
 
@@ -945,6 +946,11 @@ Async request:
    (-filter #'identity)
    (-remove-item "*")))
 
+(cl-defmacro im-when-on (&key linux darwin)
+  (pcase system-type
+    ('darwin darwin)
+    ('linux linux)))
+
 ;;;;;; Git
 
 (cl-defun im-git-temp-clone (url &key on-success (on-fail (lambda () (alert "Cloning failed!" :title "im-git-temp-clone"))))
@@ -1192,7 +1198,7 @@ using this function."
   "Holds the currently used font name.
 One of `im-fonts'.")
 
-(defconst im-font-height (pcase system-type ('gnu/linux 138) ('darwin 170)))
+(defconst im-font-height (im-when-on :linux 138 :darwin 170))
 
 (defun im-set-font (&optional next)
   "Set the first available font from the `im-fonts' list.
@@ -2494,7 +2500,7 @@ This way you can insert new entry right after other non-TODO
 
 (defun im-org-insert-dwim ()
   "Like `org-insert-link' but improved with dwim features.
-      Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
+Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
   (interactive)
   (let* ((point-in-link (org-in-regexp org-link-any-re 1))
          (clipboard-url (when (string-match-p "^http" (current-kill 0))
@@ -2524,14 +2530,14 @@ not provided then it saves the image into ~/.cache."
      nil nil nil (im-org-suggest-filename nil ".png"))))
   (let ((file (if (and file-path (not (string-empty-p file-path)))
                   (file-relative-name file-path)
-                (make-temp-file "~/.cache/org_temp_image_" nil ".png"))))
+                (expand-file-name (make-temp-file "~/.cache/org_temp_image_" nil ".png")))))
     (if (im-save-clipboard-image-to-file file)
         (insert (format "#+ATTR_ORG: :width 400\n[[file:%s]]" file))
       (user-error "Saving file failed!"))))
 
 (defun im-org-make-link-string (url)
   "Like `org-make-link-string' but fetches URL and extracts the
-title automatically. Also adds author and duration info to
+title automatically.  Also adds author and duration info to
 YouTube links."
   (cond
    ((im-youtube-link-extract-id url) (im-org-format-youtube-link url))
@@ -2936,6 +2942,8 @@ on top in their priority range.  Also entries are sorted by their
 TODO state."
   (interactive)
   (progn
+    ;; Sort by creation time
+    (org-sort-entries nil ?R nil nil "CREATED_AT")
     ;; Sort by Effort, the one with least effort is at top
     (org-sort-entries nil ?R nil nil "Effort")
     ;; Sort by priority
@@ -3185,7 +3193,7 @@ it's a list, the first element will be used as the binary name."
                  (t (error ">> Invalid command: '%s'" command)))))
     (if (not (executable-find binary))
         (let* ((installer (or installer
-                              (pcase system-type ('darwin "brew install") ('gnu/linux "pacman -S"))))
+                              (im-when-on :darwin "brew install" :linux "pacman -S")))
                (package (or package binary))
                (install-cmd (format "%s %s" installer package)))
           (kill-new install-cmd)
@@ -3682,10 +3690,9 @@ Makes the tables more readable."
         ;; Also use native notifications if Emacs is not focused
         (unless (frame-focus-state)
           (let ((alert-default-style
-                 (pcase system-type
-                   ('gnu/linux 'libnotify)
-                   ('darwin 'osx-notifier)
-                   (_ 'message))))
+                 (im-when-on
+                  :linux 'libnotify
+                  :darwin 'osx-notifier)))
             (ignore-errors
               (alert message :title title :severity severity)))))
 
@@ -5409,10 +5416,10 @@ KEY should not contain the leader key."
   :init
   (setq
    flymake-languagetool-server-command
-   (pcase system-type
-     ;; Installed it through brew
-     (darwin '("languagetool-server"))
-     (linux '("languagetool" "--http"))))
+   (im-when-on
+    ;; Installed it through brew
+    :darwin '("languagetool-server")
+    :linux '("languagetool" "--http")))
   :config
   (add-to-list 'flymake-languagetool-ignore-faces-alist 'org-modern-block-name)
   (add-to-list 'flymake-languagetool-disabled-rules "WHITESPACE_RULE"))
@@ -6302,16 +6309,15 @@ this command is invoked from."
                    (--some
                     (s-contains? room-name it)
                     (--map (buffer-name (window-buffer it)) (window-list)))))
-        ;; Only send desktop notifications for the things I'im interested
+        ;; Only send desktop notifications for the things I'm interested
         ;; mpim || group || in subscribed channels
-        (when (or (slack-mpim-p room)
-                  (slack-message-notify-p message room team))
+        (when (slack-message-notify-p message room team)
           ;; msg-str sometimes causes errors with `alert'. Thats why I
           ;; used `ignore-errors'.
           (ignore-errors
             (unless im-slack-dnd
               (alert
-               msg-str
+               (s-truncate 60 msg-str)
                :title title
                :category "slack"))))
         (unless im-slack-dnd
@@ -6449,7 +6455,7 @@ properly in MacOS."
                   (team (slack-buffer-team buf))
                   (room (slack-buffer-room buf))
                   (message (slack-room-find-message room (slack-get-ts))))
-      (slack-message-to-string message team)))
+                 (slack-message-to-string message team)))
 
 (defun im-slack-open-link (link)
   (interactive
@@ -13665,17 +13671,15 @@ Return old message."
 
 (defun im-select-audio-output ()
   (interactive)
-  (funcall
-   (pcase system-type
-     ('darwin #'im-osx-select-audio-output)
-     ('gnu/linux #'im-linux-select-audio-output))))
+  (im-when-on
+   :linux (im-linux-select-audio-output)
+   :darwin (im-osx-select-audio-output)))
 
 (defun im-select-audio-input ()
   (interactive)
-  (funcall
-   (pcase system-type
-     ('darwin #'im-osx-select-audio-input)
-     ('gnu/linux #'im-linux-select-audio-input))))
+  (im-when-on
+   :linux (im-linux-select-audio-input)
+   :darwin (im-osx-select-audio-input)))
 
 (defun im-set-mic-status (status)
   "Set mic status to STATUS.
@@ -13686,16 +13690,15 @@ Asks for STATUS if called interactively."
    (list
     (s-chop-suffix
      "d" (cadr (read-multiple-choice "Your mic should be " '((?m "muted") (?u "unmuted") (?t "toggled")))))))
-  (pcase system-type
-    ('darwin
-     (set-process-filter
-      (start-process "*SwitchAudioSourceMic*" "*SwitchAudioSourceMic*"
-                     "SwitchAudioSource" "-t" "input" "-m" status)
-      (lambda (proc out)
-        (message
-         "Your mic is %s"
-         (propertize (car (s-match "\\(\\(un\\)?muted\\)" (s-trim out))) 'face 'bold)))))
-    ('gnu/linux (user-error "Not implemented for gnu/linux"))))
+  (im-when-on
+   :linux (user-error "Not implemented for gnu/linux")
+   :darwin (set-process-filter
+            (start-process "*SwitchAudioSourceMic*" "*SwitchAudioSourceMic*"
+                           "SwitchAudioSource" "-t" "input" "-m" status)
+            (lambda (proc out)
+              (message
+               "Your mic is %s"
+               (propertize (car (s-match "\\(\\(un\\)?muted\\)" (s-trim out))) 'face 'bold))))))
 
 (defun im-toggle-mic ()
   "Toggle the mute status of your microphone."
@@ -13758,10 +13761,9 @@ Asks for STATUS if called interactively."
 
 (defun im-connect-paired-bluetooth-device ()
   (interactive)
-  (funcall
-   (pcase system-type
-     ('darwin #'im-osx-connect-paired-bluetooth-device)
-     ('gnu/linux #'im-linux-connect-paired-bluetooth-device))))
+  (im-when-on
+   :darwin (im-osx-connect-paired-bluetooth-device)
+   :linux (im-linux-connect-paired-bluetooth-device)))
 
 (im-leader
   "eb" #'im-connect-paired-bluetooth-device)
@@ -13788,9 +13790,13 @@ Asks for STATUS if called interactively."
   "Check if screen is being shared by Zoom or Google Chrome.
 Return a `promise', meant to be used in a async- function.
 Only works for OSX right now."
-  (pcase system-type
-    ('darwin
-     (let ((script "
+  (im-when-on
+   :linux
+   (progn
+     (warn ">> im-screen-sharing-now? is not implemented for gnu/linux system-type")
+     nil)
+   :darwin
+   (let ((script "
 tell application \"System Events\"
     set listOfProcesses to every process whose visible is true
     set output to \"\"
@@ -13807,17 +13813,14 @@ tell application \"System Events\"
     end repeat
     return false
 end tell"))
-       (promise-new
-        (lambda (resolve _reject)
-          (make-process :name "check-screen-sharing"
-                        :command `("osascript" "-e" ,script)
-                        :noquery t
-                        :filter
-                        (lambda (proc string)
-                          (funcall resolve (equal "true" (s-trim string)))))))))
-    ('gnu/linux
-     (message ">> im-screen-sharing-now? is not implemented for gnu/linux system-type")
-     nil)))
+     (promise-new
+      (lambda (resolve _reject)
+        (make-process :name "check-screen-sharing"
+                      :command `("osascript" "-e" ,script)
+                      :noquery t
+                      :filter
+                      (lambda (_proc string)
+                        (funcall resolve (equal "true" (s-trim string))))))))))
 
 ;;;; Postamble
 
