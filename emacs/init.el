@@ -6192,7 +6192,7 @@ this command is invoked from."
   :defer t
   :general
   (im-leader-v
-    "ess" #'im-slack-select-rooms
+    "ess" #'slack-select-rooms
     "esS" #'slack-select-unread-rooms
     "esm" #'im-slack-send-message
     "est" #'slack-all-threads
@@ -6210,6 +6210,10 @@ this command is invoked from."
   (setq slack-prefer-current-team t)
   ;; ^ Set current team with `slack-change-current-team'
   (setq slack-buffer-function #'switch-to-buffer)
+
+  (setq slack-typing-visibility nil)
+  ;; ^ Typing indicators causes some issues on my end.  Gonna disable
+  ;; it for now.
 
   ;; Disable filling as it fucks with copying stuff
   (setq lui-fill-type nil)
@@ -6247,11 +6251,6 @@ this command is invoked from."
   (slack-start)
   (slack-change-current-team)
   (run-at-time nil 3600 #'im-slack-check))
-
-(defun im-slack-select-rooms ()
-  (interactive)
-  (let ((slack-buffer-function #'switch-to-buffer))
-    (slack-select-rooms)))
 
 (defun im-slack--add-reaction-to-message (reaction)
   (defalias (intern (concat "react-" reaction))
@@ -6503,10 +6502,12 @@ properly in MacOS."
   "mc" 'slack-message-embed-channel ;
   "mm" 'slack-message-write-another-buffer
   "md" 'slack-message-delete
+  "my" 'slack-message-copy-link
   "ml" 'slack-message-copy-link
   "me" 'slack-message-edit
   "mt" 'slack-thread-show-or-create
   "mq" 'im-slack-quote-message
+  "mi" 'slack-display-user-profile-info
 
   "mrr" 'slack-message-add-reaction
   "mR" 'slack-message-remove-reaction
@@ -6516,7 +6517,8 @@ properly in MacOS."
   "mr3" (im-slack--add-reaction-to-message "eyes")
   "mr4" (im-slack--add-reaction-to-message "ultrafastparrot")
   "mr5" (im-slack--add-reaction-to-message "pepedance")
-  "mrp" (im-slack--add-reaction-to-message "pray")
+  "mrp" (im-slack--add-reaction-to-message "prayge")
+  "mrl" (im-slack--add-reaction-to-message "pepe-love")
 
   "[[" 'slack-buffer-goto-prev-message
   "]]" 'slack-buffer-goto-next-message)
