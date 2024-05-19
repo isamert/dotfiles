@@ -65,11 +65,18 @@ You can run arbitrary shell commands inside a code block like this: ~«sh("which
   (string-trim (shell-command-to-string (format "which '%s'" binary)))
 #+end_src
 
-The following is just the babel version of =(when-on ...)= function defined above. It helps you insert the text to a file based on current operating system.
+The following is just the babel version of =(im-when-on ...)= function defined above. It helps you insert the text to a file based on current operating system.
 
 #+name: when-on
 #+begin_src elisp :var darwin="" linux=""
-  (when-on :darwin darwin :linux linux)
+  (im-when-on :darwin darwin :linux linux)
+#+end_src
+
+And this is for getting values of elisp variables:
+
+#+name: var
+#+begin_src elisp :var var=""
+  (symbol-value (intern var))
 #+end_src
 
 * Programming languages
@@ -2473,19 +2480,25 @@ I want to redirect some websites to their better alternatives (for example twitt
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
   " Nitter is non-functional anymore
   " autocmd DocStart .*twitter.com js tri.excmds.urlmodify("-r", /(mobile\.)?twitter\.com/, "nitter.42l.fr")
-  autocmd DocStart https://.*www.reddit.com js tri.excmds.urlmodify("-t", "www", "old")
+  autocmd DocStart https://.*www.reddit.com/$ js tri.excmds.urlmodify("-t", "www", "old")
+  autocmd DocStart https://.*www.reddit.com/r/ js tri.excmds.urlmodify("-t", "www", "old")
+  autocmd DocStart https://.*.(youtube.com|youtu.be)/ js tri.excmds.urlmodify("-r", "(www.)?(youtube.com|youtu.be)/", "«var("im-invidious-instance")»")
 #+end_src
 
 When I open a useless website that I spent meaningless time on, I want to show open a random page that I marked as /read it later/. Here is the script that fetches a random page:
 
 #+begin_src sh :tangle ~/.bin/randomlink
-  cat ~/Documents/notes/bullet.org | sed -n '/\* Investigate/,/\*\*/p' | grep -E 'https?://' | shuf -n 1 | grep -Eo "(http|https)://[a-zA-Z0-9./?=_%:-]*"
+  #!/bin/sh
+
+  # I use full paths to binaries because on Mac, if you don't start
+  # Firefox from the terminal, you can not inherit the PATH quite easily
+  cat ~/Documents/notes/bullet.org | «which("sed")» -n '/\* Investigate/,/\*\*/p' | «which("grep")» -E 'https?://' | «which("shuf")» -n 1 | «which("grep")» -Eo "(http|https)://[a-zA-Z0-9./?=_%:-]*"
 #+end_src
 
 ...and here is the tridactyl directive:
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  command randomlink js -d€ tri.native.run("("which randomlink")»").then(link => window.location.replace(link.content.trim()))€
+  command randomlink js -d€ tri.native.run("«which("randomlink")»").then(link => window.location.replace(link.content.trim()))€
   autocmd DocStart .*(eksisozluk|ensonhaber).* randomlink
 #+end_src
 
