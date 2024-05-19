@@ -3662,12 +3662,12 @@ Makes the tables more readable."
                                               (count-lines (point-min) (point-max))))
                                          0
                                          (remove bname im-notify-posframe--active)))))
-             (cons (/ (- (plist-get info :parent-frame-width)
-                         (plist-get info :posframe-width))
-                      2)
+             (cons (- (plist-get info :parent-frame-width)
+                      (plist-get info :posframe-width)
+                      20)
                    (if (> posy 0)
                        (+ posy (+ 3 3 15))
-                     15))))
+                     30))))
          :border-width 3
          :max-height 10
          :min-width 30
