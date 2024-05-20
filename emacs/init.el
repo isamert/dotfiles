@@ -5389,73 +5389,6 @@ KEY should not contain the leader key."
   "Load required libs."
   (require 'ox-md nil t))
 
-;;;;; flymake & flymake-languagetool
-
-;; I tried flymake as my main checker instead of flycheck but I had
-;; some consistency problems (it wasn't reporting errors from time to
-;; time etc.).  Right now I only use it for languagetool because
-;; flymake-languagetool is more feature-compelete than
-;; flycheck-languagetool.
-
-(use-package flymake
-  :straight (:type built-in)
-  :hook (;; (prog-mode . flymake-mode)
-         (after-init . (lambda () (setq elisp-flymake-byte-compile-load-path load-path)))))
-
-(use-package flymake-popon
-  :straight (:type git :repo "https://codeberg.org/akib/emacs-flymake-popon.git")
-  :hook (flymake-mode . flymake-popon-mode)
-  :custom
-  (flymake-popon-posframe-extra-arguments
-   '(:poshandler posframe-poshandler-window-bottom-center))
-  :config
-  ;; Disable showing diagnostics in eldoc (in echo area) as we already
-  ;; show diagnostics in a posframe.
-  (add-hook 'flymake-mode-hook (lambda () (remove-hook 'eldoc-documentation-functions 'flymake-eldoc-function t))))
-
-(use-package flymake-languagetool
-  :hook
-  ((text-mode       . flymake-languagetool-load)
-   (org-mode        . flymake-languagetool-load)
-   (markdown-mode   . flymake-languagetool-load))
-  :init
-  (setq
-   flymake-languagetool-server-command
-   (im-when-on
-    ;; Installed it through brew
-    :darwin '("languagetool-server")
-    :linux '("languagetool" "--http")))
-  :config
-  (setq flymake-languagetool-ignore-faces-alist '((org-mode org-code org-block org-modern-block-name org-clock-begin-line)))
-  (add-to-list 'flymake-languagetool-ignore-faces-alist 'org-modern-block-name)
-  (add-to-list 'flymake-languagetool-disabled-rules "WHITESPACE_RULE"))
-
-;; - Use =ge= (=consult-flymake=) to list and jump any of the errors/warnings in the buffer.
-;; - Write ~n SPC~, ~w SPC~, ~e SPC~ to show notes, warnings, errors only in the =consult-flymake=
-
-(general-def
-  :states 'normal
-  "ge" #'im-show-diagnostic-list)
-
-(defun im-show-diagnostic-list (arg)
-  "Show all lsp errors or flycheck/flymake errors, depending on which is available.
-When ARG is non-nil, query the whole workspace/project."
-  (interactive "P")
-  (cond
-   ((bound-and-true-p lsp-mode)
-    (consult-lsp-diagnostics arg))
-   ((bound-and-true-p flymake-mode)
-    (consult-flymake arg))
-   ((bound-and-true-p flycheck-mode)
-    (consult-flycheck))
-   (t (user-error "No diagnostic provider found"))))
-
-(defun im-flymake-yank-diagnostics-at-point ()
-  "Copy the flymake diagnostics at point."
-  (interactive)
-  (im-kill
-   (mapconcat #'flymake-diagnostic-text (flymake-diagnostics (point)) "\n")))
-
 ;;;;; flycheck
 
 (use-package flycheck
@@ -5489,6 +5422,25 @@ Also disable some byte compile warnings too."
             (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
     (setq-local byte-compile-warnings (not unresolved free-vars))
     (setq flycheck-disabled-checkers '(emacs-lisp-checkdoc))))
+
+(defun im-show-diagnostic-list (arg)
+  "Show all lsp errors or flycheck/flymake errors, depending on which is available.
+When ARG is non-nil, query the whole workspace/project."
+  (interactive "P")
+  (cond
+   ((bound-and-true-p lsp-mode)
+    (consult-lsp-diagnostics arg))
+   ((bound-and-true-p flymake-mode)
+    (consult-flymake arg))
+   ((bound-and-true-p flycheck-mode)
+    (consult-flycheck))
+   (t (user-error "No diagnostic provider found"))))
+
+(general-def
+  :states 'normal
+  ;; Write ~n SPC~, ~w SPC~, ~e SPC~ to show notes, warnings, errors
+  ;; only.
+  "ge" #'im-show-diagnostic-list)
 
 ;;;;; corfu & corfu-doc & kind-icon
 ;; - When corfu popup is open
