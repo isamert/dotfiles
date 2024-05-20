@@ -5391,9 +5391,15 @@ KEY should not contain the leader key."
 
 ;;;;; flymake & flymake-languagetool
 
+;; I tried flymake as my main checker instead of flycheck but I had
+;; some consistency problems (it wasn't reporting errors from time to
+;; time etc.).  Right now I only use it for languagetool because
+;; flymake-languagetool is more feature-compelete than
+;; flycheck-languagetool.
+
 (use-package flymake
   :straight (:type built-in)
-  :hook ((prog-mode . flymake-mode)
+  :hook (;; (prog-mode . flymake-mode)
          (after-init . (lambda () (setq elisp-flymake-byte-compile-load-path load-path)))))
 
 (use-package flymake-popon
@@ -5420,6 +5426,7 @@ KEY should not contain the leader key."
     :darwin '("languagetool-server")
     :linux '("languagetool" "--http")))
   :config
+  (setq flymake-languagetool-ignore-faces-alist '((org-mode org-code org-block org-modern-block-name org-clock-begin-line)))
   (add-to-list 'flymake-languagetool-ignore-faces-alist 'org-modern-block-name)
   (add-to-list 'flymake-languagetool-disabled-rules "WHITESPACE_RULE"))
 
@@ -5439,8 +5446,8 @@ When ARG is non-nil, query the whole workspace/project."
     (consult-lsp-diagnostics arg))
    ((bound-and-true-p flymake-mode)
     (consult-flymake arg))
-   ;; ((bound-and-true-p flycheck-mode)
-   ;;  (consult-flycheck))
+   ((bound-and-true-p flycheck-mode)
+    (consult-flycheck))
    (t (user-error "No diagnostic provider found"))))
 
 (defun im-flymake-yank-diagnostics-at-point ()
@@ -5448,6 +5455,40 @@ When ARG is non-nil, query the whole workspace/project."
   (interactive)
   (im-kill
    (mapconcat #'flymake-diagnostic-text (flymake-diagnostics (point)) "\n")))
+
+;;;;; flycheck
+
+(use-package flycheck
+  :config
+  (setq flycheck-idle-change-delay 1)
+  (setq flycheck-display-errors-delay 0.3)
+  (setq flycheck-emacs-lisp-load-path 'inherit)
+  (setq flycheck-emacs-lisp-initialize-packages t)
+  (add-hook 'emacs-lisp-mode-hook #'im-flycheck-disable-checkdoc-checker-if-not-needed)
+  ;; Not quite sure why but I also need to explicitly add this
+  ;; to `org-src-mode-hook'
+  (add-hook 'org-src-mode-hook #'im-flycheck-disable-checkdoc-checker-if-not-needed))
+
+(use-package consult-flycheck :after flycheck)
+
+(use-package flycheck-posframe
+  :straight (:host github :repo "alexmurray/flycheck-posframe")
+  :after flycheck
+  :hook (flycheck-mode . flycheck-posframe-mode)
+  :config
+  (setq flycheck-posframe-border-width 2)
+  (setq flycheck-posframe-border-use-error-face t)
+  (setq flycheck-posframe-position 'window-bottom-center)
+  (flycheck-posframe-configure-pretty-defaults))
+
+(defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
+  "Disable checkdoc on org src, scratch and interaction buffers.
+Also disable some byte compile warnings too."
+  (when (or (eq major-mode #'lisp-interaction-mode)
+            (s-contains? "scratch" (buffer-name))
+            (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
+    (setq-local byte-compile-warnings (not unresolved free-vars))
+    (setq flycheck-disabled-checkers '(emacs-lisp-checkdoc))))
 
 ;;;;; corfu & corfu-doc & kind-icon
 ;; - When corfu popup is open
@@ -5630,7 +5671,7 @@ symbol."
   (setq lsp-modeline-workspace-status-enable nil)
   ;; ^ Disable modeline stuff because it's distracting
 
-  (setq lsp-diagnostics-provider :flymake)
+  (setq lsp-diagnostics-provider :flycheck)
   (setq lsp-completion-provider :none) ;; for corfu
   (setq lsp-ui-doc-include-signature t)
   ;; ^ Show the signature in the doc posframe. This shows the
