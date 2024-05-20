@@ -621,7 +621,7 @@ Useful for system-wide scripts."
           (map 'it) (do 'it) category)
   "Run given CMD and do a `completing-read' on it.
 This macro is intended to quicken up the process of running a
-shell command and doing a completing-read on it and then using
+shell command and doing a `completing-read' on it and then using
 the result in another context, possibly on another shell
 command."
   `((lambda (it) ,do)
@@ -717,14 +717,14 @@ Uses #{elisp-code} syntax."
 
 ;;;;;; List/hash-table/vector utils
 
-(defun im-ht-to-alist (val)
-  "Bad way to convert hash-tables with vectors into alists. I use
-this only for debugging."
+(defun im-hash-table-to-alist (val)
+  "Bad way to convert hash-tables with vectors into alists.
+I use this only for debugging."
   (cond
-   ((hash-table-p val) (im-ht-to-alist (ht-to-alist val)))
-   ((vectorp val) (mapcar #'im-ht-to-alist (cl-coerce val 'list)))
-   ((json-alist-p val) (map-apply (lambda (key it) (cons key (im-ht-to-alist it))) val))
-   ((listp val) (mapcar (lambda (key it) (cons key (im-ht-to-alist it))) val))
+   ((hash-table-p val) (im-hash-table-to-alist (ht-to-alist val)))
+   ((vectorp val) (mapcar #'im-hash-table-to-alist (cl-coerce val 'list)))
+   ((json-alist-p val) (map-apply (lambda (key it) (cons key (im-hash-table-to-alist it))) val))
+   ((listp val) (mapcar (lambda (key it) (cons key (im-hash-table-to-alist it))) val))
    (t val)))
 
 ;;;;;; Quick table
@@ -735,8 +735,8 @@ this only for debugging."
            (header-items (s-split sep (car lines) t))
            (header (cl-coerce (--map (list it (/ 100 (length header-items)) nil) header-items) 'vector))
            (rows (thread-last lines
-                              (-drop 1)
-                              (--map-indexed (list (number-to-string it-index) (coerce (s-split sep it t) 'vector))))))
+                    (-drop 1)
+                    (--map-indexed (list (number-to-string it-index) (cl-coerce (s-split sep it t) 'vector))))))
       (tabulated-list-mode)
       (setq tabulated-list-format header)
       (setq tabulated-list-entries rows)
@@ -3280,7 +3280,6 @@ it's a list, the first element will be used as the binary name."
   ;; I manage history with `im-eshell-append-history''
   (setq eshell-save-history-on-exit nil)
 
-
   (defun im-eshell-prompt ()
     (concat (abbreviate-file-name (eshell/pwd))
             (if (= (user-uid) 0) " # " " \n$ ")))
@@ -3305,6 +3304,7 @@ it's a list, the first element will be used as the binary name."
                      ("terminfo/65" "terminfo/65/*")
                      ("integration" "integration/*")
                      (:exclude ".dir-locals.el" "*-tests.el")))
+  :hook (eat-mode . im-disable-hl-line-mode-for-buffer)
   :config
   (eat-eshell-mode))
 
@@ -5085,8 +5085,8 @@ non-nil so that you only add it to `project-prefix-map'."
             (select-window (get-buffer-window term))))))))
 
 (defun im-term ()
+  "Select a term and open."
   (interactive)
-  "Select a term and open: "
   (empv--select-action "Term: "
     "eshell project" → (im-shell-for)
     "eshell dir" → (im-shell-for 'dir)
@@ -5096,8 +5096,7 @@ non-nil so that you only add it to `project-prefix-map'."
     "vterm new" → (call-interactively #'im-vterm)
     "nushell project" → (let ((vterm-shell "nu")) (im-vterm-project))
     "nushell dir" → (let ((vterm-shell "nu")) (im-vterm-dir))
-    ;; "nushell new" → (call-interactively #'vterm)
-    ))
+    "nushell new" → (let ((vterm-shell "nu")) (call-interactively #'im-vterm))))
 
 (im-leader "2" #'im-term)
 (bind-key "M-`" (λ-interactive (im-shell-for 'project t)))
@@ -10690,9 +10689,6 @@ This is done by adding this function to
 (im-leader
   "ou" #'im-people)
 
-(general-def :keymaps 'org-mode-map :states 'insert
-  "M-p" #'im-people)
-
 ;;;;; Google search
 
 (defun im-google-this (input)
@@ -11375,12 +11371,15 @@ scheduled, schedules them to todays date."
 
 (defun xah-open-file-at-cursor ()
   "Open the file path under cursor.
-If there is text selection, uses the text selection for path.
-If the path starts with “http://”, open the URL in browser.
-Input path can be {relative, full path, URL}.
-Path may have a trailing “:‹n›” that indicates line number, or “:‹n›:‹m›” with line and column number. If so, jump to that line number.
-If path does not have a file extension, automatically try with “.el” for elisp files.
-This command is similar to `find-file-at-point' but without prompting for confirmation.
+If there is text selection, uses the text selection for path.  If
+the path starts with “http://”, open the URL in browser.  Input
+path can be {relative, full path, URL}.
+
+Path may have a trailing “:‹n›” that indicates line number, or
+“:‹n›:‹m›” with line and column number.  If so, jump to that line
+number.  If path does not have a file extension, automatically
+try with “.el” for elisp files.  This command is similar to
+`find-file-at-point' but without prompting for confirmation.
 
 URL `http://ergoemacs.org/emacs/emacs_open_file_path_fast.html'
 Version 2020-10-17"
@@ -11390,7 +11389,12 @@ Version 2020-10-17"
           (if (use-region-p)
               (buffer-substring-no-properties (region-beginning) (region-end))
             (let ($p0 $p1 $p2
-                      ;; chars that are likely to be delimiters of file path or url, e.g. whitespace, comma. The colon is a problem. cuz it's in url, but not in file name. Don't want to use just space as delimiter because path or url are often in brackets or quotes as in markdown or html
+                      ;; chars that are likely to be delimiters of
+                      ;; file path or url, e.g. whitespace, comma. The
+                      ;; colon is a problem. cuz it's in url, but not
+                      ;; in file name. Don't want to use just space as
+                      ;; delimiter because path or url are often in
+                      ;; brackets or quotes as in markdown or html
                       ($pathStops "^  \t\n\"`'‘’“”|[]{}「」<>〔〕〈〉《》【】〖〗«»‹›❮❯❬❭〘〙·。\\"))
               (setq $p0 (point))
               (skip-chars-backward $pathStops)
@@ -11485,6 +11489,10 @@ Version 2017-01-11"
       (goto-char (point-min))
       (while (search-forward "\\\"" nil t)
         (replace-match "\"" "FIXEDCASE" "LITERAL")))))
+
+(general-def :states '(visual)
+  "ze" #'xah-escape-quotes
+  "zE" #'xah-escape-quotes)
 
 ;;;;; eksisozluk gundem
 
