@@ -5379,7 +5379,7 @@ KEY should not contain the leader key."
   (interactive
    (list
     (read-command "Set key to command: ")
-    (read-string "Bind key (SPC<key>): ")))
+    (read-string "Bind key (SPC<key>) (maybe use 3 4 5 6 7 8 9 etc.): ")))
   (im-leader :states '(normal)
     key command))
 
@@ -6308,7 +6308,7 @@ this command is invoked from."
           (ignore-errors
             (unless im-slack-dnd
               (alert
-               (s-truncate 60 msg-str)
+               msg-str
                :title title
                :category "slack"))))
         (unless im-slack-dnd
@@ -6317,7 +6317,7 @@ this command is invoked from."
            title
            (if (await (im-screen-sharing-now?))
                "[REDACTED due to screensharing]"
-             (s-truncate 60 msg-str))))))))
+             msg-str)))))))
 
 (defun im-slack-yank-last-message ()
   "Yank the contents of the last received message as text."
