@@ -3152,6 +3152,31 @@ Functions are called separately for each changed entry/header.")
 (add-hook 'before-save-hook 'im-org-store-heading-state)
 (add-hook 'after-save-hook 'im-org-compare-heading-state)
 
+;;;;; Get effort of linked header
+
+(defun im-org-get-link-effort-at-point ()
+  "Return the effort of linked header.
+Only works with id links.  Useful while planning.  When called
+interactively, insert the effort at the end of the line.
+
+I generally bind this to a key while using by
+`im-embark-bind-leader-command'."
+  (interactive)
+  (let (effort)
+    (-let (((file . pos) (org-id-find (org-element-property :path (org-element-lineage (org-element-context) '(link) t)))))
+      (with-current-buffer (find-file-noselect file)
+        (save-excursion
+          (save-restriction
+            (widen)
+            (goto-char pos)
+            (setq effort (or (org-entry-get nil "Effort")
+                             (progn
+                               (org-set-effort)
+                               (org-entry-get nil "Effort"))))))))
+    (when (called-interactively-p 'interactive)
+      (end-of-line)
+      (insert (format " → %s" effort)))))
+
 ;;;; Extra functionality
 ;;;;; im-open-thing-at-point
 
