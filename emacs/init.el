@@ -13468,8 +13468,7 @@ configuration, pass it as WINDOW-CONF."
   (interactive)
   (let* ((default-directory (im-current-project-root))
          (diff (shell-command-to-string "git diff --staged"))
-         (commit-buffer (im-get-reset-buffer im-git-commit-message-buffer))
-         (diff-buffer (im-get-reset-buffer im-git-commit-diff-buffer)))
+         (commit-buffer (im-get-reset-buffer im-git-commit-message-buffer)))
     (when (and (s-blank? diff) (not (y-or-n-p "> Nothing staged. Still want to commit?")))
       (user-error ">> Commit aborted"))
     (setq im-git-commit--prev-window-conf (or window-conf (current-window-configuration)))
@@ -13477,13 +13476,17 @@ configuration, pass it as WINDOW-CONF."
     (im-git-commit-mode)
     (delete-other-windows)
     (split-window-right)
-    (switch-to-buffer-other-window diff-buffer)
+    (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
+    (other-window 1)))
+
+(defun im-git-commit--reload-diff-buffer (diff)
+  (with-current-buffer (im-get-reset-buffer im-git-commit-diff-buffer)
     (insert diff)
     (setq buffer-read-only t)
     (im-git-staged-diff-mode)
     (goto-char (point-min))
     (setq-local diff-vc-backend 'Git)
-    (other-window 1)))
+    (current-buffer)))
 
 (defun im-git-commit-reload ()
   (interactive nil im-git-commit-mode)
@@ -13499,8 +13502,7 @@ configuration, pass it as WINDOW-CONF."
                  (with-current-buffer im-git-commit-message-buffer
                    (buffer-substring-no-properties (point-min) (point-max)))))
          (msg (->>
-               lines
-               (--filter (not (s-starts-with? im-git-commit-config-prefix it)))
+               (--take-while (not (equal "" it)) lines)
                (s-join "\n")
                (s-trim)))
          (props (->>
@@ -13585,7 +13587,11 @@ configuration, pass it as WINDOW-CONF."
   ;; FIXME: First line should not exceed 50 chars, how to indicate that?
   (whitespace-mode +1)
   (display-fill-column-indicator-mode +1)
+  (page-break-lines-mode)
   (insert "\n\n")
+  (insert "\n\n\n")
+  (insert "# Status\n\n")
+  (insert "# Settings\n\n")
   (insert im-git-commit-config-prefix " No Verify: ")
   (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
   (insert "\n")
@@ -13613,7 +13619,61 @@ configuration, pass it as WINDOW-CONF."
     (with-current-buffer buffer
       (replace-regexp "AUTHOR_NAME" name  nil (point-min) (point-max))
       (replace-regexp "AUTHOR_MAIL" email nil (point-min) (point-max))
+      (await (im-git-commit--update-unstaged))
       (goto-char (point-min)))))
+
+(defmacro im-git-commit--change-header-contents (header &rest forms)
+  (declare (indent 1))
+  `(save-excursion
+     (goto-char (point-min))
+     (re-search-forward (format "\n# *%s" ,header))
+     (end-of-line)
+     (delete-region
+      (point)
+      (or
+       (progn (when (search-forward "\n# " nil t) (- (point) 3)))
+       (point-max)))
+     (backward-char 2)
+     (insert "\n")
+     ,@forms
+     (insert "\n")))
+
+(async-defun im-git-commit--update-unstaged ()
+  (im-git-commit--change-header-contents "Status"
+    (--each (s-lines (ansi-color-apply (await (lab--git "status" "--short"))))
+      (let* ((start (point))
+             (overlay (progn
+                        (insert (s-prepend "> " it) "\n")
+                        (make-overlay start (1- (point))))))
+        (overlay-put overlay 'keymap im-git-commit-status-map)))))
+
+(defvar-keymap im-git-commit-status-map
+  "u" #'im-git-commit-unstage-at-point
+  "s" #'im-git-commit-stage-at-point)
+
+(async-defun im-git-commit--run-command-on-file-at-point (&rest git-args)
+  (let ((line (line-number-at-pos))
+        (file
+         (-as->
+          (thing-at-point 'line t) %
+          (s-chop-prefix ">" %)
+          (s-trim %)
+          (s-split " " % t)
+          (nth 1 %))))
+    (await (apply #'lab--git (im-tap (append git-args (list file)))))
+    (await (im-git-commit--update-unstaged))
+    (goto-line line)
+    (let ((diff (await (lab--git "diff" "--no-color" "--staged"))))
+      (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
+      (other-window 1))))
+
+(async-defun im-git-commit-stage-at-point ()
+  (interactive)
+  (im-git-commit--run-command-on-file-at-point "add"))
+
+(async-defun im-git-commit-unstage-at-point ()
+  (interactive)
+  (im-git-commit--run-command-on-file-at-point "restore" "--staged"))
 
 (defun im-git-commit--reset-message (str)
   "Clear the current message in the buffer and set it to STR.
@@ -13621,7 +13681,7 @@ Return old message."
   (goto-char (point-min))
   (insert str)
   (let* ((s (point))
-         (e (- (search-forward im-git-commit-config-prefix) 3))
+         (e (- (search-forward "\n") 3))
          (old (buffer-substring s e)))
     (delete-region s e)
     (goto-char (point-min))
