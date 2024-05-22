@@ -6209,7 +6209,8 @@ this command is invoked from."
   :defer t
   :general
   (im-leader-v
-    "ess" #'slack-select-rooms
+    "ess" #'im-slack-select-room
+    "esd" #'im-slack-dms
     "esS" #'slack-select-unread-rooms
     "esm" #'im-slack-send-message
     "est" #'slack-all-threads
@@ -6342,7 +6343,7 @@ this command is invoked from."
            title
            (if (await (im-screen-sharing-now?))
                "[REDACTED due to screensharing]"
-             msg-str)))))))
+             (s-truncate 80 (s-replace "\n" "" msg-str)))))))))
 
 (defun im-slack-yank-last-message ()
   "Yank the contents of the last received message as text."
@@ -6489,6 +6490,75 @@ properly in MacOS."
     (im-slack--open-message-or-thread (list :message message :room room :team team))
     thread))
 
+(defvar slack-dms '())
+(defun im-slack-dms ()
+  "List and open dms.
+Get DMs and MPIMs from client.dms endpoint, sort them by time and
+present to user.  This kind of guarantees the order that you see
+in the DM section of the official Slack client."
+  (interactive)
+  (let ((team (or (slack-team-select))))
+    (slack-request
+     (slack-request-create
+      "https://slack.com/api/client.dms?count=250"
+      team
+      :success
+      (cl-function
+       (lambda (&key data &allow-other-keys)
+         (ignore-error (quit minibuffer-quit)
+           (setq slack-dms data)
+           (let* ((selected
+                   (im-completing-read
+                    "Select: "
+                    (--sort
+                     (>
+                      (string-to-number (plist-get (plist-get it :message) :ts))
+                      (string-to-number (plist-get (plist-get other :message) :ts)))
+                     (append
+                      (plist-get data :mpims)
+                      (plist-get data :ims)))
+                    :sort? nil
+                    :formatter
+                    (lambda (it)
+                      (let ((room-name
+                             (or (ignore-errors
+                                   (slack-room-name (slack-room-find (plist-get it :id) team) team))
+                                 "???"))
+                            (text (plist-get (plist-get it :message) :text)))
+                        (format "%s (%s) - %s"
+                                (propertize room-name 'face '(:weight bold :foreground "systemPinkColor"))
+                                (propertize
+                                 (lab--time-ago
+                                  (->>
+                                   (plist-get (plist-get it :message) :ts)
+                                   (s-split "\\.")
+                                   car
+                                   string-to-number))
+                                 'face '(:slant italic :foreground "systemGrayColor"))
+                                (s-truncate 50 text)))))))
+             (slack-room-display
+              (slack-room-find (plist-get selected :id) team)
+              team)))))))))
+
+(defun im-slack-select-room ()
+  "Like `slack-select-rooms' but disable sorting and remove muted channels."
+  (interactive)
+  (let* ((team (slack-team-select))
+         (alist (slack-room-names
+                 (cl-loop for team in (list team)
+                          append (append (slack-team-ims team)
+                                         (slack-team-groups team)
+                                         (slack-team-channels team)))
+                 team
+                 #'(lambda (rs) (cl-remove-if
+                            (lambda (it)
+                              (or (slack-room-hidden-p it)
+                                  (slack-room-muted-p it team)))
+                            rs)))))
+    (slack-room-display
+     (cdr (im-completing-read "Select: " alist :formatter #'car :sort? nil))
+     team)))
+
 ;;
 ;; Utils/internals
 ;;
@@ -6535,6 +6605,7 @@ properly in MacOS."
   "mr4" (im-slack--add-reaction-to-message "ultrafastparrot")
   "mr5" (im-slack--add-reaction-to-message "pepedance")
   "mrp" (im-slack--add-reaction-to-message "prayge")
+  "mrh" (im-slack--add-reaction-to-message "handshake")
   "mrl" (im-slack--add-reaction-to-message "pepe-love")
 
   "[[" 'slack-buffer-goto-prev-message
