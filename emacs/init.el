@@ -12621,7 +12621,9 @@ attribute for current buffers file or selected file."
 ;; TODO support fn returning a string instead of a buffer. Create a
 ;; temp buffer when jump is called
 (defun im-peek (fn)
-  "TODO: document this"
+  "Display a nice little small window below current line.
+FN should take no args and return a buffer with the intended
+contents."
   (let ((buffer (save-window-excursion (funcall fn))))
     (setq im-peek--buffer buffer)
     ;; `run-at-time' function is useful for forcing the following code
@@ -12642,6 +12644,10 @@ attribute for current buffers file or selected file."
          (quick-peek-show str nil nil im-peek--line-count)
          (im-unfold-if-folded (save-excursion (end-of-line) (1+ (point)))))
        (im-peek-mode +1)))))
+
+(defun im-peek-open? ()
+  "Return t if >=1 peek window is open."
+  (car quick-peek--overlays))
 
 ;; Special peek functions
 
@@ -13720,30 +13726,56 @@ configuration, pass it as WINDOW-CONF."
 
 (defvar-keymap im-git-commit-status-map
   "u" #'im-git-commit-unstage-at-point
-  "s" #'im-git-commit-stage-at-point)
+  "s" #'im-git-commit-stage-at-point
+  "TAB" #'im-git-commit-diff-at-point)
+
+(defun im-git-commit--file-at-point ()
+  (let ((line (thing-at-point 'line t)))
+    (-some->
+        line %
+        (s-chop-prefix ">" %)
+        (s-trim %)
+        (s-split " " % t)
+        (nth 1 %))))
 
 (async-defun im-git-commit--run-command-on-file-at-point (&rest git-args)
   (let ((line (line-number-at-pos))
-        (file
-         (-as->
-          (thing-at-point 'line t) %
-          (s-chop-prefix ">" %)
-          (s-trim %)
-          (s-split " " % t)
-          (nth 1 %))))
-    (await (apply #'lab--git (im-tap (append git-args (list file)))))
+        (file (im-git-commit--file-at-point)))
+    (await (apply #'lab--git (append git-args (list file))))
     (await (im-git-commit--update-unstaged))
     (goto-line line)
     (let ((diff (await (lab--git "diff" "--no-color" "--staged"))))
       (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
       (other-window 1))))
 
+(async-defun im-git-commit-diff-at-point ()
+  (interactive)
+  (if (im-peek-open?)
+      (im-peek-remove)
+    (let* ((default-directory (im-current-project-root))
+           (file (im-git-commit--file-at-point))
+           (diff (s-trim (await (lab--git "diff" file))))
+           (result (if (s-blank? diff)
+                       ;; TODO highlight file
+                       (with-temp-buffer
+                         (insert-file-contents file)
+                         (buffer-string))
+                     (ansi-color-apply diff))))
+      (im-peek
+       (lambda ()
+         (with-current-buffer (get-buffer-create "*im-commit-diff-at-point*")
+           (erase-buffer)
+           (insert result)
+           (current-buffer)))))))
+
 (async-defun im-git-commit-stage-at-point ()
   (interactive)
+  (im-peek-remove)
   (im-git-commit--run-command-on-file-at-point "add"))
 
 (async-defun im-git-commit-unstage-at-point ()
   (interactive)
+  (im-peek-remove)
   (im-git-commit--run-command-on-file-at-point "restore" "--staged"))
 
 (defun im-git-commit--reset-message (str)
