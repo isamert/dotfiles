@@ -1134,7 +1134,6 @@ With argument, do this that many times."
   :straight (:type built-in)
   :hook (after-init . repeat-mode))
 
-
 (defmacro im-make-repeatable (name &rest pairs)
   "Put given PAIRS in a keymap named NAME and mark them as repeatable."
   (declare (indent 1))
@@ -12497,8 +12496,16 @@ attribute for current buffers file or selected file."
 
 ;;;;; im-peek -- Inline/popup documentation/translate/dictionary etc.
 
+;;;;;; quick-peek
+
+;; I based im-peek on quick-peek but will drop the dependency
+;; eventually as I am not able to properly configure some aspects of
+;; the "peek window".
+
 (use-package quick-peek
   :straight (:host github :repo "cpitclaudel/quick-peek"))
+
+;;;;;; Bindings
 
 (im-leader-v
   "mt" #'im-peek-translate
@@ -12519,10 +12526,30 @@ attribute for current buffers file or selected file."
   :keymaps 'im-peek-mode-map
   (kbd "K") #'im-peek-remove)
 
+;;;;;; im-peek implementation
+
+;;;;;;; Variables
+
 (defvar im-peek--buffer nil)
 (defvar im-peek--string nil)
 (defvar im-peek--pos 0)
 (defconst im-peek--line-count 30)
+
+;;;;;;; Mode
+
+(define-minor-mode im-peek-mode
+  "Elisp popup documentation mode."
+  :lighter " ElPopDoc"
+  :global t
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "M-j") #'im-peek-mode-scroll-down)
+            (define-key map (kbd "M-k") #'im-peek-mode-scroll-up)
+            (define-key map (kbd "C-g") #'im-peek-remove)
+            (define-key map (kbd "M-RET") #'im-peek-jump)
+            map)
+  (setf (alist-get #'im-peek-mode minor-mode-overriding-map-alist)
+        im-peek-mode-map)
+  (evil-normalize-keymaps))
 
 (defun im-peek-jump ()
   (interactive nil im-peek-mode)
@@ -12549,20 +12576,6 @@ attribute for current buffers file or selected file."
     (s-join "\n"))
    nil nil im-peek--line-count))
 
-(define-minor-mode im-peek-mode
-  "Elisp popup documentation mode."
-  :lighter " ElPopDoc"
-  :global t
-  :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "M-j") #'im-peek-mode-scroll-down)
-            (define-key map (kbd "M-k") #'im-peek-mode-scroll-up)
-            (define-key map (kbd "C-g") #'im-peek-remove)
-            (define-key map (kbd "M-RET") #'im-peek-jump)
-            map)
-  (setf (alist-get #'im-peek-mode minor-mode-overriding-map-alist)
-        im-peek-mode-map)
-  (evil-normalize-keymaps))
-
 (defun im-peek-remove ()
   (interactive nil im-peek-mode)
   (setq im-peek--pos 0)
@@ -12571,27 +12584,6 @@ attribute for current buffers file or selected file."
   (setq minor-mode-overriding-map-alist
         (assq-delete-all #'im-peek-mode
                          minor-mode-overriding-map-alist)))
-
-(defun im-peek-doc--elisp ()
-  (let ((help-xref-following t))
-    (helpful-symbol (symbol-at-point))
-    (current-buffer)))
-
-(defun im-peek-doc--lsp ()
-  (let ((result
-         ;; Taken from lsp-describe-thing-at-point
-         (-some->> (lsp--text-document-position-params)
-           (lsp--make-request "textDocument/hover")
-           (lsp--send-request)
-           (lsp:hover-contents)
-           (funcall (-flip #'lsp--render-on-hover-content) t)
-           (string-trim-right))))
-    (unless result
-      (user-error "No doc at point"))
-    (with-current-buffer (get-buffer-create "*im-lsp-md-doc*")
-      (erase-buffer)
-      (insert result)
-      (current-buffer))))
 
 (defun im-unfold-if-folded (&optional pt)
   (setq pt (or pt (point)))
@@ -12649,7 +12641,7 @@ contents."
   "Return t if >=1 peek window is open."
   (car quick-peek--overlays))
 
-;; Special peek functions
+;;;;;; Special peek functions
 
 (use-package google-translate
   :custom
@@ -12737,6 +12729,27 @@ TARGET quickly."
        (setq pos (line-number-at-pos))
        (current-buffer)))
     (im-peek-mode-scroll-down (- pos 2))))
+
+(defun im-peek-doc--elisp ()
+  (let ((help-xref-following t))
+    (helpful-symbol (symbol-at-point))
+    (current-buffer)))
+
+(defun im-peek-doc--lsp ()
+  (let ((result
+         ;; Taken from lsp-describe-thing-at-point
+         (-some->> (lsp--text-document-position-params)
+           (lsp--make-request "textDocument/hover")
+           (lsp--send-request)
+           (lsp:hover-contents)
+           (funcall (-flip #'lsp--render-on-hover-content) t)
+           (string-trim-right))))
+    (unless result
+      (user-error "No doc at point"))
+    (with-current-buffer (get-buffer-create "*im-lsp-md-doc*")
+      (erase-buffer)
+      (insert result)
+      (current-buffer))))
 
 ;;;;; im-gpt
 
@@ -13731,12 +13744,12 @@ configuration, pass it as WINDOW-CONF."
 
 (defun im-git-commit--file-at-point ()
   (let ((line (thing-at-point 'line t)))
-    (-some->
-        line %
-        (s-chop-prefix ">" %)
-        (s-trim %)
-        (s-split " " % t)
-        (nth 1 %))))
+    (-as->
+     line %
+     (s-chop-prefix ">" %)
+     (s-trim %)
+     (s-split " " % t)
+     (nth 1 %))))
 
 (async-defun im-git-commit--run-command-on-file-at-point (&rest git-args)
   (let ((line (line-number-at-pos))
