@@ -9636,43 +9636,55 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
 
 (defun im-print-buffer-file-info (&optional kill-file-path)
   (interactive "P")
-  (let* ((region? (use-region-p))
-         (point-min (if region? (region-beginning) (point-min)))
-         (point-max (if region? (region-end) (point-max)))
-         (proj-name (im-current-project-name))
-         (proj-path (or (im-current-project-root) (expand-file-name "~/")))
-         (fpath (or (buffer-file-name) (buffer-name)))
-         (fpath-pretty (string-replace (expand-file-name "~") "~" fpath))
-         (prop (lambda (x) (propertize x 'face 'bold)))
-         (text
-          (format
-           "[%s] %s\n%s\n%s\n%s\n%s%s\n%s\n%s"
-           (propertize proj-name 'face 'bold)
-           (propertize (string-remove-prefix proj-path fpath) 'face '(:foreground "plum"  :slant italic))
-           (if region? "*region*" "")
-           (format "%s%s" (if kill-file-path (propertize "Copied: " 'face 'bold) "") fpath-pretty)
-           (format "%s: %s" (funcall prop "Size") (im-human-readable-size (- point-max point-min)))
-           (if (file-exists-p (expand-file-name ".git" (im-current-project-root)))
-               (format "%s: %s\n" (funcall prop "Current branch") (lab-git-current-branch))
-             "")
-           (format
-            "%s: %s, %s: %s, %s: %s"
-            (funcall prop "Lines")
-            (count-lines point-min point-max)
-            (funcall prop "Words")
-            (length (split-string (buffer-substring-no-properties point-min point-max) "\\W+" 'omit-nulls))
-            (funcall prop "Chars")
-            (- point-max point-min))
-           (format "%s: %s" (funcall prop "Major Mode") major-mode)
-           (im-read-time))))
-    (im-peek
-     (lambda ()
-       (with-current-buffer (get-buffer-create "*im-buffer-info*")
-         (erase-buffer)
-         (insert text)
-         (current-buffer))))
-    (when kill-file-path
-      (im-kill fpath-pretty))))
+  (cl-flet ((prop (x) (propertize x 'face '(:foreground "plum" :slant italic)))
+            (plum (x) (propertize x 'face '(:foreground "plum")))
+            (bold (x) (propertize x 'face 'bold))
+            (yellow (x) (propertize (if (numberp x) (number-to-string x) x) 'face '(:foreground "yellow")))
+            (italic (x) (propertize x 'face '(:slant italic))))
+    (let* ((region? (use-region-p))
+           (point-min (if region? (region-beginning) (point-min)))
+           (point-max (if region? (region-end) (point-max)))
+           (proj-name (im-current-project-name))
+           (proj-path (or (im-current-project-root) (expand-file-name "~/")))
+           (fpath (or (buffer-file-name) (buffer-name)))
+           (fpath-pretty (string-replace (expand-file-name "~") "~" fpath))
+           (in-git? (file-exists-p (expand-file-name ".git" (im-current-project-root))))
+           (text
+            (format
+             "[%s] %s\n%s\n%s\n%s\n%s%s\n%s\n%s%s%s"
+             (bold proj-name)
+             (plum (string-remove-prefix proj-path fpath))
+             (if region? "*region*" "")
+             (format "%s%s" (if kill-file-path (bold "Copied: ") "") (italic fpath-pretty))
+             (format "%s: %s" (prop "- Size") (yellow (im-human-readable-size (- point-max point-min))))
+             (format
+              "%s: %s, %s: %s, %s: %s\n"
+              (prop "- Lines")
+              (yellow (count-lines point-min point-max))
+              (prop "Words")
+              (yellow (length (split-string (buffer-substring-no-properties point-min point-max) "\\W+" 'omit-nulls)))
+              (prop "Chars")
+              (yellow (- point-max point-min)))
+             (format "%s: %s" (prop "- Major Mode") major-mode)
+             (if in-git?
+                 (format "%s: %s\n%s"
+                         (prop "- Current branch") (bold (lab-git-current-branch))
+                         (ansi-color-apply (shell-command-to-string (format "git -c color.ui=always status %s" fpath))))
+               (italic "- Not in a git repository."))
+             (concat "\n" (im-read-time))
+             "\n\n"
+             (if in-git?
+                 (ansi-color-apply (shell-command-to-string (format "git diff --color=always %s" fpath)))
+               ""))))
+      (im-peek
+       (lambda ()
+         (with-current-buffer (get-buffer-create "*im-buffer-info*")
+           (page-break-lines-mode)
+           (erase-buffer)
+           (insert (s-trim text))
+           (current-buffer))))
+      (when kill-file-path
+        (im-kill fpath-pretty)))))
 
 ;;;;; Keybindings
 
