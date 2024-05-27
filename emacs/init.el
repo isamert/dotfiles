@@ -7992,16 +7992,18 @@ Useful if .elfeed directory is freshly syncned."
 (im-leader-v
   ";" (general-predicate-dispatch (im-eval-dwim #'eros-eval-last-sexp #'eval-region #'eros-eval-defun)
         (eq major-mode 'java-ts-mode) #'im-jshell-repl-eval
+        (eq major-mode 'js-ts-mode) #'im-deno-repl-eval
         (eq major-mode 'typescript-ts-mode) #'im-deno-repl-eval
-        (eq major-mode  'clojure-mode) (im-eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point)
-        (eq major-mode  'lisp-mode) (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region)
-        (eq major-mode  'racket-mode) (im-eval-dwim #'racket-eval-last-sexp #'racket-send-region #'racket-send-definition)
-        (eq major-mode  'scheme-mode) (im-eval-dwim #'geiser-eval-last-sexp #'geiser-eval-region #'geiser-eval-definition)
-        (eq major-mode  'kotlin-mode) (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line))
+        (eq major-mode 'clojure-mode) (im-eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point)
+        (eq major-mode 'lisp-mode) (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region)
+        (eq major-mode 'racket-mode) (im-eval-dwim #'racket-eval-last-sexp #'racket-send-region #'racket-send-definition)
+        (eq major-mode 'scheme-mode) (im-eval-dwim #'geiser-eval-last-sexp #'geiser-eval-region #'geiser-eval-definition)
+        (eq major-mode 'kotlin-mode) (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line))
   "'" (general-predicate-dispatch #'eros-inspect-last-result
         (eq major-mode 'java-ts-mode) #'im-repl-inspect-last-result
+        (eq major-mode 'js-ts-mode) #'im-repl-inspect-last-result
         (eq major-mode 'typescript-ts-mode) #'im-repl-inspect-last-result
-        (eq major-mode  'clojure-mode) #'cider-inspect-last-result))
+        (eq major-mode 'clojure-mode) #'cider-inspect-last-result))
 
 (defconst im-repl-result-buffer "*im-repl-result*")
 (defconst im-repl-last-result "")
