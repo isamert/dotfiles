@@ -8191,7 +8191,9 @@ to turn it into something generic using macros."
  :name "Deno"
  :args ()
  :prefix "=> "
- :input-regexp "^> "
+ ;; NOTE: After 1.43.1 (?) deno started to return only the results and
+ ;; not the prompt
+ :input-regexp ""
  :process-region
  (lambda (str)
    ;; Remove block comments before sending, because Deno repl cant
@@ -8200,13 +8202,8 @@ to turn it into something generic using macros."
      (setq str (replace-match "" t t str)))
    str)
  :expr (im-ts-current-expression)
- :parser
- (lambda (out)
-   (->>
-    out
-    (s-split "\n")
-    (-drop-last 1)
-    (s-join "\n"))))
+ ;; See the note above, we don't need any parsing logic
+ :parser identity)
 
 (im-create-repl
  :name "JShell"
