@@ -2202,7 +2202,6 @@ that is provided by ob-http."
    "R" #'org-agenda-clockreport-mode
    "r" #'org-agenda-redo)
   :config
-  (evil-set-initial-state 'org-agenda-mode 'normal)
   (setq org-agenda-remove-tags t)
   (setq org-agenda-include-diary t)
   (setq org-agenda-use-time-grid t)
@@ -2216,7 +2215,8 @@ that is provided by ob-http."
   (setq org-agenda-dim-blocked-tasks nil)
   (setq org-agenda-inhibit-startup t)
   (setq org-agenda-use-tag-inheritance nil)
-  (setq org-agenda-ignore-drawer-properties '(effort appt category)))
+  (setq org-agenda-ignore-drawer-properties '(effort appt category))
+  (evil-set-initial-state 'org-agenda-mode 'normal))
 
 ;;;;; ToDo keywords & faces
 
