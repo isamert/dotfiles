@@ -9462,6 +9462,10 @@ SELECT * FROM _ LIMIT 1;
 
 (use-package go-mode)
 
+;;;;; nginx
+
+(use-package nginx-mode)
+
 ;;;; Window and buffer management
 ;;;;; tab-bar-mode
 ;; It's a great workspace manager that comes bundled with Emacs. I was
