@@ -7385,6 +7385,11 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 (use-package epkg)
 
+;;;;; upver -- update dependencies interactively
+
+(use-package upver
+  :straight (:host github :repo "isamert/upver.el"))
+
 ;;;; Editing
 ;;;;; Breaking long texts/comments into multiple lines
 ;; I use =M-q= (=fill-paragraph=) to break long texts into multiple
