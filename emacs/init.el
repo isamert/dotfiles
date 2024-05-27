@@ -13744,8 +13744,8 @@ configuration, pass it as WINDOW-CONF."
   "s" #'im-git-commit-stage-at-point
   "TAB" #'im-git-commit-diff-at-point)
 
-(defun im-git-commit--file-at-point ()
-  (let ((line (thing-at-point 'line t)))
+(defun im-git-commit--file-at-point (&optional line)
+  (let ((line (or line (thing-at-point 'line t))))
     (-as->
      line %
      (s-chop-prefix ">" %)
@@ -13755,9 +13755,16 @@ configuration, pass it as WINDOW-CONF."
 
 (async-defun im-git-commit--run-command-on-file-at-point (&rest git-args)
   (let ((line (line-number-at-pos))
-        (file (im-git-commit--file-at-point)))
-    (await (apply #'lab--git (append git-args (list file))))
+        (files (if (use-region-p)
+                   (->>
+                    (buffer-substring-no-properties (region-beginning) (region-end))
+                    (s-trim)
+                    (s-lines)
+                    (-map #'im-git-commit--file-at-point))
+                 (list (im-git-commit--file-at-point)))))
+    (await (apply #'lab--git (append git-args files)))
     (await (im-git-commit--update-unstaged))
+    (deactivate-mark)
     (goto-line line)
     (let ((diff (await (lab--git "diff" "--no-color" "--staged"))))
       (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
