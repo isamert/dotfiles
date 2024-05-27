@@ -123,7 +123,9 @@
 ;; Web server stuff.  `elnode-make-webserver' is very useful for
 ;; starting a webserver in given directory.  Use `elnode-server-list'
 ;; to list active webservers.
-(use-package elnode)
+(use-package elnode
+  :custom
+  (elnode-error-log-to-messages nil))
 
 ;; JS-like async/await. Simply return a promise from a function with
 ;; (promise-new (lambda (resolve reject) (funcall resolve arg)))
@@ -1176,7 +1178,9 @@ using this function."
 ;; - ef-cherie → For me, like ef-summer but dark. Black and purple.
 
 (use-package modus-themes)
-(use-package ef-themes)
+(use-package ef-themes
+  :config
+  (load-theme 'ef-summer t))
 (use-package doom-themes
   :config
   ;; Fix for doomemacs/themes#720
@@ -3043,7 +3047,7 @@ breaks and joining the lines together. This function relies on
                                                      (1+ org-priority-lowest)))))))
                 (format " [#%s]" priority)
               "")
-            (read-string "Header: "))
+            (s-trim (read-string "Header: ")))
     (when-let ((date (im-bullet-current-date)))
       (format "\nSCHEDULED: <%s>" date))
     (format
@@ -3060,7 +3064,7 @@ breaks and joining the lines together. This function relies on
    (concat
     (format
      "%s%s"
-     (read-string "Header: ")
+     (s-trim (read-string "Header: "))
      (format
       "\n:PROPERTIES:\n:CREATED_AT: [%s]\n:END:"
       (format-time-string "%Y-%m-%d %a %H:%M")))))
@@ -5444,7 +5448,7 @@ Also disable some byte compile warnings too."
   (when (or (eq major-mode #'lisp-interaction-mode)
             (s-contains? "scratch" (buffer-name))
             (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
-    (setq-local byte-compile-warnings (not unresolved free-vars))
+    (setq-local byte-compile-warnings '(not unresolved free-vars))
     (setq flycheck-disabled-checkers '(emacs-lisp-checkdoc))))
 
 (defun im-show-diagnostic-list (arg)
@@ -8433,10 +8437,9 @@ This is used in my snippets."
 ;;;;;; Deno utils
 ;; Here are some functions that I use while developing with Deno.
 
-
 ;; TODO: Generalize LSP client switching
 (defun im-lsp-switch-to-deno ()
-  "Start `deno' lsp in current buffer."
+  "Start `deno-ls' in current buffer."
   (interactive)
   (let ((lsp-enabled-clients '(deno-ls)))
     (ignore-errors
@@ -8444,7 +8447,7 @@ This is used in my snippets."
     (lsp)))
 
 (defun im-lsp-switch-to-nodejs ()
-  "Start `deno' lsp in current buffer."
+  "Start `ts-ls' in current buffer."
   (interactive)
   (let ((lsp-enabled-clients '(ts-ls)))
     (ignore-errors
@@ -13728,6 +13731,7 @@ configuration, pass it as WINDOW-CONF."
      ,@forms
      (insert "\n")))
 
+;; TODO: Predictable sort order
 (async-defun im-git-commit--update-unstaged ()
   (im-git-commit--change-header-contents "Status"
     (--each (s-lines (ansi-color-apply (await (lab--git "status" "--short"))))

@@ -224,7 +224,7 @@
               'action
               (lambda (_button)
                 (lab-github-comment-on-issue
-                 .comments_url (lab-github--get-user-comment "^# New Comment ")
+                 .comments_url (lab-github--get-user-comment "^# New Comment")
                  :success (lambda (data) (browse-url .html_url))))
               'face custom-button
               'follow-link t)
@@ -235,7 +235,7 @@
                   'action
                   (lambda (_button)
                     (lab-github-comment-on-issue
-                     .comments_url (lab-github--get-user-comment "^# New Comment ")
+                     .comments_url (lab-github--get-user-comment "^# New Comment")
                      :success
                      (lambda (data)
                        (lab-github-update-issue .url :state "opened")
@@ -247,7 +247,7 @@
                 'action
                 (lambda (_button)
                   (lab-github-comment-on-issue
-                   .comments_url (lab-github--get-user-comment "^# New Comment ")
+                   .comments_url (lab-github--get-user-comment "^# New Comment")
                    :success
                    (lambda (data)
                      (lab-github-update-issue .url :state "closed" :reason "completed")
@@ -260,7 +260,7 @@
                 'action
                 (lambda (_button)
                   (lab-github-comment-on-issue
-                   .comments_url (lab-github--get-user-comment "^# New Comment ")
+                   .comments_url (lab-github--get-user-comment "^# New Comment")
                    :success
                    (lambda (data)
                      (lab-github-update-issue .url :state "closed" :reason "not_planned")
@@ -443,7 +443,7 @@ This assumes that this function is called on the button itself."
                             (html_url . ,(im-s-interpolated "https://github.com/#{lab-github-user}/#{(alist-get 'name node)}/issues/#{(alist-get 'number it)}"))
                             (comments_url . ,(im-s-interpolated "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}/issues/#{(alist-get 'number it)}/comments"))
                             (created_at . ,(alist-get 'createdAt it))
-                            (repository_url . (im-s-interpolated "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}"))
+                            (repository_url . ,(im-s-interpolated "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}"))
                             (repository . ,(alist-get 'name node)))
                           .issues.nodes)))
               ;; Pull Requests
