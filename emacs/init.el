@@ -5982,6 +5982,7 @@ this command is invoked from."
    (after-init . yas-global-mode)))
 
 (use-package yankpad
+  :straight (:host github :repo "isamert/yankpad")
   :after yasnippet
   :demand t
   :general
