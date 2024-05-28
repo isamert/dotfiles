@@ -2309,6 +2309,11 @@ This way you can insert new entry right after other non-TODO
       "- %U %?"
       :prepend t)
 
+     ("I" "Work Inbox" item
+      (file+headline work-org "Inbox")
+      "- %U %?"
+      :prepend t)
+
      ("n" "Meeting/clock note" item
       (clock))
 
