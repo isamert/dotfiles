@@ -3095,7 +3095,17 @@ breaks and joining the lines together. This function relies on
     "oF" #'org-transclusion-remove))
 
 ;;;;; Capture changed headings on save
-;; Sometimes, I want to capture which headings are changed on save and do some actions on those headings. Following code accomplishes that, but only for top and second level headings. To do so add a function to ~im-org-header-changed-hook~.
+
+;; Sometimes, I want to capture which headings are changed on save and
+;; do some actions on those headings. Following code accomplishes
+;; that, but only for top and second level headings. To do so add a
+;; function to ~im-org-header-changed-hook~.
+
+(defvar im-org-header-changed-hook-blacklist-files '("bullet.org")
+  "Do not run change hook on these files.
+If file is too big (> 1 MB?, or too much headers), this hook
+makes saving quite slow.  I could simply put a file limit on the
+hooks but that makes thing even more complicated.")
 
 (defvar im-org-header-changed-hook '()
   "Functions run after an entry is changed.
@@ -3112,7 +3122,8 @@ Functions are called separately for each changed entry/header.")
   "Store the state of the top-level headers for later comparison."
   (when (derived-mode-p 'org-mode)
     (let ((file (buffer-file-name)))
-      (when (file-exists-p file)
+      (when (and (file-exists-p file)
+                 (not (-contains? im-org-header-changed-hook-blacklist-files (f-filename file))))
         (setq im--org-heading-prev-state
               (with-temp-buffer
                 (insert-file-contents file)
@@ -3124,7 +3135,8 @@ Functions are called separately for each changed entry/header.")
 
 (defun im-org-compare-heading-state ()
   "Compare current top-level headers with the stored state to detect changes."
-  (when (and (derived-mode-p 'org-mode))
+  (when (and (derived-mode-p 'org-mode)
+             (not (-contains? im-org-header-changed-hook-blacklist-files (f-filename (buffer-file-name)))))
     (-each (--remove
             (member (cons (plist-get it :header) (plist-get it :body)) im--org-heading-prev-state)
             (im-org-get-some-headers))
