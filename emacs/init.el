@@ -3038,42 +3038,42 @@ breaks and joining the lines together. This function relies on
 (defun im-org-new-todo (&optional priority)
   "Create new org TODO item with the fields I want them to be there."
   (interactive)
-  (org-insert-heading '(4))
-  (insert
-   (concat
-    (format "TODO%s %s "
-            (if-let (priority
-                     (im-non-blank-or-nil
-                      (or priority
-                          (completing-read
-                           "Select priority:"
-                           (mapcar #'char-to-string (number-sequence
-                                                     org-priority-highest
-                                                     (1+ org-priority-lowest)))))))
-                (format " [#%s]" priority)
-              "")
-            (s-trim (read-string "Header: ")))
-    (when-let ((date (im-bullet-current-date)))
-      (format "\nSCHEDULED: <%s>" date))
-    (format
-     "\n:PROPERTIES:\n:CREATED_AT: [%s]\n:END:"
-     (format-time-string "%Y-%m-%d %a %H:%M"))))
-  (call-interactively #'org-set-tags-command)
-  (org-set-effort))
+  (let ((content (concat
+                  (format "TODO%s %s "
+                          (if-let (priority
+                                   (im-non-blank-or-nil
+                                    (or priority
+                                        (completing-read
+                                         "Select priority:"
+                                         (mapcar #'char-to-string (number-sequence
+                                                                   org-priority-highest
+                                                                   (1+ org-priority-lowest)))))))
+                              (format " [#%s]" priority)
+                            "")
+                          (s-trim (read-string "Header: ")))
+                  (when-let ((date (im-bullet-current-date)))
+                    (format "\nSCHEDULED: <%s>" date))
+                  (format
+                   "\n:PROPERTIES:\n:CREATED_AT: [%s]\n:END:"
+                   (format-time-string "%Y-%m-%d %a %H:%M")))))
+    (org-insert-heading '(4))
+    (insert content)
+    (call-interactively #'org-set-tags-command)
+    (org-set-effort)))
 
 (defun im-org-new-heading ()
   "Create a new heading with some automatically set properties."
   (interactive)
-  (org-insert-heading '(4))
-  (insert
-   (concat
-    (format
-     "%s%s"
-     (s-trim (read-string "Header: "))
-     (format
-      "\n:PROPERTIES:\n:CREATED_AT: [%s]\n:END:"
-      (format-time-string "%Y-%m-%d %a %H:%M")))))
-  (call-interactively #'org-set-tags-command))
+  (let ((content (concat
+                  (format
+                   "%s%s"
+                   (s-trim (read-string "Header: "))
+                   (format
+                    "\n:PROPERTIES:\n:CREATED_AT: [%s]\n:END:"
+                    (format-time-string "%Y-%m-%d %a %H:%M"))))))
+    (org-insert-heading '(4))
+    (insert content)
+    (call-interactively #'org-set-tags-command)))
 
 (im-leader :keymaps 'org-mode-map
   "ok" #'im-org-new-heading
