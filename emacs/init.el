@@ -11249,11 +11249,34 @@ scheduled, schedules them to todays date."
                     (:type "fuzzy"
                      :path ,(format "W%s" (im-V))
                      :application nil :search-option nil :begin 0 :end 0))))
+               ;; Try one week earlier
                (ignore-errors
                  (org-link-open
                   `(link
                     (:type "fuzzy"
                      :path ,(format "W%s" (1- (im-V)))
+                     :application nil :search-option nil :begin 0 :end 0)))))
+          (im-org-tree-to-indirect-buffer))))))
+
+(defun im-bullet-open-monthly-plan ()
+  "Open monthly planning entry in an indirect buffer."
+  (interactive)
+  (with-current-buffer (find-buffer-visiting bullet-org)
+    (save-restriction
+      (save-excursion
+        (when (or
+               (ignore-errors
+                 (org-link-open
+                  `(link
+                    (:type "fuzzy"
+                     :path ,(format "%s" (format-time-string "%B"))
+                     :application nil :search-option nil :begin 0 :end 0))))
+               ;; Try one month earlier
+               (ignore-errors
+                 (org-link-open
+                  `(link
+                    (:type "fuzzy"
+                     :path ,(format "%s" (format-time-string "%B" (time-subtract (current-time) (days-to-time 30))))
                      :application nil :search-option nil :begin 0 :end 0)))))
           (im-org-tree-to-indirect-buffer))))))
 
