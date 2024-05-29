@@ -5434,6 +5434,10 @@ KEY should not contain the leader key."
   "Load required libs."
   (require 'ox-md nil t))
 
+;;;;;; More org-mode actions
+
+(keymap-set embark-region-map "V" #'org-copy-visible)
+
 ;;;;; flycheck
 
 (use-package flycheck
