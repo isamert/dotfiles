@@ -11968,6 +11968,7 @@ list them as seperate entries."
                   .host .username .password)))))))
 
 ;;;;; Kubernetes
+
 ;; My main use case is drop into a shell of a pod. The code below
 ;; makes it quite easy. Use ~im-kube-select-pod~ to select a pod and
 ;; do some actions on it.
@@ -12106,6 +12107,13 @@ selecting a pod."
                                  name
                                  namespace
                                  context)))
+      "Events" →
+      (shell-command
+       (im-kill
+        (format
+         "kubectl events --for 'pod/%s' --namespace='%s' --context='%s'"
+         name namespace context))
+       (format "*im-kube-events:%s*" name))
       "Info" →
       (progn
         (with-current-buffer (get-buffer-create (format "*im-kube-pod-info-%s*" name))
