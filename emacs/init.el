@@ -3351,6 +3351,7 @@ it's a list, the first element will be used as the binary name."
                      (:exclude ".dir-locals.el" "*-tests.el")))
   :hook (eat-mode . im-disable-hl-line-mode-for-buffer)
   :config
+  (setq eat-enable-shell-prompt-annotation nil)
   (eat-eshell-mode))
 
 (defun im-eshell (name)
@@ -5093,18 +5094,27 @@ non-nil so that you only add it to `project-prefix-map'."
 (defvar im-project-shell-last-height 15)
 (defvar im-project-shell-last-window nil)
 
-(defun im-shell-for (&optional type top?)
+(defun im-shell-for (&optional type top? shell-fn)
   (interactive)
-  (require 'eshell)
+  (unless shell-fn
+    (setq shell-fn
+          (lambda (name)
+            (require 'eshell)
+            (save-window-excursion
+              (let ((eshell-buffer-name name))
+                (eshell t))))))
   (setq type (or type 'project))
   (let* ((proj-dir (or (ignore-errors
                          (project-root (project-current)))
                        default-directory))
-         (default-directory (if (eq type 'project) proj-dir default-directory))
+         (default-directory (cl-case type
+                              ('project proj-dir)
+                              ('dir default-directory)
+                              (t (expand-file-name type))))
          (proj-name (f-base default-directory))
-         (name (format "$eshell: %s" proj-name)))
+         (name (format "*$shell: %s*" proj-name)))
     (if-let* (top?
-              (window (--find (s-prefix? "\$eshell: " (buffer-name (window-buffer it))) (window-list)))
+              (window (--find (s-prefix? "\*\$shell: " (buffer-name (window-buffer it))) (window-list)))
               (focused? (equal window (selected-window))))
         (progn
           (setq im-project-shell-last-height (window-height window))
@@ -5112,9 +5122,7 @@ non-nil so that you only add it to `project-prefix-map'."
           (when im-project-shell-last-window
             (select-window im-project-shell-last-window)))
       (let* ((term (or (get-buffer name)
-                       (save-window-excursion
-                         (let ((eshell-buffer-name name))
-                           (eshell t))))))
+                       (funcall shell-fn name))))
         (with-current-buffer term
           (tab-line-mode -1))
         (setq im-project-shell-last-window (get-buffer-window))
@@ -5145,8 +5153,12 @@ non-nil so that you only add it to `project-prefix-map'."
 
 (im-leader "2" #'im-term)
 (bind-key "M-`" (λ-interactive (im-shell-for 'project t)))
-(bind-key "M-~" (λ-interactive (im-shell-for 'dir t)))
-
+(bind-key "M-<f1>" (λ-interactive (im-shell-for 'dir t)))
+(bind-key "M-<f2>" (λ-interactive (im-shell-for "~" t (lambda (name)
+                                                        (require 'eshell)
+                                                        (save-window-excursion
+                                                          (let ((eat-buffer-name name))
+                                                            (eat nil t)))))))
 
 ;;;;; consult
 ;; Some key points:
@@ -5892,7 +5904,7 @@ appropriate in some cases like terminals."
     (vterm-send-return)
     t)
    (im-with-visible-buffer
-    ".*eshell.*"
+    ".*e?shell.*"
     (eshell-previous-matching-input "" 0)
     (eshell-send-input))))
 
