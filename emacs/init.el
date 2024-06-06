@@ -312,10 +312,24 @@ the memoize cache."
         (sit-for 0.1))
       (buffer-string))))
 
+(defun im-plist-to-alist (plist)
+  "Convert PLIST to an alist.
+Taken from transient.el."
+  (let (alist)
+    (while plist
+      (push (cons (let* ((symbol (pop plist))
+                         (name (symbol-name symbol)))
+                    (if (eq (aref name 0) ?:)
+                        (intern (substring name 1))
+                      symbol))
+                  (pop plist))
+            alist))
+    (nreverse alist)))
+
 (defmacro let-plist (plist &rest form)
   "Like `let-alist' but for plists."
   (declare (indent 1))
-  `(let-alist (transient-plist-to-alist ,plist)
+  `(let-alist (im-plist-to-alist ,plist)
      ,@form))
 
 (defun im-mimetype (path)
@@ -822,10 +836,9 @@ Async request:
     (request
       endpoint
       :type -type
-      ;; TODO Maybe roll my own plist-to-alist function
       :headers (cond
                 ((and -headers (json-alist-p -headers)) -headers)
-                ((and -headers (json-plist-p -headers)) (transient-plist-to-alist -headers))
+                ((and -headers (json-plist-p -headers)) (im-plist-to-alist -headers))
                 (t nil))
       :parser (if -raw #'buffer-string #'json-read)
       :success (if -async?
@@ -839,13 +852,13 @@ Async request:
       :sync (not -async?)
       :data (cond
              ((and -data (json-alist-p -data)) -data)
-             ((and -data (json-plist-p -data)) (transient-plist-to-alist -data))
+             ((and -data (json-plist-p -data)) (im-plist-to-alist -data))
              ((stringp -data) -data)
              (t nil))
       :params (cond
                ((and -params (json-alist-p -params)) -params)
-               ((and -params (json-plist-p params)) (transient-plist-to-alist -params))
-               (t (transient-plist-to-alist params))))
+               ((and -params (json-plist-p params)) (im-plist-to-alist -params))
+               (t (im-plist-to-alist params))))
     (when (called-interactively-p 'interactive)
       (with-current-buffer (get-buffer-create "*im-request-response*")
         (erase-buffer)
@@ -1300,7 +1313,9 @@ function helps me go between these modes easily."
   (whitespace-mode 1))
 
 ;;;;; Spaces instead of tabs
-(setq-default tab-width 2)
+
+;; TODO: This breaks org-mode.
+;; (setq-default tab-width 2)
 (setq-default indent-tabs-mode nil)
 
 ;;;;; Shackle windows
@@ -2386,6 +2401,7 @@ This way you can insert new entry right after other non-TODO
 (use-package org-modern
   :after org
   :custom
+  (org-modern-timestamp nil)
   (org-use-sub-superscripts nil)
   (org-modern-table nil)
   (org-modern-hide-stars " ")
@@ -3076,8 +3092,8 @@ breaks and joining the lines together. This function relies on
     (call-interactively #'org-set-tags-command)))
 
 (im-leader :keymaps 'org-mode-map
-  "ok" #'im-org-new-heading
-  "oK" #'im-org-new-todo)
+  "ok" #'im-org-new-todo
+  "oK" #'im-org-new-heading)
 
 ;;;;; org-transclusion
 ;; My main use case for
@@ -4695,12 +4711,24 @@ of that revision."
   (setq magit-delta-default-dark-theme "Monokai Extended Bright")
   (setq magit-delta-hide-plus-minus-markers nil)
 
+  ;; To make this work, I need to patch code-review package, see
+  ;; wandersoncferreira/code-review#201-2146926599
+  (add-hook 'code-review-mode-hook #'magit-delta-mode)
+
   ;; Apply diff colors to whole visual line
   ;; See https://github.com/dandavison/magit-delta/issues/6
+  ;; White
+  ;; (set-face-attribute 'magit-diff-added-highlight nil :background "#d0ffd0")
+  ;; (set-face-attribute 'magit-diff-added nil :background "#d0ffd0")
+  ;; (set-face-attribute 'magit-diff-removed-highlight nil :background "#ffe0e0")
+  ;; (set-face-attribute 'magit-diff-removed nil :background "#ffe0e0")
+
+  ;; Dark
   (set-face-attribute 'magit-diff-added-highlight nil :background "#002800")
   (set-face-attribute 'magit-diff-added nil :background "#002800")
   (set-face-attribute 'magit-diff-removed-highlight nil :background "#3f0001")
   (set-face-attribute 'magit-diff-removed nil :background "#3f0001"))
+
 
 (defun im-delta-fix-bg-colors ()
   (setq face-remapping-alist
@@ -5161,6 +5189,7 @@ non-nil so that you only add it to `project-prefix-map'."
                                                             (eat nil t)))))))
 
 ;;;;; consult
+
 ;; Some key points:
 
 ;; - =SPC RET= brings up =consult-buffer=.
@@ -5214,6 +5243,7 @@ non-nil so that you only add it to `project-prefix-map'."
   (defalias 'im-switch-theme #'consult-theme))
 
 ;;;;;; Project & file management
+
 ;; Some functionality for project management. I do some fine-tuning for =find= and =ripgrep= commands that consult uses.
 
 (with-eval-after-load 'consult
@@ -5257,6 +5287,7 @@ approach."
 
 
 ;;;;;; consult-buffer and some extensions
+
 ;; I use =(consult-buffer)= function for switching between
 ;; buffers/files/marks etc. Here I add a source for my frequently used
 ;; files. This is handy in a way that =(consult-buffer)= becomes my
@@ -5304,6 +5335,7 @@ approach."
   (im-append! consult-buffer-sources 'im-consult-source-projects))
 
 ;;;;;; consult-dir: Jump to different places easily in minibuffer
+
 ;; Here is a nice description of the package from it's README:
 
 ;; > Avoid "navigating" long distances when picking a file or
@@ -5452,6 +5484,15 @@ KEY should not contain the leader key."
 
 ;;;;; flycheck
 
+(defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
+  "Disable checkdoc on org src, scratch and interaction buffers.
+Also disable some byte compile warnings too."
+  (when (or (eq major-mode #'lisp-interaction-mode)
+            (s-contains? "scratch" (buffer-name))
+            (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
+    (setq-local byte-compile-warnings '(not unresolved free-vars))
+    (setq flycheck-disabled-checkers '(emacs-lisp-checkdoc))))
+
 (use-package flycheck
   :config
   (setq flycheck-idle-change-delay 1)
@@ -5474,15 +5515,6 @@ KEY should not contain the leader key."
   (setq flycheck-posframe-border-use-error-face t)
   (setq flycheck-posframe-position 'window-bottom-center)
   (flycheck-posframe-configure-pretty-defaults))
-
-(defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
-  "Disable checkdoc on org src, scratch and interaction buffers.
-Also disable some byte compile warnings too."
-  (when (or (eq major-mode #'lisp-interaction-mode)
-            (s-contains? "scratch" (buffer-name))
-            (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
-    (setq-local byte-compile-warnings '(not unresolved free-vars))
-    (setq flycheck-disabled-checkers '(emacs-lisp-checkdoc))))
 
 (defun im-show-diagnostic-list (arg)
   "Show all lsp errors or flycheck/flymake errors, depending on which is available.
@@ -5947,22 +5979,27 @@ this command is invoked from."
     (when cmd
       (setq im-term-run-history (cons cmd (delete cmd im-term-run-history))))))
 
-;;;;; moodline modeline
-;; Light weight and nice modeline.
+;;;;; simple-modeline
 
+;; Lightweight and nice modeline.
 
-(use-package mood-line
-  :straight (:host gitlab :repo "jessieh/mood-line")
-  :hook (after-init . mood-line-mode)
-  :config
-  (set-face-attribute
-   'mood-line-unimportant nil
-   :foreground "Sky Blue")
-  (set-face-attribute
-   'mood-line-status-neutral nil
-   :foreground "Sky Blue"))
+(use-package simple-modeline
+  :straight (:host github :repo "gexplorer/simple-modeline")
+  :hook (after-init . simple-modeline-mode)
+  :custom (simple-modeline-segments
+           '((simple-modeline-segment-modified
+              simple-modeline-segment-buffer-name
+              simple-modeline-segment-position)
+             (simple-modeline-segment-input-method
+              simple-modeline-segment-eol
+              simple-modeline-segment-encoding
+              simple-modeline-segment-vc
+              simple-modeline-segment-misc-info
+              simple-modeline-segment-process
+              simple-modeline-segment-major-mode))))
 
 ;;;;; howdoyou
+
 ;; When you search for something, it opens the results in an org-mode
 ;; buffer. Results are fetched from SX (stack-exchange, stackoverflow
 ;; etc) sites.
@@ -5997,8 +6034,8 @@ this command is invoked from."
                    (with-current-buffer buffer (rename-buffer (format "*se: %s*" title) :unique)))))))))
 
 ;;;;; tldr
-;; tldr client for Emacs.
 
+;; tldr client for Emacs.
 
 (use-package tldr
   :commands tldr
@@ -6049,7 +6086,6 @@ this command is invoked from."
 ;; prefixed with mode name they are defined for) through
 ;; =completing-read=. Combined with ~im-globally~, you can use this
 ;; outside of Emacs.
-
 
 (defvar im--all-snippets-cache nil)
 
@@ -6708,52 +6744,6 @@ in the DM section of the official Slack client."
   (setq separedit-default-mode 'markdown-mode)
   (setq separedit-continue-fill-column t))
 
-;;;;; nov.el
-;; For reading epub files.
-
-(use-package justify-kp
-  :defer t
-  :straight (:host github :repo "Fuco1/justify-kp"))
-
-(use-package nov
-  :mode "\\.epub\\'"
-  :config
-  ;; Just copied the configuration below from
-  ;; https://depp.brause.cc/nov.el/
-
-  (require 'justify-kp)
-  (setq nov-text-width t)
-  (setq nov-text-width 120)
-  (setq visual-fill-column-center-text t)
-
-  (add-hook 'nov-mode-hook 'visual-line-mode)
-  (add-hook 'nov-mode-hook 'visual-fill-column-mode)
-
-  (defun im-nov-window-configuration-change-hook ()
-    (im-nov-post-html-render-hook)
-    (remove-hook 'window-configuration-change-hook
-                 'im-nov-window-configuration-change-hook
-                 t))
-
-  (defun im-nov-post-html-render-hook ()
-    (if (get-buffer-window)
-        (let ((max-width (pj-line-width))
-              buffer-read-only)
-          (save-excursion
-            (goto-char (point-min))
-            (while (not (eobp))
-              (when (not (looking-at "^[[:space:]]*$"))
-                (goto-char (line-end-position))
-                (when (> (shr-pixel-column) max-width)
-                  (goto-char (line-beginning-position))
-                  (pj-justify)))
-              (forward-line 1))))
-      (add-hook 'window-configuration-change-hook
-                'im-nov-window-configuration-change-hook
-                nil t)))
-
-  (add-hook 'nov-post-html-render-hook 'im-nov-post-html-render-hook))
-
 ;;;;; all-the-icons
 ;; You should run =all-the-icons-install-fonts= command after
 ;; this. Also run =fc-cache -f -v= afterwards
@@ -6791,13 +6781,6 @@ in the DM section of the official Slack client."
   :init
   (im-leader "il" #'imenu-list))
 
-;;;;; webpaste
-
-(use-package webpaste
-  :defer t
-  :config
-  (setq webpaste-open-in-browser t))
-
 ;;;;; wolfram
 ;; Easy way to interact with WolframAlpha. I generally use it for unit conversions or stuff like that.
 
@@ -6810,6 +6793,7 @@ in the DM section of the official Slack client."
   (setq wolfram-alpha-app-id im-wolfram-alpha-app-id))
 
 ;;;;; org-ai
+
 ;; There are bunch of Emacs-ChatGPT integrations and org-ai seems to
 ;; be best as it fits my workflow quite well. Besides being useful in
 ;; org-mode, it also has org-mode independent features.
@@ -6824,7 +6808,35 @@ in the DM section of the official Slack client."
   ;; (setq org-ai-default-chat-model "gpt-4-0125-preview")
   (setq org-ai-default-chat-model im-org-ai-default-model)
   (setq org-ai-default-max-tokens 2000)
-  (setq org-ai-openai-api-token im-openai-api-key))
+  (setq org-ai-openai-api-token im-openai-api-key)
+  (setq org-ai-default-chat-system-prompt
+        "Adopt the role of helpful assistant.
+NEVER mention that you're an AI.
+
+Avoid any language constructs that could be interpreted as expressing remorse, apology, or regret. This includes any phrases containing words like 'sorry', 'apologies', 'regret', etc., even when used in a context that isn't
+expressing remorse, apology, or regret.
+
+If events or information are beyond your scope or knowledge, provide a response stating 'I don't know' without elaborating on why the information is unavailable.
+
+Refrain from disclaimers about you not being a professional or expert.
+
+Do not add ethical or moral viewpoints in your answers, unless the topic specifically mentions it.
+
+Keep responses unique and free of repetition.
+
+Never suggest seeking information from elsewhere.
+
+Always focus on the key points in my questions to determine my intent.
+
+Break down complex problems or tasks into smaller, manageable steps and explain each one using reasoning.
+
+Provide multiple perspectives or solutions.
+
+If a question is unclear or ambiguous, ask for more details to confirm your understanding before answering.
+
+If a mistake is made in a previous response, recognize and correct it.
+
+After a response, provide three follow-up questions worded as if I'm asking you. Format in bold as Q1, Q2, and Q3. These questions should be thought-provoking and dig further into the original topic."))
 
 (defun im-org-ai-toggle-gpt-model ()
   "Toggle GPT model of current org-ai block.
@@ -6874,16 +6886,16 @@ Also removes the answers, if user wants it."
               (whole-blockline org-fontify-whole-block-delimiter-line))
 
           (when (re-search-forward "#\\+end_ai" nil t)
-    	      (setq block-end (match-beginning 0)
+            (setq block-end (match-beginning 0)
                   beg-of-endline (match-beginning 0)
-    		          end-of-endline (match-end 0))
+                  end-of-endline (match-end 0))
 
             ;; Fontify the block content
             (add-text-properties
-    	       beg end-of-endline '(font-lock-fontified t font-lock-multiline t))
+             beg end-of-endline '(font-lock-fontified t font-lock-multiline t))
 
             (add-text-properties
-    	       block-start beg-of-endline '(face org-block))
+             block-start beg-of-endline '(face org-block))
 
             ;; Fontify markdown code blocks
             (save-excursion
@@ -6906,18 +6918,18 @@ Also removes the answers, if user wants it."
                           (markdown-fontify-code-block-natively lang md-start md-end)
                         (org-src-font-lock-fontify-block lang md-start md-end)))))))
 
-    	      ;; Fontify the #+begin and #+end lines of the blocks
-    	      (add-text-properties
-    	       beg (if whole-blockline bol-after-beginline end-of-beginline)
-    	       '(face org-block-begin-line))
+            ;; Fontify the #+begin and #+end lines of the blocks
+            (add-text-properties
+             beg (if whole-blockline bol-after-beginline end-of-beginline)
+             '(face org-block-begin-line))
             (unless (eq (char-after beg-of-endline) ?*)
-    	        (add-text-properties
-    	         beg-of-endline
-    	         (if whole-blockline
-    	             (let ((beg-of-next-line (1+ end-of-endline)))
-    	               (min (point-max) beg-of-next-line))
-    	           (min (point-max) end-of-endline))
-    	         '(face org-block-end-line)))))))))
+              (add-text-properties
+               beg-of-endline
+               (if whole-blockline
+                   (let ((beg-of-next-line (1+ end-of-endline)))
+                     (min (point-max) beg-of-next-line))
+                 (min (point-max) end-of-endline))
+               '(face org-block-end-line)))))))))
 
 (advice-add 'org-fontify-meta-lines-and-blocks-1 :before #'org-ai-hl-fontify-ai-block)
 
@@ -7113,9 +7125,7 @@ Also removes the answers, if user wants it."
   (osm-server 'default)
   (osm-copyright nil)
   :init
-  (add-hook 'osm-mode-hook #'im-disable-line-wrapping)
-  ;; Load Org link support
-  (with-eval-after-load 'org (require 'osm-ol)))
+  (add-hook 'osm-mode-hook #'im-disable-line-wrapping))
 
 ;;;;; reveal-in-finder
 ;; Well, sometimes you need to open that pesky program.
@@ -10789,7 +10799,7 @@ This is done by adding this function to
   (interactive)
   (let* ((selected
           (->>
-           (empv--completing-read-object
+           (im-completing-read
             "Select info"
             (-mapcat
              (lambda (info)
@@ -12886,7 +12896,7 @@ Each element is a property list with the following keys:
 
 (cl-defun im-gpt (prompt
                   &key
-                  (system "You are an AI assistant living inside Emacs. You answer concisely.")
+                  (system)
                   (include-system)
                   (model org-ai-default-chat-model)
                   (callback)
@@ -12917,7 +12927,7 @@ Version: 2023-07-16"
                       (--filter (or (and (use-region-p) (plist-get it :region)) t)
                                 im-gpt-prompts)
                       :formatter (lambda (it) (or (plist-get it :display)
-                                                  (plist-get it :prompt)))))
+                                             (plist-get it :prompt)))))
           (prompt (or (plist-get selection :prompt) selection))
           (system (plist-get selection :system))
           (model (plist-get selection :model))
@@ -12930,7 +12940,7 @@ Version: 2023-07-16"
                (completing-read (format "Model [current=%s]: " org-ai-default-chat-model) org-ai-chat-models))
               (model model)
               (t org-ai-default-chat-model))
-      :system (or system "You are a code assistant that helps developers. You answer concisely.")
+      :system system
       :include-system (or include-system system)
       :empty empty)))
   (when (functionp prompt)
@@ -13939,6 +13949,7 @@ If you stage with `im-git-status', this is not needed because it
 directly edits the buffer, hence triggers `git-gutter' but
 `im-git-commit' can also stage files using git directly and this
 is where it's needed."
+  (interactive)
   (--each (->>
            (lab--git "log" "-1" "--pretty=format:%h")
            (await)

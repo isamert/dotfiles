@@ -254,6 +254,19 @@ It can be installed through homebrew:
     ,*  : yabai -m window --focus north
   ]
 
+  # Focus specific apps
+
+  # Normally, I would have `lcmd - {1,2}` bound to switching to desktop
+  # 1 & 2, but this FUCKING operating system is FUCKING retarded in a
+  # way that it, for some reason, does not focus the ONLY FUCKING APP in
+  # the FUCKING desktop for some FUCKING reason and need to reach to the
+  # mouse and click on the only app that is apparent in the screen. So I
+  # simply resorted to having a dedicated shortcuts for my most used
+  # applications to directly focus them. This helps me stay sane.
+
+  lcmd - 1 : yabai -m window --focus $(yabai -m query --windows | jq '.[] | select(.app == "Emacs") | .id')
+  # lcmd - 2 : yabai -m window --focus $(yabai -m query --windows | jq '.[] | select(.app == "Firefox") | .id')
+
   # swap managed window
   shift + lcmd - h : yabai -m window --swap west
   shift + lcmd - l : yabai -m window --swap east
