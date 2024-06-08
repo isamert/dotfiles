@@ -1874,6 +1874,7 @@ side window the only window'"
   ;; ^ Shows in the tab-bar, if tab-bar is enabled.
   (setq org-habit-show-habits nil)
   ;; ^ Speeds up agenda a bit
+  (setq org-edit-src-content-indentation 0)
 
   ;; Put archive files under an archive/ directory
   ;; I don't want them to pollute my directory
