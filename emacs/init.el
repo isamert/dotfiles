@@ -7492,51 +7492,38 @@ This happens to me on org-buffers, xwidget-at tries to get
 (use-package string-inflection
   :bind (:map evil-normal-state-map ("M-c" . string-inflection-all-cycle)))
 
-;;;;; smartparens
+;;;;; puni & combobulate & electric-pair-mode (structrual editing stuff)
 
-(use-package smartparens
-  :hook ((after-init . smartparens-global-mode))
+;; Using `electric-pair-mode' to automatically pair parenthesis.
+
+(add-hook 'after-init-hook #'electric-pair-mode)
+
+;; `puni' provides structral editing for a lot of languages using some
+;; Emacs built-ins.  It's pretty good most of the time and I really
+;; use a very small subset of it's feature set.
+
+(use-package puni
+  :straight (:host github :repo "AmaiKinono/puni")
   :general
-  (general-def
-    :states 'insert
-    :keymaps '(override)
-    "M-[" #'sp-forward-barf-sexp
-    ;; sp-forward-slurp-sexp does not work well with C-like languages,
-    ;; hence I use sp-slurp-hybrid-sexp
-    "M-]" #'sp-slurp-hybrid-sexp
-    "M-{" #'sp-backward-slurp-sexp
-    "M-}" #'sp-backward-barf-sexp
-    "M-h" #'sp-splice-sexp
-    "M-]" (general-predicate-dispatch #'sp-slurp-hybrid-sexp
-            (-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'sp-forward-slurp-sexp))
-  :config
-  (require 'smartparens-config)
-  ;; Fix ts-ts mode
-  (add-to-list 'sp-sexp-suffix (list 'typescript-ts-mode 'regexp "")))
+  (:keymaps 'prog-mode-map :states '(insert)
+   "M-[" #'puni-barf-forward
+   "M-]" #'puni-slurp-forward
+   "M-k" #'puni-splice
+   "M-t" #'puni-transpose))
 
-;;;;; writeroom-mode
-
-;; Gives you a nice, uncluttered editing experience by removing all
-;; unneeded visual clutter and by justifying the text in the middle.
-
-
-(use-package writeroom-mode
-  :commands writeroom-mode
-  :config
-  (setq writeroom-fullscreen-effect 'maximized)
-  (setq writeroom-global-effects nil)
-  (setq writeroom-mode-line-toggle-position 'header-line-format)
-  (setq writeroom-width 81))
-
-;;;;; combobulate
-
-;; Structral editing for some languages, here are the bindings that I
-;; find useful (which are enabled by ~combobulate-key-map~):
+;; `combobulate' provides structural editing for some languages using
+;; treesit.el, here are the bindings that I find useful (which are
+;; enabled by `combobulate-mode'):
 
 ;; - M-P :: combobulate-drag-up
 ;; - M-N :: combobulate-drag-down
-;; - M-a :: combobulate-navigate-logical-previous
-;; - M-e :: combobulate-navigate-logical-next
+
+;; I also replace `expand-region' with combobulate equivalent and also
+;; re-bind some of the bindings from `puni' with their combobulate
+;; equivalent:
+
+;; - M-w :: combobulate-mark-node-dwim
+;; - M-t :: combobulate-transpose-sexps
 
 (use-package combobulate
   :straight (combobulate :type git :host github :repo "mickeynp/combobulate")
@@ -7547,17 +7534,39 @@ This happens to me on org-buffers, xwidget-at tries to get
          (json-ts-mode . combobulate-mode)
          (typescript-ts-mode . combobulate-mode)
          (tsx-ts-mode . combobulate-mode))
+  :general
+  (:keymaps 'combobulate-key-map :states '(normal insert)
+   "M-w" #'combobulate-mark-node-dwim)
+  (:keymaps 'combobulate-key-map :states '(insert)
+   "M-t" #'combobulate-transpose-sexps)
+  :custom
+  ;; Numeric selection is confusing
+  (combobulate-proffer-allow-numeric-selection nil)
   :config
-  ;; Use combobulate instead of expand-region when possible.
-  (define-key combobulate-key-map (kbd "M-w") #'combobulate-mark-node-dwim)
-  (general-def :keymaps 'combobulate-key-map :states '(normal insert)
-    "M-w" #'combobulate-mark-node-dwim)
   (define-advice combobulate-mark-node-dwim (:before (&rest _) visual-mode)
     "Activate visual mode before marking."
     (evil-visual-char)))
 
+;; The reason I use a very little subset of these packages is that I
+;; already use evil-mode and it's editing capabilities cover most of
+;; the feature set provided by puni and combobulate.
+
+;;;;; writeroom-mode
+
+;; Gives you a nice, uncluttered editing experience by removing all
+;; unneeded visual clutter and by justifying the text in the middle.
+
+(use-package writeroom-mode
+  :commands writeroom-mode
+  :config
+  (setq writeroom-fullscreen-effect 'maximized)
+  (setq writeroom-global-effects nil)
+  (setq writeroom-mode-line-toggle-position 'header-line-format)
+  (setq writeroom-width 81))
+
 
 ;;;; Dummy IDE mode
+
 ;; I try to use ~lsp-mode~ and other language-specific packages for
 ;; the languages I use (see [[Language specific]]), but sometimes
 ;; either they are too slow or the computer I'm currently working on
