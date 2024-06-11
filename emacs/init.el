@@ -4733,54 +4733,30 @@ of that revision."
                           (magit-diff-added . default)
                           (magit-diff-added-highlight . default)))))
 
-;;;;; git-gutter
+;;;;; diff-hl (git gutter alternative)
 
 ;; Highlights changed lines in git. You can also stage hunks directly
 ;; in the buffer.
 
-(use-package git-gutter
-  :hook (prog-mode . git-gutter-mode)
+;; I used to use `git-gutter' but it adds lots of advices and clashes
+;; with my configuration.  diff-hl is a better maintained alternative.
+
+(use-package diff-hl
+  :straight (:host github :repo "dgutov/diff-hl")
+  :hook
+  ((prog-mode . diff-hl-mode)
+   (diff-hl-mode . diff-hl-flydiff-mode))
   :custom
-  (git-gutter:update-interval 2)
-  :config
+  (diff-hl-show-staged-changes nil)
+  :general
   (im-leader-v
-    "Gn" #'git-gutter:next-hunk
-    "Gp" #'git-gutter:previous-hunk
-    "Gs" #'im-git-stage-region
-    "Gr" #'git-gutter:revert-hunk)
-
-  (im-make-repeatable "git-gutter"
-    "n" git-gutter:next-hunk
-    "N" git-gutter:previous-hunk
-    "p" git-gutter:previous-hunk))
-
-;; Add ability to stage all hunks in the region. I use this in
-;; combination with `im-git-commit' to streamline committing even more.
-;; Source: https://emacs.stackexchange.com/a/29246
-(defun im-git-stage-region ()
-  "Stage every hunk in selected region.
-If nothing is selected, then simply stage the hunk at point."
-  (interactive)
-  (if (not (use-region-p))
-      (git-gutter:stage-hunk)
-    (let ((git-gutter:ask-p nil)
-          (start (region-beginning))
-          (end (region-end)))
-      (deactivate-mark)
-      (save-excursion
-        (goto-char start)
-        (git-gutter:next-hunk 1)
-        (while (and (< (point) end)
-                    (> (point) start))
-          (git-gutter:stage-hunk)
-          ;; This is a hack to wait for git-gutter to finish
-          ;; updating information (git-gutter kicks
-          ;; of a process to update the diff information
-          ;; and does not block)
-          (while (get-buffer (git-gutter:diff-process-buffer (git-gutter:base-file)))
-            (sit-for 0.05))
-          (git-gutter:next-hunk 1))))))
-
+    "g[" #'diff-hl-previous-hunk
+    "g]" #'diff-hl-next-hunk
+    "g{" #'diff-hl-show-hunk-previous
+    "g}" #'diff-hl-show-hunk-next
+    ;; FIXME: This does not work on region (can not apply the hunk for some reason?)
+    "gS" #'diff-hl-stage-dwim
+    "gr" #'diff-hl-revert-hunk))
 
 ;;;;; forge
 
