@@ -4746,6 +4746,8 @@ of that revision."
 
 (use-package git-gutter
   :hook (prog-mode . git-gutter-mode)
+  :custom
+  (git-gutter:update-interval 2)
   :config
   (im-leader-v
     "Gn" #'git-gutter:next-hunk
