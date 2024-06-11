@@ -10119,7 +10119,7 @@ something.")
 (defmemoizefile im-jira-get-users () "~/.emacs.d/jira-user-cache"
   (mapcar
    (lambda (project) (cons project (jiralib2-get-users project)))
-   (mapcar #'car im-jira-projects)))
+   im-jira-projects))
 
 (defun im-jira--select-user ()
   (thread-last
@@ -10132,7 +10132,7 @@ something.")
 (defun im-jira--select-project ()
   "Interactively select one of enrolled projects."
   (if (eq (length im-jira-projects) 1)
-      (caar im-jira-projects)
+      (car im-jira-projects)
     (completing-read "Select project: " im-jira-projects)))
 
 (defun im-jira--select-issue-type ()
@@ -10348,9 +10348,16 @@ story points they have released. See the following figure:
   (with-current-buffer (get-buffer-create "*jira: current-sprint-by-points*")
     (erase-buffer)
     (org-mode)
+    (org-dblock-write:jira-sprint im-jira-projects)
+    (goto-char (point-min))
+    (switch-to-buffer (current-buffer))))
+
+(defun org-dblock-write:jira-sprint (params)
+  "Dynamic block version of `im-jira-list-current-sprint-assignee-swimlane'."
+  (let ((projects (plist-get params :projects)))
     (insert "| Assignee | Total | Done | Sub-total | Status | Issue |\n|-\n")
     (->>
-     (im-jira-get-current-sprint-issues)
+     (im-jira-get-current-sprint-issues projects)
      ;; (--filter (let-alist it .fields.assignee.name))
      (--group-by (let-alist it .fields.assignee.name))
      (map-apply
@@ -10386,9 +10393,7 @@ story points they have released. See the following figure:
                             (plist-get it :tasks)))))
      (s-join "\n|-\n")
      (insert))
-    (org-table-align)
-    (goto-char (point-min))
-    (switch-to-buffer (current-buffer))))
+    (org-table-align)))
 
 (defun im-jira-create-quick-issue (arg)
   "Quickly create an issue and act on it.
