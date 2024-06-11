@@ -153,6 +153,8 @@
        (async-await--awaiter
         (funcall (iter2-lambda () ,exps))))))
 
+;; TODO: Add some primitives with async
+
 ;;;;;; emacs-async
 
 ;; To be able execute elisp asynchronously. Of course this has lot's
@@ -1883,14 +1885,6 @@ side window the only window'"
   (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
   (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org))
-
-  ;; TODO Remove when upstream fixes this
-  ;; https://github.com/minad/consult/issues/563#issuecomment-1186612641
-  (defun org-show-entry-consult-a (fn &rest args)
-    (when-let ((pos (apply fn args)))
-      (org-fold-show-entry)))
-  (advice-add 'consult-line :around #'org-show-entry-consult-a)
-  (advice-add 'consult-org-heading :around #'org-show-entry-consult-a)
 
   (add-to-list 'org-link-abbrev-alist '("imdb" . "https://www.imdb.com/title/%s"))
   (add-to-list 'org-link-abbrev-alist '("yt" . "https://youtu.be/%s"))
@@ -6552,7 +6546,7 @@ properly in MacOS."
                   (team (slack-buffer-team buf))
                   (room (slack-buffer-room buf))
                   (message (slack-room-find-message room (slack-get-ts))))
-                 (slack-message-to-string message team)))
+      (slack-message-to-string message team)))
 
 (defun im-slack-open-link (link)
   (interactive
@@ -6948,7 +6942,6 @@ Also removes the answers, if user wants it."
 
 ;; - tmr :: To quickly define a timer, without any description.
 ;; - tmr-with-details :: Define a timer with description, also asks if you need acknowledgment. Acknowledgment is useful in a sense that you can re-schedule the timer if you need it. It will ask you to write ~ack~ when the time is up, if you are not ready, you can re-schedule the timer with the same notation you use while creating it which is super convenient.
-
 
 (use-package tmr
   :defer t
@@ -9691,10 +9684,10 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
 
 (defun im-print-buffer-file-info (&optional kill-file-path)
   (interactive "P")
-  (cl-flet ((prop (x) (propertize x 'face '(:foreground "plum" :slant italic)))
-            (plum (x) (propertize x 'face '(:foreground "plum")))
+  (cl-flet ((prop (x) (propertize x 'face '(:foreground "systemPurpleColor" :slant italic)))
+            (plum (x) (propertize x 'face '(:foreground "systemPurpleColor")))
             (bold (x) (propertize x 'face 'bold))
-            (yellow (x) (propertize (if (numberp x) (number-to-string x) x) 'face '(:foreground "yellow")))
+            (yellow (x) (propertize (if (numberp x) (number-to-string x) x) 'face '(:foreground "systemOrangeColor")))
             (italic (x) (propertize x 'face '(:slant italic))))
     (let* ((region? (use-region-p))
            (point-min (if region? (region-beginning) (point-min)))
@@ -9706,7 +9699,7 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
            (in-git? (file-exists-p (expand-file-name ".git" (im-current-project-root))))
            (text
             (format
-             "[%s] %s\n%s\n%s\n%s\n%s%s\n%s\n%s%s%s"
+             "[%s] %s\n%s\n%s\n%s\n%s%s\n%s\n%s%s%s%s"
              (bold proj-name)
              (plum (string-remove-prefix proj-path fpath))
              (if region? "*region*" "")
@@ -9721,15 +9714,18 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
               (prop "Chars")
               (yellow (- point-max point-min)))
              (format "%s: %s" (prop "- Major Mode") major-mode)
+             (if in-git? (format "%s: %s" (prop "- Current branch") (bold (lab-git-current-branch))) "")
+             (concat "\n" (im-read-time) "\n")
              (if in-git?
-                 (format "%s: %s\n%s"
-                         (prop "- Current branch") (bold (lab-git-current-branch))
-                         (ansi-color-apply (shell-command-to-string (format "git -c color.ui=always status %s" fpath))))
-               (italic "- Not in a git repository."))
-             (concat "\n" (im-read-time))
-             "\n\n"
+                 (concat (bold "\nGit Status: \n") (ansi-color-apply (shell-command-to-string (format "git -c color.ui=always status %s" fpath))))
+               (italic "\n Not in a git repository."))
+             "\n"
              (if in-git?
-                 (ansi-color-apply (shell-command-to-string (format "git diff --color=always %s" fpath)))
+                 (let* ((diff (ansi-color-apply (shell-command-to-string (format "git diff --color=always %s" fpath))))
+                        (len (or (-some->> (s-split "\n" diff) (car) (length)) 0)))
+                   (concat
+                    "\n" (s-repeat len "─") "\n\n"
+                    diff))
                ""))))
       (im-peek
        (lambda ()
@@ -10490,15 +10486,7 @@ When CMD finishes, FN is called with the process output."
    (lambda (proc text)
      ;; Try sending notification through termux if gotify fails
      (unless (eq (process-exit-status proc) 0)
-       (im-send-termux-command-async
-        "termux-notification"
-        (lambda (_out) ">> Sent notification to phone.")
-        "--title"
-        title
-        "--content"
-        (or content "")
-        "--action"
-        (format "termux-open %s" url-to-open))))))
+       (error "Failed to send message through `gotify'.")))))
 
 (defun im-send-text-to-my-phone (text)
   "Send TEXT to my phones clipboard. This only works if the phone
@@ -12331,6 +12319,7 @@ WHERE is interpreted as a file name."
     (shell-command cmd)))
 
 ;;;;; macOS calendar functions
+
 ;; My work computer is a Mac. I synchronize my work calendar into my
 ;; local by using macOS' Calendar app and I utilize
 ;; [[https://hasseg.org/icalBuddy/][icalBuddy]] to interact with that
@@ -12359,6 +12348,8 @@ WHERE is interpreted as a file name."
    :on-finish (lambda (&rest _)
                 (outline-mode)
                 (setq-local outline-regexp "• ")
+                (setq-local outline-level #'outline-level)
+                (im-calendar-mode)
                 (goto-char (point-min))
                 (outline-cycle-buffer))
    :buffer-name "*calendar-today*"))
