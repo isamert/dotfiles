@@ -4740,16 +4740,17 @@ of that revision."
                           (magit-diff-added-highlight . default)))))
 
 ;;;;; git-gutter
+
 ;; Highlights changed lines in git. You can also stage hunks directly
 ;; in the buffer.
 
 (use-package git-gutter
   :hook (prog-mode . git-gutter-mode)
   :config
-  (im-leader
+  (im-leader-v
     "Gn" #'git-gutter:next-hunk
     "Gp" #'git-gutter:previous-hunk
-    "Gs" #'git-gutter:stage-hunk
+    "Gs" #'im-git-stage-region
     "Gr" #'git-gutter:revert-hunk)
 
   (im-make-repeatable "git-gutter"
@@ -4761,25 +4762,28 @@ of that revision."
 ;; combination with `im-git-commit' to streamline committing even more.
 ;; Source: https://emacs.stackexchange.com/a/29246
 (defun im-git-stage-region ()
-  "Stage every hunk in selected region."
+  "Stage every hunk in selected region.
+If nothing is selected, then simply stage the hunk at point."
   (interactive)
-  (let ((git-gutter:ask-p nil)
-        (start (region-beginning))
-        (end (region-end)))
-    (deactivate-mark)
-    (save-excursion
-      (goto-char start)
-      (git-gutter:next-hunk 1)
-      (while (and (< (point) end)
-                  (> (point) start))
-        (git-gutter:stage-hunk)
-        ;; This is a hack to wait for git-gutter to finish
-        ;; updating information (git-gutter kicks
-        ;; of a process to update the diff information
-        ;; and does not block)
-        (while (get-buffer (git-gutter:diff-process-buffer (git-gutter:base-file)))
-          (sit-for 0.05))
-        (git-gutter:next-hunk 1)))))
+  (if (not (use-region-p))
+      (git-gutter:stage-hunk)
+    (let ((git-gutter:ask-p nil)
+          (start (region-beginning))
+          (end (region-end)))
+      (deactivate-mark)
+      (save-excursion
+        (goto-char start)
+        (git-gutter:next-hunk 1)
+        (while (and (< (point) end)
+                    (> (point) start))
+          (git-gutter:stage-hunk)
+          ;; This is a hack to wait for git-gutter to finish
+          ;; updating information (git-gutter kicks
+          ;; of a process to update the diff information
+          ;; and does not block)
+          (while (get-buffer (git-gutter:diff-process-buffer (git-gutter:base-file)))
+            (sit-for 0.05))
+          (git-gutter:next-hunk 1))))))
 
 
 ;;;;; forge
