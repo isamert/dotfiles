@@ -1608,7 +1608,7 @@ side window the only window'"
   :after evil
   :general
   (:states '(normal visual) :keymaps 'evil-mc-key-map
-   "gr" nil
+   "gc" nil
    ;; Add my bindings using "gc"
    "gcc" #'evil-mc-undo-all-cursors
    "gcp" #'evil-mc-pause-cursors
@@ -4585,11 +4585,10 @@ anchor points in the buffer."
   :demand t
   :general
   (im-leader
-    "gS" #'magit-status
+    "ga" #'magit-status
     "gf" #'magit-file-dispatch
     "gp" #'vc-pull
     "gP" #'magit-push
-    "gr" #'magit-reset
     "gB" #'vc-annotate ;; Git Blame
     "gR" #'vc-refresh-state
     "gbc" #'vc-create-branch
@@ -7465,12 +7464,12 @@ This happens to me on org-buffers, xwidget-at tries to get
          :render (gts-buffer-render))))
 
 ;;;;; jinx -- spellchecker, flyspell alternative
+
 ;; I was using ~flyspell~ and ~flyspell-correct~ before but Jinx works
 ;; much better & faster out-of-the-box. It automatically works nicely
 ;; in code buffers too!
 
 ;; You need to install ~enchant~ to make Jinx work (and compile).
-
 
 (use-package jinx
   :hook (emacs-startup . global-jinx-mode)
@@ -9875,7 +9874,7 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
 (defvar im-git-main-branch "master"
   "Main branch name.")
 
-(defvar im-jira-projects '(("AI" "SAT"))
+(defvar im-jira-projects '("AI" "SAT")
   "List of projects that I enrolled in JIRA.")
 
 (defvar im-jira-base-branch "origin/master"
@@ -9927,17 +9926,19 @@ something.")
   (interactive (list (read-string "Enter JQL: " "text ~ \"...\" AND statusCategory = \"To Do|In Progress|Done\"")) "sEnter JQL: ")
   (jiralib2-jql-search jql))
 
-(defmemoize im-jira-get-current-sprint-issues ()
+(defun im-jira-get-current-sprint-issues (&optional projects)
+  "Get current sprint issues for all PROJECTS.
+If PROJECTS is nil, then `im-jira-projects' is used."
   (let ((issues '()))
     (mapc
      (lambda (project)
        (setq
         issues
         (thread-last (format "project = \"%s\" AND Sprint in openSprints()"
-                             (car project) (car project) (cdr project))
-                     (jiralib2-jql-search)
-                     (append issues))))
-     im-jira-projects)
+                   project)
+           (jiralib2-jql-search)
+           (append issues))))
+     (or projects im-jira-projects))
     issues))
 
 (defun im-jira-get-new-issues ()
@@ -9946,10 +9947,11 @@ something.")
      (lambda (project)
        (setq
         issues
-        (thread-last (format "project = \"%s\" AND created > -10d"
-                             (car project))
-                     (jiralib2-jql-search)
-                     (append issues))))
+        (thread-last
+          (format "project = \"%s\" AND created > -10d"
+                  project)
+          (jiralib2-jql-search)
+          (append issues))))
      im-jira-projects)
     issues))
 
@@ -12232,9 +12234,9 @@ WHERE is interpreted as a file name."
 (im-leader-v
   "n" #'im-narrow-dwim
   "N" (im-eval-dwim
-       #'ni-narrow-to-defun-indirect-other-window
+       #'ni-narrow-to-page-indirect-other-window
        #'ni-narrow-to-region-indirect-other-window
-       #'ni-narrow-to-page-indirect-other-window))
+       #'ni-narrow-to-defun-indirect-other-window))
 
 (defun im-narrow-dwim ()
   "Smart narrowing."
@@ -13545,7 +13547,8 @@ Call CALLBACK when successful."
      (lambda (proc event)
        (if (eq (process-exit-status proc) 0)
            (funcall callback)
-         (user-error ">> Failed to apply the diff!"))))))
+         (user-error ">> Failed to apply the diff! exitCode=%s"
+                     (process-exit-status proc)))))))
 
 (cl-defun im-git-stage-hunk-or-file (&optional reverse callback)
   "Stage the currently selected hunk or file."
