@@ -130,7 +130,7 @@
   (lab-github-pull-request-select-and-act-on
    ;; TODO: Get all, not only open issues
    ;; &state=open
-   (lab-github-request (format "repos/%s/issues?per_page=100" full-repo-name))))
+   (lab-github-request (format "repos/%s/issues?per_page=100&state=all" full-repo-name))))
 
 ;;; Pull requests & Issues
 
@@ -139,16 +139,27 @@
   :formatter
   (lambda (it)
     (let-alist it
-      (format "%s%-5s [%-10s] - %s, by %s"
-              (format "%-20s → " (format "%s#%s" (or .repository "") .number))
-              (if (s-matches? "/issues/" .html_url) "[ISSUE]" "[PR]")
+      (format "%s%-5s %-7s [%-10s] - %s, by %s"
+              (format "%-20s → " (format "%s#%s" (or .repository
+                                                     .full_name
+                                                     (nth 1 (s-split "/repos/" (or .repository_url "")))
+                                                     "") .number))
+              (format "%-5s"
+                      (if (s-matches? "/issues/" .html_url)
+                          (propertize "ISSUE" 'face '(:foreground "systemOrangeColor"))
+                        (propertize "PR" 'face '(:foreground "systemBlueColor"))))
+              (propertize (upcase .state) 'face `(:foreground ,(pcase .state
+                                                                 ("open" "systemGreenColor")
+                                                                 ("closed" "systemBrownColor"))))
               (substring .created_at 0 10)
-              .title
+              (propertize .title 'face 'bold)
               ;; graphql response → .author
               ;; rest response → .user
-              (if (and .author (not (equal .author :null)))
-                  (alist-get 'login .author)
-                .user.login))))
+              (propertize
+               (if (and .author (not (equal .author :null)))
+                   (alist-get 'login .author)
+                 .user.login)
+               'face 'italic))))
   :keymap
   ((?v "View"
        (let-alist it
@@ -428,37 +439,39 @@ This assumes that this function is called on the button itself."
    :success
    (lambda (data)
      (lab-github-pull-request-select-and-act-on
-      (let-alist data
-        (-mapcat
-         (lambda (node)
-           (let-alist node
-             (seq-concatenate
-              'list
-              ;; Issues
-              (--filter
-               (not (-contains?
-                     lab-github-open-issues-projects-blacklist
-                     (alist-get 'repository it)))
-               `(,@(--map `(,@it
-                            (html_url . ,(im-s-interpolated "https://github.com/#{lab-github-user}/#{(alist-get 'name node)}/issues/#{(alist-get 'number it)}"))
-                            (comments_url . ,(im-s-interpolated "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}/issues/#{(alist-get 'number it)}/comments"))
-                            (created_at . ,(alist-get 'createdAt it))
-                            (repository_url . ,(im-s-interpolated "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}"))
-                            (repository . ,(alist-get 'name node)))
-                          .issues.nodes)))
-              ;; Pull Requests
-              (--filter
-               (not (-contains?
-                     lab-github-open-issues-projects-blacklist
-                     (alist-get 'repository it)))
-               `(,@(--map `(,@it
-                            (html_url . ,(im-s-interpolated "https://github.com/#{lab-github-user}/#{(alist-get 'name node)}/pulls/#{(alist-get 'number it)}"))
-                            (comments_url . ,(im-s-interpolated "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}/issues/#{(alist-get 'number it)}/comments"))
-                            (created_at . ,(alist-get 'createdAt it))
-                            (repository_url . "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}")
-                            (repository . ,(alist-get 'name node)))
-                          .pullRequests.nodes))))))
-         .data.user.repositories.nodes))))
+      (--sort
+       (string> (alist-get 'created_at it) (alist-get 'created_at other))
+       (let-alist data
+         (-mapcat
+          (lambda (node)
+            (let-alist node
+              (seq-concatenate
+               'list
+               ;; Issues
+               (--filter
+                (not (-contains?
+                      lab-github-open-issues-projects-blacklist
+                      (alist-get 'repository it)))
+                `(,@(--map `(,@it
+                             (html_url . ,(im-s-interpolated "https://github.com/#{lab-github-user}/#{(alist-get 'name node)}/issues/#{(alist-get 'number it)}"))
+                             (comments_url . ,(im-s-interpolated "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}/issues/#{(alist-get 'number it)}/comments"))
+                             (created_at . ,(alist-get 'createdAt it))
+                             (repository_url . ,(im-s-interpolated "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}"))
+                             (repository . ,(alist-get 'name node)))
+                           .issues.nodes)))
+               ;; Pull Requests
+               (--filter
+                (not (-contains?
+                      lab-github-open-issues-projects-blacklist
+                      (alist-get 'repository it)))
+                `(,@(--map `(,@it
+                             (html_url . ,(im-s-interpolated "https://github.com/#{lab-github-user}/#{(alist-get 'name node)}/pulls/#{(alist-get 'number it)}"))
+                             (comments_url . ,(im-s-interpolated "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}/issues/#{(alist-get 'number it)}/comments"))
+                             (created_at . ,(alist-get 'createdAt it))
+                             (repository_url . "https://api.github.com/repos/#{lab-github-user}/#{(alist-get 'name node)}")
+                             (repository . ,(alist-get 'name node)))
+                           .pullRequests.nodes))))))
+          .data.user.repositories.nodes)))))
    :error (lambda (data) (message "NO! %s" data))))
 
 (defun lab-github--get-author-login (author)
