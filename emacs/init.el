@@ -224,16 +224,49 @@ the keys before matching, if present."
        pair))
    list))
 
-(defun im-region-or (what)
+(defun im-region-or (what &optional alternative)
   "Return currently selected string or WHAT-at-point string.
 WHAT can be \\='symbol \\='word or a function that returns string
-etc."
-  (cond
-   ((use-region-p) (buffer-substring-no-properties (region-beginning) (region-end)))
-   ((equal what 'string) (read-string "Enter value: "))
-   ((functionp what) (funcall what))
-   ((symbolp what) (thing-at-point what t))
-   (t what)))
+etc.
+
+If WHAT is \\='string, then when no region is found user is
+prompted with `read-string'.
+
+If WHAT is a literal string, then it's treated as an argument to
+`skip-chars-forward' and `skip-chars-forward'.
+
+If ALTERNATIVE is non-nil, then if the result of WHAT returns nil
+then `im-region-or' is called with ALTERNATIVE.  A useful example
+would be providing \\='string as ALTERNATIVE so that if a match
+not found with WHAT, then it is requested from the user."
+  (let ((result (cond
+                 ((use-region-p) (buffer-substring-no-properties (region-beginning) (region-end)))
+                 ((equal what 'string) (read-string "Enter value: "))
+                 ((functionp what) (funcall what))
+                 ((symbolp what) (thing-at-point what t))
+                 ((stringp what)
+                  (save-excursion
+                    (let* ((start (progn (skip-chars-backward "0-9") (point)))
+                           (end (progn (skip-chars-forward "0-9") (point)))
+                           (x (buffer-substring-no-properties start end)))
+                      (if (s-blank? x) nil x))))
+                 (t what))))
+    (if result
+        result
+      (if alternative
+          (im-region-or alternative)
+        result))))
+
+(defun get-integer-at-cursor ()
+  "Get the integer at the cursor."
+  (save-excursion
+    (let ((start (progn (skip-chars-backward "0-9") (point)))
+          (end (progn (skip-chars-forward "0-9") (point))))
+      (string-to-number (buffer-substring start end)))))
+
+(skip-chars-backward "[0-9]")
+
+123452
 
 (defun im-inner-back-quote-at-point ()
   "Return text inside the back quotes at point."
