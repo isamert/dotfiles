@@ -25,9 +25,6 @@
 
 ;;; Commentary:
 
-;; FIXME src nginx'te hata aliyor mesela fonksiyon not defined diye.
-
-
 ;; TODO add commentary
 
 ;;;; Installation
@@ -250,7 +247,8 @@ you don't get many false positives.
 
 These completions are annotated as \"doc\"."
   (-let* ((fn-name (im-org-complete--build-fn-name what block-type))
-          (doc (documentation (intern fn-name))))
+          (doc (ignore-errors
+                 (documentation (intern fn-name)))))
     (--map
      (cons
       it
@@ -387,7 +385,8 @@ These completions are annotated as \"native\"."
        "⇒ "
        fn-name
        "\n"
-       (documentation (intern fn-name))))))
+       (ignore-errors
+         (documentation (intern fn-name)))))))
 
 ;;;; Footer
 
