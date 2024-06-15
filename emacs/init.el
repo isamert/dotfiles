@@ -1608,7 +1608,8 @@ side window the only window'"
   :after evil
   :general
   (:states '(normal visual) :keymaps 'evil-mc-key-map
-   "gc" nil
+   ;; Clear default evil-mc bindings
+   "gr" nil
    ;; Add my bindings using "gc"
    "gcc" #'evil-mc-undo-all-cursors
    "gcp" #'evil-mc-pause-cursors
@@ -1877,6 +1878,9 @@ side window the only window'"
   (setq org-habit-show-habits nil)
   ;; ^ Speeds up agenda a bit
   (setq org-edit-src-content-indentation 0)
+  ;; ^ No indentation for src blocks
+  (setq org-cycle-include-plain-lists 'integrate)
+  ;; ^ Also toggle visibility of plain list with TAB etc. like they are subheadings
 
   ;; Put archive files under an archive/ directory
   ;; I don't want them to pollute my directory
@@ -4791,7 +4795,6 @@ of that revision."
 
 ;; - =s= for jumping to beginning of a word
 ;; - =S= for jumping any part of the text
-;; - =gl= for going into beginning of a line
 
 (use-package avy
   :commands (avy-goto-subword-1 avy-goto-word-1)
@@ -5529,6 +5532,7 @@ When ARG is non-nil, query the whole workspace/project."
   (setq corfu-cycle t)
   (setq corfu-auto t)
   (setq corfu-auto-prefix 2)
+  (setq corfu-auto-delay 0.4)
   (global-corfu-mode))
 
 ;; This is useful because sometimes I just want to collect list of
@@ -7507,7 +7511,7 @@ This happens to me on org-buffers, xwidget-at tries to get
   (:keymaps 'prog-mode-map :states '(insert)
    "M-[" #'puni-barf-forward
    "M-]" #'puni-slurp-forward
-   "M-k" #'puni-splice
+   "M-d" #'puni-splice
    "M-t" #'puni-transpose))
 
 ;; `combobulate' provides structural editing for some languages using
