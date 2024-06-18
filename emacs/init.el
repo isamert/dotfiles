@@ -3931,7 +3931,7 @@ Return parsed seconds from users answer."
       ("tL" global-tab-line-mode "Tab Line mode (global)" :toggle t)
       ("tb" tab-bar-mode "Tab Bar mode (global)" :toggle t))
      "Highlighting"
-     (("hg" git-gutter-mode "Highlight git diff" :toggle t)
+     (("hg" diff-hl "Highlight git diff" :toggle t)
       ("hd" rainbow-delimiters-mode "Rainbow parens" :toggle t)
       ("hl" global-hl-line-mode "Highlight current line" :toggle t)
       ("hb" beacon-mode "Cursor trailer (baecon)" :toggle t)
@@ -13968,31 +13968,6 @@ Return old message."
        (outline-show-all)
        (outline-hide-body))
   "3" #'outline-show-all)
-
-;;;;; Extras
-
-(async-defun im-git-gutter-refresh-after-commit ()
-  "Refresh git-gutter for each file affected by the last commit.
-If you stage with `im-git-status', this is not needed because it
-directly edits the buffer, hence triggers `git-gutter' but
-`im-git-commit' can also stage files using git directly and this
-is where it's needed."
-  (interactive)
-  (--each (->>
-           (lab--git "log" "-1" "--pretty=format:%h")
-           (await)
-           (lab--git "diff-tree" "--no-commit-id" "--name-only" "-r")
-           (await)
-           (s-split "\n")
-           (--filter (not (s-blank? it)))
-           (-non-nil))
-    (and-let* ((buff (find-buffer-visiting (f-join (im-current-project-root) it))))
-      (with-current-buffer buff
-        (git-gutter)))))
-
-(add-hook
- 'im-git-commit-finished-hook
- #'im-git-gutter-refresh-after-commit)
 
 ;;;; Operating system related
 ;;;;; Sound/audio output chooser
