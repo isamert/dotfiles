@@ -2098,6 +2098,7 @@ side window the only window'"
 ;;  emacs-lisp shell scheme python verb http R haskell js sql dot gnuplot plantuml)
 
 ;;;;;; Helper functions
+
 ;; Some codeblocks produce image files as it's result (like dot
 ;; language). Re-executing these blocks removes the image
 ;; overlay. With this hook images are automatically updated after
@@ -2110,15 +2111,25 @@ side window the only window'"
   "Tangle the current source block and all other related
 blocks (the ones that tangles into the same file).
 
-This function also works inside `org-edit-special' buffers."
+This function also works inside `org-edit-special' buffers and
+does not disrupt the current window configuration."
   (interactive)
   (let ((src-edit? (org-src-edit-buffer-p))
+        buffer pos
         (current-prefix-arg '(16)))
     ;;     ^ '(4) only tangles current file, '(16) tangles all code
     ;;     blocks related to current tangle file target
-    (when src-edit? (org-edit-src-exit))
-    (call-interactively 'org-babel-tangle)
-    (when src-edit? (org-edit-special))))
+    (save-window-excursion
+      (when src-edit? (org-edit-src-exit))
+      (setq buffer (current-buffer))
+      (setq pos (point))
+      (call-interactively 'org-babel-tangle))
+    (when src-edit?
+      (let ((org-src-window-setup 'current-window))
+        (with-current-buffer buffer
+          (save-excursion
+            (goto-char pos)
+            (org-edit-special)))))))
 
 ;; https://emacs.stackexchange.com/questions/23870/org-babel-result-to-a-separate-buffer/27190#27190
 (defun im-org-babel-result-to-buffer ()
@@ -5797,7 +5808,6 @@ symbol."
             (message "Using emacs-lsp-booster for %s!" orig-result)
             (cons "emacs-lsp-booster" orig-result))
         orig-result))))
-
 
 (defun im-lsp-mode-setup-orderless-completion ()
   (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
