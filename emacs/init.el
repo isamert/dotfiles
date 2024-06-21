@@ -8523,6 +8523,10 @@ This is used in my snippets."
   (let ((lsp-enabled-clients '(deno-ls)))
     (ignore-errors
       (funcall-interactively #'lsp-workspace-shutdown))
+    (let ((default-directory (im-current-project-root))
+          (fname "deno.json"))
+      (unless (file-exists-p fname)
+        (with-temp-buffer (write-file fname))))
     (lsp)))
 
 (defun im-lsp-switch-to-nodejs ()
