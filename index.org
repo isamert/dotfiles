@@ -195,39 +195,112 @@ Here is a [[https://gist.github.com/miclf/bf4b0cb6de9ead726197db7ed3d937b5][grea
   }
 #+end_src
 
-** yabai
-This is the window manager I use in OSX. It's pretty much like BSPWM. [[https://github.com/koekeishiya/yabai/blob/master/examples/yabairc][Here]] is an example configuration. I don't use the "scripting addition" due to company restrictions.
+** aerospace
 
-Installation and enabling are done through homebrew:
+I used to use [[https://github.com/koekeishiya/yabai][yabai]] but my main pain point was the virtual desktops. [[https://nikitabobko.github.io/AeroSpace][Aerospace]] fixes it completely and it's more responsive.
 
 #+begin_src sh
-  brew install koekeishiya/formulae/yabai
-  yabai --install-service
-  yabai --start-service
+brew install --cask nikitabobko/tap/aerospace
 #+end_src
 
-#+begin_src sh :tangle (when-darwin "~/.config/yabai/yabairc")
-  #!/bin/bash
+#+begin_src toml :tangle (when-darwin "~/.aerospace.toml")
+# https://nikitabobko.github.io/AeroSpace/guide
+# https://nikitabobko.github.io/AeroSpace/commands
 
-  yabai -m config mouse_follows_focus  on
-  yabai -m config layout               bsp
-  yabai -m config window_gap           6
+after-login-command = []
+after-startup-command = []
+start-at-login = true
+enable-normalization-flatten-containers = true
+enable-normalization-opposite-orientation-for-nested-containers = true
+accordion-padding = 30
+default-root-container-layout = 'tiles'
+default-root-container-orientation = 'auto'
+key-mapping.preset = 'qwerty'
 
-  # With this, you can resize/move windows by using mouse.
-  # Possibly a bad idea to set modifier to cmd but it feels natural,
-  # will see the effects. I don't use much, so it should not effect
-  yabai -m config mouse_modifier       cmd
-  yabai -m config mouse_action1        move
-  yabai -m config mouse_action2        resize
+[gaps]
+inner.horizontal = 3
+inner.vertical =   3
+outer.left =       3
+outer.bottom =     3
+outer.top =        3
+outer.right =      3
 
-  yabai -m rule --add app=CopyQ  manage=off
-  yabai -m rule --add app=Emacs  manage=off
-  yabai -m rule --add app=choose manage=off
-  yabai -m rule --add app=iTerm  manage=off
+[workspace-to-monitor-force-assignment]
+1 = 'main'
+2 = 'main'
+3 = 'main'
+4 = 'main'
+5 = 'main'
+6 = 'main'
+7 = 'secondary'
+8 = 'secondary'
+9 = 'secondary'
+0 = 'secondary'
 
-  # yabai -m rule --add app=Emacs       space=^1
-  # yabai -m rule --add app=Firefox     space=^2
-  # yabai -m rule --add app=Zoom.us     space=^3
+# See https://nikitabobko.github.io/AeroSpace/guide#exec-env-vars
+[exec]
+inherit-env-vars = true
+
+[exec.env-vars]
+PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${HOME}/.bin:${PATH}'
+
+[mode.main.binding]
+# - Letters.        a, b, c, ..., z
+# - Numbers.        0, 1, 2, ..., 9
+# - Keypad numbers. keypad0, keypad1, keypad2, ..., keypad9
+# - F-keys.         f1, f2, ..., f20
+# - Special keys.   minus, equal, period, comma, slash, backslash, quote, semicolon, backtick,
+#                   leftSquareBracket, rightSquareBracket, space, enter, esc, backspace, tab
+# - Keypad special. keypadClear, keypadDecimalMark, keypadDivide, keypadEnter, keypadEqual,
+#                   keypadMinus, keypadMultiply, keypadPlus
+# - Arrows.         left, down, up, right
+# All possible modifiers: cmd, alt, ctrl, shift
+
+cmd-period = 'focus-monitor right'
+cmd-comma = 'focus-monitor left'
+cmd-shift-period = 'move-node-to-monitor right'
+cmd-shift-comma = 'move-node-to-monitor left'
+
+cmd-f1 = 'layout v_accordion'
+cmd-f2 = 'layout h_accordion'
+cmd-f3 = 'layout tiles horizontal vertical'
+cmd-t = 'layout floating tiling'
+
+cmd-h = 'focus --boundaries-action stop left'
+cmd-j = 'focus --boundaries-action stop down'
+cmd-k = 'focus --boundaries-action stop up'
+cmd-l = 'focus --boundaries-action stop right'
+
+cmd-shift-h = 'move left'
+cmd-shift-j = 'move down'
+cmd-shift-k = 'move up'
+cmd-shift-l = 'move right'
+
+cmd-shift-minus = 'resize smart -50'
+cmd-shift-equal = 'resize smart +50'
+
+cmd-1 = 'workspace 1'
+cmd-2 = 'workspace 2'
+cmd-3 = 'workspace 3'
+cmd-4 = 'workspace 4'
+cmd-5 = 'workspace 5'
+cmd-6 = 'workspace 6'
+cmd-7 = 'workspace 7'
+cmd-8 = 'workspace 8'
+cmd-9 = 'workspace 9'
+cmd-0 = 'workspace 0'
+
+cmd-shift-1 = 'move-node-to-workspace 1'
+cmd-shift-2 = 'move-node-to-workspace 2'
+cmd-shift-3 = 'move-node-to-workspace 3'
+cmd-shift-4 = 'move-node-to-workspace 4'
+cmd-shift-5 = 'move-node-to-workspace 5'
+cmd-shift-6 = 'move-node-to-workspace 6'
+cmd-shift-7 = 'move-node-to-workspace 7'
+cmd-shift-8 = 'move-node-to-workspace 8'
+cmd-shift-9 = 'move-node-to-workspace 9'
+
+cmd-tab = 'workspace-back-and-forth'
 #+end_src
 
 ** skhd
@@ -239,74 +312,6 @@ It can be installed through homebrew:
   brew install koekeishiya/formulae/skhd
   skhd --install-service
   skhd --start-service
-#+end_src
-
-*** Window manager
-#+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
-  # focus window
-  lcmd - h : yabai -m window --focus west
-  lcmd - l : yabai -m window --focus east
-  lcmd - j : yabai -m window --focus south
-  lcmd - k [
-    # This is currently not possible, see the following issue
-    # https://github.com/koekeishiya/skhd/issues/215
-    "raycast" ~
-    ,*  : yabai -m window --focus north
-  ]
-
-  # Focus specific apps
-
-  # Normally, I would have `lcmd - {1,2}` bound to switching to desktop
-  # 1 & 2, but this FUCKING operating system is FUCKING retarded in a
-  # way that it, for some reason, does not focus the ONLY FUCKING APP in
-  # the FUCKING desktop for some FUCKING reason and need to reach to the
-  # mouse and click on the only app that is apparent in the screen. So I
-  # simply resorted to having a dedicated shortcuts for my most used
-  # applications to directly focus them. This helps me stay sane.
-
-  lcmd - 1 : yabai -m window --focus $(yabai -m query --windows | jq '.[] | select(.app == "Emacs") | .id')
-  # lcmd - 2 : yabai -m window --focus $(yabai -m query --windows | jq '.[] | select(.app == "Firefox") | .id')
-
-  # swap managed window
-  shift + lcmd - h : yabai -m window --swap west
-  shift + lcmd - l : yabai -m window --swap east
-
-  # send window to desktop
-  shift + lcmd - 1 : yabai -m window --space 1
-  shift + lcmd - 2 : yabai -m window --space 2
-  shift + lcmd - 3 : yabai -m window --space 3
-  shift + lcmd - 4 : yabai -m window --space 4
-  shift + lcmd - 5 : yabai -m window --space 5
-  shift + lcmd - 6 : yabai -m window --space 6
-  shift + lcmd - 7 : yabai -m window --space 7
-  shift + lcmd - 8 : yabai -m window --space 8
-
-  # focus monitor
-  # lcmd + , and lcmd + .
-  lcmd - 0x2B  : yabai -m display --focus west
-  lcmd - 0x2F  : yabai -m display --focus east
-
-  # send window to monitor
-  shift + lcmd - 0x2F  : yabai -m window --display east; # yabai -m display --focus 1
-  shift + lcmd - 0x2B  : yabai -m window --display west; # yabai -m display --focus 1
-
-  # resize windows
-  lcmd + alt - l : yabai -m window --resize right:20:0
-  lcmd + alt - h : yabai -m window --resize left:-20:0
-  lcmd + alt - j : yabai -m window --resize bottom:0:20
-  lcmd + alt - k : yabai -m window --resize top:0:-20
-
-  # toggle window zoom
-  lcmd - d : yabai -m window --toggle zoom-parent
-  lcmd - f : yabai -m window --toggle zoom-fullscreen
-  shift + lcmd - f : yabai -m window --toggle native-fullscreen
-
-  # toggle window split type
-  # alt - e : yabai -m window --toggle split
-
-  # float / unfloat window and center on screen
-  lcmd - t : yabai -m window --toggle float;\
-            yabai -m window --grid 4:4:1:1:2:2
 #+end_src
 
 *** Application shortcuts

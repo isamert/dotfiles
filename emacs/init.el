@@ -6619,7 +6619,11 @@ in the DM section of the official Slack client."
                       (let ((room-name
                              (or (ignore-errors
                                    (slack-room-name (slack-room-find (plist-get it :id) team) team))
-                                 "???"))
+                                 (progn
+                                   (slack-room-list-update
+                                    nil
+                                    (lambda (_) (message ">> Re-run `im-slack-dms'")))
+                                   "???")))
                             (text (plist-get (plist-get it :message) :text)))
                         (format "%s (%s) - %s"
                                 (propertize room-name 'face '(:weight bold :foreground "systemPinkColor"))
