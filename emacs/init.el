@@ -3999,7 +3999,7 @@ Return parsed seconds from users answer."
   ;; Add a way to open dirvish in selected directory using Embark
   (:keymaps 'embark-file-map "J" #'im-dirvish)
   (:keymaps 'dirvish-mode-map :states 'normal
-   "\\"    #'dired-find-file-other-window
+   "\\"    #'im-dired-find-file-ace-window
    "h"     #'dired-up-directory
    "l"     #'dired-find-alternate-file
    "T"     #'dirvish-layout-toggle
@@ -4038,6 +4038,21 @@ Return parsed seconds from users answer."
 
 (defun im-disable-tab-line ()
   (tab-line-mode -1))
+
+(defun im-find-file-ace-window (filename &optional wildcards)
+  (interactive
+   (find-file-read-args "Find file in other window: "
+                        (confirm-nonexistent-file-or-buffer)))
+  "Edit file FILENAME, in selected window.
+
+Like \\[find-file] (which see), but uses the selected window by `ace-select-window'."
+  (select-window (ace-select-window))
+  (switch-to-buffer (find-file-noselect filename nil nil wildcards)))
+
+(defun im-dired-find-file-ace-window ()
+  "In Dired, visit this file or directory in another window."
+  (interactive)
+  (dired--find-file (if (one-window-p) #'find-file-other-window #'im-find-file-ace-window) (dired-get-file-for-visit)))
 
 ;;;;;; im-dired-rsync
 ;; Dired copies files sync. This function uses rsync to copy stuff
