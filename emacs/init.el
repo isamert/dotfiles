@@ -335,6 +335,7 @@ the memoize cache."
 
 (defmacro im-with-visible-buffer (buffer-name &rest body)
   "Evaluate BODY within the BUFFER-NAME that is currently visible."
+  (declare (indent 1))
   `(with-selected-window (selected-window)
      (when (im-select-window-with-buffer ,buffer-name)
        ,@body)))
@@ -5953,25 +5954,23 @@ appropriate in some cases like terminals."
   (interactive)
   (save-buffer)
   (or
-   (im-with-visible-buffer
-    ".*vterm.*"
-    (vterm-send-up)
-    (vterm-send-return)
-    t)
-   (im-with-visible-buffer
-    ".*e?shell.*"
-    (eshell-previous-matching-input "" 0)
-    (eshell-send-input))))
+   (im-with-visible-buffer "\\*\\$?vterm.*"
+     (vterm-send-up)
+     (vterm-send-return)
+     t)
+   (im-with-visible-buffer "\\*\\$?e?shell.*"
+     (eshell-previous-matching-input "" 0)
+     (eshell-send-input))))
 
 (defun im-run-command-on-visible-term (cmd)
   (or
-   (im-with-visible-buffer ".*vterm.*"
-                           (vterm-send-string cmd)
-                           (vterm-send-return)
-                           t)
-   (im-with-visible-buffer ".*eshell.*"
-                           (insert cmd)
-                           (eshell-send-input)))
+   (im-with-visible-buffer "\\*\\$?vterm.*"
+     (vterm-send-string cmd)
+     (vterm-send-return)
+     t)
+   (im-with-visible-buffer "\\*\\$?e?shell.*"
+     (insert cmd)
+     (eshell-send-input)))
   cmd)
 
 (defun im-send-selected-text-to-visible-term (start end)
