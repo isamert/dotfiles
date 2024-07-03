@@ -6451,9 +6451,9 @@ this command is invoked from."
 (defun im-slack-open-last-message ()
   "Open last room that got new message."
   (interactive)
-  (im-slack--open-message-or-thread (im-slack--last-message)))
+  (im-slack--open-message-or-thread (im-slack--last-message) :focus? nil))
 
-(defun im-slack--open-message-or-thread (msg)
+(cl-defun im-slack--open-message-or-thread (msg &key (focus? t))
   (let-plist msg
     (if (ignore-errors (slack-thread-message-p .message))
         (slack-thread-show-messages .message .room .team)
@@ -6461,9 +6461,10 @@ this command is invoked from."
        .room
        .team))
     ;; Focus the message on buffer
-    (run-with-timer
-     1.3 nil
-     (lambda () (slack-buffer-goto (slack-ts .message))))))
+    (when focus?
+      (run-with-timer
+       1.3 nil
+       (lambda () (slack-buffer-goto (slack-ts .message)))))))
 
 (defalias 'im-slack-recent-messages #'im-slack-last-messages)
 
@@ -6495,7 +6496,8 @@ this command is invoked from."
     "Select message: "
     im-slack--last-messages
     :sort? nil
-    :formatter #'im-slack--format-message)))
+    :formatter #'im-slack--format-message)
+   :focus? nil))
 
 (defun im-slack--format-message (it)
   (let-plist it
