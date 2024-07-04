@@ -4039,16 +4039,6 @@ Return parsed seconds from users answer."
 (defun im-disable-tab-line ()
   (tab-line-mode -1))
 
-(defun im-find-file-ace-window (filename &optional wildcards)
-  (interactive
-   (find-file-read-args "Find file in other window: "
-                        (confirm-nonexistent-file-or-buffer)))
-  "Edit file FILENAME, in selected window.
-
-Like \\[find-file] (which see), but uses the selected window by `ace-select-window'."
-  (select-window (ace-select-window))
-  (switch-to-buffer (find-file-noselect filename nil nil wildcards)))
-
 (defun im-dired-find-file-ace-window ()
   "In Dired, visit this file or directory in another window."
   (interactive)
@@ -9698,6 +9688,25 @@ SELECT * FROM _ LIMIT 1;
    "M-r" #'tabgo)
   (:states 'normal :keymaps 'evil-org-mode-keymap
    "M-r" #'tabgo))
+
+;;;;; ace-window
+
+(use-package ace-window
+  :custom
+  (aw-background nil)
+  (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
+  :config
+  (set-face-attribute 'aw-leading-char-face nil :height 3.5 :weight 'bold))
+
+(defun im-find-file-ace-window (filename &optional wildcards)
+  "Edit file FILENAME, in selected window.
+
+Like \\[find-file] (which see), but uses the selected window by `ace-select-window'."
+  (interactive
+   (find-file-read-args "Find file in other window: "
+                        (confirm-nonexistent-file-or-buffer)))
+  (select-window (ace-select-window))
+  (switch-to-buffer (find-file-noselect filename nil nil wildcards)))
 
 ;;;;; bufler
 ;; Good for buffer management, especially for groupped killings.
