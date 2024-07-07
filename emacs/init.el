@@ -7448,7 +7448,9 @@ This happens to me on org-buffers, xwidget-at tries to get
   (setq sozluk-deasciify-if-not-found t))
 
 ;; This is an optional dependency for sozluk.
-(use-package turkish :after sozluk)
+(use-package turkish
+  :general
+  (im-leader "tc" #'turkish-correct-region))
 
 ;;;;; go-translate -- Google translate
 ;; This is a quite powerful package but implemented a bit weirdly. No
