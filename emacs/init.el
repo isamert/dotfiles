@@ -1471,6 +1471,8 @@ side window the only window'"
   (setq evil-want-C-i-jump nil)
   ;; C-i is bound to TAB, so I use C-l for `evil-jump-forward'
   (evil-define-key 'normal 'global (kbd "C-l") #'evil-jump-forward)
+  (define-advice evil-jump-backward (:after (&rest _) reveal) (reveal-post-command))
+  (define-advice evil-jump-forward (:after (&rest _) reveal) (reveal-post-command))
 
   ;; When I paste something in visual mode, I don't want it to take
   ;; over the kill ring I also use evil-exchange, which eliminates the
@@ -1785,7 +1787,9 @@ side window the only window'"
 (use-package goto-chg
   :after evil
   :config
-  (define-advice evil-goto-last-change (:after (&rest _) recenter) (recenter)))
+  (define-advice evil-goto-last-change (:after (&rest _) recenter)
+    (reveal-post-command)
+    (recenter)))
 
 (im-make-repeatable evil-goto-chg
   ";" evil-goto-last-change)
@@ -1887,7 +1891,7 @@ side window the only window'"
   (setq org-image-actual-width nil)
   ;; ^ Disable showing inline images in full width. Now you can add `#+ATTR_*: :width 300` to resize inline images
   ;; (setq org-ellipsis "⤵")
-  (setq org-ellipsis "…")
+  ;; (setq org-ellipsis "…")
   ;; ^ Replace ... with … in collapsed sections
   (setq org-hide-emphasis-markers t)
   ;; Hide *...* /.../ etc.
@@ -3995,6 +3999,7 @@ Return parsed seconds from users answer."
   :general
   (im-leader
     "ed" #'dirvish-dwim
+    "fh" #'dirvish-side
     "eD" #'im-dirvish)
   ;; Add a way to open dirvish in selected directory using Embark
   (:keymaps 'embark-file-map "J" #'im-dirvish)
@@ -4805,11 +4810,17 @@ of that revision."
   (im-leader-v
     "g[" #'diff-hl-previous-hunk
     "g]" #'diff-hl-next-hunk
+    ;; FIXME: Shortcuts that appear on "show" dialog are not usable (due to evil mode?)
     "g{" #'diff-hl-show-hunk-previous
     "g}" #'diff-hl-show-hunk-next
     ;; FIXME: This does not work on region (can not apply the hunk for some reason?)
     "gS" #'diff-hl-stage-dwim
-    "gr" #'diff-hl-revert-hunk))
+    "gr" #'diff-hl-revert-hunk)
+  :config
+  (define-advice diff-hl-previous-hunk (:after (&rest _) reveal) (reveal-post-command))
+  (define-advice diff-hl-next-hunk (:after (&rest _) reveal) (reveal-post-command))
+  (define-advice diff-hl-show-hunk-previous (:after (&rest _) reveal) (reveal-post-command))
+  (define-advice diff-hl-show-hunk-next (:after (&rest _) reveal) (reveal-post-command)))
 
 ;;;;; forge
 
@@ -7664,7 +7675,9 @@ This happens to me on org-buffers, xwidget-at tries to get
                                 ("FIXME"  . "#FF0000")
                                 ("DEBUG"  . "#A020F0")
                                 ("GOTCHA" . "#FF4500")
-                                ("STUB"   . "#1E90FF"))))
+                                ("STUB"   . "#1E90FF")))
+  (define-advice hl-todo-next (:after (&rest _) reveal) (reveal-post-command))
+  (define-advice hl-todo-previous (:after (&rest _) reveal) (reveal-post-command)))
 
 ;;;;; Highlight thing at point manually
 
