@@ -3009,7 +3009,7 @@ Version: 2023-06-28
 
 (defun im-org-sort-entries-best ()
   "Best sorting mechanism for your backlog.
-Entries are sorted by priority, with least effort entries being
+Entries are sorted by priority, with most effort entries being
 on top in their priority range.  Also entries are sorted by their
 TODO state."
   (interactive)
@@ -3021,7 +3021,9 @@ TODO state."
     ;; Sort by priority
     (org-sort-entries nil ?p)
     ;; Sort by TODO state
-    (org-sort-entries nil ?o)))
+    (org-sort-entries nil ?o)
+    ;; Move non-TODO headers to top
+    (org-sort-entries nil ?F (lambda () (if (or (org-entry-is-done-p) (org-entry-is-todo-p)) -1 (- 1000 (length (org-entry-get nil "ITEM"))))))))
 
 ;;;;; Remembering to clock in
 ;; I forget to clock in (and out) most of the time, so I want Emacs to
