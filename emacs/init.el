@@ -2458,10 +2458,8 @@ This way you can insert new entry right after other non-TODO
      (?* . "•")
      (?+ . "‣")))
   (org-modern-todo-faces
-   '(("TODO" :inverse-video t :weight semibold :inherit (org-todo org-modern-label))
-     ("PROG" :inverse-video t :weight semibold :inherit (org-todo org-modern-label) :foreground "magenta1")
-     ("WAIT" :inverse-video t :weight semibold :inherit (org-todo org-modern-label) :foreground "yellow1")
-     ("DONE" :inverse-video t :weight semibold :inherit (org-todo org-modern-label) :foreground "dark gray")))
+   '(("PROG" :inherit (org-modern-label org-modern-todo) :foreground "magenta" :height 1 :weight semibold)
+     ("WAIT" :inherit (org-modern-label org-modern-todo) :foreground "magenta" :height 1 :weight semibold)))
   (org-modern-priority-faces
    '((?A :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green1")
      (?B :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green2")
