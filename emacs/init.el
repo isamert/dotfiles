@@ -1926,7 +1926,10 @@ side window the only window'"
   (setq org-directory "~/Documents/notes")
   (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
-  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org))
+
+  (setq im-org-calendar-directory (format "%s/calendars" org-directory))
+  (setq im-calendar-files (directory-files im-org-calendar-directory 'full (rx ".org" eos)))
+  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
 
   (add-to-list 'org-link-abbrev-alist '("imdb" . "https://www.imdb.com/title/%s"))
   (add-to-list 'org-link-abbrev-alist '("yt" . "https://youtu.be/%s"))
@@ -2280,6 +2283,33 @@ that is provided by ob-http."
   (setq org-agenda-use-tag-inheritance nil)
   (setq org-agenda-ignore-drawer-properties '(effort appt category))
   (evil-set-initial-state 'org-agenda-mode 'normal))
+
+;;;;; org-caldav (calendar sync)
+
+;; Sync calendars with: `org-caldav-sync'.
+
+(use-package org-caldav
+  :config
+  (setq org-caldav-url (format "%s/remote.php/dav/calendars/%s" im-nextcloud-url im-nextcloud-user))
+  (setq
+   org-caldav-calendars
+   (--map
+    (list
+     :calendar-id it
+     :inbox (format "%s/%s.org" im-org-calendar-directory it))
+    im-nextcloud-calendars))
+
+  ;; TODO: Fix the following, automatically get
+  (setq org-icalendar-timezone "Europe/Amsterdam")
+
+  ;; Set it under the notes directory so that they will be synced
+  ;; between devices
+  (setq org-caldav-save-directory "~/Documents/notes/data/")
+
+  ;; Set the following to nil, I already have set `org-caldav-calendars' above
+  (setq org-caldav-inbox nil)
+  (setq org-caldav-calendar-id nil)
+  (setq org-caldav-files nil))
 
 ;;;;; ToDo keywords & faces
 
