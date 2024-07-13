@@ -5049,12 +5049,12 @@ of that revision."
 
 ;; Other complementary packages:
 
-
 (use-package orderless
   :config
+  ;; See the following: https://github.com/minad/vertico?tab=readme-ov-file#tramp-hostname-and-username-completion
   (setq completion-styles '(orderless partial-completion basic))
   (setq completion-category-defaults nil)
-  (setq completion-category-overrides '((file (styles partial-completion)))))
+  (setq completion-category-overrides '((file (styles basic partial-completion)))))
 
 (use-package marginalia
   :config
