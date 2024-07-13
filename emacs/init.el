@@ -5415,6 +5415,25 @@ approach."
    :items    #'im-my-files)
   "My frequently accessed files source for `consult-buffer'.")
 
+;; https://github.com/minad/consult/issues/206#issuecomment-886380330
+
+(defvar im-consult-source-dired-buffers
+  `(:name     "Dired"
+    :narrow   ?d
+    :hidden   t
+    :category buffer
+    :face     dired-header
+    :state    ,#'consult--buffer-state
+    :items
+    ,(lambda ()
+       (consult--buffer-query :mode 'dired-mode
+                              :sort 'visibility
+                              :as #'buffer-name)))
+  "Dired buffer candidate source for `consult-buffer'.")
+
+(with-eval-after-load 'consult
+  (im-append! consult-buffer-sources 'im-consult-source-dired-buffers))
+
 (defun im-my-files ()
   "Return list of all files I frequently use."
   `(,@(directory-files im-scratch-project-path t)
