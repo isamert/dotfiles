@@ -2151,11 +2151,12 @@ does not disrupt the current window configuration."
     (org-redisplay-inline-images)))
 
 ;;;;;; ob-http & verb-mode
+
 ;; Http request in org-mode babel.
 ;; You can get the generated curl command after executing the code
 ;; block, from *curl command history* buffer
 (use-package ob-http
-  :straight (:host github :repo "zweifisch/ob-http")
+  :straight (:host github :repo "ag91/ob-http")
   :after org)
 
 ;; An alternative to ob-http, might be better
@@ -2488,8 +2489,8 @@ This way you can insert new entry right after other non-TODO
      (?* . "•")
      (?+ . "‣")))
   (org-modern-todo-faces
-   '(("PROG" :inherit (org-modern-label org-modern-todo) :foreground "magenta" :height 1 :weight semibold)
-     ("WAIT" :inherit (org-modern-label org-modern-todo) :foreground "magenta" :height 1 :weight semibold)))
+   '(("PROG" t :inherit (org-modern-todo) :height 1 :foreground "magenta1")
+     ("WAIT" t :inherit (org-modern-todo) :height 1 :foreground "yellow1")))
   (org-modern-priority-faces
    '((?A :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green1")
      (?B :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green2")
@@ -3069,11 +3070,13 @@ TODO state."
                    (im-completing-read
                     "Select task: "
                     (->>
-                     (org-map-entries (lambda () (let ((props (org-entry-properties)))
-                                                   (when-let* ((todo (alist-get "TODO" props nil nil #'equal))
-                                                               (_ (not (equal "DONE" todo))))
-                                                     (let ((bounds (bounds-of-thing-at-point 'line)))
-                                                       (cons (buffer-substring (car bounds) (cdr bounds)) (point)))))))
+                     (org-map-entries
+                      (lambda ()
+                        (let ((props (org-entry-properties)))
+                          (when-let* ((todo (alist-get "TODO" props nil nil #'equal))
+                                      (_ (not (equal "DONE" todo))))
+                            (let ((bounds (bounds-of-thing-at-point 'line)))
+                              (cons (buffer-substring (car bounds) (cdr bounds)) (point)))))))
                      (-filter #'identity))
                     :formatter #'car))))
         (when task
@@ -3446,6 +3449,7 @@ it's a list, the first element will be used as the binary name."
   :hook (eat-mode . im-disable-hl-line-mode-for-buffer)
   :config
   (setq eat-enable-shell-prompt-annotation nil)
+  (setq eat-shell "/bin/zsh")
   (eat-eshell-mode))
 
 (defun im-eshell (name)
@@ -4948,6 +4952,7 @@ of that revision."
 ;; - =M-a= brings up embark-act menu. See [[embark]].
 ;; - =M-w= copy the current candidate.
 ;; - =TAB= inserts the current candidate (into minibuffer).
+;; - Do &<search_term> to search inside annotations (orderless feature). This is a bit slow.
 
 (use-package vertico
   :demand t
@@ -5970,6 +5975,10 @@ Moving cursor backwards is the default vim behavior but it is not
 appropriate in some cases like terminals."
   (setq-local evil-move-cursor-back nil))
 
+(im-make-repeatable im-vterm-prompt
+  "[" vterm-previous-prompt
+  "]" vterm-next-prompt)
+
 (use-package vterm
   :hook ((vterm-mode . evil-collection-vterm-escape-stay)
          (vterm-mode . im-disable-hl-line-mode-for-buffer)
@@ -6814,6 +6823,20 @@ in the DM section of the official Slack client."
     "t" #'prodigy-add-tag-filter
     "T" #'prodigy-clear-filters
     (kbd "RET") #'prodigy-display-process))
+
+(prodigy-define-service
+  :name "kmonad - keyboard remapper"
+  :command (expand-file-name "~/workspace/apps/kmonad/result/bin/kmonad")
+  :args (lambda (x y)
+          (->>
+           (format
+            "~/.config/kmonad-%s"
+            (completing-read
+             "Which configuration?"
+             (--map (s-chop-left 7 it) (directory-files "~/.config/" nil "kmonad-.*"))))
+           (expand-file-name)
+           (list)))
+  :sudo t)
 
 (defun im-prodigy-autostart ()
   "Start all services with the `:auto-start' set to non-nil if they are not already started."
