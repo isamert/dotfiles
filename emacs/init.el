@@ -13966,6 +13966,28 @@ Return old message."
        (outline-hide-body))
   "3" #'outline-show-all)
 
+;;;;; Shopping Mode
+
+;; I have a simple shopping list that I sync with my phone. This is a
+;; simple mode for easier editing on that file.
+
+(define-derived-mode alisveris-mode markdown-mode "AlisverisMode"
+  "Mode for my shopping list."
+  (setq-local header-line-format (substitute-command-keys "Bindings :: \\[im-alisveris-add-to-market] → Market")))
+
+(general-def :keymaps 'alisveris-mode-map :states 'normal
+  "\\a" #'im-alisveris-add-to-market)
+
+(defun im-alisveris-add-to-market ()
+  "Add current item to market alisverisi."
+  (interactive nil im-alisveris-mode)
+  (let ((thing (s-trim (thing-at-point 'line t))))
+    (save-excursion
+      (goto-char (point-min))
+      (search-forward-regexp "^## Market")
+      (insert (format "\n%s" thing))
+      (message "Done."))))
+
 ;;;; Operating system related
 ;;;;; Sound/audio output chooser
 
