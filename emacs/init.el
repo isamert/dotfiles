@@ -3692,6 +3692,9 @@ Makes the tables more readable."
 ;;;;; alert & im-notify-posframe
 ;; Several packages are using this package to show system-level notifications. Here I set some defaults/fallback values.
 
+
+;;;;;; Alert package
+
 (use-package alert
   :demand t
   :config
@@ -3731,6 +3734,8 @@ Makes the tables more readable."
    org-show-notification-handler
    (lambda (notification)
      (im-notify-posframe :title "*org-mode*" :message notification :margin t))))
+
+;;;;;; im-notify-posframe
 
 (defvar im-notify-posframe-blacklist-regexp nil)
 (defvar im-notify-posframe-dnd nil)
@@ -3815,9 +3820,9 @@ Makes the tables more readable."
                 ;; to my phone so that I can see it privately through
                 ;; my watch.
                 (await (im-screen-sharing-now?)))
-        (im-send-notification-to-my-phone
-         :title (or title "Emacs")
-         :content message)))))
+        (im-ntfy
+         message
+         :title (or title "Emacs"))))))
 
 (defun im-notify-posframe-clear-all (&optional delete?)
   (interactive "P")
@@ -3910,6 +3915,35 @@ First one is the latest one."
   "Ask the user to type a duration in a human-readable way.
 Return parsed seconds from users answer."
   (tmr--parse-duration (current-time) (tmr--read-duration)))
+
+;;;;;; im-ntfy -- ntfy wrapper
+
+(cl-defun im-ntfy
+    (message
+     &rest options
+     &key
+     title
+     priority
+     (topic "emacs")
+     &allow-other-keys)
+  "Send a notification to my phone."
+  (interactive
+   (list :title (im-read-string "Title: ")
+         :message (im-read-string "Message: ")))
+  (set-process-sentinel
+   (apply
+    #'start-process
+    "ntfy" "*ntfy-out*"
+    `("ntfy"
+      "publish"
+      ,@(map-apply
+         (lambda (opt val) (format "--%s=%s" (s-chop-prefix ":" (symbol-name opt)) val))
+         (map-filter (lambda (opt val) (not (-contains? '(:topic) opt))) options))
+      ,topic
+      ,message))
+   (lambda (proc text)
+     (unless (eq (process-exit-status proc) 0)
+       (error ">> [%s] Failed to send message through `ntfy'." (format-time-string "%Y-%m-%dT%H:%M:%S%z"))))))
 
 ;;;;; Hydra
 ;; Hydra creates a menu for quickly calling/toggling functions/modes
@@ -10494,25 +10528,6 @@ When CMD finishes, FN is called with the process output."
      (format "ssh -T %s" im-phone-hostname)
      t t)
     (buffer-string)))
-
-(cl-defun im-send-notification-to-my-phone
-    (&key
-     title
-     content
-     url-to-open)
-  "Send a notification to my phone."
-  (interactive
-   (list :title (im-read-string "Title: ")
-         :content (im-read-string "Content: ")
-         :url-to-open (im-read-string "URL(?): ")))
-  (set-process-sentinel
-   (start-process
-    "gotify" "*gotify-out*"
-    "gotify" "push" (format "--title=%s" title) (format "--clickUrl=%s" url-to-open) content)
-   (lambda (proc text)
-     ;; Try sending notification through termux if gotify fails
-     (unless (eq (process-exit-status proc) 0)
-       (error "Failed to send message through `gotify'.")))))
 
 (defun im-send-text-to-my-phone (text)
   "Send TEXT to my phones clipboard. This only works if the phone
