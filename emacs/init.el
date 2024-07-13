@@ -6018,7 +6018,15 @@ appropriate in some cases like terminals."
    "C-x" #'vterm--self-insert)
   :init
   :config
-  (setq vterm-kill-buffer-on-exit t))
+  (setq vterm-kill-buffer-on-exit t)
+  ;; See this: https://github.com/akermu/emacs-libvterm/issues/179#issuecomment-1045331359
+  (setq vterm-shell "/usr/bin/screen")
+  (im-tangle-file
+   :path "~/.screenrc"
+   :contents "termcapinfo xterm* ti@:te@
+startup_message off
+escape ^||
+bindkey \"^[a\" command"))
 
 (defun im-vterm-project ()
   "Open vterm for current project."
