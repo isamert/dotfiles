@@ -3958,12 +3958,18 @@ Return parsed seconds from users answer."
      &key
      title
      priority
-     (topic "emacs")
+     (icon (concat im-server "/assets/emacs.png"))
+     (channel "emacs")
+     file
      &allow-other-keys)
   "Send a notification to my phone."
   (interactive
-   (list :title (im-read-string "Title: ")
-         :message (im-read-string "Message: ")))
+   (list
+    (im-read-string "Message: ")
+    :title (im-read-string "Title: ")
+    :file (when (y-or-n-p "Attach local file? ")
+            (expand-file-name (read-file-name "Attachment: ")))
+    :channel (completing-read "Channel: " '("phone" "emacs"))))
   (set-process-sentinel
    (apply
     #'start-process
@@ -3972,8 +3978,10 @@ Return parsed seconds from users answer."
       "publish"
       ,@(map-apply
          (lambda (opt val) (format "--%s=%s" (s-chop-prefix ":" (symbol-name opt)) val))
-         (map-filter (lambda (opt val) (not (-contains? '(:topic) opt))) options))
-      ,topic
+         (map-into ;; ← To remove the duplicates
+          (map-filter (lambda (opt val) (and val (not (-contains? '(:channel) opt)))) `(:icon ,icon ,@options))
+          'hash-table))
+      ,channel
       ,message))
    (lambda (proc text)
      (unless (eq (process-exit-status proc) 0)
