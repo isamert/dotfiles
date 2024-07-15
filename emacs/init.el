@@ -6599,9 +6599,10 @@ this command is invoked from."
                 :room (plist-get it :room)
                 :team (plist-get it :team)))
    (-uniq)
-   (-map (lambda (room) (--find (equal (plist-get room :room-name)
-                                       (plist-get it :room-name))
-                                im-slack--last-messages)))))
+   (-map (lambda (room)
+           (--find (equal (plist-get room :room-name)
+                          (plist-get it :room-name))
+                   im-slack--last-messages)))))
 
 (defun im-slack--message-ts (message)
   (->>
@@ -6994,15 +6995,11 @@ Never suggest seeking information from elsewhere.
 
 Always focus on the key points in my questions to determine my intent.
 
-Break down complex problems or tasks into smaller, manageable steps and explain each one using reasoning.
-
-Provide multiple perspectives or solutions.
+Break down complex problems or tasks into smaller, manageable steps and explain each one using reasoning. For easier tasks, this is not needed.
 
 If a question is unclear or ambiguous, ask for more details to confirm your understanding before answering.
 
-If a mistake is made in a previous response, recognize and correct it.
-
-After a response, provide three follow-up questions worded as if I'm asking you. Format in bold as Q1, Q2, and Q3. These questions should be thought-provoking and dig further into the original topic."))
+If a mistake is made in a previous response, recognize and correct it."))
 
 (defun im-org-ai-toggle-gpt-model ()
   "Toggle GPT model of current org-ai block.
@@ -7724,8 +7721,14 @@ This happens to me on org-buffers, xwidget-at tries to get
   (setq dumb-jump-fallback-search nil))
 
 ;; Call treesit-auto-install-all
-(use-package  treesit-auto
-  :straight (:host github :repo "renzmann/treesit-auto")
+(use-package treesit-auto
+  :straight (treesit-auto
+             :type git
+             :host github
+             :repo "renzmann/treesit-auto"
+             :fork (:host github
+                    :repo "noctuid/treesit-auto"
+                    :branch "bind-around-set-auto-mode-0"))
   :hook (after-init . global-treesit-auto-mode))
 
 (use-package hl-todo
