@@ -323,15 +323,21 @@ the memoize cache."
              ___result))))))
 
 (defun im-select-window-with-buffer (buffer-name)
-  "Select the first visible window that matches given BUFFER-NAME."
+  "Select the visible window that matches given BUFFER-NAME.
+If more than one buffer is matched, then let user interactively
+select the right window using `aw-select'."
   (declare (indent 1))
-  (let ((curr (buffer-name (current-buffer))))
-    (--first
-     (-as-> (window-buffer it) buffer
-            (buffer-name buffer)
-            (when (and (string-match buffer-name buffer) (not (equal curr buffer)))
-              (select-window it)))
-     (window-list))))
+  (let* ((curr (buffer-name (current-buffer)))
+         (windows (--filter
+                   (-as-> (window-buffer it) buffer
+                          (buffer-name buffer)
+                          (and (string-match buffer-name buffer) (not (equal curr buffer))))
+                   (window-list))))
+    (select-window
+     (if (= 1 (length windows))
+         (car windows)
+       (cl-letf (((symbol-function 'aw-window-list) (lambda () (sort `(,@windows ,(selected-window)) 'aw-window<))))
+         (aw-select nil))))))
 
 (defmacro im-with-visible-buffer (buffer-name &rest body)
   "Evaluate BODY within the BUFFER-NAME that is currently visible."
@@ -1333,7 +1339,7 @@ Just a simple wrapper around `prettify-symbols-mode`"
   :hook (after-init . global-whitespace-mode)
   :config
   (setq whitespace-style '(face empty tabs trailing))
-  (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode)))
+  (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode eat-mode)))
 
 (defun im-whitespace-mode-toggle ()
   "Toggle between more and less agressive whitespace modes.
@@ -3125,12 +3131,14 @@ This function unfills the paragraph at point, removing line
 breaks and joining the lines together. This function relies on
   `org-fill-paragraph' to perform the actual unfilling."
   (interactive (progn
-                 (barf-if-buffer-read-only)
-                 (list (when current-prefix-arg 'full) t)))
+       (barf-if-buffer-read-only)
+       (list (when current-prefix-arg 'full) t)))
   (let ((fill-column 9999))
     (org-fill-paragraph justify region)))
 
 ;;;;; im-org-new-todo
+
+;; NOTE: With C-o in minibuffer, I can insert links to minibuffer.
 
 (defun im-org-new-todo (&optional priority)
   "Create new org TODO item with the fields I want them to be there."
@@ -3407,9 +3415,6 @@ it's a list, the first element will be used as the binary name."
   :defer t
   :hook (eshell-mode . im-disable-hl-line-mode-for-buffer)
   :general
-  (:states 'normal
-   "M-_" #'im-eshell-vertically
-   "M-|" #'im-eshell-horizontally)
   (:states 'insert :keymaps '(eshell-prompt-mode-map override)
    "C-l" (λ-interactive (eshell/clear t)))
   :config
@@ -3450,30 +3455,9 @@ it's a list, the first element will be used as the binary name."
   :config
   (setq eat-enable-shell-prompt-annotation nil)
   (setq eat-shell "/bin/zsh")
+  (setq eat-tramp-shells '(("docker" . "/bin/sh")
+                           ("ssh" . "/usr/bin/zsh")))
   (eat-eshell-mode))
-
-(defun im-eshell (name)
-  (interactive (list (read-string "Bufffer name: " "$eshell: ")))
-  (with-current-buffer (eshell t)
-    (rename-buffer name t)
-    (current-buffer)))
-
-(defun im-eshell-send-input (input)
-  (eat--send-input t input))
-
-(defun im-eshell-send-key (key)
-  (eat-self-input 1 key))
-
-(defun im-eshell-vertically ()
-  (interactive)
-  (select-window (split-window-vertically))
-  (call-interactively #'im-eshell))
-
-(defun im-eshell-horizontally ()
-  (interactive)
-  (select-window (split-window-horizontally))
-  (call-interactively #'im-eshell))
-
 
 ;;;;;; Integrate EAT with ZSH
 ;; This will be automatically sourced within .zshrc.
@@ -5236,10 +5220,10 @@ non-nil so that you only add it to `project-prefix-map'."
 
 ;; Others
 
-(defvar im-project-shell-last-height 15)
+(defvar im-project-shell-last-height 20)
 (defvar im-project-shell-last-window nil)
 
-(defun im-shell-for (&optional type top? shell-fn)
+(defun im-shell-for (&optional type placement shell-fn)
   (interactive)
   (unless shell-fn
     (setq shell-fn
@@ -5258,11 +5242,12 @@ non-nil so that you only add it to `project-prefix-map'."
                               (t (expand-file-name type))))
          (proj-name (f-base default-directory))
          (name (format "*$shell: %s*" proj-name)))
-    (if-let* (top?
+    (if-let* (placement
               (window (--find (s-prefix? "\*\$shell: " (buffer-name (window-buffer it))) (window-list)))
               (focused? (equal window (selected-window))))
         (progn
-          (setq im-project-shell-last-height (window-height window))
+          (when (-contains? '(top bottom) placement)
+            (setq im-project-shell-last-height (window-height window)))
           (delete-window window)
           (when im-project-shell-last-window
             (select-window im-project-shell-last-window)))
@@ -5271,14 +5256,14 @@ non-nil so that you only add it to `project-prefix-map'."
         (with-current-buffer term
           (tab-line-mode -1))
         (setq im-project-shell-last-window (get-buffer-window))
-        (if (not top?)
+        (if (not placement)
             (switch-to-buffer term)
           (progn
             (display-buffer-in-side-window
              term
              (append
               `((window-height . ,im-project-shell-last-height)
-                (side . top)
+                (side . ,placement)
                 (slot . 1))))
             (select-window (get-buffer-window term))))))))
 
@@ -5286,24 +5271,66 @@ non-nil so that you only add it to `project-prefix-map'."
   "Select a term and open."
   (interactive)
   (empv--select-action "Term: "
-    "eshell project" → (im-shell-for)
+    "eshell project" → (im-shell-for 'project)
     "eshell dir" → (im-shell-for 'dir)
     "eshell new" → (call-interactively #'im-eshell)
-    "vterm project" → (im-vterm-project)
-    "vterm dir" → (im-vterm-dir)
+    "vterm project" → (im-shell-for 'project nil #'im--new-vterm)
+    "vterm dir" → (im-shell-for 'dir nil #'im--new-vterm)
     "vterm new" → (call-interactively #'im-vterm)
-    "nushell project" → (let ((vterm-shell "nu")) (im-vterm-project))
-    "nushell dir" → (let ((vterm-shell "nu")) (im-vterm-dir))
-    "nushell new" → (let ((vterm-shell "nu")) (call-interactively #'im-vterm))))
+    "eat project" → (im-shell-for 'project nil #'im--new-eat)
+    "eat dir" → (im-shell-for 'dir nil #'im--new-eat)
+    "eat new" → (call-interactively #'im-eat)))
+
+(defun im-eat (name)
+  "Like `im-eshell'."
+  (interactive (list (read-string "Bufffer name: " (format "$shell: %s/%s" (im-current-project-name) (buffer-name)))))
+  (require 'eat)
+  (let* ((eat-buffer-name name))
+    (eat nil t)))
+
+(defun im-vterm (name)
+  "Like `im-eshell'."
+  (interactive (list (read-string "Bufffer name: " "$vterm: ")))
+  (require 'vterm)
+  (let* ((vterm-buffer-name name))
+    (vterm t)))
+
+(defun im-eshell (name)
+  (interactive (list (read-string "Bufffer name: " "$eshell: ")))
+  (with-current-buffer (eshell t)
+    (rename-buffer name t)
+    (current-buffer)))
+
+(defun im--new-eat (name)
+  (require 'eat)
+  (save-window-excursion
+    (let ((eat-buffer-name name))
+      (eat nil t))))
+
+(defun im--new-vterm (name)
+  (require 'vterm)
+  (save-window-excursion
+    (let ((vterm-buffer-name name))
+      (vterm t))))
+
+(defun im-terminal-vertically ()
+  (interactive)
+  (select-window (split-window-vertically))
+  (call-interactively #'im-eat))
+
+(defun im-terminal-horizontally ()
+  (interactive)
+  (select-window (split-window-horizontally))
+  (call-interactively #'im-eat))
+
+(general-def :states 'normal
+  "M-_" #'im-terminal-vertically
+  "M-|" #'im-terminal-horizontally)
 
 (im-leader "2" #'im-term)
-(bind-key "M-`" (λ-interactive (im-shell-for 'project t)))
-(bind-key "M-<f1>" (λ-interactive (im-shell-for 'dir t)))
-(bind-key "M-<f2>" (λ-interactive (im-shell-for "~" t (lambda (name)
-                                                        (require 'eshell)
-                                                        (save-window-excursion
-                                                          (let ((eat-buffer-name name))
-                                                            (eat nil t)))))))
+(bind-key "M-`" (λ-interactive (im-shell-for 'project 'bottom #'im--new-eat)))
+(bind-key "<f2>" (λ-interactive (im-shell-for "~" 'top #'im--new-eat)))
+(bind-key "<f3>" (λ-interactive (im-shell-for 'dir 'bottom #'im--new-eat)))
 
 ;;;;; consult
 
@@ -6036,65 +6063,32 @@ startup_message off
 escape ^||
 bindkey \"^[a\" command"))
 
-(defun im-vterm-project ()
-  "Open vterm for current project."
-  (interactive)
-  (require 'vterm)
-  (when-let ((pname (im-current-project-name)))
-    (let* ((vterm-buffer-name (format "*vterm-proj-%s*" pname))
-           (default-directory (or (im-current-project-root) default-directory))
-           (existing (--find
-                      (and
-                       (s-prefix? "*vterm-proj" (buffer-name it))
-                       (equal default-directory (with-current-buffer it default-directory)))
-                      (buffer-list))))
-      (if existing
-          (switch-to-buffer existing)
-        (vterm t)))))
-
-(defun im-vterm-dir ()
-  "Open vterm for `default-directory'."
-  (interactive)
-  (require 'vterm)
-  (let* ((vterm-buffer-name (format "*vterm-dir-%s*" (f-filename default-directory)))
-         (existing (--find
-                    (and
-                     (s-prefix? "*vterm-dir" (buffer-name it))
-                     (equal default-directory (with-current-buffer it default-directory)))
-                    (buffer-list))))
-    (if existing
-        (switch-to-buffer existing)
-      (vterm t))))
-
-(defun im-vterm (name)
-  "Like `im-eshell'."
-  (interactive (list (read-string "Bufffer name: " "$vterm: ")))
-  (let* ((vterm-buffer-name name))
-    (vterm t)))
-
 ;;;;;; Utility functions
+
+(defvar im-terminal-buffer-name-regexp "\\*?\\$?\\(e?shell\\|v?term\\).*")
 
 (defun im-run-last-command-on-visible-term ()
   (interactive)
   (save-buffer)
-  (or
-   (im-with-visible-buffer "\\*\\$?vterm.*"
-     (vterm-send-up)
-     (vterm-send-return)
-     t)
-   (im-with-visible-buffer "\\*\\$?e?shell.*"
-     (eshell-previous-matching-input "" 0)
-     (eshell-send-input))))
+  (im-with-visible-buffer im-terminal-buffer-name-regexp
+    (pcase major-mode
+      ('eshell-mode  (eshell-previous-matching-input "" 0)
+                     (eshell-send-input))
+      ('eat-mode (eat-self-input 1 (aref (kbd "<up>") 0))
+                 (eat-self-input 1 (aref (kbd "RET") 0)))
+      ('vterm-mode (vterm-send-up)
+                   (vterm-send-return)
+                   t))))
 
 (defun im-run-command-on-visible-term (cmd)
-  (or
-   (im-with-visible-buffer "\\*\\$?vterm.*"
-     (vterm-send-string cmd)
-     (vterm-send-return)
-     t)
-   (im-with-visible-buffer "\\*\\$?e?shell.*"
-     (insert cmd)
-     (eshell-send-input)))
+  (im-with-visible-buffer im-terminal-buffer-name-regexp
+    (pcase major-mode
+      ('eshell-mode  (insert cmd)
+                     (eshell-send-input))
+      ('eat-mode (eat--send-string (eat-term-parameter eat-terminal 'eat--process) cmd)
+                 (eat-self-input 1 (aref (kbd "RET") 0)))
+      ('vterm-mode (vterm-send-string cmd)
+                   (vterm-send-return))))
   cmd)
 
 (defun im-send-selected-text-to-visible-term (start end)
@@ -6112,11 +6106,11 @@ When invoked in a term window, return back to last window that
 this command is invoked from."
   (interactive)
   (cond
-   ((string-match ".*\\(vterm\\|eshell\\).*" (buffer-name (window-buffer (selected-window))))
+   ((string-match im-terminal-buffer-name-regexp (buffer-name (window-buffer (selected-window))))
     (select-window im-jump-to-term-last-window))
    (t
     (setq im-jump-to-term-last-window (selected-window))
-    (im-select-window-with-buffer ".*\\(vterm\\|eshell\\).*"))))
+    (im-select-window-with-buffer im-terminal-buffer-name-regexp))))
 
 (defun im-run-command-on-visible-term-with-history ()
   (interactive)
@@ -9769,10 +9763,12 @@ SELECT * FROM _ LIMIT 1;
 
 (use-package ace-window
   :custom
-  (aw-background nil)
+  (aw-background t)
+  (aw-ignore-current t)
   (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
   :config
-  (set-face-attribute 'aw-leading-char-face nil :height 3.5 :weight 'bold))
+  (set-face-attribute 'aw-leading-char-face nil :height 4.5 :weight 'bold :foreground "controlAccentColor")
+  (ace-window-posframe-mode))
 
 (defun im-find-file-ace-window (filename &optional wildcards)
   "Edit file FILENAME, in selected window.
@@ -9781,7 +9777,8 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   (interactive
    (find-file-read-args "Find file in other window: "
                         (confirm-nonexistent-file-or-buffer)))
-  (select-window (ace-select-window))
+  (let ((aw-ignore-current nil))
+    (select-window (ace-select-window)))
   (switch-to-buffer (find-file-noselect filename nil nil wildcards)))
 
 ;;;;; bufler
@@ -13112,7 +13109,7 @@ Version: 2023-07-16"
         (unless empty
           (org-ai-complete-block)))
       (unless (im-buffer-visible-p buffer)
-        (switch-to-buffer-other-window buffer))
+        (switch-to-buffer buffer))
       buffer))
    (t
     (setq prompt (if include-system (concat system "\n\n" prompt) prompt))
@@ -13795,8 +13792,8 @@ configuration, pass it as WINDOW-CONF."
     (switch-to-buffer commit-buffer)
     (im-git-commit-mode)
     (delete-other-windows)
-    (split-window-right)
-    (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
+    (select-window (split-window-right))
+    (switch-to-buffer (im-git-commit--reload-diff-buffer diff))
     (other-window 1)))
 
 (defun im-git-commit--reload-diff-buffer (diff)
