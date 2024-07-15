@@ -13832,27 +13832,40 @@ configuration, pass it as WINDOW-CONF."
                             ("yes" (list key))
                             ("no" '())
                             (_ (list key val)))))))
-         (args (-flatten (--filter (not (-contains? '("--tag") (car it))) props))))
+         (non-args '("--tag"))
+         (args (-flatten (--filter (not (-contains? non-args (car it))) props)))
+         (fixup (cadr (--find (equal (car it) "--fixup") props)))
+         (tag (cadr (--find (equal (car it) "--tag") props))))
+    (unless fixup
+      (setq args (append (list "--message" msg) args)))
     (ring-insert
      im-git-commit-message-history
      ;; This command is supposed to run at project root, so the
      ;; `default-directory' is assumed to be the project root.
      (list :project default-directory :msg msg))
     (set-process-sentinel
-     (apply #'start-process "*im-git-commit*" "*im-git-commit*" "git" "commit" "-m" msg args)
+     (apply #'start-process "*im-git-commit*" "*im-git-commit*" "git" "commit" args)
      (lambda (proc event)
        (if (eq (process-exit-status proc) 0)
            (progn
              (message "im-git-commit :: Committed")
-             (when-let ((tag? (cadr (--find (equal (car it) "--tag") props))))
-               (unless (equal tag? "no")
+             (--each im-git-commit-finished-hook (funcall it msg))
+             (when tag
+               (set-process-sentinel
+                (start-process "*im-git-tag*" " *im-git-tag*" "git" "tag" tag)
+                (lambda (proc event)
+                  (if (eq (process-exit-status proc) 0)
+                      (message ">> im-git-commit :: Tag created")
+                    (message "!! Failed to tag. See *im-git-tag* buffer for further details.")))))
+             (when fixup
+               (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
                  (set-process-sentinel
-                  (start-process "*im-git-tag*" "*im-git-tag*" "git" "tag" tag?)
+                  (start-process "*im-git-fixup*" " *im-git-fixup*"
+                                 "git" "rebase" "--interactive" "--autosquash" (concat fixup "^"))
                   (lambda (proc event)
                     (if (eq (process-exit-status proc) 0)
-                        (message ">> im-git-commit :: Tag created")
-                      (message "Failed")))))
-               (--each im-git-commit-finished-hook (funcall it msg))))
+                        (message ">> im-git-fixup :: Commit %s fixed." fixup)
+                      (message "!! Failed to fixup. See *im-git-fixup* buffer for further details.")))))) )
          (message "im-git-commit :: Failed. See buffer *im-git-commit*"))))
     (im-git-commit-cancel)))
 
@@ -13925,6 +13938,21 @@ configuration, pass it as WINDOW-CONF."
   (insert im-git-commit-config-prefix " Author: AUTHOR_NAME <AUTHOR_MAIL>\n")
   (insert im-git-commit-config-prefix " Tag: ")
   (im-insert-toggle-button "no" (lambda () (read-string "Tag: ")) :help "RET: Toggle tagging")
+  (insert "\n")
+  (insert im-git-commit-config-prefix " Fixup: ")
+  (insert-text-button
+   "no"
+   'action (lambda (button)
+             (let ((start (button-start button))
+                   (end (button-end button))
+                   (cursor (point))
+                   (action (button-get button 'action)))
+               (im-git-select-commit
+                (lambda (tag)
+                  (delete-region start end)
+                  (insert-text-button tag 'action action 'follow-link t)))))
+   'kbd-help "RET: Select commit to fixup"
+   'follow-link t)
   (insert "\n")
   (goto-char (point-min))
   (im-help-at-point-mode)
@@ -14065,6 +14093,36 @@ Return old message."
        (outline-show-all)
        (outline-hide-body))
   "3" #'outline-show-all)
+
+;;;;;; im-git-select-commit
+
+(defvar-local im-git-select-commit-finalize-callback nil)
+
+(defun im-git-select-commit (callback)
+  "Select a commit.
+CALLBACK will be called with the selected commit ref."
+  (interactive)
+  (let ((buffer (save-window-excursion
+                  (vc-print-root-log)
+                  (current-buffer))))
+    (switch-to-buffer buffer)
+    (setq im-git-select-commit-finalize-callback callback)
+    (im-git-select-commit-mode)))
+
+(defun im-git-select-commit-finalize ()
+  (interactive)
+  (im-git-select-commit-mode -1)
+  (let ((tag (log-view-current-tag (point)))
+        (fn im-git-select-commit-finalize-callback))
+    (kill-buffer)
+    (funcall fn tag)))
+
+(define-minor-mode im-git-select-commit-mode
+  "Select a commit."
+  :lighter " SelectCommit"
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "C-c C-c") #'im-git-select-commit-finalize)
+            map))
 
 ;;;;; Shopping Mode
 
