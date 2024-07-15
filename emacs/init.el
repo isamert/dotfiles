@@ -4865,6 +4865,12 @@ of that revision."
   ((prog-mode . diff-hl-mode)
    (diff-hl-mode . diff-hl-flydiff-mode))
   :custom
+  ;; Performance optiomization for diffs.
+  (vc-git-diff-switches '("--histogram"))
+  ;; Async update breaks my emacs for some reason. It's not on by
+  ;; default but wanted to keep it here to note this.
+  (diff-hl-update-async nil)
+  (diff-hl-flydiff-delay 0.5)
   (diff-hl-show-staged-changes nil)
   :general
   (im-leader-v
@@ -4877,10 +4883,10 @@ of that revision."
     "gS" #'diff-hl-stage-dwim
     "gr" #'diff-hl-revert-hunk)
   :config
-  (define-advice diff-hl-previous-hunk (:after (&rest _) reveal) (reveal-post-command))
-  (define-advice diff-hl-next-hunk (:after (&rest _) reveal) (reveal-post-command))
-  (define-advice diff-hl-show-hunk-previous (:after (&rest _) reveal) (reveal-post-command))
-  (define-advice diff-hl-show-hunk-next (:after (&rest _) reveal) (reveal-post-command)))
+  (define-advice diff-hl-previous-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))
+  (define-advice diff-hl-next-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))
+  (define-advice diff-hl-show-hunk-previous (:after (&rest _) reveal) (reveal-post-command) (recenter))
+  (define-advice diff-hl-show-hunk-next (:after (&rest _) reveal) (reveal-post-command) (recenter)))
 
 ;;;;; forge
 
