@@ -6478,6 +6478,9 @@ this command is invoked from."
   (interactive)
   (ignore-errors (slack-ws-close))
   (ignore-errors (slack-team-delete))
+  (setq im-slack--last-messages nil)
+  (setq slack-dms nil)
+  (im-slack-kill-buffers)
   (slack-register-team
    :name ty-slack-name
    :token ty-slack-token
@@ -6488,6 +6491,16 @@ this command is invoked from."
   (slack-start)
   (slack-change-current-team)
   (run-at-time nil 3600 #'im-slack-check))
+
+(defun im-slack-kill-buffers ()
+  (interactive)
+  (--each (--filter
+           (s-prefix? "*slack: " (buffer-name it)) (buffer-list))
+    (unless (ignore-errors (kill-buffer it))
+      (with-current-buffer it
+        (let ((kill-buffer-query-functions nil)
+              (kill-buffer-hook nil))
+          (kill-buffer))))))
 
 (defun im-slack--add-reaction-to-message (reaction)
   (defalias (intern (concat "react-" reaction))
@@ -6590,7 +6603,6 @@ this command is invoked from."
        (lambda () (slack-buffer-goto (slack-ts .message)))))))
 
 (defalias 'im-slack-recent-messages #'im-slack-last-messages)
-
 
 (defun im-slack-last-messages-per-room ()
   (->>
