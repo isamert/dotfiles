@@ -4525,7 +4525,7 @@ anchor points in the buffer."
    "d" #'im-eww-save-image
    "O" (λ-interactive (eww (read-string "URL: " (eww-current-url))))
    "t" #'im-eww
-   "T" (λ-interactive (im-eww (read-string "URL: " (eww-current-url))))
+   "T" (λ-interactive (funcall-interactively #'im-eww (read-string "URL: " (eww-current-url))))
    "f" #'im-eww-avy-follow
    "F" (λ-interactive (im-eww-avy-follow :new-session))
    "r" #'eww-reload
@@ -4541,14 +4541,24 @@ anchor points in the buffer."
   (setq shr-discard-aria-hidden t)
   (setq shr-use-xwidgets-for-media t)
 
+  ;; Use browse-url for each link opening. This way my `browse-url-handlers' take precedence over eww.
+  (setq eww-use-browse-url ".*")
   (setq eww-search-prefix "https://www.google.com/search?q=")
   (setq eww-auto-rename-buffer
         (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "...")))))
 
 (defun im-eww (url)
-  "Like `eww' but open URL in a new eww buffer instead of reusing the same one."
+  "`eww' wrapper.
+Like `eww' but open URL in a new eww buffer instead of reusing
+the same one if called interactively.  If inside an eww"
   (interactive (list (read-string "URL: " (im-region-or "") 'eww-prompt-history)))
-  (eww url t))
+  (cond
+   ;; If called interactively, just use a new buffer
+   ((called-interactively-p 'interactive) (eww url t))
+   ;; If we are inside an eww buffer and this function is called, simply navigate to the URL.
+   ((equal major-mode 'eww-mode) (eww-browse-url url))
+   ;; Default to interactive behavior
+   (t (eww url t))))
 
 (defun im-eww-avy-follow (&optional follow-type)
   (interactive)
