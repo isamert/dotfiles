@@ -1209,13 +1209,22 @@ With argument, do this that many times."
 
 ;;;; Visuals
 ;;;;; General
+
 ;; Disable menubar
 (menu-bar-mode 0)
-;; Wrap long lines
-(global-visual-line-mode t)
+
+;; Wrap long lines.
+;; (global-visual-line-mode t)
+
+;; This sometimes causes performance problems. So
+;; instead of calling `global-visual-line-mode', I enable it per-mode
+;; basis.  Here are some basic modes that it's enabled for:
+
+(add-hook 'TeX-mode-hook #'visual-line-mode)
+(add-hook 'text-mode-hook #'visual-line-mode)
+
 ;; Highlight current line
 (global-hl-line-mode t)
-;; Disable global-hl-line-mode in eshell, ansi-term, vterm
 
 (defun im-disable-hl-line-mode-for-buffer ()
   "Disable `global-hl-line-mode' for current buffer only.
@@ -4874,7 +4883,16 @@ of that revision."
 ;; in the buffer.
 
 ;; I used to use `git-gutter' but it adds lots of advices and clashes
-;; with my configuration.  diff-hl is a better maintained alternative.
+;; with my configuration.  diff-hl is a better maintained alternative
+;; and seemingly faster.
+
+;; Doom Emacs customizations for diff-hl:
+;; https://github.com/doomemacs/doomemacs/blob/master/modules/ui/vc-gutter/config.el
+
+;; Some observations on Doom Emacs configurations:
+
+;; `evil-insert-state-exit-hook' causes performance issues, macros
+;; gets slower as the get in/out to insert state quickly.
 
 (use-package diff-hl
   :straight (:host github :repo "dgutov/diff-hl")
@@ -4882,13 +4900,16 @@ of that revision."
   ((prog-mode . diff-hl-mode)
    (diff-hl-mode . diff-hl-flydiff-mode))
   :custom
+  (diff-hl-disable-on-remote t)
   ;; Performance optiomization for diffs.
   (vc-git-diff-switches '("--histogram"))
   ;; Async update breaks my emacs for some reason. It's not on by
-  ;; default but wanted to keep it here to note this.
+  ;; default but wanted to keep it here to note this. This happens
+  ;; probably due to make-thread calls. Possibly only happens on OSX.
   (diff-hl-update-async nil)
   (diff-hl-flydiff-delay 0.5)
   (diff-hl-show-staged-changes nil)
+  (diff-hl-draw-borders nil)
   :general
   (im-leader-v
     "g[" #'diff-hl-previous-hunk
@@ -6508,14 +6529,23 @@ this command is invoked from."
     "mc" #'slack-message-embed-channel)
 
   ;; Fix for/from yuya373/emacs-slack#547-1542119271
-  (advice-add 'lui-buttonize-urls :before-until (lambda () (derived-mode-p 'slack-mode))))
+  (advice-add 'lui-buttonize-urls :before-until (lambda () (derived-mode-p 'slack-mode)))
+
+  (dolist (mode '(slack-buffer-mode-hook
+                  slack-edit-message-mode-hook
+                  slack-message-buffer-mode-hook
+                  slack-all-threads-buffer-mode-hook
+                  slack-message-edit-buffer-mode-hook
+                  slack-search-result-buffer-mode-hook
+                  slack-thread-message-buffer-mode-hook
+                  slack-message-compose-buffer-mode-hook))
+    (add-hook mode #'visual-line-mode)))
 
 (defun im-slack-initialize ()
   (interactive)
   (ignore-errors (slack-ws-close))
   (ignore-errors (slack-team-delete))
   (setq im-slack--last-messages nil)
-  (setq slack-dms nil)
   (im-slack-kill-buffers)
   (slack-register-team
    :name ty-slack-name
