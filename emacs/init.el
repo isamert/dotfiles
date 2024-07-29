@@ -1249,7 +1249,7 @@ using this function."
 (defconst im-theme-night 'ef-cherie
   "Theme for the night.")
 
-(defconst im-fonts '("IBM Plex Mono" "Iosevka Comfy Motion" "Iosevka Comfy" "Iosevka Nerd Font")
+(defconst im-fonts '("FiraCode Nerd Font" "Iosevka Nerd Font" "IBM Plex Mono" "Iosevka Comfy Motion" "Iosevka Comfy")
   "Fonts that I use.")
 
 (defvar im-current-font nil
@@ -3481,12 +3481,11 @@ it's a list, the first element will be used as the binary name."
 
 (defun im-eshell-load-my-aliases ()
   "Load zsh/bash aliases into eshell.
-  '$*' is appended after each alias so that they can take
-  positional parameters in eshell. There is also a special syntax
-  for defining eshell-specific aliases that is read verbatim:
+'$*' is appended after each alias so that they can take
+positional parameters in eshell. There is also a special syntax
+for defining eshell-specific aliases that is read verbatim:
 
-  #eshell test='ls'
-  "
+#eshell test='ls'"
   (interactive)
   (setq
    eshell-command-aliases-list
@@ -4500,11 +4499,12 @@ anchor points in the buffer."
 
 ;;;;; eww -- web browser
 
+;;https://www.google.com/url?q=https://www.reddit.com/r/emacs/comments/w49muw/emacs_is_not_registering_function_keys_above_20/&sa=U&ved=2ahUKEwiVpej1_cmHAxUB1wIHHWOnBAcQFnoECAgQAg&usg=AOvVaw3gm4rO5PyXLR4pR4nkXhwQ
 (setq browse-url-secondary-browser-function #'browse-url-firefox)
 (setq browse-url-handlers
       '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
         (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
-        (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?$" . (lambda (link &rest _) (reddigg-view-comments link)))
+        (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?\\(&.*\\)$" . im-reddigg-view-link)
         (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . (lambda (link &rest _) (empv-play-or-enqueue link)))
         (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
@@ -4520,8 +4520,13 @@ anchor points in the buffer."
   :general
   (im-leader-v
     "ew" #'im-eww)
+  (:keymaps 'shr-map
+   "z" nil ;; So that regular evil bindings work
+   "+" #'shr-zoom-image)
   (:keymaps 'eww-mode-map :states 'normal
    "Y" #'eww-copy-page-url
+   ;; There is also u binding in shr-map but this is easier to remember
+   "c" #'shr-maybe-probe-and-copy-url
    "d" #'im-eww-save-image
    "O" (λ-interactive (eww (read-string "URL: " (eww-current-url))))
    "t" #'im-eww
@@ -4550,7 +4555,9 @@ anchor points in the buffer."
 (defun im-eww (url)
   "`eww' wrapper.
 Like `eww' but open URL in a new eww buffer instead of reusing
-the same one if called interactively.  If inside an eww"
+the same one if called interactively.  If inside an eww buffer,
+then utilize `eww-browse-url' instead.  See `eww-use-browse-url'
+for why."
   (interactive (list (read-string "URL: " (im-region-or "") 'eww-prompt-history)))
   (cond
    ;; If called interactively, just use a new buffer
@@ -5306,13 +5313,13 @@ non-nil so that you only add it to `project-prefix-map'."
 
 (defun im-vterm (name)
   "Like `im-eshell'."
-  (interactive (list (read-string "Bufffer name: " "$vterm: ")))
+  (interactive (list (read-string "Bufffer name: " (format "$vterm: %s/%s" (im-current-project-name) (buffer-name)))))
   (require 'vterm)
   (let* ((vterm-buffer-name name))
     (vterm t)))
 
 (defun im-eshell (name)
-  (interactive (list (read-string "Bufffer name: " "$eshell: ")))
+  (interactive (list (read-string "Bufffer name: " (format "$eshell: %s/%s" (im-current-project-name) (buffer-name)))))
   (with-current-buffer (eshell t)
     (rename-buffer name t)
     (current-buffer)))
@@ -5332,12 +5339,12 @@ non-nil so that you only add it to `project-prefix-map'."
 (defun im-terminal-vertically ()
   (interactive)
   (select-window (split-window-vertically))
-  (call-interactively #'im-eat))
+  (call-interactively #'im-eshell))
 
 (defun im-terminal-horizontally ()
   (interactive)
   (select-window (split-window-horizontally))
-  (call-interactively #'im-eat))
+  (call-interactively #'im-eshell))
 
 (general-def :states 'normal
   "M-_" #'im-terminal-vertically
@@ -5360,7 +5367,6 @@ non-nil so that you only add it to `project-prefix-map'."
 ;; - Do =M-,= on a candidate to preview it.
 ;; - Also don't forget to utilize =M-a= (=embark-act=) in consult windows.
 ;; - Use =M-n= (future-history) to insert current symbol after running a consult command. Normally you would use =M-{p,n}= to cycle between history items but when you open minibuffer, typing =M-n= directly tries to guess what the user input would be.
-
 
 (use-package consult
   :general
@@ -5387,10 +5393,16 @@ non-nil so that you only add it to `project-prefix-map'."
    ;; If no narrowing is available, simply inserts "?"
    "?" #'consult-narrow-help)
   :config
+  (global-set-key (kbd "<f14>") #'consult-buffer)
+
   (advice-add #'register-preview :override #'consult-register-window)
 
   (setq consult-preview-key "M-,")
   ;; ^ When you do M-, on a candidate, it previews it
+
+  ;; xref consult integration
+  (setq xref-show-xrefs-function #'consult-xref)
+  (setq xref-show-definitions-function #'consult-xref)
 
   ;; Hide some buffers from consult-buffer window. If you want to jump
   ;; on one of these buffers, start with a space after opening
@@ -5807,39 +5819,62 @@ When ARG is non-nil, query the whole workspace/project."
   )
 
 (cl-defmacro im-cape
-    (&key name generator category bound key annotate (exclusive 'no) kind)
+    (&key name completion extractor category
+          bound key annotate doc (exclusive 'no) (sort t) kind)
   "Create a cape completion function with given parameters.
-GENERATOR is a function that returns the completion list when
-called.
 
-BOUND is boundaries of the thing that gets completed. May be
+COMPLETION is a either a list that holds the completions or a
+function that returns the completions.  This can be an arbitrary
+object as EXTRACTOR is used for extracting the real completions
+from this object.  EXTRACTOR is a function that is called with
+the result of COMPLETION and real completion list is gathered
+this way.
+
+BOUND is boundaries of the thing that gets completed.  May be
 symbol, word, file etc.
 
 KEY is key to bind this cape to.
 
 ANNOTATE is a function that returns annotation for given
-completion. A function called with single argument, current
-completion item.
+completion.  It should return a string.  The function is called
+with two arguments, first being the object returned by COMPLETION
+and second being current completion item.
+
+DOC is a function that returns documentation for given
+completion.  Should return a string.  Signature is same with
+ANNOTATE.
 
 KIND is a function that returns the kind for current completion
-item. It should return a symbol like `file' `directory' etc. In
-turn, there is a icon displayed that is associated with the kind
-symbol."
+item.  It should return a symbol like `file', `folder', `text',
+`snippet', `keyword', `function', `variable', `module', `color'
+etc.  In turn, there is a icon displayed that is associated with
+the kind symbol.  Signature is same with ANNOTATE.
+
+SORT should be nil to disable sorting."
   (let ((cape-fn (intern (format "im-cape-%s" (symbol-name name)))))
     `(progn
        (defun ,cape-fn (&optional interactive)
          (interactive (list t))
          (if interactive
              (cape-interactive #',cape-fn)
-           (let ((bounds (cape--bounds ',bound)))
+           (pcase-let ((`(,beg . ,end) (cape--bounds ',bound))
+                       (xs (if (functionp ,completion)
+                               (funcall ,completion)
+                             ,completion)))
              (append
-              (list (car bounds) (cdr bounds)
-                    (cape--nonessential-table ,generator)
+              (list beg end
+                    (cape--properties-table (funcall ,extractor xs) :sort ,sort)
                     :exclusive ',exclusive)
               (when ,annotate
-                (list :annotation-function ,annotate))
+                (list :annotation-function (apply-partially ,annotate xs)))
               (when ,kind
-                (list :company-kind ,kind))
+                (list :company-kind (apply-partially ,kind xs)))
+              (when ,doc
+                (list :company-doc-buffer (lambda (x)
+                                            (with-current-buffer (get-buffer-create " *im-cape-doc*")
+                                              (erase-buffer)
+                                              (insert (funcall ,doc xs x))
+                                              (current-buffer)))))
               (when ',category
                 (list :category ',category))))))
        (when ,key
@@ -6357,15 +6392,6 @@ this command is invoked from."
       (push "=" tab-jump-out-delimiters)))
   (global-tab-jump-out-mode 1))
 
-;;;;; completing-read-xref
-;; Provides an interface to xref based on completing-read.
-
-(use-package completing-read-xref
-  :diminish
-  :straight (:host github :repo "travitch/completing-read-xref.el")
-  :config
-  (setq xref-show-definitions-function #'completing-read-xref-show-defs))
-
 ;;;;; helpful and elisp-demos
 
 ;; - helpful :: Better help dialogs with syntax highlighting, references, source etc.
@@ -6870,6 +6896,7 @@ in the DM section of the official Slack client."
     "et" #'prodigy)
   :config
   (evil-define-key 'normal prodigy-mode-map
+    "q" #'im-quit
     "m" #'prodigy-mark
     "u" #'prodigy-unmark
     "x" #'prodigy-stop
@@ -6954,6 +6981,10 @@ in the DM section of the official Slack client."
   :straight (:host github :repo "isamert/emacs-reddigg")
   :config
   (setq reddigg-convert-md-to-org t))
+
+(defun im-reddigg-view-link (link &rest _)
+  (interactive "sLink: ")
+  (reddigg-view-comments (s-chop-prefix "https://www.google.com/url?q=" link)))
 
 ;;;;; jq-mode
 ;; A mode for editing ~jq~ scripts. Mostly using it for ~jq-interactively~ function which enables you to write a jq query and update the buffer accordingly in real time.
@@ -7730,7 +7761,6 @@ This happens to me on org-buffers, xwidget-at tries to get
 ;; - <<hl-todo>> :: Highlight TODO/FIXME etc.
 ;; - Use ~]t~ and ~[t~ to go next/prev TODO/FIXME item.
 
-
 (use-package dumb-jump
   :defer t
   :init
@@ -7740,18 +7770,9 @@ This happens to me on org-buffers, xwidget-at tries to get
   ;; also see: https://github.com/jacktasia/dumb-jump/issues/376
   (setq dumb-jump-force-searcher 'ag)
   (setq dumb-jump-ignore-context t)
-  (setq dumb-jump-fallback-search nil))
+  (setq dumb-jump-fallback-search nil)
 
-;; Call treesit-auto-install-all
-(use-package treesit-auto
-  :straight (treesit-auto
-             :type git
-             :host github
-             :repo "renzmann/treesit-auto"
-             :fork (:host github
-                    :repo "noctuid/treesit-auto"
-                    :branch "bind-around-set-auto-mode-0"))
-  :hook (after-init . global-treesit-auto-mode))
+  (remove-hook 'xref-backend-functions #'etags--xref-backend))
 
 (use-package hl-todo
   :hook (prog-mode . hl-todo-mode)
@@ -8411,6 +8432,72 @@ to turn it into something generic using macros."
     (s-split "\n")
     (-drop-last 1)
     (s-join "\n"))))
+
+;;;;; tree-sitter
+
+(setq treesit-language-source-alist
+      '((awk "https://github.com/Beaglefoot/tree-sitter-awk" nil nil nil nil)
+        (bash "https://github.com/tree-sitter/tree-sitter-bash" nil nil nil nil)
+        (c "https://github.com/tree-sitter/tree-sitter-c" nil nil nil nil)
+        (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp" nil nil nil nil)
+        (clojure "https://github.com/sogaiu/tree-sitter-clojure" nil nil nil nil)
+        (cmake "https://github.com/uyha/tree-sitter-cmake" nil nil nil nil)
+        (commonlisp "https://github.com/tree-sitter-grammars/tree-sitter-commonlisp" nil nil nil nil)
+        (cpp "https://github.com/tree-sitter/tree-sitter-cpp" nil nil nil nil)
+        (css "https://github.com/tree-sitter/tree-sitter-css" nil nil nil nil)
+        (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile" nil nil nil nil)
+        (go "https://github.com/tree-sitter/tree-sitter-go" nil nil nil nil)
+        (gomod "https://github.com/camdencheek/tree-sitter-go-mod" nil nil nil nil)
+        (html "https://github.com/tree-sitter/tree-sitter-html" nil nil nil nil)
+        (java "https://github.com/tree-sitter/tree-sitter-java" nil nil nil nil)
+        (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src" nil nil)
+        (json "https://github.com/tree-sitter/tree-sitter-json" nil nil nil nil)
+        (kotlin "https://github.com/fwcd/tree-sitter-kotlin" nil nil nil nil)
+        (latex "https://github.com/latex-lsp/tree-sitter-latex" nil nil nil nil)
+        (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua" nil nil nil nil)
+        (make "https://github.com/tree-sitter-grammars/tree-sitter-make" nil nil nil nil)
+        (markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown" nil nil nil nil)
+        (nix "https://github.com/nix-community/tree-sitter-nix" nil nil nil nil)
+        (nu "https://github.com/nushell/tree-sitter-nu" nil nil nil nil)
+        (python "https://github.com/tree-sitter/tree-sitter-python" nil nil nil nil)
+        (r "https://github.com/r-lib/tree-sitter-r" nil nil nil nil)
+        (ruby "https://github.com/tree-sitter/tree-sitter-ruby" nil nil nil nil)
+        (rust "https://github.com/tree-sitter/tree-sitter-rust" nil nil nil nil)
+        (scala "https://github.com/tree-sitter/tree-sitter-scala" nil nil nil nil)
+        (sql "https://github.com/DerekStride/tree-sitter-sql" "gh-pages" nil nil nil)
+        (toml "https://github.com/tree-sitter/tree-sitter-toml" nil nil nil nil)
+        (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src" nil nil)
+        (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src" nil nil)
+        (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml" nil nil nil nil)))
+
+(defun im-install-and-enable-treesit-grammers ()
+  "Install and enable grammers defined in `treesit-language-source-alist'.
+Only for built-in modes.  Others are registered through `use-package's :mode keyword."
+  (dolist (source treesit-language-source-alist)
+    (unless (treesit-ready-p (car source))
+      (treesit-install-language-grammar (car source)))
+    (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-ts-mode))
+    (add-to-list 'auto-mode-alist '("\\.tsx\\'" . tsx-ts-mode))
+    (setq
+     major-mode-remap-alist
+     '((yaml . yaml-ts-mode)
+       (toml . toml-ts-mode)
+       (rust . rust-ts-mode)
+       (ruby . ruby-ts-mode)
+       (python-mode . python-ts-mode)
+       (json-mode . json-ts-mode)
+       (javascript-mode . js-ts-mode)
+       (java-mode . java-ts-mode)
+       (go-mode . go-ts-mode)
+       (dockerfile-mode . dockerfile-ts-mode)
+       (css-mode . css-ts-mode)
+       (cpp-mode . cpp-ts-mode)
+       (cmake-mode . cmake-ts-mode)
+       (c++-mode . c++-ts-mode)
+       (c-mode . c-ts-mode)
+       (bash-mode . bash-ts-mode)))))
+
+(add-hook 'after-init-hook #'im-install-and-enable-treesit-grammers)
 
 ;;;;; markdown
 
@@ -10058,7 +10145,7 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
 (defvar im-git-main-branch "master"
   "Main branch name.")
 
-(defvar im-jira-projects '("AI" "SAT")
+(defvar im-jira-projects '("AI" "SAT" "DISP" "LISTI")
   "List of projects that I enrolled in JIRA.")
 
 (defvar im-jira-base-branch "origin/master"
@@ -12494,6 +12581,13 @@ WHERE is interpreted as a file name."
                 (when-let ((zoom (nth 1 (s-match "\\(https://.*zoom.us/j/.*\\)\\(\b\\|\n\\)" it))))
                   (im-open-zoom-meeting-dwim zoom)))))
 
+
+(define-derived-mode im-calendar-mode outline-mode "Calendar"
+  "Calendar...")
+
+(general-def :keymaps 'im-calendar-mode-map :states 'motion
+  "TAB" #'outline-cycle)
+
 (defun im-calendar-today ()
   "Show today's calendar in a buffer. The resulting buffer has
   outline-mode enabled, so you can use outline-mode specific
@@ -12503,10 +12597,9 @@ WHERE is interpreted as a file name."
    :command "icalBuddy -f eventsToday"
    :on-start (lambda (&rest _) (erase-buffer))
    :on-finish (lambda (&rest _)
-                (outline-mode)
+                (im-calendar-mode)
                 (setq-local outline-regexp "• ")
                 (setq-local outline-level #'outline-level)
-                (im-calendar-mode)
                 (goto-char (point-min))
                 (outline-cycle-buffer))
    :buffer-name "*calendar-today*"))
@@ -12771,7 +12864,7 @@ attribute for current buffers file or selected file."
 
 (general-def
   :states 'normal
-  :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map lsp-mode-map)
+  :keymaps '(prog-mode-map)
   "K" #'im-peek-doc)
 
 (general-def
@@ -12969,7 +13062,8 @@ TARGET quickly."
   (im-peek
    (cond
     ((symbol-value 'lsp-mode) #'im-peek-doc--lsp)
-    ((-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'im-peek-doc--elisp))))
+    ((-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'im-peek-doc--elisp)
+    (eldoc-mode #'eldoc-doc-buffer))))
 
 ;; TODO: Add lsp mode etc.
 (defun im-peek-source ()

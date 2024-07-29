@@ -367,7 +367,6 @@ This assumes that this function is called on the button itself."
       (insert-text-button
        "Reload"
        'action (lambda (_button)
-                 ;; TODO: use my implementation in the future
                  (lab-github-view-repo-readme url-or-path))
        'follow-link t)
       (insert " | ")
