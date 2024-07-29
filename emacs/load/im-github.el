@@ -165,7 +165,7 @@
        (let-alist it
          (let ((repo (lab-github-repo-name-from-url .repository_url))
                (issue-no .number))
-           (with-current-buffer (get-buffer-create (format "*lab-github: %s#%s*" repo issue-no))
+           (with-current-buffer (get-buffer-create (format "*lab-github: %s#%s %s*" repo issue-no .title))
              (erase-buffer)
              (insert (format "- Status :: %s " (s-titleize .state)))
              (insert-button
