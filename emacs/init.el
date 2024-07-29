@@ -1265,7 +1265,7 @@ using this function."
   "Holds the currently used font name.
 One of `im-fonts'.")
 
-(defconst im-font-height (im-when-on :linux 138 :darwin 170))
+(defconst im-font-height (im-when-on :linux 138 :darwin 150))
 
 (defun im-set-font (&optional next)
   "Set the first available font from the `im-fonts' list.
@@ -1282,13 +1282,15 @@ If NEXT is non-nil, then use the next font."
                         :height im-font-height)
     (setq im-current-font font)))
 
-;;;;; Change theme by day and night automatically
+(add-hook 'after-init-hook #'im-set-font)
+
+;; Change theme by day and night automatically
 
 (use-package theme-changer
   :straight (:host github :repo "hadronzoo/theme-changer")
-  :config
-  (require 'theme-changer)
-  (change-theme im-theme-day im-theme-night))
+  :hook (after-init . (lambda () (change-theme im-theme-day im-theme-night)))
+  :autoload (change-theme))
+
 
 ;;;;; prettify-symbols-mode
 ;; I make use of this mode quite frequently throughout the configuration.
@@ -4513,7 +4515,7 @@ anchor points in the buffer."
 (setq browse-url-handlers
       '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
         (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
-        (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?\\(&.*\\)$" . im-reddigg-view-link)
+        (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?\\(&.*\\)?$" . im-reddigg-view-link)
         (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . (lambda (link &rest _) (empv-play-or-enqueue link)))
         (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
@@ -6854,11 +6856,12 @@ in the DM section of the official Slack client."
                                          (slack-team-groups team)
                                          (slack-team-channels team)))
                  team
-                 #'(lambda (rs) (cl-remove-if
-                            (lambda (it)
-                              (or (slack-room-hidden-p it)
-                                  (slack-room-muted-p it team)))
-                            rs)))))
+                 #'(lambda (rs)
+                     (cl-remove-if
+                      (lambda (it)
+                        (or (slack-room-hidden-p it)
+                            (slack-room-muted-p it team)))
+                      rs)))))
     (slack-room-display
      (cdr (im-completing-read "Select: " alist :formatter #'car :sort? nil))
      team)))
@@ -7961,6 +7964,7 @@ Useful if .elfeed directory is freshly syncned."
 (use-package empv
   :straight (:host github :repo "isamert/empv.el")
   :defer t
+  :autoload (empv--select-action)
   :init
   (im-leader "r" empv-map)
   :config
