@@ -4751,89 +4751,39 @@ for why."
   :init
   (evil-define-key 'insert 'shell-mode-map (kbd "C-l") #'comint-clear-buffer))
 
-;;;;; magit & vc
-;; While I mainly use magit for version control stuff, ~vc~ has some nicer parts that I make use of. Like
-;; - =vc-annotate= :: Faster and simpler alternative to =magit-blame=. (Bound to ~SPC gB~). Use =L= on line to show commit message.
+;;;;; vc --- version control
 
-;; Sometimes I use =vc= for pure speed. Because it supports multiple backends, the terminology is a bit different but here is how you stage and commit (keybindings are coming from [[evil-collection]]):
-;; - =C-x v d= to open magit-status like status buffer.
-;; - =TAB= to show diff of the file at point.
-;; - =m/u= (vc-dir-mark) to mark/unmark files to take an action on them. You can also think this as staging if your next action is going to be committing.
-;; - =c= (vc-next-action) to commit /staged/ files.
+;; I used to use but because of it's slowness (mostly fault of macOs
+;; and my work mandatory security apps), I ditched it. vc is pretty
+;; nice most of the time.
 
-;; Note that it's not possible to stage hunks with =vc=.
-
-;;;;;; Installation/feature summary
-;; - Read this for some useful status mode keymaps: https://endlessparentheses.com/it-s-magit-and-you-re-the-magician.html
-;; - y :: Branch viewer (delete branches with ~k~)
-;; - ll :: Log current
-;; - bs :: Branch spin-off; create and checkout to a new branch, carry over the ongoing changes. It also undoes the changes in the current branch
-;; - bc :: Branch create; you can directly create new branch from *origin/develop* for instance
-;; - Fe :: (magit-pull) and then e. This makes it possible to pull from a different remote to your current branch. You can do git fetch and then ~Fe~ to pull main into your current branch, for example. So that you don't need to switch master to be able to rebase your branch against master.
-;; - cF :: Add your currently staged changes to a commit you made earlier.
-
-(use-package magit
-  :demand t
-  :general
-  (im-leader
-    "ga" #'magit-status
-    "gf" #'magit-file-dispatch
-    "gp" #'vc-pull
-    "gP" #'magit-push
-    "gB" #'vc-annotate ;; Git Blame
-    "gR" #'vc-refresh-state
-    "gbc" #'vc-create-branch
-    "gbs" #'vc-switch-branch
-    "gbb" #'magit-branch
-    "gL" #'vc-print-root-log)
-  :config
-  (define-advice magit-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
-  (define-advice magit-branch-and-checkout (:after (&rest _) refresh-vc-state) (vc-refresh-state))
-  (define-advice vc-create-branch (:after (&rest _) refresh-vc-state) (vc-refresh-state))
-  (define-advice vc-switch-branch (:after (&rest _) refresh-vc-state) (vc-refresh-state)))
-
-;;;;;; vc configuration
+;; I've also implemented a status/commit workflow, similar to magit's
+;; but it's very fast and much more streamlined for my usage. See
+;; `im-git-status' and `im-git-commit'.
 
 (use-package vc
   :straight (:type built-in)
   :general
   (:keymaps 'vc-dir-mode-map :states 'normal
    "r" #'vc-dir-refresh)
-  :config
-  ;; Magit like commit interface:
-  ;; - Open commit window
-  ;; - Clear all other windows
-  ;; - Open diff
-  ;; - When committed, kill diff buffer and window.
-  (require 'log-edit)
-  (remove-hook 'log-edit-hook #'log-edit-show-files)
-  (add-hook 'log-edit-hook #'im-vc-show-diff))
-
-(defvar im--last-log-diff-buffer nil)
-(defun im-vc-show-diff ()
-  "Same as `log-edit-show-diff' but do not focus to the diff window."
-  (let ((bname (buffer-name (current-buffer))))
-    (delete-other-windows)
-    (log-edit-show-diff)
-    (setq im--last-log-diff-buffer (current-buffer))
-    (im-select-window-with-buffer bname)))
-
-;; Restore window configuration etc. after we are done.
-;; log-edit-done-hook only works on successful case but this advice
-;; works for every case
-(define-advice log-edit-kill-buffer (:after (&rest args) kill-diff-window)
-  (im-select-window-with-buffer (buffer-name im--last-log-diff-buffer))
-  (when (equal (window-buffer) im--last-log-diff-buffer)
-    (im-quit))
-  (kill-buffer im--last-log-diff-buffer)
-  (tab-bar-history-back))
+  (:keymaps 'diff-mode-map :states 'normal
+   "o" #'im-vc-diff-open-file-at-revision-dwim)
+  (im-leader
+    "gp" #'vc-pull
+    "gR" #'vc-refresh-state
+    "gbc" #'vc-create-branch
+    "gbs" #'vc-switch-branch
+    "gB" #'vc-annotate ;; Git Blame
+    "gL" #'vc-print-root-log
+    ;; TODO: add magit like interface for force pushing and selecting upstream?
+    "gP" #'vc-push))
 
 (defun im-vc-diff-open-file-at-revision-dwim ()
-  (interactive nil diff-mode)
   "Open the file at revision.
 Simply works like you hit enter on a magit diff window.  Useful
 when displaying old diffs and you want to jump to the full file
 of that revision."
+  (interactive nil diff-mode)
   (pcase-let* ((`(,old ,new) diff-vc-revisions)
                (file-path (s-trim
                            (s-chop-prefixes
@@ -4864,10 +4814,6 @@ of that revision."
         (reveal-mode))
       (forward-line line))))
 
-
-(general-def :keymaps 'diff-mode-map :states 'normal
-  "o" #'im-vc-diff-open-file-at-revision-dwim)
-
 ;;;;;; git-timemachine
 ;; - Toggle with ~git-timemachine~ (SPC gt).
 ;; - When in timemachine mode,
@@ -4880,48 +4826,6 @@ of that revision."
   :general
   (im-leader-v
     "gt" #'git-timemachine-toggle))
-
-;;;;;; magit-delta (for diff syntax highlighting)
-;; You need to install ~delta~ (or ~git-delta~) before to get this
-;; working. See [[https://github.com/dandavison/delta][here]].
-
-
-(use-package magit-delta
-  :after magit
-  :hook
-  ((magit-mode . magit-delta-mode)
-   (magit-delta-mode . im-delta-fix-bg-colors))
-  :config
-  (setq magit-delta-default-light-theme "GitHub")
-  (setq magit-delta-default-dark-theme "Monokai Extended Bright")
-  (setq magit-delta-hide-plus-minus-markers nil)
-
-  ;; To make this work, I need to patch code-review package, see
-  ;; wandersoncferreira/code-review#201-2146926599
-  (add-hook 'code-review-mode-hook #'magit-delta-mode)
-
-  ;; Apply diff colors to whole visual line
-  ;; See https://github.com/dandavison/magit-delta/issues/6
-  ;; White
-  ;; (set-face-attribute 'magit-diff-added-highlight nil :background "#d0ffd0")
-  ;; (set-face-attribute 'magit-diff-added nil :background "#d0ffd0")
-  ;; (set-face-attribute 'magit-diff-removed-highlight nil :background "#ffe0e0")
-  ;; (set-face-attribute 'magit-diff-removed nil :background "#ffe0e0")
-
-  ;; Dark
-  (set-face-attribute 'magit-diff-added-highlight nil :background "#002800")
-  (set-face-attribute 'magit-diff-added nil :background "#002800")
-  (set-face-attribute 'magit-diff-removed-highlight nil :background "#3f0001")
-  (set-face-attribute 'magit-diff-removed nil :background "#3f0001"))
-
-
-(defun im-delta-fix-bg-colors ()
-  (setq face-remapping-alist
-        (seq-difference face-remapping-alist
-                        '((magit-diff-removed . default)
-                          (magit-diff-removed-highlight . default)
-                          (magit-diff-added . default)
-                          (magit-diff-added-highlight . default)))))
 
 ;;;;; diff-hl (git gutter alternative)
 
@@ -4972,33 +4876,11 @@ of that revision."
   (define-advice diff-hl-show-hunk-previous (:after (&rest _) reveal) (reveal-post-command) (recenter))
   (define-advice diff-hl-show-hunk-next (:after (&rest _) reveal) (reveal-post-command) (recenter)))
 
-;;;;; forge
-
-(use-package forge
-  :after magit
-  :custom
-  ;; I set this for the following commands:
-  ;; - `forge-list-owned-issues'
-  ;; - `forge-list-owned-pullreqs'
-  (forge-owned-accounts '(("isamert"))))
-
-;; To configure, run:
-
-;; $ git config --global github.user isamert
-
-;; Then I created and added the API key from here to =~/.authinfo=
-;; file, in the following syntax:
-
-;; machine api.github.com login isamert^forge password <GH_API_KEY>
-
 ;;;;; blamer -- git blame
 
 (use-package blamer
   :ensure t
-  :general
-  (im-leader
-    "gi" #'blamer-show-posframe-commit-info)
-  :defer 20)
+  :commands (blamer-show-posframe-commit-info))
 
 ;;;;; avy
 ;; avy is very similar to ~vim-easymotion~. It simply jumps to a
