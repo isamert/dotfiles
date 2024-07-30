@@ -124,6 +124,7 @@
 ;; starting a webserver in given directory.  Use `elnode-server-list'
 ;; to list active webservers.
 (use-package elnode
+  :defer t
   :custom
   (elnode-error-log-to-messages nil))
 
@@ -263,10 +264,6 @@ not found with WHAT, then it is requested from the user."
     (let ((start (progn (skip-chars-backward "0-9") (point)))
           (end (progn (skip-chars-forward "0-9") (point))))
       (string-to-number (buffer-substring start end)))))
-
-(skip-chars-backward "[0-9]")
-
-123452
 
 (defun im-inner-back-quote-at-point ()
   "Return text inside the back quotes at point."
@@ -1029,7 +1026,9 @@ Async request:
 (defalias 'im-generate-random-string #'im-insert-random-string)
 (defalias 'im-generate-random-id #'im-insert-random-string)
 (defun im-insert-random-string ()
-  "Generate a 7 character random string."
+  "Generate a 7 character random string.
+Useful for the cases where I need to reference stuff inside a
+file/project etc."
   (interactive)
   (let ((chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
         (string ""))
@@ -1037,15 +1036,34 @@ Async request:
       (setq string (concat string (string (aref chars (random (length chars)))))))
     (insert string)))
 
+;; TODO: Formalize the notation, something like "ref:<id>" and
+;; "def:<id>" and have a function that finds this specific id in the
+;; current project.
+
 ;;;;; Load path
-;; Add =~/.emacs.d/load/= to =load-path=. I have extra configuration kept in this path.
 
-(defconst im-load-path (expand-file-name "~/.emacs.d/load/"))
+(defconst im-load-path (expand-file-name "~/.emacs.d/load/")
+  "The path that I keep my extra stuff.
+Probably stuff that not committed to git.")
+
+(defconst im-packages-path (expand-file-name "~/.emacs.d/packages/")
+  "The path that I keep my experimental packages in.
+These packages are not published as a separate project but lives
+in my dotfiles repository.")
+
 (add-to-list 'load-path im-load-path)
+(add-to-list 'load-path im-packages-path)
 
-;; Also load ~im-secrets~ from =load-path=. I'll be utilizing some variables defined here throughout my configuration. It contains some api-keys, some tokens or some passwords etc. that I don't want to leak into public. Instead of doing mutations on an external hidden script, I define variables in this external hidden script and reference them in the configuration. This way the logic stays in the public configuration file so that everyone can take a look, but only the variable itself will be hidden from the public.
+;; Also load ~im-secrets~ from =load-path=. I'll be utilizing some
+;; variables defined here throughout my configuration. It contains
+;; some api-keys, some tokens or some passwords etc. that I don't want
+;; to leak into public. Instead of doing mutations on an external
+;; hidden script, I define variables in this external hidden script
+;; and reference them in the configuration. This way the logic stays
+;; in the public configuration file so that everyone can take a look,
+;; but only the variable itself will be hidden from the public.
 
-(load "im-secrets")
+(require 'im-secrets)
 
 ;;;; Basics
 ;;;;; Overriding some defaults
@@ -1241,16 +1259,17 @@ using this function."
 ;; - ef-summer → Pinkish white theme, really nice to look at.
 ;; - ef-cherie → For me, like ef-summer but dark. Black and purple.
 
-(use-package modus-themes)
+(use-package modus-themes
+  :defer t)
 (use-package ef-themes
-  :config
-  (load-theme 'ef-summer t))
+  :defer t)
 (use-package doom-themes
+  :defer t
   :config
   ;; Fix for doomemacs/themes#720
   (custom-set-faces
    `(tab-bar
-     ((t (:background ,(doom-color 'bg-alt) :foreground ,(doom-color 'fg-alt)))))))
+     ((t (:background ,(or (doom-color 'bg-alt) unspecified) :foreground ,(or (doom-color 'fg-alt) unspecified)))))))
 
 (defconst im-theme-day 'ef-summer
   "Theme for the day.")
@@ -1562,13 +1581,19 @@ side window the only window'"
   :states '(normal visual))
 
 ;;;;; evil-collection
+
+;; TODO: Instead of eagerly loading bindings, move them to their
+;; package declaration, like:
+
+;; (with-eval-after-load ='calendar
+;;   (evil-collection-calendar-setup))
+
 (use-package evil-collection
   :after evil
   :config
   (evil-collection-init 'ibuffer)
   (evil-collection-init 'compile)
   (evil-collection-init 'eshell)
-  (evil-collection-init 'geiser)
   (evil-collection-init 'dired)
   (evil-collection-init 'grep)
   (evil-collection-init 'replace)
@@ -1896,79 +1921,80 @@ side window the only window'"
 
 (use-package org
   :mode ("\\.org\\'" . org-mode)
-  :config
-  (setq org-return-follows-link t)
+  :custom
+  (org-return-follows-link t)
   ;; ^ Open links with RET
-  (setq org-src-fontify-natively t)
+  (org-src-fontify-natively t)
   ;; ^ Enable code highlighting in ~SRC~ blocks.
-  (setq org-hierarchical-todo-statistics t)
+  (org-hierarchical-todo-statistics t)
   ;; ^ Show all children in todo statistics [1/5]
-  (setq org-imenu-depth 7)
+  (org-imenu-depth 7)
   ;; ^ include up to 7-depth headers in imenu search
-  (setq org-image-actual-width nil)
+  (org-image-actual-width nil)
   ;; ^ Disable showing inline images in full width. Now you can add `#+ATTR_*: :width 300` to resize inline images
   ;; (setq org-ellipsis "⤵")
   ;; (setq org-ellipsis "…")
   ;; ^ Replace ... with … in collapsed sections
-  (setq org-hide-emphasis-markers t)
+  (org-hide-emphasis-markers t)
   ;; Hide *...* /.../ etc.
-  (setq org-pretty-entities t)
-  (setq org-log-into-drawer t)
+  (org-pretty-entities t)
+  (org-log-into-drawer t)
   ;; ^ Log into LOGBOOK drawer instead of directly loging under the heading
-  (setq org-extend-today-until 3)
+  (org-extend-today-until 3)
   ;; ^ Consider the current day to end at 3AM
-  (setq org-use-effective-time t)
+  (org-use-effective-time t)
   ;; ^ Make timestamp processing functions aware of the previous config
-  (setq org-element-use-cache nil)
+  (org-element-use-cache nil)
   ;; ^ Cache causes bunch of random errors although disabling cache
   ;; reduces the agenda performance significantly
-  (setq org-tags-column 0)
+  (org-tags-column 0)
   ;; Tags starts right after the heading.
-  (setq org-reverse-note-order t)
+  (org-reverse-note-order t)
   ;; ^ I keep new notes at the beginning. This helps with that.
-  (setq org-confirm-babel-evaluate nil)
+  (org-confirm-babel-evaluate nil)
   ;; ^ Don't ask permissions for evaluating code blocks
-  (setq org-clock-clocked-in-display 'mode-line)
+  (org-clock-clocked-in-display 'mode-line)
   ;; ^ Shows in the tab-bar, if tab-bar is enabled.
-  (setq org-habit-show-habits nil)
+  (org-habit-show-habits nil)
   ;; ^ Speeds up agenda a bit
-  (setq org-edit-src-content-indentation 0)
+  (org-edit-src-content-indentation 0)
   ;; ^ No indentation for src blocks
-  (setq org-cycle-include-plain-lists 'integrate)
+  (org-cycle-include-plain-lists 'integrate)
   ;; ^ Also toggle visibility of plain list with TAB etc. like they are subheadings
 
   ;; Put archive files under an archive/ directory
   ;; I don't want them to pollute my directory
-  (setq org-archive-location "archive/%s_archive::")
-  (setq org-directory "~/Documents/notes")
-  (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
+  (org-archive-location "archive/%s_archive::")
+  (org-directory "~/Documents/notes")
+  (org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
 
-  (setq im-org-calendar-directory (format "%s/calendars" org-directory))
-  (setq im-calendar-files (directory-files im-org-calendar-directory 'full (rx ".org" eos)))
-  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
+  (im-org-calendar-directory (format "%s/calendars" org-directory))
+  (im-calendar-files (directory-files im-org-calendar-directory 'full (rx ".org" eos)))
+  (org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
 
-  (add-to-list 'org-link-abbrev-alist '("imdb" . "https://www.imdb.com/title/%s"))
-  (add-to-list 'org-link-abbrev-alist '("yt" . "https://youtu.be/%s"))
-  ;; ^ More info: https://orgmode.org/manual/Link-Abbreviations.html
-
-  ;; http://www.foldl.me/2012/disabling-electric-indent-mode/
-  (defun im-disable-electric-indent ()
-    (set (make-local-variable 'electric-indent-functions)
-         (list (lambda (arg) 'no-indent))))
-
-  (add-hook 'org-mode-hook #'im-disable-electric-indent)
-
+  :config
   ;; Automatically invoke `org-indent-mode' which gives nice little
   ;; indentation under subsections. It makes reading easier. This does
   ;; not add any spaces/tabs to the text file, the indentation is only
   ;; visually apparent in Emacs.
   ;; (add-hook 'org-mode-hook #'org-indent-mode t)
 
+  (add-to-list 'org-link-abbrev-alist '("imdb" . "https://www.imdb.com/title/%s"))
+  (add-to-list 'org-link-abbrev-alist '("yt" . "https://youtu.be/%s"))
+  ;; ^ More info: https://orgmode.org/manual/Link-Abbreviations.html
+
   ;; With the following, I can call functions defined inside this file in other org files
   (org-babel-lob-ingest (concat org-directory "/utils.org")))
 
 (use-package org-contrib :after org)
+
+;; http://www.foldl.me/2012/disabling-electric-indent-mode/
+(defun im-disable-electric-indent ()
+  (set (make-local-variable 'electric-indent-functions)
+       (list (lambda (arg) 'no-indent))))
+
+(add-hook 'org-mode-hook #'im-disable-electric-indent)
 
 ;;;;; Keybindings
 
@@ -2138,7 +2164,7 @@ blocks (the ones that tangles into the same file).
 
 This function also works inside `org-edit-special' buffers and
 does not disrupt the current window configuration."
-  (interactive)
+  (interactive nil org-mode)
   (let ((src-edit? (org-src-edit-buffer-p))
         buffer pos
         (current-prefix-arg '(16)))
@@ -2159,7 +2185,7 @@ does not disrupt the current window configuration."
 ;; https://emacs.stackexchange.com/questions/23870/org-babel-result-to-a-separate-buffer/27190#27190
 (defun im-org-babel-result-to-buffer ()
   "A function to efficiently feed babel code block result to a separate buffer."
-  (interactive)
+  (interactive nil org-mode)
   (org-open-at-point)
   (org-babel-remove-result))
 
@@ -2285,21 +2311,22 @@ that is provided by ob-http."
    "q" #'org-agenda-quit
    "R" #'org-agenda-clockreport-mode
    "r" #'org-agenda-redo)
-  :config
-  (setq org-agenda-remove-tags t)
-  (setq org-agenda-include-diary t)
-  (setq org-agenda-use-time-grid t)
-  (setq org-agenda-time-grid
-        '((daily today require-timed remove-match)
-          (800 900 1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100 2200 2300 2400)
-          " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄"))
+  :custom
+  (org-agenda-remove-tags t)
+  (org-agenda-include-diary t)
+  (org-agenda-use-time-grid t)
+  (org-agenda-time-grid
+   '((daily today require-timed remove-match)
+     (800 900 1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100 2200 2300 2400)
+     " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄"))
   ;; Make it open faster
   ;; https://orgmode.org/manual/Speeding-Up-Your-Agendas.html
   ;; https://orgmode.org/worg/agenda-optimization.html
-  (setq org-agenda-dim-blocked-tasks nil)
-  (setq org-agenda-inhibit-startup t)
-  (setq org-agenda-use-tag-inheritance nil)
-  (setq org-agenda-ignore-drawer-properties '(effort appt category))
+  (org-agenda-dim-blocked-tasks nil)
+  (org-agenda-inhibit-startup t)
+  (org-agenda-use-tag-inheritance nil)
+  (org-agenda-ignore-drawer-properties '(effort appt category))
+  :config
   (evil-set-initial-state 'org-agenda-mode 'normal))
 
 ;;;;; org-caldav (calendar sync)
@@ -2307,27 +2334,24 @@ that is provided by ob-http."
 ;; Sync calendars with: `org-caldav-sync'.
 
 (use-package org-caldav
-  :config
-  (setq org-caldav-url (format "%s/remote.php/dav/calendars/%s" im-nextcloud-url im-nextcloud-user))
-  (setq
-   org-caldav-calendars
-   (--map
-    (list
-     :calendar-id it
-     :inbox (format "%s/%s.org" im-org-calendar-directory it))
-    im-nextcloud-calendars))
-
+  :after org
+  :defer t
+  :custom
+  (org-caldav-url (format "%s/remote.php/dav/calendars/%s" im-nextcloud-url im-nextcloud-user))
+  (org-caldav-calendars (--map
+                         (list
+                          :calendar-id it
+                          :inbox (format "%s/%s.org" im-org-calendar-directory it))
+                         im-nextcloud-calendars))
   ;; TODO: Fix the following, automatically get
-  (setq org-icalendar-timezone "Europe/Amsterdam")
-
+  (org-icalendar-timezone "Europe/Amsterdam")
   ;; Set it under the notes directory so that they will be synced
   ;; between devices
-  (setq org-caldav-save-directory "~/Documents/notes/data/")
-
+  (org-caldav-save-directory "~/Documents/notes/data/")
   ;; Set the following to nil, I already have set `org-caldav-calendars' above
-  (setq org-caldav-inbox nil)
-  (setq org-caldav-calendar-id nil)
-  (setq org-caldav-files nil))
+  (org-caldav-inbox nil)
+  (org-caldav-calendar-id nil)
+  (org-caldav-files nil))
 
 ;;;;; ToDo keywords & faces
 
@@ -2346,7 +2370,7 @@ that is provided by ob-http."
   (custom-set-faces
    '(org-headline-done ((t (:strike-through t))))
    '(org-agenda-done ((t (:strike-through t))))
-   '(org-column ((t (:background nil))))
+   '(org-column ((t (:background unspecified))))
    '(org-scheduled-today ((t (:foreground "light green"))))
 
    ;; Make some stuff small
@@ -2530,10 +2554,13 @@ This way you can insert new entry right after other non-TODO
 ;;;;; org-ql
 
 (use-package org-ql
+  :defer t
   :after org
   ;; Load org-ql-search prematurely to be able to use org-ql blocks in
   ;; org-mode
-  :hook (org-mode . (lambda () (require 'org-ql-search))))
+  :init
+  (with-eval-after-load 'org
+    (require 'org-ql-search)))
 
 ;; Here are some utility functions that I use in org-ql dynamic blocks:
 
@@ -2794,7 +2821,6 @@ Headers are gathered from all the org files found in `org-directory'."
      (concat "id:" header-id)
      (unless (use-region-p)
        (read-string "Enter link text: " (plist-get selected :header))))))
-
 
 (defun im-org-jump-to-header ()
   "Jump to selected header."
@@ -3312,6 +3338,23 @@ I generally bind this to a key while using by
     (when (called-interactively-p 'interactive)
       (end-of-line)
       (insert (format " → %s" effort)))))
+
+;;;;; im-org-complete
+
+;; Completion at point for dynamic block headers, source block headers
+;; etc.
+
+(use-package im-org-complete
+  :straight nil
+  :hook (org-mode . im-org-complete-setup))
+
+;;;;; im-svgcal
+
+;; Experimental visual calendar based on SVG for the current day.
+
+(use-package im-svgcal
+  :defer t
+  :straight nil)
 
 ;;;; Extra functionality
 ;;;;; im-open-thing-at-point
@@ -4622,7 +4665,8 @@ for why."
 
 ;;;;;; Language detection and code highlighting in eww buffers
 
-(use-package language-detection)
+(use-package language-detection
+  :defer t)
 
 (defun eww-tag-pre (dom)
   (let ((shr-folding-mode 'none)
@@ -5132,11 +5176,11 @@ of that revision."
 ;; function that returns all of my projects' paths.
 
 
-;; (use-package project
-;;   :straight (:type built-in)
-;;   ;; I dynamically load projects list
-;;   ;; FIXME Setting it to nil breaks project.el
-;;   :custom (project-list-file nil))
+(use-package project
+  :straight nil
+  ;; I dynamically load projects list
+  ;; FIXME Setting it to nil breaks project.el
+  :autoload (project--find-in-directory))
 
 (defconst im-projects-root "~/Workspace/projects")
 
@@ -5283,8 +5327,8 @@ non-nil so that you only add it to `project-prefix-map'."
                          (project-root (project-current)))
                        default-directory))
          (default-directory (cl-case type
-                              ('project proj-dir)
-                              ('dir default-directory)
+                              (project proj-dir)
+                              (dir default-directory)
                               (t (expand-file-name type))))
          (proj-name (f-base default-directory))
          (name (format "*$shell: %s*" proj-name)))
@@ -5416,7 +5460,7 @@ non-nil so that you only add it to `project-prefix-map'."
    ;; If no narrowing is available, simply inserts "?"
    "?" #'consult-narrow-help)
   :config
-  (global-set-key (kbd "<f14>") #'consult-buffer)
+  (global-set-key (kbd "<f13>") #'consult-buffer)
 
   (advice-add #'register-preview :override #'consult-register-window)
 
@@ -5524,7 +5568,8 @@ approach."
   "Return list of all files I frequently use."
   `(,@(directory-files im-scratch-project-path t)
     ,@(directory-files org-directory t "^\\w+.*.org$")
-    ,@(directory-files im-load-path t "\\.el$")))
+    ,@(directory-files im-load-path t "\\.el$")
+    ,@(directory-files im-packages-path t "\\.el$")))
 
 (with-eval-after-load 'consult
   (im-append! consult-buffer-sources 'im-consult-source-files)
@@ -5585,17 +5630,17 @@ approach."
        ,(format "/run/media/%s/BINGUS/" (user-login-name))))))
 
 (use-package consult-dir
+  :defer
   :bind (("C-x C-d" . consult-dir)
          :map vertico-map
          ("M-d" . consult-dir))
-  :demand t
-  :config
-  (setq consult-dir-sources '(consult-dir--my-dirs
-                              consult-dir--source-bookmark
-                              consult-dir--source-recentf
-                              consult-dir--source-tramp-local
-                              consult-dir--source-default
-                              consult-dir--source-project)))
+  :custom
+  (consult-dir-sources '(consult-dir--my-dirs
+                         consult-dir--source-bookmark
+                         consult-dir--source-recentf
+                         consult-dir--source-tramp-local
+                         consult-dir--source-default
+                         consult-dir--source-project)))
 
 
 ;;;;; embark
@@ -6267,8 +6312,8 @@ this command is invoked from."
 
 (use-package yankpad
   :straight (:host github :repo "isamert/yankpad")
-  :after yasnippet
-  :demand t
+  :after (org yasnippet)
+  :autoload (yankpad--categories yankpad--snippets)
   :general
   (im-leader
     "sr" #'yankpad-reload
@@ -6284,15 +6329,13 @@ this command is invoked from."
   (:keymaps 'minibuffer-local-map
    (kbd "M-s") #'yankpad-insert
    (kbd "M-e") #'hippie-expand)
-  :config
-  (setq yankpad-file snippets-org)
-  (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand)
-
+  :custom
+  (yankpad-file snippets-org)
   ;; Categories returned by the following functions will be used to
   ;; expand snippets
-  (setq
-   yankpad-auto-category-functions
-   '(yankpad-major-mode-category im-current-project-name)))
+  (yankpad-auto-category-functions '(yankpad-major-mode-category im-current-project-name))
+  :init
+  (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand))
 
 ;; I also like to use these snippets outside of Emacs. For this, I
 ;; defined =im-select-any-snippet=. It let's you select any snippet
@@ -6311,7 +6354,7 @@ this command is invoked from."
       ,(async-inject-variables "^load-path$")
       (require 'dash)
       (require 'yankpad)
-      ,(async-inject-variables "^yankpad-file$")
+      (setq yankpad-file ,snippets-org)
       (-mapcat
        (lambda (category)
          (--map (cons (format "%s :: %s" category (car it)) it)
@@ -6348,7 +6391,6 @@ this command is invoked from."
         (yas-minor-mode-on))
       (yankpad--run-snippet snippet)
       (im-kill (buffer-string)))))
-
 
 ;;;;; git-link
 
@@ -7197,7 +7239,7 @@ Also removes the answers, if user wants it."
 
 (use-package lab
   :straight (:host github :repo "isamert/lab.el")
-  :demand t ;; I use some functions from this package
+  :autoload (lab--git lab--time-ago lab-git-clone lab-current-branch lab-git-origin-switch-to-ssh)
   :general
   (im-leader
     "gmb" #'lab-list-branch-merge-requests
@@ -7227,16 +7269,15 @@ Also removes the answers, if user wants it."
   (setq lab-group ty-gitlab-group)
   (setq lab-should-open-pipeline-on-manual-action? t))
 
-;;;;; activity-watch-mode
+;; I also have an experimental GitHub version, tailored for more
+;; open-source work needs instead of regular stuff.
 
-(use-package activity-watch-mode
-  :straight (:host github :repo "pauldub/activity-watch-mode")
-  :hook (after-init . global-activity-watch-mode)
-  :config
-  (setq activity-watch-project-name-resolvers '(im)))
-
-(defun activity-watch-project-name-im ()
-  (im-current-project-name))
+(use-package im-github
+  :autoload (lab-github-issue-at-point)
+  :commands (lab-github-view-repo-readme)
+  :straight nil
+  :init
+  (add-to-list 'im-open-thing-at-point-alist '(lab-github-issue-at-point . lab-github-open-issue)))
 
 ;;;;; swagg.el -- Swagger UI
 
@@ -7324,11 +7365,12 @@ Also removes the answers, if user wants it."
 
 ;; Dependency of xwwp
 (use-package ctable
+  :after xwwp
   :straight (:host github :repo "kiwanami/emacs-ctable"  :files (:defaults "*.el")))
 
 (use-package xwwp
-  :demand t
   :straight (:host github :repo "kchanqvq/xwwp"  :files (:defaults "*"))
+  :commands (xwwp)
   :general
   (im-leader
     "eW" #'xwwp)
@@ -7533,16 +7575,16 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 (use-package biome
   :straight (:host github :repo "SqrtMinusOne/biome")
-  :config
-  (setq biome-query-coords
-        `(("Amsterdam, Netherlands" ,im-amsterdam-lat ,im-amsterdam-long)
-          ("Ankara, Turkey" ,im-ankara-lat ,im-ankara-long)
-          ("Istanbul, Turkey" ,im-istanbul-lat ,im-istanbul-long)))
-
-  (setq biome-grid-highlight-current t)
-
-  (setq
-   biome-query-override-column-names
+  :defer t
+  ;; These commands are generated in the :config section.
+  :commands (im-weather-daily-ankara im-weather-daily-amsterdam im-weather-daily-istanbul)
+  :custom
+  (biome-query-coords
+   `(("Amsterdam, Netherlands" ,im-amsterdam-lat ,im-amsterdam-long)
+     ("Ankara, Turkey" ,im-ankara-lat ,im-ankara-long)
+     ("Istanbul, Turkey" ,im-istanbul-lat ,im-istanbul-long)))
+  (biome-grid-highlight-current t)
+  (biome-query-override-column-names
    '(("apparent_temperature_max" . "Max feel")
      ("apparent_temperature_min" . "Min feel")
      ("temperature_2m_min" . "Min temp")
@@ -7557,16 +7599,17 @@ This happens to me on org-buffers, xwidget-at tries to get
      ("is_day" . "Zone     ")
      ("shortwave_radiation_sum" . "Radiation")
      ("time" . "📅 ")))
-
+  :config
   ;; Generate a preset for each city in biome-query-coords
-
   (--each (map-keys biome-query-coords)
     (eval
      `(biome-def-preset ,(intern (concat "im-weather-daily-" (downcase (car (s-split ", " it)))))
         ((:name . "Weather Forecast")
          (:group . "daily")
          (:params
-          ("daily" "shortwave_radiation_sum" "uv_index_clear_sky_max" "uv_index_max" "precipitation_probability_max" "precipitation_hours" "precipitation_sum" "sunset" "sunrise" "apparent_temperature_min" "apparent_temperature_max" "temperature_2m_min" "temperature_2m_max" "weathercode")
+          ("daily" "shortwave_radiation_sum" "uv_index_clear_sky_max" "uv_index_max" "precipitation_probability_max"
+           "precipitation_hours" "precipitation_sum" "sunset" "sunrise" "apparent_temperature_min" "apparent_temperature_max"
+           "temperature_2m_min" "temperature_2m_max" "weathercode")
           ("latitude" . ,(car (map-elt biome-query-coords it)))
           ("longitude" . ,(cadr (map-elt biome-query-coords it))))))))
 
@@ -7576,7 +7619,8 @@ This happens to me on org-buffers, xwidget-at tries to get
         ((:name . "Weather Forecast")
          (:group . "hourly")
          (:params
-          ("hourly" "uv_index_clear_sky" "uv_index" "relativehumidity_2m" "precipitation" "precipitation_probability" "apparent_temperature" "temperature_2m" "is_day"  "weathercode")
+          ("hourly" "uv_index_clear_sky" "uv_index" "relativehumidity_2m" "precipitation"
+           "precipitation_probability" "apparent_temperature" "temperature_2m" "is_day"  "weathercode")
           ("latitude" . ,(car (map-elt biome-query-coords it)))
           ("longitude" . ,(cadr (map-elt biome-query-coords it)))))))))
 
@@ -8563,14 +8607,11 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
 (use-package haskell-mode
   :mode "\\.hs\\'")
 
-(use-package lsp-haskell
-  :after (lsp haskell)
-  :config
-  (setq lsp-haskell-process-path-hie "ghcide"
-        lsp-haskell-process-args-hie '()))
-
-(use-package ormolu
-  :hook (haskell-mode . ormolu-format-on-save-mode))
+;; (use-package lsp-haskell
+;;   :after (lsp haskell)
+;;   :config
+;;   (setq lsp-haskell-process-path-hie "ghcide"
+;;         lsp-haskell-process-args-hie '()))
 
 ;;;;; rust
 
@@ -8585,8 +8626,8 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
 ;; This is a package I wrote for inserting JSDoc comments easily. Check out the [[https://github.com/im-jsdoc.el][README]].
 
 (use-package jsdoc
-  :commands jsdoc
-  :straight (:host github :repo "isamert/jsdoc.el"))
+  :straight (:host github :repo "isamert/jsdoc.el")
+  :defer t)
 
 ;;;;;; Add node_modules/.bin to PATH automatically
 
@@ -8738,12 +8779,12 @@ This is used in my snippets."
 ;; Use "return ..." to get the object.
 
 (use-package ob-deno
-  :straight
-  (:host github
-   :repo "jflatow/ob-deno"
-   :branch "jflatow/async"))
+  :after org
+  :straight (:host github :repo "jflatow/ob-deno" :branch "jflatow/async")
+  :defer t)
 
-(add-to-list 'org-src-lang-modes '("deno" . typescript-ts))
+(with-eval-after-load 'org
+  (add-to-list 'org-src-lang-modes '("deno" . typescript-ts)))
 
 ;;;;;; Deno utils
 ;; Here are some functions that I use while developing with Deno.
@@ -8925,11 +8966,12 @@ When called with prefix argument, REPLACE becomes non-nil."
 ;;;;; scala
 
 (use-package scala-mode
+  :mode ("\\.\\(scala\\|sbt\\|worksheet\\.sc\\)\\'" . scala-mode)
   :interpreter
   ("scala" . scala-mode))
 
 (use-package lsp-metals
-  :after lsp
+  :after (lsp scala-mode)
   :custom
   (lsp-metals-server-args '("-J-Dmetals.allow-multiline-string-formatting=off"
                             "-J-Dmetals.icons=unicode"))
@@ -8986,6 +9028,8 @@ work.  You need to enter full path while importing by yourself."
 
 ;;;;;; maven helpers
 
+;; TODO: Fish shell already provides something similar (see fish-completion). Maybe this is not needed.
+
 (defun im-maven-goal-run (&optional invalidate)
   "Select a maven goal and run it.
 This function caches the goal list in the firt run. If you want
@@ -9002,12 +9046,12 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
         (setq goals (im-maven-goals-read))
         (im-serialize-into-file cache-file goals)
         (message "Generating maven goal list, please wait...Done")))
-    (let ((selected (lab--completing-read-object
+    (let ((selected (im-completing-read
                      "Select maven goal: "
                      goals
                      :formatter #'(lambda (x) (format "%s - %s"
-                                                      (propertize (car x) 'face '(:weight bold))
-                                                      (propertize (cadr x) 'face '(:weight thin :slant italic))))
+                                                 (propertize (car x) 'face '(:weight bold))
+                                                 (propertize (cadr x) 'face '(:weight thin :slant italic))))
                      :category 'maven-goal)))
       (let ((default-directory (im-current-project-root)))
         (im-shell-command
@@ -9083,8 +9127,8 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
   :general
   (:keymaps 'lisp-mode-map-map :states 'normal
    "K" #'slime-documentation)
-  :config
-  (setq inferior-lisp-program "sbcl"))
+  :custom
+  (inferior-lisp-program "sbcl"))
 
 ;;;;; emmet-mode
 ;; Hit <C-j> after these and get:
@@ -9113,9 +9157,9 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
 
 (use-package kotlin-mode
   :mode "\\.kt\\'"
-  :config
+  :custom
   ;; ki is a better REPL for Kotlin. You can save and reload your session.
-  (setq kotlin-command "ki"))
+  (kotlin-command "ki"))
 
 ;;;;; gradle/groovy
 
@@ -9177,12 +9221,6 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
 ;; Highlights quotes. Surprisingly useful
 (use-package highlight-quoted
   :hook (emacs-lisp-mode . highlight-quoted-mode))
-
-;; Replace package name prefixes with given character.
-;; (use-package nameless
-;;   :straight (:host github :repo "Malabarba/Nameless")
-;;   :custom (nameless-prefix "⟩")
-;;   :hook (emacs-lisp-mode . nameless-mode))
 
 ;;;;;; Linting & package development
 
@@ -9300,9 +9338,33 @@ Lisp function does not specify a special indentation."
 
 ;;;;;; emr & redshank -- refactoring tools
 
-(use-package redshank)
-(use-package emr :straight
-  (:host github :repo "isamert/emacs-refactor"))
+(use-package redshank
+  ;; All interactive redshank commands
+  :commands (redshank-maybe-splice-progn
+             redshank-point-at-enclosing-let-form
+             redshank-ignore-event
+             redshank-asdf-insert-module-components
+             redshank-highlight-binder
+             redshank-unhighlight-binder
+             redshank-slime-uninstall
+             redshank-letify-form
+             redshank-backward-down-list
+             redshank-letify-form-up
+             redshank-extract-to-defun
+             redshank-enclose-form-with-lambda
+             redshank-condify-form
+             redshank-eval-whenify-form
+             redshank-rewrite-negated-predicate
+             redshank-elisp-generate-form
+             redshank-lisp-generate-form
+             redshank-generate-thing-at-point
+             redshank-defclass-skeleton
+             redshank-define-condition-skeleton)
+  :defer t)
+
+(use-package emr
+  :straight (:host github :repo "isamert/emacs-refactor")
+  :defer t)
 
 ;;;;; Racket
 ;; - Open a racket buffer.
@@ -9347,15 +9409,21 @@ Lisp function does not specify a special indentation."
 ;;;;; scheme
 
 (use-package geiser
+  :defer t
   :commands geiser
-  :config
-  (setq geiser-debug-jump-to-debug-p nil)
-  (setq geiser-default-implementation 'guile))
+  :custom
+  (geiser-debug-jump-to-debug-p nil)
+  (geiser-default-implementation 'guile)
+  :init
+  (with-eval-after-load 'geiser
+    (evil-collection-geiser-setup)))
 
 (use-package geiser-guile
-  :after geiser)
+  :after geiser
+  :defer t)
 
 ;;;;; Docker stuff
+
 ;; Some major modes for editing files.
 
 (use-package dockerfile-mode
@@ -9376,19 +9444,20 @@ Lisp function does not specify a special indentation."
   (evil-define-key 'normal docker-volume-mode-map    (kbd "a") #'docker-volume-help))
 
 ;;;;; Kubernetes
+
 ;; - Use ~kubernetes-overview~ to get an overview.
 ;; - Use ~kubernetes-contexts-use-context~ to switch between contexts.
 ;; - Use ~kubernetes-set-namespace~ to set a namespace.
 
 (use-package kubernetes
   :defer t
-  :config
-  (setq kubernetes-poll-frequency 3600)
-  (setq kubernetes-redraw-frequency 3600)
-
-  (evil-define-key 'normal kubernetes-overview-mode-map
-    (kbd "r") #'kubernetes-refresh
-    (kbd "a") #'kubernetes-dispatch))
+  :custom
+  (kubernetes-poll-frequency 3600)
+  (kubernetes-redraw-frequency 3600)
+  :general
+  (:keymaps 'kubernetes-overview-mode-map :states 'normal
+   "r" #'kubernetes-refresh
+   "a" #'kubernetes-dispatch))
 
 (use-package kubernetes-evil
   :after kubernetes)
@@ -9396,14 +9465,16 @@ Lisp function does not specify a special indentation."
 ;;;;; vimrc
 ;; Mostly for editing tridactyl and sometimes real vimrc.
 
-
 (use-package vimrc-mode :defer t)
 
 ;;;;; Graphviz/dot
 
 (use-package graphviz-dot-mode
-  :demand t ;; Otherwise it won't work on org-mode buffers
-  :mode ("\\.dot\\'" "\\.gv\\'"))
+  :mode ("\\.dot\\'" "\\.gv\\'")
+  :init
+  (with-eval-after-load 'org-src
+    (add-to-list 'org-src-lang-modes '("dot" . graphviz-dot))))
+
 
 ;;;;; PlantUML
 
@@ -9424,8 +9495,8 @@ Lisp function does not specify a special indentation."
 (use-package couchbase-query
   :straight (:host github :repo "isamert/couchbase-query.el")
   :defer t
-  :config
-  (setq couchbase-query-command "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/cbq"))
+  :custom
+  (couchbase-query-command "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/cbq"))
 
 ;; Create a mode for n1ql and make n1ql code blocks inside org-mode
 ;; runnable.
@@ -9676,8 +9747,9 @@ total {rows,bytes} etc. and first 10 rows of the table."
 (bind-key "M-o B" #'im-bq-select-table)
 
 ;;;;; kbd-mode
-;; For working with KMonad kbd files. Do ~C-c C-c~ (~kbd-start-demo~) to apply your config and try it in a buffer.
 
+;; For working with KMonad kbd files. Do ~C-c C-c~ (~kbd-start-demo~)
+;; to apply your config and try it in a buffer.
 
 (use-package kbd-mode
   :straight (:host github :repo "kmonad/kbd-mode")
@@ -9777,70 +9849,74 @@ SELECT * FROM _ LIMIT 1;
 
 ;;;;; go
 
-(use-package go-mode)
+(use-package go-mode
+  :mode "\\.go\\'"
+  :defer t)
 
 ;;;;; nginx
 
-(use-package nginx-mode)
+(use-package nginx-mode
+  :mode (("nginx\\.conf\\'"  . nginx-mode)
+         ("/nginx/.+\\.conf\\'" . nginx-mode))
+  :defer t)
 
 ;;;; Window and buffer management
 ;;;;; tab-bar-mode
+
 ;; It's a great workspace manager that comes bundled with Emacs. I was
 ;; using an abomination where ~persp.el~ and ~eyebrowse~ was glued
 ;; together but I guess this is a simpler and more sane alternative to
 ;; them.
 
-;; ~tab-history-mode~ is just like ~winner-mode~ but tab-local which
-;; saves you from a lot of trouble.
+(use-package tab-bar
+  :straight nil
+  :custom
+  (tab-bar-new-tab-to 'rightmost)
+  (tab-bar-new-tab-choice im-init-file)
+  ;; Experimenting with not showing tab-bar at all.
+  ;; TODO: need a way to display on which tab am I, possibly inside
+  ;; modeline?
+  (tab-bar-show nil)
+  ;; Show numbers before tab names
+  (tab-bar-tab-hints t)
+  (tab-bar-auto-width nil)
+  (tab-bar-auto-width-max t)
+  (tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
+  (tab-bar-tab-name-function #'tab-bar-tab-name-current)
+  ;; FIXME: For some reason, my function gets slower over time. Dunno
+  ;; why, will investigate later.
+  ;; (setq tab-bar-tab-name-function #'im-current-project-name)
 
+  (tab-bar-format
+   '(tab-bar-format-tabs
+     tab-bar-separator
+     tab-bar-format-add-tab
+     tab-bar-format-align-right
+     tab-bar-format-global))
+  ;; Don't show global-mode-string in mode-line because we already show
+  ;; it on right side of the tab-bar
+  (mode-line-misc-info (assq-delete-all 'global-mode-string mode-line-misc-info))
+  :hook (after-init . tab-bar-mode)
+  :config
+  ;; Enable history so that I can use `tab-bar-history-back'
+  ;; `tab-bar-history-forward'.  `winner-mode' also have the same
+  ;; functionality but `tab-bar-history-mode' works per tab so that it
+  ;; does not mangle things up between different tabs which is just
+  ;; great.
+  (tab-bar-history-mode)
 
-(tab-bar-mode)
-(tab-bar-history-mode)
-
-(setq tab-bar-new-tab-to 'rightmost)
-(setq tab-bar-new-tab-choice im-init-file)
-(setq
- tab-bar-format
- '(tab-bar-format-tabs
-   tab-bar-separator
-   tab-bar-format-add-tab
-   tab-bar-format-align-right
-   tab-bar-format-global))
-
-;; Don't show global-mode-string in mode-line because we already show
-;; it on right side of the tab-bar
-(setq mode-line-misc-info (assq-delete-all 'global-mode-string mode-line-misc-info))
-
-;; Use a slightly modified version of ~tab-bar-tab-name-format~.
-
-
-(setq tab-bar-tab-hints t)
-;; ^ Show numbers before tab names
-(setq tab-bar-auto-width nil)
-(setq tab-bar-auto-width-max t)
-;; ^ Hmmm
-(setq tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
-
-(setq tab-bar-tab-name-function #'tab-bar-tab-name-current)
-;; FIXME: For some reason, my function gets slower over time. Dunno
-;; why, will investigate later.
-;; (setq tab-bar-tab-name-function #'im-current-project-name)
-
-;; Evil has a default binding for switching between tabs with ~gt~ and
-;; ~gT~, switching forward and backward respectively. I just make them
-;; repeatable so that after first ~gt~ (~gT~) I can hammer down ~t~
-;; (or ~T~) to switch next/prev tab quickly instead of doing ~gt~ (or
-;; ~gT~) again and again.
-
-
-(im-make-repeatable tab-bar-switch
-  "t" tab-bar-switch-to-next-tab
-  "T" tab-bar-switch-to-prev-tab)
+  ;; Evil has a default binding for switching between tabs with ~gt~ and
+  ;; ~gT~, switching forward and backward respectively. I just make them
+  ;; repeatable so that after first ~gt~ (~gT~) I can hammer down ~t~
+  ;; (or ~T~) to switch next/prev tab quickly instead of doing ~gt~ (or
+  ;; ~gT~) again and again.
+  (im-make-repeatable tab-bar-switch
+    "t" tab-bar-switch-to-next-tab
+    "T" tab-bar-switch-to-prev-tab))
 
 ;; I want to show ~consult-buffer~ when I open a new tab to be able to
 ;; quickly jump a file. I also want to show it in a buffer, not in
 ;; mini-buffer.
-
 (defun im-tab-bar-new-tab ()
   "Open a new tab and display consult-buffer."
   (interactive)
@@ -9850,14 +9926,13 @@ SELECT * FROM _ LIMIT 1;
         (this-command 'consult-buffer))
     (consult-buffer)))
 
+(defun im-tab-bar-new-tab-with-current-buffer ()
+  "Open a new tab and display the current buffer."
+  (interactive)
+  (let ((tab-bar-new-tab-choice t))
+    (tab-bar-new-tab)))
+
 ;;;;; tab-line-mode
-
-
-(setq tab-line-close-button-show 'selected)
-(setq tab-line-tabs-function #'im-tab-line-buffers)
-(setq tab-line-tab-name-function #'tab-line-tab-name-truncated-buffer)
-(setq tab-line-tab-name-truncated-max 25)
-;; (global-tab-line-mode)
 
 (defvar im-tab-line-hidden-buffer-name-regexp
   (concat
@@ -9871,6 +9946,16 @@ SELECT * FROM _ LIMIT 1;
    "\\|.*stderr\\*"
    "")
   "Regexp to filter out buffer names on tab line.")
+
+(use-package tab-line
+  :straight nil
+  ;; :hook (after-init . global-tab-line-mode)
+  :custom
+  (tab-line-close-button-show 'selected)
+  (tab-line-tabs-function #'im-tab-line-buffers)
+  (tab-line-tab-name-function #'tab-line-tab-name-truncated-buffer)
+  (tab-line-tab-name-truncated-max 25))
+
 
 (defun im-tab-line-buffers ()
   "Return releated project buffers (not limited to files, shells
@@ -10063,6 +10148,7 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   "wu" #'tab-bar-history-back ;; undo
   "wr" #'tab-bar-history-forward ;; redo
   "wt" #'im-tab-bar-new-tab ;; tab
+  "wT" #'im-tab-bar-new-tab-with-current-buffer ;; tab
   "wn" #'tab-bar-rename-tab ;; name
   "wm" #'tab-move ;; move
   "ws" #'tab-bar-switch-to-tab ;; switch
@@ -10240,9 +10326,9 @@ If PROJECTS is nil, then `im-jira-projects' is used."
        (setq
         issues
         (thread-last (format "project = \"%s\" AND Sprint in openSprints()"
-                   project)
-           (jiralib2-jql-search)
-           (append issues))))
+                             project)
+                     (jiralib2-jql-search)
+                     (append issues))))
      (or projects im-jira-projects))
     issues))
 
@@ -10386,7 +10472,7 @@ If PROJECTS is nil, then `im-jira-projects' is used."
 (defun im-jira-change-issue-status (key)
   (interactive "sIssue number: ")
   (->>
-   (lab--completing-read-object
+   (im-completing-read
     "Select status: "
     (im-jira-get-issue-transitions key)
     :formatter (lambda (it) (let-alist it (format "%s [%s]" .name .to.name))))
@@ -13095,7 +13181,7 @@ TARGET quickly."
   (interactive)
   (im-peek
    (cond
-    ((symbol-value 'lsp-mode) #'im-peek-doc--lsp)
+    ((ignore-errors (symbol-value 'lsp-mode)) #'im-peek-doc--lsp)
     ((-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'im-peek-doc--elisp)
     (eldoc-mode #'eldoc-doc-buffer))))
 
@@ -13209,8 +13295,9 @@ Version: 2023-07-16"
                       "Prompt: "
                       (--filter (or (and (use-region-p) (plist-get it :region)) t)
                                 im-gpt-prompts)
-                      :formatter (lambda (it) (or (plist-get it :display)
-                                             (plist-get it :prompt)))))
+                      :formatter (lambda (it)
+                                   (or (plist-get it :display)
+                                       (plist-get it :prompt)))))
           (prompt (or (plist-get selection :prompt) selection))
           (system (plist-get selection :system))
           (model (plist-get selection :model))

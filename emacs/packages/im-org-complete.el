@@ -134,6 +134,13 @@ Generally speaking, returned completions are annotated with one of these:
       (im-org-complete--parameters what block-type))
      (t '()))))
 
+;; TODO: Implement this
+;;;###autoload
+(defun im-org-complete-setup ()
+  (add-hook
+   'completion-at-point-functions
+   #'im-org-complete-completion-at-point nil 'local))
+
 (defun im-org-complete--parameter-types (what block-type param)
   "Get types of PARAM of the BLOCK-TYPE.
 WHAT is the name of the block, for source blocks it's something

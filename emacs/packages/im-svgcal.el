@@ -42,6 +42,7 @@
 (defvar im-svgcal--source-buffer nil
   "Buffer that is used to generate svgcal.")
 
+;;;###autoload
 (defun im-svgcal-enable ()
   "Enable svgcal."
   (interactive)
@@ -59,6 +60,7 @@
           (im-svgcal-render-buffer)
         (im-svgcal-disable))))))
 
+;;;###autoload
 (defun im-svgcal-disable ()
   "Disable svgcal."
   (interactive)
@@ -72,6 +74,7 @@
       (remove-hook 'after-save-hook #'im-svgcal-run 'local)
       (setq im-svgcal--last-entries nil))))
 
+;;;###autoload
 (defun im-svgcal-run ()
   (interactive)
   (when (buffer-narrowed-p)

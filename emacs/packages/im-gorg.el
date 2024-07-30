@@ -3,7 +3,6 @@
 ;; Experimental notifications for org-mode.
 
 (defun im-gorg-enable ()
-  ""
   (let ((start-time (float-time)))
     (async-start
      `(lambda ()
@@ -54,3 +53,6 @@
        (setq im-notif-org-agenda-results results)
        (--filter (< (alist-get 'remaining it) ) results)
        (message ">> Took %s seconds" (- (float-time) start-time))))))
+
+(provide 'im-gorg)
+;;; im-gorg.el ends here]

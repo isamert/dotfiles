@@ -53,7 +53,6 @@
 (defvar lab-github-open-issues-projects-blacklist '("isamert.github.io" "addalias" "gedi" "gracer" "scli")
   "Projects that you want to filter out when you use `lab-github-list-all-open-issues'.")
 
-
 ;;; Core
 
 (cl-defun lab-github-request (endpoint &key type success error data)
@@ -116,15 +115,18 @@
 ;; TODO: instead of defining this function, can I make
 ;; `lab-github-project-act-on' interactive using the macro
 
+;;;###autoload
 (defun lab-github-act-on-project (repo-or-link)
   (interactive (list (lab-github-interactive-url "URL or repo name: ")))
   (lab-github-project-act-on (lab-github-request (format "repos/%s" (lab-github-repo-name-from-url repo-or-link)))))
 
+;;;###autoload
 (defun lab-github-list-all-owned-projects ()
   (interactive)
   (lab-github-project-select-and-act-on
    (lab-github-request "users/#{user}/repos?per_page=100")))
 
+;;;###autoload
 (defun lab-github-list-project-pull-requests (full-repo-name)
   (interactive "sFull repo name: ")
   (lab-github-pull-request-select-and-act-on
@@ -349,10 +351,12 @@ This assumes that this function is called on the button itself."
    :success success
    :error (or error (lambda (data) (user-error ">> Can't comment: %s" data)))))
 
+;;;###autoload
 (defun lab-github-issue-view (url-or-path)
   (interactive (list (lab-github-interactive-url "URL or repo name: ")))
   (lab--github-pull-request-view (lab-github-request (concat "repos/" (lab-github-repo-name-from-url url-or-path)))))
 
+;;;###autoload
 (defun lab-github-view-repo-readme (url-or-path)
   (interactive (list (lab-github-interactive-url "URL or repo name: ")))
   (let* ((repo (lab-github-repo-name-from-url url-or-path))
@@ -427,6 +431,7 @@ This assumes that this function is called on the button itself."
 
 ;; TODO: Filter by date
 ;; https://docs.github.com/en/graphql/overview/explorer
+;;;###autoload
 (defun lab-github-list-all-open-issues ()
   "List all open GitHub issues belonging to my repositories."
   (interactive)
@@ -545,6 +550,7 @@ COMMENT) where OWNER and COMMENT are optional."
     (when (and project issue)
       (list (when owner (s-chop-suffix "/" owner)) project issue (when comment (s-chop-prefix "-" comment))))))
 
+;;;###autoload
 (defun lab-github-open-issue (issue)
   "Open the ISSUE, formatted like (OWNER PROJECT NO COMMENT-NO).
 OWNER and COMMENT-NO is optional.  If OWNER is nil, then it's
@@ -558,8 +564,6 @@ assumed to be the `lab-github-user'."
       project
       issue
       (if comment (format "#issuecomment-%s" comment) "")))))
-
-(add-to-list 'im-open-thing-at-point-alist '(lab-github-issue-at-point . lab-github-open-issue))
 
 (provide 'im-github)
 ;;; im-github.el ends here

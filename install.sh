@@ -3,7 +3,9 @@
 set -euo pipefail
 
 FRESH=0
-EMACS_LOAD_DIR="${HOME}/.emacs.d/load/"
+EMACS_PROFILE="${HOME}/.emacs.d"
+EMACS_PACKAGES_DIR="${EMACS_PROFILE}/packages"
+EMACS_LOAD_DIR="${EMACS_PROFILE}/load"
 
 case ${1:-""} in
 -h | --help)
@@ -18,12 +20,19 @@ case ${1:-""} in
     ;;
 esac
 
+mkdir -p "${EMACS_LOAD_DIR}"
+mkdir -p "${EMACS_PACKAGES_DIR}"
+
 echo "=> Remove broken symlinks..."
+find "${EMACS_PACKAGES_DIR}" -xtype l -exec unlink {} \;
 find "${EMACS_LOAD_DIR}" -xtype l -exec unlink {} \;
 
 echo "=> Cleaning old files..."
 rm -f ~/.emacs.d/init.el
 rm -f ~/.emacs.d/early-init.el
+for file in "${PWD}/emacs/packages"/*.el; do
+    [[ ! $file = *secrets* ]] && rm -f "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
+done
 for file in "${PWD}/emacs/load"/*.el; do
     [[ ! $file = *secrets* ]] && rm -f "${EMACS_LOAD_DIR}/$(basename "${file}")"
 done
@@ -32,9 +41,11 @@ echo "=> Installing Emacs configuration..."
 ln -s "${PWD}/emacs/init.el" ~/.emacs.d/init.el
 ln -s "${PWD}/emacs/early-init.el" ~/.emacs.d/early-init.el
 
-mkdir -p ~/.emacs.d/load/
+for file in "${PWD}/emacs/packages"/*.el; do
+    ln -s "${file}" "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
+done
 for file in "${PWD}/emacs/load"/*.el; do
-    ln -s "${file}" "$HOME/.emacs.d/load/$(basename "${file}")"
+    ln -s "${file}" "${EMACS_LOAD_DIR}/$(basename "${file}")"
 done
 
 if [[ $FRESH != 1 ]]; then
