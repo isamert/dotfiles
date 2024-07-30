@@ -6134,6 +6134,33 @@ debugger in but it's almost 99% of time not what I want."
       (call-interactively #'dap-debug)
     (user-error "Not in a project")))
 
+;;;;; eglot
+
+;; TODO: Add hooks for modes, eglot-ensure
+(use-package eglot
+  :defer t
+  :custom
+  (eglot-autoshutdown t)
+  (eglot-events-buffer-size 0)
+  (eglot-extend-to-xref nil)
+  (eglot-ignored-server-capabilities
+   '(:documentFormattingProvider
+     :documentRangeFormattingProvider
+     :documentOnTypeFormattingProvider
+     ;; :colorProvider
+     :foldingRangeProvider)))
+
+(use-package eglot-booster
+  :straight (:host github :repo "jdtsmith/eglot-booster")
+  :after eglot
+  :config (eglot-booster-mode))
+
+;; This is needed so that go-to definition works for library files.
+(use-package eglot-java
+  :after eglot
+  :straight (:host github :repo "yveszoundi/eglot-java")
+  :hook (java-ts-mode . eglot-java-mode))
+
 ;;;;; vterm
 ;; Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files
 ;; contains some helpful commands that enriches ~vterm~ usage.
