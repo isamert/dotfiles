@@ -414,6 +414,14 @@ This assumes that this function is called on the button itself."
        'action (lambda (_button) (im-inspect result))
        'follow-link t)
       (insert "\n\n")
+      (insert repo "\n")
+      (ignore-errors
+        (insert
+         (format
+          "(use-package %s :straight (:host github :repo \"%s\"))"
+          (car (s-split "\\." (nth 1 (s-split "/" repo))))
+          repo)))
+      (insert "\n\n")
       (insert "\n")
       (insert (base64-decode-string .content))
       (goto-char (point-min))

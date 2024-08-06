@@ -1094,16 +1094,16 @@ With argument, do this that many times."
 ;; installing a package or after an update from recent list.
 
 (use-package recentf
-  :straight (:type built-in)
-  :defer 5
-  :config
-  (setq recentf-max-saved-items 500)
-  (add-to-list 'recentf-exclude (format ".*\\.elc" (getenv "HOME")))
-  (add-to-list 'recentf-exclude "/tmp/.*")
-  (add-to-list 'recentf-exclude "/var/folders/.*")
-  (recentf-mode t))
+  :straight nil
+  :hook (after-init . recentf-mode)
+  :custom
+  (recentf-max-saved-items 500)
+  (recentf-exclude (list ".*\\.elc"
+                         "/tmp/.*"
+                         "/var/folders/.*")))
 
 ;;;;; reveal-mode
+
 ;; Enable the reveal-mode. This is quite needed as some commands that
 ;; does jumping does not reveal the text if it's hidden and reveal
 ;; mode does that.
@@ -1114,13 +1114,13 @@ With argument, do this that many times."
 ;;;;; Save minibuffer, kill-ring, search-ring history
 
 (use-package savehist
-  :straight (:type built-in)
+  :straight nil
+  :hook (after-init . savehist-mode)
   :config
   ;; Clipboard selections are copied into the kill-ring
   (setq save-interprogram-paste-before-kill t)
   (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
-  (setq savehist-file "~/.emacs.d/savehist")
-  (savehist-mode 1))
+  (setq savehist-file "~/.emacs.d/savehist"))
 
 
 ;;;;; Better scrolling
@@ -1165,15 +1165,19 @@ With argument, do this that many times."
 ;; ^ How many of the old versions to keep
 
 ;;;;; Remove trailing space before save
+
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
 
 ;;;;; Make script files executable automatically
+
 (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
 (with-eval-after-load 'ob-tangle
   (add-hook 'org-babel-post-tangle-hook #'executable-make-buffer-file-executable-if-script-p))
 
 ;;;;; Automatically run some commands after saving specific files
-;; This is like =autocmd BufWritePost= of vim. When a particular file is edited, I want to make sure a command runs after the save.
+
+;; This is like =autocmd BufWritePost= of vim. When a particular file
+;; is edited, I want to make sure a command runs after the save.
 
 (defvar im-run-after-save-alist
   '(("~/.\\(Xresources\\|Xdefaults\\)" . "xrdb %; notify-send 'xrdb updated'")
@@ -1203,10 +1207,11 @@ With argument, do this that many times."
      match)))
 
 ;;;;; repeat-mode
+
 ;; Enables you to have repeatable keybindings.
 
 (use-package repeat
-  :straight (:type built-in)
+  :straight nil
   :hook (after-init . repeat-mode))
 
 (defmacro im-make-repeatable (name &rest pairs)
@@ -1221,9 +1226,6 @@ With argument, do this that many times."
            map))
        (-each ',(mapcar #'cadr pairs)
          (lambda (it) (put it 'repeat-map ',map-name))))))
-
-(im-make-repeatable evil-goto-chg
-  ";" evil-goto-last-change)
 
 ;;;; Visuals
 ;;;;; General
@@ -1261,8 +1263,10 @@ using this function."
 
 (use-package modus-themes
   :defer t)
+
 (use-package ef-themes
   :defer t)
+
 (use-package doom-themes
   :defer t
   :config
@@ -1277,7 +1281,11 @@ using this function."
 (defconst im-theme-night 'ef-cherie
   "Theme for the night.")
 
-(defconst im-fonts '("FiraCode Nerd Font" "Iosevka Nerd Font" "IBM Plex Mono" "Iosevka Comfy Motion" "Iosevka Comfy")
+(defconst im-fonts '("FiraCode Nerd Font"
+                     "Iosevka Nerd Font"
+                     "IBM Plex Mono"
+                     "Iosevka Comfy Motion"
+                     "Iosevka Comfy")
   "Fonts that I use.")
 
 (defvar im-current-font nil
@@ -1312,6 +1320,7 @@ If NEXT is non-nil, then use the next font."
 
 
 ;;;;; prettify-symbols-mode
+
 ;; I make use of this mode quite frequently throughout the configuration.
 
 (setq prettify-symbols-unprettify-at-point t)
@@ -1326,18 +1335,6 @@ Just a simple wrapper around `prettify-symbols-mode`"
          (setq prettify-symbols-alist (append prettify-symbols-alist ,pairs))
          (prettify-symbols-mode 1))
        (add-hook ',mode #',hook))))
-
-;;;;; fira-code-mode (font ligatures)
-
-;; This adds Fira Code ligatures into Emacs, meaning that it prettifies well-known code symbols. This mode also saves the length of the chars, so it does not break spacing.
-;; - After the first install, you need to call =fira-code-mode-install-fonts= and then maybe restart Emacs etc.
-
-;; FIXME: having problems with X forwarding
-;; (use-package fira-code-mode
-;;   :hook
-;;   ((prog-mode org-mode) . fira-code-mode)
-;;   :config
-;;   (setq fira-code-mode-disabled-ligatures '(":" "x" "[]")))
 
 ;;;;; Frame title
 ;; Make window title contain buffer name so it's easier to identify
@@ -1363,7 +1360,9 @@ Just a simple wrapper around `prettify-symbols-mode`"
   :hook (prog-mode . rainbow-delimiters-mode))
 
 ;;;;; Highlight trailing spaces
-;; Following highlights trailing spaces. Also see: [[Remove trailing space before save]]
+
+;; Following highlights trailing spaces. Also see: [[Remove trailing
+;; space before save]]
 
 (use-package whitespace
   :hook (after-init . global-whitespace-mode)
@@ -1414,6 +1413,7 @@ side window the only window'"
     (window-toggle-side-windows)))
 
 ;;;;; Miscellaneous packages
+
 ;; Some small packages that enriches editing experience visually. I
 ;; don't enable all of them by default, I enable most of them whenever
 ;; I need the functionality. I utilize an appearance [[Hydra]] to
@@ -1427,19 +1427,7 @@ side window the only window'"
 ;; per buffer. This scales fonts with
 ;; default-text-scale-{increase,decrease} globally.
 (use-package default-text-scale
-  :demand t)
-
-;; It helps you to find your cursor when you change buffers/windows
-;; etc with a little animation.
-;; hl-line-mode helsp with finding the cursor. Disabled for now.
-;; (use-package beacon
-;;   :hook (after-init . beacon-mode)
-;;   :config
-;;   (setq beacon-blink-duration 0.5)
-;;   (setq beacon-push-mark 50)
-;;   (setq beacon-color "#9F72D9")
-;;   (add-to-list 'beacon-dont-blink-major-modes 'dirvish-mode)
-;;   (add-to-list 'beacon-dont-blink-major-modes 'eshell-mode))
+  :commands (default-text-scale-decrease default-text-scale-decrease))
 
 ;; This shows some indent guides and it's highly configurable.
 (use-package highlight-indent-guides
@@ -1454,10 +1442,9 @@ side window the only window'"
 ;;;;; Spacious padding
 ;; Add some padding to Emacs frame to freshen things up.
 
+;; Disabled for now.
 (use-package spacious-padding
-  ;; Disabled for now.
-  ;; :hook (after-init . spacious-padding-mode)
-  )
+  :commands (spacious-padding-mode))
 
 ;;;;; page-break-lines
 
@@ -1466,7 +1453,8 @@ side window the only window'"
 ;; mode in some cases where I need to draw a horizontal line in the
 ;; buffer to separate some stuff.
 
-(use-package page-break-lines)
+(use-package page-break-lines
+  :autoload (page-break-lines-mode))
 
 ;;;; evil-mode
 ;;;;; Basic configuration
@@ -1582,48 +1570,57 @@ side window the only window'"
 
 ;;;;; evil-collection
 
-;; TODO: Instead of eagerly loading bindings, move them to their
-;; package declaration, like:
-
-;; (with-eval-after-load ='calendar
-;;   (evil-collection-calendar-setup))
-
 (use-package evil-collection
   :after evil
+  :custom
+  (evil-collection-want-unimpaired-p t)
+  (evil-collection-unimpaired-want-repeat-mode-integration t))
+
+(use-package grep
+  :defer t
+  :straight nil
   :config
-  (evil-collection-init 'ibuffer)
-  (evil-collection-init 'compile)
-  (evil-collection-init 'eshell)
-  (evil-collection-init 'dired)
-  (evil-collection-init 'grep)
-  (evil-collection-init 'replace)
-  (evil-collection-init 'elfeed)
-  (evil-collection-init 'consult)
-  (evil-collection-init 'vterm)
-  (evil-collection-init 'term)
-  (evil-collection-init 'xref)
-  (evil-collection-init 'magit)
-  (evil-collection-init 'magit-todos)
-  (evil-collection-init 'git-timemachine)
-  (evil-collection-init 'calendar)
-  (evil-collection-init 'w3m)
-  (evil-collection-init 'eww)
-  (evil-collection-init 'vc-git)
-  (evil-collection-init 'vc-dir)
-  (evil-collection-init 'log-view)
-  (evil-collection-init 'log-edit)
-  (evil-collection-init 'vc-annotate)
-  (evil-collection-init 'help)
-  (evil-collection-init 'info)
-  (evil-collection-init 'Custom)
-  (evil-collection-init 'imenu-list)
-  (evil-collection-init 'custom)
-  (evil-collection-init 'xwidget)
+  (evil-collection-grep-setup))
 
-  (define-advice evil-collection-unimpaired-previous-error (:after (&rest _) recenter) (recenter))
-  (define-advice evil-collection-unimpaired-next-error (:after (&rest _) recenter) (recenter)))
+(use-package replace
+  :defer t
+  :straight nil
+  :config
+  (evil-collection-replace-setup))
 
-;;;;; evil-unimpaired
+(use-package compile
+  :defer t
+  :straight nil
+  :config
+  (evil-collection-compile-setup))
+
+(use-package xref
+  :defer t
+  :straight nil
+  :config
+  (evil-collection-xref-setup))
+
+(use-package help
+  :defer t
+  :straight nil
+  :config
+  (evil-collection-help-setup))
+
+(use-package imenu
+  :defer t
+  :straight nil
+  :config
+  (evil-collection-imenu-setup)
+  (evil-collection-imenu-list-setup))
+
+(use-package custom
+  :defer t
+  :straight nil
+  :config
+  (evil-collection-custom-setup))
+
+;;;;;; evil-unimpaired
+
 ;; Apparently [[evil-collection]] has a vim-unimpaired implementation
 ;; already. It contains bindings like:
 ;;   - ~[<SPC>~ ~]<SPC>~ Insert newline above/below.
@@ -1641,6 +1638,11 @@ side window the only window'"
 ;; Following are my extensions:
 
 (with-eval-after-load 'evil-collection
+  (evil-collection-init 'unimpaired)
+
+  (define-advice evil-collection-unimpaired-previous-error (:after (&rest _) recenter) (recenter))
+  (define-advice evil-collection-unimpaired-next-error (:after (&rest _) recenter) (recenter))
+
   (evil-collection-define-key 'normal 'evil-collection-unimpaired-mode-map
     "[d" #'im-delete-line-above
     "]d" #'im-delete-line-below)
@@ -1663,12 +1665,10 @@ side window the only window'"
       (beginning-of-line)
       (kill-line)
       (when (s-blank? (s-trim (thing-at-point 'line t)))
-        (kill-line))))
-
-  (setq evil-collection-unimpaired-want-repeat-mode-integration t)
-  (evil-collection-unimpaired-setup))
+        (kill-line)))))
 
 ;;;;; evil-mc (multiple cursors)
+
 ;; Multiple cursors for evil.
 
 ;; - Basics
@@ -1740,6 +1740,7 @@ side window the only window'"
   (evil-escape-mode 1))
 
 ;;;;; evil-matchit
+
 ;; Jump between matching tags using ~%~, like =<div>...</div>=,
 ;; ={...}= etc. =ci%=, =da%= etc. works as expected.
 
@@ -1749,6 +1750,7 @@ side window the only window'"
   (global-evil-matchit-mode 1))
 
 ;;;;; evil-goggles
+
 ;; ~evil-goggles~ gives nice visual feedbacks while editing with
 ;; evil-mode. When you do =dd=, =yw=, =ciw= or something similar, it
 ;; will give a visual feedback for the selection. Feels kinda natural
@@ -1828,6 +1830,7 @@ side window the only window'"
 
 (use-package goto-chg
   :after evil
+  :commands (evil-goto-last-change)
   :config
   (define-advice evil-goto-last-change (:after (&rest _) recenter)
     (reveal-post-command)
@@ -1961,6 +1964,11 @@ side window the only window'"
   ;; ^ No indentation for src blocks
   (org-cycle-include-plain-lists 'integrate)
   ;; ^ Also toggle visibility of plain list with TAB etc. like they are subheadings
+  (org-fold-core-style 'text-properties)
+  ;; ^ Documentation says text-properties are more buggy but my
+  ;; experience is the opposite. At least for now. overlay folding
+  ;; messes things up with indirect buffers which I use quite a
+  ;; lot. Haven't reported upstream tho.
 
   ;; Put archive files under an archive/ directory
   ;; I don't want them to pollute my directory
@@ -2530,13 +2538,13 @@ This way you can insert new entry right after other non-TODO
      (?* . "•")
      (?+ . "‣")))
   (org-modern-todo-faces
-   '(("PROG" t :inherit (org-modern-todo) :height 1 :foreground "magenta1")
-     ("WAIT" t :inherit (org-modern-todo) :height 1 :foreground "yellow1")))
+   '(("PROG" :background "purple" :foreground "plum1")
+     ("WAIT" :background "goldenrod3" :foreground "yellow2")))
   (org-modern-priority-faces
-   '((?A :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green1")
-     (?B :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green2")
-     (?C :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green3")
-     (?D :inverse-video t :weight semibold :inherit (org-priority org-modern-label) :foreground "green4")))
+   '((?A :background "forest green" :foreground "beige")
+     (?B :background "goldenrod" :foreground "beige")
+     (?C :background "coral" :foreground "beige")
+     (?D :background "red3" :foreground "beige")))
   :hook
   (org-mode . org-modern-mode)
   (org-agenda-finalize . org-modern-agenda))
@@ -2826,10 +2834,11 @@ Headers are gathered from all the org files found in `org-directory'."
   "Jump to selected header."
   (interactive)
   (let* ((selected (im-alist-completing-read "Select header:" (im-org-all-headers))))
-    (with-current-buffer (find-file-other-window (plist-get selected :fname))
+    (with-current-buffer (find-file (plist-get selected :fname))
       (widen)
       (goto-char 0)
-      (forward-line (plist-get selected :line)))))
+      (forward-line (plist-get selected :line))
+      (reveal-post-command))))
 
 ;;;;; Insert image with width
 ;; This function is especially useful when used in combination with =embark-act-all=. The workflow is as follows:
@@ -3350,10 +3359,18 @@ I generally bind this to a key while using by
 
 ;;;;; im-svgcal
 
-;; Experimental visual calendar based on SVG for the current day.
+;; Experimental SVG visual calendar for the current day.
+
+;; At the time of writing this, I wasn't aware of (or maybe it didn't
+;; even exist?) org-timeblock[1].  im-svgcal is quite similar to that
+;; but only works for given day and it's independent from the agenda,
+;; it simply draws a calendar for current org file (or current
+;; restricted section of the org file).
+
+;; [1]: https://github.com/ichernyshovvv/org-timeblock
 
 (use-package im-svgcal
-  :defer t
+  :commands (im-svgcal-enable im-svgcal-run)
   :straight nil)
 
 ;;;; Extra functionality
@@ -3472,6 +3489,8 @@ it's a list, the first element will be used as the binary name."
   (:states 'insert :keymaps '(eshell-prompt-mode-map override)
    "C-l" (λ-interactive (eshell/clear t)))
   :config
+  (evil-collection-eshell-setup)
+
   ;; This is nil on purpose. Because `im-eshell-append-history' does
   ;; duplication check before writing it to history and if this is
   ;; non-nil then it fails to do the duplication check because
@@ -3492,9 +3511,6 @@ it's a list, the first element will be used as the binary name."
   :config
   (eshell-syntax-highlighting-global-mode +1))
 
-;; I make use of this function
-(autoload 'eat-make "eat")
-
 ;; You may need to call `eat-compile-terminfo' after installing eat.
 (use-package eat
   :straight (:type git
@@ -3505,6 +3521,7 @@ it's a list, the first element will be used as the binary name."
                      ("terminfo/65" "terminfo/65/*")
                      ("integration" "integration/*")
                      (:exclude ".dir-locals.el" "*-tests.el")))
+  :autoload (eat-make)
   :hook (eat-mode . im-disable-hl-line-mode-for-buffer)
   :config
   (setq eat-enable-shell-prompt-annotation nil)
@@ -3761,13 +3778,22 @@ Makes the tables more readable."
   `(,(alist-get 'background-color (frame-parameters)) ,(mini-frame-get-background-color)))
 
 ;;;;; alert & im-notify-posframe
-;; Several packages are using this package to show system-level notifications. Here I set some defaults/fallback values.
-
 
 ;;;;;; Alert package
 
+;; Several packages are using this package to show system-level
+;; notifications. Here I set some defaults/fallback values.
+
 (use-package alert
-  :demand t
+  :general
+  (im-leader
+    "yy" #'im-notify-posframe-notifications
+    "yu" #'im-notify-posframe-enable-dnd
+    "yU" #'im-notify-posframe-disable-dnd
+    "yb" #'im-notify-posframe-blacklist
+    "ys" #'im-notify-posframe-snooze-last
+    "yc" #'im-notify-posframe-clear-all
+    "yC" (λ-interactive  (im-notify-posframe-clear-all t)))
   :config
   (alert-define-style
    'im-alert-posframe
@@ -3790,15 +3816,6 @@ Makes the tables more readable."
                               (substring-no-properties (plist-get info :message))
                               (substring-no-properties (plist-get info :title))))
       (alert-message-notify info)))
-
-  (im-leader
-    "yy" #'im-notify-posframe-notifications
-    "yu" #'im-notify-posframe-enable-dnd
-    "yU" #'im-notify-posframe-disable-dnd
-    "yb" #'im-notify-posframe-blacklist
-    "ys" #'im-notify-posframe-snooze-last
-    "yc" #'im-notify-posframe-clear-all
-    "yC" (λ-interactive  (im-notify-posframe-clear-all t)))
 
   ;; org-clock sends notification if the current tasks estimated effort is met.
   (setq
@@ -4094,16 +4111,18 @@ Return parsed seconds from users answer."
 
 (use-package dired
   :straight (:type built-in)
+  :custom
+  (dired-dwim-target t)
+  (dired-listing-switches "-l -A -h -v --group-directories-first")
+  (ls-lisp-dirs-first t)
+  (ls-lisp-use-insert-directory-program nil)
+  (dired-kill-when-opening-new-dired-buffer t)
+  (dired-clean-confirm-killing-deleted-buffers nil)
+  (dired-recursive-copies 'always)
+  (dired-recursive-deletes 'always)
+  (dired-dwim-target t)
   :config
-  (setq dired-dwim-target t)
-  (setq dired-listing-switches "-l -A -h -v --group-directories-first")
-  (setq ls-lisp-dirs-first t)
-  (setq ls-lisp-use-insert-directory-program nil)
-  (setq dired-kill-when-opening-new-dired-buffer t)
-  (setq dired-clean-confirm-killing-deleted-buffers nil)
-  (setq dired-recursive-copies 'always)
-  (setq dired-recursive-deletes 'always)
-  (setq dired-dwim-target t)
+  (evil-collection-dired-setup)
   (put 'dired-find-alternate-file 'disabled nil))
 
 (use-package dirvish
@@ -4129,15 +4148,11 @@ Return parsed seconds from users answer."
    "H"     #'dirvish-history-go-backward
    "L"     #'dirvish-history-go-forward
    "Q"     #'im-quit)
-  ;; Other keybindings comes from dired-mode (which comes from
-  ;; evil-collection)
-  :init
-  ;; Need to load this eagerly, otherwise `dired-jump' calls does not
-  ;; load dirvish.
-  (dirvish-override-dired-mode)
+  :custom
+  (dirvish-subtree-always-show-state t)
+  (dirvish-attributes '(vc-state subtree-state all-the-icons collapse git-msg file-time file-size))
   :config
-  (setq dirvish-subtree-always-show-state t)
-  (setq dirvish-attributes '(vc-state subtree-state all-the-icons collapse git-msg file-time file-size))
+  (dirvish-override-dired-mode)
 
   ;; Disable wrapping lines in some modes so that full-screen dirvish looks good
   (add-hook 'dirvish-directory-view-mode-hook #'im-disable-line-wrapping)
@@ -4240,7 +4255,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 ;; - Set a mark by hitting ~v~, then go to another date and hit ~M-=~ which will show day count between those two dates.
 
 (use-package calendar
-  :straight (:type built-in)
+  :straight nil
   ;; Enable including other diary entries using the #include "..." syntax
   ;; I use this to separate my work and normal diary
   :hook ((diary-list-entries . diary-include-other-diary-files)
@@ -4257,6 +4272,8 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (evil-define-key 'normal diary-fancy-display-mode-map "q" #'evil-delete-buffer)
   (evil-define-key 'normal calendar-mode-map (kbd "a") #'im-calendar-jump-org-agenda)
   :config
+  (evil-collection-calendar-setup)
+
   (calendar-set-date-style 'european)
 
   ;; Start the week from Monday
@@ -4472,28 +4489,31 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 (use-package w3m
   :commands (w3m im-w3m-open-url-dwim)
   :hook (w3m-mode . (lambda () (setq-local scroll-margin 0)))
-  :config
-  (evil-define-key 'normal w3m-mode-map
-    (kbd "&") (λ-interactive (funcall browse-url-secondary-browser-function w3m-current-url))
-    (kbd "^") (λ-interactive (browse-url w3m-current-url))
-    (kbd "K") #'w3m-next-buffer
-    (kbd "J") #'w3m-previous-buffer
-    (kbd "o") #'im-w3m-open-url-dwim
-    (kbd "O") #'w3m-edit-url
-    (kbd "t") (λ-interactive (im-w3m-open-url-dwim (read-string "URL: ") :new-session))
-    (kbd "T") (λ-interactive (im-w3m-open-url-dwim (read-string "URL: " w3m-current-url) :new-session))
-    (kbd "M-j") #'w3m-tab-move-left
-    (kbd "M-k") #'w3m-tab-move-right
-    (kbd "x") #'w3m-delete-buffer
-    (kbd "Y") #'im-w3m-yank-url
-    (kbd "f") #'im-w3m-avy-link
-    (kbd "F") #'im-w3m-avy-link-new-session)
-  (setq w3m-fill-column 80)
-  (setq w3m-use-title-buffer-name t)
-  (setq w3m-default-display-inline-images t)
-  (setq w3m-use-tab-line nil)
+  :general
+  (:keymaps 'w3m-mode-map :states 'normal
+   "&" (λ-interactive (funcall browse-url-secondary-browser-function w3m-current-url))
+   "^" (λ-interactive (browse-url w3m-current-url))
+   "K" #'w3m-next-buffer
+   "J" #'w3m-previous-buffer
+   "o" #'im-w3m-open-url-dwim
+   "O" #'w3m-edit-url
+   "t" (λ-interactive (im-w3m-open-url-dwim (read-string "URL: ") :new-session))
+   "T" (λ-interactive (im-w3m-open-url-dwim (read-string "URL: " w3m-current-url) :new-session))
+   "M-j" #'w3m-tab-move-left
+   "M-k" #'w3m-tab-move-right
+   "x" #'w3m-delete-buffer
+   "Y" #'im-w3m-yank-url
+   "f" #'im-w3m-avy-link
+   "F" #'im-w3m-avy-link-new-session)
+  :custom
+  (w3m-fill-column 80)
+  (w3m-use-title-buffer-name t)
+  (w3m-default-display-inline-images t)
+  (w3m-use-tab-line nil)
   ;; (setq w3m-display-mode 'plain)
-  (w3m-display-mode 'plain))
+  (w3m-display-mode 'plain)
+  :config
+  (evil-collection-w3m-setup))
 
 (defun im-w3m-open-url-dwim (url &optional new-session)
   (interactive "sURL: ")
@@ -4553,18 +4573,27 @@ anchor points in the buffer."
 
 ;;;;; eww -- web browser
 
-;;https://www.google.com/url?q=https://www.reddit.com/r/emacs/comments/w49muw/emacs_is_not_registering_function_keys_above_20/&sa=U&ved=2ahUKEwiVpej1_cmHAxUB1wIHHWOnBAcQFnoECAgQAg&usg=AOvVaw3gm4rO5PyXLR4pR4nkXhwQ
+(defun im-purified-url-handler (fn)
+  "Clear the redundant stuff from urls.
+Some links are prefixed with google redirection url, this
+removes (and other similar stuff) so that the url handler works
+properly."
+  (lambda (url &rest _)
+    (funcall
+     fn
+     (s-chop-prefix "https://www.google.com/url?q=" url))))
+
 (setq browse-url-secondary-browser-function #'browse-url-firefox)
 (setq browse-url-handlers
-      '((".*jtracker.trendyol.*/browse/.*" . (lambda (link &rest _) (im-jira-view-ticket link)))
-        (".*slack.com/archives/.*" . (lambda (link &rest _) (im-slack-open-link link)))
-        (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?\\(&.*\\)?$" . im-reddigg-view-link)
-        (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . (lambda (link &rest _) (im-open-stackexchange-link link)))
-        (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . (lambda (link &rest _) (empv-play-or-enqueue link)))
-        (".*\\.mp3" . (lambda (link &rest _) (empv--play-or-enqueue link)))
-        (".*github.com/.*issues/.*" . (lambda (link &rest _) (lab-github-issue-view link)))
-        (".*github.com/[A-Za-z0-9\\. _-]+/[A-Za-z0-9\\. _-]+$" . (lambda (link &rest _) (lab-github-view-repo-readme link)))
-        (".*zoom.us/j/.*" . (lambda (link &rest _) (im-open-zoom-meeting-dwim link)))
+      `((".*jtracker.trendyol.*/browse/.*" . ,(im-purified-url-handler #'im-jira-view-ticket))
+        (".*slack.com/archives/.*" . ,(im-purified-url-handler #'im-slack-open-link))
+        (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?\\(&.*\\)?$" . ,(im-purified-url-handler #'reddigg-view-comments))
+        (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . ,(im-purified-url-handler #'im-open-stackexchange-link))
+        (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . ,(im-purified-url-handler #'empv-play-or-enqueue))
+        (".*\\.mp3" . ,(im-purified-url-handler #'empv--play-or-enqueue))
+        (".*github.com/.*issues/.*" . ,(im-purified-url-handler #'lab-github-issue-view))
+        (".*github.com/[A-Za-z0-9\\. _-]+/[A-Za-z0-9\\. _-]+$" . ,(im-purified-url-handler #'lab-github-view-repo-readme))
+        (".*zoom.us/j/.*" . ,(im-purified-url-handler #'im-open-zoom-meeting-dwim))
         (".*\\(trendyol\\|gitlab\\|slack\\|docs.google\\).*" . browse-url-firefox)
         ("." . (lambda (link &rest _) (im-eww link)))))
 
@@ -4576,6 +4605,7 @@ anchor points in the buffer."
     "ew" #'im-eww)
   (:keymaps 'shr-map
    "z" nil ;; So that regular evil bindings work
+   "v" nil ;; So that regular evil bindings work
    "+" #'shr-zoom-image)
   (:keymaps 'eww-mode-map :states 'normal
    "Y" #'eww-copy-page-url
@@ -4593,18 +4623,21 @@ anchor points in the buffer."
    "<f3>" (λ-interactive (browse-url (eww-current-url)))
    "<f4>" (λ-interactive (browse-url-default-browser (eww-current-url)))
    "&" (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url))))
-  :config
+  :custom
   ;; Gifs make my computer suffer, so I just disable them
   ;; (setq shr-image-animate nil)
-  (setq shr-max-image-proportion 0.6)
-  (setq shr-discard-aria-hidden t)
-  (setq shr-use-xwidgets-for-media t)
+  (shr-max-image-proportion 0.6)
+  (shr-discard-aria-hidden t)
+  (shr-use-xwidgets-for-media t)
 
-  ;; Use browse-url for each link opening. This way my `browse-url-handlers' take precedence over eww.
-  (setq eww-use-browse-url ".*")
-  (setq eww-search-prefix "https://www.google.com/search?q=")
-  (setq eww-auto-rename-buffer
-        (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "...")))))
+  ;; Use browse-url for each link opening. This way my
+  ;; `browse-url-handlers' take precedence over eww.
+  (eww-use-browse-url ".*")
+  (eww-search-prefix "https://www.google.com/search?q=")
+  (eww-auto-rename-buffer
+   (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "..."))))
+  :config
+  (evil-collection-eww-setup))
 
 (defun im-eww (url)
   "`eww' wrapper.
@@ -4762,7 +4795,7 @@ for why."
 ;; `im-git-status' and `im-git-commit'.
 
 (use-package vc
-  :straight (:type built-in)
+  :straight nil
   :general
   (:keymaps 'vc-dir-mode-map :states 'normal
    "r" #'vc-dir-refresh)
@@ -4776,7 +4809,12 @@ for why."
     "gB" #'vc-annotate ;; Git Blame
     "gL" #'vc-print-root-log
     ;; TODO: add magit like interface for force pushing and selecting upstream?
-    "gP" #'vc-push))
+    "gP" #'vc-push)
+  :config
+  (evil-collection-vc-git-setup)
+  (evil-collection-log-view-setup)
+  (evil-collection-vc-dir-setup)
+  (evil-collection-vc-annotate-setup))
 
 (defun im-vc-diff-open-file-at-revision-dwim ()
   "Open the file at revision.
@@ -4823,11 +4861,14 @@ of that revision."
 ;; - ~C-j/k~ to go to prev/next revision of the file.
 
 (use-package git-timemachine
+  :commands (git-timemachine-toggle)
   :general
   (im-leader-v
-    "gt" #'git-timemachine-toggle))
+    "gt" #'git-timemachine-toggle)
+  :config
+  (evil-collection-git-timemachine-setup))
 
-;;;;; diff-hl (git gutter alternative)
+;;;;; diff-hl -- git gutter alternative
 
 ;; Highlights changed lines in git. You can also stage hunks directly
 ;; in the buffer.
@@ -4856,6 +4897,8 @@ of that revision."
   ;; Async update breaks my emacs for some reason. It's not on by
   ;; default but wanted to keep it here to note this. This happens
   ;; probably due to make-thread calls. Possibly only happens on OSX.
+  ;; UPDATE: After updating Emacs to 29.4, the crashing problem
+  ;; disappeared but setting it to t makes diff-hl even more slow.
   (diff-hl-update-async nil)
   (diff-hl-flydiff-delay 0.5)
   (diff-hl-show-staged-changes nil)
@@ -4883,6 +4926,7 @@ of that revision."
   :commands (blamer-show-posframe-commit-info))
 
 ;;;;; avy
+
 ;; avy is very similar to ~vim-easymotion~. It simply jumps to a
 ;; visible text using a given char.
 
@@ -4891,14 +4935,14 @@ of that revision."
 
 (use-package avy
   :commands (avy-goto-subword-1 avy-goto-word-1)
-  :init
-  (evil-define-key 'normal 'global
-    (kbd "S") #'avy-goto-subword-1
-    (kbd "s") #'avy-goto-word-1)
-  :config
-  (setq avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p)
-        avy-case-fold-search nil
-        avy-all-windows t))
+  :custom
+  (avy-keys '(?q ?w ?e ?r ?t ?a ?s ?d ?f ?j ?k ?l ?u ?i ?o ?p))
+  (avy-case-fold-search nil)
+  (avy-all-windows t)
+  :general
+  (:states 'normal
+   (kbd "S") #'avy-goto-subword-1
+   (kbd "s") #'avy-goto-word-1))
 
 ;;;;; vertico & marginalia & orderless & mini-frame
 ;; A nice, fast minibuffer narrowing framework. It works well with quite a lot of package.
@@ -5321,6 +5365,7 @@ non-nil so that you only add it to `project-prefix-map'."
   :general
   (im-leader
     "fo" #'find-file
+    "fb" #'switch-to-buffer
     "fs" #'save-buffer
     "fd" #'consult-dir
     "fl" #'consult-line
@@ -5342,6 +5387,8 @@ non-nil so that you only add it to `project-prefix-map'."
    ;; If no narrowing is available, simply inserts "?"
    "?" #'consult-narrow-help)
   :config
+  (evil-collection-consult-setup)
+
   (global-set-key (kbd "<f13>") #'consult-buffer)
 
   (advice-add #'register-preview :override #'consult-register-window)
@@ -5449,7 +5496,9 @@ approach."
 (defun im-my-files ()
   "Return list of all files I frequently use."
   `(,@(directory-files im-scratch-project-path t)
-    ,@(directory-files org-directory t "^\\w+.*.org$")
+    ;; Org may be loaded lazily
+    ,@(when (bound-and-true-p org-directory)
+        (directory-files org-directory t "^\\w+.*.org$"))
     ,@(directory-files im-load-path t "\\.el$")
     ,@(directory-files im-packages-path t "\\.el$")))
 
@@ -5635,6 +5684,7 @@ Also disable some byte compile warnings too."
     (setq flycheck-disabled-checkers '(emacs-lisp-checkdoc))))
 
 (use-package flycheck
+  :commands (flycheck-mode)
   :config
   (setq flycheck-idle-change-delay 1)
   (setq flycheck-display-errors-delay 0.3)
@@ -6081,6 +6131,8 @@ appropriate in some cases like terminals."
    "C-x" #'vterm--self-insert)
   :init
   :config
+  (evil-collection-vterm-setup)
+
   (setq vterm-kill-buffer-on-exit t)
   ;; See this: https://github.com/akermu/emacs-libvterm/issues/179#issuecomment-1045331359
   (setq vterm-shell "/usr/bin/screen")
@@ -6966,10 +7018,6 @@ in the DM section of the official Slack client."
   :config
   (setq reddigg-convert-md-to-org t))
 
-(defun im-reddigg-view-link (link &rest _)
-  (interactive "sLink: ")
-  (reddigg-view-comments (s-chop-prefix "https://www.google.com/url?q=" link)))
-
 ;;;;; jq-mode
 ;; A mode for editing ~jq~ scripts. Mostly using it for ~jq-interactively~ function which enables you to write a jq query and update the buffer accordingly in real time.
 
@@ -7073,16 +7121,24 @@ Also removes the answers, if user wants it."
 ;; works. Probably an issue in my config.
 
 ;;;;; tmr.el -- timers, reminders etc.
+
 ;; Pretty timers. I forget everything, so it's quite important for me
 ;; to have a quick way to define timers. I was using ~appt-add~ for
 ;; this before but it does not let you view/manipulate upcoming timers
 ;; easily and tmr does this very well with ~tmr-tabulated-view~.
 
 ;; - tmr :: To quickly define a timer, without any description.
-;; - tmr-with-details :: Define a timer with description, also asks if you need acknowledgment. Acknowledgment is useful in a sense that you can re-schedule the timer if you need it. It will ask you to write ~ack~ when the time is up, if you are not ready, you can re-schedule the timer with the same notation you use while creating it which is super convenient.
+
+;; - tmr-with-details :: Define a timer with description, also asks if
+;;   you need acknowledgment. Acknowledgment is useful in a sense that
+;;   you can re-schedule the timer if you need it. It will ask you to
+;;   write ~ack~ when the time is up, if you are not ready, you can
+;;   re-schedule the timer with the same notation you use while
+;;   creating it which is super convenient.
 
 (use-package tmr
   :defer t
+  :autoload (tmr--parse-duration)
   :init
   (im-leader "T" #'tmr-with-details)
   :config
@@ -7182,7 +7238,7 @@ Also removes the answers, if user wants it."
 ;; open-source work needs instead of regular stuff.
 
 (use-package im-github
-  :autoload (lab-github-issue-at-point)
+  :autoload (lab-github-issue-at-point lab-github-issue-view)
   :commands (lab-github-view-repo-readme)
   :straight nil
   :init
@@ -7296,6 +7352,8 @@ Also removes the answers, if user wants it."
    "<f3>" (λ-interactive (browse-url (xwidget-webkit-uri (xwidget-webkit-current-session))))
    "<f4>" (λ-interactive (browse-url-default-browser (xwidget-webkit-uri (xwidget-webkit-current-session)))))
   :config
+  (evil-collection-xwidget-setup)
+
   (require 'xwwp-full)
   (setq xwidget-webkit-buffer-name-format "*webkit: %T*")
   (setq xwidget-webkit-cookie-file "~/.cache/emacs-webkit-cookies"))
@@ -7422,6 +7480,7 @@ This happens to me on org-buffers, xwidget-at tries to get
 (use-package consult-gh
   :straight (:host github :repo "armindarvish/consult-gh")
   :after consult
+  :defer t
   :custom
   ;; Previews are triggered with `consult-preview-key'
   (consult-gh-show-preview t)
@@ -7566,12 +7625,170 @@ This happens to me on org-buffers, xwidget-at tries to get
 ;; using package.el and don't want to load it. Use
 ;; `epkg-list-packages'.
 
-(use-package epkg)
+(use-package epkg
+  :defer t)
 
 ;;;;; upver -- update dependencies interactively
 
 (use-package upver
+  :commands (upver)
   :straight (:host github :repo "isamert/upver.el"))
+
+;;;;; wanderlust -- email client
+
+;; Wanderlust seems like an easy way to set up IMAP email without
+;; messing with local mail sync process.  Defaults are quite weird but
+;; they can be overridden somewhat easily.  I should probably use mu4e
+;; or something similar but for now, Wanderlust let's me read my new
+;; mail and respond to them in Emacs without much hassle.  For more
+;; advanced stuff, like searching in inbox, it's still not there yet
+;; but that's enough for me for now.
+
+(use-package wanderlust
+  :init
+  (autoload 'wl "wl" "Wanderlust" t)
+  (autoload 'wl-user-agent-compose "wl-draft" nil t)
+  :commands (c)
+  :custom
+  ;; macOS allows file names up to 255 characters,
+  ;; use half of that size as threshold to switch to hashing
+  (elmo-msgdb-path-encode-threshold 128)
+  (wl-demo nil)
+  ;; Mark sent mail (in the wl-fcc folder) as read
+  (wl-fcc-force-as-read t)
+  ;; Use Fwd: instead of Forward:
+  (wl-forward-subject-prefix "Fwd: " )
+  ;; Fields in the e-mail header that I do not want to see (regexps)
+  (wl-message-ignored-field-list  '(".*Received:" ".*Path:" ".*Id:" "^References:"
+                                    "^Replied:" "^Errors-To:" "^Lines:" "^Sender:"
+                                    ".*Host:" "^Xref:" "^Content-Type:" "^Precedence:"
+                                    "^Status:" "^X-VM-.*:" "^List-*" "^Authentication-Results*"
+                                    "^X-*" "^Received-SPF*" "^DKIM-Signature:" "^DomainKey-Signature:"
+                                    "^X-Mailman-Version:" "ARC-*" "Content-Transfer-Encoding"))
+  ;; Fields in the e-mail header that I want to see even if they match the regex in wl-message-ignored-field-list
+  (wl-message-visible-field-list (quote ("^Dnas.*:" "^Message-Id:" "^X-Mailer:" "^X-Mailman-Version:")))
+  ;; Show full title in summary view
+  (wl-summary-width nil)
+  ;; STMP
+  (wl-from "Isa Mert Gurbuz <isamertgurbuz@gmail.com>")
+  (wl-smtp-connection-type   'starttls)         ; Use TLS
+  (wl-smtp-posting-port      587)               ; The SMTP port
+  (wl-smtp-authenticate-type "plain")           ; Authentication type
+  (wl-smtp-posting-user      "isamertgurbuz")   ; Username
+  (wl-smtp-posting-server    "smtp.gmail.com")  ; SMTP server
+  (wl-local-domain           "gmail.com")       ; The SMTP server again
+  (wl-message-id-domain      "smtp.gmail.com")
+
+  (wl-folder-check-async t)
+  (wl-biff-notify-hook '((lambda () (alert "You have new mail!" :title "Wanderlust"))))
+  :general
+  (:keymaps 'wl-summary-mode-map :states 'normal
+   "RET" #'im-wl-jump-to-message
+
+   "s" #'wl-summary-sync-update
+
+   ;; marks
+   "u" #'wl-summary-unmark
+   "mr" #'wl-summary-mark-as-read
+   "mu" #'wl-summary-mark-as-unread
+   "md" #'im-wl-mark-message-for-deletion
+   "ms" #'wl-execute-temp-marks
+
+   "R" #'wl-summary-read
+   "D" #'im-wl-summary-delete
+   "r" #'wl-summary-reply-with-citation
+
+   "a" #'wl-summary-reply
+   "d" #'im-wl-mark-message-for-deletion)
+  (:keymaps 'wl-folder-mode-map :states 'normal
+   "RET" #'wl-folder-jump-to-current-entity)
+  ;; FIXME: binding does not work
+  (:keymaps 'mime-view-mode-default-map :states 'normal
+   "q" #'im-wl-mime-view-quit))
+
+(setq-default mime-charset-for-write 'utf-8)
+(setq-default mime-transfer-level 8)
+(setq charsets-mime-charset-alist
+      '(((ascii) . us-ascii)
+        ((unicode) . utf-8)))
+
+(with-eval-after-load 'wl
+  (if (boundp 'mail-user-agent)
+      (setq mail-user-agent 'wl-user-agent))
+  (if (fboundp 'define-mail-user-agent)
+      (define-mail-user-agent
+        'wl-user-agent
+        'wl-user-agent-compose
+        'wl-draft-send
+        'wl-draft-kill
+        'mail-send-hook)))
+
+(define-advice wl-summary-sync-update (:after (&rest _) sort-properly)
+  (im-wl-sort-properly))
+
+(add-hook 'wl-summary-prepared-hook #'im-wl-sort-properly)
+
+(defalias 'im-new-email #'wl-summary-write)
+
+(defun im-wl-mime-view-quit ()
+  (interactive nil mime-view-mode)
+  (kill-buffer)
+  (delete-window))
+
+(defun im-wl-sort-properly ()
+  ;; Unfortunately thread view sorts threads by their first message
+  ;; instead of last, so it makes me miss some messages
+  (setq wl-summary-buffer-view 'sequence)
+  (wl-summary-rescan "!date")
+  (goto-char (point-min)))
+
+(defun im-wl-jump-to-message ()
+  "Jump to message in same window."
+  (interactive nil wl-summary-mode)
+  (let (buffer)
+    (save-window-excursion
+      (wl-summary-enter-handler)
+      (setq buffer (window-buffer (--find (s-prefix? " *WL:Message" (buffer-name (window-buffer it))) (window-list)))))
+    (switch-to-buffer buffer)))
+
+(defun im-wl-mark-message-for-deletion ()
+  (interactive nil wl-summary-mode)
+  (wl-summary-set-mark "D" nil nil nil)
+  (when (called-interactively-p 'interactive)
+    (message (substitute-command-keys ">> To sync with server, do \\[wl-execute-temp-marks]"))))
+
+(defun im-wl-summary-delete ()
+  "Delete message immediately."
+  (interactive nil wl-summary-mode)
+  (im-wl-mark-message-for-deletion)
+  (wl-execute-temp-marks))
+
+(im-cape
+ :name people-emails
+ :completion
+ (lambda ()
+   (->>
+    (im-deserialize-from-file "~/.emacs.d/sync/people")
+    (-map
+     (lambda (entry)
+       (let ((mails (--filter (s-prefix? "EMAIL" (car it)) entry)))
+         (--map
+          (let ((type (s-titleize (s-chop-prefix "_" (s-chop-prefix "EMAIL" (car it))))))
+            (list
+             (cdr it)
+             ;; annotation
+             (concat (if (s-blank? type) "" (concat type " of " )) (map-elt entry "ITEM"))
+             ;; doc
+             entry))
+          mails))))
+    (-flatten-n 1)
+    (-non-nil)))
+ :extractor (lambda (xs) (mapcar #'car xs))
+ :bound symbol
+ :category symbol
+ :key "M-o m"
+ :doc (lambda (xs x) (pp-to-string (nth 1 (map-elt xs x))))
+ :annotate (lambda (xs x) (concat " -> " (nth 0 (map-elt xs x)))))
 
 ;;;; Editing
 ;;;;; Breaking long texts/comments into multiple lines
@@ -7589,21 +7806,22 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 (use-package synosaurus
   :commands synosaurus-choose-and-replace
-  :init
+  :general
   (im-leader "mr" #'synosaurus-choose-and-replace)
-  :config
+  :custom
   (setq synosaurus-choose-method nil))
 
-(use-package wordnut)
+(use-package wordnut
+  :defer t)
 
 ;;;;; sozluk.el -- Turkish dictionary
 
 (use-package sozluk
   :straight (:host github :repo "isamert/sozluk.el")
   :defer t
-  :config
-  ;; (setq sozluk-include-etymology-on-sozluk t)
-  (setq sozluk-deasciify-if-not-found t))
+  :custom
+  ;; (sozluk-include-etymology-on-sozluk t)
+  (sozluk-deasciify-if-not-found t))
 
 ;; This is an optional dependency for sozluk.
 (use-package turkish
@@ -7611,6 +7829,7 @@ This happens to me on org-buffers, xwidget-at tries to get
   (im-leader "tc" #'turkish-correct-region))
 
 ;;;;; go-translate -- Google translate
+
 ;; This is a quite powerful package but implemented a bit weirdly. No
 ;; minor/major modes etc. So it's kind of hard to bind anything in
 ;; translation buffer without fiddling with advices etc. but I don't
@@ -7825,26 +8044,26 @@ This happens to me on org-buffers, xwidget-at tries to get
   :general
   (im-leader
     "ee" #'im-elfeed-reload-and-open)
+  (:keymaps 'elfeed-search-mode-map :states 'normal
+   "o" #'elfeed-search-browse-url
+   "O" #'im-elfeed-search-browse-url-in-default-browser)
   :config
-  ;; When adding tags, don't add any hierarchical tags like (blog blog-software), or (metal metal-black)
-  ;; Just use something like: (blog software) and (metal black)
+  (evil-collection-elfeed-setup)
 
+  ;; When adding tags, don't add any hierarchical tags like (blog
+  ;; blog-software), or (metal metal-black) Just use something like:
+  ;; (blog software) and (metal black)
   (require 'im-feeds)
   (setq elfeed-search-title-max-width 100)
   (setq elfeed-curl-extra-arguments '("--netrc"))
   (setq elfeed-feeds (mapcar #'im-elfeed--expand im-feeds))
+
+  ;; To apply hooks to all existing entries, use: elfeed-apply-hooks-now
   (im-elfeed-auto-tag-url '(("youtube\\.com" youtube)))
   (im-elfeed-auto-tag-title '(("youtube\\.com" youtube)
                               ("c\\+\\+"  (programming c++))
                               ("python"   (programming python))
-                              ("haskell"  (programming haskell))))
-
-  ;; To apply hooks to all existing entries, use: elfeed-apply-hooks-now
-
-  (evil-define-key 'normal elfeed-search-mode-map
-    "o" #'elfeed-search-browse-url
-    "O" #'im-elfeed-search-browse-url-in-default-browser))
-
+                              ("haskell"  (programming haskell)))))
 
 ;; TODO: experiment with custom faces
 ;; (defface elfeed-comic
@@ -7912,13 +8131,14 @@ Useful if .elfeed directory is freshly syncned."
       (elfeed-search-update--force))))
 
 ;;;;; empv (music/media/radio/youtube management)
+
 ;; Manage media and streams through =completing-read=.
 
 (use-package empv
   :straight (:host github :repo "isamert/empv.el")
   :defer t
   :autoload (empv--select-action)
-  :init
+  :general
   (im-leader "r" empv-map)
   :config
   (require 'im-radio-channels)
@@ -8422,44 +8642,49 @@ to turn it into something generic using macros."
 
 ;;;;; tree-sitter
 
-(setq treesit-language-source-alist
-      '((awk "https://github.com/Beaglefoot/tree-sitter-awk" nil nil nil nil)
-        (bash "https://github.com/tree-sitter/tree-sitter-bash" nil nil nil nil)
-        (c "https://github.com/tree-sitter/tree-sitter-c" nil nil nil nil)
-        (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp" nil nil nil nil)
-        (clojure "https://github.com/sogaiu/tree-sitter-clojure" nil nil nil nil)
-        (cmake "https://github.com/uyha/tree-sitter-cmake" nil nil nil nil)
-        (commonlisp "https://github.com/tree-sitter-grammars/tree-sitter-commonlisp" nil nil nil nil)
-        (cpp "https://github.com/tree-sitter/tree-sitter-cpp" nil nil nil nil)
-        (css "https://github.com/tree-sitter/tree-sitter-css" nil nil nil nil)
-        (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile" nil nil nil nil)
-        (go "https://github.com/tree-sitter/tree-sitter-go" nil nil nil nil)
-        (gomod "https://github.com/camdencheek/tree-sitter-go-mod" nil nil nil nil)
-        (html "https://github.com/tree-sitter/tree-sitter-html" nil nil nil nil)
-        (java "https://github.com/tree-sitter/tree-sitter-java" nil nil nil nil)
-        (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src" nil nil)
-        (json "https://github.com/tree-sitter/tree-sitter-json" nil nil nil nil)
-        (kotlin "https://github.com/fwcd/tree-sitter-kotlin" nil nil nil nil)
-        (latex "https://github.com/latex-lsp/tree-sitter-latex" nil nil nil nil)
-        (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua" nil nil nil nil)
-        (make "https://github.com/tree-sitter-grammars/tree-sitter-make" nil nil nil nil)
-        (markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown" nil nil nil nil)
-        (nix "https://github.com/nix-community/tree-sitter-nix" nil nil nil nil)
-        (nu "https://github.com/nushell/tree-sitter-nu" nil nil nil nil)
-        (python "https://github.com/tree-sitter/tree-sitter-python" nil nil nil nil)
-        (r "https://github.com/r-lib/tree-sitter-r" nil nil nil nil)
-        (ruby "https://github.com/tree-sitter/tree-sitter-ruby" nil nil nil nil)
-        (rust "https://github.com/tree-sitter/tree-sitter-rust" nil nil nil nil)
-        (scala "https://github.com/tree-sitter/tree-sitter-scala" nil nil nil nil)
-        (sql "https://github.com/DerekStride/tree-sitter-sql" "gh-pages" nil nil nil)
-        (toml "https://github.com/tree-sitter/tree-sitter-toml" nil nil nil nil)
-        (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src" nil nil)
-        (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src" nil nil)
-        (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml" nil nil nil nil)))
+(use-package treesit
+  :straight nil
+  :hook (after-init . im-install-and-enable-treesit-grammers)
+  :custom
+  (treesit-language-source-alist
+   '((awk "https://github.com/Beaglefoot/tree-sitter-awk" nil nil nil nil)
+     (bash "https://github.com/tree-sitter/tree-sitter-bash" nil nil nil nil)
+     (c "https://github.com/tree-sitter/tree-sitter-c" nil nil nil nil)
+     (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp" nil nil nil nil)
+     (clojure "https://github.com/sogaiu/tree-sitter-clojure" nil nil nil nil)
+     (cmake "https://github.com/uyha/tree-sitter-cmake" nil nil nil nil)
+     (commonlisp "https://github.com/tree-sitter-grammars/tree-sitter-commonlisp" nil nil nil nil)
+     (cpp "https://github.com/tree-sitter/tree-sitter-cpp" nil nil nil nil)
+     (css "https://github.com/tree-sitter/tree-sitter-css" nil nil nil nil)
+     (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile" nil nil nil nil)
+     (go "https://github.com/tree-sitter/tree-sitter-go" nil nil nil nil)
+     (gomod "https://github.com/camdencheek/tree-sitter-go-mod" nil nil nil nil)
+     (html "https://github.com/tree-sitter/tree-sitter-html" nil nil nil nil)
+     (java "https://github.com/tree-sitter/tree-sitter-java" nil nil nil nil)
+     (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src" nil nil)
+     (json "https://github.com/tree-sitter/tree-sitter-json" nil nil nil nil)
+     (kotlin "https://github.com/fwcd/tree-sitter-kotlin" nil nil nil nil)
+     (latex "https://github.com/latex-lsp/tree-sitter-latex" nil nil nil nil)
+     (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua" nil nil nil nil)
+     (make "https://github.com/tree-sitter-grammars/tree-sitter-make" nil nil nil nil)
+     (markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown" nil nil nil nil)
+     (nix "https://github.com/nix-community/tree-sitter-nix" nil nil nil nil)
+     (nu "https://github.com/nushell/tree-sitter-nu" nil nil nil nil)
+     (python "https://github.com/tree-sitter/tree-sitter-python" nil nil nil nil)
+     (r "https://github.com/r-lib/tree-sitter-r" nil nil nil nil)
+     (ruby "https://github.com/tree-sitter/tree-sitter-ruby" nil nil nil nil)
+     (rust "https://github.com/tree-sitter/tree-sitter-rust" nil nil nil nil)
+     (scala "https://github.com/tree-sitter/tree-sitter-scala" nil nil nil nil)
+     (sql "https://github.com/DerekStride/tree-sitter-sql" "gh-pages" nil nil nil)
+     (toml "https://github.com/tree-sitter/tree-sitter-toml" nil nil nil nil)
+     (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src" nil nil)
+     (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src" nil nil)
+     (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml" nil nil nil nil))))
 
 (defun im-install-and-enable-treesit-grammers ()
   "Install and enable grammers defined in `treesit-language-source-alist'.
 Only for built-in modes.  Others are registered through `use-package's :mode keyword."
+  (require 'treesit)
   (dolist (source treesit-language-source-alist)
     (unless (treesit-ready-p (car source))
       (treesit-install-language-grammar (car source)))
@@ -8483,8 +8708,6 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
        (c++-mode . c++-ts-mode)
        (c-mode . c-ts-mode)
        (bash-mode . bash-ts-mode)))))
-
-(add-hook 'after-init-hook #'im-install-and-enable-treesit-grammers)
 
 ;;;;; markdown
 
@@ -9233,17 +9456,24 @@ Lisp function does not specify a special indentation."
                   (funcall method indent-point state)))))))))
 
 ;;;;;; doctest.el
-;; See this: [[https://ag91.github.io/blog/2023/03/20/doctestel-or-testing-your-pure-elisp-functions-in-your-docstring/][Doctest.el or testing your pure Elisp functions in your docstring - Where parallels cross]]
+
+;; See this:
+;; [[https://ag91.github.io/blog/2023/03/20/doctestel-or-testing-your-pure-elisp-functions-in-your-docstring/][Doctest.el
+;; or testing your pure Elisp functions in your docstring - Where
+;; parallels cross]]
 
 (use-package doctest
-  :straight (:host github :repo "ag91/doctest"))
+  :straight (:host github :repo "ag91/doctest")
+  :commands (doctest doctest-here doctest-defun))
 
 ;;;;;; suggest.el -- Function suggestions
+
 ;; Do ~M-x suggest~, enter the inputs and the expected output and
 ;; it'll suggest you some functions. Quite nice and useful, I used it
 ;; plenty of time.
 
-(use-package suggest)
+(use-package suggest
+  :commands suggest)
 
 ;;;;;; emr & redshank -- refactoring tools
 
@@ -9908,6 +10138,7 @@ SELECT * FROM _ LIMIT 1;
 ;;;;; ace-window
 
 (use-package ace-window
+  :defer t
   :custom
   (aw-background t)
   (aw-ignore-current t)
@@ -10158,6 +10389,15 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
 ;;
 
 (use-package jiralib2
+  :autoload (jiralib2-assign-issue
+             jiralib2-create-issue
+             jiralib2-get-issue
+             jiralib2-get-issuetypes
+             jiralib2-get-users
+             jiralib2-session-call
+             jiralib2-update-summary-description
+             jiralib2-create-issue
+             jiralib2-jql-search)
   :config
   (setq jiralib2-url ty-jira-url)
   (setq jiralib2-auth 'basic)
@@ -13692,11 +13932,11 @@ NC_ID property is set to the entry."
 ;; work computer magit is quite slow due to some management apps
 ;; intertwining with external process calls.
 
-;; I use either `git-gutter' or `im-git-status' to stage/revert hunks
-;; in the file and then I use `im-git-commit' to commit.
+;; I use either `diff-hl' or `im-git-status' to stage/revert hunks in
+;; the file and then I use `im-git-commit' to commit.
 
-;; When using `git-gutter', I simply stage hunks in-file. I can also
-;; use `im-git-stage-region' to stage all hunks in a region.
+;; When using `diff-hl', I simply stage hunks in-file. I can also use
+;; `im-git-stage-region' to stage all hunks in a region.
 
 ;; With `im-git-status', I can also stage hunks or full files.
 
@@ -13737,6 +13977,9 @@ NC_ID property is set to the entry."
 
 ;; TODO: Arguments should persist (except amend?). When I toggle No
 ;; Verify, it should stay toggled for the next im-git-commit call.
+
+;; TODO: Add hook for after stageing a file/hunk or C-c C-c, C-c C-k
+;; so that I can run `im-update-diff-hl-overlays-for-current-project'.
 
 (defvar-keymap im-git-unstaged-diff-mode-map
   "s" #'im-git-stage-hunk-or-file
@@ -13921,14 +14164,15 @@ Call CALLBACK when successful."
 
 (defvar im-git-commit-finished-hook '()
   "Functions to run after successfully committing.
-Each function is called with COMMIT-MSG.")
+Each function is called with COMMIT-MSG, inside project root.")
 
 (defconst im-git-commit-message-buffer "*im-git-commit-message*")
 (defconst im-git-commit-diff-buffer "*im-git-diff-staged*")
 (defconst im-git-commit-config-prefix "⚙")
 (defvar im-git-commit--prev-window-conf nil)
 (defvar im-git-commit-message-history (make-ring 100))
-(add-to-list 'savehist-additional-variables 'im-git-commit-message-history)
+(with-eval-after-load 'savehist
+  (add-to-list 'savehist-additional-variables 'im-git-commit-message-history))
 (defvar-local im-git-commit--current-message-ref nil)
 (defvar-local im-git-commit--template nil)
 
