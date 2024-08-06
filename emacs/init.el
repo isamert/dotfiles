@@ -6144,15 +6144,12 @@ appropriate in some cases like terminals."
   :config
   (evil-collection-vterm-setup)
 
-  (setq vterm-kill-buffer-on-exit t)
-  ;; See this: https://github.com/akermu/emacs-libvterm/issues/179#issuecomment-1045331359
-  (setq vterm-shell "/usr/bin/screen")
-  (im-tangle-file
-   :path "~/.screenrc"
-   :contents "termcapinfo xterm* ti@:te@
-startup_message off
-escape ^||
-bindkey \"^[a\" command"))
+  ;; Setting screen as the terminal fixes some of vterm's problems, as
+  ;; described here[1] but it creates some other problems like when
+  ;; the screen size changes, some of the scrollback gets deleted etc.
+  ;; [1]: https://github.com/akermu/emacs-libvterm/issues/179#issuecomment-1045331359
+
+  (setq vterm-kill-buffer-on-exit t))
 
 ;;;;;; Utility functions
 
