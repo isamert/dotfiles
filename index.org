@@ -256,49 +256,51 @@ PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${HOME}/.bin:${PATH}'
 # - Arrows.         left, down, up, right
 # All possible modifiers: cmd, alt, ctrl, shift
 
-cmd-period = 'focus-monitor right'
-cmd-comma = 'focus-monitor left'
-cmd-shift-period = 'move-node-to-monitor right'
-cmd-shift-comma = 'move-node-to-monitor left'
+#cmd-f1 = 'layout v_accordion'
+#cmd-f2 = 'layout h_accordion'
+#cmd-f3 = 'layout tiles horizontal vertical'
+cmd-alt-ctrl-f13 = 'layout floating tiling'
+cmd-alt-ctrl-f14 = 'fullscreen'
 
-cmd-f1 = 'layout v_accordion'
-cmd-f2 = 'layout h_accordion'
-cmd-f3 = 'layout tiles horizontal vertical'
-cmd-t = 'layout floating tiling'
+cmd-alt-ctrl-f11 = 'resize smart -50'
+cmd-alt-ctrl-f12 = 'resize smart +50'
 
-cmd-h = 'focus --boundaries-action stop left'
-cmd-j = 'focus --boundaries-action stop down'
-cmd-k = 'focus --boundaries-action stop up'
-cmd-l = 'focus --boundaries-action stop right'
+cmd-alt-ctrl-f19 = 'focus-monitor left'
+cmd-alt-ctrl-f20 = 'focus-monitor right'
+cmd-alt-ctrl-shift-f19 = 'move-node-to-monitor left'
+cmd-alt-ctrl-shift-f20 = 'move-node-to-monitor right'
 
-cmd-shift-h = 'move left'
-cmd-shift-j = 'move down'
-cmd-shift-k = 'move up'
-cmd-shift-l = 'move right'
+cmd-alt-ctrl-f15 = 'focus --boundaries-action stop left'
+cmd-alt-ctrl-f16 = 'focus --boundaries-action stop down'
+cmd-alt-ctrl-f17 = 'focus --boundaries-action stop up'
+cmd-alt-ctrl-f18 = 'focus --boundaries-action stop right'
 
-cmd-shift-minus = 'resize smart -50'
-cmd-shift-equal = 'resize smart +50'
+cmd-alt-ctrl-shift-f15 = 'move left'
+cmd-alt-ctrl-shift-f16 = 'move down'
+cmd-alt-ctrl-shift-f17 = 'move up'
+cmd-alt-ctrl-shift-f18 = 'move right'
 
-cmd-1 = 'workspace 1'
-cmd-2 = 'workspace 2'
-cmd-3 = 'workspace 3'
-cmd-4 = 'workspace 4'
-cmd-5 = 'workspace 5'
-cmd-6 = 'workspace 6'
-cmd-7 = 'workspace 7'
-cmd-8 = 'workspace 8'
-cmd-9 = 'workspace 9'
-cmd-0 = 'workspace 0'
+cmd-alt-ctrl-f1 = 'workspace 1'
+cmd-alt-ctrl-f2 = 'workspace 2'
+cmd-alt-ctrl-f3 = 'workspace 3'
+cmd-alt-ctrl-f4 = 'workspace 4'
+cmd-alt-ctrl-f5 = 'workspace 5'
+cmd-alt-ctrl-f6 = 'workspace 6'
+cmd-alt-ctrl-f7 = 'workspace 7'
+cmd-alt-ctrl-f8 = 'workspace 8'
+cmd-alt-ctrl-f9 = 'workspace 9'
+cmd-alt-ctrl-f10 = 'workspace 0'
 
-cmd-shift-1 = 'move-node-to-workspace 1'
-cmd-shift-2 = 'move-node-to-workspace 2'
-cmd-shift-3 = 'move-node-to-workspace 3'
-cmd-shift-4 = 'move-node-to-workspace 4'
-cmd-shift-5 = 'move-node-to-workspace 5'
-cmd-shift-6 = 'move-node-to-workspace 6'
-cmd-shift-7 = 'move-node-to-workspace 7'
-cmd-shift-8 = 'move-node-to-workspace 8'
-cmd-shift-9 = 'move-node-to-workspace 9'
+cmd-alt-ctrl-shift-f1 = 'move-node-to-workspace 1'
+cmd-alt-ctrl-shift-f2 = 'move-node-to-workspace 2'
+cmd-alt-ctrl-shift-f3 = 'move-node-to-workspace 3'
+cmd-alt-ctrl-shift-f4 = 'move-node-to-workspace 4'
+cmd-alt-ctrl-shift-f5 = 'move-node-to-workspace 5'
+cmd-alt-ctrl-shift-f6 = 'move-node-to-workspace 6'
+cmd-alt-ctrl-shift-f7 = 'move-node-to-workspace 7'
+cmd-alt-ctrl-shift-f8 = 'move-node-to-workspace 8'
+cmd-alt-ctrl-shift-f9 = 'move-node-to-workspace 9'
+cmd-alt-ctrl-shift-f10 = 'move-node-to-workspace 0'
 
 cmd-tab = 'workspace-back-and-forth'
 #+end_src
@@ -316,13 +318,11 @@ It can be installed through homebrew:
 
 *** Application shortcuts
 #+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
-  hyper - t : term -e trans -shell
   hyper - r : emacsclient -c
   hyper - i : emacsclient --eval "(im-globally (im-select-any-snippet))"
-  hyper - p : emacsclient --eval "(im-globally (im-password-act))"
-  hyper - v : emacsclient --eval "(empv-toggle-video)"
+  hyper - o : emacsclient --eval "(im-globally (im-people))"
   hyper - g : emacsclient --eval "(im-globally (im-gitlab-select-project))"
-  hyper - l : emacsclient --eval "(im-globally (im-people))"
+  hyper - v : emacsclient --eval "(empv-toggle-video)"
   hyper - return : open -n -a 'Alacritty.app'
 #+end_src
 
@@ -1524,63 +1524,49 @@ Easily switch between contexts with completion.
 
 ** Emacs configuration
 #+begin_src bash :tangle ~/.zshrc
-  function is-emacs {
-    [[ $INSIDE_EMACS = 'vterm' ]];
-  }
+# * EAT integration
+[[ -n "$EAT_SHELL_INTEGRATION_DIR" ]] && \
+    source "$EAT_SHELL_INTEGRATION_DIR/zsh"
 
-  if is-emacs; then
-      # With this function we can send elisp commands while we are on emacs vterm
-      # for example, "elisp message hey" would send (message "hey") to emacs.
-      function elisp {
-          if [[ -n "$TMUX" ]]; then
-              # tell tmux to pass the escape sequences through
-              # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
-              printf "\ePtmux;\e\e]51;E"
-          elif [[ "${TERM%%-*}" = "screen" ]]; then
-              # GNU screen (screen, screen-256color, screen-256color-bce)
-              printf "\eP\e]51;E"
-          else
-              printf "\e]51;E"
-          fi
+# * VTERM integration
 
-          printf "\e]51;E"
-          local r
-          while [[ $# -gt 0 ]]; do
-              r="${1//\\/\\\\}"
-              r="${r//\"/\\\"}"
-              printf '"%s" ' "$r"
-              shift
-          done
+# With this function we can send elisp commands while we are on emacs vterm
+# for example, "elisp message hey" would send (message "hey") to emacs.
+vterm_cmd() {
+    local vterm_elisp
+    vterm_elisp=""
+    while [[ $# -gt 0 ]]; do
+        vterm_elisp="$vterm_elisp""$(printf '"%s" ' "$(printf "%s" "$1" | sed -e 's|\\|\\\\|g' -e 's|"|\\"|g')")"
+        shift
+    done
+    vterm_printf "51;E$vterm_elisp"
+}
 
-          if [[ -n "$TMUX" ]]; then
-              # tell tmux to pass the escape sequences through
-              # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
-              printf "\007\e\\"
-          elif [[ "${TERM%%-*}" = "screen" ]]; then
-              # GNU screen (screen, screen-256color, screen-256color-bce)
-              printf "\007\e\\"
-          else
-              printf "\e\\"
-          fi
-      }
+# Changed the following a bit so that it can detect tmux and screen properly
+vterm_printf() {
+    if [[ -n "$TMUX" ]] && [[ "${TERM}" = "tmux"* ]]; then
+        # Tell tmux to pass the escape sequences through
+        printf "\ePtmux;\e\e]%s\007\e\\" "$1"
+    elif [[ "${TERM}" = "screen"* ]]; then
+        # GNU screen (screen, screen-256color, screen-256color-bce)
+        printf "\eP\e]%s\007\e\\" "$1"
+    else
+        printf "\e]%s\e\\" "$1"
+    fi
+}
 
-      # Helper for clearing screen
-      function vterm_printf {
-          if [[ -n "$TMUX" ]]; then
-              # tell tmux to pass the escape sequences through
-              # (Source: http://permalink.gmane.org/gmane.comp.terminal-emulators.tmux.user/1324)
-              printf "\ePtmux;\e\e]%s\007\e\\" "$1"
-          elif [[ "${TERM%%-*}" = "screen" ]]; then
-              # GNU screen (screen, screen-256color, screen-256color-bce)
-              printf "\eP\e]%s\007\e\\" "$1"
-          else
-              printf "\e]%s\e\\" "$1"
-          fi
-      }
+if [[ "$INSIDE_EMACS" = 'vterm' ]]; then
+    # Rebind clear so that scrollback is also cleared on emacs vterm
+    alias clear='vterm_printf "51;Evterm-clear-scrollback";tput clear'
 
-      # Rebind clear so that scrollback is also cleared on emacs vterm
-      alias clear='vterm_printf "51;Evterm-clear-scrollback";tput clear'
-  fi
+    function emacs-vterm-precmd() {
+        vterm_printf "51;A$USER@$HOST:$PWD" >$TTY
+    }
+
+    # See this: https://github.com/romkatv/powerlevel10k/issues/2294#issuecomment-1535767681
+    autoload -Uz add-zsh-hook
+    add-zsh-hook precmd emacs-vterm-precmd
+fi
 #+end_src
 ** Mac OSX configuration
 #+begin_src shell
@@ -1670,74 +1656,74 @@ This file is sourced by both =zsh= and =bash=.
 #+end_src
 
 #+begin_src bash :tangle ~/.config/aliases/generic
-  # package management
-  #eshell nixin='nix-env -iA "nixpkgs.$1"'
-  function nixin { nix-env -iA "nixpkgs.$1" }
-  alias nixrem='nix-env -e'
-  alias nixs='nix search nixpkgs'
-  alias nixls='nix-env --query'
+# package management
+#eshell nixin='nix-env -iA "nixpkgs.$1"'
+function nixin { nix-env -iA "nixpkgs.$1" }
+alias nixrem='nix-env -e'
+alias nixs='nix search nixpkgs'
+alias nixls='nix-env --query'
 
-  # process management
-  alias nameof='ps -o comm= -p' # Get the name of given PID (reverse pidof)
-  alias fuckall='killall -s 9'
-  alias fkill='fuzzy kill'
+# process management
+alias nameof='ps -o comm= -p' # Get the name of given PID (reverse pidof)
+alias fuckall='killall -s 9'
+alias fkill='fuzzy kill'
 
-  function fuckemacs {
-      if pgrep Emacs; then
-          kill -USR2 $(pgrep Emacs)
-      else
-          kill -USR2 $(pgrep emacs)
-      fi
-  }
+function fuckemacs {
+    if pgrep Emacs; then
+        kill -USR2 $(pgrep Emacs)
+    else
+        kill -USR2 $(pgrep emacs)
+    fi
+}
 
-  # utility
-  alias cdtemp='cd $(mktemp -d)'
-  alias ...='cd ../..'
-  alias ....='cd ../../..'
-  alias .....='cd ../../../..'
-  alias df='df -H'
-  alias du='ncdu'
-  alias fastssh='ssh -Y -C -c chacha20-poly1305@openssh.com'
-  alias cdd='cd $(fd -t d -d 8 | fzf)'
+# utility
+alias cdtemp='cd $(mktemp -d)'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias df='df -H'
+alias du='ncdu'
+alias fastssh='ssh -Y -C -c chacha20-poly1305@openssh.com'
+alias cdd='cd $(fd -t d -d 8 | fzf)'
 
-  alias ls='lsd --group-dirs first --classify'
-  alias ll='lsd --group-dirs first --classify --oneline'
-  alias lls='lsd --group-dirs first --classify --long'
-  alias lla='lsd --group-dirs first --classify --long --all'
-  alias tree='lsd --tree'
+alias ls='lsd --group-dirs=first --classify'
+alias ll='lsd --group-dirs=first --classify --long --date=relative --timesort --blocks=date,size,name'
+alias lls='lsd --group-dirs=first --classify --long --header --date=relative --timesort --git --hyperlink=auto'
+alias lla='lsd --group-dirs=first --classify --long --header --date=relative --timesort --git --hyperlink=auto --almost-all'
+alias tree='lsd --tree'
 
-  alias gcm='git commit -m'
-  alias gds='git diff --staged'
-  alias gs='git status'
+alias gcm='git commit -m'
+alias gds='git diff --staged'
+alias gs='git status'
 
-  # abbrv
-  alias n='nvim'
-  alias v='jaro --method=view'
-  alias e='jaro --method=edit'
-  alias o='jaro'
-  alias mt='jaro --mime-type'
-  alias mkx='chmod +x'
-  alias ytdl='yt-dlp'
-  alias ytmp3='yt-dlp --extract-audio --audio-format mp3 --output "%(title)s.%(ext)s"'
+# abbrv
+alias n='nvim'
+alias v='jaro --method=view'
+alias e='jaro --method=edit'
+alias o='jaro'
+alias mt='jaro --mime-type'
+alias mkx='chmod +x'
+alias ytdl='yt-dlp'
+alias ytmp3='yt-dlp --extract-audio --audio-format mp3 --output "%(title)s.%(ext)s"'
 
-  # master Wq
-  alias :q='exit'
-  alias :wq='exit'
+# master Wq
+alias :q='exit'
+alias :wq='exit'
 
-  # useful
-  alias find-dups='find . ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD'
+# useful
+alias find-dups='find . ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD'
 
-  # stuff
-  alias ipaddr='curl https://api.ipify.org'
-  alias ipinfo='curl https://ipinfo.io'
+# stuff
+alias ipaddr='curl https://api.ipify.org'
+alias ipinfo='curl https://ipinfo.io'
 
-  # highlight streams with bat
-  alias hjson='bat --language=json --paging=never --style=plain'
-  alias hlog='bat --language=log --paging=never --style=plain'
+# highlight streams with bat
+alias hjson='bat --language=json --paging=never --style=plain'
+alias hlog='bat --language=log --paging=never --style=plain'
 
-  # higlight json parts of the stream and print other lines plain
-  # ./program_that_may_output_json | logjson
-  alias logjson='jq -R -r ". as \$line | try fromjson catch \$line"'
+# higlight json parts of the stream and print other lines plain
+# ./program_that_may_output_json | logjson
+alias logjson='jq -R -r ". as \$line | try fromjson catch \$line"'
 #+end_src
 
 * Tmux
@@ -2383,100 +2369,107 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
 - =:tabopen= can (~t~ binding) can take =-c container-name= parameter, which opens tab in given container. Like =:tabopen -c work ...=. You don't need to write container name fully, first letter also suffices if it does not clash with any other container name.
 
 #+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  sanitise tridactyllocal tridactylsync
+sanitise tridactyllocal tridactylsync
 
-  colors midnight
-  set editorcmd «which("emacsclient")»
-  set searchengine g
-  set hintfiltermode vimperator-reflow
-  set smoothscroll true
-  set modeindicatorshowkeys true
-  set tabopencontaineraware true
-  set newtab https://isamert.net/newtab.html
+colors midnight
+set editorcmd «which("emacsclient")»
+set searchengine g
+set hintfiltermode vimperator-reflow
+set smoothscroll true
+set modeindicatorshowkeys true
+set tabopencontaineraware true
+set newtab https://isamert.net/newtab.html
 
-  " container shortcuts
-  bind ;1 recontain w
-  bind ;2 recontain p
-  bind ;3 recontain s
+" container shortcuts
+bind ;1 recontain w
+bind ;2 recontain p
+bind ;3 recontain s
 
-  " editor
-  bind --mode=insert <C-i> composite emacs/visual-mode; editor
+" editor
+bind --mode=insert <C-i> composite emacs/visual-mode; editor
 
-  " commands
-  command withUrl composite get_current_url |
+" commands
+command withUrl composite get_current_url |
 
-  command sync open localhost:8384
-  command jaro withUrl ! jaro
-  command jarohint hint -W ! jaro
-  command jaro-enqueue withUrl ! jaro --method=enqueue
-  command jarohint-enqueue hint -W ! jaro --method=enqueue
-  command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
-  command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
-  command copyimageurl composite hint -pipe img src | yank
-  command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(lab-watch-pipeline "${JS_ARG}")'`)
-  command emacs/open withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(progn (browse-url "${JS_ARG}") (im-force-focus-emacs))'`)
-  command emacs/eww withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(progn (eww "${JS_ARG}") (im-force-focus-emacs))'`)
-  command emacs/meme-downloader withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}")'`)
-  command emacs/meme-downloader-with-title withUrl js -p tri.native.run(`«which("which emacsclient")» --eval '(im-meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
-  command emacs/visual-mode js (() => {tri.native.write("/tmp/tridactyl.source", document.documentElement.outerHTML); tri.native.run(`«which("emacsclient")» --eval '(progn (im-firefox-visual-mode) (im-force-focus-emacs))'`)})();
+command sync open localhost:8384
+command jaro withUrl ! jaro
+command jarohint hint -W ! jaro
+command jaro-enqueue withUrl ! jaro --method=enqueue
+command jarohint-enqueue hint -W ! jaro --method=enqueue
+command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
+command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
+command copyimageurl composite hint -pipe img src | yank
+command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(lab-watch-pipeline "${JS_ARG}")'`)
+command emacs/open withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(progn (browse-url "${JS_ARG}") (im-force-focus-emacs))'`)
+command emacs/eww withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(progn (eww "${JS_ARG}") (im-force-focus-emacs))'`)
+command emacs/meme-downloader withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(im-meme-downloader "${JS_ARG}")'`)
+command emacs/meme-downloader-with-title withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(im-meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
+command emacs/visual-mode js (() => {tri.native.write("/tmp/tridactyl.source", document.documentElement.outerHTML); tri.native.run(`«which("emacsclient")» --eval '(progn (im-firefox-visual-mode) (im-force-focus-emacs))'`)})();
 
-  " quick search
-  set searchurls.g https://www.google.com/search?q=%s
-  set searchurls.you https://you.com/search?q=%s
-  set searchurls.y https://yandex.com/search/?text=%s
-  set searchurls.s https://serx.ml/search?q=%s
-  set searchurls.ddg https://duckduckgo.com/?q=%s
-  set searchurls.gif https://giphy.com/search/%s
-  set searchurls.ty https://www.trendyol.com/sr?q=%s
+" quick search
+set searchurls.g https://www.google.com/search?q=%s
+set searchurls.you https://you.com/search?q=%s
+set searchurls.y https://yandex.com/search/?text=%s
+set searchurls.s https://serx.ml/search?q=%s
+set searchurls.ddg https://duckduckgo.com/?q=%s
+set searchurls.gif https://giphy.com/search/%s
+set searchurls.ty https://www.trendyol.com/sr?q=%s
 
-  set searchurls.yt https://www.youtube.com/results?search_query=%s
-  set searchurls.r https://reddit.com/r/%s
+set searchurls.yt https://www.youtube.com/results?search_query=%s
+set searchurls.r https://reddit.com/r/%s
 
-  set searchurls.npm https://www.npmjs.com/search?q=%s
-  set searchurls.nix https://search.nixos.org/packages?channel=unstable&type=packages&query=%s
+set searchurls.npm https://www.npmjs.com/search?q=%s
+set searchurls.nix https://search.nixos.org/packages?channel=unstable&type=packages&query=%s
 
-  " tridactyl search
-  unbind <C-f>
-  bind / fillcmdline find
-  bind ? fillcmdline find -?
-  bind n findnext 1
-  bind N findnext -1
+" tridactyl search
+unbind <C-f>
+bind / fillcmdline find
+bind ? fillcmdline find -?
+bind n findnext 1
+bind N findnext -1
 
-  " key-bindings
-  unbind <F1>
-  bind <A-x> fillcmdline_notrail
-  bind <A-≈> fillcmdline_notrail
-  bind + zoom 0.1 true
-  bind - zoom -0.1 true
-  bind p pin
-  bind ;i copyimage
-  bind <A-j> tabmove +1
-  bind <A-∆> tabmove +1
-  bind <A-k> tabmove -1
-  bind <A-˚> tabmove -1
-  bind U fillcmdline undo
-  bind K tabprev
-  bind J tabnext
-  bind A tabaudio
-  bind % fillcmdline tabrename %
+" key-bindings
+unbind <F1>
+bind <A-x> fillcmdline_notrail
+bind <A-≈> fillcmdline_notrail
+bind + zoom 0.1 true
+bind - zoom -0.1 true
+bind p pin
+bind ;i copyimage
+bind <A-j> tabmove +1
+bind <A-∆> tabmove +1
+bind <A-k> tabmove -1
+bind <A-˚> tabmove -1
+bind U fillcmdline undo
+bind K tabprev
+bind J tabnext
+bind A tabaudio
+bind % fillcmdline tabrename %
 
-  " jaro
-  bind ;j jaro
-  bind ;J jarohint
-  bind ;e jaro-enqueue
-  bind ;E jarohint-enqueue
+" jaro
+bind ;j jaro
+bind ;J jarohint
+bind ;e jaro-enqueue
+bind ;E jarohint-enqueue
 
-  " More emacs like bindings for ex-mode
-  unbind --mode=ex <Space>
-  bind --mode=ex <Tab> ex.insert_space_or_completion
+" More emacs like bindings for ex-mode
+unbind --mode=ex <Space>
+bind --mode=ex <Tab> ex.insert_space_or_completion
 
-  bind --mode=ex <ArrowUp> ex.prev_completion
-  bind --mode=ex <ArrowDown> ex.next_completion
+bind --mode=ex <ArrowUp> ex.prev_completion
+bind --mode=ex <ArrowDown> ex.next_completion
 
-  bind --mode=ex <A-p> ex.prev_history
-  bind --mode=ex <A-n> ex.next_history
-  bind --mode=ex <A-π> ex.prev_history
-  bind --mode=ex <A-˜> ex.next_history
+bind --mode=ex <A-p> ex.prev_history
+bind --mode=ex <A-n> ex.next_history
+bind --mode=ex <A-π> ex.prev_history
+bind --mode=ex <A-˜> ex.next_history
+
+
+" Extra stuff
+source ~/.config/tridactyl/extrarc
+
+" Work releated stuff
+source ~/.config/tridactyl/workrc
 #+end_src
 
 **** Redirect URLs
