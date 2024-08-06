@@ -1209,34 +1209,21 @@ Following snippet let's you edit current command with ~C-x C-e~ in your default 
   bindkey "^X^E" edit-command-line
 #+end_src
 
-** Theme settings
-See the [[https://spaceship-prompt.sh/options/][documentation]] for spaceship theme.
+** Theme & module settings
+See the [[https://starship.rs/config/][documentation]] for starship theme. You need to [[https://starship.rs/][install]] it first from your system package manager. And then:
 
 #+begin_src bash :tangle ~/.zshrc
-  # Install it
-  zinit light spaceship-prompt/spaceship-prompt
+  eval "$(starship init zsh)"
+#+end_src
 
-  # Add necessary configuration to be able to change default-directory in vterm.
-  # It also displays an extra icon to indicate that Emacs-vterm integration is working.
-  spaceship_emacsvterm() {
-      is-emacs || return
-      vterm_printf "51;A$(whoami)@$(hostname):$(pwd)";
-      spaceship::section "white" "$SPACESHIP_PROMPT_DEFAULT_PREFIX" "🍷" "$SPACESHIP_PROMPT_DEFAULT_SUFFIX"
-  }
+The configuration is done externally:
 
-  export SPACESHIP_PROMPT_ORDER=(
-    time          # Time stamps section
-    user          # Username section
-    dir           # Current directory section
-    host          # Hostname section
-    git           # Git section (git_branch + git_status)
-    exec_time     # Execution time
-    emacsvterm
-    line_sep      # Line break
-    jobs          # Background jobs indicator
-    exit_code     # Exit code section
-    char          # Prompt character
-  )
+#+begin_src toml :tangle ~/.config/starship.toml
+[cmd_duration]
+# Show system notifications for commands that takes longer than 5 seconds
+min_time_to_notify = 5000
+show_notifications = true
+notification_timeout = 15000
 #+end_src
 
 ** Plugin configuration
