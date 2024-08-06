@@ -4803,7 +4803,7 @@ for why."
    "o" #'im-vc-diff-open-file-at-revision-dwim)
   (im-leader
     "gp" #'vc-pull
-    "gR" #'vc-refresh-state
+    "gR" #'im-update-git-state
     "gbc" #'vc-create-branch
     "gbs" #'vc-switch-branch
     "gB" #'vc-annotate ;; Git Blame
@@ -4851,6 +4851,17 @@ of that revision."
         (funcall (assoc-default file-path auto-mode-alist 'string-match))
         (reveal-mode))
       (forward-line line))))
+
+(defun im-update-git-state ()
+  "Update all diff-hl overlays and vc state for current project."
+  (interactive)
+  (when-let* ((project (project-current nil))
+              (buffers (project-buffers project)))
+    (--each buffers
+      (with-current-buffer it
+        (when (and buffer-file-name (derived-mode-p 'prog-mode))
+          (diff-hl-update)
+          (vc-refresh-state))))))
 
 ;;;;;; git-timemachine
 ;; - Toggle with ~git-timemachine~ (SPC gt).
