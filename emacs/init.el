@@ -7798,6 +7798,20 @@ This happens to me on org-buffers, xwidget-at tries to get
  :doc (lambda (xs x) (pp-to-string (nth 1 (map-elt xs x))))
  :annotate (lambda (xs x) (concat " -> " (nth 0 (map-elt xs x)))))
 
+;;;;; easysession.el -- session manager
+
+;; Simple package to save/retrieve Emacs sessions. It works well with
+;; tab-bar. Currently my workflow is:
+
+;; `easysession-save-as' :: Save a named session.
+;; `easysession-switch-to' :: Load a session. Usually called after starting Emacs.
+
+;; By default, all file visiting buffers, dired buffers, and indirect
+;; buffers are persisted and restored.
+
+(use-package easysession
+  :straight (:host github :repo "jamescherti/easysession.el"))
+
 ;;;; Editing
 ;;;;; Breaking long texts/comments into multiple lines
 ;; I use =M-q= (=fill-paragraph=) to break long texts into multiple
