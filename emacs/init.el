@@ -8276,42 +8276,9 @@ Useful if .elfeed directory is freshly syncned."
   (add-hook 'erc-insert-modify-hook 'erc-highlight-nicknames))
 
 ;;;; Keybindings
-;; Keybindings are generally set in-place, following have no context, so they are here.
 
-;;;;; macOS
-
-(when (eq system-type 'darwin)
-  ;; I set the following in Linux using xmodmap but it's kinda
-  ;; impossible to do it in OSX I guess.
-
-  ;; I use an external keyboard, this makes AltGr and Meta (Alt) work as expected
-  ;; I have also inverted Meta and Control keys system-wide or something, so
-  ;; this setting is done according to that.
-  (setq ns-option-modifier 'meta)
-  (setq ns-right-alternate-modifier 'none)
-
-  ;; (define-key key-translition-map ...) is better than (global-define-key ...)
-  ;; because this just remaps key everywhere to given key so that the mappings
-  ;; works in command mode, isearch etc.
-  ;; AltGr + k -> Up
-  ;; AltGr + j -> Down
-  ;; AltGr + l -> Right
-  ;; AltGr + h -> Left
-  (define-key key-translation-map (kbd "˚") (kbd "<up>"))
-  (define-key key-translation-map (kbd "∆") (kbd "<down>"))
-  (define-key key-translation-map (kbd "¬") (kbd "<right>"))
-  (define-key key-translation-map (kbd "˙") (kbd "<left>"))
-
-  (define-key key-translation-map (kbd "") (kbd "S-<up>"))
-  (define-key key-translation-map (kbd "Ô") (kbd "S-<down>"))
-  (define-key key-translation-map (kbd "Ò") (kbd "S-<right>"))
-  (define-key key-translation-map (kbd "Ó") (kbd "S-<left>"))
-
-  ;; AltGr + [ -> (
-  ;; AltGr + ] -> )
-  (define-key key-translation-map (kbd "“") (kbd "("))
-  (define-key key-translation-map (kbd "‘") (kbd ")")))
-
+;; Keybindings are generally set in-place, following have no context,
+;; so they are here.
 
 ;;;;; Some general keybindings
 
@@ -10338,28 +10305,6 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   "-" shrink-window
   ">" enlarge-window-horizontally
   "<" shrink-window-horizontally)
-
-;;;;; Fix macOS fullscreen
-
-;; On MacOS, native fullscreen fucks with ESC, so I simply don't use
-;; it. Native fullscreen is also quite bad in itself, I can't assign
-;; keybindings to switch to a dedicated fullscreen app.
-(setq ns-use-native-fullscreen nil)
-
-;; But non-native fullscreen does not play well with posframes for
-;; some reason. It creates some visual artifacts. So I simply remove
-;; them each time fullscreen is toggled.
-
-(define-advice toggle-frame-fullscreen (:after (&rest _) fix-fullscreen-artifacts)
-  (posframe-delete-all)
-  (ignore-errors (im-notify-posframe-clear-all t))
-  (ignore-errors (kill-buffer "*blamer*"))
-  (ignore-errors (kill-buffer "*lsp-ui-doc-1*"))
-  (ignore-errors (kill-buffer "*flycheck-posframe-buffer*"))
-  (ignore-errors (kill-buffer " *lsp-ui-doc-1*"))
-  (ignore-errors (kill-buffer "*lsp-documentation*"))
-  (ignore-errors (kill-buffer " *corfu-popupinfo*"))
-  (ignore-errors (kill-buffer " *corfu*")))
 
 ;;;; Misc functions
 ;;;;; marks integration
@@ -14750,6 +14695,74 @@ end tell"))
                       :filter
                       (lambda (_proc string)
                         (funcall resolve (equal "true" (s-trim string))))))))))
+
+;;;;; MacOS
+;;;;;; Keybindings
+
+(when (eq system-type 'darwin)
+  ;; I use an external keyboard, this makes AltGr and Meta (Alt) work as expected
+  ;; I have also inverted Meta and Control keys system-wide or something, so
+  ;; this setting is done according to that.
+  (setq ns-option-modifier 'meta)
+  (setq ns-right-alternate-modifier 'none))
+
+;;;;;; Fix fullscreen
+
+(when (eq system-type 'darwin)
+  ;; On MacOS, native fullscreen fucks with ESC, so I simply don't use
+  ;; it. Native fullscreen is also quite bad in itself, I can't assign
+  ;; keybindings to switch to a dedicated fullscreen app.
+
+  ;; UPDATE: After an MacOS update (or Emacs update?) ESC problem is
+  ;; solved and I can use the native fullscreen. And now I use
+  ;; aerospace as my WM and it does not work with non-native
+  ;; fullscreen and I don't use it all.
+
+  ;; (setq ns-use-native-fullscreen nil)
+
+  ;; But non-native fullscreen does not play well with posframes for
+  ;; some reason. It creates some visual artifacts. So I simply remove
+  ;; them each time fullscreen is toggled.
+
+  ;; (define-advice toggle-frame-fullscreen (:after (&rest _) fix-fullscreen-artifacts)
+  ;;   (posframe-delete-all)
+  ;;   (ignore-errors (im-notify-posframe-clear-all t))
+  ;;   (ignore-errors (kill-buffer "*blamer*"))
+  ;;   (ignore-errors (kill-buffer "*lsp-ui-doc-1*"))
+  ;;   (ignore-errors (kill-buffer "*flycheck-posframe-buffer*"))
+  ;;   (ignore-errors (kill-buffer " *lsp-ui-doc-1*"))
+  ;;   (ignore-errors (kill-buffer "*lsp-documentation*"))
+  ;;   (ignore-errors (kill-buffer " *corfu-popupinfo*"))
+  ;;   (ignore-errors (kill-buffer " *corfu*")))
+  )
+
+;;;;;; Hammerspoon integration
+
+;; I have a menubar that shows my current tab and currently clocked in
+;; task. I disable the tab-bar visually and check which tab I
+;; currently am in through this Hammerspoon menubar.
+
+(when (eq system-type 'darwin)
+  (add-hook 'org-clock-in-hook #'im-hammerspoon-handle-clock-in)
+  (add-hook 'org-clock-out-hook #'im-hammerspoon-handle-clock-in)
+
+  (defun im-hammerspoon-handle-clock-in ()
+    (request "http://localhost:9093/task"
+      :type "POST"
+      :data (if (org-clock-is-active)
+                (substring-no-properties (org-clock-get-clock-string))
+              "")))
+
+  (define-advice tab-bar-select-tab (:after (&rest _) report-tab-change-to-hammerspoon)
+    (request "http://localhost:9093/workspace"
+      :type "POST"
+      :data (or (alist-get 'name (tab-bar--current-tab))
+                (tab-bar-tab-name-current))))
+
+  (define-advice org-clock-update-mode-line (:after (&rest _) report-to-hammerspoon)
+    (im-hammerspoon-handle-clock-in))
+
+  (run-with-timer 30 30 #'im-hammerspoon-handle-clock-in))
 
 ;;;; Postamble
 
