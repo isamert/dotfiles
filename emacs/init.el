@@ -9121,6 +9121,10 @@ When called with prefix argument, REPLACE becomes non-nil."
   (when-let (lombok (im-lsp-java-find-lombok-jar))
     (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok)))))
 
+;;   ;; This is required to make lsp work well with Lombok
+;;   (when-let (lombok (im-lsp-java-find-lombok-jar))
+;;     (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok)))))
+
 ;;;;;; Supplementary functions
 
 (defun im-jshell ()
@@ -10069,13 +10073,21 @@ SELECT * FROM _ LIMIT 1;
   :custom
   (tab-line-close-button-show 'selected)
   (tab-line-tabs-function #'im-tab-line-buffers)
-  (tab-line-tab-name-function #'tab-line-tab-name-truncated-buffer)
-  (tab-line-tab-name-truncated-max 25))
+  (tab-line-tab-name-truncated-max 32)
+  (tab-line-tab-name-function #'im-tab-line-buffer-name))
 
+(defun im-tab-line-buffer-name (buffer &optional _buffers)
+  (let ((name (tab-line-tab-name-truncated-buffer buffer)))
+    ;; im-tab-line-buffers groups special with the same prefix
+    ;; together. I mostly prefix my buffers like "*XXX: ..." and here
+    ;; I delete that prefix to gain a little bit more space while
+    ;; displaying.
+    (if-let ((str (s-match " ?\\*[a-zA-Z0-9_-]+: \\(.*\\)" name)))
+        (cadr str)
+      name)))
 
 (defun im-tab-line-buffers ()
-  "Return releated project buffers (not limited to files, shells
-  etc.) to display in tab-line."
+  "Return related project buffers (not limited to files, shells etc.) to display in tab-line."
   (let* ((proj (or (im-current-project-root)
                    (expand-file-name default-directory)))
          (buffer-name (buffer-name))
