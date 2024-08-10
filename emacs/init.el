@@ -58,6 +58,10 @@
 ;;;; Preparation
 ;;;;; straight.el and use-package
 
+;; Useful to see which packages take long time to load
+;; (require 'use-package)
+;; (setq use-package-compute-statistics t)
+
 (defvar bootstrap-version)
 (defvar straight-base-dir)
 (let ((bootstrap-file
@@ -1977,16 +1981,16 @@ side window the only window'"
   (org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
 
-  (im-org-calendar-directory (format "%s/calendars" org-directory))
-  (im-calendar-files (directory-files im-org-calendar-directory 'full (rx ".org" eos)))
-  (org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
-
   :config
   ;; Automatically invoke `org-indent-mode' which gives nice little
   ;; indentation under subsections. It makes reading easier. This does
   ;; not add any spaces/tabs to the text file, the indentation is only
   ;; visually apparent in Emacs.
   ;; (add-hook 'org-mode-hook #'org-indent-mode t)
+
+  (defvar im-org-calendar-directory (format "%s/calendars" org-directory))
+  (setq im-calendar-files (directory-files im-org-calendar-directory 'full (rx ".org" eos)))
+  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
 
   (add-to-list 'org-link-abbrev-alist '("imdb" . "https://www.imdb.com/title/%s"))
   (add-to-list 'org-link-abbrev-alist '("yt" . "https://youtu.be/%s"))
@@ -4956,6 +4960,7 @@ of that revision."
    (kbd "s") #'avy-goto-word-1))
 
 ;;;;; vertico & marginalia & orderless & mini-frame
+
 ;; A nice, fast minibuffer narrowing framework. It works well with quite a lot of package.
 ;; - =marginalia.el= brings annotations to completing-read, ie. it adds current keybinding of a command, summary of command to M-x.
 ;; - =miniframe.el= shows all completing-read prompts in a nice mini popup frame.
@@ -5250,7 +5255,7 @@ non-nil so that you only add it to `project-prefix-map'."
 (defvar im-project-shell-last-height 20)
 (defvar im-project-shell-last-window nil)
 
-(defun im-shell-for (&optional type placement shell-fn)
+(defun im-shell-for (&optional type placement shell-fn shell-name)
   (interactive)
   (unless shell-fn
     (setq shell-fn
@@ -5268,9 +5273,9 @@ non-nil so that you only add it to `project-prefix-map'."
                               (dir default-directory)
                               (t (expand-file-name type))))
          (proj-name (f-base default-directory))
-         (name (format "*$shell: %s*" proj-name)))
+         (name (format "*$%s: %s*" (or shell-name "shell") proj-name)))
     (if-let* (placement
-              (window (--find (s-prefix? "\*\$shell: " (buffer-name (window-buffer it))) (window-list)))
+              (window (--find (s-prefix? (format "\*\$%s: " (or shell-name "shell")) (buffer-name (window-buffer it))) (window-list)))
               (focused? (equal window (selected-window))))
         (progn
           (when (-contains? '(top bottom) placement)
@@ -5298,32 +5303,38 @@ non-nil so that you only add it to `project-prefix-map'."
   "Select a term and open."
   (interactive)
   (empv--select-action "Term: "
-    "eshell project" → (im-shell-for 'project)
-    "eshell dir" → (im-shell-for 'dir)
+    "eshell project" → (im-shell-for 'project nil nil "eshell")
+    "eshell dir" → (im-shell-for 'dir nil nil "eshell")
     "eshell new" → (call-interactively #'im-eshell)
-    "vterm project" → (im-shell-for 'project nil #'im--new-vterm)
-    "vterm dir" → (im-shell-for 'dir nil #'im--new-vterm)
+    "vterm project" → (im-shell-for 'project nil #'im--new-vterm "vterm")
+    "vterm dir" → (im-shell-for 'dir nil #'im--new-vterm "vterm")
     "vterm new" → (call-interactively #'im-vterm)
-    "eat project" → (im-shell-for 'project nil #'im--new-eat)
-    "eat dir" → (im-shell-for 'dir nil #'im--new-eat)
+    "eat project" → (im-shell-for 'project nil #'im--new-eat "eat")
+    "eat dir" → (im-shell-for 'dir nil #'im--new-eat "eat")
     "eat new" → (call-interactively #'im-eat)))
+
+(defun im--suggest-shell-name (type)
+  (format "$%s: %s/%s" type (im-current-project-name)
+          (if (buffer-file-name (current-buffer))
+              (buffer-name)
+            (symbol-name major-mode))))
 
 (defun im-eat (name)
   "Like `im-eshell'."
-  (interactive (list (read-string "Bufffer name: " (format "$shell: %s/%s" (im-current-project-name) (buffer-name)))))
+  (interactive (list (read-string "Buffer name: " (im--suggest-shell-name "eat"))))
   (require 'eat)
   (let* ((eat-buffer-name name))
     (eat nil t)))
 
 (defun im-vterm (name)
   "Like `im-eshell'."
-  (interactive (list (read-string "Bufffer name: " (format "$vterm: %s/%s" (im-current-project-name) (buffer-name)))))
+  (interactive (list (read-string "Buffer name: " (format "$vterm: %s/%s" (im-current-project-name) (buffer-name)))))
   (require 'vterm)
   (let* ((vterm-buffer-name name))
     (vterm t)))
 
 (defun im-eshell (name)
-  (interactive (list (read-string "Bufffer name: " (format "$eshell: %s/%s" (im-current-project-name) (buffer-name)))))
+  (interactive (list (read-string "Buffer name: " (format "$eshell: %s/%s" (im-current-project-name) (buffer-name)))))
   (with-current-buffer (eshell t)
     (rename-buffer name t)
     (current-buffer)))
@@ -7069,30 +7080,7 @@ in the DM section of the official Slack client."
   (setq org-ai-default-chat-model im-org-ai-default-model)
   (setq org-ai-default-max-tokens 2000)
   (setq org-ai-openai-api-token im-openai-api-key)
-  (setq org-ai-default-chat-system-prompt
-        "Adopt the role of helpful assistant.
-NEVER mention that you're an AI.
-
-Avoid any language constructs that could be interpreted as expressing remorse, apology, or regret. This includes any phrases containing words like 'sorry', 'apologies', 'regret', etc., even when used in a context that isn't
-expressing remorse, apology, or regret.
-
-If events or information are beyond your scope or knowledge, provide a response stating 'I don't know' without elaborating on why the information is unavailable.
-
-Refrain from disclaimers about you not being a professional or expert.
-
-Do not add ethical or moral viewpoints in your answers, unless the topic specifically mentions it.
-
-Keep responses unique and free of repetition.
-
-Never suggest seeking information from elsewhere.
-
-Always focus on the key points in my questions to determine my intent.
-
-Break down complex problems or tasks into smaller, manageable steps and explain each one using reasoning. For easier tasks, this is not needed.
-
-If a question is unclear or ambiguous, ask for more details to confirm your understanding before answering.
-
-If a mistake is made in a previous response, recognize and correct it."))
+  (setq org-ai-default-chat-system-prompt "You're an helpful assistant designed to provide helpful, accurate, and concise responses. Your primary focus should be on delivering quick and clear solutions, especially for programming-related queries. Focus on providing quick, clear solutions. When appropriate, offer additional insights, alternative approaches (such as using standard functions over ad-hoc implementations), or different perspectives to enhance user understanding or outcomes along with the original solution. Keep replies relevant, to the point, and free from unnecessary explanations or obvious/elementary information."))
 
 (defun im-org-ai-toggle-gpt-model ()
   "Toggle GPT model of current org-ai block.
@@ -9298,9 +9286,9 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
 
 (use-package emmet-mode
   :hook (js-mode css-mode sgml-mode web-mode tsx-mode)
-  :init
-  (setq emmet-expand-jsx-className? t
-        emmet-self-closing-tag-style " /"))
+  :custom
+  (emmet-expand-jsx-className? t)
+  (emmet-self-closing-tag-style " /"))
 
 ;;;;; r
 
