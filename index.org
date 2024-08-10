@@ -387,21 +387,62 @@ I use it minimally for some quality-of-life improvements.
 #+begin_src sh
   brew install hammerspoon
 #+end_src
+
 *** Mouse follows focus
 To install it:
 #+begin_src sh
-  mkdir -p ~/.hammerspoon/Spoons
-  curl -L "https://github.com/Hammerspoon/Spoons/raw/master/Spoons/MouseFollowsFocus.spoon.zip" -o /tmp/mff.zip
-  cd ~/.hammerspoon/Spoons
-  unzip /tmp/mff.zip
+mkdir -p ~/.hammerspoon/Spoons
+curl -L "https://github.com/Hammerspoon/Spoons/raw/master/Spoons/MouseFollowsFocus.spoon.zip" -o /tmp/mff.zip
+cd ~/.hammerspoon/Spoons
+unzip /tmp/mff.zip
 #+end_src
 
 The configuration:
 #+begin_src lua :tangle ~/hammerspoon/init.lua
-  mouse_follows_focus = hs.loadSpoon("MouseFollowsFocus")
-  mouse_follows_focus:configure({})
-  mouse_follows_focus:start()
+-- * MouseFollowsFocus
+
+mouse_follows_focus = hs.loadSpoon("MouseFollowsFocus")
+mouse_follows_focus:configure({})
+mouse_follows_focus:start()
 #+end_src
+
+** Emacs Integration
+I have a little menubar that shows the current clocked in task and the current tab-bar of Emacs in MacOS menu. I was going to use a socket instead of an HTTP server but didn't manage to get ~hs.socket~ to work for some reason.
+
+#+begin_src lua :tangle ~/hammerspoon/init.lua
+-- * Menubar & Emacs
+
+menubar = hs.menubar.new()
+menubar:setTitle("-")
+
+workspace = ""
+task = ""
+
+function updateTitle()
+   -- TODO: https://www.hammerspoon.org/docs/hs.styledtext.html
+   local taskIcon = (task == "") and "✖" or "✓"
+   menubar:setTitle(string.format("%s %s | ⭾ [%s]", taskIcon, task, workspace))
+end
+
+function cb(verb, path, headers, body)
+   if path == "/task" then
+      task = body
+      updateTitle()
+   elseif path == "/workspace" then
+      workspace = body
+      updateTitle()
+   else
+      print(">> Unknown request to: ", path, headers, body)
+   end
+   return "ok", 200, {}
+end
+
+server = hs.httpserver.new()
+server:setPort(9093)
+server:setCallback(cb)
+server:start()
+#+end_src
+
 * Linux
 ** systemd
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
