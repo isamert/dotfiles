@@ -11268,9 +11268,9 @@ This is done by adding this function to
 
 (defun im-people ()
   "Select and kill people info.
-  people.org should contain the following snippet on it's `after-save-hook':
-    (im-serialize-into-file \"~/.emacs.d/sync/people\"
-      (org-map-entries #'org-entry-properties \"LEVEL=1\"))"
+people.org should contain the following snippet on it's `after-save-hook':
+  (im-serialize-into-file \"~/.emacs.d/sync/people\"
+    (org-map-entries #'org-entry-properties \"LEVEL=1\"))"
   (interactive)
   (let* ((selected
           (->>
@@ -11305,7 +11305,13 @@ This is done by adding this function to
            (equal prop "ID"))
       (insert (format "[[id:%s][%s]]"
                       val
-                      (s-trim (read-string "Name: " (alist-get "ITEM" info nil nil #'equal))))))
+                      (if (use-region-p)
+                          (let* ((beg (region-beginning))
+                                 (end (region-end))
+                                 (str (buffer-substring-no-properties beg end)))
+                            (delete-region beg end)
+                            str)
+                        (s-trim (read-string "Name: " (alist-get "ITEM" info nil nil #'equal)))))))
      ;; Strip out links from addresses
      ((s-prefix? "ADDRESS" prop)
       (if-let (x (s-match "\\[\\[\\(.*\\)\\]\\[\\(.*\\)\\]\\]" val))
@@ -11316,7 +11322,7 @@ This is done by adding this function to
         (im-kill val)))
      (t (im-kill val)))))
 
-(im-leader
+(im-leader-v
   "ou" #'im-people)
 
 ;;;;; Google search
