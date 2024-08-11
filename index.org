@@ -217,6 +217,11 @@ default-root-container-layout = 'tiles'
 default-root-container-orientation = 'auto'
 key-mapping.preset = 'qwerty'
 
+# Mouse lazily follows focused monitor (default in i3)
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+# Mouse lazily follows any focus (window or workspace)
+#on-focus-changed = ['move-mouse window-lazy-center']
+
 [gaps]
 inner.horizontal = 3
 inner.vertical =   3
@@ -388,25 +393,7 @@ I use it minimally for some quality-of-life improvements.
   brew install hammerspoon
 #+end_src
 
-*** Mouse follows focus
-To install it:
-#+begin_src sh
-mkdir -p ~/.hammerspoon/Spoons
-curl -L "https://github.com/Hammerspoon/Spoons/raw/master/Spoons/MouseFollowsFocus.spoon.zip" -o /tmp/mff.zip
-cd ~/.hammerspoon/Spoons
-unzip /tmp/mff.zip
-#+end_src
-
-The configuration:
-#+begin_src lua :tangle ~/hammerspoon/init.lua
--- * MouseFollowsFocus
-
-mouse_follows_focus = hs.loadSpoon("MouseFollowsFocus")
-mouse_follows_focus:configure({})
-mouse_follows_focus:start()
-#+end_src
-
-** Emacs Integration
+*** Emacs Integration
 I have a little menubar that shows the current clocked in task and the current tab-bar of Emacs in MacOS menu. I was going to use a socket instead of an HTTP server but didn't manage to get ~hs.socket~ to work for some reason.
 
 #+begin_src lua :tangle ~/hammerspoon/init.lua
