@@ -2184,6 +2184,22 @@ Use ~b~ key to disable/enable it. It's on by default.
   sed -Ei 's/([ \t]+)categories =.*/\1categories = '"'"'"sponsor","selfpromo","interaction","intro","outro"'"'"'/' ~/.config/mpv/scripts/sponsorblock_minimal.lua
 #+end_src
 
+*** uosc
+UI for mpv. Pretty looking and very functional. Has a menu that is searchable. Also allows you to switch stream quality on YouTube videos etc. Spectacular.
+
+Installation:
+#+begin_src sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/tomasklaen/uosc/HEAD/installers/unix.sh)"
+#+end_src
+
+*** thumbfast
+Thumbnail plugin. Works with uosc.
+
+Installation:
+#+begin_src sh
+curl https://raw.githubusercontent.com/po5/thumbfast/master/thumbfast.lua -o ~/.config/mpv/scripts/thumbfast.lua
+#+end_src
+
 ** nsxiv
 #+begin_src sh :tangle (when-linux "~/.config/nsxiv/exec/key-handler")
   #!/bin/bash
