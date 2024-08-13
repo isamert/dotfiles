@@ -3534,6 +3534,39 @@ it's a list, the first element will be used as the binary name."
                            ("ssh" . "/usr/bin/zsh")))
   (eat-eshell-mode))
 
+;;;;;; Send a notification for long running commands
+
+;; See `im-eshell-notify-duration' to control what a long running
+;; command means.  This only sends if user is focused to another
+;; buffer or Emacs is out of focus.
+
+;; I already have this feature in zsh, provided by starship
+;; prompt. This is just an enhanced eshell implementation.
+
+(with-eval-after-load 'eshell
+  (defvar im-eshell-notify-duration 1
+    "Minimum time in seconds that a command takes for a notification to fire.")
+
+  (defvar-local im-eshell-notify--last-execution-time nil)
+
+  (defun im-eshell-notify--pre-command-hook ()
+    (setq im-eshell-notify--last-execution-time (float-time)))
+
+  (defun im-eshell-notify--post-command-hook ()
+    (let ((execution-time (- (float-time) im-eshell-notify--last-execution-time)))
+      (when (> execution-time im-eshell-notify-duration)
+        ;; Only send a notification if user focused to another buffer or
+        ;; Emacs is out of focus.
+        (when (or
+               (not (frame-focus-state))
+               (not (eq (current-buffer) (window-buffer (selected-window)))))
+          (alert
+           (format "Execution took %s seconds." execution-time)
+           :title (format "Command finished: %s!" eshell-last-command-name))))))
+
+  (add-to-list 'eshell-pre-command-hook 'im-eshell-notify--pre-command-hook)
+  (add-to-list 'eshell-post-command-hook 'im-eshell-notify--post-command-hook))
+
 ;;;;;; Integrate EAT with ZSH
 ;; This will be automatically sourced within .zshrc.
 
