@@ -4643,6 +4643,7 @@ properly."
   (:keymaps 'shr-map
    "z" nil ;; So that regular evil bindings work
    "v" nil ;; So that regular evil bindings work
+   "O" nil ;; So that my bindings work
    "+" #'shr-zoom-image)
   (:keymaps 'eww-mode-map :states 'normal
    "Y" #'eww-copy-page-url
@@ -7048,7 +7049,12 @@ in the DM section of the official Slack client."
 ;; ```
 
 (use-package separedit
-  :bind (:map evil-normal-state-map ("gm" . separedit))
+  ;; C-u separedit → Let's you select the editing mode first.
+  :general
+  (:states 'normal
+   "gm" #'separedit)
+  (:keymaps 'minibuffer-mode-map
+   "M-r" #'separedit)
   :config
   (setq separedit-default-mode 'markdown-mode)
   (setq separedit-continue-fill-column t))
@@ -8029,8 +8035,8 @@ This happens to me on org-buffers, xwidget-at tries to get
   ;; ag is supported by nearly every rule but rg is not.
   ;; also see: https://github.com/jacktasia/dumb-jump/issues/376
   (setq dumb-jump-force-searcher 'ag)
-  (setq dumb-jump-ignore-context t)
-  (setq dumb-jump-fallback-search nil)
+  (setq dumb-jump-ignore-context nil)
+  (setq dumb-jump-fallback-search t)
 
   (remove-hook 'xref-backend-functions #'etags--xref-backend))
 
@@ -8400,9 +8406,12 @@ Useful if .elfeed directory is freshly syncned."
 
 ;;;;;; Display/get currently focused function name in modeline
 
-(use-package which-function
-  :straight (:type built-in)
-  :hook (after-init . which-function-mode))
+;; TODO Generally causes perf problems. Disabled it for now to see if
+;; I'm really using it or not.
+
+;; (use-package which-function
+;;   :straight (:type built-in)
+;;   :hook (after-init . which-function-mode))
 
 ;;;;;; origami-mode -- Folding
 ;; I generally use the built-in hs-minor-mode but it does not work with all languages. Origami is a more generic solution that works fairly well.
@@ -10230,61 +10239,6 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   (split-window-right)
   (other-window 1))
 
-(defun im-print-buffer-file-info (&optional kill-file-path)
-  (interactive "P")
-  (cl-flet ((prop (x) (propertize x 'face '(:foreground "systemPurpleColor" :slant italic)))
-            (plum (x) (propertize x 'face '(:foreground "systemPurpleColor")))
-            (bold (x) (propertize x 'face 'bold))
-            (yellow (x) (propertize (if (numberp x) (number-to-string x) x) 'face '(:foreground "systemOrangeColor")))
-            (italic (x) (propertize x 'face '(:slant italic))))
-    (let* ((region? (use-region-p))
-           (point-min (if region? (region-beginning) (point-min)))
-           (point-max (if region? (region-end) (point-max)))
-           (proj-name (im-current-project-name))
-           (proj-path (or (im-current-project-root) (expand-file-name "~/")))
-           (fpath (or (buffer-file-name) (buffer-name)))
-           (fpath-pretty (string-replace (expand-file-name "~") "~" fpath))
-           (in-git? (file-exists-p (expand-file-name ".git" (im-current-project-root))))
-           (text
-            (format
-             "[%s] %s\n%s\n%s\n%s\n%s%s\n%s\n%s%s%s%s"
-             (bold proj-name)
-             (plum (string-remove-prefix proj-path fpath))
-             (if region? "*region*" "")
-             (format "%s%s" (if kill-file-path (bold "Copied: ") "") (italic fpath-pretty))
-             (format "%s: %s" (prop "- Size") (yellow (im-human-readable-size (- point-max point-min))))
-             (format
-              "%s: %s, %s: %s, %s: %s\n"
-              (prop "- Lines")
-              (yellow (count-lines point-min point-max))
-              (prop "Words")
-              (yellow (length (split-string (buffer-substring-no-properties point-min point-max) "\\W+" 'omit-nulls)))
-              (prop "Chars")
-              (yellow (- point-max point-min)))
-             (format "%s: %s" (prop "- Major Mode") major-mode)
-             (if in-git? (format "%s: %s" (prop "- Current branch") (bold (lab-git-current-branch))) "")
-             (concat "\n" (im-read-time) "\n")
-             (if in-git?
-                 (concat (bold "\nGit Status: \n") (ansi-color-apply (shell-command-to-string (format "git -c color.ui=always status %s" fpath))))
-               (italic "\n Not in a git repository."))
-             "\n"
-             (if in-git?
-                 (let* ((diff (ansi-color-apply (shell-command-to-string (format "git diff --color=always %s" fpath))))
-                        (len (or (-some->> (s-split "\n" diff) (car) (length)) 0)))
-                   (concat
-                    "\n" (s-repeat len "─") "\n\n"
-                    diff))
-               ""))))
-      (im-peek
-       (lambda ()
-         (with-current-buffer (get-buffer-create "*im-buffer-info*")
-           (page-break-lines-mode)
-           (erase-buffer)
-           (insert (s-trim text))
-           (current-buffer))))
-      (when kill-file-path
-        (im-kill fpath-pretty)))))
-
 ;;;;; Keybindings
 
 (evil-define-key 'normal 'global
@@ -10333,10 +10287,6 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   ;; ace-window
   "wa" #'ace-window
   "ws" #'ace-swap-window)
-
-(im-leader-v
-  ;; extra
-  "wi" #'im-print-buffer-file-info)
 
 ;; Buffer related bindings
 (im-leader-v
@@ -12032,6 +11982,13 @@ scheduled, schedules them to todays date."
   (message "OK!"))
 
 ;;;;; Current file functionality
+
+(im-leader
+  "fi" #'im-print-buffer-file-info
+  "fc" #'im-copy-current-filename
+  "fr" #'im-rename-current-file-name-and-buffer
+  "fD" #'im-delete-current-file)
+
 ;; Sometimes I just want to delete/rename/move etc. the current file
 ;; without resorting to dired or any other file manager. Here are some
 ;; interactive functions to do that.
@@ -12053,6 +12010,7 @@ scheduled, schedules them to todays date."
     (set-visited-file-name new-name)
     (set-buffer-modified-p nil)))
 
+(defalias 'im-delete/remove-this-file #'im-delete-current-file)
 ;; Slightly modified version of: http://www.ergoemacs.org/emacs/elisp_delete-current-file.html
 (defun im-delete-current-file ()
   "Delete the current file and copy it's content to `kill-ring'."
@@ -12067,7 +12025,74 @@ scheduled, schedules them to todays date."
       (set-buffer-modified-p nil)
       (kill-buffer (current-buffer)))))
 
-(defalias 'im-delete/remove-this-file #'im-delete-current-file)
+(defalias 'im-copy-current-file-path 'im-copy-current-filename)
+(defun im-copy-current-filename (&optional uri)
+  "Copy the current buffer file name to the clipboard.
+If the URI is non-nil, then add file:// in front of the
+file-path."
+  (interactive "P")
+  (let* ((fname (if (equal major-mode 'dired-mode)
+                    default-directory
+                  (buffer-file-name)))
+         (filename (if (and fname uri)
+                       (concat "file://" fname)
+                     fname)))
+    (message ">> Copied: '%s'" (im-kill (or fname (buffer-name))))))
+
+(defun im-print-buffer-file-info (&optional kill-file-path)
+  (interactive "P")
+  (cl-flet ((prop (x) (propertize x 'face '(:foreground "systemPurpleColor" :slant italic)))
+            (plum (x) (propertize x 'face '(:foreground "systemPurpleColor")))
+            (bold (x) (propertize x 'face 'bold))
+            (yellow (x) (propertize (if (numberp x) (number-to-string x) x) 'face '(:foreground "systemOrangeColor")))
+            (italic (x) (propertize x 'face '(:slant italic))))
+    (let* ((region? (use-region-p))
+           (point-min (if region? (region-beginning) (point-min)))
+           (point-max (if region? (region-end) (point-max)))
+           (proj-name (im-current-project-name))
+           (proj-path (or (im-current-project-root) (expand-file-name "~/")))
+           (fpath (or (buffer-file-name) (buffer-name)))
+           (fpath-pretty (string-replace (expand-file-name "~") "~" fpath))
+           (in-git? (file-exists-p (expand-file-name ".git" (im-current-project-root))))
+           (text
+            (format
+             "[%s] %s\n%s\n%s\n%s\n%s%s\n%s\n%s%s%s%s"
+             (bold proj-name)
+             (plum (string-remove-prefix proj-path fpath))
+             (if region? "*region*" "")
+             (format "%s%s" (if kill-file-path (bold "Copied: ") "") (italic fpath-pretty))
+             (format "%s: %s" (prop "- Size") (yellow (im-human-readable-size (- point-max point-min))))
+             (format
+              "%s: %s, %s: %s, %s: %s\n"
+              (prop "- Lines")
+              (yellow (count-lines point-min point-max))
+              (prop "Words")
+              (yellow (length (split-string (buffer-substring-no-properties point-min point-max) "\\W+" 'omit-nulls)))
+              (prop "Chars")
+              (yellow (- point-max point-min)))
+             (format "%s: %s" (prop "- Major Mode") major-mode)
+             (if in-git? (format "%s: %s" (prop "- Current branch") (bold (lab-git-current-branch))) "")
+             (concat "\n" (im-read-time) "\n")
+             (if in-git?
+                 (concat (bold "\nGit Status: \n") (ansi-color-apply (shell-command-to-string (format "git -c color.ui=always status %s" fpath))))
+               (italic "\n Not in a git repository."))
+             "\n"
+             (if in-git?
+                 (let* ((diff (ansi-color-apply (shell-command-to-string (format "git diff --color=always %s" fpath))))
+                        (len (or (-some->> (s-split "\n" diff) (car) (length)) 0)))
+                   (concat
+                    "\n" (s-repeat len "─") "\n\n"
+                    diff))
+               ""))))
+      (im-peek
+       (lambda ()
+         (with-current-buffer (get-buffer-create "*im-buffer-info*")
+           (page-break-lines-mode)
+           (erase-buffer)
+           (insert (s-trim text))
+           (current-buffer))))
+      (when kill-file-path
+        (im-kill fpath-pretty)))))
 
 ;;;;; xah-open-file-at-cursor
 ;; This is better than =find-file-at-point= because it takes line
@@ -12376,26 +12401,6 @@ Returns process buffer."
     (when switch
       (switch-to-buffer buffer-name))
     (get-buffer buffer-name)))
-
-;;;;; Copy current/buffers filename into clipboard
-
-(defalias 'im-copy-current-filename-to-clipboard 'im-copy-file-name-to-clipboard)
-(defun im-copy-file-name-to-clipboard (&optional uri)
-  "Copy the current buffer file name to the clipboard.
-If the URI is non-nil, then add file:// in front of the
-file-path."
-  (interactive "P")
-  (let* ((fname (if (equal major-mode 'dired-mode)
-                    default-directory
-                  (buffer-file-name)))
-         (filename (if (and fname uri)
-                       (concat "file://" fname)
-                     fname)))
-    (if filename
-        (progn
-          (kill-new filename)
-          (message ">> Copied buffer file name '%s' to the clipboard." filename))
-      (user-error ">> Failed to copy"))))
 
 ;;;;; Password manager
 
