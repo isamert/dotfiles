@@ -3488,7 +3488,11 @@ it's a list, the first element will be used as the binary name."
 (use-package eshell
   :straight (:type built-in)
   :defer t
-  :hook (eshell-mode . im-disable-hl-line-mode-for-buffer)
+  :hook
+  (eshell-mode . im-disable-hl-line-mode-for-buffer)
+  (eshell-mode . (lambda ()
+                   (setq-local corfu-auto nil)
+                   (corfu-mode)))
   :general
   (:states 'insert :keymaps '(eshell-prompt-mode-map override)
    "C-l" (λ-interactive (eshell/clear t)))
@@ -3553,16 +3557,17 @@ it's a list, the first element will be used as the binary name."
     (setq im-eshell-notify--last-execution-time (float-time)))
 
   (defun im-eshell-notify--post-command-hook ()
-    (let ((execution-time (- (float-time) im-eshell-notify--last-execution-time)))
-      (when (> execution-time im-eshell-notify-duration)
-        ;; Only send a notification if user focused to another buffer or
-        ;; Emacs is out of focus.
-        (when (or
-               (not (frame-focus-state))
-               (not (eq (current-buffer) (window-buffer (selected-window)))))
-          (alert
-           (format "Execution took %s seconds." execution-time)
-           :title (format "Command finished: %s!" eshell-last-command-name))))))
+    (when im-eshell-notify--last-execution-time
+      (let ((execution-time (- (float-time) im-eshell-notify--last-execution-time)))
+        (when (> execution-time im-eshell-notify-duration)
+          ;; Only send a notification if user focused to another buffer or
+          ;; Emacs is out of focus.
+          (when (or
+                 (not (frame-focus-state))
+                 (not (eq (current-buffer) (window-buffer (selected-window)))))
+            (alert
+             (format "Execution took %s seconds." execution-time)
+             :title (format "Command finished: %s!" eshell-last-command-name)))))))
 
   (add-to-list 'eshell-pre-command-hook 'im-eshell-notify--pre-command-hook)
   (add-to-list 'eshell-post-command-hook 'im-eshell-notify--post-command-hook))
@@ -5795,17 +5800,21 @@ When ARG is non-nil, query the whole workspace/project."
 
 (use-package corfu
   :straight (:files (:defaults "extensions/*.el"))
+  :custom
+  (corfu-cycle t)
+  (corfu-auto t)
+  (corfu-auto-prefix 2)
+  (corfu-auto-delay 0.4)
+  ;; Enabled differently in eshell
+  (global-corfu-modes '((not eshell) t))
   :config
   (define-key corfu-map (kbd "M-j") #'corfu-next)
   (define-key corfu-map (kbd "M-k") #'corfu-previous)
   (define-key corfu-map (kbd "RET") #'corfu-complete)
+  (define-key corfu-map (kbd "RET") #'corfu-send)
   (define-key corfu-map (kbd "<tab>") nil)
 
   (set-face-background 'corfu-current "dim gray")
-  (setq corfu-cycle t)
-  (setq corfu-auto t)
-  (setq corfu-auto-prefix 2)
-  (setq corfu-auto-delay 0.4)
   (global-corfu-mode))
 
 ;; This is useful because sometimes I just want to collect list of
