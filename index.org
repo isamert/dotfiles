@@ -1251,7 +1251,7 @@ The configuration is done externally:
 # Show system notifications for commands that takes longer than 5 seconds
 min_time_to_notify = 5000
 show_notifications = true
-notification_timeout = 15000
+notification_timeout = 99999
 #+end_src
 
 ** Plugin configuration

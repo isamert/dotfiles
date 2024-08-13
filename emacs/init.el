@@ -4932,7 +4932,12 @@ of that revision."
   (define-advice diff-hl-previous-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))
   (define-advice diff-hl-next-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))
   (define-advice diff-hl-show-hunk-previous (:after (&rest _) reveal) (reveal-post-command) (recenter))
-  (define-advice diff-hl-show-hunk-next (:after (&rest _) reveal) (reveal-post-command) (recenter)))
+  (define-advice diff-hl-show-hunk-next (:after (&rest _) reveal) (reveal-post-command) (recenter))
+  (define-advice diff-hl-stage-dwim (:around (orig-fn &rest args) apply-even-if-buffer-is-narrowed)
+    "Original `diff-hl-stage-dwim' does not work if buffer is narrowed, this fixes it."
+    (save-restriction
+      (widen)
+      (apply orig-fn args))))
 
 ;;;;; blamer -- git blame
 
