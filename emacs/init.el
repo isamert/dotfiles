@@ -7713,8 +7713,15 @@ This happens to me on org-buffers, xwidget-at tries to get
   (wl-local-domain           "gmail.com")       ; The SMTP server again
   (wl-message-id-domain      "smtp.gmail.com")
 
+  ;; Dont ask y/n for fetching messages under 500 KB
+  (wl-prefetch-threshold 500000)
   (wl-folder-check-async t)
   (wl-biff-notify-hook '((lambda () (alert "You have new mail!" :title "Wanderlust"))))
+
+  ;; Do not ask bunch of questions while opening the summary buffer
+  ;; and simply fetch 500 messages at most
+  (elmo-folder-update-confirm nil)
+  (elmo-message-fetch-threshold 500)
   :general
   (:keymaps 'wl-summary-mode-map :states 'normal
    "RET" #'im-wl-jump-to-message
