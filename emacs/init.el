@@ -8426,9 +8426,26 @@ Useful if .elfeed directory is freshly syncned."
 ;; Generally unnecessary and sometimes causes problems
 (add-hook 'org-mode-hook #'im-disable-which-func)
 
-(use-package origami
-  :hook (yaml-mode . origami-mode)
-  :straight (:host github :repo "gregsexton/origami.el"))
+;;;;;; outline-indent-mode -- Code folding based on indendation
+
+;; I generally use the built-in hs-minor-mode but it does not work
+;; with all languages. outline-indent is a more generic solution that works
+;; fairly well.
+
+;; I used to use origami-mode for the use cases I mentioned but
+;; outline-indent is much better and makes more sense while
+;; folding. origami was a bit confusing (as the /thing/ itself).
+
+(use-package outline-indent
+  :straight (:host github :repo "jamescherti/outline-indent.el")
+  :hook
+  (python . outline-indent-minor-mode)
+  (python-ts . outline-indent-minor-mode)
+  (yaml . outline-indent-minor-mode)
+  (yaml-ts . outline-indent-minor-mode)
+  :custom
+  (outline-blank-line t)
+  (outline-indent-ellipsis " ▼ "))
 
 ;;;;;; REPLs
 
