@@ -8415,15 +8415,16 @@ Useful if .elfeed directory is freshly syncned."
 
 ;;;;;; Display/get currently focused function name in modeline
 
-;; TODO Generally causes perf problems. Disabled it for now to see if
-;; I'm really using it or not.
+(use-package which-function
+  :straight (:type built-in)
+  :custom
+  :hook (after-init . which-function-mode))
 
-;; (use-package which-function
-;;   :straight (:type built-in)
-;;   :hook (after-init . which-function-mode))
+(defun im-disable-which-func ()
+  (which-function-mode -1))
 
-;;;;;; origami-mode -- Folding
-;; I generally use the built-in hs-minor-mode but it does not work with all languages. Origami is a more generic solution that works fairly well.
+;; Generally unnecessary and sometimes causes problems
+(add-hook 'org-mode-hook #'im-disable-which-func)
 
 (use-package origami
   :hook (yaml-mode . origami-mode)
