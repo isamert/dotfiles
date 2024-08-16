@@ -8406,13 +8406,6 @@ Useful if .elfeed directory is freshly syncned."
   ;; `aggressive-indent-mode' for that.
   (add-hook 'emacs-lisp-mode-hook (lambda () (apheleia-mode -1))))
 
-
-;;;;;; editorconfig -- Pick up .editorconfig settings
-;; Pick up ~.editorconfig~ settings for current project automatically.
-
-(use-package editorconfig
-  :hook (after-init . editorconfig-mode))
-
 ;;;;;; Display/get currently focused function name in modeline
 
 (use-package which-function
