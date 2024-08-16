@@ -1073,6 +1073,8 @@ in my dotfiles repository.")
 ;;;;; Overriding some defaults
 
 (setq save-silently t)
+(setenv "EDITOR" "emacsclient")
+(setenv "VISUAL" "emacsclient")
 
 ;;;;;; M-Backspace should delete, instead of killing
 
@@ -1277,7 +1279,7 @@ using this function."
   ;; Fix for doomemacs/themes#720
   (custom-set-faces
    `(tab-bar
-     ((t (:background ,(or (doom-color 'bg-alt) unspecified) :foreground ,(or (doom-color 'fg-alt) unspecified)))))))
+     ((t (:background ,(or (doom-color 'bg-alt) 'unspecified) :foreground ,(or (doom-color 'fg-alt) 'unspecified)))))))
 
 (defconst im-theme-day 'ef-summer
   "Theme for the day.")
@@ -3450,6 +3452,9 @@ it's a list, the first element will be used as the binary name."
 (use-package eldoc
   :straight (:type built-in)
   :custom
+  ;; I have a `im-peek-doc' function that displays the documentation
+  ;; inline, which eleminates the need for multiline doc in minibuffer
+  (eldoc-echo-area-use-multiline-p nil)
   (eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly))
 
 ;;;;; display-time-mode
@@ -8410,7 +8415,6 @@ Useful if .elfeed directory is freshly syncned."
 
 (use-package which-function
   :straight (:type built-in)
-  :custom
   :hook (after-init . which-function-mode))
 
 (defun im-disable-which-func ()
@@ -8437,7 +8441,6 @@ Useful if .elfeed directory is freshly syncned."
   (yaml . outline-indent-minor-mode)
   (yaml-ts . outline-indent-minor-mode)
   :custom
-  (outline-blank-line t)
   (outline-indent-ellipsis " ▼ "))
 
 ;;;;;; REPLs
@@ -8695,6 +8698,7 @@ to turn it into something generic using macros."
 
 (use-package treesit
   :straight nil
+  :autoload (im-install-and-enable-treesit-grammers)
   :hook (after-init . im-install-and-enable-treesit-grammers)
   :custom
   (treesit-language-source-alist
@@ -10202,6 +10206,7 @@ SELECT * FROM _ LIMIT 1;
 
 (use-package ace-window
   :defer t
+  :autoload (aw-select)
   :custom
   (aw-background t)
   (aw-ignore-current t)
@@ -10380,11 +10385,11 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
              jiralib2-update-summary-description
              jiralib2-create-issue
              jiralib2-jql-search)
-  :config
-  (setq jiralib2-url ty-jira-url)
-  (setq jiralib2-auth 'basic)
-  (setq jiralib2-user-login-name ty-jira-login)
-  (setq jiralib2-token nil))
+  :custom
+  (jiralib2-url ty-jira-url)
+  (jiralib2-auth 'basic)
+  (jiralib2-user-login-name ty-jira-login)
+  (jiralib2-token nil))
 
 ;;
 ;; My completing-read based JIRA utilities
@@ -10424,6 +10429,8 @@ something.")
 (defun im-jira-open-issue (issue-number)
   "Open given Jira ISSUE-NUMBER."
   (interactive "sIssue: ")
+  ;; TODO: Remove the following if I move this functionality to a package/file
+  (require 'jiralib2)
   (let ((url (format "%s/browse/%s" jiralib2-url (car (s-split " " issue-number)))))
     (kill-new url)
     (browse-url url)))
@@ -14480,7 +14487,8 @@ configuration, pass it as WINDOW-CONF."
                (im-git-select-commit
                 (lambda (tag)
                   (delete-region start end)
-                  (insert-text-button tag 'action action 'follow-link t)))))
+                  (insert-text-button tag 'action action 'follow-link t)
+                  (im-git-commit--reset-message "<!-- No need to update the message -->")))))
    'kbd-help "RET: Select commit to fixup"
    'follow-link t)
   (insert "\n")
@@ -14983,5 +14991,6 @@ end tell"))
 ;; byte-compile-warnings: (not unresolved free-vars)
 ;; checkdoc-force-docstrings-flag: nil
 ;; checkdoc--argument-missing-flag: nil
+;; eval: (setq elisp-flymake-byte-compile-load-path load-path)
 ;; End:
 ;;; init.el ends here
