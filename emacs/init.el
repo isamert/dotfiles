@@ -12582,116 +12582,78 @@ selecting a pod."
    :do (let ((info (s-split " " it t)))
          (im-kube-pod--act (list :name (nth 1 info) :namespace (nth 0 info) :context (im-kube--current-context))))))
 
-;; TODO wtf is this shit
+(defun im-kube-context-overview (&optional switch-context)
+  "Same thing as `im-kube-select-pod' but in friendlier vtable form."
+  (interactive "P")
+  (when switch-context
+    (im-kube-use-context))
+  (let ((context (im-kube--current-context)))
+    (with-current-buffer (get-buffer-create (format "*im-kube: %s*" context))
+      (erase-buffer)
+      (make-vtable
+       :row-colors (im-vtable--pretty-colors)
+       :column-colors (im-vtable--pretty-colors)
+       :columns '("Namespace" "Name"
+                  (:name "Ready" :min-width 6)
+                  (:name "Status"
+                   :formatter (lambda (value)
+                                (cond
+                                 ((equal value "Running") (im-tbp--color "green" value))
+                                 ((equal value "Running") (im-tbp--color "green" value))
+                                 ((-contains? '("Error" "CrashLoopBackOff" "NotReady") value) (im-tbp--color "red" value))
+                                 (t (im-tbp--color "yellow" value)))))
+                  (:name "Restarts"
+                   :min-width 8
+                   :formatter (lambda (value)
+                                (if (ignore-errors (> (string-to-number value) 0))
+                                    (im-tbp--color "red" value)
+                                  value)))
+                  (:name "Age" :min-width 3))
+       :use-header-line nil
+       :objects-function (lambda ()
+                           (->>
+                            context
+                            (format "kubectl get pods --all-namespaces --no-headers --context=%s")
+                            (shell-command-to-string )
+                            (s-trim)
+                            (s-split "\n")
+                            (--map (let ((data (s-split " " it t)))
+                                     (list
+                                      :namespace (nth 0 data) :name (nth 1 data) :ready (nth 2 data)
+                                      :status (nth 3 data) :restarts (nth 4 data) :age (nth 5 data)
+                                      :context context)))))
+       :actions `("RET" im-kube-pod--act
+                  "L" im-kube-pod--logs
+                  "F" im-kube-pod--logs-follow
+                  "x" im-kube-pod--remove
+                  "i" im-kube-pod--info)
+       :getter (lambda (object column vtable)
+                 (let-plist object
+                   (pcase (vtable-column vtable column)
+                     ("Namespace" .namespace)
+                     ("Name" .name)
+                     ("Ready" .ready)
+                     ("Status" .status)
+                     ("Restarts" .restarts)
+                     ("Age" .age)))))
+      (switch-to-buffer (current-buffer)))))
+
 (defun im-kube-pod--act (pod &optional container)
   (let ((namespace (plist-get pod :namespace))
         (name (plist-get pod :name))
         (context (plist-get pod :context)))
     (empv--select-action "Action for"
-      "Exec into default container" →
-      (with-current-buffer (im-eshell (format "$pod: %s" name))
-        (insert
-         (im-kill (format "kubectl exec --namespace='%s' -i -t '%s' --context='%s' -- bash"
-                          namespace
-                          name
-                          context))))
-      "Exec into container" →
-      (let ((container (or container (im-kube-pod--select-container pod))))
-        (with-current-buffer (im-eshell (format "$pod: %s" name))
-          (insert
-           (im-kill (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' --context='%s' -- bash"
-                            namespace
-                            container
-                            name
-                            context)))))
-      "Logs" →
-      (let ((container (or container (im-kube-pod--select-container pod))))
-        (shell-command
-         (im-kill
-          (format
-           "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s'"
-           name namespace container context))
-         (format "*im-kube-logs:%s-%s*" name container)))
-      "Logs (follow)" →
-      (with-current-buffer (vterm (format "$pod: %s" name))
-        (vterm-insert
-         (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s' --context='%s'"
-                          name
-                          namespace
-                          (or container (im-kube-pod--select-container pod))
-                          context))))
-      "Logs (to a file)" →
-      (let ((container (or container (im-kube-pod--select-container pod)))
-            (fname (expand-file-name (read-file-name
-                                      "File: "
-                                      "~/Workspace/temp/"
-                                      nil
-                                      nil
-                                      (format "%s-%s.logs" (format-time-string "%Y-%m-%d") name)))))
-        (message ">> Downloading logs for %s. Done." name)
-        (set-process-sentinel
-         (start-process-shell-command
-          "*im-kube-log-write*"
-          "*im-kube-log-write*"
-          (im-kill (format "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s' > '%s'"
-                           name
-                           namespace
-                           container
-                           context
-                           fname)))
-         (lambda (proc event)
-           (if (eq (process-exit-status proc) 0)
-               (progn
-                 (message ">> Downloading logs for %s. Done." name)
-                 (find-file fname))
-             (user-error "Failed to get logs")))))
-      "Logs (previous pod)" →
-      (let ((container (or container (im-kube-pod--select-container pod))))
-        (shell-command
-         (im-kill
-          (format
-           "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s' -p"
-           name namespace container context))
-         (format "*im-kube-logs:%s-%s-PREVIOUS*" name container)))
-      ;; Logs from all pods combined for given pod's app
-      "App logs" →
-      (let ((container (or container (im-kube-pod--select-container pod))))
-        (with-current-buffer (im-eshell (format "$pod: %s" name))
-          (insert (im-kill
-                   (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s' --context='%s'"
-                           (im-kube-pod--get-app-name pod)
-                           namespace
-                           container
-                           context)))))
-      "Top" →
-      (im-shell-command
-       :command (format "kubectl top pod  '%s' --namespace='%s' --context='%s'"
-                        name
-                        namespace
-                        context))
-      "Remove" →
-      (im-shell-command
-       :command (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
-                                 name
-                                 namespace
-                                 context)))
-      "Events" →
-      (shell-command
-       (im-kill
-        (format
-         "kubectl events --for 'pod/%s' --namespace='%s' --context='%s'"
-         name namespace context))
-       (format "*im-kube-events:%s*" name))
-      "Info" →
-      (progn
-        (with-current-buffer (get-buffer-create (format "*im-kube-pod-info-%s*" name))
-          (insert
-           (shell-command-to-string (format "kubectl get pod '%s' --namespace='%s' --context='%s' --output=json"
-                                            name
-                                            namespace
-                                            context)))
-          (json-ts-mode)
-          (switch-to-buffer (current-buffer)))))))
+      "Exec into default container" → (im-kube-pod--exec-into-default-container pod)
+      "Exec into container" → (im-kube-pod--exec-into-container pod container)
+      "Logs" → (im-kube-pod--logs pod container)
+      "Logs (follow)" → (im-kube-pod--logs-follow pod container)
+      "Logs (to a file)" → (im-kube-pod--logs-to-file pod container)
+      "Logs (previous pod)" → (im-kube-pod--previous-logs pod container)
+      "App logs" → (im-kube-pod--app-logs pod)
+      "Top" → (im-kube-pod--top pod)
+      "Remove" → (im-kube-pod--remove pod)
+      "Events" → (im-kube-pod--events pod)
+      "Info" → (im-kube-pod--info pod))))
 
 (defun im-kube-pod--select-container (pod)
   (im-output-select
@@ -12702,6 +12664,132 @@ selecting a pod."
          (plist-get pod :context))
    :prompt (format "Container for %s: " (plist-get pod :name))
    :split " "))
+
+(defun im-kube-pod--info (pod)
+  "Pod info action."
+  (with-current-buffer (get-buffer-create (format "*im-kube-pod-info-%s*" (plist-get pod :name)))
+    (insert
+     (shell-command-to-string (format "kubectl get pod '%s' --namespace='%s' --context='%s' --output=json"
+                                      (plist-get pod :name)
+                                      (plist-get pod :namespace)
+                                      (plist-get pod :context))))
+    (json-ts-mode)
+    (switch-to-buffer (current-buffer))
+    (goto-char (point-min))))
+
+(defun im-kube-pod--top (pod)
+  (im-shell-command
+   :command (format "kubectl top pod  '%s' --namespace='%s' --context='%s'"
+                    (plist-get pod :name)
+                    (plist-get pod :namespace)
+                    (plist-get pod :context))))
+
+(defun im-kube-pod--remove (pod)
+  (when (y-or-n-p (format "Do you really want to remove %s? " (plist-get pod :name)))
+    (im-shell-command
+     :command (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
+                               (plist-get pod :name)
+                               (plist-get pod :namespace)
+                               (plist-get pod :context))))))
+
+(defun im-kube-pod--events (pod)
+  (shell-command
+   (im-kill
+    (format
+     "kubectl events --for 'pod/%s' --namespace='%s' --context='%s'"
+     (plist-get pod :name)
+     (plist-get pod :namespace)
+     (plist-get pod :context)))
+   (format "*im-kube-events:%s*" (plist-get pod :name))))
+
+(defun im-kube-pod--app-logs (pod &optional container)
+  ;; Logs from all pods combined for given pod's app
+  (let ((container (or container (im-kube-pod--select-container pod))))
+    (with-current-buffer (im-eshell (format "$pod: %s" name))
+      (insert (im-kill
+               (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s' --context='%s'"
+                       (im-kube-pod--get-app-name pod)
+                       (plist-get pod :namespace)
+                       container
+                       (plist-get pod :context)))))))
+
+(defun im-kube-pod--previous-logs (pod &optional container)
+  (let ((container (or container (im-kube-pod--select-container pod))))
+    (shell-command
+     (im-kill
+      (format
+       "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s' -p"
+       (plist-get pod :name)
+       (plist-get pod :namespace)
+       container
+       (plist-get pod :context)))
+     (format "*im-kube-logs:%s-%s-PREVIOUS*" (plist-get pod :name) container))))
+
+(defun im-kube-pod--logs-to-file (pod &optional container)
+  (let ((container (or container (im-kube-pod--select-container pod)))
+        (fname (expand-file-name (read-file-name
+                                  "File: "
+                                  "~/Workspace/temp/"
+                                  nil
+                                  nil
+                                  (format "%s-%s.logs" (format-time-string "%Y-%m-%d") (plist-get pod :name))))))
+    (message ">> Downloading logs for %s. Done." (plist-get pod :name))
+    (set-process-sentinel
+     (start-process-shell-command
+      "*im-kube-log-write*"
+      "*im-kube-log-write*"
+      (im-kill (format "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s' > '%s'"
+                       (plist-get pod :name)
+                       (plist-get pod :namespace)
+                       container
+                       (plist-get pod :context)
+                       fname)))
+     (lambda (proc event)
+       (if (eq (process-exit-status proc) 0)
+           (progn
+             (message ">> Downloading logs for %s. Done." (plist-get pod :name))
+             (find-file fname))
+         (user-error "Failed to get logs"))))))
+
+(defun im-kube-pod--logs-follow (pod)
+  (with-current-buffer (vterm (format "$pod: %s" (plist-get pod :name)))
+    (vterm-insert
+     (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s' --context='%s'"
+                      (plist-get pod :name)
+                      (plist-get pod :namespace)
+                      container
+                      (plist-get pod :context))))))
+
+(defun im-kube-pod--logs (pod &optional container)
+  (im-tap pod)
+  (let ((container (or container (im-kube-pod--select-container pod))))
+    (shell-command
+     (im-kill
+      (format
+       "kubectl logs %s --since=0 --namespace='%s' --container='%s' --context='%s'"
+       (plist-get pod :name)
+       (plist-get pod :namespace)
+       container
+       (plist-get pod :context)))
+     (format "*im-kube-logs:%s-%s*" (plist-get pod :name) container))))
+
+(defun im-kube-pod--exec-into-container (pod &optional container)
+  (let ((container (or container (im-kube-pod--select-container pod))))
+    (with-current-buffer (im-eshell (format "$pod: %s" (plist-get pod :name)))
+      (insert
+       (im-kill (format "kubectl exec --namespace='%s' --container='%s' -i -t '%s' --context='%s' -- bash"
+                        (plist-get pod :namespace)
+                        container
+                        (plist-get pod :name)
+                        (plist-get pod :context)))))))
+
+(defun im-kube-pod--exec-into-default-container (pod)
+  (with-current-buffer (im-eshell (format "$pod: %s" (plist-get pod :name)))
+    (insert
+     (im-kill (format "kubectl exec --namespace='%s' -i -t '%s' --context='%s' -- bash"
+                      (plist-get pod :namespace)
+                      (plist-get pod :name)
+                      (plist-get pod :context))))))
 
 (defun im-kube-pod--get-app-name (pod)
   "Return the application name of the POD belongs."
