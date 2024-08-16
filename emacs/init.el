@@ -9641,25 +9641,6 @@ Lisp function does not specify a special indentation."
   (evil-define-key 'normal docker-network-mode-map   (kbd "a") #'docker-network-help)
   (evil-define-key 'normal docker-volume-mode-map    (kbd "a") #'docker-volume-help))
 
-;;;;; Kubernetes
-
-;; - Use ~kubernetes-overview~ to get an overview.
-;; - Use ~kubernetes-contexts-use-context~ to switch between contexts.
-;; - Use ~kubernetes-set-namespace~ to set a namespace.
-
-(use-package kubernetes
-  :defer t
-  :custom
-  (kubernetes-poll-frequency 3600)
-  (kubernetes-redraw-frequency 3600)
-  :general
-  (:keymaps 'kubernetes-overview-mode-map :states 'normal
-   "r" #'kubernetes-refresh
-   "a" #'kubernetes-dispatch))
-
-(use-package kubernetes-evil
-  :after kubernetes)
-
 ;;;;; vimrc
 ;; Mostly for editing tridactyl and sometimes real vimrc.
 
