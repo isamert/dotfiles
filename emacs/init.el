@@ -5743,40 +5743,30 @@ KEY should not contain the leader key."
 
 (keymap-set embark-region-map "V" #'org-copy-visible)
 
-;;;;; flycheck
+;;;;; flymake
 
-(defun im-flycheck-disable-checkdoc-checker-if-not-needed ()
-  "Disable checkdoc on org src, scratch and interaction buffers.
-Also disable some byte compile warnings too."
-  (when (or (eq major-mode #'lisp-interaction-mode)
-            (s-contains? "scratch" (buffer-name))
-            (and (eq major-mode #'emacs-lisp-mode) (featurep 'org) (org-src-edit-buffer-p)))
-    (setq-local byte-compile-warnings '(not unresolved free-vars))
-    (setq flycheck-disabled-checkers '(emacs-lisp-checkdoc))))
+(use-package flymake
+  :straight (:type built-in)
+  ;; :hook ((prog-mode . flymake-mode)
+  ;;        (after-init . (lambda () (setq ))))
+  )
 
-(use-package flycheck
-  :commands (flycheck-mode)
-  :config
-  (setq flycheck-idle-change-delay 1)
-  (setq flycheck-display-errors-delay 0.3)
-  (setq flycheck-emacs-lisp-load-path 'inherit)
-  (setq flycheck-emacs-lisp-initialize-packages t)
-  (add-hook 'emacs-lisp-mode-hook #'im-flycheck-disable-checkdoc-checker-if-not-needed)
-  ;; Not quite sure why but I also need to explicitly add this
-  ;; to `org-src-mode-hook'
-  (add-hook 'org-src-mode-hook #'im-flycheck-disable-checkdoc-checker-if-not-needed))
+(use-package flymake-popon
+  :straight (:host codeberg  :repo "akib/emacs-flymake-popon")
+  :hook
+  (flymake-mode . flymake-popon-mode)
+  ;; Disable showing diagnostics in eldoc (in echo area) as we already
+  ;; show diagnostics in a posframe.
+  (flymake-popon-mode  . (lambda () (remove-hook 'eldoc-documentation-functions 'flymake-eldoc-function t)))
+  :custom
+  (flymake-popon-posframe-extra-arguments
+   '(:poshandler posframe-poshandler-window-bottom-center)))
 
-(use-package consult-flycheck :after flycheck)
-
-(use-package flycheck-posframe
-  :straight (:host github :repo "alexmurray/flycheck-posframe")
-  :after flycheck
-  :hook (flycheck-mode . flycheck-posframe-mode)
-  :config
-  (setq flycheck-posframe-border-width 2)
-  (setq flycheck-posframe-border-use-error-face t)
-  (setq flycheck-posframe-position 'window-bottom-center)
-  (flycheck-posframe-configure-pretty-defaults))
+(defun im-flymake-yank-diagnostics-at-point ()
+  "Copy the flymake diagnostics at point."
+  (interactive)
+  (im-kill
+   (mapconcat #'flymake-diagnostic-text (flymake-diagnostics (point)) "\n")))
 
 (defun im-show-diagnostic-list (arg)
   "Show all lsp errors or flycheck/flymake errors, depending on which is available.
