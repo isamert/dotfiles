@@ -14573,6 +14573,23 @@ CALLBACK will be called with the selected commit ref."
             (define-key map (kbd "C-c C-c") #'im-git-select-commit-finalize)
             map))
 
+;;;;;;; im-git-commit-amend
+
+(defun im-git-commit-amend ()
+  "Asks you a message and does `git commit --amend -m ...'."
+  (interactive)
+  (let ((buffer-name "*im-git-amend*")
+        (message (read-string "Message: " (shell-command-to-string "git log -1 --pretty=format:'%s'"))))
+    (im-shell-command
+     :command "git"
+     :args `("commit" "--amend" "-m" ,message)
+     :switch nil
+     :buffer-name buffer-name
+     :on-finish (lambda (&rest _) (message ">> Amended"))
+     :on-fail (lambda (&rest _)
+                (message ">> Amend failed!")
+                (switch-to-buffer buffer-name)))))
+
 ;;;;; Shopping Mode
 
 ;; I have a simple shopping list that I sync with my phone. This is a
