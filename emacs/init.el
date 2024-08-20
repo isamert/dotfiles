@@ -467,7 +467,7 @@ complicates things or not sufficient."
 ;; and give that file?
 
 (cl-defun im-tangle-file (&key _path _contents)
-  (warn "Implement im-tangle-file"))
+  (message "WARN: Implement im-tangle-file"))
 
 ;;;;;; Elisp utils
 
@@ -834,7 +834,7 @@ called with the current state of the button."
 (cl-defun im-request
     (endpoint
      &rest params
-     &key (-type "GET") (-headers) (-data) (-params) (-async?) (-success) (-raw)
+     &key (-type "GET") (-headers) (-data) (-params) (-async?) (-on-success) (-on-error) (-raw)
      &allow-other-keys)
   "Like `request' but plist and JSON oriented. JSON responses are
 automatically parsed, query parameters are constructed from
@@ -859,11 +859,10 @@ With some HTTP headers:
 
     (im-request \"...\" :-headers \\='(:Authorization \"Bearer e21ewqfasdwtkl\"))
 
-Async request:
+For async requests, simply provide a success handler:
 
     (im-request \"...\"
-      :-async? t
-      :-success (cl-function
+      :-on-success (cl-function
                   (lambda (&key data &allow-other-keys)
                     ...use the parsed json DATA...)))"
   (declare (indent defun))
@@ -1100,7 +1099,7 @@ With argument, do this that many times."
 ;; installing a package or after an update from recent list.
 
 (use-package recentf
-  :straight nil
+  :straight (:type built-in)
   :hook (after-init . recentf-mode)
   :custom
   (recentf-max-saved-items 500)
@@ -1120,7 +1119,7 @@ With argument, do this that many times."
 ;;;;; Save minibuffer, kill-ring, search-ring history
 
 (use-package savehist
-  :straight nil
+  :straight (:type built-in)
   :hook (after-init . savehist-mode)
   :config
   ;; Clipboard selections are copied into the kill-ring
@@ -1217,7 +1216,7 @@ With argument, do this that many times."
 ;; Enables you to have repeatable keybindings.
 
 (use-package repeat
-  :straight nil
+  :straight (:type built-in)
   :hook (after-init . repeat-mode))
 
 (defmacro im-make-repeatable (name &rest pairs)
@@ -1584,44 +1583,44 @@ side window the only window'"
 
 (use-package grep
   :defer t
-  :straight nil
+  :straight (:type built-in)
   :config
   (evil-collection-grep-setup))
 
 (use-package replace
   :defer t
-  :straight nil
+  :straight (:type built-in)
   :config
   (evil-collection-replace-setup))
 
 (use-package compile
   :defer t
-  :straight nil
+  :straight (:type built-in)
   :config
   (evil-collection-compile-setup))
 
 (use-package xref
   :defer t
-  :straight nil
+  :straight (:type built-in)
   :config
   (evil-collection-xref-setup))
 
 (use-package help
   :defer t
-  :straight nil
+  :straight (:type built-in)
   :config
   (evil-collection-help-setup))
 
 (use-package imenu
   :defer t
-  :straight nil
+  :straight (:type built-in)
   :config
   (evil-collection-imenu-setup)
   (evil-collection-imenu-list-setup))
 
 (use-package custom
   :defer t
-  :straight nil
+  :straight (:type built-in)
   :config
   (evil-collection-custom-setup))
 
@@ -1935,6 +1934,8 @@ side window the only window'"
   ;; ^ Open links with RET
   (org-src-fontify-natively t)
   ;; ^ Enable code highlighting in ~SRC~ blocks.
+  (org-src-window-setup 'current-window)
+  ;; ^ Open indirect edits in current window and don't mess with window config at all
   (org-hierarchical-todo-statistics t)
   ;; ^ Show all children in todo statistics [1/5]
   (org-imenu-depth 7)
@@ -3354,14 +3355,14 @@ I generally bind this to a key while using by
       (end-of-line)
       (insert (format " → %s" effort)))))
 
-;;;;; im-org-complete
+;;;;; corg.el --- Org Mode block header completion
 
 ;; Completion at point for dynamic block headers, source block headers
 ;; etc.
 
-(use-package im-org-complete
-  :straight nil
-  :hook (org-mode . im-org-complete-setup))
+(use-package corg
+  :straight (:host github :repo "isamert/corg.el")
+  :hook (org-mode . corg-setup))
 
 ;;;;; im-svgcal
 
@@ -4140,6 +4141,7 @@ Return parsed seconds from users answer."
       ("<SPC>" nil "Quit" :color blue)))))
 
 ;;;;; wgrep
+
 ;; With this package, you can make =grep= buffers editable and your
 ;; edits can be applied to the files itself. Also =embark= has a
 ;; feature where you can export the current completing-read results
@@ -4153,11 +4155,12 @@ Return parsed seconds from users answer."
   :defer t)
 
 ;;;;; dired/dirvish
-;; There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
+;; There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
 (use-package dired
   :straight (:type built-in)
+  :defer t
   :custom
   (dired-dwim-target t)
   (dired-listing-switches "-l -A -h -v --group-directories-first")
@@ -4195,12 +4198,13 @@ Return parsed seconds from users answer."
    "H"     #'dirvish-history-go-backward
    "L"     #'dirvish-history-go-forward
    "Q"     #'im-quit)
+  :init
+  (with-eval-after-load 'dired
+    (dirvish-override-dired-mode))
   :custom
   (dirvish-subtree-always-show-state t)
   (dirvish-attributes '(vc-state subtree-state all-the-icons collapse git-msg file-time file-size))
   :config
-  (dirvish-override-dired-mode)
-
   ;; Disable wrapping lines in some modes so that full-screen dirvish looks good
   (add-hook 'dirvish-directory-view-mode-hook #'im-disable-line-wrapping)
   (add-hook 'dired-mode-hook #'im-disable-line-wrapping)
@@ -4302,7 +4306,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 ;; - Set a mark by hitting ~v~, then go to another date and hit ~M-=~ which will show day count between those two dates.
 
 (use-package calendar
-  :straight nil
+  :straight (:type built-in)
   ;; Enable including other diary entries using the #include "..." syntax
   ;; I use this to separate my work and normal diary
   :hook ((diary-list-entries . diary-include-other-diary-files)
@@ -4843,7 +4847,7 @@ for why."
 ;; `im-git-status' and `im-git-commit'.
 
 (use-package vc
-  :straight nil
+  :straight (:type built-in)
   :general
   (:keymaps 'vc-dir-mode-map :states 'normal
    "r" #'vc-dir-refresh)
@@ -5162,15 +5166,13 @@ of that revision."
           consult-imenu)))
 
 ;;;;; ~project.el~ and project management
+
 ;; ~(project-remember-projects-under im-projects-root t)~ does not
 ;; work as I expect, so I add all of my projects using a custom
 ;; function that returns all of my projects' paths.
 
-
 (use-package project
-  :straight nil
-  ;; I dynamically load projects list
-  ;; FIXME Setting it to nil breaks project.el
+  :straight (:type built-in)
   :autoload (project--find-in-directory))
 
 (defconst im-projects-root "~/Workspace/projects")
@@ -5217,16 +5219,18 @@ It simply checks for folders with `.git' under them."
 (defalias 'im-import-projects #'im-load-projects-list)
 (defun im-load-projects-list ()
   (interactive)
-  (message "Loading projects....")
-  ;; Ensure all projects are known by project.el
-  ;; The following does not recurse as I like it to be
-  ;; (project-remember-projects-under im-projects-root t)
-  (setq project--list '())
-  (--each (--map (project--find-in-directory it) (im-all-project-roots))
-    (project-remember-project it t))
-  (message "Loading projects...Done."))
+  (make-thread
+   (lambda ()
+     (message "Loading projects....")
+     ;; Ensure all projects are known by project.el
+     ;; The following does not recurse as I like it to be
+     ;; (project-remember-projects-under im-projects-root t)
+     (setq project--list '())
+     (--each (--map (project--find-in-directory it) (im-all-project-roots))
+       (project-remember-project it t))
+     (message "Loading projects...Done."))))
 
-(run-with-timer 10 nil #'im-load-projects-list)
+(add-hook 'after-init-hook #'im-load-projects-list)
 
 ;; project.el offers ~C-x p~ keymap with very useful bindings. I also
 ;; keep my project related bindings under ~SPC p~.
@@ -5237,7 +5241,6 @@ It simply checks for folders with `.git' under them."
 ;; ~project-switch-commands~ list and you need to define a key in
 ;; ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by
 ;; given key.
-
 
 (im-leader "p" (λ-interactive
                 (if-let (root (im-current-project-root))
@@ -5816,10 +5819,13 @@ When ARG is non-nil, query the whole workspace/project."
 ;; completions. With this I can use embark's collect functionality.
 (defun corfu-move-to-minibuffer ()
   (interactive)
-  (let ((completion-extra-properties corfu--extra)
-        completion-cycle-threshold completion-cycling)
-    (apply #'consult-completion-in-region completion-in-region--data)))
-(define-key corfu-map "\M-m" #'corfu-move-to-minibuffer)
+  (pcase completion-in-region--data
+    (`(,beg ,end ,table ,pred ,extras)
+     (let ((completion-extra-properties extras)
+           completion-cycle-threshold completion-cycling)
+       (consult-completion-in-region beg end table pred)))))
+(keymap-set corfu-map "M-m" #'corfu-move-to-minibuffer)
+(add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 (use-package corfu-quick
   :straight nil
@@ -5961,11 +5967,6 @@ SORT should be nil to disable sorting."
      ;; :colorProvider
      :foldingRangeProvider)))
 
-(use-package eglot-booster
-  :straight (:host github :repo "jdtsmith/eglot-booster")
-  :after eglot
-  :config (eglot-booster-mode))
-
 ;; This is needed so that go-to definition works for library files.
 (use-package eglot-java
   :after eglot
@@ -6041,8 +6042,9 @@ appropriate in some cases like terminals."
     (pcase major-mode
       ('eshell-mode  (insert cmd)
                      (eshell-send-input))
-      ('eat-mode (eat--send-string (eat-term-parameter eat-terminal 'eat--process) cmd)
-                 (eat-self-input 1 (aref (kbd "RET") 0)))
+      ('eat-mode
+       (eat--send-string (eat-term-parameter eat-terminal 'eat--process) cmd)
+       (eat-self-input 1 (aref (kbd "RET") 0)))
       ('vterm-mode (vterm-send-string cmd)
                    (vterm-send-return))))
   cmd)
@@ -6051,7 +6053,7 @@ appropriate in some cases like terminals."
   (interactive "r")
   (if (use-region-p)
       (im-run-command-on-visible-term (buffer-substring-no-properties start end))
-    (im-run-command-on-visible-term (s-trim (buffer-substring-no-properties (line-beginning-position) (line-end-position))))))
+    (im-run-command-on-visible-term (s-trim (thing-at-point 'line t)))))
 
 (defvar im-term-run-history '())
 (defvar im-jump-to-term-last-window nil)
@@ -6185,13 +6187,11 @@ this command is invoked from."
 
 (defun im-load-snippets-list ()
   (interactive)
-  (message ">> Loading snippets...")
-  (async-start
-   `(lambda ()
-      ,(async-inject-variables "^load-path$")
-      (require 'dash)
-      (require 'yankpad)
-      (setq yankpad-file ,snippets-org)
+  (make-thread
+   (lambda ()
+     (message ">> Loading snippets...")
+     (setq
+      im--all-snippets-cache
       (-mapcat
        (lambda (category)
          (--map (cons (format "%s :: %s" category (car it)) it)
@@ -6205,9 +6205,7 @@ this command is invoked from."
                  (ignore-errors
                    (yankpad--snippets category)))))
        (yankpad--categories)))
-   (lambda (result)
-     (message ">> Loading snippets... Done")
-     (setq im--all-snippets-cache result))))
+     (message ">> Loading snippets... Done"))))
 
 ;; Load snippets for the first time, after the startup
 ;; This may take a bit of time
@@ -6772,7 +6770,7 @@ in the DM section of the official Slack client."
   "q" #'im-quit
 
   "@" 'slack-message-embed-mention
-  "mc" 'slack-message-embed-channel ;
+  "mc" 'slack-message-embed-channel
   "mm" 'slack-message-write-another-buffer
   "md" 'slack-message-delete
   "my" 'slack-message-copy-link
@@ -6781,6 +6779,7 @@ in the DM section of the official Slack client."
   "mt" 'slack-thread-show-or-create
   "mq" 'im-slack-quote-message
   "mi" 'slack-display-user-profile-info
+  "mj" 'slack-thread-message-buffer-jump-to-channel-buffer
 
   "mrr" 'slack-message-add-reaction
   "mR" 'slack-message-remove-reaction
@@ -8244,6 +8243,8 @@ Useful if .elfeed directory is freshly syncned."
   (python-ts . outline-indent-minor-mode)
   (yaml . outline-indent-minor-mode)
   (yaml-ts . outline-indent-minor-mode)
+  (docker-compose-mode . outline-indent-minor-mode)
+  (sql-mode . outline-indent-minor-mode)
   :custom
   (outline-indent-ellipsis " ▼ "))
 
@@ -8501,7 +8502,7 @@ to turn it into something generic using macros."
 ;;;;; tree-sitter
 
 (use-package treesit
-  :straight nil
+  :straight (:type built-in)
   :autoload (im-install-and-enable-treesit-grammers)
   :hook (after-init . im-install-and-enable-treesit-grammers)
   :custom
@@ -9397,8 +9398,9 @@ Lisp function does not specify a special indentation."
 (use-package dockerfile-mode
   :mode "Dockerfile\\'")
 (use-package docker-compose-mode
-  :mode "docker-compose\\'")
-
+  :mode "docker-compose\\'"
+  :hook
+  (docker-compose-mode . highlight-indent-guides-mode))
 
 ;; A package for  managing docker.
 
@@ -9818,7 +9820,7 @@ SELECT * FROM _ LIMIT 1;
 ;; them.
 
 (use-package tab-bar
-  :straight nil
+  :straight (:type built-in)
   :custom
   (tab-bar-new-tab-to 'rightmost)
   (tab-bar-new-tab-choice im-init-file)
@@ -9897,7 +9899,7 @@ SELECT * FROM _ LIMIT 1;
   "Regexp to filter out buffer names on tab line.")
 
 (use-package tab-line
-  :straight nil
+  :straight (:type built-in)
   ;; :hook (after-init . global-tab-line-mode)
   :custom
   (tab-line-close-button-show 'selected)
@@ -14695,15 +14697,33 @@ end tell"))
 ;; currently am in through this Hammerspoon menubar.
 
 (when (eq system-type 'darwin)
+  (defvar im-hammerspoon-handle-clock-p t
+    "Whether to handle org clock stuff in hammerspoon or not.")
+
+  (defun im-toggle-hammerspoon-handle-clock ()
+    "Toggle the value of `im-hammerspoon-handle-clock-p'.
+This is useful when using laptop screen only as the menubar disappears
+because of the notch if the text is too long and I can't see which tab I
+am on because of this."
+    (interactive)
+    (setq im-hammerspoon-handle-clock-p (not im-hammerspoon-handle-clock-p))
+    ;; Reset text if disabled
+    (unless im-hammerspoon-handle-clock-p
+      (request "http://localhost:9093/task"
+        :type "POST"
+        :data ""))
+    (message ">> `im-hammerspoon-handle-clock-p' is now %s" im-hammerspoon-handle-clock-p))
+
   (add-hook 'org-clock-in-hook #'im-hammerspoon-handle-clock-in)
   (add-hook 'org-clock-out-hook #'im-hammerspoon-handle-clock-in)
 
   (defun im-hammerspoon-handle-clock-in ()
-    (request "http://localhost:9093/task"
-      :type "POST"
-      :data (if (org-clock-is-active)
-                (substring-no-properties (org-clock-get-clock-string))
-              "")))
+    (when im-hammerspoon-handle-clock-p
+      (request "http://localhost:9093/task"
+        :type "POST"
+        :data (if (org-clock-is-active)
+                  (substring-no-properties (org-clock-get-clock-string))
+                ""))))
 
   (define-advice tab-bar-select-tab (:after (&rest _) report-tab-change-to-hammerspoon)
     (request "http://localhost:9093/workspace"
