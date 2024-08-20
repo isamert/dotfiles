@@ -871,45 +871,54 @@ For async requests, simply provide a success handler:
         (json-object-type 'alist)
         (json-array-type #'list)
         (json-key-type 'symbol))
+
     ;; Remove request related items from params list
-    (dolist (key '(:-type :-headers :-data :-params :-async? :-success :-raw))
+    (dolist (key '(:-type :-headers :-data :-params :-async? :-on-success :-raw :-on-error))
       (cl-remf params key))
 
-    (request
-      endpoint
-      :type -type
-      :headers (cond
-                ((and -headers (json-alist-p -headers)) -headers)
-                ((and -headers (json-plist-p -headers)) (im-plist-to-alist -headers))
-                (t nil))
-      :parser (if -raw #'buffer-string #'json-read)
-      :success (if -async?
-                   -success
-                 (cl-function
-                  (lambda (&key data &allow-other-keys)
-                    (setq json data))))
-      :error (cl-function
-              (lambda (&key status data &allow-other-keys)
-                (user-error "STATUS: %s, DATA: %s," status data)))
-      :sync (not -async?)
-      :data (cond
-             ((and -data (json-alist-p -data)) -data)
-             ((and -data (json-plist-p -data)) (im-plist-to-alist -data))
-             ((stringp -data) -data)
-             (t nil))
-      :params (cond
-               ((and -params (json-alist-p -params)) -params)
-               ((and -params (json-plist-p params)) (im-plist-to-alist -params))
-               (t (im-plist-to-alist params))))
-    (when (called-interactively-p 'interactive)
-      (with-current-buffer (get-buffer-create "*im-request-response*")
-        (erase-buffer)
-        (insert json)
-        (json-pretty-print-buffer)
-        (json-ts-mode)
-        (switch-to-buffer-other-window (current-buffer))
-        (goto-char (point-min))))
-    json))
+    (let ((fn (lambda (resolve reject)
+                (request
+                  endpoint
+                  :type -type
+                  :headers (cond
+                            ((and -headers (json-alist-p -headers)) -headers)
+                            ((and -headers (json-plist-p -headers)) (im-plist-to-alist -headers))
+                            (t nil))
+                  :parser (if -raw #'buffer-string (apply-partially #'json-parse-buffer :object-type 'alist :array-type 'list))
+                  :success (cl-function
+                            (lambda (&key data &allow-other-keys)
+                              (funcall resolve data)))
+                  :error (cl-function
+                          (lambda (&key data status error-thrown &allow-other-keys)
+                            (message "im-request :: failed status=%s, error-thrown=%s, data=%s" status error-thrown data)
+                            (funcall reject data)))
+                  :sync (and (not -on-success) (not -async?))
+                  :data (cond
+                         ((and -data (json-alist-p -data)) (json-encode -data))
+                         ((and -data (json-plist-p -data)) (json-encode (im-plist-to-alist -data)))
+                         ((stringp -data) -data)
+                         (t nil))
+                  :params (cond
+                           ((and -params (json-alist-p -params)) -params)
+                           ((and -params (json-plist-p params)) (im-plist-to-alist -params))
+                           (t (im-plist-to-alist params)))))))
+      (cond
+       (-async? (promise-new fn))
+       ((or -on-success -on-error)
+        (funcall
+         fn
+         (or -on-success (lambda (data) (message "im-request :: Unhandled success. Data: %s" data)))
+         (or -on-error (lambda (data) (message "im-request :: Unhandled error. Data: %s" data)))))
+       (t (funcall fn (lambda (data) (setq json data)) (lambda (data) (user-error "Request failed, see earlier logs.")))
+          (when (called-interactively-p 'interactive)
+            (with-current-buffer (get-buffer-create "*im-request-response*")
+              (erase-buffer)
+              (insert json)
+              (json-pretty-print-buffer)
+              (json-ts-mode)
+              (switch-to-buffer-other-window (current-buffer))
+              (goto-char (point-min))))
+          json)))))
 
 (cl-defun im-request-json-async (url &key headers type data)
   "Async `request'."
