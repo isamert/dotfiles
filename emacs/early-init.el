@@ -6,19 +6,32 @@
 
 ;;; Code:
 
-;; Some stuff are taken from:
-;; https://github.com/emacs-lsp/lsp-mode#performance
+;;; Sane defaults
 
 (setq package-enable-at-startup nil)
 (setq-default lexical-binding 'lv)
 (setq native-comp-async-report-warnings-errors nil)
 
-(setq gc-cons-threshold 3000000)
-;; ^ Set gc threshold to ~30MB
-(setq read-process-output-max (* 1024 1024))
-;; ^ Better than default
+;;;; Performance related stuff
+
+
+;; If you don't use RTL ever, this could improve perf
+(setq-default bidi-display-reordering 'left-to-right)
+(setq-default bidi-paragraph-direction 'left-to-right)
+(setq-default bidi-inhibit-bpa t)
+
+;; Some stuff are taken from:
+;; https://github.com/emacs-lsp/lsp-mode#performance
+
+(setq gc-cons-threshold (* 40 1024 1024)) ;; 40 mb
+(setq read-process-output-max (* 2 1024 1024)) ;; 2 mb
+(setq process-adaptive-read-buffering nil) ;; Not sure if there is any gains from this.
+(setq fast-but-imprecise-scrolling t)
+(setq redisplay-skip-fontification-on-input t)
+(setq inhibit-compacting-font-caches t)
+
 (setq confirm-kill-processes nil)
-;; ^ When exitting, kill processes withouh asking
+;; ^ When exitting, kill processes without asking
 (setq ring-bell-function 'ignore)
 ;; ^ This completely disables alarms
 (setq column-number-mode t)
