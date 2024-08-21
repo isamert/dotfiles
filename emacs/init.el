@@ -12083,7 +12083,8 @@ Version 2017-01-11"
             it))
    (--filter (and (not (s-blank? it))
                   (> (length it) 5)
-                  (not (s-matches? "^\\(ls\\|pwd\\|exit\\|cd\\|echo\\)" it))))))
+                  (not (s-matches? "^\\(ls\\|pwd\\|exit\\|cd\\|echo\\)" it))
+                  (not (s-suffix? "\\" it))))))
 
 (cl-defun im-shell-command
     (&key
@@ -12123,7 +12124,7 @@ asterisks will be added automatically by eat.
 
 Returns process buffer."
   (interactive
-   (let ((command (completing-read "Command: " (im-zsh-smart-history))))
+   (let ((command (im-completing-read "Command: " (im-zsh-smart-history) :sort? nil)))
      (list
       :command command
       :on-finish
