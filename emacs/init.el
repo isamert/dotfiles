@@ -12513,17 +12513,17 @@ selecting a pod."
              (find-file fname))
          (user-error "Failed to get logs"))))))
 
-(defun im-kube-pod--logs-follow (pod)
-  (with-current-buffer (vterm (format "$pod: %s" (plist-get pod :name)))
-    (vterm-insert
-     (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s' --context='%s'"
-                      (plist-get pod :name)
-                      (plist-get pod :namespace)
-                      container
-                      (plist-get pod :context))))))
+(defun im-kube-pod--logs-follow (pod &optional container)
+  (let ((container (or container (im-kube-pod--select-container pod))))
+    (with-current-buffer (vterm (format "$pod: %s" (plist-get pod :name)))
+      (vterm-insert
+       (im-kill (format "kubectl logs %s -f --namespace='%s' --container='%s' --context='%s'"
+                        (plist-get pod :name)
+                        (plist-get pod :namespace)
+                        container
+                        (plist-get pod :context)))))))
 
 (defun im-kube-pod--logs (pod &optional container)
-  (im-tap pod)
   (let ((container (or container (im-kube-pod--select-container pod))))
     (shell-command
      (im-kill
