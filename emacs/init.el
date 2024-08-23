@@ -10410,10 +10410,11 @@ If PROJECTS is nil, then `im-jira-projects' is used."
      (lambda (project)
        (setq
         issues
-        (thread-last (format "project = \"%s\" AND Sprint in openSprints()"
-                             project)
-                     (jiralib2-jql-search)
-                     (append issues))))
+        (thread-last
+          (format "project = \"%s\" AND Sprint in openSprints()"
+                  project)
+          (jiralib2-jql-search)
+          (append issues))))
      (or projects im-jira-projects))
     issues))
 
@@ -10736,29 +10737,34 @@ If PROJECTS is nil, then `im-jira-projects' is used."
   "Mode for viewing JIRA tickets.")
 
 (defun jira-view-mode-open-externally ()
-  (interactive)
+  (interactive nil jira-view-mode)
   (with-default-browser
    (let-alist jira-view-mode-ticket
      (im-jira-open-issue .key))))
 
 (defun jira-view-mode-edit ()
-  (interactive)
+  (interactive nil jira-view-mode)
   (let-alist jira-view-mode-ticket
     (im-jira-update-ticket .key .fields.summary .fields.description)))
 
 (defun jira-view-mode-reload ()
-  (interactive)
+  (interactive nil jira-view-mode)
   (let-alist jira-view-mode-ticket
     (im-jira-view-ticket .key)))
 
 (defun jira-view-mode-act ()
-  (interactive)
+  (interactive nil jira-view-mode)
   (im-jira-issue-actions jira-view-mode-ticket))
+
+(defun jira-view-mode-inspect ()
+  (interactive nil jira-view-mode)
+  (im-inspect jira-view-mode-ticket))
 
 (evil-define-key 'normal jira-view-mode-map
   (kbd "&") #'jira-view-mode-open-externally
   (kbd "ge") #'jira-view-mode-edit
   (kbd "gr") #'jira-view-mode-reload
+  (kbd "gi") #'jira-view-mode-inspect
   ;; TODO All actions might be single keypress.
   (kbd "ga") #'jira-view-mode-act)
 
@@ -10811,16 +10817,22 @@ story points they have released. See the following figure:
   (with-current-buffer (get-buffer-create "*jira: current-sprint-by-points*")
     (erase-buffer)
     (org-mode)
-    (org-dblock-write:jira-sprint im-jira-projects)
+    (org-dblock-write:jira (list :projects im-jira-projects))
     (goto-char (point-min))
     (switch-to-buffer (current-buffer))))
 
-(defun org-dblock-write:jira-sprint (params)
+(defun org-dblock-write:jira (params)
   "Dynamic block version of `im-jira-list-current-sprint-assignee-swimlane'."
-  (let ((projects (plist-get params :projects)))
-    (insert "| Assignee | Total | Done | Sub-total | Status | Issue |\n|-\n")
+  (let ((projects (plist-get params :projects))
+        (jql (plist-get params :jql))
+        (group-by-assignee? (plist-get params :group-by-assignee)))
+    (if group-by-assignee?
+        (insert "| Assignee | Total | Done | Sub-total | Status | Issue |\n|-\n")
+      (insert "| Assignee | Point | Status | Issue |\n|-\n"))
     (->>
-     (im-jira-get-current-sprint-issues projects)
+     (cond
+      (jql (jiralib2-jql-search jql))
+      (t (im-jira-get-current-sprint-issues projects)))
      ;; (--filter (let-alist it .fields.assignee.name))
      (--group-by (let-alist it .fields.assignee.name))
      (map-apply
@@ -10843,17 +10855,26 @@ story points they have released. See the following figure:
                  vals)
           (--sort (string> (plist-get it :status) (plist-get other :status)))))))
      (--sort (> (plist-get it :total) (plist-get other :total)))
-     (--map (format "| %s | %s | %s | | | |\n%s"
-                    (plist-get it :assignee)
-                    (plist-get it :total)
-                    (plist-get it :done)
-                    (s-join
-                     "\n"
-                     (--map (format "| | | | %s | %s | %s |"
-                                    (plist-get it :points)
-                                    (plist-get it :status)
-                                    (s-truncate 60 (plist-get it :summary)))
-                            (plist-get it :tasks)))))
+     (--map (if group-by-assignee?
+                (format "| %s | %s | %s | | | |\n%s"
+                        (plist-get it :assignee)
+                        (plist-get it :total)
+                        (plist-get it :done)
+                        (s-join
+                         "\n"
+                         (--map (format "| | | | %s | %s | %s |"
+                                        (plist-get it :points)
+                                        (plist-get it :status)
+                                        (s-truncate 60 (plist-get it :summary)))
+                                (plist-get it :tasks))))
+              (s-join
+               "\n"
+               (--map (format "| %s | %s | %s | %s |"
+                              (plist-get it :assignee)
+                              (plist-get it :points)
+                              (plist-get it :status)
+                              (s-truncate 60 (plist-get it :summary)))
+                      (plist-get it :tasks)))))
      (s-join "\n|-\n")
      (insert))
     (org-table-align)))
