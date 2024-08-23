@@ -14920,10 +14920,25 @@ am on because of this."
 
 (provide 'init)
 
+;; Here are some variables for this file specifically. Some of them
+;; are self-explanatory but I'll go over some of them for clarity:
+;;
+;; - separedit-default-mode :: All the comments in this file are
+;;   formatted with Org mode markup. When I do \\[separedit] on a
+;;   comment, an indirect buffer will pop up and normally edit that
+;;   section in markdown mode but through this variable I set it to
+;;   org.
+;; - I don't care about some byte compiler warnings for this file,
+;;   which are disabled through =byte-compile-warnings= variable.
+;; - In the same vein of the one above, I don't care about some
+;;   checkdoc warnings which are disabled through checkdoc-* variables
+;;   below.
+
 ;; Local Variables:
 ;; byte-compile-warnings: (not unresolved free-vars)
 ;; checkdoc-force-docstrings-flag: nil
 ;; checkdoc--argument-missing-flag: nil
+;; separedit-default-mode: org-mode
 ;; eval: (setq elisp-flymake-byte-compile-load-path load-path)
 ;; End:
 ;;; init.el ends here
