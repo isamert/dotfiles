@@ -4747,6 +4747,7 @@ properly."
       `((".*jtracker.trendyol.*/browse/.*" . ,(im-purified-url-handler #'im-jira-view-ticket))
         (".*slack.com/archives/.*" . ,(im-purified-url-handler #'im-slack-open-link))
         (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?\\(&.*\\)?$" . ,(im-purified-url-handler #'reddigg-view-comments))
+        (".*news.ycombinator.com/item\\?id=.*" . ,(im-purified-url-handler #'hnreader-comment))
         (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . ,(im-purified-url-handler #'im-open-stackexchange-link))
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . ,(im-purified-url-handler #'empv-play-or-enqueue))
         (".*\\.mp3" . ,(im-purified-url-handler #'empv--play-or-enqueue))
@@ -7014,15 +7015,22 @@ in the DM section of the official Slack client."
   :config
   (all-the-icons-completion-mode +1))
 
-;;;;; reddigg
+;;;;; reddigg and hnreader -- org-mode interface for reddit and hacernews
 
-;; It lets me display comments of given reddit thread in an org buffer using the =reddigg-view-comments= function.
+;; These packages lets me display comments of given reddit/hn thread
+;; in an org buffer.
+;;
+;; Also see `browse-url-handlers' configuration to see how I utilize
+;; these packages.
 
 (use-package reddigg
   :defer t
   :straight (:host github :repo "isamert/emacs-reddigg")
   :config
   (setq reddigg-convert-md-to-org t))
+
+(use-package hnreader
+  :defer t)
 
 ;;;;; jq-mode
 
