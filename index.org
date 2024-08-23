@@ -2544,46 +2544,6 @@ When I open a useless website that I spent meaningless time on, I want to show o
   autocmd DocStart .*(eksisozluk|ensonhaber).* randomlink
 #+end_src
 
-**** TreeStyleTabs integration
-I use TreeStyleTabs and it's perfect. This is just cherry on top.
-
-- Source: https://github.com/tridactyl/tridactyl/issues/377#issuecomment-895565496
-
-#+begin_src vimrc  :tangle ~/.config/tridactyl/tridactylrc
-  command ttcollapse js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'collapse-tree', tab: JS_ARGS[1]})€
-  command ttcollapse_recursively js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'collapse-tree', tab: JS_ARGS[1], recursively: true})€
-  command ttexpand js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'expand-tree', tab: JS_ARGS[1]})€
-  command ttexpand_recursively js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'expand-tree', tab: JS_ARGS[1], recursively: true})€
-  command ttcollapse_current_or_parent js browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'get-tree-structure', tab: 'current'}).then(struct => browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'collapse-tree', tab: struct[0].collapsed ? 'parent' : 'current'}))
-  command ttfocus js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'focus', tab: JS_ARGS[1]})€
-  command ttindent js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'indent', tab: JS_ARGS[1]})€
-  command ttindent_recursively js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'indent', tab: JS_ARGS[1], followChildren: true})€
-  command ttoutdent js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'outdent', tab: JS_ARGS[1]})€
-  command ttoutdent_recursively js -d€ browser.runtime.sendMessage("treestyletab@piro.sakura.ne.jp", {type: 'outdent', tab: JS_ARGS[1], followChildren: true})€
-
-  " Collapse/expand current tree
-  bind zc ttcollapse_current_or_parent
-  bind zC ttcollapse_recursively root
-  bind zo ttexpand current
-  bind zO ttexpand_recursively current
-
-  " Collapse/expand all
-  bind zm ttcollapse *
-  bind zr ttexpand *
-
-  " Focus parent/root of a tree
-  bind zp ttfocus parent
-  bind zP ttfocus root
-
-  " Focus next/previous, skipping over subtrees. May also try nextSiblingCyclic/prevSiblingCyclic:
-  bind zj ttfocus nextSibling
-  bind zk ttfocus prevSibling
-
-  " Indent/outindent current tab
-  bind << ttoutdent_recursively current
-  bind >> ttindent_recursively current
-#+end_src
-
 **** Slack integration
 Neither Slack web app nor the desktop app lets you define your own custom keybindings but using the web app in combination with Tridactyl we can create our own shortcuts. I also created [[https://github.com/tridactyl/tridactyl/wiki/Slack][this tridactyl wiki page]] based on the bindings I created here. It might contain more details.
 
@@ -2635,37 +2595,342 @@ You can open next/previous posts with left and right keys on instagram but as fa
   bindurl .*.instagram.com --mode=normal <ArrowUp> hint -Jc button[aria-label="Go Back"]
   bindurl .*.instagram.com --mode=normal <ArrowDown> hint -Jc button[aria-label="Next"]
 #+end_src
-**** Work related configuration
-#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  set searchurls.tywiki https://wiki.trendyol.com/dosearchsite.action?queryString=%s
-  set searchurls.tygs https://gitlab.trendyol.com/discovery/seller-ads?filter=%s
-  set searchurls.tyg https://gitlab.trendyol.com/?name=%s
+*** sidebery configuration
+Here is my sidebery config export:
 
-  " autocmd DocLoad https://gitlab.trendyol.com/.*/-/pipelines/.* emacs/gitlab-watch-pipeline
+#+begin_src json
+{
+  "settings": {
+    "nativeScrollbars": true,
+    "nativeScrollbarsThin": true,
+    "nativeScrollbarsLeft": false,
+    "selWinScreenshots": false,
+    "updateSidebarTitle": true,
+    "markWindow": false,
+    "markWindowPreface": "[Sidebery] ",
+    "ctxMenuNative": false,
+    "ctxMenuRenderInact": true,
+    "ctxMenuRenderIcons": true,
+    "ctxMenuIgnoreContainers": "",
+    "navBarLayout": "horizontal",
+    "navBarInline": true,
+    "navBarSide": "left",
+    "hideAddBtn": false,
+    "hideSettingsBtn": false,
+    "navBtnCount": true,
+    "hideEmptyPanels": true,
+    "hideDiscardedTabPanels": false,
+    "navActTabsPanelLeftClickAction": "none",
+    "navActBookmarksPanelLeftClickAction": "none",
+    "navTabsPanelMidClickAction": "discard",
+    "navBookmarksPanelMidClickAction": "none",
+    "navSwitchPanelsWheel": true,
+    "subPanelRecentlyClosedBar": true,
+    "subPanelBookmarks": true,
+    "subPanelHistory": false,
+    "groupLayout": "list",
+    "containersSortByName": false,
+    "skipEmptyPanels": false,
+    "dndTabAct": true,
+    "dndTabActDelay": 750,
+    "dndTabActMod": "none",
+    "dndExp": "pointer",
+    "dndExpDelay": 750,
+    "dndExpMod": "none",
+    "dndOutside": "win",
+    "dndActTabFromLink": true,
+    "dndActSearchTab": true,
+    "dndMoveTabs": false,
+    "dndMoveBookmarks": false,
+    "searchBarMode": "dynamic",
+    "searchPanelSwitch": "any",
+    "searchBookmarksShortcut": "",
+    "searchHistoryShortcut": "",
+    "warnOnMultiTabClose": "collapsed",
+    "activateLastTabOnPanelSwitching": true,
+    "activateLastTabOnPanelSwitchingLoadedOnly": true,
+    "switchPanelAfterSwitchingTab": "always",
+    "tabRmBtn": "hover",
+    "activateAfterClosing": "next",
+    "activateAfterClosingStayInPanel": false,
+    "activateAfterClosingGlobal": false,
+    "activateAfterClosingNoFolded": true,
+    "activateAfterClosingNoDiscarded": true,
+    "askNewBookmarkPlace": true,
+    "tabsRmUndoNote": true,
+    "tabsUnreadMark": false,
+    "tabsUpdateMark": "all",
+    "tabsUpdateMarkFirst": true,
+    "tabsReloadLimit": 5,
+    "tabsReloadLimitNotif": true,
+    "showNewTabBtns": true,
+    "newTabBarPosition": "after_tabs",
+    "tabsPanelSwitchActMove": false,
+    "tabsPanelSwitchActMoveAuto": true,
+    "tabsUrlInTooltip": "full",
+    "newTabCtxReopen": false,
+    "tabWarmupOnHover": true,
+    "tabSwitchDelay": 0,
+    "moveNewTabPin": "start",
+    "moveNewTabParent": "last_child",
+    "moveNewTabParentActPanel": false,
+    "moveNewTab": "end",
+    "moveNewTabActivePin": "start",
+    "pinnedTabsPosition": "panel",
+    "pinnedTabsList": false,
+    "pinnedAutoGroup": false,
+    "pinnedNoUnload": true,
+    "pinnedForcedDiscard": false,
+    "tabsTree": true,
+    "groupOnOpen": true,
+    "tabsTreeLimit": 3,
+    "autoFoldTabs": false,
+    "autoFoldTabsExcept": "none",
+    "autoExpandTabs": false,
+    "autoExpandTabsOnNew": false,
+    "rmChildTabs": "folded",
+    "tabsLvlDots": true,
+    "discardFolded": false,
+    "discardFoldedDelay": 0,
+    "discardFoldedDelayUnit": "sec",
+    "tabsTreeBookmarks": true,
+    "treeRmOutdent": "branch",
+    "autoGroupOnClose": false,
+    "autoGroupOnClose0Lvl": false,
+    "autoGroupOnCloseMouseOnly": false,
+    "ignoreFoldedParent": false,
+    "showNewGroupConf": true,
+    "sortGroupsFirst": true,
+    "colorizeTabs": true,
+    "colorizeTabsSrc": "domain",
+    "colorizeTabsBranches": false,
+    "colorizeTabsBranchesSrc": "url",
+    "inheritCustomColor": true,
+    "previewTabs": false,
+    "previewTabsMode": "i",
+    "previewTabsPageModeFallback": "w",
+    "previewTabsInlineHeight": 70,
+    "previewTabsPopupWidth": 280,
+    "previewTabsSide": "right",
+    "previewTabsDelay": 500,
+    "previewTabsFollowMouse": true,
+    "previewTabsWinOffsetY": 36,
+    "previewTabsWinOffsetX": 6,
+    "previewTabsInPageOffsetY": 0,
+    "previewTabsInPageOffsetX": 0,
+    "previewTabsCropRight": 0,
+    "hideInact": false,
+    "hideFoldedTabs": false,
+    "hideFoldedParent": "none",
+    "nativeHighlight": false,
+    "warnOnMultiBookmarkDelete": "collapsed",
+    "autoCloseBookmarks": false,
+    "autoRemoveOther": false,
+    "highlightOpenBookmarks": false,
+    "activateOpenBookmarkTab": false,
+    "showBookmarkLen": true,
+    "bookmarksRmUndoNote": true,
+    "loadBookmarksOnDemand": true,
+    "pinOpenedBookmarksFolder": true,
+    "oldBookmarksAfterSave": "ask",
+    "loadHistoryOnDemand": true,
+    "fontSize": "xxs",
+    "animations": true,
+    "animationSpeed": "norm",
+    "theme": "plain",
+    "density": "default",
+    "colorScheme": "dark",
+    "sidebarCSS": false,
+    "groupCSS": false,
+    "snapNotify": true,
+    "snapExcludePrivate": false,
+    "snapInterval": 0,
+    "snapIntervalUnit": "min",
+    "snapLimit": 0,
+    "snapLimitUnit": "snap",
+    "snapAutoExport": false,
+    "snapAutoExportType": "json",
+    "snapAutoExportPath": "Sidebery/snapshot-%Y.%M.%D-%h.%m.%s",
+    "snapMdFullTree": false,
+    "hScrollAction": "none",
+    "onePanelSwitchPerScroll": false,
+    "wheelAccumulationX": true,
+    "wheelAccumulationY": true,
+    "navSwitchPanelsDelay": 128,
+    "scrollThroughTabs": "none",
+    "scrollThroughVisibleTabs": true,
+    "scrollThroughTabsSkipDiscarded": true,
+    "scrollThroughTabsExceptOverflow": true,
+    "scrollThroughTabsCyclic": false,
+    "scrollThroughTabsScrollArea": 0,
+    "autoMenuMultiSel": true,
+    "multipleMiddleClose": false,
+    "longClickDelay": 500,
+    "wheelThreshold": false,
+    "wheelThresholdX": 10,
+    "wheelThresholdY": 60,
+    "tabDoubleClick": "none",
+    "tabsSecondClickActPrev": true,
+    "tabsSecondClickActPrevPanelOnly": false,
+    "shiftSelAct": true,
+    "activateOnMouseUp": false,
+    "tabLongLeftClick": "none",
+    "tabLongRightClick": "none",
+    "tabMiddleClick": "close",
+    "tabMiddleClickCtrl": "discard",
+    "tabMiddleClickShift": "duplicate",
+    "tabCloseMiddleClick": "close",
+    "tabsPanelLeftClickAction": "none",
+    "tabsPanelDoubleClickAction": "tab",
+    "tabsPanelRightClickAction": "menu",
+    "tabsPanelMiddleClickAction": "tab",
+    "newTabMiddleClickAction": "new_child",
+    "bookmarksLeftClickAction": "open_in_act",
+    "bookmarksLeftClickActivate": false,
+    "bookmarksLeftClickPos": "default",
+    "bookmarksMidClickAction": "open_in_new",
+    "bookmarksMidClickActivate": false,
+    "bookmarksMidClickRemove": false,
+    "bookmarksMidClickPos": "default",
+    "historyLeftClickAction": "open_in_act",
+    "historyLeftClickActivate": false,
+    "historyLeftClickPos": "default",
+    "historyMidClickAction": "open_in_new",
+    "historyMidClickActivate": false,
+    "historyMidClickPos": "default",
+    "syncName": "",
+    "syncSaveSettings": false,
+    "syncSaveCtxMenu": false,
+    "syncSaveStyles": false,
+    "syncSaveKeybindings": false,
+    "selectActiveTabFirst": true
+  },
+  "sidebar": {
+    "panels": {
+      "nqYWdHQS2bL0": {
+        "type": 2,
+        "id": "nqYWdHQS2bL0",
+        "name": "Tabs",
+        "color": "toolbar",
+        "iconSVG": "icon_tabs",
+        "iconIMGSrc": "",
+        "iconIMG": "",
+        "lockedPanel": false,
+        "skipOnSwitching": false,
+        "noEmpty": false,
+        "newTabCtx": "none",
+        "dropTabCtx": "none",
+        "moveRules": [],
+        "moveExcludedTo": -1,
+        "bookmarksFolderId": -1,
+        "newTabBtns": [],
+        "srcPanelConfig": null
+      },
+      "dmRm04pnK_B5": {
+        "type": 2,
+        "id": "dmRm04pnK_B5",
+        "name": "Personal",
+        "color": "blue",
+        "iconSVG": "fingerprint",
+        "iconIMGSrc": "",
+        "iconIMG": "",
+        "lockedPanel": false,
+        "skipOnSwitching": false,
+        "noEmpty": false,
+        "newTabCtx": "none",
+        "dropTabCtx": "none",
+        "moveRules": [],
+        "moveExcludedTo": -1,
+        "bookmarksFolderId": -1,
+        "newTabBtns": [],
+        "srcPanelConfig": null
+      },
+      "zkxIyW_E6AZ0": {
+        "type": 2,
+        "id": "zkxIyW_E6AZ0",
+        "name": "Work",
+        "color": "orange",
+        "iconSVG": "briefcase",
+        "iconIMGSrc": "",
+        "iconIMG": "",
+        "lockedPanel": false,
+        "skipOnSwitching": false,
+        "noEmpty": false,
+        "newTabCtx": "none",
+        "dropTabCtx": "none",
+        "moveRules": [],
+        "moveExcludedTo": -1,
+        "bookmarksFolderId": -1,
+        "newTabBtns": [],
+        "srcPanelConfig": null
+      },
+      "history": {
+        "type": 4,
+        "id": "history",
+        "name": "History",
+        "color": "toolbar",
+        "iconSVG": "icon_clock",
+        "tempMode": false,
+        "lockedPanel": false,
+        "skipOnSwitching": false,
+        "viewMode": "history"
+      }
+    },
+    "nav": [
+      "nqYWdHQS2bL0",
+      "dmRm04pnK_B5",
+      "zkxIyW_E6AZ0",
+      "sp-0",
+      "history",
+      "remute_audio_tabs",
+      "add_tp",
+      "settings"
+    ]
+  },
+  "ver": "5.2.0",
+  "keybindings": {
+    "_execute_sidebar_action": "F1",
+    "next_panel": "Alt+Period",
+    "prev_panel": "Alt+Comma",
+    "new_tab_on_panel": "MacCtrl+Space",
+    "new_tab_in_group": "MacCtrl+Shift+Space",
+    "up": "Alt+Up",
+    "down": "Alt+Down",
+    "up_shift": "Alt+Shift+Up",
+    "down_shift": "Alt+Shift+Down",
+    "activate": "Alt+Space",
+    "reset_selection": "Alt+R",
+    "fold_inact_branches": "F3",
+    "move_tabs_up": "Alt+Shift+K",
+    "move_tabs_down": "Alt+Shift+J",
+    "switch_to_panel_0": "Alt+1",
+    "switch_to_panel_1": "Alt+2",
+    "switch_to_panel_2": "Alt+3",
+    "switch_to_panel_3": "Alt+4",
+    "switch_to_panel_4": "Alt+5",
+    "search": "F2",
+    "switch_to_next_tab": "Alt+J",
+    "switch_to_prev_tab": "Alt+K"
+  }
+}
 #+end_src
-
 *** userChrome.css
-I use [[https://github.com/piroor/treestyletab][TreeStyleTab]] so I hide the tab bar and siderbar heading. And now that I started using Gnome again, I also have the =firefox-gnome-theme=.
+I use [[https://github.com/mbnuqw/sidebery][Sidebery]] so I hide the tab bar and siderbar heading.
 
 #+begin_src css :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/chrome/userChrome.css")
-  @import "firefox-gnome-theme/userChrome.css";
+#TabsToolbar {
+    visibility: collapse;
+}
 
-  @import "firefox-gnome-theme\/theme/colors/light-maia.css";
-  @import "firefox-gnome-theme\/theme/colors/dark-maia.css";
-
-  #TabsToolbar {
-      visibility: collapse;
-  }
-
-  #sidebar-header {
-    visibility: collapse !important;
-  }
+#sidebar-header {
+  visibility: collapse !important;
+}
 #+end_src
 
 Also need to enable following config to make userChrome.css work:
 
 #+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/user.js")
-  user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 #+end_src
 
 *** Other configs
