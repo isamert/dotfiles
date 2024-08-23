@@ -7,6 +7,7 @@
 ;;; Code:
 
 ;;;; Introduction
+
 ;; This is my Emacs configuration. My main focus is sanity. I'm a
 ;; person who get frustrated pretty easily. So instead of optimizing
 ;; the time spent on doing things, I try to find ways of doing things
@@ -40,6 +41,7 @@
 ;; - I try to prefer built-in packages or packages that enhances built-in ones where possible. I'm also trying to simplify my configuration, so another goal is to reduce the package number. Although I intend to keep packages that enhances the overall experience with no special configuration (just install and forget type of packages).
 
 ;;;;; Keybinding conventions
+
 ;; - After leader
 ;;   - =e= :: is reserved for independent programs, that is not related to editing/programming. For example, "ec" opens calendar, "ee" opens elfeed, "er..." controls the radio.
 ;;   - =t= :: is reserved for toggling stuff. Toggle the terminal, toggle a frequently accessed buffer etc.
@@ -52,10 +54,12 @@
 ;;   - =o= :: is for org-mode/outline mode.
 
 ;;;;; Updating packages
+
 ;; Just do ~M-x straight-pull-all~. I do this quite infrequently. If
 ;; everything is working fine as it is, I tend to not update anything.
 
 ;;;; Preparation
+
 ;;;;; straight.el and use-package
 
 ;; Useful to see which packages take long time to load
@@ -93,6 +97,7 @@
 ;; - =:if= :: Loads the package conditionally, like =:if (eq system-type 'darwin)=.
 
 ;;;;;; Hiding mode indicators from modeline
+
 ;; ~diminish.el~ provides a way to hide mode indicators from mode
 ;; line. Either pass ~:diminish t~ to use-package while installing or
 ;; just call ~(diminish 'x-mode)~.
@@ -193,6 +198,7 @@ the header line."
 (autoload 'parse-csv-string-rows "parse-csv")
 
 ;;;;;; midnight-mode
+
 ;; I run some functions periodically using midnight-mode. Runs once a
 ;; day at the specified time. Simply add your function via ~add-hook~
 ;; to ~midnight-hook~.
@@ -204,6 +210,7 @@ the header line."
 (midnight-delay-set 'midnight-delay (truncate (* 10.5 60 60))) ;; 10:30am
 
 ;;;;; Variables and functions
+
 ;; Some basic variable and function definitions that will be used in
 ;; configuration.
 
@@ -828,6 +835,7 @@ called with the current state of the button."
    'follow-link t))
 
 ;;;;;; API call
+
 ;; This function is for doing easy REST calls and it uses plists for everything because it's more readable and easier to type than alists (but you can still use alists if you want or need to). I use this to quickly prototype stuff in elisp.
 
 
@@ -1078,6 +1086,7 @@ in my dotfiles repository.")
 (require 'im-secrets)
 
 ;;;; Basics
+
 ;;;;; Overriding some defaults
 
 (setq save-silently t)
@@ -1104,6 +1113,7 @@ With argument, do this that many times."
 (global-set-key (read-kbd-macro "<M-DEL>") 'backward-delete-word)
 
 ;;;;; Recent files
+
 ;; Save recent files. Also exclude package files that appears after
 ;; installing a package or after an update from recent list.
 
@@ -1138,6 +1148,7 @@ With argument, do this that many times."
 
 
 ;;;;; Better scrolling
+
 ;;;;;; Better settings for mouse scroll
 
 (setq mouse-wheel-scroll-amount '(1 ((shift) . 1))) ;; one line at a time
@@ -1145,6 +1156,7 @@ With argument, do this that many times."
 (setq mouse-wheel-follow-mouse 't)                  ;; scroll window under mouse
 
 ;;;;;; Mouse shortcuts for zooming
+
 ;; Ctrl-Scroll to zoom in and out
 
 (global-set-key [C-mouse-4] 'text-scale-increase)
@@ -1153,12 +1165,14 @@ With argument, do this that many times."
 (global-set-key (kbd "C-=") 'text-scale-decrease)
 
 ;;;;;; Conservative scrolling
+
 ;; If the cursor is at the end of the file, when you scroll emacs does a strange jump. This fixes it.
 
 (setq scroll-conservatively 100) ;; When cursor reaches end, just scroll line-by-line
 ;; (setq scroll-margin 10) ;; Start scolling earlier
 
 ;;;;; Backups
+
 ;; Instead of having a file that ends with ~ or '# files in same
 ;; directory, save all backup files in =~/.emacs.d/backups=.
 
@@ -1242,6 +1256,7 @@ With argument, do this that many times."
          (lambda (it) (put it 'repeat-map ',map-name))))))
 
 ;;;; Visuals
+
 ;;;;; General
 
 ;; Disable menubar
@@ -1267,6 +1282,7 @@ using this function."
   (setq-local global-hl-line-mode nil))
 
 ;;;;; Fonts and theme
+
 
 ;; The themes I used over time and liked are:
 ;; - doom-one → Grayish theme with great colors.
@@ -1351,6 +1367,7 @@ Just a simple wrapper around `prettify-symbols-mode`"
        (add-hook ',mode #',hook))))
 
 ;;;;; Frame title
+
 ;; Make window title contain buffer name so it's easier to identify
 ;; windows. I use ~rofi~ to switch between windows in my DE, so it
 ;; helps to have buffer name in window title.
@@ -1358,7 +1375,9 @@ Just a simple wrapper around `prettify-symbols-mode`"
 (setq frame-title-format "%b - emacs")
 
 ;;;;; Parentheses
+
 ;;;;;; Matching
+
 ;; Just enable parenthesis matching.
 
 (use-package show-paren
@@ -1368,6 +1387,7 @@ Just a simple wrapper around `prettify-symbols-mode`"
   (setq show-paren-style 'parenthesis))
 
 ;;;;;; Rainbow
+
 ;; Colors parentheses depending on their dept.
 
 (use-package rainbow-delimiters
@@ -1404,6 +1424,7 @@ function helps me go between these modes easily."
 (setq-default indent-tabs-mode nil)
 
 ;;;;; Shackle windows
+
 ;; Make some temproary windows appear at bottom. This makes buffer
 ;; management so much easier. Buffers that will match given regex will
 ;; appear at bottom while covering the given amount of screen.
@@ -1454,6 +1475,7 @@ side window the only window'"
   (setq highlight-indent-guides-bitmap-function 'highlight-indent-guides--bitmap-line))
 
 ;;;;; Spacious padding
+
 ;; Add some padding to Emacs frame to freshen things up.
 
 ;; Disabled for now.
@@ -1471,6 +1493,7 @@ side window the only window'"
   :autoload (page-break-lines-mode))
 
 ;;;; evil-mode
+
 ;;;;; Basic configuration
 
 (use-package evil
@@ -1714,6 +1737,7 @@ side window the only window'"
   (after-init . global-evil-mc-mode))
 
 ;;;;; evil-surround
+
 ;; - Change surroundings. Do =cs"'= to turn ="Hello world!"= into ='Hello world!'=.
 ;;   - ='Hello world!'= ~cs'<q>~ =<q>Hello world!</q>=
 ;;   - =Hel|lo= ~ysiw"~ ="Hello"= (| is the cursor position.)
@@ -1741,6 +1765,7 @@ side window the only window'"
   (add-hook 'emacs-lisp-mode-hook (lambda () (push '(?` . ("`" . "'")) evil-surround-pairs-alist))))
 
 ;;;;; evil-escape
+
 ;; Return back to normal mode using ~jk~ from anywhere. It does not
 ;; play well with multiple cursors, so use ~ESC~ to when using evil-mc
 ;; related stuff.
@@ -1794,6 +1819,7 @@ side window the only window'"
   (evil-goggles-use-diff-faces))
 
 ;;;;; evil-snipe
+
 ;; - Overall better =f/F/t/T= and . Nice visual feedbacks.
 
 (use-package evil-snipe
@@ -1808,6 +1834,7 @@ side window the only window'"
   (setq evil-snipe-skip-leading-whitespace nil))
 
 ;;;;; evil-exchange
+
 ;; Change two parts of the text.
 ;; - Mark some text in visual mode and do =gx=.
 ;; - Mark some other text in visual mode and do =gx= again to exchange two parts.
@@ -1818,6 +1845,7 @@ side window the only window'"
   (evil-exchange-install))
 
 ;;;;; evil-visualstar
+
 ;; With this package, you can do a visual selection and ~*~, ~#~ keys will work on them.
 
 (use-package evil-visualstar
@@ -1827,6 +1855,7 @@ side window the only window'"
   (global-evil-visualstar-mode 1))
 
 ;;;;; evil-numbers
+
 ;; Pretty useful for macros. Increment or decrement number at point
 ;; with ~+,-~ in normal mode.
 
@@ -1837,6 +1866,7 @@ side window the only window'"
    "-" #'evil-numbers/dec-at-pt))
 
 ;;;;; goto-chg
+
 ;; =g;= goes to the last change. (repeatable)
 
 ;; There is also =gv= which selects the last selection. Not related to
@@ -1854,7 +1884,9 @@ side window the only window'"
   ";" evil-goto-last-change)
 
 ;;;;; Custom text-objects
+
 ;;;;;; org blocks
+
 ;; There is `org-babel-mark-block' but it only works for source blocks
 ;; but this one works for everything between #begin_<> ... #end_<>.
 ;; There is also "e" object defined by evil-org, which works for quite
@@ -1906,6 +1938,7 @@ side window the only window'"
   "]" evil-forward-section-begin)
 
 ;;;; org-mode
+
 ;;;;; Tips etc.
 
 ;; Some lesser known functions:
@@ -2138,6 +2171,7 @@ side window the only window'"
     (outline-hide-body)))
 
 ;;;;; Babel
+
 ;;;;;; General configuration
 
 ;; Allow these languages to run in code blocks
@@ -2305,6 +2339,7 @@ that is provided by ob-http."
       (nreverse tokens))))
 
 ;;;;; Exporting
+
 ;;;;;; HTML
 
 (use-package htmlize :after org)
@@ -2318,6 +2353,7 @@ that is provided by ob-http."
   (setq org-icalendar-use-deadline '(todo-due event-if-todo)))
 
 ;;;;; Agenda
+
 ;; Some general settings.
 
 (use-package org-agenda
@@ -2403,6 +2439,7 @@ that is provided by ob-http."
    '(org-block-end-line ((t (:height 0.8))))))
 
 ;;;;; org-capture
+
 ;; See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this page]] for more detail on template elements.
 
 ;; Some functions that I utilize for capture templates:
@@ -2618,6 +2655,7 @@ This way you can insert new entry right after other non-TODO
       :sort '(date))))
 
 ;;;;; Linking improvements
+
 ;; Org does not provide an easy way to copy link at point. Here is a fix for that:
 
 ;; Source: https://emacs.stackexchange.com/a/60555
@@ -2641,6 +2679,7 @@ This way you can insert new entry right after other non-TODO
     (org-store-link nil t)))
 
 ;;;;;; Show expanded links at point
+
 ;; This following trick (got it from
 ;; [[https://www.reddit.com/r/emacs/comments/o68i0v/weekly_tips_tricks_c_thread/h2rizey?utm_source=share&utm_medium=web2x&context=3][this]]
 ;; comment) simply calls =C-h .= (=display-local-help=) when idle,
@@ -2659,6 +2698,7 @@ This way you can insert new entry right after other non-TODO
   (add-hook 'org-mode-hook #'im-help-at-point-mode))
 
 ;;;;;; Insert links/images more intelligently
+
 ;; - if region is selected and there is a url in the clipboard, convert it to a link directly.
 ;; - if nothing is selected and there is a link in clipboard, just insert it as a link with the link's own title.
 ;; - if clipboard has in image in it, save that into a file that you interactively select and then insert it into the buffer.
@@ -2857,6 +2897,7 @@ Headers are gathered from all the org files found in `org-directory'."
       (reveal-post-command))))
 
 ;;;;; Insert image with width
+
 ;; This function is especially useful when used in combination with =embark-act-all=. The workflow is as follows:
 ;; - =M-x= =im-org-insert-image-file-with-width=
 ;; - Filter the files that you want to insert to your buffer.
@@ -2903,11 +2944,13 @@ Headers are gathered from all the org files found in `org-directory'."
                         (or content "")))))))
 
 ;;;;; Project management
+
 ;; I'm doing all of my project management in org-mode. Here you can
 ;; find some supplementary functionality that makes project management
 ;; within org-mode easy.
 
 ;;;;;; Do a regexp search in a project inside a org dynamic block
+
 ;; Here I create a dynamic block for org-mode, named
 ;; ~project-grep~. You can create a block like the following:
 
@@ -3123,6 +3166,7 @@ TODO state."
     (org-sort-entries nil ?F (lambda () (if (or (org-entry-is-done-p) (org-entry-is-todo-p)) -1 (- 1000 (length (org-entry-get nil "ITEM"))))))))
 
 ;;;;; Remembering to clock in
+
 ;; I forget to clock in (and out) most of the time, so I want Emacs to
 ;; remind clocking to me. This function regularly checks if I'm
 ;; clocked in or not and tries to remind me to take the appropriate
@@ -3247,6 +3291,7 @@ breaks and joining the lines together. This function relies on
   "oK" #'im-org-new-heading)
 
 ;;;;; org-transclusion
+
 ;; My main use case for
 ;; [[https://github.com/nobiot/org-transclusion][org-transclusion]] is
 ;; that I sometimes create curated lists of other headings and instead
@@ -3390,6 +3435,7 @@ I generally bind this to a key while using by
   :straight nil)
 
 ;;;; Extra functionality
+
 ;;;;; im-open-thing-at-point
 
 (defvar im-open-thing-at-point-alist '()
@@ -3438,6 +3484,7 @@ it's a list, the first element will be used as the binary name."
       command)))
 
 ;;;; Other packages
+
 ;;;;; which-key
 
 (use-package which-key
@@ -3447,6 +3494,7 @@ it's a list, the first element will be used as the binary name."
   (which-key-mode))
 
 ;;;;; world-clock
+
 ;; - Simply do ~M-x world-clock~.
 
 (setq world-clock-list
@@ -3468,6 +3516,7 @@ it's a list, the first element will be used as the binary name."
   (eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly))
 
 ;;;;; display-time-mode
+
 ;; I started using Emacs in full screen (Emacs maximalism goes on), so
 ;; this is helpful.
 
@@ -3479,6 +3528,7 @@ it's a list, the first element will be used as the binary name."
   (setq display-time-default-load-average nil))
 
 ;;;;; outline-mode
+
 ;; This is a built-in mode for providing basic outlining
 ;; features. Here are a few configurations to make the navigation a
 ;; bit more like what I use in org-mode:
@@ -3588,6 +3638,7 @@ it's a list, the first element will be used as the binary name."
   (add-to-list 'eshell-post-command-hook 'im-eshell-notify--post-command-hook))
 
 ;;;;;; Integrate EAT with ZSH
+
 ;; This will be automatically sourced within .zshrc.
 
 (im-tangle-file
@@ -3595,6 +3646,7 @@ it's a list, the first element will be used as the binary name."
  :contents "[[ -n $EAT_SHELL_INTEGRATION_DIR ]] && source $EAT_SHELL_INTEGRATION_DIR/zsh")
 
 ;;;;;; Proper command completion
+
 ;; This package provides command, subcommand and argument completion
 ;; using fish shell. You need to have fish shell installed. There is
 ;; also helm version that provides argument documentation but I
@@ -3633,6 +3685,7 @@ for defining eshell-specific aliases that is read verbatim:
 
 
 ;;;;;; Eshell-specific aliases
+
 ;; Look at [[Aliases]] section in my config to see all bash/zsh
 ;; aliases. These are eshell specific:
 
@@ -3650,6 +3703,7 @@ for defining eshell-specific aliases that is read verbatim:
   (eshell/cd (im-current-project-root)))
 
 ;;;;;; Automatically print notes for given directory
+
 ;; I have the file ~im-autodir-file~ which contains notes for
 ;; directories, like in the following format:
 
@@ -3728,6 +3782,7 @@ for defining eshell-specific aliases that is read verbatim:
     (org-narrow-to-subtree)))
 
 ;;;;;; Consistent history
+
 ;; Normally, if you have more than one eshell instance open and quit
 ;; them consecutively, the last closed one will overwrite the
 ;; ~eshell-history-file~. The following /appends/ issued command to
@@ -3764,6 +3819,7 @@ This is for preventing eshell overriding my appended history."
     (funcall old-func filename append)))
 
 ;;;;; bookmark.el
+
 ;; You can use ~list-bookmarks~ command to view/edit/delete them but
 ;; using ~consult-bookmark~ and calling ~embark-act~ on them to
 ;; view/delete/edit given bookmark might be easier.
@@ -3790,6 +3846,7 @@ This is for preventing eshell overriding my appended history."
   "x" #'timer-list-cancel)
 
 ;;;;; tabulated-list-mode
+
 ;; - It's a built-in mode that shows some kind of tabulated data.
 ;; - It is used by many major modes, like [[docker]], [[prodigy]], etc. I just add these common keybindings to have a consistent way of navigating in them.
 ;; - I also try to bind following keys in their respective mode maps:
@@ -3810,6 +3867,7 @@ This is for preventing eshell overriding my appended history."
     (kbd "r") #'tabulated-list-revert))
 
 ;;;;; vtable-mode
+
 ;; Here are mostly used keys in vtable-map:
 ;; - S :: Sort by column.
 ;; - r :: Refresh the table
@@ -4099,6 +4157,7 @@ Return parsed seconds from users answer."
        (error ">> [%s] Failed to send message through `ntfy'." (format-time-string "%Y-%m-%dT%H:%M:%S%z"))))))
 
 ;;;;; Hydra
+
 ;; Hydra creates a menu for quickly calling/toggling functions/modes
 ;; in a visually easy way. My main use case for it right now is
 ;; grouping bunch of appearance related functions/modes that I use
@@ -4238,6 +4297,7 @@ Return parsed seconds from users answer."
   (dired--find-file (if (one-window-p) #'find-file-other-window #'im-find-file-ace-window) (dired-get-file-for-visit)))
 
 ;;;;;; im-dired-rsync
+
 ;; Dired copies files sync. This function uses rsync to copy stuff
 ;; async, especially useful while copying stuff over tramp/ssh.
 
@@ -4290,6 +4350,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
        (message "!! Error while copying files.")))))
 
 ;;;;; image-mode
+
 ;; I want to be able to kill image buffers with simply hitting
 ;; =q=. This does that.
 
@@ -4299,6 +4360,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   "r" #'image-rotate)
 
 ;;;;; calendar & diary & appt
+
 ;; Some tips:
 
 ;; - ~.~ go to today
@@ -4388,6 +4450,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 
 
 ;;;;;; Automatically syncing with remote calendars
+
 ;; I'm experimenting with using default Emacs calendar as my work
 ;; calendar. To do so, I import the remote calendar into my diary
 ;; using the following function. Set ~im-calendar-remote-ics-file~ to
@@ -4427,6 +4490,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 ;; (run-with-timer 60 (* 30 60) #'im-update-calendar)
 
 ;;;;;; appt.el: notifications for org-agenda and diary items
+
 ;; ~appt.el~ shows notifications for upcoming events in your diary and
 ;; in your org-agenda.
 
@@ -4495,6 +4559,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 
 ;;;;;; More org-mode and diary integration and utilities
 
+
 (defun im-diary-kill-entry-as-bullet-task (&optional include-description)
   "Copy current diary entry as a bullet.org task."
   (interactive "P")
@@ -4544,6 +4609,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 ;; ^ Only try to handle git, this speeds up things a little bit
 
 ;;;;; w3m
+
 ;;;;;; Installation/Keybindings
 
 (use-package w3m
@@ -4925,6 +4991,7 @@ of that revision."
           (vc-refresh-state))))))
 
 ;;;;;; git-timemachine
+
 ;; - Toggle with ~git-timemachine~ (SPC gt).
 ;; - When in timemachine mode,
 ;; - use =gt<SOMETHING>= to do timemachine specific operations. Some useful ones are:
@@ -5658,6 +5725,7 @@ approach."
 
 
 ;;;;; embark
+
 ;; =embark.el= provides contextual command maps.
 
 ;; - =M-a= activates command mode. Next key should be command. Do =C-h= to list all commands with their keybindings.
@@ -5676,6 +5744,7 @@ approach."
   :config
   (bind-key (kbd "M-a") #'embark-act)
   (bind-key (kbd "M-A") #'embark-act-all)
+  (bind-key (kbd "M-c") #'embark-select)
   (setq embark-prompter #'embark-completing-read-prompter)
   ;; ^ This directly shows the actions in a completing read window.
   ;; By default, it is set to `embark-keymap-prompter' and you need to
@@ -5697,6 +5766,7 @@ approach."
   (define-key embark-symbol-map "h" #'helpful-symbol))
 
 ;;;;;; sudo-file-edit action
+
 ;; Nice little embark action that let's you open files with sudo.
 
 ;; Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
@@ -5800,6 +5870,7 @@ When ARG is non-nil, query the whole workspace/project."
   "ge" #'im-show-diagnostic-list)
 
 ;;;;; corfu & corfu-doc & kind-icon
+
 ;; - When corfu popup is open
 ;; - ~M-SPC~ to insert a space to be able to filter with orderless.
 ;; - ~M-q~ to show an avy like quick selection keys.
@@ -5983,6 +6054,7 @@ SORT should be nil to disable sorting."
   :hook (java-ts-mode . eglot-java-mode))
 
 ;;;;; vterm
+
 ;; Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files
 ;; contains some helpful commands that enriches ~vterm~ usage.
 
@@ -6285,6 +6357,7 @@ this command is invoked from."
       (t (user-error "Forge undefined"))))))
 
 ;;;;; tab-out
+
 ;; When you press tab, jump out from the current enclosing
 ;; parens/quotes etc. When there is no enclosing stuff, TAB key
 ;; automatically fallbacks to it's default behavior.
@@ -6355,6 +6428,7 @@ this command is invoked from."
   (add-to-list 'aggressive-indent-protected-commands 'format-all-buffer))
 
 ;;;;; xmodmap-mode
+
 ;; Simple mode for editing =~/.Xmodmap= file.
 ;; Source:  https://www.emacswiki.org/emacs/XModMapMode
 
@@ -6886,6 +6960,7 @@ in the DM section of the official Slack client."
   (setq separedit-continue-fill-column t))
 
 ;;;;; all-the-icons
+
 ;; You should run =all-the-icons-install-fonts= command after
 ;; this. Also run =fc-cache -f -v= afterwards
 ;; (=all-the-icons-install-fonts= already does that but it may fail).
@@ -6899,6 +6974,7 @@ in the DM section of the official Slack client."
   (all-the-icons-completion-mode +1))
 
 ;;;;; reddigg
+
 ;; It lets me display comments of given reddit thread in an org buffer using the =reddigg-view-comments= function.
 
 (use-package reddigg
@@ -6908,6 +6984,7 @@ in the DM section of the official Slack client."
   (setq reddigg-convert-md-to-org t))
 
 ;;;;; jq-mode
+
 ;; A mode for editing ~jq~ scripts. Mostly using it for ~jq-interactively~ function which enables you to write a jq query and update the buffer accordingly in real time.
 
 (use-package jq-mode
@@ -6915,6 +6992,7 @@ in the DM section of the official Slack client."
   :commands jq-interactively)
 
 ;;;;; imenu-list
+
 ;; You can also do ~consult-imenu~ and ~embark-collect~ but it does not have a refresh feature.
 
 (use-package imenu-list
@@ -6923,6 +7001,7 @@ in the DM section of the official Slack client."
   (im-leader "il" #'imenu-list))
 
 ;;;;; wolfram
+
 ;; Easy way to interact with WolframAlpha. I generally use it for unit conversions or stuff like that.
 
 (use-package wolfram
@@ -7152,6 +7231,7 @@ Also removes the answers, if user wants it."
     (s-prepend ":"))))
 
 ;;;;; osm -- OpenStreetMaps in Emacs
+
 ;; Very cool and the nice thing is it integrates itself with the built-in bookmarking system. So you can bookmark places (or store them as org links) and jump to them whenever needed.
 
 (use-package osm
@@ -7187,6 +7267,7 @@ Also removes the answers, if user wants it."
   (add-hook 'osm-mode-hook #'im-disable-line-wrapping))
 
 ;;;;; reveal-in-finder
+
 ;; Well, sometimes you need to open that pesky program.
 
 (use-package reveal-in-osx-finder
@@ -7678,7 +7759,9 @@ This happens to me on org-buffers, xwidget-at tries to get
   :straight (:host github :repo "jamescherti/easysession.el"))
 
 ;;;; Editing
+
 ;;;;; Breaking long texts/comments into multiple lines
+
 ;; I use =M-q= (=fill-paragraph=) to break long texts into multiple
 ;; lines. It also works well within comment sections. 80 col length is
 ;; quite readable. See how this item is formatted, it's done
@@ -7687,6 +7770,7 @@ This happens to me on org-buffers, xwidget-at tries to get
 (setq fill-column 80)
 
 ;;;;; synosaurus & wordnut
+
 ;; Both synosaurus and wordnut uses ~wordnet~ to work. Use
 ;; ~synosaurus-choose-and-replace~ to replace the current word with
 ;; one of it's synonyms.
@@ -7902,11 +7986,13 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 
 ;;;; Media/feed/IRC
+
 ;; I try to maximize my Emacs usage which brings it's own benefits and
 ;; downsides which I will not go over here. Here are some packages and
 ;; configurations that are not related to programming/editing.
 
 ;;;;; elfeed (RSS feeds)
+
 ;; Feed reader.
 
 ;; - Filter examples (after hitting ~s~)
@@ -8064,6 +8150,7 @@ Useful if .elfeed directory is freshly syncned."
      (insert))))
 
 ;;;;; orgmdb (movies & shows)
+
 ;; I have a file called ~watchlist.org~ where I keep list of movies and shows that I watched and going to watch. Here are some packages and functions to deal with them.
 
 (use-package orgmdb
@@ -8075,6 +8162,7 @@ Useful if .elfeed directory is freshly syncned."
   (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore actors poster plot)))
 
 ;;;;; erc (IRC client)
+
 ;; IRC client for Emacs.
 
 ;; - Some shortcuts:
@@ -8165,8 +8253,11 @@ Useful if .elfeed directory is freshly syncned."
 (im-leader "1" (λ-interactive (call-interactively (local-key-binding (kbd "C-c C-c")))))
 
 ;;;; Programming languages
+
 ;;;;; General/language-agnostic functionality
+
 ;;;;;; Jump to beginning/end of a statement
+
 ;; Using [w and ]w, I can jump between statements. For
 
 ;; TODO: should be able to descend down the tree
@@ -8195,6 +8286,7 @@ Useful if .elfeed directory is freshly syncned."
   "]" im-treesit-end-of-statement)
 
 ;;;;;; format-all, apheleia -- Format buffers, automatically
+
 ;; Use =format-all-buffer= function to format current buffer. Works for any language.
 
 (use-package format-all
@@ -8613,7 +8705,9 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
         lsp-rust-clippy-preference 'on))
 
 ;;;;; javascript
+
 ;;;;;; jsdoc.el
+
 ;; This is a package I wrote for inserting JSDoc comments easily. Check out the [[https://github.com/im-jsdoc.el][README]].
 
 (use-package jsdoc
@@ -8778,6 +8872,7 @@ This is used in my snippets."
   (add-to-list 'org-src-lang-modes '("deno" . typescript-ts)))
 
 ;;;;;; Deno utils
+
 ;; Here are some functions that I use while developing with Deno.
 
 ;; TODO: Generalize LSP client switching
@@ -8825,12 +8920,14 @@ of just pulling non-cached ones."
        (switch-to-buffer buf)))))
 
 ;;;;; json
+
 ;; ~hs-minor-mode~ works great with JSON.
 
 (add-hook 'json-mode-hook #'hs-minor-mode)
 (add-hook 'json-ts-mode-hook #'hs-minor-mode)
 
 ;;;;;; Running JQ or Javascript on given JSON
+
 ;; I work with JSON a lot. Here I have some functions that let's you run given expression on selected JSON.
 
 (defvar im-nodejs-runner-preface
@@ -9048,6 +9145,7 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
           (if (s-contains? "[ERROR]" x) "" x))))))))
 
 ;;;;; clojure
+
 ;; Here is the current workflow I use:
 
 ;; - =lein new app project-name=
@@ -9092,6 +9190,7 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
   (inferior-lisp-program "sbcl"))
 
 ;;;;; emmet-mode
+
 ;; Hit <C-j> after these and get:
 
 ;; - =a= ~<a href="|">|</a>~
@@ -9136,7 +9235,9 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
   (add-hook 'yaml-ts-mode-hook #'highlight-indent-guides-mode))
 
 ;;;;; elisp
+
 ;;;;;; Inspector/debugging/pretty-printing
+
 ;; There is a built-in function (~data-debug-eval-expression~) to
 ;; inspect objects (not good as CIDERs inspector but it works). I made
 ;; a helper function to evaluate last expression and open data-debug
@@ -9159,6 +9260,7 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
 ;; better for inspection sometimes.
 
 ;;;;;; eros
+
 ;; Like CIDER, it shows the results of ~eval-last-sexp~ etc. in an
 ;; overlay, right next to the expression itself. There is also
 ;; ~eros-inspect-last-result~ which essentially shows the result of
@@ -9171,6 +9273,7 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
   (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1))))
 
 ;;;;;; Pretty stuff
+
 (defvar
   im-elisp-pretty-symbols
   '((">="     . ?≥)
@@ -9342,6 +9445,7 @@ Lisp function does not specify a special indentation."
   :defer t)
 
 ;;;;; Racket
+
 ;; - Open a racket buffer.
 ;; - Do C-c C-c (racket-run)
 ;; - It'll drop you on a REPL within the scope of the file.
@@ -9420,6 +9524,7 @@ Lisp function does not specify a special indentation."
   (evil-define-key 'normal docker-volume-mode-map    (kbd "a") #'docker-volume-help))
 
 ;;;;; vimrc
+
 ;; Mostly for editing tridactyl and sometimes real vimrc.
 
 (use-package vimrc-mode :defer t)
@@ -9446,6 +9551,7 @@ Lisp function does not specify a special indentation."
   (setq org-plantuml-jar-path plantuml-jar-path))
 
 ;;;;; Couchbase
+
 ;; Install couchbase-query package for running interactive queries
 ;; inside emacs.
 
@@ -9818,6 +9924,7 @@ SELECT * FROM _ LIMIT 1;
   :defer t)
 
 ;;;; Window and buffer management
+
 ;;;;; tab-bar-mode
 
 ;; It's a great workspace manager that comes bundled with Emacs. I was
@@ -9986,6 +10093,7 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   (switch-to-buffer (find-file-noselect filename nil nil wildcards)))
 
 ;;;;; bufler
+
 ;; Good for buffer management, especially for groupped killings.
 
 (use-package bufler
@@ -10098,7 +10206,9 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   "<" shrink-window-horizontally)
 
 ;;;; Misc functions
+
 ;;;;; marks integration
+
 ;; [[https://github.com/im-marks][marks]] is a grep-like tool for
 ;; searching org-mode and markdown files. The following snippet
 ;; provides a ~consult~ support for marks.
@@ -10694,6 +10804,7 @@ instead of acting on issue."
 
 
 ;;;;; My Android phone and Emacs
+
 ;; I have an Android phone that is running
 ;; [[https://termux.com/][Termux]] all the time. If you install Termux
 ;; through [[https://www.f-droid.org/][F-Droid]] you can also install
@@ -10936,6 +11047,7 @@ When CMD finishes, FN is called with the process output."
 (run-with-timer 60 nil #'im-start-signal-bot)
 
 ;;;;; people.org - Contact management
+
 ;; Please see
 ;; [[https://isamert.net/2021/04/21/managing-your-contacts-in-org-mode-and-syncing-them-to-your-phone-android-ios-whatever-.html][this
 ;; post]] for further information.
@@ -11123,6 +11235,7 @@ people.org should contain the following snippet on it's `after-save-hook':
 (im-leader-v "mg" #'im-google-this)
 
 ;;;;; bullet.org
+
 ;; I have a ~bullet.org~ file that I keep my daily journal and here
 ;; are some utility functions that use with it. I may document this
 ;; later (or even publish it as a package?)
@@ -11611,6 +11724,7 @@ scheduled, schedules them to todays date."
       fname)))
 
 ;;;;; Scratch/temporary buffers in side windows
+
 ;; Here I define two important functions and their helpers.  The
 ;; following functions are pretty useful for quick note taking or
 ;; evaluating elisp. Having these buffers in a side window makes them
@@ -11725,6 +11839,7 @@ scheduled, schedules them to todays date."
     (message (format "%d result blocks are removed." total-removed))))
 
 ;;;;; Functions for easy indentation switching
+
 ;; - http://blog.binchen.org/posts/easy-indentation-setup-in-emacs-for-web-development.html
 
 (defun im-setup-indent-local (n)
@@ -11881,6 +11996,7 @@ file-path."
         (im-kill fpath-pretty)))))
 
 ;;;;; xah-open-file-at-cursor
+
 ;; This is better than =find-file-at-point= because it takes line
 ;; numbers etc. into account.
 
@@ -12579,6 +12695,7 @@ selecting a pod."
           :buffer (get-buffer-create "*kafka-describe:%s*" it)))))
 
 ;;;;; Run functions globally
+
 ;; Simply use ~im-dmenu~ function instead of the default
 ;; ~completing-read~ function when the code is called inside this
 ;; macro. This way, you can use your ~completing-read~ based functions
@@ -13480,6 +13597,7 @@ Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
   (message "Done."))
 
 ;;;;; Scratch project
+
 ;; I have a project pre-configured for scratch files. Like default
 ;; scratch buffer, I also have different files for different languages
 ;; that I use similarly to the scratch buffer. Due to the nature of
@@ -13507,6 +13625,7 @@ Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
 (add-hook 'after-init-hook #'im-initialize-scratch-project)
 
 ;;;;; tridactyl firefox visual mode
+
 ;; I use a command called ~emacs/visual-mode~ in tridactyl to write
 ;; the current Firefox page's source into a file and call the
 ;; following function. This way I get a nice Emacs buffer with the
@@ -13704,6 +13823,7 @@ Throw error otherwise."
                         "")))))
 
 ;;;;; NextCloud integration
+
 ;;;;;; Contacts
 
 (cl-defun im-nextcloud-put-contact (vcard &key on-success on-error)
@@ -14462,6 +14582,7 @@ CALLBACK will be called with the selected commit ref."
       (message "Done."))))
 
 ;;;; Operating system related
+
 ;;;;; Sound/audio output chooser
 
 (defun im-osx-select-audio-output ()
@@ -14658,6 +14779,7 @@ end tell"))
                         (funcall resolve (equal "true" (s-trim string))))))))))
 
 ;;;;; MacOS
+
 ;;;;;; Keybindings
 
 (when (eq system-type 'darwin)
