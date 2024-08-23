@@ -5136,7 +5136,15 @@ of that revision."
 ;; - =M-{[,]}= goes {previous,next} group.
 ;; - =M-m= cycles the marginalia detail level.
 ;; - =M-a= brings up embark-act menu. See [[embark]].
-;; - =M-w= copy the current candidate.
+;; - =M-A= embark act all.
+;; - =M-w= copy the current candidate (embark-save).
+;; - =M-w= copy the current candidate (embark-save).
+;; - =M-q= avy-like select and act.
+;; - =M-q= avy-like select and act.
+;; - =M-r= separaedit
+;; - =M-d= insert directory (consult-dir)
+;; - =M-g= vertico multigrid
+;; - =M-c= vertico-select (and act with M-A on selected)
 ;; - =TAB= inserts the current candidate (into minibuffer).
 ;; - Do &<search_term> to search inside annotations (orderless feature). This is a bit slow.
 
@@ -7467,6 +7475,11 @@ This happens to me on org-buffers, xwidget-at tries to get
   :custom
   (deadgrep-display-buffer-function #'switch-to-buffer)
   (deadgrep-project-root-function #'im-current-project-root)
+  ;; Normally =--multiline= has memory and performance penalty and not
+  ;; recommended for every search but I normally use =consult-ripgrep=
+  ;; and if I'm using deadgrep than this means shit got serious and I
+  ;; need the advanced stuff.
+  (deadgrep-extra-arguments '("--no-config" "--multiline"))
   :general
   (:keymaps 'deadgrep-mode-map :states 'normal
    "RET" #'deadgrep-visit-result
@@ -7714,6 +7727,10 @@ This happens to me on org-buffers, xwidget-at tries to get
 
    "a" #'wl-summary-reply
    "d" #'im-wl-mark-message-for-deletion)
+  (:keymaps 'wl-summary-mode-map :states 'visual
+   ;; marks
+   "mr" #'wl-summary-mark-as-read-region
+   "mu" #'wl-summary-mark-as-unread-region)
   (:keymaps 'wl-folder-mode-map :states 'normal
    "RET" #'wl-folder-jump-to-current-entity)
   ;; FIXME: binding does not work
@@ -9288,10 +9305,11 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
 
 ;;;;; yaml
 
-(use-package yaml-mode
+(use-package yaml-ts-mode
+  :straight (:type built-in)
   :mode ("\\.yaml\\'" "\\.yml\\'")
   :config
-  (add-hook 'yaml-ts-mode-hook #'origami-mode)
+  (add-hook 'yaml-ts-mode-hook #'outline-indent-minor-mode)
   (add-hook 'yaml-ts-mode-hook #'highlight-indent-guides-mode))
 
 ;;;;; elisp
@@ -12183,7 +12201,7 @@ Version 2017-01-11"
 
 (general-def :states '(visual)
   "ze" #'xah-escape-quotes
-  "zE" #'xah-escape-quotes)
+  "zE" #'xah-unescape-quotes)
 
 ;;;;; eksisozluk gundem
 
