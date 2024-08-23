@@ -7754,16 +7754,6 @@ This happens to me on org-buffers, xwidget-at tries to get
    "[s" #'jinx-previous
    "]s" #'jinx-next))
 
-;;;;; string-inflection
-
-;; - In the case of =string-inflection-ruby-style-cycle=   : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacs_lisp~
-;; - In the case of =string-inflection-python-style-cycle= : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacs_lisp~
-;; - In the case of =string-inflection-java-style-cycle=   : ~emacsLisp => EMACS_LISP => EmacsLisp => emacsLisp~
-;; - In the case of =string-inflection-all-cycle=          : ~emacs_lisp => EMACS_LISP => EmacsLisp => emacsLisp => emacs-lisp => Emacs_Lisp => emacs_lisp~
-
-(use-package string-inflection
-  :bind (:map evil-normal-state-map ("M-c" . string-inflection-all-cycle)))
-
 ;;;;; puni & combobulate & electric-pair-mode (structrual editing stuff)
 
 ;; Using `electric-pair-mode' to automatically pair parenthesis.
