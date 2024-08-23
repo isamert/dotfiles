@@ -9157,6 +9157,13 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
   (require 'data-debug)
   (data-debug-show-stuff (eval-last-sexp nil) "last sexp"))
 
+(use-package data-debug-mode
+  :straight (:type built-in)
+  :general
+  (:states 'normal :keymaps 'data-debug-mode-map
+   "RET" #'data-debug-expand-or-contract
+   "TAB" #'data-debug-expand-or-contract))
+
 ;; There is also ~pp-eval-last-sexp~ which evaluates and pretty-prints
 ;; the result of last expression in a separate buffer, which can be
 ;; better for inspection sometimes.
