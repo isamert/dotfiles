@@ -2480,13 +2480,13 @@ bind + zoom 0.1 true
 bind - zoom -0.1 true
 bind p pin
 bind ;i copyimage
-bind <A-j> tabmove +1
-bind <A-∆> tabmove +1
-bind <A-k> tabmove -1
-bind <A-˚> tabmove -1
+" bind <A-j> tabmove +1
+" bind <A-∆> tabmove +1
+" bind <A-k> tabmove -1
+" bind <A-˚> tabmove -1
 bind U fillcmdline undo
-bind K tabprev
-bind J tabnext
+" bind K tabprev
+" bind J tabnext
 bind A tabaudio
 bind % fillcmdline tabrename %
 
