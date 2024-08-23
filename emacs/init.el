@@ -1542,9 +1542,9 @@ side window the only window'"
   ;; Disable evil bindings in insert mode. This needs to be called
   ;; before loading evil mode...
   (setq evil-disable-insert-state-bindings t)
-  ;; This seems to be the most relaible undo system.  Also see `vundo'
+  ;; This seems to be the most reliable undo system.  Also see `vundo'
   ;; package down below for undo-tree like functionality
-  (setq evil-undo-system 'undo-redo)
+  (setq evil-undo-system 'undo-fu)
   :config
   ;; ...but I want some default evil bindings in insert mode, so just
   ;; remap them
@@ -7424,12 +7424,39 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 ;;;;; vundo -- unto-tree like branching undo
 
-;; The interface is pretty intuitive. Go {back,forward} with {b,f} or {left,right} and branch out with {n,p} or {up,down}.
+(setq undo-limit 67108864) ; 64mb.
+(setq undo-strong-limit 100663296) ; 96mb.
+(setq undo-outer-limit 1006632960) ; 960mb.
 
 (use-package vundo
   :general
   (:states 'normal
-   "U" #'vundo))
+   "U" #'vundo)
+  (:states 'normal :keymaps 'vundo-mode-map
+   "q" #'vundo-quit
+   "RET" #'vundo-confirm
+   "d" #'vundo-diff
+   "h" #'vundo-backward
+   "l" #'vundo-forward
+   "k" #'vundo-previous
+   "j" #'vundo-next)
+  :custom
+  (vundo-compact-display t)
+  (vundo-window-max-height 20)
+  (vundo-glyph-alist vundo-unicode-symbols)
+  :config
+  (evil-set-initial-state 'vundo-mode 'normal))
+
+(use-package undo-fu
+  :demand t)
+
+(use-package undo-fu-session
+  :after undo-fu
+  :demand t
+  :custom
+  (undo-fu-session-compression 'zst)
+  :config
+  (global-undo-fu-session-mode 1))
 
 ;;;;; deadgrep
 
