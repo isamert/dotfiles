@@ -5138,8 +5138,7 @@ of that revision."
 ;; - =M-m= cycles the marginalia detail level.
 ;; - =M-a= brings up embark-act menu. See [[embark]].
 ;; - =M-A= embark act all.
-;; - =M-w= copy the current candidate (embark-save).
-;; - =M-w= copy the current candidate (embark-save).
+;; - =M-w= copy the current candidate intelligently (im-vertico-save).
 ;; - =M-q= avy-like select and act.
 ;; - =M-q= avy-like select and act.
 ;; - =M-r= separaedit
@@ -5176,6 +5175,7 @@ of that revision."
   (setq enable-recursive-minibuffers t)
 
   ;; Bindings
+  (define-key vertico-map (kbd "M-w") #'vertico-save)
   (define-key vertico-map (kbd "M-[") #'vertico-previous-group)
   (define-key vertico-map (kbd "M-]") #'vertico-next-group)
   (define-key vertico-map (kbd "M-j") #'next-line)
@@ -5186,6 +5186,22 @@ of that revision."
 
   ;; Use `consult-completion-in-region' which works with vertico
   (setq completion-in-region-function #'consult-completion-in-region))
+
+(defun im-vertico-save ()
+  "Same as `vertico-save' but removes bogus char and closes minibuffer.
+Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-candidates-content-text-in-selectrum.html"
+  (interactive)
+  (let ((candidate (vertico--candidate))
+        (prompt (minibuffer-prompt)))
+    (kill-new
+     (cond
+      ((s-contains? "grep" prompt) (s-join ":" (-drop 2 (s-split ":" candidate))))
+      ;; ^ Strip `filename:line-number:` from the text
+      ((s-matches? ".*\\(Go to line\\|Switch to\\).*" prompt) (s-chop-right 1 candidate))
+      ;; ^ `consult-line' and `consult-buffer' has an unrecognizable char at
+      ;; the end of every candidate, so I just strip them here
+      (t candidate))))
+  (keyboard-escape-quit))
 
 ;;;;;; vertico extensions
 
