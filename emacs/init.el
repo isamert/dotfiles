@@ -15,24 +15,57 @@
 ;; boost as a byproduct.
 
 ;;;;; Emacs installation
+
 ;; I use my distributions package manager to install Emacs. However,
 ;; in MacOS (my work computer) I use /homebrew/ and /emacs-plus/
 ;; formula. Here is how you install it:
-
+;;
+;; #+begin_src sh
 ;;   brew tap d12frosted/emacs-plus
-;;   brew install emacs-plus@29 \
+;;   brew install emacs-plus@30 \
 ;;        --with-dragon-icon \
 ;;        --with-dbus \
-;;        --with-no-frame-refocus \
-;;        --with-native-comp \
 ;;        --with-imagemagick \
 ;;        --with-poll \
-;;        --with-xwidgets
-
-;; You can read about the options [[https://github.com/d12frosted/homebrew-emacs-plus#options][here]], but the most important one is ~--with-poll~. Otherwise you'll get lot's of /no file descriptors left, too many files are open/ errors, especially if you are using LSP etc..
+;;        --with-debug
+;; #+end_src
+;;
+;; There are also other nice Emacs distributions, like:
+;;
+;; - https://github.com/jimeh/emacs-builds
+;; - https://emacsformacosx.com/
+;;
+;; But I need the aforementioned switches and patches. Otherwise these
+;; are very good.
+;;
+;; * --with-poll
+;;
+;; You can read about the options [[https://github.com/d12frosted/homebrew-emacs-plus#options][here]], but the most important one is
+;; ~--with-poll~. Otherwise you'll get lot's of /no file descriptors
+;; left, too many files are open/ errors, especially if you are using
+;; LSP etc..
+;;
+;; * --with-debug
+;;
+;; It is nice for debugging crashes or freezes. Helps you get a better
+;; output from the debugger. When Emacs freezes and ~pkill -USR2 Emacs~
+;; is not helping, what you can do to debug the issue is:
+;;
+;; #+begin_src sh
+;;   $ lldb --local-lldbinit /opt/homebrew/Cellar/emacs-plus@30/<VERSION>/Emacs.app
+;;   (lldb) r # → Do this to start emacs
+;;   # wait for the freeze
+;;   # C-c to quit the Emacs after freeze
+;;   (lldb) xbacktrace
+;; #+end_src
+;;
+;; Same story with crashes. Just run Emacs through =lldb= all the time
+;; and be prepared I guess...
 
 ;;;; Usage notes
+
 ;;;;; General notes and conventions
+
 ;; - This configuration is meant to be used with /emacs daemon/, so I don't really care about the startup time etc.
 ;; - I try to split package configurations into multiple org src blocks and unify them using ~noweb~ references under a single =use-package= directive.
 ;; - I try to put things in way that easily copyable from the configuration. An example would be using multiple =(setq ...)= lines instead of having one =(setq ... ...)= call and setting multiple variables in one go.
