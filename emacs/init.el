@@ -52,11 +52,12 @@
 ;; is not helping, what you can do to debug the issue is:
 ;;
 ;; #+begin_src sh
+;;   $ cd ~/Library/Caches/Homebrew/emacs-plus@30--git/src
 ;;   $ lldb --local-lldbinit /opt/homebrew/Cellar/emacs-plus@30/<VERSION>/Emacs.app
 ;;   (lldb) r # → Do this to start emacs
 ;;   # wait for the freeze
 ;;   # C-c to quit the Emacs after freeze
-;;   (lldb) xbacktrace
+;;   (lldb) xbacktrace # or bt
 ;; #+end_src
 ;;
 ;; Same story with crashes. Just run Emacs through =lldb= all the time
@@ -7926,8 +7927,26 @@ This happens to me on org-buffers, xwidget-at tries to get
 ;; I was using ~flyspell~ and ~flyspell-correct~ before but Jinx works
 ;; much better & faster out-of-the-box. It automatically works nicely
 ;; in code buffers too!
-
+;;
 ;; You need to install ~enchant~ to make Jinx work (and compile).
+;;
+;; [2024-08-24 Sat 03:30] Recently I have been having random crashes,
+;; and it turns out (after a very long session of debugging) the reason
+;; is enchant. enchant SEGFAULTs when using Apple Spell, so what I did
+;; is:
+;;
+;; #+begin_src
+;;   rm /opt/homebrew/Cellar/enchant/2.8.2/share/enchant-2/AppleSpell.config
+;;   rm /opt/homebrew/Cellar/enchant/2.8.2/lib/enchant-2/enchant_applespell.so
+;;   rm /opt/homebrew/Cellar/enchant/2.8.2/lib/enchant-2/enchant_applespell.a
+;; #+end_src
+;;
+;; Seems like other people also had this issue and resolved
+;; differently, like building enchant from source etc:
+;;
+;; - https://github.com/rrthomas/enchant/issues/391
+;; - https://github.com/pyenchant/pyenchant/issues/321
+;; - https://old.reddit.com/r/emacs/comments/1eg9hdg/multilingual_spellchecking_omg_what_a_rabbit_hole/
 
 (use-package jinx
   :hook (emacs-startup . global-jinx-mode)
