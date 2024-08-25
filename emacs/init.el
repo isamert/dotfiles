@@ -4908,6 +4908,41 @@ empty string."
                (funcall next (cadr data)))))))
       (_ (funcall next action)))))
 
+;;;;;; Fixing page layouts
+
+;; Some pages I frequently visit needs some fixing to display the
+;; content better.  The following piece does exactly that.  For each
+;; given url, it runs the specified function in the eww buffer.  This
+;; way I get a better view.
+
+(defvar im-eww-page-fixers
+  '(("^https://\\(www.\\)?startpage.com/sp/search" . im-eww--fix-startpage)))
+
+(with-eval-after-load 'eww
+  (add-hook 'eww-after-render-hook #'im-eww-after-render))
+
+(defun im-eww-after-render ()
+  (--each (im-assoc-regexp (eww-current-url) im-eww-page-fixers)
+    (let ((fn (cdr it)))
+      (let ((inhibit-read-only t))
+        (goto-char (point-min))
+        (funcall fn))
+      (goto-char (point-min)))))
+
+(defun im-eww--fix-startpage ()
+  (while (re-search-forward "Visit in Anonymous View" nil t)
+    (delete-region (line-beginning-position) (line-end-position))
+    (insert ""))
+  (goto-char (point-min))
+  (let ((pos (point)))
+    (while (and (not (eobp)) (not (looking-at "^Web results")))
+      (forward-char))
+    (delete-region pos (point)))
+  (re-search-forward "^Startpage isn’t")
+  (forward-line -1)
+  (delete-region (point) (point-max))
+  (page-break-lines-mode))
+
 ;;;;;; Language detection and code highlighting in eww buffers
 
 (use-package language-detection
