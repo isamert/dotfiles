@@ -4795,7 +4795,7 @@ properly."
   ;; Use browse-url for each link opening. This way my
   ;; `browse-url-handlers' take precedence over eww.
   (eww-use-browse-url ".*")
-  (eww-search-prefix "https://www.google.com/search?q=")
+  (eww-search-prefix "https://www.startpage.com/sp/search?abp=-1&t=device&lui=english&sc=xJgFkqH2tfCu20&cat=web&prfe=bcfd50b9911b2c8c90fe567dcc034a47c25b6bbad9d49325c02d5e7063258f5310102504f00de9c5b9f11331d7811b22555d35fa08425db6ca42cb38773906a0c08e86291a93527d8d2183e9&query=")
   (eww-auto-rename-buffer
    (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "..."))))
   :config
@@ -4807,7 +4807,7 @@ Like `eww' but open URL in a new eww buffer instead of reusing
 the same one if called interactively.  If inside an eww buffer,
 then utilize `eww-browse-url' instead.  See `eww-use-browse-url'
 for why."
-  (interactive (list (read-string "URL: " (im-region-or "") 'eww-prompt-history)))
+  (interactive (list (im-web-autosuggest :history 'eww-prompt-history :initial (im-region-or ""))))
   (cond
    ;; If called interactively, just use a new buffer
    ((called-interactively-p 'interactive) (eww url t))
@@ -4857,6 +4857,56 @@ for why."
 (defun im-xwidget-webkit-open-in-eww ()
   (interactive nil xwidget-webkit-mode)
   (eww (xwidget-webkit-uri (xwidget-webkit-current-session)) t))
+
+;;;;;; im-web-autosuggest -- autosuggestions for web searches
+
+(defvar im-web-autosuggest-history nil)
+(cl-defun im-web-autosuggest
+    (&key
+     (history 'im-web-autosuggest-history)
+     (initial ""))
+  "Autosuggest as you type for web searches.
+This uses StartPage's autosuggestion endpoint.  It is not very good but
+better than nothing.
+
+HISTORY is by default `im-web-autosuggest-history', it should be a
+symbol.  Access history as usual, C-r or \\[consult-history].
+
+INITIAL is the initial string shown in the prompt.  By default it's
+empty string."
+  (interactive)
+  (->>
+   (consult--read
+    (thread-first
+      (consult--async-sink)
+      (consult--async-refresh-immediate)
+      (im-web-autosuggest--gen)
+      (consult--async-throttle)
+      (consult--async-split))
+    :prompt "Search for: "
+    :category 'url
+    :lookup (lambda (selected candidates cand &rest _) selected)
+    :initial initial
+    :sort nil
+    :history (or history 'im-web-autosuggest-history)
+    :require-match nil)))
+
+;; TODO: investigate Brave's autosuggest as this one is quite shite.
+;; That one is free but requires credit card number tho
+(defun im-web-autosuggest--gen (next)
+  (lambda (action)
+    (pcase action
+      ((pred stringp)
+       (when (not (string-empty-p (string-trim action)))
+         (im-request
+           "https://www.startpage.com/osuggestions"
+           :q action
+           :-on-success
+           (lambda (data)
+             (funcall next 'flush)
+             (when data
+               (funcall next (cadr data)))))))
+      (_ (funcall next action)))))
 
 ;;;;;; Language detection and code highlighting in eww buffers
 
@@ -11379,8 +11429,8 @@ people.org should contain the following snippet on it's `after-save-hook':
      "Googling: "
      (im-region-or 'word))))
   (browse-url
-   (format
-    "https://google.com/search?q=%s"
+   (concat
+    eww-search-prefix
     input)))
 
 (im-leader-v "mg" #'im-google-this)
