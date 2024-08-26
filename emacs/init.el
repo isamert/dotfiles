@@ -4753,7 +4753,7 @@ properly."
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . ,(im-purified-url-handler #'empv-play-or-enqueue))
         (".*\\.mp3" . ,(im-purified-url-handler #'empv--play-or-enqueue))
         (".*github.com/.*issues/.*" . ,(im-purified-url-handler #'lab-github-issue-view))
-        (".*github.com/[A-Za-z0-9\\. _-]+/[A-Za-z0-9\\. _-]+$" . ,(im-purified-url-handler #'lab-github-view-repo-readme))
+        (".*github.com/[A-Za-z0-9\\. _-]+/[A-Za-z0-9\\. _-]+\\(\\?tab=readme-ov-file.*\\)?$" . ,(im-purified-url-handler #'lab-github-view-repo-readme))
         (".*zoom.us/j/.*" . ,(im-purified-url-handler #'im-open-zoom-meeting-dwim))
         (".*\\(trendyol\\|gitlab\\|slack\\|docs.google\\).*" . browse-url-firefox)
         ("." . (lambda (link &rest _) (im-eww link)))))
