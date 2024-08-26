@@ -7947,7 +7947,7 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 ;;;;; im-git -- my git workflow, magit alternative
 
-(use-package im-github
+(use-package im-git
   :straight nil
   :general
   (im-leader
