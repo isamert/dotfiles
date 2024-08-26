@@ -20,6 +20,8 @@ case ${1:-""} in
     ;;
 esac
 
+shopt -s nullglob
+
 mkdir -p "${EMACS_LOAD_DIR}"
 mkdir -p "${EMACS_PACKAGES_DIR}"
 
@@ -31,20 +33,28 @@ echo "=> Cleaning old files..."
 rm -f ~/.emacs.d/init.el
 rm -f ~/.emacs.d/early-init.el
 for file in "${PWD}/emacs/packages"/*.el; do
-    [[ ! $file = *secrets* ]] && rm -f "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
+    echo "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
+    rm -f "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
 done
 for file in "${PWD}/emacs/load"/*.el; do
-    [[ ! $file = *secrets* ]] && rm -f "${EMACS_LOAD_DIR}/$(basename "${file}")"
+    echo "${EMACS_LOAD_DIR}/$(basename "${file}")"
+    rm -f "${EMACS_LOAD_DIR}/$(basename "${file}")"
 done
+
+# Remove broken links
+find ${EMACS_PACKAGES_DIR} -xtype l  -exec rm -f {} \;
+find ${EMACS_LOAD_DIR} -xtype l  -exec rm -f {} \;
 
 echo "=> Installing Emacs configuration..."
 ln -s "${PWD}/emacs/init.el" ~/.emacs.d/init.el
 ln -s "${PWD}/emacs/early-init.el" ~/.emacs.d/early-init.el
 
 for file in "${PWD}/emacs/packages"/*.el; do
+    echo "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
     ln -s "${file}" "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
 done
 for file in "${PWD}/emacs/load"/*.el; do
+    echo "${EMACS_LOAD_DIR}/$(basename "${file}")"
     ln -s "${file}" "${EMACS_LOAD_DIR}/$(basename "${file}")"
 done
 
