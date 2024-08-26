@@ -185,7 +185,7 @@ Call CALLBACK when successful."
         (when cached "--cached"))))
      (lambda (proc _event)
        (if (eq (process-exit-status proc) 0)
-           (funcall callback)
+           (when callback (funcall callback))
          (user-error ">> Failed to apply the diff! exitCode=%s"
                      (process-exit-status proc)))))))
 
@@ -206,7 +206,7 @@ is called after the hunk is applied with no arguments."
        (lambda ()
          (diff-file-kill)
          (message ">> File %sstaged successfully!" (if reverse "un" ""))
-         (funcall callback))))
+         (when callback (funcall callback)))))
     (cl-return-from im-git-stage-hunk-or-file))
   (-let* (((hstart hend) (diff-bounds-of-hunk))
           (hunk (buffer-substring-no-properties hstart hend))
@@ -227,7 +227,7 @@ is called after the hunk is applied with no arguments."
          (goto-char pt)
          (diff-hunk-kill))
        (message ">> Hunk applied successfully!")
-       (funcall callback)))))
+       (when callback (funcall callback))))))
 
 (defun im-git-unstage-hunk-or-file ()
   "Unstage the currently selected hunk or file."
