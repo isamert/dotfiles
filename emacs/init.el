@@ -12694,61 +12694,76 @@ selecting a pod."
    :do (let ((info (s-split " " it t)))
          (im-kube-pod--act (list :name (nth 1 info) :namespace (nth 0 info) :context (im-kube--current-context))))))
 
-(defun im-kube-context-overview (&optional switch-context)
+(defvar-local im-kube--current-context nil)
+(defun im-kube-context-overview (&optional context)
   "Same thing as `im-kube-select-pod' but in friendlier vtable form."
-  (interactive "P")
-  (when switch-context
-    (im-kube-use-context))
-  (let ((context (im-kube--current-context)))
-    (with-current-buffer (get-buffer-create (format "*im-kube: %s*" context))
-      (erase-buffer)
-      (make-vtable
-       :row-colors (im-vtable--pretty-colors)
-       :column-colors (im-vtable--pretty-colors)
-       :columns '("Namespace" "Name"
-                  (:name "Ready" :min-width 6)
-                  (:name "Status"
-                   :formatter (lambda (value)
-                                (cond
-                                 ((equal value "Running") (im-tbp--color "green" value))
-                                 ((equal value "Running") (im-tbp--color "green" value))
-                                 ((-contains? '("Error" "CrashLoopBackOff" "NotReady") value) (im-tbp--color "red" value))
-                                 (t (im-tbp--color "yellow" value)))))
-                  (:name "Restarts"
-                   :min-width 8
-                   :formatter (lambda (value)
-                                (if (ignore-errors (> (string-to-number value) 0))
-                                    (im-tbp--color "red" value)
-                                  value)))
-                  (:name "Age" :min-width 3))
-       :use-header-line nil
-       :objects-function (lambda ()
-                           (->>
-                            context
-                            (format "kubectl get pods --all-namespaces --no-headers --context=%s")
-                            (shell-command-to-string )
-                            (s-trim)
-                            (s-split "\n")
-                            (--map (let ((data (s-split " " it t)))
-                                     (list
-                                      :namespace (nth 0 data) :name (nth 1 data) :ready (nth 2 data)
-                                      :status (nth 3 data) :restarts (nth 4 data) :age (nth 5 data)
-                                      :context context)))))
-       :actions `("RET" im-kube-pod--act
-                  "L" im-kube-pod--logs
-                  "F" im-kube-pod--logs-follow
-                  "x" im-kube-pod--remove
-                  "i" im-kube-pod--info)
-       :getter (lambda (object column vtable)
-                 (let-plist object
-                   (pcase (vtable-column vtable column)
-                     ("Namespace" .namespace)
-                     ("Name" .name)
-                     ("Ready" .ready)
-                     ("Status" .status)
-                     ("Restarts" .restarts)
-                     ("Age" .age)))))
-      (switch-to-buffer (current-buffer)))))
+  (interactive (progn
+       (when current-prefix-arg
+         (im-kube-use-context))
+       (list (im-kube--current-context))))
+  (with-current-buffer (get-buffer-create (format "*im-kube: %s*" context))
+    ;; TODO: Make a major mode out of this
+    (setq im-kube--current-context context)
+    (erase-buffer)
+    (make-vtable
+     :row-colors (im-vtable--pretty-colors)
+     :column-colors (im-vtable--pretty-colors)
+     :columns '("Namespace" "Name"
+                (:name "Ready" :min-width 6)
+                (:name "Status"
+                 :formatter (lambda (value)
+                              (cond
+                               ((equal value "Running") (im-tbp--color "green" value))
+                               ((equal value "Running") (im-tbp--color "green" value))
+                               ((-contains? '("Error" "CrashLoopBackOff" "NotReady") value) (im-tbp--color "red" value))
+                               (t (im-tbp--color "yellow" value)))))
+                (:name "Restarts"
+                 :min-width 8
+                 :formatter (lambda (value)
+                              (if (ignore-errors (> (string-to-number value) 0))
+                                  (im-tbp--color "red" value)
+                                value)))
+                (:name "Age" :min-width 3))
+     :use-header-line nil
+     :objects-function (lambda ()
+                         (->>
+                          context
+                          (format "kubectl get pods --all-namespaces --no-headers --context=%s")
+                          (shell-command-to-string )
+                          (s-trim)
+                          (s-split "\n")
+                          (--map (let ((data (s-split " " it t)))
+                                   (list
+                                    :namespace (nth 0 data) :name (nth 1 data) :ready (nth 2 data)
+                                    :status (nth 3 data) :restarts (nth 4 data) :age (nth 5 data)
+                                    :context context)))))
+     :actions `("RET" im-kube-pod--act
+                "L" im-kube-pod--logs
+                "F" im-kube-pod--logs-follow
+                "x" im-kube-pod--remove
+                "i" im-kube-pod--info)
+     :getter (lambda (object column vtable)
+               (let-plist object
+                 (pcase (vtable-column vtable column)
+                   ("Namespace" .namespace)
+                   ("Name" .name)
+                   ("Ready" .ready)
+                   ("Status" .status)
+                   ("Restarts" .restarts)
+                   ("Age" .age)))))
+    (switch-to-buffer (current-buffer))))
+
+(with-eval-after-load 'ol
+  (org-link-set-parameters
+   "kubectx"
+   :follow (lambda (link _) (im-kube-context-overview link))
+   :store (lambda ()
+            (when (s-prefix? "*im-kube: " (buffer-name))
+              (org-link-store-props
+               :type "kubectx"
+               :description im-kube--current-context
+               :link
+               (format "kubectx:%s" im-kube--current-context))))))
 
 (defun im-kube-pod--act (pod &optional container)
   (let ((namespace (plist-get pod :namespace))
