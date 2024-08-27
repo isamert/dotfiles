@@ -13912,25 +13912,6 @@ Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
 
 (add-hook 'after-init-hook #'im-initialize-scratch-project)
 
-;;;;; tridactyl firefox visual mode
-
-;; I use a command called ~emacs/visual-mode~ in tridactyl to write
-;; the current Firefox page's source into a file and call the
-;; following function. This way I get a nice Emacs buffer with the
-;; contents of the current Firefox page. This is useful sometimes
-;; where I do copy/paste between the page and Emacs.
-
-;; See here for the [[id:1239046F-4A4A-4F33-B48A-1D9D6281AD62][tridactyl command]].
-
-(defun im-firefox-visual-mode ()
-  "Tridactyl calls this command to render the HTML of current Firefox page in Emacs."
-  (save-window-excursion
-    (with-temp-buffer
-      (insert-file-contents "/tmp/tridactyl.source")
-      (shr-render-buffer (current-buffer))))
-  (switch-to-buffer "*html*")
-  (rename-buffer (format "*firefox-visual*")))
-
 ;;;;; YAML <-> JSON conversation
 
 (defun im-yaml-to-json (yaml &optional replace?)

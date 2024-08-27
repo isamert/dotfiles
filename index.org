@@ -2405,195 +2405,64 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
 #+end_src
 * Browsers
 ** Firefox
-*** tridactyl
-:PROPERTIES:
-:ID:       1239046F-4A4A-4F33-B48A-1D9D6281AD62
-:END:
-- =:undo= has autocompletion, ie. lists all tabs that are closed.
-- =:tabopen= can (~t~ binding) can take =-c container-name= parameter, which opens tab in given container. Like =:tabopen -c work ...=. You don't need to write container name fully, first letter also suffices if it does not clash with any other container name.
-
-#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-sanitise tridactyllocal tridactylsync
-
-colors midnight
-set editorcmd «which("emacsclient")»
-set searchengine g
-set hintfiltermode vimperator-reflow
-set smoothscroll true
-set modeindicatorshowkeys true
-set tabopencontaineraware true
-set newtab https://isamert.net/newtab.html
-
-" container shortcuts
-bind ;1 recontain w
-bind ;2 recontain p
-bind ;3 recontain s
-
-" editor
-bind --mode=insert <C-i> composite emacs/visual-mode; editor
-
-" commands
-command withUrl composite get_current_url |
-
-command sync open localhost:8384
-command jaro withUrl ! jaro
-command jarohint hint -W ! jaro
-command jaro-enqueue withUrl ! jaro --method=enqueue
-command jarohint-enqueue hint -W ! jaro --method=enqueue
-command copyimage composite hint -pipe img src | js -p tri.native.run("curl -L -o /tmp/tridactylimg " + JS_ARG) ; ! xclip -selection clipboard -t image/png -i "/tmp/tridactylimg"
-command searchimage composite hint -pipe img src | js -p tri.excmds.open("images.google.com/searchbyimage?image_url=" + JS_ARG)
-command copyimageurl composite hint -pipe img src | yank
-command emacs/gitlab-watch-pipeline withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(lab-watch-pipeline "${JS_ARG}")'`)
-command emacs/open withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(progn (browse-url "${JS_ARG}") (im-force-focus-emacs))'`)
-command emacs/eww withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(progn (eww "${JS_ARG}") (im-force-focus-emacs))'`)
-command emacs/meme-downloader withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(im-meme-downloader "${JS_ARG}")'`)
-command emacs/meme-downloader-with-title withUrl js -p tri.native.run(`«which("emacsclient")» --eval '(im-meme-downloader "${JS_ARG}" "${prompt("Title:")}")'`)
-command emacs/visual-mode js (() => {tri.native.write("/tmp/tridactyl.source", document.documentElement.outerHTML); tri.native.run(`«which("emacsclient")» --eval '(progn (im-firefox-visual-mode) (im-force-focus-emacs))'`)})();
-
-" quick search
-set searchurls.g https://www.google.com/search?q=%s
-set searchurls.you https://you.com/search?q=%s
-set searchurls.y https://yandex.com/search/?text=%s
-set searchurls.s https://serx.ml/search?q=%s
-set searchurls.ddg https://duckduckgo.com/?q=%s
-set searchurls.gif https://giphy.com/search/%s
-set searchurls.ty https://www.trendyol.com/sr?q=%s
-
-set searchurls.yt https://www.youtube.com/results?search_query=%s
-set searchurls.r https://reddit.com/r/%s
-
-set searchurls.npm https://www.npmjs.com/search?q=%s
-set searchurls.nix https://search.nixos.org/packages?channel=unstable&type=packages&query=%s
-
-" tridactyl search
-unbind <C-f>
-bind / fillcmdline find
-bind ? fillcmdline find -?
-bind n findnext 1
-bind N findnext -1
-
-" key-bindings
-unbind <F1>
-bind <A-x> fillcmdline_notrail
-bind <A-≈> fillcmdline_notrail
-bind + zoom 0.1 true
-bind - zoom -0.1 true
-bind p pin
-bind ;i copyimage
-" bind <A-j> tabmove +1
-" bind <A-∆> tabmove +1
-" bind <A-k> tabmove -1
-" bind <A-˚> tabmove -1
-bind U fillcmdline undo
-" bind K tabprev
-" bind J tabnext
-bind A tabaudio
-bind % fillcmdline tabrename %
-
-" jaro
-bind ;j jaro
-bind ;J jarohint
-bind ;e jaro-enqueue
-bind ;E jarohint-enqueue
-
-" More emacs like bindings for ex-mode
-unbind --mode=ex <Space>
-bind --mode=ex <Tab> ex.insert_space_or_completion
-
-bind --mode=ex <ArrowUp> ex.prev_completion
-bind --mode=ex <ArrowDown> ex.next_completion
-
-bind --mode=ex <A-p> ex.prev_history
-bind --mode=ex <A-n> ex.next_history
-bind --mode=ex <A-π> ex.prev_history
-bind --mode=ex <A-˜> ex.next_history
-
-
-" Extra stuff
-source ~/.config/tridactyl/extrarc
-
-" Work releated stuff
-source ~/.config/tridactyl/workrc
-#+end_src
-
-**** Redirect URLs
-I want to redirect some websites to their better alternatives (for example twitter to nitter so that I can read twitter without logging in).
-
-#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  " Nitter is non-functional anymore
-  " autocmd DocStart .*twitter.com js tri.excmds.urlmodify("-r", /(mobile\.)?twitter\.com/, "nitter.42l.fr")
-  autocmd DocStart https://.*www.reddit.com/$ js tri.excmds.urlmodify("-t", "www", "old")
-  autocmd DocStart https://.*www.reddit.com/r/ js tri.excmds.urlmodify("-t", "www", "old")
-  autocmd DocStart https://.*.(youtube.com|youtu.be)/ js tri.excmds.urlmodify("-r", "(www.)?(youtube.com|youtu.be)/", "«var("im-invidious-instance")»")
-#+end_src
-
-When I open a useless website that I spent meaningless time on, I want to show open a random page that I marked as /read it later/. Here is the script that fetches a random page:
-
-#+begin_src sh :tangle ~/.bin/randomlink
-  #!/bin/sh
-
-  # I use full paths to binaries because on Mac, if you don't start
-  # Firefox from the terminal, you can not inherit the PATH quite easily
-  cat ~/Documents/notes/bullet.org | «which("sed")» -n '/\* Investigate/,/\*\*/p' | «which("grep")» -E 'https?://' | «which("shuf")» -n 1 | «which("grep")» -Eo "(http|https)://[a-zA-Z0-9./?=_%:-]*"
-#+end_src
-
-...and here is the tridactyl directive:
-
-#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  command randomlink js -d€ tri.native.run("«which("randomlink")»").then(link => window.location.replace(link.content.trim()))€
-  autocmd DocStart .*(eksisozluk|ensonhaber).* randomlink
-#+end_src
-
-**** Slack integration
-Neither Slack web app nor the desktop app lets you define your own custom keybindings but using the web app in combination with Tridactyl we can create our own shortcuts. I also created [[https://github.com/tridactyl/tridactyl/wiki/Slack][this tridactyl wiki page]] based on the bindings I created here. It might contain more details.
-
-#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  " https://github.com/tridactyl/tridactyl/issues/4870
-  bind <C-6> tab #
-
-  command slack-top js -d€ document.querySelector('[data-qa="slack_kit_scrollbar"]').scrollTop = 0€
-  command slack-top-then composite slack-top;
-
-  " f -> just like f but more intelligent
-  bindurl .*.slack.com --mode=normal f hint -Jc div[data-sidebar-link-id]:not([data-sidebar-link-id=""]),div[data-section-channel-index]:not([data-section-channel-index=""]),button,a
-
-  " v -> select and copy the message
-  bindurl .*.slack.com --mode=normal v composite hint -pipe div[data-qa=message-text] | js -p navigator.clipboard.writeText(JS_ARG.innerText)
-
-  " ;n -> compose new message
-  bindurl .*.slack.com --mode=normal ;n hint -Jc button[data-qa=composer_button]
-
-  " ;q quote selected message
-  bindurl .*.slack.com --mode=normal ;q composite hint -pipe div[data-qa=message-text] | js -p navigator.clipboard.writeText(JS_ARG.innerText.split('\n').map(it => `> ${it}`).join('\n')); hint -c div[data-qa=message_input]
-
-  " ;u -> open unreads
-  bindurl .*.slack.com --mode=normal ;u slack-top-then hint -Jc div[data-sidebar-link-id="Punreads"]
-
-  " ;t -> open all threads
-  bindurl .*.slack.com --mode=normal ;t slack-top-then hint -Jc div[data-sidebar-link-id="Vall_threads"]
-
-  " ;d -> open all dms
-  bindurl .*.slack.com --mode=normal ;d slack-top-then hint -Jc div[data-sidebar-link-id="Pdms"]
-
-  " ;a -> open activity window
-  bindurl .*.slack.com --mode=normal ;a slack-top-then hint -Jc div[data-sidebar-link-id="Pactivity"]
-
-  " ;m -> interactively select a message and open message actions
-  bindurl .*.slack.com ;m composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-focus-key=message_actions],[role=menuitem]
-
-  " ;e -> interactively select a message and edit the selected message
-  bindurl .*.slack.com ;e composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-qa=edit_message]
-
-  " ;c -> interactively select a message and copy the link of selected message
-  bindurl .*.slack.com ;c composite hint -Jc div[class=c-message_kit__gutter]; hint -Jc button[data-qa=more_message_actions]; hint -Jc button[data-qa=copy_link]
-#+end_src
-
-**** Instagram integration
-You can open next/previous posts with left and right keys on instagram but as far as I know, there is no way to open next/previous picture of the current post (if it's a multi-picture post). With the following, you can use up and down keys to navigate between pictures of the current post.
-
-#+begin_src vimrc :tangle ~/.config/tridactyl/tridactylrc
-  bindurl .*.instagram.com --mode=normal <ArrowUp> hint -Jc button[aria-label="Go Back"]
-  bindurl .*.instagram.com --mode=normal <ArrowDown> hint -Jc button[aria-label="Next"]
+*** vimium-c configuration
+#+begin_src json
+{
+  "name": "Vimium C",
+  "@time": "8/28/2024, 12:28:14 AM",
+  "time": 1724797694599,
+  "environment": {
+    "extension": "1.99.997",
+    "platform": "mac",
+    "firefox": 129
+  },
+  "exclusionRules": [],
+  "keyLayout": 2,
+  "keyMappings": [
+    "#!no-check",
+    "map b Vomnibar.activateTabs",
+    "map t Vomnibar.activateInNewTab",
+    "map T Vomnibar.activateEditUrlInNewTab",
+    "map O Vomnibar.activateEditUrl",
+    "map sf LinkHints.activateSearchLinkText",
+    "unmap <f1>",
+    "unmap <f2>",
+    ""
+  ],
+  "localeEncoding": "",
+  "searchEngines": [
+    "s|sp|startpage:",
+    "https://www.startpage.com/sp/search?abp=-1&t=device&lui=english&sc=xJgFkqH2tfCu20&cat=web&prfe=bcfd50b9911b2c8c90fe567dcc034a47c25b6bbad9d49325c02d5e7063258f5310102504f00de9c5b9f11331d7811b22555d35fa08425db6ca42cb38773906a0c08e86291a93527d8d2183e9&query=%s \\",
+    "  blank=https://startpage.com/ Startpage",
+    "b|bing: https://www.bing.com/search?q=%s \\",
+    "  blank=https://www.bing.com/ Bing",
+    "g|go|gg|google|Google: https://www.google.com/search?q=%s \\",
+    "  www.google.com re=/^(?:\\.[a-z]{2,4})?\\/search\\b.*?[#&?]q=([^#&]*)/i\\",
+    "  blank=https://www.google.com/ Google",
+    "b|br|brave: https://search.brave.com/search?q=%s Brave",
+    "d|dd|ddg|duckduckgo: https://duckduckgo.com/?q=%s DuckDuckGo",
+    "qw|qwant: https://www.qwant.com/?q=%s Qwant",
+    "y|ya|yd|yandex: https://yandex.com/search/?text=%s Yandex",
+    "maps|gm|gmap|gmaps: https://www.google.com/maps?q=%s \\",
+    "  blank=https://www.google.com/maps Google Maps",
+    "y|yt: https://isamertiv.duckdns.org/search?q=%s \\",
+    "  blank=https://www.youtube.com/ YouTube",
+    "w|wiki: https://www.wikipedia.org/w/index.php?search=%s Wikipedia",
+    "gh|github: https://github.com/search?q=$s \\",
+    "  blank=https://github.com/ GitHub",
+    ""
+  ],
+  "searchUrl":
+"https://www.startpage.com/sp/search?abp=-1&t=device&lui=english&sc=xJgFkqH2tfCu20&cat=web&prfe=bcfd50b9911b2c8c90fe567dcc034a47c25b6bbad9d49325c02d5e7063258f5310102504f00de9c5b9f11331d7811b22555d35fa08425db6ca42cb38773906a0c08e86291a93527d8d2183e9&query=$s Startpage",
+  "vimSync": true,
+  "vomnibarOptions": {
+    "actions": "",
+    "maxMatches": 15,
+    "queryInterval": 200,
+    "sizes": "77,3,44,0.8",
+    "styles": "mono-url"
+  }
+}
 #+end_src
 *** sidebery configuration
 Here is my sidebery config export:
