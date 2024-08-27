@@ -10970,7 +10970,6 @@ If PROJECTS is nil, then `im-jira-projects' is used."
       (org-set-property "STORY_POINTS" (format "%s" (or (alist-get im-jira-story-points-field-name .fields) "N/A")))
       (org-fold-show-all))))
 
-
 (defun im-jira-list-current-sprint-assignee-swimlane ()
   "Draw an org table for the current sprint that resembles assignee
 swimlanes of JIRA.
@@ -10997,60 +10996,74 @@ story points they have released. See the following figure:
 
 (defun org-dblock-write:jira (params)
   "Dynamic block version of `im-jira-list-current-sprint-assignee-swimlane'."
-  (let ((projects (plist-get params :projects))
-        (jql (plist-get params :jql))
-        (group-by-assignee? (plist-get params :group-by-assignee)))
+  (let* ((projects (plist-get params :projects))
+         (issues (plist-get params :issues))
+         (progress? (plist-get params :progress?))
+         (jql (plist-get params :jql))
+         (group-by-assignee? (plist-get params :group-by-assignee))
+         results)
+    (when issues
+      (setq jql (format "key IN (%s)" (s-join ", " (mapcar #'symbol-name issues)))))
+    (setq results (cond
+                   (jql (jiralib2-jql-search jql))
+                   (t (im-jira-get-current-sprint-issues projects))))
+    (when progress?
+      (let ((done (length (--filter (-contains? '("Released" "Done") (let-alist it .fields.status.name)) results)))
+            (total (length results)))
+        (insert
+         (format "- Progress :: %s/%s (%s%%)\n\n" done total (/ (* 100 done) total)))))
     (if group-by-assignee?
         (insert "| Assignee | Total | Done | Sub-total | Status | Issue |\n|-\n")
       (insert "| Assignee | Point | Status | Issue |\n|-\n"))
-    (->>
-     (cond
-      (jql (jiralib2-jql-search jql))
-      (t (im-jira-get-current-sprint-issues projects)))
-     ;; (--filter (let-alist it .fields.assignee.name))
-     (--group-by (let-alist it .fields.assignee.name))
-     (map-apply
-      (lambda (key vals)
-        (list
-         :assignee key
-         :total (-sum (--map (let-alist it (or (alist-get im-jira-story-points-field-name .fields) 0)) vals))
-         :done (->>
-                vals
-                (--filter (-contains? '("Done" "Released") (let-alist it .fields.status.name)))
-                (--map (let-alist it (or (alist-get im-jira-story-points-field-name .fields) 0)))
-                (-sum))
-         :tasks
-         (->>
-          (--map (let-alist it
-                   (list
-                    :points (alist-get im-jira-story-points-field-name .fields)
-                    :summary (format "%s - %s" .key .fields.summary)
-                    :status .fields.status.name))
-                 vals)
-          (--sort (string> (plist-get it :status) (plist-get other :status)))))))
-     (--sort (> (plist-get it :total) (plist-get other :total)))
-     (--map (if group-by-assignee?
-                (format "| %s | %s | %s | | | |\n%s"
-                        (plist-get it :assignee)
-                        (plist-get it :total)
-                        (plist-get it :done)
-                        (s-join
-                         "\n"
-                         (--map (format "| | | | %s | %s | %s |"
-                                        (plist-get it :points)
-                                        (plist-get it :status)
-                                        (s-truncate 60 (plist-get it :summary)))
-                                (plist-get it :tasks))))
-              (s-join
-               "\n"
-               (--map (format "| %s | %s | %s | %s |"
-                              (plist-get it :assignee)
-                              (plist-get it :points)
-                              (plist-get it :status)
-                              (s-truncate 60 (plist-get it :summary)))
-                      (plist-get it :tasks)))))
-     (s-join "\n|-\n")
-     (insert))
+    (cond
+     (group-by-assignee?
+      (->>
+       results
+       (--group-by (let-alist it .fields.assignee.name))
+       (map-apply
+        (lambda (key vals)
+          (list
+           :assignee key
+           :total (-sum (--map (let-alist it (or (alist-get im-jira-story-points-field-name .fields) 0)) vals))
+           :done (->>
+                  vals
+                  (--filter (-contains? '("Done" "Released") (let-alist it .fields.status.name)))
+                  (--map (let-alist it (or (alist-get im-jira-story-points-field-name .fields) 0)))
+                  (-sum))
+           :tasks
+           (->>
+            (--map (let-alist it
+                     (list
+                      :points (alist-get im-jira-story-points-field-name .fields)
+                      :summary (format "%s - %s" .key .fields.summary)
+                      :status .fields.status.name))
+                   vals)
+            (--sort (string> (plist-get it :status) (plist-get other :status)))))))
+       (--sort (> (plist-get it :total) (plist-get other :total)))
+       (--map (format "| %s | %s | %s | | | |\n%s"
+                      (plist-get it :assignee)
+                      (plist-get it :total)
+                      (plist-get it :done)
+                      (s-join
+                       "\n"
+                       (--map (format "| | | | %s | %s | %s |"
+                                      (plist-get it :points)
+                                      (plist-get it :status)
+                                      (s-truncate 60 (plist-get it :summary)))
+                              (plist-get it :tasks)))))
+       (s-join "\n|-\n")
+       (insert)))
+     (t
+      (->>
+       results
+       (--map (let-alist it
+                (format "| %s | %s | %s | %s |"
+                        .fields.assignee.name
+                        (alist-get im-jira-story-points-field-name .fields)
+                        .fields.status.name
+                        (s-truncate 60 (format "%s - %s" .key .fields.summary)))))
+       (s-join "\n")
+       (insert))))
     (org-table-align)))
 
 (defun im-jira-create-quick-issue (arg)
