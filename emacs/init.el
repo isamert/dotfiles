@@ -1317,14 +1317,6 @@ using this function."
 
 ;;;;; Fonts and theme
 
-
-;; The themes I used over time and liked are:
-;; - doom-one → Grayish theme with great colors.
-;; - modus-vivendi → A regular black theme with nice amount of contrast.
-;; - ef-melissa-dark → Like solarized but much nicer colors.
-;; - ef-summer → Pinkish white theme, really nice to look at.
-;; - ef-cherie → For me, like ef-summer but dark. Black and purple.
-
 (use-package modus-themes
   :defer t)
 
@@ -1339,17 +1331,30 @@ using this function."
    `(tab-bar
      ((t (:background ,(or (doom-color 'bg-alt) 'unspecified) :foreground ,(or (doom-color 'fg-alt) 'unspecified)))))))
 
-(defconst im-theme-day 'ef-summer
+(defconst im-theme-day
+  '(;; Pinkish white theme, really nice to look at.
+    ef-summer)
   "Theme for the day.")
 
-(defconst im-theme-night 'ef-cherie
+(defconst im-theme-night
+  '(;; Grayish theme with great colors.
+    doom-one
+    ;; A regular black theme with nice amount of contrast.
+    modus-vivendi
+    ;; Like solarized but much nicer colors.
+    ef-melissa-dark
+    ;; like ef-summer but dark. Black and purple.
+    ef-cherie
+    ;; Nice dark theme with good contrast.
+    doom-Iosvkem)
   "Theme for the night.")
 
-(defconst im-fonts '("FiraCode Nerd Font"
-                     "Iosevka Nerd Font"
-                     "IBM Plex Mono"
-                     "Iosevka Comfy Motion"
-                     "Iosevka Comfy")
+(defconst im-fonts
+  '("FiraCode Nerd Font"
+    "Iosevka Nerd Font"
+    "IBM Plex Mono"
+    "Iosevka Comfy Motion"
+    "Iosevka Comfy")
   "Fonts that I use.")
 
 (defvar im-current-font nil
@@ -1373,15 +1378,47 @@ If NEXT is non-nil, then use the next font."
                         :height im-font-height)
     (setq im-current-font font)))
 
+(use-package solar
+  :straight (:type built-in)
+  :defer t
+  :autoload (solar-sunrise-sunset))
+
 (add-hook 'after-init-hook #'im-set-font)
 
-;; Change theme by day and night automatically
+(add-hook 'after-init-hook #'im-theme-adaptive-enable)
+(defun im-theme-adaptive-enable ()
+  (run-at-time
+   "24:10" nil
+   #'im-theme-adaptive-enable)
+  (cl-flet ((pick-and-load-theme-from
+             (lst)
+             (let ((theme (if (listp lst)
+                              (nth (random (length lst)) lst)
+                            lst)))
+               (message ">> Loading %s theme..." theme)
+               (load-theme theme :no-confirm)
+               (message ">> Loading %s theme...Done" theme))))
+    (-let ((((sunrise) (sunset) _daylight) (solar-sunrise-sunset (im-current-date))))
+      (run-at-time
+       ;; Switch to day theme 1 hour after sunrise.
+       (im-hour-number-to-hour-string (1+ sunrise))
+       nil
+       (lambda () (pick-and-load-theme-from im-theme-day)))
+      (run-at-time
+       ;; Switch to night theme 1 hour before sunset
+       (im-hour-number-to-hour-string (1- sunset))
+       nil
+       (lambda () (pick-and-load-theme-from im-theme-night))))))
 
-(use-package theme-changer
-  :straight (:host github :repo "hadronzoo/theme-changer")
-  :hook (after-init . (lambda () (change-theme im-theme-day im-theme-night)))
-  :autoload (change-theme))
+(defun im-hour-number-to-hour-string (hour)
+  "Convert given HOUR number to hour string, like  20.67 to \"20:40\"."
+  (let* ((whole (truncate hour))
+         (fraction (* 60 (- hour whole))))
+    (format "%02d:%02d" whole (round fraction))))
 
+(defun im-current-date ()
+  "Return date in the format of \\='(MONTH DAY YEAR)."
+  (mapcar #'string-to-number (s-split "," (format-time-string "%m,%d,%Y"))))
 
 ;;;;; prettify-symbols-mode
 
