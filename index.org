@@ -396,7 +396,7 @@ I use it minimally for some quality-of-life improvements.
 *** Emacs Integration
 I have a little menubar that shows the current clocked in task and the current tab-bar of Emacs in MacOS menu. I was going to use a socket instead of an HTTP server but didn't manage to get ~hs.socket~ to work for some reason.
 
-#+begin_src lua :tangle ~/hammerspoon/init.lua
+#+begin_src lua :tangle ~/.hammerspoon/init.lua
 -- * Menubar & Emacs
 
 menubar = hs.menubar.new()
@@ -425,7 +425,7 @@ function cb(verb, path, headers, body)
 end
 
 server = hs.httpserver.new()
-server:setPort(9093)
+server:setPort(4562)
 server:setCallback(cb)
 server:start()
 #+end_src

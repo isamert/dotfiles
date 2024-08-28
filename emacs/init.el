@@ -14493,6 +14493,7 @@ end tell"))
 ;; currently am in through this Hammerspoon menubar.
 
 (when (eq system-type 'darwin)
+  (defvar im-hammerspoon-server "http://localhost:4562")
   (defvar im-hammerspoon-handle-clock-p t
     "Whether to handle org clock stuff in hammerspoon or not.")
 
@@ -14505,7 +14506,7 @@ am on because of this."
     (setq im-hammerspoon-handle-clock-p (not im-hammerspoon-handle-clock-p))
     ;; Reset text if disabled
     (unless im-hammerspoon-handle-clock-p
-      (request "http://localhost:9093/task"
+      (request (concat im-hammerspoon-server "/task")
         :type "POST"
         :data ""))
     (message ">> `im-hammerspoon-handle-clock-p' is now %s" im-hammerspoon-handle-clock-p))
@@ -14515,14 +14516,14 @@ am on because of this."
 
   (defun im-hammerspoon-handle-clock-in ()
     (when im-hammerspoon-handle-clock-p
-      (request "http://localhost:9093/task"
+      (request (concat im-hammerspoon-server "/task")
         :type "POST"
         :data (if (org-clock-is-active)
                   (substring-no-properties (org-clock-get-clock-string))
                 ""))))
 
   (define-advice tab-bar-select-tab (:after (&rest _) report-tab-change-to-hammerspoon)
-    (request "http://localhost:9093/workspace"
+    (request (concat im-hammerspoon-server "/workspace")
       :type "POST"
       :data (or (alist-get 'name (tab-bar--current-tab))
                 (tab-bar-tab-name-current))))
