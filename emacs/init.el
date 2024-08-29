@@ -1202,7 +1202,7 @@ With argument, do this that many times."
 
 ;; If the cursor is at the end of the file, when you scroll emacs does a strange jump. This fixes it.
 
-(setq scroll-conservatively 100) ;; When cursor reaches end, just scroll line-by-line
+(setq scroll-conservatively 101) ;; When cursor reaches end, just scroll line-by-line
 ;; (setq scroll-margin 10) ;; Start scolling earlier
 
 ;;;;; Backups
@@ -7206,14 +7206,14 @@ in the DM section of the official Slack client."
 ;; be best as it fits my workflow quite well. Besides being useful in
 ;; org-mode, it also has org-mode independent features.
 
-(defvar im-org-ai-default-model "gpt-3.5-turbo-0125")
+(defvar im-org-ai-default-model "gpt-4o-mini")
 (defvar im-org-ai-powerful-model "gpt-4o")
 
 (use-package org-ai
   :straight (:host github :repo "rksm/org-ai")
   :hook (org-mode . org-ai-mode)
   :config
-  ;; (setq org-ai-default-chat-model "gpt-4-0125-preview")
+  (add-to-list 'org-ai-chat-models "gpt-4o-mini")
   (setq org-ai-default-chat-model im-org-ai-default-model)
   (setq org-ai-default-max-tokens 2000)
   (setq org-ai-openai-api-token im-openai-api-key)
@@ -12882,7 +12882,7 @@ selecting a pod."
 (defun im-kube-pod--app-logs (pod &optional container)
   ;; Logs from all pods combined for given pod's app
   (let ((container (or container (im-kube-pod--select-container pod))))
-    (with-current-buffer (im-eshell (format "$pod: %s" name))
+    (with-current-buffer (im-eshell (format "$pod: %s" (plist-get pod :name)))
       (insert (im-kill
                (format "kubectl logs -f --selector app=%s --namespace='%s' --container='%s' --context='%s'"
                        (im-kube-pod--get-app-name pod)
