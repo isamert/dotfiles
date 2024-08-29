@@ -13992,7 +13992,76 @@ Task: %s
      :follow nil
      :callback (lambda () (message ">> AI request finished.")))))
 
-(im-leader-v "sa" #'im-ai-snippet)
+(cl-defun im-ai (prompt &key follow model sys-prompt output-buffer callback)
+  "Like `org-ai-prompt' but do not stream by default.
+CALLBACK is called with the result, if OUTPUT-BUFFER is nil.  If
+OUTPUT-BUFFER is not nil, then the result is streamed to the
+OUTPUT-BUFFER."
+  (org-ai-interrupt-current-request)
+  (let ((buff (or output-buffer (get-buffer-create " *im-ai*")))
+        (org-ai-default-chat-model model))
+    (with-current-buffer buff
+      (unless output-buffer
+        (erase-buffer))
+      (org-ai-prompt
+       prompt
+       :output-buffer buff
+       :sys-prompt sys-prompt
+       :follow follow
+       :callback
+       (lambda ()
+         (im-run-deferred
+          (unless output-buffer
+            (funcall callback (with-current-buffer buff (buffer-string))))))))))
+
+(defun im-ai-snippet-superior (input)
+  "Like `im-ai-snippet' but superior and slower.
+Requesting from AI to conform a specific output type reduces it's answer
+quality.  This one, compared to `im-ai-snippet' it simply asks the
+question without any formatting restrictions and then formats the given
+answer with another ai call, but this time with a cheaper model to just
+format the result.
+
+I use this when `im-ai-snippet' fails."
+  (interactive "sQuestion: ")
+  (let ((prompt (format
+                 "%s in %s"
+                 input
+                 (let ((mode-name
+                        (if (and (derived-mode-p 'org-mode) (org-in-src-block-p))
+                            (org-element-property :language (org-element-at-point))
+                          (symbol-name major-mode))))
+                   (->>
+                    mode-name
+                    (s-chop-suffix "-mode")
+                    (s-chop-suffix "-ts")
+                    (s-replace-all '(("-" . " ")
+                                     ("interaction" . "")))
+                    (s-titleize))))))
+    (im-ai
+     prompt
+     :sys-prompt org-ai-default-chat-system-prompt
+     :model im-org-ai-powerful-model
+     :callback
+     (lambda (answer)
+       (im-ai
+        (format "For the following question and answer, convert it to a snippet:
+- Strip out explanations
+- Keep the code only, convert it to something directly usable.
+- Incorporate necessary commentaries as code comments.
+- Do not use any markdown formatting, only include the code snippet in the answer.
+
+The question: %s
+
+The answer:
+
+%s" prompt answer)
+        :model im-org-ai-default-model
+        :output-buffer (current-buffer))))))
+
+(im-leader-v
+  "sa" #'im-ai-snippet
+  "sA" #'im-ai-snippet-superior)
 
 ;;;;; im-test -- test related utility functions
 
