@@ -1396,6 +1396,7 @@ If NEXT is non-nil, then use the next font."
                               (nth (random (length lst)) lst)
                             lst)))
                (message ">> Loading %s theme..." theme)
+               (mapc #'disable-theme custom-enabled-themes)
                (load-theme theme :no-confirm)
                (message ">> Loading %s theme...Done" theme))))
     (-let ((((sunrise) (sunset) _daylight) (solar-sunrise-sunset (im-current-date))))
@@ -1419,6 +1420,14 @@ If NEXT is non-nil, then use the next font."
 (defun im-current-date ()
   "Return date in the format of \\='(MONTH DAY YEAR)."
   (mapcar #'string-to-number (s-split "," (format-time-string "%m,%d,%Y"))))
+
+(defun im-reload-theme ()
+  "To get rid of some artifacts."
+  (interactive)
+  (let ((theme (car custom-enabled-themes)))
+    (mapc #'disable-theme custom-enabled-themes)
+    (when theme
+      (load-theme theme :no-confirm))))
 
 ;;;;; prettify-symbols-mode
 
