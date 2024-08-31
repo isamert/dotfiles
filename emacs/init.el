@@ -3757,6 +3757,16 @@ it's a list, the first element will be used as the binary name."
  :path "~/.config/zsh/eat-zsh-integration.sh"
  :contents "[[ -n $EAT_SHELL_INTEGRATION_DIR ]] && source $EAT_SHELL_INTEGRATION_DIR/zsh")
 
+(defun im-eshell-reset ()
+  "Reset current eshell."
+  (interactive nil eshell-mode)
+  (let ((name (buffer-name))
+        (dir default-directory))
+    (let ((kill-buffer-query-functions '()))
+      (kill-buffer))
+    (let ((default-directory dir))
+      (im-eshell name))))
+
 ;;;;;; Proper command completion
 
 ;; This package provides command, subcommand and argument completion
