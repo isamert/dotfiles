@@ -1126,6 +1126,12 @@ in my dotfiles repository.")
 (setq save-silently t)
 (setenv "EDITOR" "emacsclient")
 (setenv "VISUAL" "emacsclient")
+(setenv "BROWSER" "emacs-browser")
+(im-tangle-file
+ :doc "Simple `browse-url' wrapper. This enables external processes to call emacs with a url."
+ :path "~/.bin/emacs-browser"
+ :contents "#!/bin/bash
+emacsclient --eval \"(browse-url \\\"$1\\\")\"")
 
 ;;;;;; M-Backspace should delete, instead of killing
 
