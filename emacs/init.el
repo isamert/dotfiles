@@ -1384,12 +1384,24 @@ If NEXT is non-nil, then use the next font."
   :autoload (solar-sunrise-sunset))
 
 (add-hook 'after-init-hook #'im-set-font)
+(add-hook 'after-init-hook #'im-adaptive-theme-enable)
 
-(add-hook 'after-init-hook #'im-theme-adaptive-enable)
-(defun im-theme-adaptive-enable ()
-  (run-at-time
-   "24:10" nil
-   #'im-theme-adaptive-enable)
+(defvar im-adaptive-theme--next-timer nil)
+(defvar im-adaptive-theme--day-timer nil)
+(defvar im-adaptive-theme--night-timer nil)
+
+(defun im-adaptive-theme-enable ()
+  (interactive)
+  (when im-adaptive-theme--next-timer
+    (cancel-timer im-adaptive-theme--next-timer))
+  (when im-adaptive-theme--day-timer
+    (cancel-timer im-adaptive-theme--day-timer))
+  (when im-adaptive-theme--day-timer
+    (cancel-timer im-adaptive-theme--night-timer))
+  (setq im-adaptive-theme--next-timer
+        (run-at-time
+         "24:10" nil
+         #'im-adaptive-theme-enable))
   (cl-flet ((pick-and-load-theme-from
              (lst)
              (let ((theme (if (listp lst)
@@ -1399,17 +1411,30 @@ If NEXT is non-nil, then use the next font."
                (mapc #'disable-theme custom-enabled-themes)
                (load-theme theme :no-confirm)
                (message ">> Loading %s theme...Done" theme))))
-    (-let ((((sunrise) (sunset) _daylight) (solar-sunrise-sunset (im-current-date))))
-      (run-at-time
-       ;; Switch to day theme 1 hour after sunrise.
-       (im-hour-number-to-hour-string (1+ sunrise))
-       nil
-       (lambda () (pick-and-load-theme-from im-theme-day)))
-      (run-at-time
-       ;; Switch to night theme 1 hour before sunset
-       (im-hour-number-to-hour-string (1- sunset))
-       nil
-       (lambda () (pick-and-load-theme-from im-theme-night))))))
+    (-let* ((((sunrise) (sunset) _daylight) (solar-sunrise-sunset (im-current-date)))
+            (switch-to-day-hour (1+ sunrise))
+            (switch-to-night-hour (1- sunset))
+            (current-hour (string-to-number (format-time-string "%H"))))
+      (if (and (> current-hour switch-to-day-hour)
+               (< current-hour switch-to-night-hour))
+          (pick-and-load-theme-from im-theme-day)
+        (pick-and-load-theme-from im-theme-night))
+      (when (< current-hour switch-to-day-hour)
+        (setq
+         im-adaptive-theme--day-timer
+         (run-at-time
+          ;; Switch to day theme 1 hour after sunrise.
+          (im-hour-number-to-hour-string switch-to-day-hour)
+          nil
+          (lambda () (pick-and-load-theme-from im-theme-day)))))
+      (when (< current-hour switch-to-day-hour)
+        (setq
+         im-adaptive-theme--night-timer
+         (run-at-time
+          ;; Switch to night theme 1 hour before sunset
+          (im-hour-number-to-hour-string switch-to-night-hour)
+          nil
+          (lambda () (pick-and-load-theme-from im-theme-night))))))))
 
 (defun im-hour-number-to-hour-string (hour)
   "Convert given HOUR number to hour string, like  20.67 to \"20:40\"."
