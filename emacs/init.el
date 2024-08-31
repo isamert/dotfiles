@@ -3687,6 +3687,7 @@ it's a list, the first element will be used as the binary name."
   (defun im-eshell-prompt ()
     (concat (abbreviate-file-name (eshell/pwd))
             (if (= (user-uid) 0) " # " " \n$ ")))
+
   (setq eshell-prompt-regexp "^$ ")
   (setq eshell-prompt-function #'im-eshell-prompt))
 
@@ -3899,35 +3900,35 @@ for defining eshell-specific aliases that is read verbatim:
 ;; ~eshell-history-file~. The following /appends/ issued command to
 ;; history after each command.
 
-(defvar im-eshell-history-blacklist "^\\(ls\\|pwd\\|cd\\|clear\\|exit\\|rm\\|mkdir\\|mkcd\\|im-autodir\\)")
+(defvar im-eshell-history-blacklist "^\\(ls\\|pwd\\|cd\\|clear\\|exit\\|rm\\|mkdir\\|mkcd\\|im-autodir\\|lls\\|ll\\)")
 
 ;; Adapted from: https://emacs.stackexchange.com/questions/18564/merge-history-from-multiple-eshells
 ;; Changes:
 ;; - Duplication check
 ;; - Blacklisted commands
-;; - Process only successful commands
-;;    - Not quite sure if this is a good idea though. Just experimenting.
+(defvar-local im-eshell-append-history nil)
 (defun im-eshell-append-history ()
   "Call `eshell-write-history' with the `append' parameter set to `t'."
-  (when (and eshell-history-ring
-             (eq eshell-last-command-status 0)
-             (ring-elements eshell-history-ring))
-    (let ((last-elem (s-trim (car (ring-elements eshell-history-ring))))
-          (prev-elem (or (ignore-errors (s-trim (nth 1 (ring-elements eshell-history-ring)))) "")))
-      (when (and (not (string= last-elem prev-elem))
-                 (not (s-matches? im-eshell-history-blacklist last-elem)))
-        (let ((newest-cmd-ring (make-ring 1)))
-          (ring-insert newest-cmd-ring last-elem)
-          (let ((eshell-history-ring newest-cmd-ring))
-            (eshell-write-history eshell-history-file-name t)))))))
+  (if (not im-eshell-append-history)
+      ;; Remove the eshell save hook on first run.
+      ;; Also don't append on first run to prevent duplication.
+      (progn
+        (remove-hook 'eshell-exit-hook #'eshell--save-history t)
+        (setq im-eshell-append-history t))
+    (when (and eshell-history-ring
+               (ring-elements eshell-history-ring))
+      (let ((last-elem (s-trim (car (ring-elements eshell-history-ring))))
+            (prev-elem (or (ignore-errors (s-trim (nth 1 (ring-elements eshell-history-ring)))) "")))
+        (when (and (not (string= last-elem prev-elem))
+                   (not (s-matches? im-eshell-history-blacklist last-elem)))
+          (with-temp-buffer
+            (insert last-elem "\n")
+            (eshell-with-private-file-modes
+             (write-region (point-min) (point-max)
+                           (file-truename eshell-history-file-name)
+                           'append 'no-message))))))))
 
 (add-hook 'eshell-post-command-hook #'im-eshell-append-history)
-
-(define-advice eshell-write-history (:around (old-func &optional filename append) skip-writing-history)
-  "Skip writing history if append is nil.
-This is for preventing eshell overriding my appended history."
-  (when append
-    (funcall old-func filename append)))
 
 ;;;;; bookmark.el
 
