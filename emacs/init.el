@@ -7179,49 +7179,15 @@ in the DM section of the official Slack client."
 ;; be best as it fits my workflow quite well. Besides being useful in
 ;; org-mode, it also has org-mode independent features.
 
-;; FIXME: Highlighting in AI blocks does not work even with the trick
-;; mentioned in the README.  I tried it in a minimal config and it
-;; works. Probably an issue in my config.
 (use-package org-ai
   :straight (:host github :repo "rksm/org-ai")
   :hook (org-mode . org-ai-mode)
   :custom
   (org-ai-default-chat-model "gpt-4o")
   (org-ai-default-max-tokens 2000)
-  (org-ai-openai-api-token im-openai-api-key)
   (org-ai-default-chat-system-prompt "You're an helpful assistant designed to provide helpful, accurate, and concise responses. Your primary focus should be on delivering quick and clear solutions, especially for programming-related queries. Focus on providing quick, clear solutions. When appropriate, offer additional insights, alternative approaches (such as using standard functions over ad-hoc implementations), or different perspectives to enhance user understanding or outcomes along with the original solution. Keep replies relevant, to the point, and free from unnecessary explanations or obvious/elementary information.")
   :config
   (add-to-list 'org-ai-chat-models "gpt-4o-mini"))
-
-(defun im-org-ai-toggle-gpt-model ()
-  "Toggle GPT model of current org-ai block.
-Also removes the answers, if user wants it."
-  (interactive)
-  (save-excursion
-    (when (re-search-backward
-           (format "#\\+begin_ai markdown :model \"\\(%s\\|%s\\)\""
-                   im-org-ai-default-model
-                   im-org-ai-powerful-model)
-           nil t)
-      (let* ((match-start (match-beginning 0))
-             (match-end (match-end 0))
-             (current-model (match-string 1)))
-        (cond ((string-prefix-p current-model im-org-ai-default-model)
-               (replace-match (format "#+begin_ai markdown :model \"%s\"" im-org-ai-powerful-model) nil nil))
-              ((string= current-model im-org-ai-powerful-model)
-               (replace-match (format "#+begin_ai markdown :model \"%s\"" im-org-ai-default-model) nil nil)))
-        (when (y-or-n-p "Want to remove AI answers?")
-          (let ((start (progn
-                         (goto-char match-start)
-                         (re-search-forward "^\\[AI]: ")
-                         (beginning-of-line)
-                         (point)))
-                (end (progn
-                       (re-search-forward "^#\\+end_ai")
-                       (beginning-of-line)
-                       (point))))
-            (when (and start end)
-              (delete-region start end))))))))
 
 (use-package im-ai
   :straight nil

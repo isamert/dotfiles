@@ -304,6 +304,38 @@ predefined prompts."
       (switch-to-buffer buffer))
     buffer))
 
+;;;; org-ai extensions
+
+(defun im-ai-toggle-gpt-model-on-ai-block ()
+  "Toggle GPT model of current org-ai block.
+Also removes the answers, if user wants it."
+  (interactive)
+  (save-excursion
+    (when (re-search-backward
+           (format "#\\+begin_ai markdown :model \"\\(%s\\|%s\\)\""
+                   im-ai-default-model
+                   im-ai-powerful-model)
+           nil t)
+      (let* ((match-start (match-beginning 0))
+             (match-end (match-end 0))
+             (current-model (match-string 1)))
+        (cond ((string= current-model im-ai-default-model)
+               (replace-match (format "#+begin_ai markdown :model \"%s\"" im-ai-powerful-model) nil nil))
+              ((string= current-model im-ai-powerful-model)
+               (replace-match (format "#+begin_ai markdown :model \"%s\"" im-ai-default-model) nil nil)))
+        (when (y-or-n-p "Want to remove AI answers?")
+          (let ((start (progn
+                         (goto-char match-start)
+                         (re-search-forward "^\\[AI]: ")
+                         (beginning-of-line)
+                         (point)))
+                (end (progn
+                       (re-search-forward "^#\\+end_ai")
+                       (beginning-of-line)
+                       (point))))
+            (when (and start end)
+              (delete-region start end))))))))
+
 ;;;; Utils
 
 (defun im-ai--get-current-language ()
