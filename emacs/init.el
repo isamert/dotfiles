@@ -142,6 +142,31 @@
 ;; not needed but better have it as I might change my modeline in the
 ;; future.
 
+;;;;; Load path
+
+(defconst im-load-path (expand-file-name "~/.emacs.d/load/")
+  "The path that I keep my extra stuff.
+Probably stuff that not committed to git.")
+
+(defconst im-packages-path (expand-file-name "~/.emacs.d/packages/")
+  "The path that I keep my experimental packages in.
+These packages are not published as a separate project but lives
+in my dotfiles repository.")
+
+(add-to-list 'load-path im-load-path)
+(add-to-list 'load-path im-packages-path)
+
+;; Also load ~im-secrets~ from =load-path=. I'll be utilizing some
+;; variables defined here throughout my configuration. It contains
+;; some api-keys, some tokens or some passwords etc. that I don't want
+;; to leak into public. Instead of doing mutations on an external
+;; hidden script, I define variables in this external hidden script
+;; and reference them in the configuration. This way the logic stays
+;; in the public configuration file so that everyone can take a look,
+;; but only the variable itself will be hidden from the public.
+
+(require 'im-secrets)
+
 ;;;;; Essential packages
 
 ;; I use =s.el= and =dash.el= extensively. They already come as a
@@ -1086,31 +1111,6 @@ file/project etc."
 ;; TODO: Formalize the notation, something like "ref:<id>" and
 ;; "def:<id>" and have a function that finds this specific id in the
 ;; current project.
-
-;;;;; Load path
-
-(defconst im-load-path (expand-file-name "~/.emacs.d/load/")
-  "The path that I keep my extra stuff.
-Probably stuff that not committed to git.")
-
-(defconst im-packages-path (expand-file-name "~/.emacs.d/packages/")
-  "The path that I keep my experimental packages in.
-These packages are not published as a separate project but lives
-in my dotfiles repository.")
-
-(add-to-list 'load-path im-load-path)
-(add-to-list 'load-path im-packages-path)
-
-;; Also load ~im-secrets~ from =load-path=. I'll be utilizing some
-;; variables defined here throughout my configuration. It contains
-;; some api-keys, some tokens or some passwords etc. that I don't want
-;; to leak into public. Instead of doing mutations on an external
-;; hidden script, I define variables in this external hidden script
-;; and reference them in the configuration. This way the logic stays
-;; in the public configuration file so that everyone can take a look,
-;; but only the variable itself will be hidden from the public.
-
-(require 'im-secrets)
 
 ;;;; Basics
 
@@ -7989,6 +7989,7 @@ This happens to me on org-buffers, xwidget-at tries to get
 ;;;;; im-tab --- my tab related extensions
 
 (use-package im-tab
+  :straight nil
   :general
   (im-leader
     ;; Save current tab window configuration to a key
