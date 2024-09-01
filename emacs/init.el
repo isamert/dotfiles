@@ -7977,6 +7977,19 @@ This happens to me on org-buffers, xwidget-at tries to get
   :init
   (add-hook 'im-git-commit-finished-hook #'im-update-git-state))
 
+;;;;; im-shiori -- Shiori bookmark manager integration
+
+(use-package im-shiori
+  :straight nil
+  :defer t
+  :custom
+  (im-shiori-url im-homeserver-shiori-url)
+  (im-shiori-username im-homeserver-username)
+  (im-shiori-password im-homeserver-password)
+  (im-shiori-elfeed-tags '(later bookmark shiori))
+  :init
+  (eval-after-load 'elfeed #'im-shiori-enable-elfeed-support))
+
 ;;;; Editing
 
 ;;;;; Breaking long texts/comments into multiple lines
