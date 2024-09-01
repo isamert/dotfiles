@@ -1321,7 +1321,7 @@ I explicitly disable this mode for some modes in my configuration
 using this function."
   (setq-local global-hl-line-mode nil))
 
-;;;;; Fonts and theme
+;;;;; Themes
 
 (use-package modus-themes
   :defer t)
@@ -1337,23 +1337,26 @@ using this function."
    `(tab-bar
      ((t (:background ,(or (doom-color 'bg-alt) 'unspecified) :foreground ,(or (doom-color 'fg-alt) 'unspecified)))))))
 
-(defconst im-theme-day
-  '(;; Pinkish white theme, really nice to look at.
-    ef-summer)
-  "Theme for the day.")
+(use-package im-adaptive-theme
+  :straight nil
+  :hook (after-init . im-adaptive-theme-enable)
+  :custom
+  (im-adaptive-theme-day-themes
+   '(;; Pinkish white theme, really nice to look at.
+     ef-summer))
+  (im-adaptive-theme-night-themes
+   '(;; Grayish theme with great colors.
+     doom-one
+     ;; A regular black theme with nice amount of contrast.
+     modus-vivendi
+     ;; Like solarized but much nicer colors.
+     ef-melissa-dark
+     ;; like ef-summer but dark. Black and purple.
+     ef-cherie
+     ;; Nice dark theme with good contrast.
+     doom-Iosvkem)))
 
-(defconst im-theme-night
-  '(;; Grayish theme with great colors.
-    doom-one
-    ;; A regular black theme with nice amount of contrast.
-    modus-vivendi
-    ;; Like solarized but much nicer colors.
-    ef-melissa-dark
-    ;; like ef-summer but dark. Black and purple.
-    ef-cherie
-    ;; Nice dark theme with good contrast.
-    doom-Iosvkem)
-  "Theme for the night.")
+;;;;; Fonts
 
 (defconst im-fonts
   '("FiraCode Nerd Font"
@@ -1384,81 +1387,7 @@ If NEXT is non-nil, then use the next font."
                         :height im-font-height)
     (setq im-current-font font)))
 
-(use-package solar
-  :straight (:type built-in)
-  :defer t
-  :autoload (solar-sunrise-sunset))
-
 (add-hook 'after-init-hook #'im-set-font)
-(add-hook 'after-init-hook #'im-adaptive-theme-enable)
-
-(defvar im-adaptive-theme--next-timer nil)
-(defvar im-adaptive-theme--day-timer nil)
-(defvar im-adaptive-theme--night-timer nil)
-
-(defun im-adaptive-theme-enable ()
-  (interactive)
-  (when im-adaptive-theme--next-timer
-    (cancel-timer im-adaptive-theme--next-timer))
-  (when im-adaptive-theme--day-timer
-    (cancel-timer im-adaptive-theme--day-timer))
-  (when im-adaptive-theme--day-timer
-    (cancel-timer im-adaptive-theme--night-timer))
-  (setq im-adaptive-theme--next-timer
-        (run-at-time
-         "24:10" nil
-         #'im-adaptive-theme-enable))
-  (cl-flet ((pick-and-load-theme-from
-             (lst)
-             (let ((theme (if (listp lst)
-                              (nth (random (length lst)) lst)
-                            lst)))
-               (message ">> Loading %s theme..." theme)
-               (mapc #'disable-theme custom-enabled-themes)
-               (load-theme theme :no-confirm)
-               (message ">> Loading %s theme...Done" theme))))
-    (-let* ((((sunrise) (sunset) _daylight) (solar-sunrise-sunset (im-current-date)))
-            (switch-to-day-hour (1+ sunrise))
-            (switch-to-night-hour (1- sunset))
-            (current-hour (string-to-number (format-time-string "%H"))))
-      (if (and (> current-hour switch-to-day-hour)
-               (< current-hour switch-to-night-hour))
-          (pick-and-load-theme-from im-theme-day)
-        (pick-and-load-theme-from im-theme-night))
-      (when (< current-hour switch-to-day-hour)
-        (setq
-         im-adaptive-theme--day-timer
-         (run-at-time
-          ;; Switch to day theme 1 hour after sunrise.
-          (im-hour-number-to-hour-string switch-to-day-hour)
-          nil
-          (lambda () (pick-and-load-theme-from im-theme-day)))))
-      (when (< current-hour switch-to-day-hour)
-        (setq
-         im-adaptive-theme--night-timer
-         (run-at-time
-          ;; Switch to night theme 1 hour before sunset
-          (im-hour-number-to-hour-string switch-to-night-hour)
-          nil
-          (lambda () (pick-and-load-theme-from im-theme-night))))))))
-
-(defun im-hour-number-to-hour-string (hour)
-  "Convert given HOUR number to hour string, like  20.67 to \"20:40\"."
-  (let* ((whole (truncate hour))
-         (fraction (* 60 (- hour whole))))
-    (format "%02d:%02d" whole (round fraction))))
-
-(defun im-current-date ()
-  "Return date in the format of \\='(MONTH DAY YEAR)."
-  (mapcar #'string-to-number (s-split "," (format-time-string "%m,%d,%Y"))))
-
-(defun im-reload-theme ()
-  "To get rid of some artifacts."
-  (interactive)
-  (let ((theme (car custom-enabled-themes)))
-    (mapc #'disable-theme custom-enabled-themes)
-    (when theme
-      (load-theme theme :no-confirm))))
 
 ;;;;; prettify-symbols-mode
 
