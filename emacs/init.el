@@ -7180,24 +7180,25 @@ in the DM section of the official Slack client."
   :config
   (setq wolfram-alpha-app-id im-wolfram-alpha-app-id))
 
-;;;;; org-ai
+;;;;; org-ai & im-ai -- interactions with LLMs
 
 ;; There are bunch of Emacs-ChatGPT integrations and org-ai seems to
 ;; be best as it fits my workflow quite well. Besides being useful in
 ;; org-mode, it also has org-mode independent features.
 
-(defvar im-org-ai-default-model "gpt-4o-mini")
-(defvar im-org-ai-powerful-model "gpt-4o")
-
+;; FIXME: Highlighting in AI blocks does not work even with the trick
+;; mentioned in the README.  I tried it in a minimal config and it
+;; works. Probably an issue in my config.
 (use-package org-ai
   :straight (:host github :repo "rksm/org-ai")
   :hook (org-mode . org-ai-mode)
+  :custom
+  (org-ai-default-chat-model "gpt-4o")
+  (org-ai-default-max-tokens 2000)
+  (org-ai-openai-api-token im-openai-api-key)
+  (org-ai-default-chat-system-prompt "You're an helpful assistant designed to provide helpful, accurate, and concise responses. Your primary focus should be on delivering quick and clear solutions, especially for programming-related queries. Focus on providing quick, clear solutions. When appropriate, offer additional insights, alternative approaches (such as using standard functions over ad-hoc implementations), or different perspectives to enhance user understanding or outcomes along with the original solution. Keep replies relevant, to the point, and free from unnecessary explanations or obvious/elementary information.")
   :config
-  (add-to-list 'org-ai-chat-models "gpt-4o-mini")
-  (setq org-ai-default-chat-model im-org-ai-default-model)
-  (setq org-ai-default-max-tokens 2000)
-  (setq org-ai-openai-api-token im-openai-api-key)
-  (setq org-ai-default-chat-system-prompt "You're an helpful assistant designed to provide helpful, accurate, and concise responses. Your primary focus should be on delivering quick and clear solutions, especially for programming-related queries. Focus on providing quick, clear solutions. When appropriate, offer additional insights, alternative approaches (such as using standard functions over ad-hoc implementations), or different perspectives to enhance user understanding or outcomes along with the original solution. Keep replies relevant, to the point, and free from unnecessary explanations or obvious/elementary information."))
+  (add-to-list 'org-ai-chat-models "gpt-4o-mini"))
 
 (defun im-org-ai-toggle-gpt-model ()
   "Toggle GPT model of current org-ai block.
@@ -7229,9 +7230,15 @@ Also removes the answers, if user wants it."
             (when (and start end)
               (delete-region start end))))))))
 
-;; FIXME: Highlighting in AI blocks does not work even with the trick
-;; mentioned in the README.  I tried it in a minimal config and it
-;; works. Probably an issue in my config.
+(use-package im-ai
+  :straight nil
+  :custom
+  (im-ai-file "~/Documents/notes/extra/gpt.org")
+  :general
+  (im-leader-v
+    "eg" #'im-ai
+    "sa" #'im-ai-snippet
+    "sA" #'im-ai-snippet-superior))
 
 ;;;;; tmr.el -- timers, reminders etc.
 
@@ -13663,154 +13670,6 @@ TARGET quickly."
       (insert result)
       (current-buffer))))
 
-;;;;; im-gpt
-
-(im-leader-v "eg" #'im-gpt)
-
-(defvar im-gpt-prompts
-  '((:display "[EMPTY]"
-     :empty t)
-    (:prompt "Summarize the following section: #{region}" :region t)
-    (:prompt "Add documentation to the following code: #{region}" :region t)
-    (:prompt "Add documentation to the following Elisp code: #{region}"
-     :system "You are an Emacs lisp and documentation expert. You add inline documentation to given code by complying with Emacs lisp documentation conventions (refer parameters in UPPERCASE style without quoting them, use `this' style quoting for other Elisp objects/references). Refer to \"Tips for Documentation Strings\" in Emacs manual. ONLY return the documentation string in quotes, without repeating the code."
-     :region t)
-    (:display "Add documentation testing to the following Elisp code."
-     :prompt "You are an Emacs lisp and documentation expert. You create tests for given function and add them into the documentation string of the function in the following format:
-
->> <TEST-CODE>
-=> <TEST-RESULT>
-
-Where <TEST-CODE> is the test itself, like (+ 1 1), and <TEST-RESULT> is the result of calling <TEST-CODE>, like 2.
-
-Here is the function:
-#{code}"
-     :region t)
-    (:prompt "Explain following code: #{code}" :region t)
-    (:display "Grammar, spelling fix/improve"
-     :prompt "The sentence is:  #{region}"
-     :system "I want you to act as an English translator, spelling corrector and improver. I will speak to you in any language and you will detect the language, translate it and answer in the corrected and improved version of my text, in English. I want you to replace my simplified words and sentences with more upper level English words and sentences. Keep the meaning same. I want you to only reply the correction, the improvements and nothing else, do not write explanations. Keep the text to the point, don't add too many mumbo-jumbo. Also do corrections based on the context, like using proper abbreviations etc.")
-    (:display "Rambling"
-     :prompt
-     (lambda ()
-       (format "I will give you my ramblings about a topic. I want you to turn it into a coherent piece of text. Remove unnecessary parts (like if I changed my mind during the text, only include the latest idea). Fix grammatical errors and misspellings. Make it easy to read and understand. Summarize the points without loosing important details. Turn them into bullet points. Here is your first input: \n\n %s" (read-string "Ramble: " (im-region-or ""))))))
-  "A list of prompts for the `im-gpt' function.
-
-Each element is a property list with the following keys:
-- PROMPT: The user prompt.
-- DISPLAY (Optional) The text to show to the user while selecting prompts.
-- SYSTEM: (Optional) The system prompt for the AI assistant.
-- REGION: (Optional) A boolean indicating whether to include the
-  selected region when calling `im-gpt' with the prompt.
-- MODEL: (Optional) Model to use with this prompt. (Default=`org-ai-default-chat-model')")
-
-(defvar im-gpt-file "~/Documents/notes/extra/gpt.org"
-  "If non-nil, use this file to output interactive `im-gpt' requests.")
-(defconst im-gpt--buffer "*im-gpt*")
-
-(cl-defun im-gpt (prompt
-                  &key
-                  (system)
-                  (include-system)
-                  (model org-ai-default-chat-model)
-                  (callback)
-                  (empty))
-  "Use the ChatGPT to generate responses to user prompts.
-
-- PROMPT is the user input to generate a response for.
-- SYSTEM is the system prompt for the AI assistant.
-- INCLUDE-SYSTEM, if non-nil, includes SYSTEM prompt to PROMPT.
-  I found that it's more reliable to include system prompt to
-  every message.
-- CALLBACK is a function that takes the prompt and the generated
-  response as an argument and performs custom actions with it. It
-  defaults to a function that displays the response in a separate
-  buffer using `markdown-mode' and switches to that buffer.
-
-When called interactively, this function prompts for PROMPT and
-lets you customize SYSTEM and CALLBACK. See `im-gpt-prompts' for
-predefined prompts.
-
-Version: 2023-08-26
-- Defer interactive usage to org-ai as much as possible.
-- Ask for model to use if called with C-u.
-Version: 2023-07-16"
-  (interactive
-   (let* ((selection (im-completing-read
-                      "Prompt: "
-                      (--filter (or (and (use-region-p) (plist-get it :region)) t)
-                                im-gpt-prompts)
-                      :formatter (lambda (it)
-                                   (or (plist-get it :display)
-                                       (plist-get it :prompt)))))
-          (prompt (or (plist-get selection :prompt) selection))
-          (system (plist-get selection :system))
-          (model (plist-get selection :model))
-          (empty (plist-get selection :empty))
-          (include-system (plist-get selection :include-system)))
-     (list
-      prompt
-      :model (cond
-              (current-prefix-arg
-               (completing-read (format "Model [current=%s]: " org-ai-default-chat-model) org-ai-chat-models))
-              (model model)
-              (t org-ai-default-chat-model))
-      :system system
-      :include-system (or include-system system)
-      :empty empty)))
-  (when (functionp prompt)
-    (setq prompt (funcall prompt))
-    (deactivate-mark))
-  (when empty
-    (setq prompt (im-region-or "")))
-  (when-let ((region (im-region-or nil)))
-    (cond
-     ((s-matches? "#{\\(code\\|region\\)" prompt)
-      (setq prompt (s-replace "#{region}" region prompt))
-      (setq prompt (s-replace "#{code}" (format "\n```\n%s\n```\n" region) prompt)))
-     ((use-region-p)
-      (setq prompt (concat prompt "\n\n" region)))))
-  (cond
-   ;; If called interactively, delegate to `org-ai-prompt' with given
-   ;; prompt and system prompt. This automatically streams to
-   ;; `im-gpt--buffer'.
-   ((called-interactively-p 'interactive)
-    (let ((buffer
-           (if im-gpt-file
-               (find-file-noselect im-gpt-file)
-             (get-buffer-create im-gpt--buffer))))
-      (with-current-buffer buffer
-        (goto-char (point-max))
-        (insert "* " (format-time-string "%Y-%m-%d %a %H:%M"))
-        (unless empty
-          (insert " -- " (s-truncate 50 prompt)))
-        (insert "\n")
-        (insert (format "#+begin_ai markdown :model \"%s\" :sys-everywhere %s\n" model include-system))
-        (when system
-          (insert (format "[SYS]: %s\n\n" system)))
-        (insert (format "[ME]: %s\n" prompt))
-        (insert "#+end_ai\n")
-        (when empty
-          (forward-line -2)
-          (end-of-line))
-        (unless (eq major-mode 'org-mode)
-          (org-mode))
-        (unless org-ai-mode
-          (org-ai-mode))
-        (unless empty
-          (org-ai-complete-block)))
-      (unless (im-buffer-visible-p buffer)
-        (switch-to-buffer buffer))
-      buffer))
-   (t
-    (setq prompt (if include-system (concat system "\n\n" prompt) prompt))
-    (org-ai-chat-request
-     :messages `[(:role system :content ,system)
-                 (:role user :content ,prompt)]
-     :model model
-     :callback (lambda (content role usage)
-                 (funcall callback prompt content))))))
-
 ;;;;; im-extract
 
 (cl-defun im-extract (files)
@@ -13926,122 +13785,6 @@ Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
        (region-beginning)
        (region-end)
        (lambda () yaml)))))
-
-;;;;; ai snippets
-
-(defconst im-org-ai-snippet-buffer "*im-org-ai-snippet-buffer*")
-(defun im-ai-snippet (prompt)
-  "Ask for a snippet and get it directly inside your buffer."
-  (interactive "sQuestion: ")
-  (org-ai-interrupt-current-request)
-  (with-current-buffer (get-buffer-create im-org-ai-snippet-buffer)
-    (erase-buffer))
-  (let* ((cb (current-buffer))
-         (region (when (use-region-p)
-                   (prog1
-                       (buffer-substring-no-properties (region-beginning) (region-end))
-                     (delete-region (region-beginning) (region-end)))))
-         (org-ai-default-chat-model im-org-ai-powerful-model))
-    (org-ai-prompt
-     (s-trim
-      (format
-       "Provide a code snippet based on the following instructions:
-- Respond ONLY with the code snippet.
-- Present the code in plain text; avoid markdown or any extra formatting.
-- Include NO explanations or additional text.
-- Use ONLY the programming language specified.
-
-Language: %s
-Task: %s
-
-%s"
-       (let ((mode-name
-              (if (and (derived-mode-p 'org-mode) (org-in-src-block-p))
-                  (org-element-property :language (org-element-at-point))
-                (symbol-name major-mode))))
-         (->>
-          mode-name
-          (s-chop-suffix "-mode")
-          (s-chop-suffix "-ts")
-          (s-replace-all '(("-" . " ")
-                           ("interaction" . "")))
-          (s-titleize)))
-       prompt
-       (if region region "")))
-     :output-buffer (current-buffer)
-     :follow nil
-     :callback (lambda () (message ">> AI request finished.")))))
-
-(cl-defun im-ai (prompt &key follow model sys-prompt output-buffer callback)
-  "Like `org-ai-prompt' but do not stream by default.
-CALLBACK is called with the result, if OUTPUT-BUFFER is nil.  If
-OUTPUT-BUFFER is not nil, then the result is streamed to the
-OUTPUT-BUFFER."
-  (org-ai-interrupt-current-request)
-  (let ((buff (or output-buffer (get-buffer-create " *im-ai*")))
-        (org-ai-default-chat-model model))
-    (with-current-buffer buff
-      (unless output-buffer
-        (erase-buffer))
-      (org-ai-prompt
-       prompt
-       :output-buffer buff
-       :sys-prompt sys-prompt
-       :follow follow
-       :callback
-       (lambda ()
-         (im-run-deferred
-          (unless output-buffer
-            (funcall callback (with-current-buffer buff (buffer-string))))))))))
-
-(defun im-ai-snippet-superior (input)
-  "Like `im-ai-snippet' but superior and slower.
-Requesting from AI to conform a specific output type reduces it's answer
-quality.  This one, compared to `im-ai-snippet' it simply asks the
-question without any formatting restrictions and then formats the given
-answer with another ai call, but this time with a cheaper model to just
-format the result.
-
-I use this when `im-ai-snippet' fails."
-  (interactive "sQuestion: ")
-  (let ((prompt (format
-                 "%s in %s"
-                 input
-                 (let ((mode-name
-                        (if (and (derived-mode-p 'org-mode) (org-in-src-block-p))
-                            (org-element-property :language (org-element-at-point))
-                          (symbol-name major-mode))))
-                   (->>
-                    mode-name
-                    (s-chop-suffix "-mode")
-                    (s-chop-suffix "-ts")
-                    (s-replace-all '(("-" . " ")
-                                     ("interaction" . "")))
-                    (s-titleize))))))
-    (im-ai
-     prompt
-     :sys-prompt org-ai-default-chat-system-prompt
-     :model im-org-ai-powerful-model
-     :callback
-     (lambda (answer)
-       (im-ai
-        (format "For the following question and answer, convert it to a snippet:
-- Strip out explanations
-- Keep the code only, convert it to something directly usable.
-- Incorporate necessary commentaries as code comments.
-- Do not use any markdown formatting, only include the code snippet in the answer.
-
-The question: %s
-
-The answer:
-
-%s" prompt answer)
-        :model im-org-ai-default-model
-        :output-buffer (current-buffer))))))
-
-(im-leader-v
-  "sa" #'im-ai-snippet
-  "sA" #'im-ai-snippet-superior)
 
 ;;;;; im-test -- test related utility functions
 
