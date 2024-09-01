@@ -323,12 +323,22 @@ It can be installed through homebrew:
 
 *** Application shortcuts
 #+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
-  hyper - r : emacsclient -c
-  hyper - i : emacsclient --eval "(im-globally (im-select-any-snippet))"
-  hyper - o : emacsclient --eval "(im-globally (im-people))"
-  hyper - g : emacsclient --eval "(im-globally (im-gitlab-select-project))"
-  hyper - v : emacsclient --eval "(empv-toggle-video)"
-  hyper - return : open -n -a 'Alacritty.app'
+hyper - r : emacsclient -c
+hyper - i : emacsclient --eval "(im-globally (im-select-any-snippet))"
+hyper - o : emacsclient --eval "(im-globally (im-people))"
+hyper - g : emacsclient --eval "(im-globally (im-gitlab-select-project))"
+hyper - v : emacsclient --eval "(empv-toggle-video)"
+hyper - return : open -n -a 'Alacritty.app'
+
+# Define a mode name shortcuts
+:: shortcuts @
+# From default mode, F13 opens shortcuts mode
+f13 ; shortcuts
+# In shortcuts mode, F13 returns back to default mode
+shortcuts < f13 ; default
+# In shortcuts mode, m returns back to normal mode by simulating f13
+# key and then does the command
+shortcuts < m : skhd -k "f13";  emacsclient --eval "(im-toggle-mic)"
 #+end_src
 
 *** Firefox specific

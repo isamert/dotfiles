@@ -14216,14 +14216,26 @@ Asks for STATUS if called interactively."
     (s-chop-suffix
      "d" (cadr (read-multiple-choice "Your mic should be " '((?m "muted") (?u "unmuted") (?t "toggled")))))))
   (im-when-on
-   :linux (user-error "Not implemented for gnu/linux")
-   :darwin (set-process-filter
-            (start-process "*SwitchAudioSourceMic*" "*SwitchAudioSourceMic*"
-                           "SwitchAudioSource" "-t" "input" "-m" status)
-            (lambda (proc out)
-              (message
-               "Your mic is %s"
-               (propertize (car (s-match "\\(\\(un\\)?muted\\)" (s-trim out))) 'face 'bold))))))
+   :linux
+   (user-error "Not implemented for gnu/linux")
+   :darwin
+   (set-process-filter
+    (start-process "*SwitchAudioSourceMic*" "*SwitchAudioSourceMic*"
+                   "SwitchAudioSource" "-t" "input" "-m" status)
+    (lambda (proc out)
+      (let* ((status (car (s-match "\\(\\(un\\)?muted\\)" (s-trim out))))
+             (icon (if (equal status "unmuted") "🔊" "🔇")))
+        (unless (frame-focus-state)
+          (let ((alert-fade-time 5)
+                (alert-default-style 'osx-notifier))
+            (alert icon
+                   :title (format "Mic is %s" status)
+                   :persistent nil
+                   :never-persist t)))
+        (message
+         "Your mic is %s %s"
+         (propertize status 'face 'bold)
+         icon))))))
 
 (defun im-toggle-mic ()
   "Toggle the mute status of your microphone."
