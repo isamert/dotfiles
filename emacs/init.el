@@ -99,6 +99,7 @@
 ;; Useful to see which packages take long time to load
 ;; (require 'use-package)
 ;; (setq use-package-compute-statistics t)
+(setq use-package-enable-imenu-support t) ;; With that, IMenu will show packages section
 
 (defvar bootstrap-version)
 (defvar straight-base-dir)
@@ -507,7 +508,7 @@ complicates things or not sufficient."
 ;; into another file in this directory (like eat-zsh-integration.sh)
 ;; and give that file?
 
-(cl-defun im-tangle-file (&key _path _contents)
+(cl-defun im-tangle-file (&key _doc _path _contents)
   (message "WARN: Implement im-tangle-file"))
 
 ;;;;;; Elisp utils
@@ -4764,7 +4765,7 @@ properly."
 (setq browse-url-handlers
       `((".*jtracker.trendyol.*/browse/.*" . ,(im-purified-url-handler #'im-jira-view-ticket))
         (".*slack.com/archives/.*" . ,(im-purified-url-handler #'im-slack-open-link))
-        (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)?\\(&.*\\)?$" . ,(im-purified-url-handler #'reddigg-view-comments))
+        (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)\\(/[a-zA-Z0-9_-]+/?\\)?\\(&.*\\)?$" . ,(im-purified-url-handler #'reddigg-view-comments))
         (".*news.ycombinator.com/item\\?id=.*" . ,(im-purified-url-handler #'hnreader-comment))
         (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . ,(im-purified-url-handler #'im-open-stackexchange-link))
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . ,(im-purified-url-handler #'empv-play-or-enqueue))
@@ -5623,7 +5624,7 @@ non-nil so that you only add it to `project-prefix-map'."
     (vterm t)))
 
 (defun im-eshell (name)
-  (interactive (list (read-string "Buffer name: " (format "$eshell: %s/%s" (im-current-project-name) (buffer-name)))))
+  (interactive (list (read-string "Buffer name: " (generate-new-buffer-name (format "*$eshell: %s*" (im-current-project-name))))))
   (with-current-buffer (eshell t)
     (rename-buffer name t)
     (current-buffer)))
@@ -10180,6 +10181,7 @@ SELECT * FROM _ LIMIT 1;
   ;; TODO: need a way to display on which tab am I, possibly inside
   ;; modeline?
   (tab-bar-show nil)
+  (tab-bar-history-limit 20)
   ;; Show numbers before tab names
   (tab-bar-tab-hints t)
   (tab-bar-auto-width nil)
