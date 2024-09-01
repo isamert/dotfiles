@@ -4,17 +4,13 @@
 
 ;; isamert's configuration
 
-;;; Code:
-
-;;;; Introduction
-
 ;; This is my Emacs configuration. My main focus is sanity. I'm a
 ;; person who get frustrated pretty easily. So instead of optimizing
 ;; the time spent on doing things, I try to find ways of doing things
 ;; that does not make me frustrated. Most of the time you get speed
 ;; boost as a byproduct.
 
-;;;;; Emacs installation
+;;;; Emacs installation
 
 ;; I use my distributions package manager to install Emacs. However,
 ;; in MacOS (my work computer) I use /homebrew/ and /emacs-plus/
@@ -91,6 +87,8 @@
 
 ;; Just do ~M-x straight-pull-all~. I do this quite infrequently. If
 ;; everything is working fine as it is, I tend to not update anything.
+
+;;; Code:
 
 ;;;; Preparation
 
@@ -193,8 +191,6 @@
 (use-package im-async-await
   :straight nil
   :defer t)
-
-;; TODO: Add some primitives with async
 
 ;;;;;; emacs-async
 
@@ -10189,7 +10185,7 @@ SELECT * FROM _ LIMIT 1;
   ;; Experimenting with not showing tab-bar at all.
   ;; TODO: need a way to display on which tab am I, possibly inside
   ;; modeline?
-  (tab-bar-show nil)
+  (tab-bar-show t)
   (tab-bar-history-limit 20)
   ;; Show numbers before tab names
   (tab-bar-tab-hints t)
