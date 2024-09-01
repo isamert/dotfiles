@@ -7986,6 +7986,22 @@ This happens to me on org-buffers, xwidget-at tries to get
   :init
   (eval-after-load 'elfeed #'im-shiori-enable-elfeed-support))
 
+;;;;; im-tab --- my tab related extensions
+
+(use-package im-tab
+  :general
+  (im-leader
+    ;; Save current tab window configuration to a key
+    "ww2" #'im-tab-configuration-save-current
+    "ww3" #'im-tab-configuration-save-current
+    "ww4" #'im-tab-configuration-save-current
+    "ww5" #'im-tab-configuration-save-current
+    ;; Restore a saved configuration with a key
+    "w2" #'im-tab-configuration-restore-current
+    "w3" #'im-tab-configuration-restore-current
+    "w4" #'im-tab-configuration-restore-current
+    "w5" #'im-tab-configuration-restore-current))
+
 ;;;; Editing
 
 ;;;;; Breaking long texts/comments into multiple lines
