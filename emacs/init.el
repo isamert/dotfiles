@@ -14111,6 +14111,45 @@ existing buffer and opens the link in tuir."
       (with-current-buffer "*tuir*"
         (setq-local evil-escape-inhibit t)))))
 
+;;;;; Global Mode Line formatting
+
+;; Automatically format global mode-line just like I wanted.  There is
+;; no easy way of editing the order of items inside
+;; `global-mode-string' and no really way to inject adjacent items to
+;; already existing items.  So I simply format it just like what I
+;; want periodically.
+
+(when tab-bar-show
+  (run-at-time 10 45 #'im-update-global-mode-line))
+
+(defun im-update-global-mode-line ()
+  (let ((all-the-icons-default-adjust 0))
+    (setq
+     global-mode-string
+     `(""
+       ,@(when (bound-and-true-p appt-mode-string)
+           (list
+            (all-the-icons-faicon "calendar-check-o")
+            " "
+            appt-mode-string))
+       ,@(when (and (functionp #'org-clocking-p) (org-clocking-p))
+           (list
+            (all-the-icons-fileicon "org")
+            " "
+            org-mode-line-string))
+       ,@(when display-time-string
+           (list
+            (all-the-icons-wicon
+             (format "time-%s"
+                     ;; Convert to number first so that leading 0s are stripped away
+                     (string-to-number (format-time-string "%I"))))
+            " "
+            display-time-string))))))
+
+(with-eval-after-load 'org
+  (add-hook 'org-clock-in-hook #'im-update-global-mode-line)
+  (add-hook 'org-clock-out-hook #'im-update-global-mode-line))
+
 ;;;; Operating system related
 
 ;;;;; Sound/audio output chooser
