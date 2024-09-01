@@ -173,30 +173,26 @@
   (elnode-error-log-to-messages nil))
 
 ;; JS-like async/await. Simply return a promise from a function with
-;; (promise-new (lambda (resolve reject) (funcall resolve arg)))
+;;
+;; #+begin_src elisp
+;; (promise-new
+;;  (lambda (resolve reject)
+;;    (funcall resolve arg)))
+;; #+end_src
+;;
 ;; and then
-;; (async-defun some-function () (message "Result is %s" (await promise-returned-function)))
+;;
+;; #+begin_src elisp
+;; (async-defun some-function ()
+;;   (message "Result is %s" (await promise-returned-function)))
+;; #+end_src
+;;
 (use-package async-await
-  :demand t
-  :config
-  (require 'async-await))
+  :autoload (async-defun))
 
-(defmacro async-cl-defun (name arglist &rest body)
-  "Same as `async-defun' but uses `cl-defun' to define the function."
-  (declare (doc-string 3) (indent 2))
-  (cl-assert lexical-binding)
-  (let* ((parsed-body (macroexp-parse-body body))
-         (declarations (car parsed-body))
-         (exps (macroexpand-all
-                `(cl-macrolet
-                     ((await (value)
-                             `(async-await--check-return-value (iter-yield ,value))))
-                   ,@(cdr parsed-body))
-                macroexpand-all-environment)))
-    `(cl-defun ,name ,arglist
-       ,@declarations
-       (async-await--awaiter
-        (funcall (iter2-lambda () ,exps))))))
+(use-package im-async-await
+  :straight nil
+  :defer t)
 
 ;; TODO: Add some primitives with async
 
