@@ -14047,6 +14047,54 @@ NC_ID property is set to the entry."
       (insert (format "\n%s" thing))
       (message "Done."))))
 
+;;;;; im-tuir  -- Emacs tuir (reddit terminal viewer) wrapper
+
+;; Tuir can be installed like:
+;;
+;; #+begin_src sh
+;; python3 -m venv .
+;; bin/activate
+;; python3 -m pip install tuir-continued
+;; #+end_src
+;;
+;; I had to change the ~open_browser~ function of tuir so that it works
+;; properly on MacOS.
+;;
+;; The file can be found under:
+;; =tuir/lib/python3.12/site-packages/tuir/terminal.py=
+;;
+;; #+begin_src python
+;; def open_browser(self, url):
+;;     with self.suspend():
+;;         if self.config['force_new_browser_window']:
+;;             webbrowser.open_new(url)
+;;         else:
+;;             webbrowser.open_new_tab(url)
+;; #+end_src
+
+(defun im-tuir (&optional link)
+  "A wrapper for terminal `tuir' command.
+If LINK is non-nil, then open the link instead of homepage.  Calling
+this function without a link should open the already existing tuir
+buffer, otherwise it will create one.  Calling it with link kills the
+existing buffer and opens the link in tuir."
+  (interactive)
+  (if (and (not link) (get-buffer "*tuir*"))
+      (switch-to-buffer "*tuir*")
+    (let ((eat-buffer-name "*tuir*")
+          (eat-kill-buffer-on-exit t)
+          (evil-default-state 'insert))
+      (when (and link (get-buffer "*tuir*"))
+        (let ((kill-buffer-query-functions nil))
+          (kill-buffer "*tuir*")))
+      (eat
+       (let ((path "~/workspace/apps/tuir/bin/tuir"))
+         (if link
+             (format "%s '%s'" path link)
+           path)))
+      (with-current-buffer "*tuir*"
+        (setq-local evil-escape-inhibit t)))))
+
 ;;;; Operating system related
 
 ;;;;; Sound/audio output chooser
