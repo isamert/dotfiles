@@ -7111,7 +7111,19 @@ in the DM section of the official Slack client."
    "M-r" #'separedit)
   :config
   (setq separedit-default-mode 'markdown-mode)
-  (setq separedit-continue-fill-column t))
+  (setq separedit-continue-fill-column t)
+  (advice-add
+   'separedit--select-mode
+   :override
+   (lambda ()
+     (completing-read "Select major mode: " obarray
+                      (lambda (x)
+                        (and (fboundp x)
+                             (commandp x)
+                             (string-match "-mode$" (symbol-name x))))
+                      t
+                      nil 'separedit--mode-history (or (car separedit--mode-history)
+                                                       (format "%s" major-mode))))))
 
 ;;;;; all-the-icons
 
