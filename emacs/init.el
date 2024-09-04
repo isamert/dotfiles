@@ -9397,15 +9397,12 @@ to invalidate the cache, pass a non-nil value for INVALIDATE."
 ;; - =lein new app project-name=
 ;; - =cider-jack-in=
 
-
 (use-package cider
-  :after clojure
+  :defer t
   :general
-  (:keymaps 'clojure-mode-map :states 'normal
-   "K" #'cider-doc)
-  (:keymaps 'cider-inspector-mode-map :states 'normal
-   "RET" #'cider-inspector-operate-on-point
-   "DEL" #'cider-inspector-pop)
+  (general-def :keymaps 'cider-inspector-mode-map :states 'normal
+    "RET" #'cider-inspector-operate-on-point
+    "DEL" #'cider-inspector-pop)
   :config
   (setq cider-inspector-page-size 50)
   (setq cider-show-error-buffer nil)
@@ -13644,6 +13641,7 @@ TARGET quickly."
    (cond
     ((ignore-errors (symbol-value 'lsp-mode)) #'im-peek-doc--lsp)
     ((-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'im-peek-doc--elisp)
+    ((equal major-mode 'clojure-mode) #'im-peek-doc--clojure)
     (eldoc-mode #'eldoc-doc-buffer))))
 
 ;; TODO: Add lsp mode etc.
@@ -13678,6 +13676,11 @@ TARGET quickly."
       (erase-buffer)
       (insert result)
       (current-buffer))))
+
+(defun im-peek-doc--clojure ()
+  (save-window-excursion
+    (cider-doc)
+    (current-buffer)))
 
 ;;;;; im-extract
 
