@@ -215,6 +215,7 @@ in my dotfiles repository.")
 
 (use-package im-async-await
   :straight nil
+  :autoload (async-cl-defun)
   :defer t)
 
 ;;;;;; emacs-async
@@ -7947,7 +7948,8 @@ This happens to me on org-buffers, xwidget-at tries to get
   :general
   (im-leader
     "gs" #'im-git-status
-    "gc" #'im-git-commit)
+    "gc" #'im-git-commit
+    "ga" #'im-git-commit-amend)
   :init
   (add-hook 'im-git-commit-finished-hook #'im-update-git-state))
 
@@ -7955,7 +7957,6 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 (use-package im-shiori
   :straight nil
-  :defer t
   :custom
   (im-shiori-url im-homeserver-shiori-url)
   (im-shiori-username im-homeserver-username)
