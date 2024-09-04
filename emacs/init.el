@@ -8943,6 +8943,13 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
   (setq lsp-rust-server 'rust-analyzer
         lsp-rust-clippy-preference 'on))
 
+;;;;; web-mode
+
+;; This helps me edit html files with css and javascipt inside them.
+
+(use-package web-mode
+  :mode "\\.html\\'")
+
 ;;;;; javascript
 
 ;;;;;; jsdoc.el
