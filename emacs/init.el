@@ -9063,7 +9063,7 @@ This is used in my snippets."
        (-map #'s-trim)
        (s-join " "))))))
 
-;;;;; typescript
+;;;;; typescript & deno
 
 (setq-default typescript-ts-mode-indent-offset 2)
 
@@ -9072,6 +9072,10 @@ This is used in my snippets."
 (add-hook 'tsx-ts-mode-hook #'im-add-node-modules-to-path)
 (add-hook 'typescript-ts-mode-hook #'hs-minor-mode)
 (add-hook 'tsx-ts-mode-hook #'hs-minor-mode)
+
+(use-package im-deno
+  :straight nil
+  :demand t)
 
 ;;;;;; REPL interaction
 
@@ -9117,54 +9121,6 @@ This is used in my snippets."
 
 (with-eval-after-load 'org
   (add-to-list 'org-src-lang-modes '("deno" . typescript-ts)))
-
-;;;;;; Deno utils
-
-;; Here are some functions that I use while developing with Deno.
-
-;; TODO: Generalize LSP client switching
-(defun im-lsp-switch-to-deno ()
-  "Start `deno-ls' in current buffer."
-  (interactive)
-  (let ((lsp-enabled-clients '(deno-ls)))
-    (ignore-errors
-      (funcall-interactively #'lsp-workspace-shutdown))
-    (let ((default-directory (im-current-project-root))
-          (fname "deno.json"))
-      (unless (file-exists-p fname)
-        (with-temp-buffer (write-file fname))))
-    (lsp)))
-
-(defun im-lsp-switch-to-nodejs ()
-  "Start `ts-ls' in current buffer."
-  (interactive)
-  (let ((lsp-enabled-clients '(ts-ls)))
-    (ignore-errors
-      (funcall-interactively #'lsp-workspace-shutdown))
-    (lsp)))
-
-(defun im-deno-cache-buffer-dependencies (invalidate?)
-  "Install and cache dependencies stated in current Deno file.
-If INVALIDATE? is non-nil, then force reload dependencies instead
-of just pulling non-cached ones."
-  (interactive "P")
-  ;; TODO reload lsp on file on save?
-  (let ((buf (current-buffer)))
-    (save-buffer)
-    (im-shell-command
-     :command (format "deno cache %s %s"
-                      (if invalidate? "-r" "")
-                      (f-relative (buffer-file-name)))
-     :on-start
-     (lambda (&rest _)
-       (message ">> Downloading deps..."))
-     :on-fail
-     (lambda (&rest _)
-       (user-error ">> Downloading deps...Failed!"))
-     :on-finish
-     (lambda (&rest _)
-       (message ">> Downloading deps...Done.")
-       (switch-to-buffer buf)))))
 
 ;;;;; json
 
