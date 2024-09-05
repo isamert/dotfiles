@@ -644,7 +644,9 @@ CALLBACK will be called with the selected commit ref."
   "Asks you a message and does `git commit --amend -m ...'."
   (interactive)
   (let ((buffer-name "*im-git-amend*")
-        (message (read-string "Message: " (shell-command-to-string "git log -1 --pretty=format:'%s'"))))
+        (message (read-string
+                  "Message: "
+                  (s-trim (shell-command-to-string "git log -1 --pretty=%B")))))
     (im-shell-command
      :command "git"
      :args `("commit" "--amend" "-m" ,message)
