@@ -6907,62 +6907,85 @@ properly in MacOS."
     (im-slack--open-message-or-thread (list :message message :room room :team team))
     thread))
 
-(defvar slack-dms '())
-(defun im-slack-dms ()
+(defun im-slack-dms (&optional data)
   "List and open dms.
 Get DMs and MPIMs from client.dms endpoint, sort them by time and
 present to user.  This kind of guarantees the order that you see
-in the DM section of the official Slack client."
+in the DM section of the official Slack client.
+
+Fetches missing channels/users first."
   (interactive)
   (let ((team (or (slack-team-select))))
-    (slack-request
-     (slack-request-create
-      "https://slack.com/api/client.dms?count=250"
-      team
-      :success
-      (cl-function
-       (lambda (&key data &allow-other-keys)
-         (ignore-error (quit minibuffer-quit)
-           (setq slack-dms data)
-           (let* ((selected
-                   (im-completing-read
-                    "Select: "
-                    (--sort
-                     (>
-                      (string-to-number (plist-get (plist-get it :message) :ts))
-                      (string-to-number (plist-get (plist-get other :message) :ts)))
+    (if data
+        (let* ((selected
+                (im-completing-read
+                 "Select: "
+                 (--sort
+                  (>
+                   (string-to-number (plist-get (plist-get it :message) :ts))
+                   (string-to-number (plist-get (plist-get other :message) :ts)))
+                  (append
+                   (plist-get data :mpims)
+                   (plist-get data :ims)))
+                 :sort? nil
+                 :formatter
+                 (lambda (it)
+                   (let ((room-name (slack-room-name (slack-room-find (plist-get it :id) team) team))
+                         (text (plist-get (plist-get it :message) :text)))
+                     (format "%s (%s) - %s"
+                             (propertize room-name 'face '(:weight bold :foreground "systemPinkColor"))
+                             (propertize
+                              (lab--time-ago
+                               (->>
+                                (plist-get (plist-get it :message) :ts)
+                                (s-split "\\.")
+                                car
+                                string-to-number))
+                              'face '(:slant italic :foreground "systemGrayColor"))
+                             (s-truncate 50 text)))))))
+          (slack-room-display
+           (slack-room-find (plist-get selected :id) team)
+           team))
+      (slack-request
+       (slack-request-create
+        "https://slack.com/api/client.dms?count=250"
+        team
+        :success
+        (cl-function
+         (lambda (&key data &allow-other-keys)
+           (ignore-error (quit minibuffer-quit)
+             (let* ((user-ids
                      (append
-                      (plist-get data :mpims)
-                      (plist-get data :ims)))
-                    :sort? nil
-                    :formatter
-                    (lambda (it)
-                      (let ((room-name
-                             (or (ignore-errors
-                                   (slack-room-name (slack-room-find (plist-get it :id) team) team))
-                                 (progn
-                                   (slack-room-list-update
-                                    nil
-                                    (lambda (_) (message ">> Re-run `im-slack-dms'")))
-                                   "???")))
-                            (text (plist-get (plist-get it :message) :text)))
-                        (format "%s (%s) - %s"
-                                (propertize room-name 'face '(:weight bold :foreground "systemPinkColor"))
-                                (propertize
-                                 (lab--time-ago
-                                  (->>
-                                   (plist-get (plist-get it :message) :ts)
-                                   (s-split "\\.")
-                                   car
-                                   string-to-number))
-                                 'face '(:slant italic :foreground "systemGrayColor"))
-                                (s-truncate 50 text)))))))
-             (slack-room-display
-              (slack-room-find (plist-get selected :id) team)
-              team)))))))))
+                      (-non-nil (--map (plist-get (plist-get it :message) :user) (plist-get data :ims)))
+                      (-non-nil (--map (plist-get (plist-get it :message) :user) (plist-get data :mpims)))))
+                    (missing-user-ids (slack-team-missing-user-ids (slack-team-select) user-ids))
+                    (channels (append
+                               (-non-nil (--map (plist-get it :id) (plist-get data :ims)))
+                               (-non-nil (--map (plist-get it :id) (plist-get data :mpims)))))
+                    (missing-channel-ids (-non-nil (--map (if (slack-room-find it (slack-team-select)) nil it) channels)))
+                    (missing-users? (> (length missing-user-ids) 0))
+                    (missing-channels? (> (length missing-channel-ids) 0)))
+               (cond
+                (missing-users?
+                 (message ">> Some people are missing, loading...")
+                 (slack-user-info-request
+                  missing-user-ids
+                  team :after-success
+                  (lambda ()
+                    (message ">> Some people are missing, loading...Done")
+                    (im-slack-dms data))))
+                (missing-channels?
+                 (message ">> Some channels are missing, loading...")
+                 (slack-conversations-info
+                  missing-channel-ids
+                  team :after-success
+                  (lambda ()
+                    (message ">> Some channels are missing, loading...Done")
+                    (im-slack-dms data))))
+                (t (im-slack-dms data))))))))))))
 
 (defun im-slack-select-room ()
-  "Like `slack-select-rooms' but disable sorting and remove muted channels."
+  "Like `slack-select-rooms' but disable sorting."
   (interactive)
   (let* ((team (slack-team-select))
          (alist (slack-room-names
@@ -6974,8 +6997,7 @@ in the DM section of the official Slack client."
                  #'(lambda (rs)
                      (cl-remove-if
                       (lambda (it)
-                        (or (slack-room-hidden-p it)
-                            (slack-room-muted-p it team)))
+                        (slack-room-hidden-p it))
                       rs)))))
     (slack-room-display
      (cdr (im-completing-read "Select: " alist :formatter #'car :sort? nil))
