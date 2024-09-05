@@ -8004,6 +8004,17 @@ This happens to me on org-buffers, xwidget-at tries to get
     "w4" #'im-tab-configuration-restore-current
     "w5" #'im-tab-configuration-restore-current))
 
+;;;;; im-filebrowser --- Filebrowser integration
+
+(use-package im-filebrowser
+  :straight nil
+  :defer t
+  :custom
+  (im-filebrowser-url im-homeserver-filebrowser-url)
+  (im-filebrowser-username im-homeserver-username)
+  (im-filebrowser-password im-homeserver-password)
+  (im-filebrowser-base-path "/ssh:files:"))
+
 ;;;; Editing
 
 ;;;;; Breaking long texts/comments into multiple lines
