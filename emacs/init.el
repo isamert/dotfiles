@@ -9309,66 +9309,6 @@ work.  You need to enter full path while importing by yourself."
          (vterm-buffer-name "*vterm-jshell*"))
     (vterm)))
 
-;;;;;; maven helpers
-
-;; TODO: Fish shell already provides something similar (see fish-completion). Maybe this is not needed.
-
-(defun im-maven-goal-run (&optional invalidate)
-  "Select a maven goal and run it.
-This function caches the goal list in the firt run. If you want
-to invalidate the cache, pass a non-nil value for INVALIDATE."
-  (interactive "P")
-  (let* ((cache-dir (expand-file-name "~/.cache/im-maven/"))
-         (cache-file (f-join cache-dir (concat (s-replace "/" "!" (im-current-project-root)) "maven-goals")))
-         goals)
-    (if (and (not invalidate) (f-exists? cache-file))
-        (setq goals (im-deserialize-from-file cache-file))
-      (progn
-        (message "Generating maven goal list, please wait...")
-        (f-mkdir-full-path cache-dir)
-        (setq goals (im-maven-goals-read))
-        (im-serialize-into-file cache-file goals)
-        (message "Generating maven goal list, please wait...Done")))
-    (let ((selected (im-completing-read
-                     "Select maven goal: "
-                     goals
-                     :formatter #'(lambda (x) (format "%s - %s"
-                                                 (propertize (car x) 'face '(:weight bold))
-                                                 (propertize (cadr x) 'face '(:weight thin :slant italic))))
-                     :category 'maven-goal)))
-      (let ((default-directory (im-current-project-root)))
-        (im-shell-command
-         :command (format "./mvnw %s" (car selected))
-         :buffer-name (format "*%s: %s*" (f-filename (im-current-project-name)) (car selected)))))))
-
-(defun im-maven-goals-read ()
-  "Find all maven goals and their descriptions in current project."
-  (let ((default-directory (im-current-project-root)))
-    (->>
-     (shell-command-to-string "mvn help:effective-pom | grep -E -A 1 '<groupId>'")
-     (s-split "\n")
-     (--filter (not (equal it "--")))
-     (-partition 2)
-     (--filter (s-contains? "plugin" (nth 1 it)))
-     (--map (let ((group-id (nth 1 (s-match ">\\(.*\\)<" (car it))))
-                  (artifact-id (nth 1 (s-match ">\\(.*\\)<" (nth 1 it)))))
-              (format "-DgroupId=%s -DartifactId=%s" group-id artifact-id)))
-     (-uniq)
-     (--mapcat
-      (--map
-       (let ((xd (s-split "\n" (s-trim it))))
-         (list (car xd)
-               (s-join " " (mapcar #'s-trim (-drop 1 xd)))))
-       (s-split
-        "\n\n"
-        (let ((x
-               (->
-                (im-tap (format "mvn help:describe %s" it) )
-                shell-command-to-string
-                (string-trim-left "\\(\n\\|.\\)*This plugin has [0-9]+ goals:\n\n")
-                (string-trim-right "\n\nFor more information\\(\n\\|.\\)*"))))
-          (if (s-contains? "[ERROR]" x) "" x))))))))
-
 ;;;;; clojure
 
 ;; Here is the current workflow I use:
