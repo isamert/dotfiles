@@ -498,7 +498,9 @@ configuration, pass it as WINDOW-CONF."
 ;; TODO: Predictable sort order
 (async-defun im-git-commit--update-unstaged ()
   (im-git-commit--change-header-contents "Status"
-    (--each (s-lines (ansi-color-apply (await (lab--git "status" "--short"))))
+    (--each (s-lines (ansi-color-apply (await (lab--git
+                                               "-c" "color.status=always"
+                                               "status" "--short"))))
       (let* ((start (point))
              (overlay (progn
                         (insert (s-prepend "> " it) "\n")
