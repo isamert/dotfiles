@@ -86,7 +86,10 @@
 ;; TODO: Arguments should persist (except amend?). When I toggle No
 ;; Verify, it should stay toggled for the next im-git-commit call.
 
-(defvar-keymap im-git-unstaged-diff-mode-map
+(defvar-local im-git-dif--context nil
+  "It can be either \\='im-git-status or \\='im-git-commit depending on where the diff is shown.")
+
+(defvar-keymap im-git-diff-mode-map
   "s" #'im-git-stage-hunk-or-file
   "x" #'im-git-reverse-hunk
   "c" #'im-git-commit
@@ -100,7 +103,7 @@
   "3" #'outline-show-all)
 
 (general-def
-  :keymaps 'im-git-unstaged-diff-mode-map
+  :keymaps 'im-git-diff-mode-map
   :states 'normal
   "s" #'im-git-stage-hunk-or-file
   "x" #'im-git-reverse-hunk
@@ -114,14 +117,19 @@
        (outline-hide-body))
   "3" #'outline-show-all)
 
-(define-derived-mode im-git-unstaged-diff-mode diff-mode "DS"
-  "Mode to show unstaged git diff.")
+(define-derived-mode im-git-diff-mode diff-mode "DS"
+  "Mode to show unstaged git diff."
+  (setq buffer-read-only nil)
+  (setq buffer-read-only t)
+  (setq-local diff-vc-backend 'Git)
+  (setq-local im-git-dif--context 'im-git-status)
+  (goto-char (point-min)))
 
 (defvar im-git-status--old-window-conf nil)
 
 (defun im-git-status-reload ()
   "Reload current git status window."
-  (interactive nil im-git-unstaged-diff-mode)
+  (interactive nil im-git-diff-mode)
   (im-git-status :window-conf im-git-status--old-window-conf)
   (message ">> Reloaded."))
 
@@ -139,26 +147,25 @@
           (im-git-commit :window-conf im-git-status--old-window-conf)))
       (cl-return-from im-git-status))
     (with-current-buffer dbuff
-      (setq buffer-read-only nil)
       (erase-buffer)
       (insert diff)
-      (setq buffer-read-only t)
-      (im-git-unstaged-diff-mode)
-      (setq-local diff-vc-backend 'Git)
+      (im-git-diff-mode)
       (switch-to-buffer dbuff)
-      (goto-char (point-min))
       (delete-other-windows))))
 
 (defun im-git-status-commit ()
   "Like `im-git-commit' but restore the right window cfg when commit finishes."
-  (interactive nil im-git-unstaged-diff-mode)
-  (im-git-commit :window-conf im-git-status--old-window-conf))
+  (interactive nil im-git-diff-mode)
+  (if (eq im-git-dif--context 'im-git-status)
+      (im-git-commit :window-conf im-git-status--old-window-conf)
+    (im-git-commit :window-conf im-git-commit--old-window-conf)))
 
 (defun im-git-status-cancel ()
   "Cancel."
-  (interactive nil im-git-unstaged-diff-mode)
+  (interactive nil im-git-diff-mode)
   (kill-buffer (current-buffer))
-  (set-window-configuration im-git-status--old-window-conf))
+  (when (equal im-git-dif--context 'im-git-status)
+    (set-window-configuration im-git-status--old-window-conf)))
 
 (defun im-git-diff-at-file? ()
   "Return if cursor is on somewhere around the start of file diff."
@@ -193,7 +200,7 @@ Call CALLBACK when successful."
   "Stage the currently selected hunk or file.
 If REVERSE is non-nil, than reverse it instead of staging it.  CALLBACK
 is called after the hunk is applied with no arguments."
-  (interactive nil im-git-unstaged-diff-mode)
+  (interactive nil im-git-diff-mode)
   (-when-let* ((_ (im-git-diff-at-file?))
                ((file) (diff-find-source-location))
                ((fstart fend) (diff-bounds-of-file)))
@@ -239,7 +246,7 @@ is called after the hunk is applied with no arguments."
 ;; the reversed diff)
 (cl-defun im-git-reverse-hunk ()
   "Reverse hunk at point."
-  (interactive nil im-git-unstaged-diff-mode)
+  (interactive nil im-git-diff-mode)
   (-when-let* ((_ (im-git-diff-at-file?))
                ((file) (diff-find-source-location))
                ((fstart fend) (diff-bounds-of-file)))
@@ -280,7 +287,8 @@ Each function is called with COMMIT-MSG, inside project root.")
 (defconst im-git-commit-message-buffer "*im-git-commit-message*")
 (defconst im-git-commit-diff-buffer "*im-git-diff-staged*")
 (defconst im-git-commit-config-prefix "⚙")
-(defvar im-git-commit--prev-window-conf nil)
+(defconst im-git--status-filename-prefix "〉")
+(defvar im-git-commit--old-window-conf nil)
 (defvar im-git-commit-message-history (make-ring 100))
 (with-eval-after-load 'savehist
   (add-to-list 'savehist-additional-variables 'im-git-commit-message-history))
@@ -299,7 +307,7 @@ configuration, pass it as WINDOW-CONF."
          (commit-buffer (im-get-reset-buffer im-git-commit-message-buffer)))
     (when (and (s-blank? diff) (not (y-or-n-p "> Nothing staged. Still want to commit?")))
       (user-error ">> Commit aborted"))
-    (setq im-git-commit--prev-window-conf (or window-conf (current-window-configuration)))
+    (setq im-git-commit--old-window-conf (or window-conf (current-window-configuration)))
     (switch-to-buffer commit-buffer)
     (im-git-commit-mode)
     (delete-other-windows)
@@ -319,7 +327,7 @@ configuration, pass it as WINDOW-CONF."
 (defun im-git-commit-reload ()
   "Reload the diff."
   (interactive nil im-git-commit-mode)
-  (im-git-commit :window-conf im-git-commit--prev-window-conf)
+  (im-git-commit :window-conf im-git-commit--old-window-conf)
   (message ">> Reloaded."))
 
 (defun im-git-commit-finalize ()
@@ -385,7 +393,7 @@ configuration, pass it as WINDOW-CONF."
   (interactive)
   (kill-buffer im-git-commit-message-buffer)
   (kill-buffer im-git-commit-diff-buffer)
-  (set-window-configuration im-git-commit--prev-window-conf))
+  (set-window-configuration im-git-commit--old-window-conf))
 
 (defun im-git-commit-prev-message ()
   (interactive nil im-git-commit-mode)
@@ -498,25 +506,29 @@ configuration, pass it as WINDOW-CONF."
 ;; TODO: Predictable sort order
 (async-defun im-git-commit--update-unstaged ()
   (im-git-commit--change-header-contents "Status"
-    (--each (s-lines (ansi-color-apply (await (lab--git
-                                               "-c" "color.status=always"
-                                               "status" "--short"))))
-      (let* ((start (point))
-             (overlay (progn
-                        (insert (s-prepend "> " it) "\n")
-                        (make-overlay start (1- (point))))))
-        (overlay-put overlay 'keymap im-git-commit-status-map)))))
+    (--each-indexed (s-lines (ansi-color-apply
+                              (await (lab--git
+                                      "-c" "color.status=always"
+                                      "status" "--branch" "--short"))))
+      (if (= it-index 0)
+          (insert (s-chop-prefix "## " it) "\n")
+        (let* ((start (point))
+               (overlay (progn
+                          (insert (s-prepend (concat im-git--status-filename-prefix " ") it) "\n")
+                          (make-overlay start (1- (point))))))
+          (overlay-put overlay 'keymap im-git-commit-status-map))))))
 
 (defvar-keymap im-git-commit-status-map
   "u" #'im-git-commit-unstage-at-point
   "s" #'im-git-commit-stage-at-point
-  "TAB" #'im-git-commit-diff-at-point)
+  "TAB" #'im-git-commit-diff-at-point
+  "RET" #'im-git-commit-diff-at-point)
 
 (defun im-git-commit--file-at-point (&optional line)
   (let ((line (or line (thing-at-point 'line t))))
     (-as->
      line %
-     (s-chop-prefix ">" %)
+     (s-chop-prefix im-git--status-filename-prefix %)
      (s-trim %)
      (s-split " " % t)
      (nth 1 %))))
@@ -553,9 +565,11 @@ configuration, pass it as WINDOW-CONF."
                      (ansi-color-apply diff))))
       (im-peek
        (lambda ()
-         (with-current-buffer (get-buffer-create "*im-commit-diff-at-point*")
+         (with-current-buffer (im-get-reset-buffer "*im-commit-diff-at-point*")
            (erase-buffer)
            (insert result)
+           (im-git-diff-mode)
+           (setq im-git-dif--context 'im-git-commit)
            (current-buffer)))))))
 
 (async-defun im-git-commit-stage-at-point ()
