@@ -115,9 +115,11 @@ number for the UNIT."
                          "%s/share/%s"
                          im-filebrowser-url
                          (alist-get 'hash data))))
-        (if (equal ?d (car (read-multiple-choice "Select link type: " '((?d "direct") (?s "share")))))
-            (im-kill direct-link)
-          (im-kill share-link))))))
+        (message
+         ">> Copied: %s"
+         (if (equal ?d (car (read-multiple-choice "Select link type: " '((?d "direct") (?s "share")))))
+             (im-kill direct-link)
+           (im-kill share-link)))))))
 
 (defun im-filebrowser-ensure-login ()
   "Login with username and password to Filebrowser."

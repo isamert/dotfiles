@@ -8004,7 +8004,7 @@ This happens to me on org-buffers, xwidget-at tries to get
     "w4" #'im-tab-configuration-restore-current
     "w5" #'im-tab-configuration-restore-current))
 
-;;;;; im-filebrowser --- Filebrowser integration
+;;;;; im-filebrowser -- Filebrowser integration
 
 (use-package im-filebrowser
   :straight nil
