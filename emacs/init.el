@@ -13499,37 +13499,25 @@ contents."
 
 (use-package google-translate
   :custom
+  (google-translate-translation-directions-alist
+   ;; Ordered based on my usage:
+   '(("en" . "tr")
+     ("nl" . "en")
+     ("tr" . "en")
+     ("en" . "nl")))
   (google-translate-listen-program "mpv")
-  (google-translate-backend-method 'curl))
+  ;; Try 'curl or 'wget if getting any errors
+  (google-translate-backend-method 'emacs))
 
-(defun im-peek-translate (source target str)
-  "Translate STR from SOURCE to TARGET.
-
-When called interactively, it expects input in form of :
-
-  source:target thing to translate
-
-source:target part can appear anywhere in the input.
-
-A future history is already provided so that you can change SOURCE and
-TARGET quickly."
-  (interactive
-   (let* ((s (im-region-or 'word))
-          (match (s-match
-                  "\\(.*\\)\\([a-z]\\{2\\}\\):\\([a-z]\\{2\\}\\)\\(\\(.\\|\n\\)*\\)"
-                  (read-string
-                   "Translate: "
-                   (concat "en:tr " s)
-                   nil
-                   (concat "tr:en " s)))))
-     (list
-      (nth 2 match)
-      (nth 3 match)
-      (concat (s-trim (nth 1 match)) " " (s-trim (nth 4 match))))))
-  (im-peek (lambda ()
-             (let ((google-translate-pop-up-buffer-set-focus t))
-               (google-translate-translate source target str)
-               (current-buffer)))))
+(defun im-peek-translate ()
+  "Simple `google-translate-smooth-translate' wrapper.
+Use C-n C-p to switch between translation directions."
+  (interactive)
+  (im-peek
+   (lambda ()
+     (let ((google-translate-pop-up-buffer-set-focus t))
+       (google-translate-smooth-translate)
+       (current-buffer)))))
 
 (defun im-peek-sozluk ()
   "Show definition of the word at point (tr)."
