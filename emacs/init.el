@@ -13649,10 +13649,12 @@ Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
         (delete-region (point-min) (progn
                                      (goto-char (point-min))
                                      (search-forward "[\s\s]")))
-        (delete-region (progn
-                         (goto-char (point-max))
-                         (search-backward-regexp "See all related words"))
-                       (point-max))))
+        (ignore-errors
+          (delete-region
+           (progn
+             (goto-char (point-max))
+             (search-backward-regexp "See all related words"))
+           (point-max)))))
     (goto-char (point-min))))
 
 ;;;;; My git configuration
