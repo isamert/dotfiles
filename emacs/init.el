@@ -10751,7 +10751,7 @@ If PROJECTS is nil, then `im-jira-projects' is used."
      (let* ((action
              (im-completing-read
               (format "Act on %s: " (s-truncate 20 .fields.summary))
-              '("View" "Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Raw" "[Cancel]")
+              '("View" "Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Inspect" "[Cancel]")
               :sort? nil)))
        (pcase action
          ("View"
@@ -10778,7 +10778,7 @@ If PROJECTS is nil, then `im-jira-projects' is used."
           (im-jira-change-issue-status .key))
          ("Insert as task"
           (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
-         ("Raw"
+         ("Inspect"
           (im-json-encode-and-show issue)
           (cl-return))
          ("[Cancel]"
@@ -10944,8 +10944,8 @@ story points they have released. See the following figure:
         (insert
          (format "- Progress :: %s/%s (%s%%)\n\n" done total (/ (* 100 done) total)))))
     (if group-by-assignee?
-        (insert "| Assignee | Total | Done | Sub-total | Status | Issue |\n|-\n")
-      (insert "| Assignee | Point | Status | Issue |\n|-\n"))
+        (insert "| Assignee | Total | Done |  Sub-total | Status | Creator  | Issue |\n|-\n")
+      (insert "| Assignee | Creator | Point | Status | Issue |\n|-\n"))
     (cond
      (group-by-assignee?
       (->>
@@ -10967,7 +10967,8 @@ story points they have released. See the following figure:
                      (list
                       :points (alist-get im-jira-story-points-field-name .fields)
                       :summary (format "%s - %s" .key .fields.summary)
-                      :status .fields.status.name))
+                      :status .fields.status.name
+                      :creator .fields.creator.name))
                    vals)
             (--sort (string> (plist-get it :status) (plist-get other :status)))))))
        (--sort (> (plist-get it :total) (plist-get other :total)))
@@ -10977,8 +10978,9 @@ story points they have released. See the following figure:
                       (plist-get it :done)
                       (s-join
                        "\n"
-                       (--map (format "| | | | %s | %s | %s |"
+                       (--map (format "| | | | %s | %s | %s | %s |"
                                       (plist-get it :points)
+                                      (plist-get it :creator)
                                       (plist-get it :status)
                                       (s-truncate 60 (plist-get it :summary)))
                               (plist-get it :tasks)))))
@@ -10988,8 +10990,9 @@ story points they have released. See the following figure:
       (->>
        results
        (--map (let-alist it
-                (format "| %s | %s | %s | %s |"
+                (format "| %s | %s | %s | %s | %s |"
                         .fields.assignee.name
+                        .fields.creator.name
                         (alist-get im-jira-story-points-field-name .fields)
                         .fields.status.name
                         (s-truncate 60 (format "%s - %s" .key .fields.summary)))))
