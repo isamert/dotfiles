@@ -2815,7 +2815,6 @@ Length, author, title etc. are appended to the link."
     (im-shell-command
      :command "rg"
      :args `(,(format "\\[\\[id:%s\\]" id) "--color=never" "--no-heading")
-     :switch nil
      :on-finish
      (lambda (out)
        (let* ((infos (--map (-take 2 (s-split-up-to ":" it 2)) (s-split "\n" out t)))
@@ -4379,6 +4378,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
     (im-shell-command
      :command "rsync"
      :eat t
+     :switch t
      :args
      `("-s" "--archive" "--recursive" "--verbose" "--human-readable" "--partial" "--xattrs" "--info=progress1"
        ,@(when (--any? (s-matches? ssh-regexp it) files)
@@ -9938,6 +9938,7 @@ total {rows,bytes} etc. and first 10 rows of the table."
   (let ((buffer-name (format "*bq table info: %s*" table-name)))
     (im-shell-command
      :buffer-name buffer-name
+     :switch t
      :command (format "bq show '%s'" (im-tap table-name))
      :on-start
      (lambda (&rest _)
@@ -12400,10 +12401,10 @@ Version 2017-01-11"
 ;; on selected region.
 (evil-define-key 'normal 'global (kbd "!") #'im-shell-command)
 
-(defun im-zsh-smart-history ()
+(defun im-shell-smart-history ()
   (->>
    (with-temp-buffer
-     (insert-file-contents "~/.zsh_history")
+     (insert-file-contents eshell-history-file-name)
      (buffer-string))
    s-trim
    (s-split "\n")
@@ -12413,7 +12414,8 @@ Version 2017-01-11"
    (--filter (and (not (s-blank? it))
                   (> (length it) 5)
                   (not (s-matches? "^\\(ls\\|pwd\\|exit\\|cd\\|echo\\)" it))
-                  (not (s-suffix? "\\" it))))))
+                  (not (s-suffix? "\\" it))))
+   (reverse)))
 
 (cl-defun im-shell-command
     (&key
@@ -12421,7 +12423,8 @@ Version 2017-01-11"
      args
      eat
      env
-     (switch t)
+     async
+     switch
      (buffer-name (concat "*" command "*"))
      (on-start (lambda (&rest _)))
      (on-finish (lambda (&rest _)))
@@ -12453,9 +12456,10 @@ asterisks will be added automatically by eat.
 
 Returns process buffer."
   (interactive
-   (let ((command (im-completing-read "Command: " (im-zsh-smart-history) :sort? nil)))
+   (let ((command (im-completing-read "Command: " (im-shell-smart-history) :sort? nil)))
      (list
       :command command
+      :switch t
       :on-finish
       (lambda (&rest _)
         (let ((msg (format ">> \"%s\" finished successfully." command)))
@@ -12483,43 +12487,47 @@ Returns process buffer."
                 (apply #'start-process command buffer-name command args)
               (start-process-shell-command command buffer-name command))))
          (proc-out ""))
-    (set-process-sentinel
-     proc
-     (lambda (p e)
-       (with-current-buffer (get-buffer-create buffer-name)
-         (read-only-mode -1))
-       (let ((exit-code (process-exit-status p)))
-         (if (= 0 exit-code)
-             (funcall on-finish proc-out)
-           (funcall on-fail exit-code)))))
-    (unless eat
-      (set-process-filter
-       proc
-       (lambda (proc str)
-         (with-current-buffer buffer-name
-           (setq proc-out (concat proc-out str))
-           (let ((inhibit-read-only t))
-             (save-excursion
-               (goto-char (point-max))
-               (insert (ansi-color-apply (s-replace "" "\n" str)))))))))
-    (with-current-buffer buffer-name
-      (unless eat
-        (prog-mode))
-      (im-shell-command-mode 1)
-      (evil-normal-state)
-      (setq-local
-       im-shell-command-mode-command
-       (list
-        :command command
-        :args args
-        :buffer-name buffer-name
-        :on-start on-start
-        :on-finish on-finish
-        :on-fail on-fail))
-      (funcall on-start))
-    (when switch
-      (switch-to-buffer buffer-name))
-    (get-buffer buffer-name)))
+    (let ((fn (lambda (resolve reject)
+                (set-process-sentinel
+                 proc
+                 (lambda (p e)
+                   (with-current-buffer (get-buffer-create buffer-name)
+                     (read-only-mode -1))
+                   (let ((exit-code (process-exit-status p)))
+                     (if (= 0 exit-code)
+                         (funcall resolve proc-out)
+                       (funcall reject exit-code))))))))
+      (prog1 (if async
+                 (promise-new fn)
+               (funcall fn on-finish on-fail))
+        (unless eat
+          (set-process-filter
+           proc
+           (lambda (proc str)
+             (with-current-buffer buffer-name
+               (setq proc-out (concat proc-out str))
+               (let ((inhibit-read-only t))
+                 (save-excursion
+                   (goto-char (point-max))
+                   (insert (ansi-color-apply (s-replace "" "\n" str)))))))))
+        (with-current-buffer buffer-name
+          (unless eat
+            (prog-mode))
+          (im-shell-command-mode 1)
+          (evil-normal-state)
+          (setq-local
+           im-shell-command-mode-command
+           (list
+            :command command
+            :args args
+            :buffer-name buffer-name
+            :on-start on-start
+            :on-finish on-finish
+            :on-fail on-fail))
+          (funcall on-start))
+        (when switch
+          (switch-to-buffer buffer-name))
+        (get-buffer buffer-name)))))
 
 ;;;;; Password manager
 
@@ -12786,6 +12794,7 @@ selecting a pod."
 
 (defun im-kube-pod--top (pod)
   (im-shell-command
+   :switch t
    :command (format "kubectl top pod  '%s' --namespace='%s' --context='%s'"
                     (plist-get pod :name)
                     (plist-get pod :namespace)
@@ -12794,6 +12803,7 @@ selecting a pod."
 (defun im-kube-pod--remove (pod)
   (when (y-or-n-p (format "Do you really want to remove %s? " (plist-get pod :name)))
     (im-shell-command
+     :switch t
      :command (im-kill (format "kubectl delete pod '%s' --namespace='%s' --context='%s'"
                                (plist-get pod :name)
                                (plist-get pod :namespace)
@@ -13090,6 +13100,7 @@ WHERE is interpreted as a file name."
   (interactive)
   (im-shell-command
    :command "icalBuddy -f -ea eventsNow"
+   :switch t
    :buffer-name "*calendar-now*"
    :on-start (lambda (&rest _) (erase-buffer))
    :on-finish (lambda (it)
@@ -13110,6 +13121,7 @@ WHERE is interpreted as a file name."
   (interactive)
   (im-shell-command
    :command "icalBuddy -f eventsToday"
+   :switch t
    :on-start (lambda (&rest _) (erase-buffer))
    :on-finish (lambda (&rest _)
                 (im-calendar-mode)
@@ -13618,7 +13630,6 @@ finds the best way to extract and does not overwrite anything."
     (im-shell-command
      :command (im-ensure-binary "aunpack" :package "atool")
      :args (append '("--each") files)
-     :switch nil
      :on-finish
      (lambda (out)
        (let ((extracted (--keep
@@ -13752,6 +13763,7 @@ output."
                     ('jest "yarn jest --coverage --colors")
                     ('vitest "FORCE_COLOR=1 yarn vitest --coverage --run"))
          :buffer-name (format "%s-test-cov" (im-current-project-name))
+         :switch t
          :on-finish (lambda (&rest _) (browse-url-default-browser cov-file))
          :on-fail (lambda (&rest _) (user-error ">> Tests are failed!")))
       (browse-url-default-browser cov-file))))
@@ -13833,7 +13845,8 @@ Throw error otherwise."
                       current-test-class
                       (if (and run-only-focused-test current-test-name)
                           (format "#%s" current-test-name)
-                        "")))))
+                        ""))
+     :switch t)))
 
 ;;;;; NextCloud integration
 
