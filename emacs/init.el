@@ -7782,145 +7782,152 @@ This happens to me on org-buffers, xwidget-at tries to get
   :commands (upver)
   :straight (:host github :repo "isamert/upver.el"))
 
-;;;;; wanderlust -- email client
+;;;;; notmuch & message & sendmail -- email stuff
 
-;; Wanderlust seems like an easy way to set up IMAP email without
-;; messing with local mail sync process.  Defaults are quite weird but
-;; they can be overridden somewhat easily.  I should probably use mu4e
-;; or something similar but for now, Wanderlust let's me read my new
-;; mail and respond to them in Emacs without much hassle.  For more
-;; advanced stuff, like searching in inbox, it's still not there yet
-;; but that's enough for me for now.
+;; Easy to use, fast email client.  Tagging feature is something I am
+;; familiar from elfeed, and notmuch executes this concept very
+;; well. A pleasure to use.
 
-(use-package wanderlust
-  :init
-  (autoload 'wl "wl" "Wanderlust" t)
-  (autoload 'wl-user-agent-compose "wl-draft" nil t)
-  :commands (c)
+;; Summary of what is going on:
+;;
+;; - `mbsync' (or `isync') is used for fetching mail from remote mail
+;;   server to local.
+;;   - The configuration is kept under =~/.mbsyncrc=
+;;   - This needs to be run periodically to sync mail.  See my
+;;     `im-sync-mail' function.
+;; - `notmuch' is the mail indexer which essentially lets you search
+;;   your mail.
+;;   - The configuration is kept under =~/.notmuch-config=
+;;   - It is an external program, that works on your local maildir
+;;     (which is created by the `mbsync')
+;;   - It needs to be run after each update to index your mail.  See
+;;     my `im-sync-mail' function.
+;;   - It is also an Emacs package which let's you view your email and
+;;     interact with them.
+;; - `msmtp' is the SMTP client that let's you send your mails.
+;;   - The configuration is kept under =~/.msmtprc=.
+;;   - See `sendmail' and `message' configuration down below for Emacs
+;;     integration.
+;;
+;; See [[../index.org]] for relevant configuration files.
+;;
+;; Great video, explaining notmuch and the workflow by prot:
+;; https://youtube.com/watch?v=g7iF11qamh8
+;;
+;; For gmail configuration, following is helpful:
+;; https://frostyx.cz/posts/synchronize-your-2fa-gmail-with-mbsync#gmail-with-2fa
+;;
+;; Another helpful and easy to follow guide:
+;; https://jonathanchu.is/posts/emacs-notmuch-isync-msmtp-setup/
+;;
+;; Most of the customizations down below are inspired by prot's configuration:
+;; https://protesilaos.com/emacs/dotemacs
+
+;; Good time to set these values:
+(setq user-full-name "Isa Mert Gurbuz")
+(setq user-mail-address "isamertgurbuz@gmail.com")
+
+(use-package notmuch
+  :defer t
   :custom
-  ;; macOS allows file names up to 255 characters,
-  ;; use half of that size as threshold to switch to hashing
-  (elmo-msgdb-path-encode-threshold 128)
-  (wl-demo nil)
-  ;; Mark sent mail (in the wl-fcc folder) as read
-  (wl-fcc-force-as-read t)
-  ;; Use Fwd: instead of Forward:
-  (wl-forward-subject-prefix "Fwd: " )
-  ;; Fields in the e-mail header that I do not want to see (regexps)
-  (wl-message-ignored-field-list  '(".*Received:" ".*Path:" ".*Id:" "^References:"
-                                    "^Replied:" "^Errors-To:" "^Lines:" "^Sender:"
-                                    ".*Host:" "^Xref:" "^Content-Type:" "^Precedence:"
-                                    "^Status:" "^X-VM-.*:" "^List-*" "^Authentication-Results*"
-                                    "^X-*" "^Received-SPF*" "^DKIM-Signature:" "^DomainKey-Signature:"
-                                    "^X-Mailman-Version:" "ARC-*" "Content-Transfer-Encoding"))
-  ;; Fields in the e-mail header that I want to see even if they match the regex in wl-message-ignored-field-list
-  (wl-message-visible-field-list (quote ("^Dnas.*:" "^Message-Id:" "^X-Mailer:" "^X-Mailman-Version:")))
-  ;; Show full title in summary view
-  (wl-summary-width nil)
-  ;; STMP
-  (wl-from "Isa Mert Gurbuz <isamertgurbuz@gmail.com>")
-  (wl-smtp-connection-type   'starttls)         ; Use TLS
-  (wl-smtp-posting-port      587)               ; The SMTP port
-  (wl-smtp-authenticate-type "plain")           ; Authentication type
-  (wl-smtp-posting-user      "isamertgurbuz")   ; Username
-  (wl-smtp-posting-server    "smtp.gmail.com")  ; SMTP server
-  (wl-local-domain           "gmail.com")       ; The SMTP server again
-  (wl-message-id-domain      "smtp.gmail.com")
-
-  ;; Dont ask y/n for fetching messages under 500 KB
-  (wl-prefetch-threshold 500000)
-  (wl-folder-check-async t)
-  (wl-biff-notify-hook '((lambda () (alert "You have new mail!" :title "Wanderlust"))))
-
-  ;; Do not ask bunch of questions while opening the summary buffer
-  ;; and simply fetch 500 messages at most
-  (elmo-folder-update-confirm nil)
-  (elmo-message-fetch-threshold 500)
+  (notmuch-show-logo nil)
+  (notmuch-hello-auto-refresh t)
+  (notmuch-show-all-tags-list t)
+  (notmuch-show-empty-saved-searches t)
+  (notmuch-show-relative-dates t)
+  (notmuch-show-part-button-default-action 'notmuch-show-view-part)
+  (notmuch-saved-searches
+   '((:name "📥 inbox" :query "tag:inbox and not tag:deleted" :key "i")
+     (:name "💬 unread (inbox)" :query "tag:unread and tag:inbox" :key "u")
+     (:name "🏳️ flagged" :query "tag:flagged" :key "f")
+     (:name "✍🏻 sent" :query "tag:sent" :key "t")
+     (:name "📰 drafts" :query "tag:draft" :key "d")
+     (:name "💭 all mail" :query "*" :key "a")))
+  (notmuch-mua-hidden-headers nil)
+  (notmuch-always-prompt-for-sender t)
+  ;; Automatically move sent mails to Sent folder of corresponding
+  ;; account and add/remove relevant tags
+  (notmuch-fcc-dirs `(("isamertgurbuz@gmail.com" . "gmail/Sent +sent -new -inbox -unread")))
+  :hook
+  ;; Check if attachments are really attached before sending
+  ;; Also see `notmuch-mua-attachment-regexp'
+  (notmuch-mua-send . notmuch-mua-attachment-check)
   :general
-  (:keymaps 'wl-summary-mode-map :states 'normal
-   "RET" #'im-wl-jump-to-message
+  (:keymaps 'notmuch-search-mode-map :states 'normal
+   ;; gr → Refresh view
+   ;; C → compose mail
+   "r" #'evil-collection-notmuch-search-toggle-unread)
+  (im-leader
+    "en" #'im-notmuch-inbox
+    "eN" #'notmuch-hello)
+  :config
+  (setq-default notmuch-search-oldest-first nil)
+  (evil-collection-notmuch-setup))
 
-   "s" #'wl-summary-sync-update
+(use-package message
+  :straight (:type built-in)
+  :defer t
+  :hook
+  (message-setup . message-sort-headers)
+  :custom
+  (mail-user-agent 'message-user-agent)
+  (message-mail-user-agent t)
+  (message-elide-ellipsis "\n> [... %l lines elided]\n")
+  (compose-mail-user-agent-warnings nil)
+  (message-signature "Isa Mert Gurbuz\nhttps://isamert.net\n")
+  (mail-signature message-signature)
+  (message-citation-line-function #'message-insert-formatted-citation-line)
+  (message-confirm-send nil)
+  (message-kill-buffer-on-exit t))
 
-   ;; marks
-   "u" #'wl-summary-unmark
-   "mr" #'wl-summary-mark-as-read
-   "mu" #'wl-summary-mark-as-unread
-   "md" #'im-wl-mark-message-for-deletion
-   "ms" #'wl-execute-temp-marks
+(use-package sendmail
+  :straight (:type built-in)
+  :after message
+  :config
+  (setq send-mail-function 'sendmail-send-it)
+  (setq sendmail-program (executable-find "msmtp"))
+  (setq message-sendmail-envelope-from 'header))
 
-   "R" #'wl-summary-read
-   "D" #'im-wl-summary-delete
-   "r" #'wl-summary-reply-with-citation
+(defun im-notmuch-inbox ()
+  "Open Inbox directly."
+  (interactive)
+  (notmuch-search (plist-get (car notmuch-saved-searches) :query)))
 
-   "a" #'wl-summary-reply
-   "d" #'im-wl-mark-message-for-deletion)
-  (:keymaps 'wl-summary-mode-map :states 'visual
-   ;; marks
-   "mr" #'wl-summary-mark-as-read-region
-   "mu" #'wl-summary-mark-as-unread-region)
-  (:keymaps 'wl-folder-mode-map :states 'normal
-   "RET" #'wl-folder-jump-to-current-entity)
-  ;; FIXME: binding does not work
-  (:keymaps 'mime-view-mode-default-map :states 'normal
-   "q" #'im-wl-mime-view-quit))
+;;;;;; Sync mail
 
-(setq-default mime-charset-for-write 'utf-8)
-(setq-default mime-transfer-level 8)
-(setq charsets-mime-charset-alist
-      '(((ascii) . us-ascii)
-        ((unicode) . utf-8)))
+(async-defun im-sync-mail (&optional interactive?)
+  "Run mbsync, update notmuch index and check new message count.
 
-(with-eval-after-load 'wl
-  (if (boundp 'mail-user-agent)
-      (setq mail-user-agent 'wl-user-agent))
-  (if (fboundp 'define-mail-user-agent)
-      (define-mail-user-agent
-        'wl-user-agent
-        'wl-user-agent-compose
-        'wl-draft-send
-        'wl-draft-kill
-        'mail-send-hook)))
+This could be a cron job but keeping it in emacs gives me the
+opportunity to notify the new email count right after fetching all
+mails."
+  (interactive (list t))
+  (condition-case reason
+      (let (count)
+        (when interactive?
+          (message ">> Checking mail..."))
+        (await (im-shell-command :command "mbsync -a" :async t))
+        (await (im-shell-command :command "notmuch new" :async t))
+        (setq
+         count
+         (string-to-number
+          (await (im-shell-command :command "notmuch count tag:inbox and tag:unread" :async t))))
+        (when interactive?
+          (message "You have %s new mail." count))
+        (when (> count 0)
+          (message (format "You have %s new mail!" count))))
+    (error (alert (format "Exit code: %s. See buffers *notmuch* and *mbsync*." reason)
+                  :title "Checking for mail failed!"))))
 
-(define-advice wl-summary-sync-update (:after (&rest _) sort-properly)
-  (im-wl-sort-properly))
+(run-with-timer
+ 60
+ (* 15 60)
+ #'im-sync-mail)
 
-(add-hook 'wl-summary-prepared-hook #'im-wl-sort-properly)
+;;;;;; Mail auto completion for my contacts
 
-(defalias 'im-new-email #'wl-summary-write)
-
-(defun im-wl-mime-view-quit ()
-  (interactive nil mime-view-mode)
-  (kill-buffer)
-  (delete-window))
-
-(defun im-wl-sort-properly ()
-  ;; Unfortunately thread view sorts threads by their first message
-  ;; instead of last, so it makes me miss some messages
-  (setq wl-summary-buffer-view 'sequence)
-  (wl-summary-rescan "!date")
-  (goto-char (point-min)))
-
-(defun im-wl-jump-to-message ()
-  "Jump to message in same window."
-  (interactive nil wl-summary-mode)
-  (let (buffer)
-    (save-window-excursion
-      (wl-summary-enter-handler)
-      (setq buffer (window-buffer (--find (s-prefix? " *WL:Message" (buffer-name (window-buffer it))) (window-list)))))
-    (switch-to-buffer buffer)))
-
-(defun im-wl-mark-message-for-deletion ()
-  (interactive nil wl-summary-mode)
-  (wl-summary-set-mark "D" nil nil nil)
-  (when (called-interactively-p 'interactive)
-    (message (substitute-command-keys ">> To sync with server, do \\[wl-execute-temp-marks]"))))
-
-(defun im-wl-summary-delete ()
-  "Delete message immediately."
-  (interactive nil wl-summary-mode)
-  (im-wl-mark-message-for-deletion)
-  (wl-execute-temp-marks))
+;; With the following, "M-o m" completes email addresses of my
+;; contacts.
 
 (im-cape
  :name people-emails
