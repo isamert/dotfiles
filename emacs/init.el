@@ -6628,6 +6628,8 @@ this command is invoked from."
 
   ;; Disable filling as it fucks with copying stuff
   (setq lui-fill-type nil)
+  (setq lui-fill-column 0)
+  (setq lui-time-stamp-format "[%a %b %d %H:%M]")
   (setq slack-message-custom-notifier #'im-slack-notify)
   (setq slack-message-custom-delete-notifier #'im-slack-notify)
 
