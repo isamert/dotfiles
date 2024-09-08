@@ -452,7 +452,7 @@ configuration, pass it as WINDOW-CONF."
    :on-toggle
    (lambda (state)
      (when (and (equal state "yes") (y-or-n-p "Use old commit message?"))
-       (im-git-commit--reset-message (shell-command-to-string "git log -1 --pretty=format:'%s'")))))
+       (im-git-commit--reset-message (s-trim (shell-command-to-string "git log -1 --pretty=%B"))))))
   (insert "\n")
   (insert im-git-commit-config-prefix " Author: AUTHOR_NAME <AUTHOR_MAIL>\n")
   (insert im-git-commit-config-prefix " Tag: ")
