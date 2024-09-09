@@ -6978,12 +6978,17 @@ Fetches missing channels/users first."
                     (im-slack-dms data))))
                 (missing-channels?
                  (message ">> Some channels are missing, loading...")
-                 (slack-conversations-info
-                  missing-channel-ids
-                  team :after-success
-                  (lambda ()
-                    (message ">> Some channels are missing, loading...Done")
-                    (im-slack-dms data))))
+                 (let* ((finished-count 0)
+                        (cb (lambda ()
+                              (setq finished-count (1+ finished-count))
+                              (when (length= missing-channel-ids finished-count)
+                                (message ">> Some channels are missing, loading...Done")
+                                (im-slack-dms data)))))
+                   (--each missing-channel-ids
+                     (slack-conversations-info
+                      it
+                      team
+                      (lambda () (funcall cb))))))
                 (t (im-slack-dms data))))))))))))
 
 (defun im-slack-select-room ()
