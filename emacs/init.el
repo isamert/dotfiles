@@ -7804,6 +7804,9 @@ This happens to me on org-buffers, xwidget-at tries to get
 
 ;;;;; notmuch & message & sendmail -- email stuff
 
+(use-package ol-notmuch
+  :after notmuch)
+
 ;; Easy to use, fast email client.  Tagging feature is something I am
 ;; familiar from elfeed, and notmuch executes this concept very
 ;; well. A pleasure to use.
