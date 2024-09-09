@@ -6687,6 +6687,19 @@ this command is invoked from."
               (kill-buffer-hook nil))
           (kill-buffer))))))
 
+(defun im-slack-toggle-timestamps ()
+  "Toggle visibility of timestamps in current buffer."
+  (interactive nil slack-message-buffer-mode slack-thread-message-buffer-mode-map)
+  (save-excursion
+    (let ((inhibit-read-only t))
+      (goto-char (point-min))
+      (while (not (eobp))
+        (when (get-text-property (point) 'lui-time-stamp)
+          (if (get-text-property (point) 'invisible)
+              (remove-text-properties (point) (1+ (point)) '(invisible nil))
+            (put-text-property (point) (1+ (point)) 'invisible t)))
+        (goto-char (next-property-change (point) nil (point-max)))))))
+
 (defun im-slack--add-reaction-to-message (reaction)
   (defalias (intern (concat "react-" reaction))
     `(lambda ()
