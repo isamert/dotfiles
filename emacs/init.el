@@ -14077,11 +14077,16 @@ existing buffer and opens the link in tuir."
 (when tab-bar-show
   (run-at-time 10 45 #'im-update-global-mode-line))
 
-(defun im-update-global-mode-line ()
+(defun im-update-global-mode-line (&optional force)
+  (interactive)
   (let ((all-the-icons-default-adjust 0))
     (setq
      global-mode-string
      `(""
+       ,@(when im-is-mic-muted?
+           (list
+            (all-the-icons-faicon "microphone-slash")
+            " | "))
        ,@(when (bound-and-true-p appt-mode-string)
            (list
             (all-the-icons-faicon "calendar-check-o")
@@ -14099,7 +14104,9 @@ existing buffer and opens the link in tuir."
                      ;; Convert to number first so that leading 0s are stripped away
                      (string-to-number (format-time-string "%I"))))
             " "
-            display-time-string))))))
+            display-time-string)))))
+  (when force
+    (force-mode-line-update)))
 
 (with-eval-after-load 'org
   (add-hook 'org-clock-in-hook #'im-update-global-mode-line)
@@ -14161,6 +14168,8 @@ existing buffer and opens the link in tuir."
    :linux (im-linux-select-audio-input)
    :darwin (im-osx-select-audio-input)))
 
+(defvar im-is-mic-muted? nil)
+
 (defun im-set-mic-status (status)
   "Set mic status to STATUS.
 STATUS is either mute, unmute or toggle.
@@ -14179,7 +14188,8 @@ Asks for STATUS if called interactively."
                    "SwitchAudioSource" "-t" "input" "-m" status)
     (lambda (proc out)
       (let* ((status (car (s-match "\\(\\(un\\)?muted\\)" (s-trim out))))
-             (icon (if (equal status "unmuted") "🔊" "🔇")))
+             (muted? (equal status "muted"))
+             (icon (if muted? "🔇" "🔊")))
         (unless (frame-focus-state)
           (let ((alert-fade-time 5)
                 (alert-default-style 'osx-notifier))
@@ -14187,6 +14197,8 @@ Asks for STATUS if called interactively."
                    :title (format "Mic is %s" status)
                    :persistent nil
                    :never-persist t)))
+        (setq im-is-mic-muted? muted?)
+        (im-update-global-mode-line :force)
         (message
          "Your mic is %s %s"
          (propertize status 'face 'bold)
