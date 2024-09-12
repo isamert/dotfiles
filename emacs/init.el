@@ -7915,8 +7915,7 @@ This happens to me on org-buffers, xwidget-at tries to get
   (message-mail-user-agent t)
   (message-elide-ellipsis "\n> [... %l lines elided]\n")
   (compose-mail-user-agent-warnings nil)
-  (message-signature "Isa Mert Gurbuz\nhttps://isamert.net\n")
-  (mail-signature message-signature)
+  (mail-signature "Isa Mert Gurbuz\nhttps://isamert.net\n")
   (message-citation-line-function #'message-insert-formatted-citation-line)
   (message-confirm-send nil)
   (message-kill-buffer-on-exit t))
@@ -7949,6 +7948,7 @@ mails."
           (message ">> Checking mail..."))
         (await (im-shell-command :command "mbsync -a" :async t))
         (await (im-shell-command :command "notmuch new" :async t))
+        (await (im-shell-command :command "notmuch tag +work -- not tag:work and folder:work/INBOX" :async t))
         (setq
          count
          (string-to-number
@@ -7956,7 +7956,8 @@ mails."
         (when interactive?
           (message "You have %s new mail." count))
         (when (> count 0)
-          (message (format "You have %s new mail!" count))))
+          (alert (format "You have %s new mail!" count)
+                 :title "New Mail!")))
     (error (alert (format "Exit code: %s. See buffers *notmuch* and *mbsync*." reason)
                   :title "Checking for mail failed!"))))
 
