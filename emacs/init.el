@@ -3589,6 +3589,16 @@ it's a list, the first element will be used as the binary name."
 
 (evil-set-initial-state 'debugger-mode 'normal)
 
+;;;;; hideshow -- hs-minor mode for code folding
+
+(use-package hideshow
+  :straight (:type built-in)
+  :custom
+  ;; Comment folding results in weird behavior combined with
+  ;; outli-mode.  And comments are not that long generally, so this is
+  ;; good.
+  (hs-hide-comments-when-hiding-all nil))
+
 ;;;;; eat & eshell
 
 (use-package eshell
