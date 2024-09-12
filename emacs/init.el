@@ -3526,6 +3526,14 @@ it's a list, the first element will be used as the binary name."
   (which-key-setup-minibuffer)
   (which-key-mode))
 
+;;;;; doc-view-mode
+
+(use-package doc-view
+  :defer t
+  :straight (:type built-in)
+  :config
+  (evil-collection-doc-view-setup))
+
 ;;;;; world-clock
 
 ;; - Simply do ~M-x world-clock~.
