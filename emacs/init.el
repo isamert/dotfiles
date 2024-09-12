@@ -7378,13 +7378,20 @@ Fetches missing channels/users first."
   ;; And jump to that project
   (add-hook 'lab-after-git-clone-functions (lambda () (dired default-directory)))
 
-  (setq lab-projects-directory "~/Workspace/projects/")
-  (setq lab-pipeline-watcher-initial-delay 45)
+  (setq lab-projects-directory im-projects-root)
+  (setq lab-pipeline-watcher-initial-delay 30)
   (setq lab-pipeline-watcher-debounce-time 15)
   (setq lab-host ty-gitlab-url)
   (setq lab-token ty-gitlab-token)
   (setq lab-group ty-gitlab-group)
-  (setq lab-should-open-pipeline-on-manual-action? t))
+  (setq lab-should-open-pipeline-on-manual-action? t)
+  (add-hook 'midnight-hook #'im-update-all-projects))
+
+(defun im-update-all-projects ()
+  (lab-pull-bulk (lab-all-project-roots im-projects-root))
+  ;; Can't get all group projects async right now
+  ;; (lab-get-all-group-projects-async :on-success ))
+  )
 
 ;; I also have an experimental GitHub version, tailored for more
 ;; open-source work needs instead of regular stuff.
