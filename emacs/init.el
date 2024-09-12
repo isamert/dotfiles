@@ -8484,74 +8484,32 @@ Useful if .elfeed directory is freshly syncned."
   (setq orgmdb-poster-folder "~/Documents/notes/data/posters")
   (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore actors poster plot)))
 
-;;;;; erc (IRC client)
+;;; rcirc -- simple, built-in irc client
 
-;; IRC client for Emacs.
-
-;; - Some shortcuts:
-;; - C-c C-b :: switch between channels
-;; - C-c C-j :: join channel
-
-;; TODO items:
-;; - Autologin
-;; - Autojoin channels
-;; - Notifications
-;; - Add registration notes here
-;; - Colors?
-
-(use-package erc
-  :commands erc
+(use-package rcirc
+  :straight (:type built-in)
+  :custom
+  (rcirc-server-alist `(("irc.libera.chat"
+                         :port 6697
+                         :nick "isamert"
+                         :password ,im-libera-chat-password
+                         :encryption tls
+                         :channels ("#rcirc" "#emacs"))))
+  (rcirc-default-nick "isamert")
+  (rcirc-default-full-name "Isa Mert Gurbuz")
+  (rcirc-prompt (concat
+                 (let ((all-the-icons-default-adjust 0))
+                   (all-the-icons-faicon "angle-double-right")) "_ "))
   :config
+  (evil-set-initial-state 'rcirc-mode 'normal)
+  (add-hook 'rcirc-mode-hook #'im-rcirc-setup-buffer))
 
-  ;; More compact and cleaner look, nicks and messages are in seperate
-  ;; column and total length for nicks are 15 cols
-  (setq erc-fill-function 'erc-fill-static)
-  (setq erc-fill-static-center 15)
-
-  ;; The rest is from https://www.emacswiki.org/emacs/ErcNickColors
-  ;; It's the Option 5
-
-  (defmacro unpack-color (color red green blue &rest body)
-    `(let ((,red   (car ,color))
-           (,green (car (cdr ,color)))
-           (,blue  (car (cdr (cdr ,color)))))
-       ,@body))
-
-  (defun rgb-to-html (color)
-    (unpack-color color red green blue
-                  (concat "#" (format "%02x%02x%02x" red green blue))))
-
-  (defun hexcolor-luminance (color)
-    (unpack-color color red green blue
-                  (floor (+ (* 0.299 red) (* 0.587 green) (* 0.114 blue)))))
-
-  (defun invert-color (color)
-    (unpack-color color red green blue
-                  `(,(- 255 red) ,(- 255 green) ,(- 255 blue))))
-
-  (defun erc-get-color-for-nick (nick dark)
-    (let* ((hash     (md5 (downcase nick)))
-           (red      (mod (string-to-number (substring hash 0 10) 16) 256))
-           (blue     (mod (string-to-number (substring hash 10 20) 16) 256))
-           (green    (mod (string-to-number (substring hash 20 30) 16) 256))
-           (color    `(,red ,green ,blue)))
-      (rgb-to-html (if (if dark (< (hexcolor-luminance color) 85)
-                         (> (hexcolor-luminance color) 170))
-                       (invert-color color)
-                     color))))
-
-  (defun erc-highlight-nicknames ()
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward "\\w+" nil t)
-        (let* ((bounds (bounds-of-thing-at-point 'symbol))
-               (nick   (buffer-substring-no-properties (car bounds) (cdr bounds))))
-          (when (erc-get-server-user nick)
-            (put-text-property
-             (car bounds) (cdr bounds) 'face
-             (cons 'foreground-color (erc-get-color-for-nick nick 't))))))))
-
-  (add-hook 'erc-insert-modify-hook 'erc-highlight-nicknames))
+(defun im-rcirc-setup-buffer ()
+  (setq-local scroll-conservatively 8192)
+  (whitespace-mode -1)
+  (rcirc-omit-mode +1)
+  (rcirc-track-minor-mode +1)
+  (turn-on-visual-line-mode))
 
 ;;;; Keybindings
 
