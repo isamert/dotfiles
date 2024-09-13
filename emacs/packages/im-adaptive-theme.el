@@ -74,8 +74,11 @@
 
 ;;;; Main
 
-(defun im-adaptive-theme-enable ()
-  "Enable theme switching at day and night."
+;;;###autoload
+(defun im-adaptive-theme-enable (&optional only-enable)
+  "Enable theme switching at day and night.
+If ONLY-ENABLE is non-nil, then only set the timers and don't change the
+theme right now."
   (interactive)
   (when im-adaptive-theme--next-timer
     (cancel-timer im-adaptive-theme--next-timer))
@@ -86,7 +89,7 @@
   (setq im-adaptive-theme--next-timer
         (run-at-time
          "24:10" nil
-         #'im-adaptive-theme-enable))
+         (lambda () (im-adaptive-theme-enable :only-enable))))
   (cl-flet ((pick-and-load-theme-from
              (lst)
              (let ((theme (if (listp lst)
@@ -100,10 +103,11 @@
             (switch-to-day-hour (+ im-adaptive-theme-sunrise-offset sunrise))
             (switch-to-night-hour (+ im-adaptive-theme-sunset-offset sunset))
             (current-hour (string-to-number (format-time-string "%H"))))
-      (if (and (> current-hour switch-to-day-hour)
-               (< current-hour switch-to-night-hour))
-          (pick-and-load-theme-from im-adaptive-theme-day-themes)
-        (pick-and-load-theme-from im-adaptive-theme-night-themes))
+      (unless only-enable
+        (if (and (> current-hour switch-to-day-hour)
+                 (< current-hour switch-to-night-hour))
+            (pick-and-load-theme-from im-adaptive-theme-day-themes)
+          (pick-and-load-theme-from im-adaptive-theme-night-themes)))
       (when (< current-hour switch-to-day-hour)
         (setq
          im-adaptive-theme--day-timer
@@ -119,6 +123,7 @@
           nil
           (lambda () (pick-and-load-theme-from im-adaptive-theme-night-themes))))))))
 
+;;;###autoload
 (defun im-adaptive-theme-reload ()
   "To get rid of some artifacts."
   (interactive)
