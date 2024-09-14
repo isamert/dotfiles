@@ -2287,9 +2287,9 @@ does not disrupt the current window configuration."
 
 ;;;;;; ob-http & verb-mode
 
-;; Http request in org-mode babel.
-;; You can get the generated curl command after executing the code
-;; block, from *curl command history* buffer
+;; Http request in org-mode babel.  You can get the generated curl
+;; command after executing the code block, from *curl command history*
+;; buffer or using `:print-curl' parameter to the block.
 (use-package ob-http
   :straight (:host github :repo "ag91/ob-http")
   :after org)
@@ -2298,7 +2298,7 @@ does not disrupt the current window configuration."
 (use-package verb
   :straight (:host github :repo "federicotdn/verb")
   :after org
-  :hook (org-mode . verb-mode)
+  ;; :hook (org-mode . verb-mode)
   :config
   (im-leader "ur" #'verb-send-request-on-point))
 
@@ -4928,7 +4928,8 @@ empty string."
       ((pred stringp)
        (when (not (string-empty-p (string-trim action)))
          (im-request
-           "https://www.startpage.com/osuggestions"
+           "https://ac.ecosia.org/autocomplete"
+           :type "list"
            :q action
            :-on-success
            (lambda (data)
@@ -7738,8 +7739,15 @@ This happens to me on org-buffers, xwidget-at tries to get
   :straight (:host github :repo "SqrtMinusOne/biome")
   :defer t
   ;; These commands are generated in the :config section.
-  :commands (im-weather-daily-ankara im-weather-daily-amsterdam im-weather-daily-istanbul)
+  :commands (im-biome-weather-daily-ankara
+             im-biome-weather-daily-amsterdam
+             im-biome-weather-daily-istanbul
+             im-biome-weather-hourly-ankara
+             im-biome-weather-hourly-amsterdam
+             im-biome-weather-hourly-istanbul)
   :custom
+  ;; See README, this fixes request--callback: peculiar error issue.
+  (biome-api-try-parse-error-as-response t)
   (biome-query-coords
    `(("Amsterdam, Netherlands" ,im-amsterdam-lat ,im-amsterdam-long)
      ("Ankara, Turkey" ,im-ankara-lat ,im-ankara-long)
@@ -7764,7 +7772,7 @@ This happens to me on org-buffers, xwidget-at tries to get
   ;; Generate a preset for each city in biome-query-coords
   (--each (map-keys biome-query-coords)
     (eval
-     `(biome-def-preset ,(intern (concat "im-weather-daily-" (downcase (car (s-split ", " it)))))
+     `(biome-def-preset ,(intern (concat "im-biome-weather-daily-" (downcase (car (s-split ", " it)))))
         ((:name . "Weather Forecast")
          (:group . "daily")
          (:params
@@ -7776,7 +7784,7 @@ This happens to me on org-buffers, xwidget-at tries to get
 
   (--each (map-keys biome-query-coords)
     (eval
-     `(biome-def-preset ,(intern (concat "im-weather-hourly-" (downcase (car (s-split ", " it)))))
+     `(biome-def-preset ,(intern (concat "im-biome-weather-hourly-" (downcase (car (s-split ", " it)))))
         ((:name . "Weather Forecast")
          (:group . "hourly")
          (:params
@@ -8041,7 +8049,8 @@ mails."
   (im-shiori-password im-homeserver-password)
   (im-shiori-elfeed-tags '(later bookmark shiori))
   :init
-  (eval-after-load 'elfeed #'im-shiori-enable-elfeed-support))
+  (with-eval-after-load 'elfeed
+    (im-shiori-enable-elfeed-support)))
 
 ;;;;; im-tab --- my tab related extensions
 
@@ -8064,7 +8073,7 @@ mails."
 
 (use-package im-filebrowser
   :straight nil
-  :defer t
+  :commands (im-filebrowser-share)
   :custom
   (im-filebrowser-url im-homeserver-filebrowser-url)
   (im-filebrowser-username im-homeserver-username)
