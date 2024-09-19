@@ -8122,27 +8122,6 @@ mails."
   :general
   (im-leader "tc" #'turkish-correct-region))
 
-;;;;; go-translate -- Google translate
-
-;; This is a quite powerful package but implemented a bit weirdly. No
-;; minor/major modes etc. So it's kind of hard to bind anything in
-;; translation buffer without fiddling with advices etc. but I don't
-;; think it's really required. Only binding you need to know is ~h~
-;; (hit it on either in insert or emacs mode) to list all available
-;; options. For example, hitting ~y~ will speak the word using the
-;; translation engine.
-
-(use-package go-translate
-  :commands gts-do-translate
-  :config
-  (setq gts-translate-list '(("en" "tr") ("tr" "en")))
-  (setq gts-buffer-follow-p t)
-  (setq gts-default-translator
-        (gts-translator
-         :picker (gts-prompt-picker)
-         :engines (list (gts-google-engine) (gts-bing-engine) (gts-stardict-engine))
-         :render (gts-buffer-render))))
-
 ;;;;; jinx -- spellchecker, flyspell alternative
 
 ;; I was using ~flyspell~ and ~flyspell-correct~ before but Jinx works
@@ -13537,6 +13516,7 @@ contents."
 ;;;;;; Special peek functions
 
 (use-package google-translate
+  :autoload (im-peek-translate google-translate-smooth-translate)
   :custom
   (google-translate-translation-directions-alist
    ;; Ordered based on my usage:
