@@ -203,7 +203,103 @@ I used to use [[https://github.com/koekeishiya/yabai][yabai]] but my main pain p
 brew install --cask nikitabobko/tap/aerospace
 #+end_src
 
-#+begin_src toml :tangle (when-darwin "~/.aerospace.toml")
+
+#+name: aerospace-mac-keyboard-bindings
+#+begin_src toml
+cmd-period = 'focus-monitor right'
+cmd-comma = 'focus-monitor left'
+cmd-shift-period = 'move-node-to-monitor right'
+cmd-shift-comma = 'move-node-to-monitor left'
+
+cmd-f1 = 'layout v_accordion'
+cmd-f2 = 'layout h_accordion'
+cmd-f3 = 'layout tiles horizontal vertical'
+cmd-t = 'layout floating tiling'
+
+cmd-h = 'focus --boundaries-action stop left'
+cmd-j = 'focus --boundaries-action stop down'
+cmd-k = 'focus --boundaries-action stop up'
+cmd-l = 'focus --boundaries-action stop right'
+
+cmd-shift-h = 'move left'
+cmd-shift-j = 'move down'
+cmd-shift-k = 'move up'
+cmd-shift-l = 'move right'
+
+cmd-shift-minus = 'resize smart -50'
+cmd-shift-equal = 'resize smart +50'
+
+cmd-1 = 'workspace 1'
+cmd-2 = 'workspace 2'
+cmd-3 = 'workspace 3'
+cmd-4 = 'workspace 4'
+cmd-5 = 'workspace 5'
+cmd-6 = 'workspace 6'
+cmd-7 = 'workspace 7'
+cmd-8 = 'workspace 8'
+cmd-9 = 'workspace 9'
+cmd-0 = 'workspace 0'
+
+cmd-shift-1 = 'move-node-to-workspace 1'
+cmd-shift-2 = 'move-node-to-workspace 2'
+cmd-shift-3 = 'move-node-to-workspace 3'
+cmd-shift-4 = 'move-node-to-workspace 4'
+cmd-shift-5 = 'move-node-to-workspace 5'
+cmd-shift-6 = 'move-node-to-workspace 6'
+cmd-shift-7 = 'move-node-to-workspace 7'
+cmd-shift-8 = 'move-node-to-workspace 8'
+cmd-shift-9 = 'move-node-to-workspace 9'
+
+cmd-tab = 'workspace-back-and-forth'
+#+end_src
+
+#+name: aerospace-uhk-bindings
+#+begin_src toml
+cmd-alt-ctrl-f13 = 'layout floating tiling'
+cmd-alt-ctrl-f14 = 'fullscreen'
+
+cmd-alt-ctrl-f11 = 'resize smart -50'
+cmd-alt-ctrl-f12 = 'resize smart +50'
+
+cmd-alt-ctrl-f19 = 'focus-monitor left'
+cmd-alt-ctrl-f20 = 'focus-monitor right'
+cmd-alt-ctrl-shift-f19 = 'move-node-to-monitor left'
+cmd-alt-ctrl-shift-f20 = 'move-node-to-monitor right'
+
+cmd-alt-ctrl-f15 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop left'
+cmd-alt-ctrl-f16 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop down'
+cmd-alt-ctrl-f17 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop up'
+cmd-alt-ctrl-f18 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop right'
+
+cmd-alt-ctrl-shift-f15 = 'move left'
+cmd-alt-ctrl-shift-f16 = 'move down'
+cmd-alt-ctrl-shift-f17 = 'move up'
+cmd-alt-ctrl-shift-f18 = 'move right'
+
+cmd-alt-ctrl-f1 = 'workspace 1'
+cmd-alt-ctrl-f2 = 'workspace 2'
+cmd-alt-ctrl-f3 = 'workspace 3'
+cmd-alt-ctrl-f4 = 'workspace 4'
+cmd-alt-ctrl-f5 = 'workspace 5'
+cmd-alt-ctrl-f6 = 'workspace 6'
+cmd-alt-ctrl-f7 = 'workspace 7'
+cmd-alt-ctrl-f8 = 'workspace 8'
+cmd-alt-ctrl-f9 = 'workspace 9'
+cmd-alt-ctrl-f10 = 'workspace 0'
+
+cmd-alt-ctrl-shift-f1 = 'move-node-to-workspace 1'
+cmd-alt-ctrl-shift-f2 = 'move-node-to-workspace 2'
+cmd-alt-ctrl-shift-f3 = 'move-node-to-workspace 3'
+cmd-alt-ctrl-shift-f4 = 'move-node-to-workspace 4'
+cmd-alt-ctrl-shift-f5 = 'move-node-to-workspace 5'
+cmd-alt-ctrl-shift-f6 = 'move-node-to-workspace 6'
+cmd-alt-ctrl-shift-f7 = 'move-node-to-workspace 7'
+cmd-alt-ctrl-shift-f8 = 'move-node-to-workspace 8'
+cmd-alt-ctrl-shift-f9 = 'move-node-to-workspace 9'
+cmd-alt-ctrl-shift-f10 = 'move-node-to-workspace 0'
+#+end_src
+
+#+begin_src toml :noweb yes :tangle (when-darwin "~/.aerospace.toml")
 # https://nikitabobko.github.io/AeroSpace/guide
 # https://nikitabobko.github.io/AeroSpace/commands
 
@@ -264,50 +360,9 @@ PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${HOME}/.bin:${PATH}'
 #cmd-f1 = 'layout v_accordion'
 #cmd-f2 = 'layout h_accordion'
 #cmd-f3 = 'layout tiles horizontal vertical'
-cmd-alt-ctrl-f13 = 'layout floating tiling'
-cmd-alt-ctrl-f14 = 'fullscreen'
 
-cmd-alt-ctrl-f11 = 'resize smart -50'
-cmd-alt-ctrl-f12 = 'resize smart +50'
-
-cmd-alt-ctrl-f19 = 'focus-monitor left'
-cmd-alt-ctrl-f20 = 'focus-monitor right'
-cmd-alt-ctrl-shift-f19 = 'move-node-to-monitor left'
-cmd-alt-ctrl-shift-f20 = 'move-node-to-monitor right'
-
-cmd-alt-ctrl-f15 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop left'
-cmd-alt-ctrl-f16 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop down'
-cmd-alt-ctrl-f17 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop up'
-cmd-alt-ctrl-f18 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop right'
-
-cmd-alt-ctrl-shift-f15 = 'move left'
-cmd-alt-ctrl-shift-f16 = 'move down'
-cmd-alt-ctrl-shift-f17 = 'move up'
-cmd-alt-ctrl-shift-f18 = 'move right'
-
-cmd-alt-ctrl-f1 = 'workspace 1'
-cmd-alt-ctrl-f2 = 'workspace 2'
-cmd-alt-ctrl-f3 = 'workspace 3'
-cmd-alt-ctrl-f4 = 'workspace 4'
-cmd-alt-ctrl-f5 = 'workspace 5'
-cmd-alt-ctrl-f6 = 'workspace 6'
-cmd-alt-ctrl-f7 = 'workspace 7'
-cmd-alt-ctrl-f8 = 'workspace 8'
-cmd-alt-ctrl-f9 = 'workspace 9'
-cmd-alt-ctrl-f10 = 'workspace 0'
-
-cmd-alt-ctrl-shift-f1 = 'move-node-to-workspace 1'
-cmd-alt-ctrl-shift-f2 = 'move-node-to-workspace 2'
-cmd-alt-ctrl-shift-f3 = 'move-node-to-workspace 3'
-cmd-alt-ctrl-shift-f4 = 'move-node-to-workspace 4'
-cmd-alt-ctrl-shift-f5 = 'move-node-to-workspace 5'
-cmd-alt-ctrl-shift-f6 = 'move-node-to-workspace 6'
-cmd-alt-ctrl-shift-f7 = 'move-node-to-workspace 7'
-cmd-alt-ctrl-shift-f8 = 'move-node-to-workspace 8'
-cmd-alt-ctrl-shift-f9 = 'move-node-to-workspace 9'
-cmd-alt-ctrl-shift-f10 = 'move-node-to-workspace 0'
-
-cmd-tab = 'workspace-back-and-forth'
+# «aerospace-mac-keyboard-bindings»
+«aerospace-uhk-bindings»
 #+end_src
 
 ** skhd
