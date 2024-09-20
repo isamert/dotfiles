@@ -4337,6 +4337,7 @@ Return parsed seconds from users answer."
   :config
   ;; Disable wrapping lines in some modes so that full-screen dirvish looks good
   (add-hook 'dirvish-directory-view-mode-hook #'im-disable-line-wrapping)
+  (add-hook 'dired-mode-hook #'dired-omit-mode)
   (add-hook 'dired-mode-hook #'im-disable-line-wrapping)
   (add-hook 'dired-mode-hook #'im-disable-tab-line))
 
