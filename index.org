@@ -495,6 +495,17 @@ server:setCallback(cb)
 server:start()
 #+end_src
 
+** The notch and items in the MacOS menu bar
+If the icons in the menubar takes a lot of place, some of them goes under the notch and becomes totally invisible, non-interactable. The following two things help:
+
+- Setting a lower spacing and padding for the icons (need to restart your computer afterwards):
+#+begin_src sh
+defaults -currentHost write -globalDomain NSStatusItemSpacing -int 5
+defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 3
+#+end_src
+
+- [[https://github.com/dwarvesf/hidden][Hidden Bar]] → This lets you selectively hide some items so that only the things you want stay visible.
+
 * Linux
 ** systemd
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
