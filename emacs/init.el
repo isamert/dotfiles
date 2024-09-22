@@ -13517,17 +13517,18 @@ contents."
 ;;;;;; Special peek functions
 
 (use-package google-translate
-  :autoload (im-peek-translate google-translate-smooth-translate)
+  :defines (google-translate-pop-up-buffer-set-focus)
   :custom
-  (google-translate-translation-directions-alist
-   ;; Ordered based on my usage:
-   '(("en" . "tr")
-     ("nl" . "en")
-     ("tr" . "en")
-     ("en" . "nl")))
   (google-translate-listen-program "mpv")
   ;; Try 'curl or 'wget if getting any errors
-  (google-translate-backend-method 'emacs))
+  (google-translate-backend-method 'emacs)
+  :init
+  (setq google-translate-translation-directions-alist
+        ;; Ordered based on my usage:
+        '(("en" . "tr")
+          ("nl" . "en")
+          ("tr" . "en")
+          ("en" . "nl"))))
 
 (defun im-peek-translate ()
   "Simple `google-translate-smooth-translate' wrapper.
