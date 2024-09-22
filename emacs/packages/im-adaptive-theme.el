@@ -66,6 +66,15 @@
   :type 'number
   :group 'im-adaptive-theme)
 
+(defcustom im-adaptive-theme-detect-geolocation-automatically
+  nil
+  "Use the geolocation information retrieved from ipinfo.io.
+This changes the value of the following variables according to response:
+  - `calendar-latitude'
+  - `calendar-longitude'"
+  :type 'boolean
+  :group 'im-adaptive-theme)
+
 ;;;; Variables
 
 (defvar im-adaptive-theme--next-timer nil)
@@ -86,6 +95,35 @@ theme right now."
     (cancel-timer im-adaptive-theme--day-timer))
   (when im-adaptive-theme--day-timer
     (cancel-timer im-adaptive-theme--night-timer))
+  (if im-adaptive-theme-detect-geolocation-automatically
+      (im-adaptive-theme-detect-geolocation
+       (lambda (_success?)
+         (im-adaptive-theme--enable only-enable)))
+    (im-adaptive-theme--enable only-enable)))
+
+;;;###autoload
+(defun im-adaptive-theme-reload ()
+  "To get rid of some artifacts."
+  (interactive)
+  (let ((theme (car custom-enabled-themes)))
+    (mapc #'disable-theme custom-enabled-themes)
+    (when theme
+      (load-theme theme :no-confirm))))
+
+(defun im-adaptive-theme-detect-geolocation (&optional on-finished)
+  (im-request "ipinfo.io"
+    :-on-success
+    (lambda (data)
+      (pcase-let ((`(,lat ,long) (string-split (alist-get 'loc data) ",")))
+        (setq calendar-latitude (string-to-number lat))
+        (setq calendar-longitude (string-to-number long)))
+      (funcall on-finished t))
+    :-on-error
+    (lambda (_data)
+      (message ">> im-adaptive-theme-detect-geolocation failed")
+      (funcall on-finished nil))))
+
+(defun im-adaptive-theme--enable (only-enable)
   (setq im-adaptive-theme--next-timer
         (run-at-time
          "24:10" nil
@@ -122,15 +160,6 @@ theme right now."
           (im-adaptive-theme--hour-number-to-hour-string switch-to-night-hour)
           nil
           (lambda () (pick-and-load-theme-from im-adaptive-theme-night-themes))))))))
-
-;;;###autoload
-(defun im-adaptive-theme-reload ()
-  "To get rid of some artifacts."
-  (interactive)
-  (let ((theme (car custom-enabled-themes)))
-    (mapc #'disable-theme custom-enabled-themes)
-    (when theme
-      (load-theme theme :no-confirm))))
 
 ;;;; Utils
 

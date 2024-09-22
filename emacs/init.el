@@ -1335,6 +1335,7 @@ using this function."
   :straight nil
   :hook (after-init . im-adaptive-theme-enable)
   :custom
+  (im-adaptive-theme-detect-geolocation-automatically t)
   (im-adaptive-theme-day-themes
    '(;; Pinkish white theme, really nice to look at.
      ef-summer))
@@ -4469,8 +4470,12 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   ;; calendar (press `gs'). `calendar-sunrise-sunset' shows the
   ;; sunrise/sunset times for time under the cursor which means you
   ;; can look up sunrise/sunset times of past/future times.
-  (setq calendar-latitude 52.37403)
-  (setq calendar-longitude 4.88969)
+
+  ;; See down below for im-adaptive-theme, it automatically sets
+  ;; these variables. I keep this as fallback here:
+
+  (setq calendar-latitude im-amsterdam-lat)
+  (setq calendar-longitude im-amsterdam-long)
 
   ;; Use 24-hour format to display times
   (setq calendar-time-display-form
