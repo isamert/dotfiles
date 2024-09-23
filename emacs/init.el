@@ -10984,7 +10984,7 @@ story points they have released. See the following figure:
                                       (plist-get it :points)
                                       (plist-get it :creator)
                                       (plist-get it :status)
-                                      (s-truncate 60 (plist-get it :summary)))
+                                      (s-truncate 120 (plist-get it :summary)))
                               (plist-get it :tasks)))))
        (s-join "\n|-\n")
        (insert)))
@@ -10997,7 +10997,7 @@ story points they have released. See the following figure:
                         .fields.creator.name
                         (alist-get im-jira-story-points-field-name .fields)
                         .fields.status.name
-                        (s-truncate 60 (format "%s - %s" .key .fields.summary)))))
+                        (s-truncate 120 (format "%s - %s" .key .fields.summary)))))
        (s-join "\n")
        (insert))))
     (org-table-align)))
