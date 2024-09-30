@@ -5700,6 +5700,9 @@ non-nil so that you only add it to `project-prefix-map'."
     "fs" #'save-buffer
     "fd" #'consult-dir
     "fl" #'consult-line
+    ;; Normally searches within project buffers, with prefix arg
+    ;; searches within all buffers.
+    "fL" #'consult-line-multi
     "cr" #'consult-history
     "RET" #'consult-buffer)
   (:keymaps 'minibuffer-mode-map
