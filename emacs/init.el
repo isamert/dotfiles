@@ -8490,7 +8490,7 @@ Useful if .elfeed directory is freshly syncned."
   (setq orgmdb-poster-folder "~/Documents/notes/data/posters")
   (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore actors poster plot)))
 
-;;; rcirc -- simple, built-in irc client
+;;;;; rcirc -- simple, built-in irc client
 
 (use-package rcirc
   :straight (:type built-in)
