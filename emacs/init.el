@@ -5744,31 +5744,6 @@ non-nil so that you only add it to `project-prefix-map'."
   ;; This also supports previews. Use the `consult-preview-key'.
   (defalias 'im-switch-theme #'consult-theme))
 
-(defun im-consult-git-grep-branch (branch)
-  "Run interactive grep inside given BRANCH and display the result at that revision."
-  (interactive
-   (list (im-output-select
-          :cmd "git branch -a --format='%(refname:lstrip=2)'"
-          :prompt (format "Select branch (current=%s): " (lab-git-current-branch))
-          :keep-order t)))
-  (pcase-let* ((default-directory (im-current-project-root))
-               (result (save-window-excursion
-                         (prog1 (consult-git-grep (list branch))
-                           (kill-buffer (im-tap (current-buffer))))))
-               (`(,fname ,line-no) (s-split-up-to ":" (s-chop-prefix (concat branch ":") result) 2)))
-    (with-current-buffer (get-buffer-create (format "*%s at %s*" fname branch))
-      (erase-buffer)
-      (insert
-       (shell-command-to-string
-        (format "git show %s:%s" branch fname)))
-      (goto-char (point-min))
-      (forward-line (1- (string-to-number line-no)))
-      (delay-mode-hooks
-        (funcall (assoc-default fname auto-mode-alist 'string-match)))
-      (font-lock-fontify-buffer)
-      (switch-to-buffer (current-buffer))
-      (recenter))))
-
 ;;;;;; Project & file management
 
 ;; Some functionality for project management. I do some fine-tuning for =find= and =ripgrep= commands that consult uses.
@@ -5812,6 +5787,30 @@ approach."
      :map (s-chop-prefix "./" it)
      :do (find-file it))))
 
+(defun im-consult-git-grep-branch (branch)
+  "Run interactive grep inside given BRANCH and display the result at that revision."
+  (interactive
+   (list (im-output-select
+          :cmd "git branch -a --format='%(refname:lstrip=2)'"
+          :prompt (format "Select branch (current=%s): " (lab-git-current-branch))
+          :keep-order t)))
+  (pcase-let* ((default-directory (im-current-project-root))
+               (result (save-window-excursion
+                         (prog1 (consult-git-grep (list branch))
+                           (kill-buffer (im-tap (current-buffer))))))
+               (`(,fname ,line-no) (s-split-up-to ":" (s-chop-prefix (concat branch ":") result) 2)))
+    (with-current-buffer (get-buffer-create (format "*%s at %s*" fname branch))
+      (erase-buffer)
+      (insert
+       (shell-command-to-string
+        (format "git show %s:%s" branch fname)))
+      (goto-char (point-min))
+      (forward-line (1- (string-to-number line-no)))
+      (delay-mode-hooks
+        (funcall (assoc-default fname auto-mode-alist 'string-match)))
+      (font-lock-fontify-buffer)
+      (switch-to-buffer (current-buffer))
+      (recenter))))
 
 ;;;;;; consult-buffer and some extensions
 
