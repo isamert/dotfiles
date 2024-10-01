@@ -2422,7 +2422,8 @@ that is provided by ob-http."
   (org-agenda-use-tag-inheritance nil)
   (org-agenda-ignore-drawer-properties '(effort appt category))
   :config
-  (evil-set-initial-state 'org-agenda-mode 'normal))
+  (evil-set-initial-state 'org-agenda-mode 'normal)
+  (add-hook 'org-agenda-finalize-hook #'evil-force-normal-state))
 
 ;;;;; org-caldav (calendar sync)
 
