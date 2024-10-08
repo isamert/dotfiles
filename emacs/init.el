@@ -4831,7 +4831,7 @@ properly."
   ;; Use browse-url for each link opening. This way my
   ;; `browse-url-handlers' take precedence over eww.
   (eww-use-browse-url ".*")
-  (eww-search-prefix "https://www.startpage.com/sp/search?abp=-1&t=device&lui=english&sc=xJgFkqH2tfCu20&cat=web&prfe=bcfd50b9911b2c8c90fe567dcc034a47c25b6bbad9d49325c02d5e7063258f5310102504f00de9c5b9f11331d7811b22555d35fa08425db6ca42cb38773906a0c08e86291a93527d8d2183e9&query=")
+  (eww-search-prefix "https://www.ecosia.org/search?q=")
   (eww-auto-rename-buffer
    (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "..."))))
   :config
