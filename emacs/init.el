@@ -7036,20 +7036,20 @@ Fetches missing channels/users first."
                     (missing-channels? (> (length missing-channel-ids) 0)))
                (cond
                 (missing-users?
-                 (message ">> Some people are missing, loading...")
+                 (message ">> Some people are missing: %s, loading..." missing-user-ids)
                  (slack-user-info-request
                   missing-user-ids
                   team :after-success
                   (lambda ()
-                    (message ">> Some people are missing, loading...Done")
+                    (message ">> Some people are missing: %s, loading...Done" missing-user-ids)
                     (im-slack-dms data))))
                 (missing-channels?
-                 (message ">> Some channels are missing, loading...")
+                 (message ">> Some channels are missing: %s, loading..." missing-channel-ids)
                  (let* ((finished-count 0)
                         (cb (lambda ()
                               (setq finished-count (1+ finished-count))
                               (when (length= missing-channel-ids finished-count)
-                                (message ">> Some channels are missing, loading...Done")
+                                (message ">> Some channels are missing: %s, loading...Done" missing-channel-ids)
                                 (im-slack-dms data)))))
                    (--each missing-channel-ids
                      (slack-conversations-info
