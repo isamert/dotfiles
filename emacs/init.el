@@ -9374,6 +9374,10 @@ work.  You need to enter full path while importing by yourself."
   (setq cider-inspector-page-size 50)
   (setq cider-show-error-buffer nil)
 
+  (add-hook 'clojure-mode-hook 'hs-minor-mode)
+  (add-hook 'clojure-mode-hook 'aggressive-indent-mode)
+  (add-to-list 'outli-heading-config '(clojure-mode ";;" ?\; t))
+
   ;; `compojure' indent
   (define-clojure-indent
     (defroutes 'defun)
