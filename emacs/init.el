@@ -13140,7 +13140,6 @@ WHERE is interpreted as a file name."
                 (when-let ((zoom (nth 1 (s-match "\\(https://.*zoom.us/j/.*\\)\\(\b\\|\n\\)" it))))
                   (im-open-zoom-meeting-dwim zoom)))))
 
-
 (define-derived-mode im-calendar-mode outline-mode "Calendar"
   "Calendar...")
 
@@ -13148,9 +13147,9 @@ WHERE is interpreted as a file name."
   "TAB" #'outline-cycle)
 
 (defun im-calendar-today ()
-  "Show today's calendar in a buffer. The resulting buffer has
-  outline-mode enabled, so you can use outline-mode specific
-  bindings to jump, hide/show stuff."
+  "Show today's calendar in a buffer.
+The resulting buffer has outline-mode enabled, so you can use
+outline-mode specific bindings to jump, hide/show stuff."
   (interactive)
   (im-shell-command
    :command "icalBuddy -f eventsToday"
@@ -13163,6 +13162,21 @@ WHERE is interpreted as a file name."
                 (goto-char (point-min))
                 (outline-cycle-buffer))
    :buffer-name "*calendar-today*"))
+
+(defun im-calendar-for-date (date)
+  "Show given DATEs calendar in a buffer."
+  (interactive (list (format-time-string "%Y-%m-%d" (org-read-date nil 'to-time nil "Date:  "))))
+  (im-shell-command
+   :command (format "icalBuddy -f eventsFrom:%s to:%s" date date)
+   :switch t
+   :on-start (lambda (&rest _) (erase-buffer))
+   :on-finish (lambda (&rest _)
+                (im-calendar-mode)
+                (setq-local outline-regexp "• ")
+                (setq-local outline-level #'outline-level)
+                (goto-char (point-min))
+                (outline-cycle-buffer))
+   :buffer-name (format "*calendar-%s*" date)))
 
 ;;;;; im-clipboard-image-to-text
 
