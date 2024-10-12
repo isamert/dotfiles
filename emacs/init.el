@@ -6965,14 +6965,14 @@ properly in MacOS."
    (list
     (read-string "Link: " (thing-at-point 'url))))
   (let* ((m (s-match
-             "https://\\(\\w+\\).slack.com/archives/\\(\\w+\\)/p\\(\\w+\\).*\\(\\?thread_ts=\\(\\w+\\)\\)?"
+             "https://\\(\\w+\\)\\(.enterprise\\)?.slack.com/archives/\\(\\w+\\)/p\\(\\w+\\).*\\(\\?thread_ts=\\(\\w+\\)\\)?"
              link))
          (team (--find (string= (oref it domain) (nth 1 m))
                        (hash-table-values slack-teams-by-token)))
-         (room (slack-room-find (nth 2 m) team))
-         (message-ts (number-to-string (/ (string-to-number (nth 3 m)) 1000000.0)))
+         (room (slack-room-find (nth 3 m) team))
+         (message-ts (number-to-string (/ (string-to-number (nth 4 m)) 1000000.0)))
          (message (slack-room-find-message room message-ts))
-         (thread (nth 4 m)))
+         (thread (nth 5 m)))
     (im-slack--open-message-or-thread (list :message message :room room :team team))
     thread))
 
