@@ -7308,6 +7308,36 @@ Fetches missing channels/users first."
     "sa" #'im-ai-snippet
     "sA" #'im-ai-snippet-superior))
 
+;;;;; gptel
+
+;; Seems more capable than org-ai. Probably going to replace org-ai
+;; with this in the long run.
+;;
+;; - Supports images etc.
+;; - Automatically converts markdown responses to org syntax on the fly,
+;; - Very easy to add/delete context.
+;;
+;; Use <file:...> syntax to include media files in the prompt. Should
+;; be in a single line.
+;;
+;; * Commands
+;;
+;; - ~gptel~                     → Start a dedicated chat buffer.
+;; - ~gptel-add~                 → Add to context DWIM
+;; - ~gptel-send~                → Send current region as prompt and insert the result.
+;; - ~C-u gptel-send~            → Edit stuff before sending prompt.
+;;
+;; Inside a gptel buffer:
+;;
+;; - ~C-u C-x RET~ or ~gptel-menu~ → Menu
+
+(use-package gptel
+  :config
+  (setq gptel-default-mode #'org-mode)
+  (setq gptel-track-media t)
+  (setq gptel-prompt-prefix-alist '((org-mode . "[ME]: ")))
+  (setq gptel-response-prefix-alist '((org-mode . "[AI]: "))))
+
 ;;;;; tmr.el -- timers, reminders etc.
 
 ;; Pretty timers. I forget everything, so it's quite important for me
