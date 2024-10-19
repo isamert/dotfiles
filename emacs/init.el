@@ -13015,6 +13015,8 @@ selecting a pod."
 
 ;;;;; Archive URLs with single-file
 
+;; TODO: Archive reddit with reddigg.el
+
 (cl-defun im-archive-url (url &key where (backend 'chrome) crawl tidy on-finish on-fail)
   "Archive the URL into WHERE. WHERE can be a directory or a
 file. If it's a directory, it should already exists otherwise
@@ -13028,7 +13030,8 @@ WHERE is interpreted as a file name."
   (setq where (expand-file-name where))
   (let* ((command
           (format
-           "single-file --filename-replacement-character='-' %s %s %s \"%s\" \"%s\""
+           "%s --filename-replacement-character='-' %s %s %s \"%s\" \"%s\""
+           (im-ensure-binary "single-file" :package "single-file-cli" :installer "nixin")
            (if (eq system-type 'darwin)
                "--browser-executable-path=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\""
              "--browser-executable-path=chromium")
