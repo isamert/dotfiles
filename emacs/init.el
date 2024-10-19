@@ -13021,12 +13021,31 @@ selecting a pod."
 
 ;;;;; Archive URLs with single-file
 
-;; TODO: Archive reddit with reddigg.el
-
 (cl-defun im-archive-url (url &key where (backend 'chrome) crawl tidy on-finish on-fail)
-  "Archive the URL into WHERE. WHERE can be a directory or a
-file. If it's a directory, it should already exists otherwise
-WHERE is interpreted as a file name."
+  "Archive the URL into WHERE.
+WHERE can be a directory or a file.  If it's a directory, it should
+already exists otherwise WHERE is interpreted as a file name."
+  (interactive
+   (list (or
+          (im-org-link-copy)
+          (thing-at-point 'url)
+          (read-string "URL: "))
+         (read-directory-name "Save files into: ")))
+  (setq where (expand-file-name where))
+  (cond
+   ((s-matches? im-reddit-comment-url-regexp url)
+    (im-archive-url--reddit url :where where))
+   (t
+    (im-archive-url--helper
+     url
+     :where where
+     :backend backend
+     :crawl crawl
+     :tidy tidy
+     :on-finish on-finish
+     :on-fail on-fail))))
+
+(cl-defun im-archive-url--helper (url &key where (backend 'chrome) crawl tidy on-finish on-fail)
   (interactive
    (list (or
           (im-org-link-copy)
@@ -13079,6 +13098,26 @@ WHERE is interpreted as a file name."
          (message "Archiving failed: '%s'. Command is copied to your kill ring." url)
          (kill-new command))
        (and on-fail (funcall on-fail 'abnormal-exit))))))
+
+(cl-defun im-archive-url--reddit (link &key where)
+  "Archive Reddit comment page LINK to WHERE in org-mode.
+See `im-archive-url' for WHERE's definition."
+  (setq link (substring link (length "https://www.reddit.com/") nil))
+  (promise-chain (reddigg--promise-comments link)
+    (then #'reddigg--print-comments)
+    (then (lambda (&rest _)
+            (write-region
+             (with-current-buffer (reddigg--get-cmt-buffer)
+               (buffer-substring-no-properties (point-min) (point-max)))
+             nil
+             (cond
+              ;; NOTE: I don't have a use case where I pass `nil' for
+              ;; `where'.  If I do, it's better to include the page
+              ;; title to the filename.
+              ((f-dir? where) (f-join where (format-time-string "%Y%m%dT%H%M%S-reddit-comments.org")))
+              (where where)))))
+    (promise-catch (lambda (reason)
+                     (message "im-archive-url--reddit failed: %s" reason)))))
 
 ;;;;; narrow-indirect & im-narrow-dwim
 
