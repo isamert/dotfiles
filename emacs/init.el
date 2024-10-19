@@ -2072,6 +2072,12 @@ side window the only window'"
   (setq im-calendar-files (directory-files im-org-calendar-directory 'full (rx ".org" eos)))
   (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
 
+  ;; When I unfold an header if the contents are longer than remaining
+  ;; window width then cursor recenters to the top of the window. I
+  ;; disable with the following line.
+  (with-eval-after-load 'org-cycle
+    (setq org-cycle-hook (delq 'org-cycle-optimize-window-after-visibility-change org-cycle-hook)))
+
   (add-to-list 'org-link-abbrev-alist '("imdb" . "https://www.imdb.com/title/%s"))
   (add-to-list 'org-link-abbrev-alist '("yt" . "https://youtu.be/%s"))
   ;; ^ More info: https://orgmode.org/manual/Link-Abbreviations.html
