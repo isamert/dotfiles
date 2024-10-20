@@ -75,6 +75,13 @@ This changes the value of the following variables according to response:
   :type 'boolean
   :group 'im-adaptive-theme)
 
+(defcustom im-adaptive-theme-refresh-timezone t
+  "Setting this to non-nil prevents time-zone change problems.
+You may change time-zones without restarting Emacs, which may cause
+issues with theme change hours.  This is a little hack to prevent it."
+  :type 'boolean
+  :group 'im-adaptive-theme)
+
 ;;;; Variables
 
 (defvar im-adaptive-theme--next-timer nil)
@@ -124,6 +131,8 @@ theme right now."
       (funcall on-finished nil))))
 
 (defun im-adaptive-theme--enable (only-enable)
+  (when im-adaptive-theme-refresh-timezone
+    (set-time-zone-rule nil))
   (setq im-adaptive-theme--next-timer
         (run-at-time
          "24:10" nil
