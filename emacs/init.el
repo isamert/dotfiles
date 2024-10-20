@@ -4775,6 +4775,8 @@ anchor points in the buffer."
 
 ;;;;; eww -- web browser
 
+(defconst im-reddit-comment-url-regexp ".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)\\(/[a-zA-Z0-9_-]+/?\\)?\\(&.*\\)?$")
+
 (defun im-purified-url-handler (fn)
   "Clear the redundant stuff from urls.
 Some links are prefixed with google redirection url, this
@@ -4789,7 +4791,7 @@ properly."
 (setq browse-url-handlers
       `((".*jtracker.trendyol.*/browse/.*" . ,(im-purified-url-handler #'im-jira-view-ticket))
         (".*slack.com/archives/.*" . ,(im-purified-url-handler #'im-slack-open-link))
-        (".*reddit.com/r/[a-zA-Z0-9_-]+/comments/[a-zA-Z0-9_-]+/\\([a-zA-Z0-9_-]+/?\\)\\(/[a-zA-Z0-9_-]+/?\\)?\\(&.*\\)?$" . ,(im-purified-url-handler #'reddigg-view-comments))
+        (,im-reddit-comment-url-regexp . ,(im-purified-url-handler #'reddigg-view-comments))
         (".*news.ycombinator.com/item\\?id=.*" . ,(im-purified-url-handler #'hnreader-comment))
         (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . ,(im-purified-url-handler #'im-open-stackexchange-link))
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . ,(im-purified-url-handler #'empv-play-or-enqueue))
