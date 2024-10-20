@@ -166,6 +166,28 @@ OUTPUT-BUFFER."
           (unless output-buffer
             (funcall callback (with-current-buffer buff (buffer-string))))))))))
 
+;;;; im-ai-lookup
+
+(defvar im-ai-lookup--history nil)
+
+(defun im-ai-lookup (prompt)
+  (interactive (list (read-string "Ask AI: " nil im-ai-lookup--history)))
+  (when (string= prompt "")
+    (user-error "A prompt is required."))
+  (with-current-buffer (get-buffer-create "*im-ai-lookup*")
+    (erase-buffer)
+    (org-mode)
+    (display-buffer (current-buffer)
+                    `((display-buffer-in-side-window)
+                      (side . bottom)
+                      (window-height . 15)))
+    (insert
+     (format
+      "#+begin_ai markdown :model \"%s\"\n[ME]:%s\n#+end_ai"
+      im-ai-powerful-model
+      prompt))
+    (org-ctrl-c-ctrl-c)))
+
 ;;;; im-ai-snippet*
 
 (defun im-ai-snippet (prompt)
