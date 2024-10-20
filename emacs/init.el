@@ -1036,6 +1036,11 @@ For async requests, simply provide a success handler:
   (or (s-match "^\\(https?\\|file\\)://\\|www." url)
       (s-match "\\.\\(org\\|net\\|com\\)$" url)))
 
+(defun im-check-internet-connection ()
+  "Return t if there is an active internet connection.
+May return false on slow connections.  Checks blocking, max 1 secs."
+  (= 0 (call-process "nc" nil nil nil  "-G" "1" "-z" "www.google.com" "80")))
+
 ;;;;;; File operations
 
 (defun im-latest-file (&optional path)
@@ -8030,24 +8035,25 @@ This could be a cron job but keeping it in emacs gives me the
 opportunity to notify the new email count right after fetching all
 mails."
   (interactive (list t))
-  (condition-case reason
-      (let (count)
-        (when interactive?
-          (message ">> Checking mail..."))
-        (await (im-shell-command :command "mbsync -a" :async t))
-        (await (im-shell-command :command "notmuch new" :async t))
-        (await (im-shell-command :command "notmuch tag +work -- not tag:work and folder:work/INBOX" :async t))
-        (setq
-         count
-         (string-to-number
-          (await (im-shell-command :command "notmuch count tag:inbox and tag:unread" :async t))))
-        (when interactive?
-          (message "You have %s new mail." count))
-        (when (> count 0)
-          (alert (format "You have %s new mail!" count)
-                 :title "New Mail!")))
-    (error (alert (format "Exit code: %s. See buffers *notmuch* and *mbsync*." reason)
-                  :title "Checking for mail failed!"))))
+  (when (im-check-internet-connection)
+    (condition-case reason
+        (let (count)
+          (when interactive?
+            (message ">> Checking mail..."))
+          (await (im-shell-command :command "mbsync -a" :async t))
+          (await (im-shell-command :command "notmuch new" :async t))
+          (await (im-shell-command :command "notmuch tag +work -- not tag:work and folder:work/INBOX" :async t))
+          (setq
+           count
+           (string-to-number
+            (await (im-shell-command :command "notmuch count tag:inbox and tag:unread" :async t))))
+          (when interactive?
+            (message "You have %s new mail." count))
+          (when (> count 0)
+            (alert (format "You have %s new mail!" count)
+                   :title "New Mail!")))
+      (error (alert (format "Exit code: %s. See buffers *notmuch* and *mbsync*." reason)
+                    :title "Checking for mail failed!")))))
 
 (run-with-timer
  60
