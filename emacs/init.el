@@ -7318,6 +7318,7 @@ Fetches missing channels/users first."
   :general
   (im-leader-v
     "eg" #'im-ai
+    "sl" #'im-ai-lookup
     "sa" #'im-ai-snippet
     "sA" #'im-ai-snippet-superior))
 
@@ -12770,6 +12771,7 @@ selecting a pod."
        (when current-prefix-arg
          (im-kube-use-context))
        (list (im-kube--current-context))))
+  (require 'vtable)
   (with-current-buffer (get-buffer-create (format "*im-kube: %s*" context))
     ;; TODO: Make a major mode out of this
     (setq im-kube--current-context context)
