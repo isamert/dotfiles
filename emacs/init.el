@@ -9926,6 +9926,7 @@ of the results drawer.
 If `:cmd' is non-nil, then instead of executing query, print out
 the resulting bq command."
   (let* ((job-id (im-uuid))
+         (dry-run? (alist-get :dry-run params))
          (format (or (alist-get :format params) "pretty"))
          (api (alist-get :api params))
          (project-id (alist-get :project-id params))
@@ -9941,6 +9942,7 @@ the resulting bq command."
     (setq query (org-babel-expand-body:bqsql query params))
     (setq cmd `("query" ,buf "bq" "query"
                 ,@(when api `("--api" ,api))
+                ,@(when dry-run? `("--dry_run"))
                 ,@(when project-id `("--project_id" ,project-id))
                 "--quiet" "--max_rows" "100000" "--nouse_legacy_sql"
                 "--format" ,format
