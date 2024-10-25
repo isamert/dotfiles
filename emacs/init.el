@@ -4813,6 +4813,7 @@ properly."
   :general
   (im-leader-v
     "ew" #'im-eww)
+  (:keymaps 'embark-file-map "/" #'eww-open-file)
   (:keymaps 'shr-map
    "z" nil ;; So that regular evil bindings work
    "v" nil ;; So that regular evil bindings work
