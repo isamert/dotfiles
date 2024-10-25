@@ -9468,10 +9468,13 @@ work.  You need to enter full path while importing by yourself."
   (emmet-expand-jsx-className? t)
   (emmet-self-closing-tag-style " /"))
 
-;;;;; r
+;;;;; R-lang
 
 (use-package ess
   :mode "\\.r\\'")
+
+(setenv "R_LIBS" (expand-file-name "~/.rlibs"))
+(setenv "R_LIBS_USER" (expand-file-name "~/.rlibs"))
 
 ;;;;; kotlin
 
