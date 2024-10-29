@@ -174,19 +174,23 @@ OUTPUT-BUFFER."
   (interactive (list (read-string "Ask AI: " nil im-ai-lookup--history)))
   (when (string= prompt "")
     (user-error "A prompt is required."))
-  (with-current-buffer (get-buffer-create "*im-ai-lookup*")
-    (erase-buffer)
-    (org-mode)
-    (display-buffer (current-buffer)
-                    `((display-buffer-in-side-window)
-                      (side . bottom)
-                      (window-height . 15)))
-    (insert
-     (format
-      "#+begin_ai markdown :model \"%s\"\n[ME]:%s\n#+end_ai"
-      im-ai-powerful-model
-      prompt))
-    (org-ctrl-c-ctrl-c)))
+  (let ((context (if (use-region-p)
+                     (concat "\n" (s-trim (buffer-substring-no-properties (region-beginning) (region-end))) "\n")
+                   "")))
+    (with-current-buffer (get-buffer-create "*im-ai-lookup*")
+      (erase-buffer)
+      (org-mode)
+      (display-buffer (current-buffer)
+                      `((display-buffer-in-side-window)
+                        (side . bottom)
+                        (window-height . 15)))
+      (insert
+       (format
+        "#+begin_ai markdown :model \"%s\"\n[ME]:%s%s\n#+end_ai"
+        im-ai-powerful-model
+        prompt
+        context))
+      (org-ctrl-c-ctrl-c))))
 
 ;;;; im-ai-snippet*
 
