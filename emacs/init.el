@@ -9232,8 +9232,7 @@ This is used in my snippets."
 
 (use-package ob-deno
   :after org
-  :straight (:host github :repo "jflatow/ob-deno" :branch "jflatow/async")
-  :defer t)
+  :straight (:host github :repo "isamert/ob-deno"))
 
 (with-eval-after-load 'org
   (add-to-list 'org-src-lang-modes '("deno" . typescript-ts)))
