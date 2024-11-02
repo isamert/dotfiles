@@ -3636,6 +3636,19 @@ it's a list, the first element will be used as the binary name."
   (setq eshell-history-size 10000)
   ;; I manage history with `im-eshell-append-history''
   (setq eshell-save-history-on-exit nil)
+  ;; You can jump to a directory by doing a regex match with:
+  ;;
+  ;;    cd =some-regexp
+  ;;
+  ;; and you'll jump to the latest matching directory in in the last
+  ;; dir ring.
+  ;;
+  ;; Also use
+  ;;
+  ;;     cd -
+  ;;
+  ;; to jump to the latest directory before the current one.
+  (setq eshell-last-dir-ring-size 1000)
 
   (defun im-eshell-prompt ()
     (concat (abbreviate-file-name (eshell/pwd))
