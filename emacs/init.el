@@ -3728,6 +3728,9 @@ it's a list, the first element will be used as the binary name."
 ;; haven't tried it yet and I need to make it work with corfu instead
 ;; of helm.
 
+;; - In `eshell', fish completion is only used when `pcomplete' fails.
+;; - Don't forget that pcomplete works with TAB, not M-TAB.
+
 (use-package fish-completion
   :after eshell
   :hook (eshell-mode . fish-completion-mode))
@@ -6112,7 +6115,6 @@ When ARG is non-nil, query the whole workspace/project."
   (define-key corfu-map (kbd "M-j") #'corfu-next)
   (define-key corfu-map (kbd "M-k") #'corfu-previous)
   (define-key corfu-map (kbd "RET") #'corfu-complete)
-  (define-key corfu-map (kbd "RET") #'corfu-send)
   (define-key corfu-map (kbd "<tab>") nil)
 
   (set-face-background 'corfu-current "dim gray")
@@ -6148,10 +6150,11 @@ When ARG is non-nil, query the whole workspace/project."
   :straight nil
   :after corfu
   :config
-  (setq corfu-popupinfo-delay 0)
+  (setq corfu-popupinfo-delay '(1.0 . 0.3))
   (corfu-popupinfo-mode)
   ;; Toggle doc on/off while in corfu
-  (define-key corfu-map (kbd "M-d") #'corfu-popupinfo-toggle)
+  (define-key corfu-map (kbd "M-i") #'corfu-popupinfo-toggle)
+  (define-key corfu-map (kbd "M-l") #'corfu-popupinfo-location)
   (define-key corfu-map (kbd "M-p") #'corfu-popupinfo-scroll-down)
   (define-key corfu-map (kbd "M-n") #'corfu-popupinfo-scroll-up))
 
