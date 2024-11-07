@@ -8008,13 +8008,19 @@ This happens to me on org-buffers, xwidget-at tries to get
   (:keymaps 'notmuch-search-mode-map :states 'normal
    ;; gr → Refresh view
    ;; C → compose mail
-   "r" #'evil-collection-notmuch-search-toggle-unread)
+   "u" #'evil-collection-notmuch-search-toggle-unread
+   "gs" #'notmuch-search
+   "gS" #'notmuch-tree)
   (im-leader
     "en" #'im-notmuch-inbox
     "eN" #'notmuch-hello)
   :config
   (setq-default notmuch-search-oldest-first nil)
-  (evil-collection-notmuch-setup))
+  (evil-collection-notmuch-setup)
+  ;; I use the s key for another thing
+  (evil-collection-define-key 'normal 'notmuch-common-keymap
+    "s" nil
+    "S" nil))
 
 (use-package message
   :straight (:type built-in)
