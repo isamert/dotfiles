@@ -9954,7 +9954,7 @@ the resulting bq command."
          (buffer? (alist-get :buffer params))
          (cmd? (alist-get :cmd params))
          (json-out? (s-matches? "json" format))
-         (buf (get-buffer-create "*im-bqsql*"))
+         (buf (get-buffer-create "*im-big-querysql*"))
          (org-buffer (current-buffer))
          (start-time (float-time))
          cmd cmd-str
@@ -10067,35 +10067,35 @@ total {rows,bytes} etc. and first 10 rows of the table."
    :object-type 'alist
    :array-type 'list))
 
-(defmemoizefile im-bq-all-tables () "~/.emacs.d/big-query-table-cache"
+(defmemoizefile im-big-query-all-tables () "~/.emacs.d/big-query-table-cache"
   (->>
-   (im-big-query-get-all-datasets im-bq-project-id)
+   (im-big-query-get-all-datasets im-big-query-project-id)
    (--map (alist-get 'id it))
    (--mapcat (ignore-errors (im-big-query-get-all-tables it)))))
 
-(defun im-bq-all-table-names ()
-  (--map (alist-get 'id it) (im-bq-all-tables)))
+(defun im-big-query-all-table-names ()
+  (--map (alist-get 'id it) (im-big-query-all-tables)))
 
 ;; TODO: Act on it
-(defun im-bq-select-table ()
+(defun im-big-query-select-table ()
   "Select a BigQuery table and insert it."
   (interactive)
   (insert
    (im-completing-read
     "Table: "
-    (--map (s-replace ":" "." it) (im-bq-all-table-names))
-    :category 'im-bq-table-name)))
+    (--map (s-replace ":" "." it) (im-big-query-all-table-names))
+    :category 'im-big-query-table-name)))
 
 (with-eval-after-load 'embark
-  (defvar-keymap im-bq-table-name
+  (defvar-keymap im-big-query-table-name
     :doc "Actions for BQ tables"
     :parent embark-general-map
     ;; Define the first binding as the default action
     "i" #'im-big-query-table-info)
 
-  (add-to-list 'embark-keymap-alist '(im-bq-table-name . im-bq-table-name)))
+  (add-to-list 'embark-keymap-alist '(im-big-query-table-name . im-big-query-table-name)))
 
-(bind-key "M-o B" #'im-bq-select-table)
+(bind-key "M-o B" #'im-big-query-select-table)
 
 ;;;;; kbd-mode
 
