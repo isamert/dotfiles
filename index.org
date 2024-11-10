@@ -2933,7 +2933,8 @@ Here is my sidebery config export:
 }
 #+end_src
 *** userChrome.css
-I use [[https://github.com/mbnuqw/sidebery][Sidebery]] so I hide the tab bar and siderbar heading.
+- I use [[https://github.com/mbnuqw/sidebery][Sidebery]] so I hide the tab bar and siderbar heading.
+- I also decrease the width of "flexible space" so that it becomes something useful.
 
 #+begin_src css :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/chrome/userChrome.css")
 #TabsToolbar {
@@ -2942,6 +2943,11 @@ I use [[https://github.com/mbnuqw/sidebery][Sidebery]] so I hide the tab bar and
 
 #sidebar-header {
   visibility: collapse !important;
+}
+
+#nav-bar toolbarspring {
+    min-width: 10px !important;
+    max-width: 20px !important;
 }
 #+end_src
 
