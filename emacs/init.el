@@ -4340,7 +4340,7 @@ Return parsed seconds from users answer."
   (put 'dired-find-alternate-file 'disabled nil))
 
 (use-package dirvish
-  :straight (:host github :repo "alexluigit/dirvish")
+  :straight (:host github :repo "hlissner/dirvish")
   :after dired
   :general
   (im-leader
