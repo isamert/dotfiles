@@ -8601,6 +8601,8 @@ Useful if .elfeed directory is freshly syncned."
   (rcirc-prompt (concat
                  (let ((all-the-icons-default-adjust 0))
                    (all-the-icons-faicon "angle-double-right")) "_ "))
+  (rcirc-reconnect-delay 15)
+  (rcirc-reconnect-attempts 5)
   :config
   (evil-set-initial-state 'rcirc-mode 'normal)
   (add-hook 'rcirc-mode-hook #'im-rcirc-setup-buffer))
