@@ -11068,7 +11068,7 @@ story points they have released. See the following figure:
          (format "- Progress :: %s/%s (%s%%)\n\n" done total (/ (* 100 done) total)))))
     (if group-by-assignee?
         (insert "| Assignee | Total | Done |  Sub-total | Status | Creator  | Issue |\n|-\n")
-      (insert "| Assignee | Creator | Point | Status | Issue |\n|-\n"))
+      (insert "| Assignee | Creator | Point | Status | Sprint | Issue |\n|-\n"))
     (cond
      (group-by-assignee?
       (->>
@@ -11113,11 +11113,13 @@ story points they have released. See the following figure:
       (->>
        results
        (--map (let-alist it
-                (format "| %s | %s | %s | %s | %s |"
+                (format "| %s | %s | %s | %s | %s | %s |"
                         .fields.assignee.name
                         .fields.creator.name
                         (alist-get im-jira-story-points-field-name .fields)
                         .fields.status.name
+                        (when-let ((match (s-match "name=\\([^,]+\\)," (or (car .fields.customfield_10004) ""))))
+                          (nth 1 match))
                         (s-truncate 120 (format "%s - %s" .key .fields.summary)))))
        (s-join "\n")
        (insert))))
