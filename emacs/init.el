@@ -10021,6 +10021,11 @@ the resulting bq command."
                (switch-to-buffer-other-window bname)))))))
     job-id))
 
+(defun im-big-query--fix-table-name (table-name)
+  "Fix table name by replacing first `.' with `:'.
+This is the format that `bq' tool expects."
+  (s-replace-regexp "^\\([A-Za-z0-9_-]+\\)\\." "\\1:" table-name))
+
 (defun im-big-query-job-status (job-id)
   "Get status for given job id."
   (interactive
@@ -10039,8 +10044,7 @@ total {rows,bytes} etc. and first 10 rows of the table."
           (ignore-errors
             (im-region-or
              (lambda () (im-inner-back-quote-at-point)))))))
-  ;; Replace first `.' with `:'
-  (setq table-name (s-replace-regexp "^\\([A-Za-z0-9_-]+\\)\\." "\\1:" table-name))
+  (setq table-name (im-big-query--fix-table-name table-name))
   (let ((buffer-name (format "*bq table info: %s*" table-name)))
     (im-shell-command
      :buffer-name buffer-name
@@ -10096,6 +10100,17 @@ total {rows,bytes} etc. and first 10 rows of the table."
   (add-to-list 'embark-keymap-alist '(im-big-query-table-name . im-big-query-table-name)))
 
 (bind-key "M-o B" #'im-big-query-select-table)
+
+(im-cape
+ :name big-query-tables
+ :completion #'im-big-query-all-table-names
+ :extractor
+ (lambda (xs)
+   (--map (s-replace ":" "." it) xs))
+ :bound filename
+ :kind (lambda (xs x) "" 'module)
+ :category symbol
+ :key "M-o b")
 
 ;;;;; kbd-mode
 
