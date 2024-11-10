@@ -986,6 +986,7 @@ For async requests, simply provide a success handler:
               (goto-char (point-min))))
           json)))))
 
++;; TODO: Remove this, use the one above with :-async? t
 (cl-defun im-request-json-async (url &key headers type data)
   "Async `request'."
   (promise-new
@@ -1647,6 +1648,16 @@ side window the only window'"
 
 (general-create-definer im-leader-v
   :prefix "<SPC>"
+  :keymaps 'override
+  :states '(normal visual))
+
+(general-create-definer im-leader2
+  :prefix "<f16>"
+  :keymaps 'override
+  :states 'normal)
+
+(general-create-definer im-leader2-v
+  :prefix "<f16>"
   :keymaps 'override
   :states '(normal visual))
 
@@ -6327,9 +6338,7 @@ appropriate in some cases like terminals."
     "tj" #'im-jump-to-visible-term
     "tl" #'im-run-last-command-on-visible-term
     "ty" #'im-send-selected-text-to-visible-term
-    "tr" #'im-run-command-on-visible-term-with-history
-    "tn" #'im-vterm-project
-    "td" #'im-vterm-dir)
+    "tr" #'im-run-command-on-visible-term-with-history)
   (:keymaps 'vterm-mode-map :states 'insert
    "C-r" #'vterm--self-insert
    "M-\\" #'vterm--self-insert
