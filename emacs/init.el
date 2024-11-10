@@ -5253,8 +5253,10 @@ of that revision."
 ;;;;; blamer -- git blame
 
 (use-package blamer
-  :ensure t
-  :commands (blamer-show-posframe-commit-info))
+  :commands (blamer-show-posframe-commit-info)
+  :general
+  (im-leader
+    "gi" #'blamer-show-posframe-commit-info))
 
 ;;;;; avy
 
