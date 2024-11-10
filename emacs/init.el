@@ -256,11 +256,16 @@ the header line."
 ;; day at the specified time. Simply add your function via ~add-hook~
 ;; to ~midnight-hook~.
 
-(require 'midnight)
-
-;; From: https://old.reddit.com/r/emacs/comments/y4nc0e/help_needed_with_midnightmode/
-;; To make it *not* work at each emacs startup, use numbers instead of "10:30am"
-(midnight-delay-set 'midnight-delay (truncate (* 10.5 60 60))) ;; 10:30am
+(use-package midnight
+  :straight (:type built-in)
+  :demand t
+  :config
+  ;; From: https://old.reddit.com/r/emacs/comments/y4nc0e/help_needed_with_midnightmode/
+  ;; To make it *not* work at each emacs startup, use numbers instead of "10:30am"
+  ;;
+  ;; Set it to 10:30am because some jobs require VPN to be open.
+  (midnight-delay-set 'midnight-delay (truncate (* 10.5 60 60)))
+  (midnight-mode +1))
 
 ;;;;; Variables and functions
 
