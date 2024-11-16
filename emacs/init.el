@@ -986,7 +986,7 @@ For async requests, simply provide a success handler:
               (goto-char (point-min))))
           json)))))
 
-+;; TODO: Remove this, use the one above with :-async? t
+;; TODO: Remove this, use the one above with :-async? t
 (cl-defun im-request-json-async (url &key headers type data)
   "Async `request'."
   (promise-new
