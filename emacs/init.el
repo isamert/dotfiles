@@ -6758,6 +6758,7 @@ this command is invoked from."
                   slack-search-result-buffer-mode-hook
                   slack-thread-message-buffer-mode-hook
                   slack-message-compose-buffer-mode-hook))
+    (add-hook mode #'im-slack--enable-completion-at-point)
     (add-hook mode #'visual-line-mode)))
 
 (defun im-slack-initialize ()
@@ -6769,6 +6770,7 @@ this command is invoked from."
   (slack-register-team
    :name ty-slack-name
    :token ty-slack-token
+   :enterprise-token ty-slack-enterprise-token
    :cookie ty-slack-cookie
    :subscribed-channels ty-slack-channels
    :visible-threads nil
@@ -6776,6 +6778,12 @@ this command is invoked from."
   (slack-start)
   (slack-change-current-team)
   (run-at-time nil 3600 #'im-slack-check))
+
+(defun im-slack--enable-completion-at-point ()
+  (setq-local
+   completion-at-point-functions
+   `(,(cape-company-to-capf #'company-slack-backend)
+     cape-emoji)))
 
 (defun im-slack-kill-buffers ()
   (interactive)
