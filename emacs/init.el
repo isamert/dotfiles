@@ -4852,7 +4852,8 @@ properly."
   :hook (eww-mode . tab-line-mode)
   :general
   (im-leader-v
-    "ew" #'im-eww)
+    "ew" #'im-eww-plain
+    "eW" #'im-eww)
   (:keymaps 'embark-file-map "/" #'eww-open-file)
   (:keymaps 'shr-map
    "z" nil ;; So that regular evil bindings work
@@ -4898,6 +4899,10 @@ the same one if called interactively.  If inside an eww buffer,
 then utilize `eww-browse-url' instead.  See `eww-use-browse-url'
 for why."
   (interactive (list (im-web-autosuggest :history 'eww-prompt-history :initial (im-region-or ""))))
+  (im-eww-plain url))
+
+(defun im-eww-plain (url)
+  (interactive (list (read-string "Search: " nil 'eww-prompt-history)))
   (cond
    ;; If called interactively, just use a new buffer
    ((called-interactively-p 'interactive) (eww url t))
