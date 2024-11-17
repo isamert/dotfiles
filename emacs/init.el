@@ -218,6 +218,11 @@ in my dotfiles repository.")
   :autoload (async-cl-defun)
   :defer t)
 
+(use-package request
+  :custom
+  (request-log-level 'warn)
+  (request-message-level -1))
+
 ;;;;;; emacs-async
 
 ;; To be able execute elisp asynchronously. Of course this has lot's
@@ -894,8 +899,10 @@ called with the current state of the button."
 
 ;;;;;; API call
 
-;; This function is for doing easy REST calls and it uses plists for everything because it's more readable and easier to type than alists (but you can still use alists if you want or need to). I use this to quickly prototype stuff in elisp.
-
+;; This function is for doing easy REST calls and it uses plists for
+;; everything because it's more readable and easier to type than
+;; alists (but you can still use alists if you want or need to). I use
+;; this to quickly prototype stuff in elisp.
 
 (cl-defun im-request
     (endpoint
@@ -956,7 +963,8 @@ For async requests, simply provide a success handler:
                               (funcall resolve data)))
                   :error (cl-function
                           (lambda (&key data status error-thrown &allow-other-keys)
-                            (message "im-request :: failed status=%s, error-thrown=%s, data=%s" status error-thrown data)
+                            (unless -on-error
+                              (message "im-request :: failed status=%s, error-thrown=%s, data=%s" status error-thrown data))
                             (funcall reject data)))
                   :sync (and (not -on-success) (not -async?))
                   :data (cond
