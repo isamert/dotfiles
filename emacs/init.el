@@ -4976,13 +4976,11 @@ empty string."
     :prompt "Search for: "
     :category 'url
     :lookup (lambda (selected candidates cand &rest _) selected)
-    :initial initial
+    :initial (concat "#" initial)
     :sort nil
     :history (or history 'im-web-autosuggest-history)
     :require-match nil)))
 
-;; TODO: investigate Brave's autosuggest as this one is quite shite.
-;; That one is free but requires credit card number tho
 (defun im-web-autosuggest--gen (next)
   (lambda (action)
     (pcase action
@@ -4996,7 +4994,10 @@ empty string."
            (lambda (data)
              (funcall next 'flush)
              (when data
-               (funcall next (cadr data)))))))
+               (funcall next (cadr data))))
+           :-on-error
+           (lambda (data)
+             (funcall next 'flush)))))
       (_ (funcall next action)))))
 
 ;;;;;; Fixing page layouts
