@@ -9996,8 +9996,11 @@ Lisp function does not specify a special indentation."
   "Execute QUERY with given PARAMS.
 `:var' syntax is ${var_name} and replaced as-is.
 
-`:format' can be either `pretty' or `json'.  Former outputs an
-org table, other one outputs the result as json.
+`:format' can be either `org-table', `table' or `json'.  Former outputs
+an org table, other one outputs the result as json.  By default, it's
+`org-table'.  `org-table' means the output is a regular org mode table.
+`table' means the output is `table.el' formatted table (it is actually
+what is returned from bq command with the `pretty' formatting option).
 
 If `:buffer' is non-nil, then output results to a buffer, instead
 of the results drawer.
@@ -10006,7 +10009,7 @@ If `:cmd' is non-nil, then instead of executing query, print out
 the resulting bq command."
   (let* ((job-id (im-uuid))
          (dry-run? (alist-get :dry-run params))
-         (format (or (alist-get :format params) "pretty"))
+         (format (or (alist-get :format params) "org-table"))
          (api (alist-get :api params))
          (project-id (alist-get :project-id params))
          (buffer? (alist-get :buffer params))
@@ -10024,7 +10027,9 @@ the resulting bq command."
                 ,@(when dry-run? `("--dry_run"))
                 ,@(when project-id `("--project_id" ,project-id))
                 "--quiet" "--max_rows" "100000" "--nouse_legacy_sql"
-                "--format" ,format
+                "--format" ,(pcase format
+                              ((or "org-table" "table") "pretty")
+                              (x x))
                 "--job_id" ,job-id ,query))
     (setq cmd-str (s-join
                    " "
@@ -10035,7 +10040,9 @@ the resulting bq command."
     (when cmd?
       (org-babel-insert-result cmd-str)
       (user-error "Done"))
-    (with-current-buffer buf (erase-buffer))
+    (with-current-buffer buf
+      (buffer-disable-undo)
+      (erase-buffer))
     (im-ensure-binary "bq" :package "google-cloud-sdk" :installer "nix-env -iA")
     (setq process (apply #'start-process cmd))
     (set-process-sentinel
@@ -10043,7 +10050,24 @@ the resulting bq command."
      (lambda (p m)
        (let* ((end-time (float-time))
               (result (with-current-buffer buf
-                        (string-trim (buffer-string))))
+                        ;; Convert pretty table into an org mode table
+                        (when (equal "org-table" format)
+                          (goto-char (point-min))
+                          (skip-chars-forward "\n\t ")
+                          (when (looking-at "^\\+")
+                            (kill-line 1)
+                            (forward-line 1)
+                            (delete-char 1)
+                            (insert "|")
+                            (end-of-line)
+                            (delete-char -1)
+                            (insert "|")
+                            (goto-char (point-max))
+                            (skip-chars-backward "\n\t ")
+                            (beginning-of-line)
+                            (when (looking-at "^\\+")
+                              (kill-line 1))))
+                        (buffer-substring-no-properties (point-min) (point-max))))
               (msg (format "=> Query finished, time elapsed: %s"
                            (format-seconds "%Y %D %H %M %z%S" (- end-time start-time))))
               (bname (format "*bqsql:%s" (if (eq buffer? t) job-id buffer?)))
