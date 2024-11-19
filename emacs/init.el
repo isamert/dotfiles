@@ -8482,6 +8482,15 @@ mails."
   :config
   (evil-collection-elfeed-setup)
 
+  (evil-collection-define-key 'normal 'elfeed-search-mode-map
+    "s" nil
+    "S" nil
+    "gs" 'elfeed-search-live-filter
+    "gS" 'elfeed-search-set-filter)
+  (evil-collection-define-key 'normal 'elfeed-show-mode-map
+    "s" nil
+    "S" nil)
+
   ;; When adding tags, don't add any hierarchical tags like (blog
   ;; blog-software), or (metal metal-black) Just use something like:
   ;; (blog software) and (metal black)
