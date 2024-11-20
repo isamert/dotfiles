@@ -356,6 +356,8 @@ not found with WHAT, then it is requested from the user."
         cmd)))))
 
 (defun im-serialize-into-file (file data)
+  (unless (f-exists? (f-dirname file))
+    (f-mkdir-full-path (f-dirname file)))
   (with-temp-file (expand-file-name file)
     (let ((print-length nil)
           (print-level nil))
@@ -1095,7 +1097,7 @@ May return false on slow connections.  Checks blocking, max 1 secs."
 (cl-defmacro im-when-on (&key linux darwin)
   (pcase system-type
     ('darwin darwin)
-    ('linux linux)))
+    ((or 'gnu/linux 'linux) linux)))
 
 ;;;;;; Git
 
@@ -1377,23 +1379,25 @@ using this function."
     "Iosevka Nerd Font"
     "IBM Plex Mono"
     "Iosevka Comfy Motion"
-    "Iosevka Comfy")
+    "Iosevka Comfy"
+    "Liberation Mono"
+    "Noto Sans Mono")
   "Fonts that I use.")
 
 (defvar im-current-font nil
   "Holds the currently used font name.
 One of `im-fonts'.")
 
-(defconst im-font-height (im-when-on :linux 138 :darwin 150))
+(defconst im-font-height (im-when-on :linux 108 :darwin 150))
 
 (defun im-set-font (&optional next)
   "Set the first available font from the `im-fonts' list.
 If NEXT is non-nil, then use the next font."
   (interactive "P")
-  (let* ((fonts (-filter #'im-font-exists-p im-fonts))
-         (font (if next
-                   (or (cadr (member im-current-font fonts)) (car fonts))
-                 (car fonts))))
+  (and-let* ((fonts (-filter #'im-font-exists-p im-fonts))
+             (font (if next
+                       (or (cadr (member im-current-font fonts)) (car fonts))
+                     (car fonts))))
     (set-face-attribute 'default nil
                         :font font
                         :weight 'normal
@@ -1401,7 +1405,7 @@ If NEXT is non-nil, then use the next font."
                         :height im-font-height)
     (setq im-current-font font)))
 
-(add-hook 'after-init-hook #'im-set-font)
+(add-hook 'after-init-hook #'im-set-font 99)
 
 ;;;;; prettify-symbols-mode
 
@@ -2098,7 +2102,9 @@ side window the only window'"
   ;; (add-hook 'org-mode-hook #'org-indent-mode t)
 
   (defvar im-org-calendar-directory (format "%s/calendars" org-directory))
-  (setq im-calendar-files (directory-files im-org-calendar-directory 'full (rx ".org" eos)))
+  (setq im-calendar-files
+        (when (file-exists-p im-org-calendar-directory)
+          (directory-files im-org-calendar-directory 'full (rx ".org" eos))))
   (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
 
   ;; When I unfold an header if the contents are longer than remaining
@@ -3794,7 +3800,8 @@ for defining eshell-specific aliases that is read verbatim:
                     (concat imp " $*"))))
      (--mapcat
       (s-split "\n" (with-temp-buffer (insert-file-contents it) (buffer-string)))
-      (directory-files "~/.config/aliases/" t directory-files-no-dot-files-regexp))))))
+      (when (file-exists-p "~/.config/aliases/")
+        (directory-files "~/.config/aliases/" t directory-files-no-dot-files-regexp)))))))
 
 (add-hook 'eshell-alias-load-hook #'im-eshell-load-my-aliases)
 
@@ -7634,8 +7641,6 @@ Fetches missing channels/users first."
   :straight (:host github :repo "kchanqvq/xwwp"  :files (:defaults "*"))
   :commands (xwwp)
   :general
-  (im-leader
-    "eW" #'xwwp)
   (:keymaps 'xwidget-webkit-mode-map
    :states 'normal
    "f" #'xwwp-ace-toggle
@@ -9039,10 +9044,10 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
           (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src" nil nil)
           (json "https://github.com/tree-sitter/tree-sitter-json" nil nil nil nil)
           (kotlin "https://github.com/fwcd/tree-sitter-kotlin" nil nil nil nil)
-          (latex "https://github.com/latex-lsp/tree-sitter-latex" nil nil nil nil)
+          ;; (latex "https://github.com/latex-lsp/tree-sitter-latex" nil nil nil nil)
           (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua" nil nil nil nil)
           (make "https://github.com/tree-sitter-grammars/tree-sitter-make" nil nil nil nil)
-          (markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown" nil nil nil nil)
+          ;; (markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown" nil nil nil nil)
           (nix "https://github.com/nix-community/tree-sitter-nix" nil nil nil nil)
           (nu "https://github.com/nushell/tree-sitter-nu" nil nil nil nil)
           (python "https://github.com/tree-sitter/tree-sitter-python" nil nil nil nil)
@@ -13925,7 +13930,7 @@ Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
 (defun im-initialize-scratch-project ()
   "Initialize a project where scratch files are kept."
   (unless (f-exists? im-scratch-project-path)
-    (f-mkdir im-scratch-project-path)
+    (f-mkdir-full-path im-scratch-project-path)
     ;; Create scratch.ts
     (f-write-text "import * as R from 'npm:ramda';" 'utf-8 (f-join im-scratch-project-path "scratch.ts"))
     (f-write-text ";;; Directory Local Variables            -*- no-byte-compile: t -*-
@@ -14497,7 +14502,7 @@ Only works for OSX right now."
   (im-when-on
    :linux
    (progn
-     (warn ">> im-screen-sharing-now? is not implemented for gnu/linux system-type")
+     ;; (warn ">> im-screen-sharing-now? is not implemented for gnu/linux system-type")
      nil)
    :darwin
    (let ((script "
