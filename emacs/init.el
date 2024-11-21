@@ -610,24 +610,27 @@ If it exists, it's killed first and return a new buffer."
 
 ;;;;;; Clipboard functions
 
-(defun im-clipboard-command ()
-  "Get clipboard command for current system.
-      The returned command directly puts the image data into stdout."
-  (cond
-   ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
-   ((locate-file "pngpaste" exec-path) "pngpaste -")))
-
 (defun im-clipboard-contains-image-p ()
   "Check whether the clipboard has image or not."
-  (im-when-on
-   :linux (s-contains? "image/" (im-sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS"))
-   :darwin (eq (shell-command "pngpaste - &>/dev/null") 0)))
+  (cond
+   ((locate-file "wl-paste" exec-path)
+    (s-contains? "image/" (shell-command-to-string "wl-paste --list-types")))
+   ((locate-file "xclip" exec-path)
+    (s-contains? "image/" (im-sync-async-command-to-string "xclip" "-o" "-sel" "c" "-t" "TARGETS")))
+   ((locate-file "pngpaste" exec-path)
+    (eq (shell-command "pngpaste - &>/dev/null") 0))))
 
 (defun im-save-clipboard-image-to-file (file)
   "Save the image in clipboard (if there is any) to given FILE.
 Also see `im-clipboard-contains-image-p' to check if there is one."
   (interactive "FFile to save the image: ")
-  (shell-command (format "%s > %s" (im-clipboard-command) file)))
+  (shell-command
+   (format "%s > %s"
+           (cond
+            ((locate-file "wl-paste" exec-path) "wl-paste")
+            ((locate-file "xclip" exec-path) "xclip -selection clipboard -target image/png -out")
+            ((locate-file "pngpaste" exec-path) "pngpaste -"))
+           file)))
 
 ;;;;;; User input
 
