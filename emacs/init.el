@@ -6723,7 +6723,7 @@ this command is invoked from."
 ;;;;; slack
 
 (use-package slack
-  :straight (:host github :repo "isamert/emacs-slack")
+  :straight (:host github :repo "emacs-slack/emacs-slack")
   :defer t
   :general
   (im-leader-v
