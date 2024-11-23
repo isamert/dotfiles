@@ -1352,6 +1352,9 @@ using this function."
 (use-package ef-themes
   :defer t)
 
+(use-package kaolin-themes
+  :defer t)
+
 (use-package doom-themes
   :defer t
   :config
