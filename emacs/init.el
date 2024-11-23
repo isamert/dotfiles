@@ -1057,8 +1057,13 @@ For async requests, simply provide a success handler:
 
 (defun im-check-internet-connection ()
   "Return t if there is an active internet connection.
-May return false on slow connections.  Checks blocking, max 1 secs."
-  (= 0 (call-process "nc" nil nil nil  "-G" "1" "-z" "www.google.com" "80")))
+May return false on slow connections.  Checks blocking, max 150 ms (for
+Linux), 1 secs for Mac."
+  (im-when-on
+   :linux
+   (= 0 (call-process "nc" nil nil nil "-w" "150ms" "-z" "www.google.com" "80"))
+   :darwin
+   (= 0 (call-process "nc" nil nil nil  "-G" "1" "-z" "www.google.com" "80"))))
 
 ;;;;;; File operations
 
