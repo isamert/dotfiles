@@ -8302,10 +8302,12 @@ mails."
   :custom (jinx-languages "en_US tr_TR")
   :general
   (:keymaps 'evil-normal-state-map
-   "z=" #'jinx-correct
+   "z=" #'jinx-correct-word
    ;; Override flyspell bindings from evil-commands with jinx ones
    "[s" #'jinx-previous
-   "]s" #'jinx-next))
+   "]s" #'jinx-next)
+  (:keymaps 'evil-visual-state-map
+   "z=" #'jinx-correct-word))
 
 ;;;;; puni & combobulate & electric-pair-mode (structrual editing stuff)
 
