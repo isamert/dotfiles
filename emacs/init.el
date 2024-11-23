@@ -14524,18 +14524,23 @@ Asks for STATUS if called interactively."
 ;;;;; Switch next monitor input
 
 (defun im-ddcutil-toggle/switch-monitor-input (monitor)
-  "Switch to other monitor, USBC or HDMI."
+  "Switch to other monitor, USBC, DisplayPort or HDMI."
   (interactive (list (intern (completing-read "Monitor: " '(usbc hdmi dp)))))
-  (let* ((addresses '((hdmi . "0x11")
-                      (dp . "0x0f")
-                      (usbc . "0x1b")))
-         (cmd (format
-               "ddcutil -b $(ddcutil detect | grep I2C | cut -d- -f2 | tail -n 1) setvcp 0x60 %s"
-               (alist-get monitor addresses))))
-    (shell-command-to-string
-     (if (workpc?)
-         (format "ssh %s '%s'" (completing-read "Select linux machine: " (im-ssh-host-list)) cmd)
-       cmd))))
+  (let* ((target (alist-get monitor '((hdmi . "17")
+                                      (dp . "15")
+                                      (usbc . "27"))))
+         (cmd (im-when-on
+               :linux
+               (format
+                "%s setvcp 0x60 %s"
+                (im-ensure-binary "ddcutil" :package "ddcutil" :installer "See index.org")
+                target)
+               :darwin
+               (format
+                "%s set input %s"
+                (im-ensure-binary "m1ddc" :package "m1ddc" :installer "brew install")
+                target))))
+    (shell-command-to-string cmd)))
 
 ;;;;; Check if screen is shared by Zoom/Chrome etc.
 
