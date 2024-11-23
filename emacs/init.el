@@ -10315,6 +10315,13 @@ SELECT * FROM _ LIMIT 1;
          ("/nginx/.+\\.conf\\'" . nginx-mode))
   :defer t)
 
+;;;;; Conf
+
+(use-package conf
+  :straight (:type built-in)
+  :config
+  (add-hook 'conf-mode-hook #'outli-mode))
+
 ;;;; Window and buffer management
 
 ;;;;; tab-bar-mode
