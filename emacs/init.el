@@ -9837,6 +9837,11 @@ Lisp function does not specify a special indentation."
 
 ;;;;; scheme
 
+(use-package scheme
+  :straight (:type built-in)
+  :config
+  (add-to-list 'outli-heading-config '(scheme-mode ";;" ?\; t)))
+
 (use-package geiser
   :defer t
   :commands geiser
