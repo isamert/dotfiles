@@ -13199,10 +13199,10 @@ already exists otherwise WHERE is interpreted as a file name."
   (let* ((command
           (format
            "%s --filename-replacement-character='-' %s %s %s \"%s\" \"%s\""
-           (im-ensure-binary "single-file" :package "single-file-cli" :installer "nixin")
+           (im-ensure-binary "deno run -A npm:single-file-cli" :installer "Install deno and thats it.")
            (if (eq system-type 'darwin)
                "--browser-executable-path=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\""
-             "--browser-executable-path=chromium")
+             "--browser-executable-path=chromium-browser")
            (if (eq backend 'firefox)
                "--back-end=webdriver-gecko"
              "")
@@ -13231,9 +13231,10 @@ already exists otherwise WHERE is interpreted as a file name."
                             ((f-dir? where) (im-latest-file where))
                             (t (error "Can't find file created backup file")))))
          (when tidy
-           (unless (executable-find "tidy")
-             (user-error "`tidy' not found in the path"))
-           (shell-command (format "tidy -q -w 120 -m '%s'" created-file)))
+           (shell-command
+            (format "%s -q -w 120 -m '%s'"
+                    (im-ensure-binary "tidy")
+                    created-file)))
          (and on-finish (funcall on-finish created-file))))
      :on-fail
      (lambda (&rest _)
