@@ -1801,7 +1801,7 @@ After issuing the command above, you need to do ~PREFIX I~ to install all plugin
   set -g @command-capture-key o
   set -g @command-capture-prompt-pattern '➜ '
 
-  set -g default-shell $PREFIX/bin/zsh
+  set -g default-shell $PREFIX/bin/fish
   set -g mouse on
   set -g base-index 1 # Window indexes starts from 1
   setw -g pane-base-index 1 # Pane indexes starts from 1
@@ -2222,33 +2222,6 @@ curl https://raw.githubusercontent.com/po5/thumbfast/master/thumbfast.lua -o ~/.
   done
 #+end_src
 * Editors
-** Emacs
-This file is just used for loading the configuration. The configuration is actually an org file and it should've been already tangled to make this work.
-
-#+begin_src elisp :tangle ~/.emacs.d/init.el
-  (let ((enable-local-variables :all)
-        (vc-follow-symlinks t))
-    (load-file "~/.emacs.d/index.el"))
-#+end_src
-
-*** emacsd
-systemd unit for emacs daemon. It starts after ~graphical-session.target~ so that it correctly inherits environment variables.
-
-#+begin_src conf :tangle ~/.config/systemd/user/emacsd.service
-  [Unit]
-  Description=Emacs text editor
-  Documentation=info:emacs man:emacs(1) https://gnu.org/software/emacs/
-
-  [Service]
-  Type=forking
-  ExecStart=/usr/bin/emacs --daemon
-  ExecStop=/usr/bin/emacsclient --eval "(kill-emacs)"
-  Restart=on-failure
-
-  [Install]
-  WantedBy=graphical-session.target
-#+end_src
-
 ** Neovim
 I had a fat neovim configuration at past but I don't use vim anymore. This is just the minimal configuration I've started maintaining
 #+begin_src vimrc :tangle ~/.config/nvim/init.vim
@@ -2477,7 +2450,7 @@ I had a fat neovim configuration at past but I don't use vim anymore. This is ju
 *** sidebery configuration
 Here is my sidebery config export:
 
-#+begin_src json
+#+begin_src json :tangle ~/Downloads/sideberry.json
 {
   "settings": {
     "nativeScrollbars": true,
@@ -2870,7 +2843,7 @@ Here is my sidebery config export:
 - I use [[https://github.com/mbnuqw/sidebery][Sidebery]] so I hide the tab bar and siderbar heading.
 - I also decrease the width of "flexible space" so that it becomes something useful.
 
-#+begin_src css :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/chrome/userChrome.css")
+#+begin_src css :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default-release*"))) "/chrome/userChrome.css")
 #TabsToolbar {
     visibility: collapse;
 }
@@ -2887,13 +2860,13 @@ Here is my sidebery config export:
 
 Also need to enable following config to make userChrome.css work:
 
-#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/user.js")
+#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default-release*"))) "/user.js")
 user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 #+end_src
 
 *** Other configs
 
-#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default*"))) "/user.js")
+#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default-release*"))) "/user.js")
   user_pref("browser.toolbars.bookmarks.visibility", "never");
   user_pref("browser.fullscreen.exit_on_escape", false)
 
