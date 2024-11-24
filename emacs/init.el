@@ -1386,7 +1386,8 @@ using this function."
 ;;;;; Fonts
 
 (defconst im-fonts
-  '("FiraCode Nerd Font"
+  '("Cascadia Code NF"
+    "FiraCode Nerd Font"
     "Iosevka Nerd Font"
     "IBM Plex Mono"
     "Iosevka Comfy Motion"
@@ -9843,7 +9844,8 @@ Lisp function does not specify a special indentation."
 (use-package scheme
   :straight (:type built-in)
   :config
-  (add-to-list 'outli-heading-config '(scheme-mode ";;" ?\; t)))
+  (with-eval-after-load 'outli
+    (add-to-list 'outli-heading-config '(scheme-mode ";;" ?\; t))))
 
 (use-package geiser
   :defer t
@@ -10325,8 +10327,9 @@ SELECT * FROM _ LIMIT 1;
 
 ;;;;; Conf
 
-(use-package conf
+(use-package conf-mode
   :straight (:type built-in)
+  :defer t
   :config
   (add-hook 'conf-mode-hook #'outli-mode))
 
