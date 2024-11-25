@@ -568,15 +568,21 @@ Following snippet enables some configurations for pacman:
   «sh("cat /etc/pacman.conf | sed -E 's/^#(Parallel|Color|VerbosePkgLists|TotalDownload)/\\1/'")»
 #+end_src
 
+** Fedora (dnf) configuration
+#+begin_src conf :tangle (when-linux "/sudo::/etc/dnf/dnf.conf")
+[main]
+defaultyes=True
+#+end_src
+
 ** External monitor brightness
 - Install ~ddcutil~
 - Enable automatic loading of ~i2c-dev~ module with systemd.
   #+begin_src conf :tangle (when-linux "/sudo::/etc/modules-load.d/i2c-dev.conf")
-    i2c-dev
+  i2c-dev
   #+end_src
 - Add your user to the i2c group.
   #+begin_src sh
-    sudo usermod -aG i2c $USER
+  sudo usermod -aG i2c $USER
   #+end_src
   - The group should've been created by the ~ddcutil~ package. If not, do this first:
     #+begin_src sh
@@ -584,15 +590,15 @@ Following snippet enables some configurations for pacman:
     #+end_src
 - Give permission to i2c user for ~/dev/i2c-*~ devices:
   #+begin_src sh
-    sudo cp /usr/share/ddcutil/data/45-ddcutil-i2c.rules /etc/udev/rules.d
-    # OR do this, if the file does not exist:
-    echo 'KERNEL=="i2c-[0-9]*", GROUP="i2c"' >> /etc/udev/rules.d/10-i2c-user-permissions.rules
+  sudo cp /usr/share/ddcutil/data/45-ddcutil-i2c.rules /etc/udev/rules.d
+  # OR do this, if the file does not exist:
+  echo 'KERNEL=="i2c-[0-9]*", GROUP="i2c"' >> /etc/udev/rules.d/10-i2c-user-permissions.rules
   #+end_src
 
 Now you should be able to do:
 #+begin_src sh
-  ddcutil getvcp 10 # Return current brightness value
-  ddcutil setvcp 10 50 # Set the current brightness value
+ddcutil getvcp 10 # Return current brightness value
+ddcutil setvcp 10 50 # Set the current brightness value
 #+end_src
 
 Also see this gnome extension and it's README for further information: https://github.com/daitj/gnome-display-brightness-ddcutil
@@ -904,358 +910,297 @@ This is the configuration for the embedded keyboard on mac.
   «kmonad-layers»
 #+end_src
 
-** sxhkd
-This is the global keybinding manager. I don't use GNOME's own keybinding manager as it's clumsy to use.
+** swaywm
+#+begin_src sh :tangle ~/.config/sway/environment
+PATH="$PATH:$HOME/.local/bin:$HOME/.bin"
 
-TODO: unify this and skhd configuration?
-
-#+name: hyper
-#+begin_src text
-  super + alt + ctrl + shift
+BROWSER=jaro
+VISUAL="jaro --method=edit"
+EDITOR="jaro --method=edit"
 #+end_src
 
-#+begin_src conf :tangle (when-linux "~/.config/sxhkd/sxhkdrc")
-  # Clear notifications
-  «hyper» + v
-    emacsclient --eval '(empv-toggle-video)'
+#+begin_src conf :tangle ~/.config/sway/config
+# * Variables
 
-  «hyper» + Return
-    term
+set $mod Mod4
+set $hypr Ctrl+Mod1+Mod4+Shift
 
-  «hyper» + d
-    dolphin
+set $left h
+set $down j
+set $up k
+set $right l
 
-  «hyper» + s
-    flameshot gui
+set $term foot
+set $menu rofi -terminal '$term' -window-thumbnail -sidebar-mode -markup -show-icons -show combi -combi-modes window#drun#run#recursivebrowser -modes window#drun#filebrowser -combi-modi
+set $calc qalculate-gtk
 
-  «hyper» + c
-    copyq toggle
+# * Monitors
 
-  # Show all snippets and select one interactively
-  «hyper» + i
-    emacsclient --eval "(im-globally (im-select-any-snippet))"
+output * bg /usr/share/backgrounds/default.png fill
+output * render_bit_depth 10
 
-  «hyper» + p
-    emacsclient --eval "(im-globally (im-password-act))"
+# * Visuals
 
-  «hyper» + t
-    term -e trans -shell
+smart_borders on
+focus_wrapping no
+default_border pixel 3
 
-  ctrl + alt + l
-    loginctl lock-session
-#+end_src
+# * Behaviour
 
-Here is the systemd service entry:
+floating_modifier $mod normal
 
-#+begin_src desktop :tangle (when-linux "~/.config/systemd/user/sxhkd.service")
-  [Unit]
-  Description=SXHKD
+# * Keybindings - Apps
 
-  [Service]
-  Type=simple
-  Restart=always
-  RestartSec=3
-  ExecStart=«which("sxhkd")»
-  Nice=-20
+bindsym $hypr+a exec $menu
+bindsym $hypr+w exec $calc
+bindsym $hypr+s exec grimshot copy area
+bindsym $mod+Return exec $term
+bindsym $hypr+Return exec $term
+bindsym $hypr+c exec copyq toggle
+bindsym $hypr+t exec crow
 
-  [Install]
-  WantedBy=xdg-desktop-autostart.target
-#+end_src
-** i3 & KDE
-- See: https://github.com/heckelson/i3-and-kde-plasma
+bindsym $hypr+i exec emacsclient --eval "(im-globally (im-select-any-snippet))"
+bindsym $hypr+p exec emacsclient --eval "(im-globally (im-password-act))"
+bindsym Ctrl+Mod1+l exec loginctl lock-session
 
-#+begin_src conf :tangle (when-linux "~/.config/systemd/user/plasma-i3.service")
-  [Unit]
-  Description=Launch Plasma with i3
-  Before=plasma-workspace.target
+# * Keybindings - Window management
 
-  [Service]
-  ExecStart=/usr/bin/i3
-  Restart=on-failure
+bindsym $mod+$left focus left
+bindsym $mod+$down focus down
+bindsym $mod+$up focus up
+bindsym $mod+$right focus right
 
-  [Install]
-  WantedBy=plasma-workspace.target
-#+end_src
+bindsym $mod+Shift+$left move left
+bindsym $mod+Shift+$down move down
+bindsym $mod+Shift+$up move up
+bindsym $mod+Shift+$right move right
 
-To activate i3:
+bindsym $mod+Shift+c reload
 
-#+begin_src sh
-systemctl mask plasma-kwin_x11.service # Disable kwin
-systemctl enable plasma-i3 # Enable i3
-#+end_src
+bindsym $mod+w kill
 
-To return back to kwin:
+bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
 
-#+begin_src sh
-systemctl --user enable plasma-kwin_x11.service # Enable kwin
-systemctl --user mask plasma-i3 # Disable i3
-#+end_src
+# * Keybindings - Workspaces
 
-** i3 config
-#+begin_src conf :tangle (when-linux "~/.config/i3/config")
-  set $mod Mod4
-  set $hyper Mod4+Mod1+Shift+Control
-  # No borders if it's the only window in the desktop
-  smart_borders on
-  default_border pixel 3
-  focus_wrapping no
-  font pango:monospace 8
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+bindsym $mod+0 workspace number 10
 
-  exec --no-startup-id dex --autostart --environment i3
-  exec --no-startup-id feh --bg-scale ~/Documents/wallpapers/paul-gilmore-KT3WlrL_bsg-unsplash.jpg
-  exec_always --no-startup-id picom -bc
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+bindsym $mod+Shift+8 move container to workspace number 8
+bindsym $mod+Shift+9 move container to workspace number 9
+bindsym $mod+Shift+0 move container to workspace number 10
 
-  # Use Mouse+$mod to drag floating windows to their wanted position
-  floating_modifier $mod
-  # move tiling windows via drag & drop by left-clicking into the title bar,
-  # or left-clicking anywhere into the window while holding the floating modifier.
-  tiling_drag modifier titlebar
+# * Keybindings - Splitting and container management
 
-  # start a terminal
-  bindsym $mod+Return exec konsole
+# You can "split" the current object of your focus with
+# $mod+b or $mod+v, for horizontal and vertical splits
+# respectively.
+bindsym $mod+backslash splith
+bindsym $mod+minus splitv
 
-  # WM bindings
-  bindsym $mod+w kill
+# Switch the current container between different layout styles
+bindsym $mod+y layout stacking
+bindsym $mod+u layout tabbed
+bindsym $mod+i layout toggle split
 
-  bindsym $mod+h focus left
-  bindsym $mod+j focus down
-  bindsym $mod+k focus up
-  bindsym $mod+l focus right
+# Make the current focus fullscreen
+bindsym $mod+f fullscreen
 
-  bindsym $mod+Shift+h move left
-  bindsym $mod+Shift+j move down
-  bindsym $mod+Shift+k move up
-  bindsym $mod+Shift+l move right
+# Toggle the current focus between tiling and floating mode
+bindsym $mod+t floating toggle
 
-  bindsym $mod+backslash split h
-  bindsym $mod+minus split v
+# Swap focus between the tiling area and the floating area
+bindsym $mod+space focus mode_toggle
 
-  bindsym $mod+f fullscreen toggle
-  bindsym $mod+Shift+f floating toggle
+# Move focus to the parent container
+bindsym $mod+a focus parent
 
-  bindsym $mod+s layout stacking
-  bindsym $mod+t layout tabbed
-  bindsym $mod+i layout toggle split
+# * Keybindings - Scratchpad
 
-  # Define names for default workspaces for which we configure key bindings later on.
-  # We use variables to avoid repeating the names in multiple places.
-  set $ws1 "1"
-  set $ws2 "2"
-  set $ws3 "3"
-  set $ws4 "4"
-  set $ws5 "5"
-  set $ws6 "6"
-  set $ws7 "7"
-  set $ws8 "8"
-  set $ws9 "9"
+# Move the currently focused window to the scratchpad
+bindsym $hypr+e move scratchpad
 
-  # switch to workspace
-  bindsym $mod+1 workspace number $ws1
-  bindsym $mod+2 workspace number $ws2
-  bindsym $mod+3 workspace number $ws3
-  bindsym $mod+4 workspace number $ws4
-  bindsym $mod+5 workspace number $ws5
-  bindsym $mod+6 workspace number $ws6
-  bindsym $mod+7 workspace number $ws7
-  bindsym $mod+8 workspace number $ws8
-  bindsym $mod+9 workspace number $ws9
+# Show the next scratchpad window or hide the focused scratchpad window.
+# If there are multiple scratchpad windows, this command cycles through them.
+bindsym $hypr+r scratchpad show
 
-  # move focused container to workspace
-  bindsym $mod+Shift+1 move container to workspace number $ws1
-  bindsym $mod+Shift+2 move container to workspace number $ws2
-  bindsym $mod+Shift+3 move container to workspace number $ws3
-  bindsym $mod+Shift+4 move container to workspace number $ws4
-  bindsym $mod+Shift+5 move container to workspace number $ws5
-  bindsym $mod+Shift+6 move container to workspace number $ws6
-  bindsym $mod+Shift+7 move container to workspace number $ws7
-  bindsym $mod+Shift+8 move container to workspace number $ws8
-  bindsym $mod+Shift+9 move container to workspace number $ws9
-  bindsym $mod+Shift+0 move container to workspace number $ws10
+# * Keybindings - Resize
 
-  bindsym $mod+Shift+c reload
-  bindsym $mod+Shift+r restart
+mode "resize" {
+    bindsym $right resize shrink width 10px
+    bindsym $up resize grow height 10px
+    bindsym $down resize shrink height 10px
+    bindsym $left resize grow width 10px
 
-  # resize window (you can also use the mouse for that)
-  mode "resize" {
-    bindsym h resize shrink width 10 px or 10 ppt
-    bindsym j resize grow height 10 px or 10 ppt
-    bindsym k resize shrink height 10 px or 10 ppt
-    bindsym l resize grow width 10 px or 10 ppt
-
-    # back to normal: Enter or Escape or $mod+r
+    # Return to default mode
     bindsym Return mode "default"
     bindsym Escape mode "default"
-    bindsym $mod+r mode "default"
-  }
+}
 
-  bindsym $mod+r mode "resize"
+bindsym $mod+r mode "resize"
 
-  # Start i3bar to display a workspace bar (plus the system information i3status
-  # finds out, if available)
-  bar {
-    status_command i3status
-  }
+# * Window configurations
 
-  for_window [class="copyq"] floating enable; resize set 1280 720; move position center;
+for_window [app_id="qalculate-gtk"] floating enable
+for_window [app_id="com.github.hluk.copyq"] floating enable
+for_window [app_id="org.kde.CrowTranslate"] floating enable
 
-  # Plasma compatibility improvements
-  # From https://github.com/heckelson/i3-and-kde-plasma
-  for_window [title="Desktop @ QRect.*"] kill; floating enable; border none
-  for_window [window_role="pop-up"] floating enable
-  for_window [window_role="task_dialog"] floating enable
-  for_window [class="yakuake"] floating enable
-  for_window [class="systemsettings"] floating enable
-  for_window [class="plasmashell"] floating enable;
-  for_window [class="Plasma"] floating enable; border none
-  for_window [title="plasma-desktop"] floating enable; border none
-  for_window [title="win7"] floating enable; border none
-  for_window [class="krunner"] floating enable; border none
-  for_window [class="Kmix"] floating enable; border none
-  for_window [class="Klipper"] floating enable; border none
-  for_window [class="Plasmoidviewer"] floating enable; border none
-  for_window [class="(?i)*nextcloud*"] floating disable
-  for_window [class="plasmashell" window_type="notification"] border none, move position 70 ppt 81 ppt
-  no_focus [class="plasmashell" window_type="notification"]
+# * Include other stuff
+
+# Include configs from 3 locations:
+#  - /usr/share/sway/config.d
+#  - /etc/sway/config.d
+#  - $XDG_CONFIG_HOME/sway/config.d ($HOME/.config/sway/config.d)
+#
+# If multiple directories contain the files with the same name, the later
+# directory takes precedence; `$XDG_CONFIG_HOME/sway/config.d/20-swayidle.conf`
+# will always be loaded instead of `/usr/share/sway/config.d/20-swayidle.conf`
+# or `/etc/sway/config.d/20-swayidle.conf`
+#
+# This mechanism permits overriding our default configuration per-system
+# (/etc) or per-user ($XDG_CONFIG_HOME) basis. Just create the file you
+# want to modify/override in the higher-level directory.
+#
+# For example, to disable the default bar from Fedora configs, you'll need to
+#     $ echo -n > "$HOME/.config/sway/config.d/90-bar.conf"
+#
+# Note the quoting, the $() and the arguments quoting. All the parts are equally
+# important to make the magic work. And if you want to learn the secret behind
+# the trick, it's all in the `wordexp(3)`.
+#
+include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "/etc/sway/config.d/*.conf" "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/*.conf")'
 #+end_src
-* Zsh
-Check out these links to get a grasp of how all of these stuff work. I also tried to add notes to each file.
-- https://wiki.archlinux.org/index.php/Zsh
-- https://unix.stackexchange.com/questions/71253/what-should-shouldnt-go-in-zshenv-zshrc-zlogin-zprofile-zlogout
-- https://blog.flowblok.id.au/2013-02/shell-startup-scripts.html (I don't use the technique described here, just linking this for amazing graphs)
-
-** ~/.zshenv
-- This file is sourced first.
-- This file is sourced every time, no matter which type of shell you are firing up (interactive/non-interactive/login/non-login).
-- System-wide equivalent of this file is =/etc/zshenv= or =/etc/zsh/zshenv=.
-
-- Having your essential environment variables (like =PATH=) set here is also important.
-  - For example when you run =unison= to sync content between your computers, =unison= connects to the other computer through =ssh=. This connection is done on a =non-interactive/non-login= shell (or just take this as an example: =ssh some-computer 'echo $PATH'= this is also done on a =non-interactive/non-login= shell). So if your =unison= binary is not in one of the paths that appear in default =PATH= variable, it'll fail to find it. So you need to add the path that
-
-Unfortunately, this file is not sourced by GDM at login. So I'm sourcing it in =~/.profile= manually:
-
-#+begin_src sh :tangle ~/.profile
-  source ~/.zshenv
+* Shell
+** Fish
+#+begin_src fish :tangle ~/.config/fish/config.fish
+if status is-interactive
+    starship init fish | source
+end
 #+end_src
 
-#+begin_src sh :tangle ~/.zshenv
-  # Run ts_onfinish when a tsp job is finished
-  export TS_ONFINISH=ts_onfinish
-  export SHELL=/bin/zsh
-  export «env-variables»
-#+end_src
-** ~/.zprofile
-- This file is sourced after =.zshenv=.
-- This file is read *only* while logging in and it's only sourced once.
-- System-wide equivalent of this file is =/etc/zprofile= or =/etc/zsh/zprofile=.
-- This is where I run =startx= which essentially calls [[.xinitrc]]
-- I put stuff that is not going to change during the session, this may include
-  - Stuff that is static.
-  - Stuff that takes time to load. Because this file is loaded at the start and only sourced once, it makes sense to load heavy stuff here.
+#+begin_src fish :tangle ~/.config/fish/conf.d/aliases.fish
+# * Stow aliases
 
-- A lot of programs (like Java, Flatpak or anything that wants to edit your PATH or similar environment variables) put their configuration under =/etc/profile.d/=. Normally, =/etc/profile= (which is automatically sourced by =bash= at startup), also sources these files. In my system (or Arch Linux in general) also have =/etc/zsh/zprofile= which contains the following: =emulate sh -c 'source /etc/profile'=. So essentially sourcing the stuff under =/etc/profile.d/= is automatically handled.
+alias !ssync="stow -d ~/Nextcloud/Sync/ -t ~"
 
-Unfortunately, this file is (also) not sourced by GDM at login. So I'm sourcing it in =~/.profile= manually:
+# * Package management
 
-#+begin_src sh :tangle ~/.profile
-  source ~/.zprofile
-#+end_src
+abbr -a -- dnfi 'sudo dnf install'
+abbr -a -- dnfr 'sudo dnf remove'
+abbr -a -- dnfs 'dnf search'
+abbr -a -- dnfp 'dnf provides'
+abbr -a -- dnfupd 'sudo dnf update'
+abbr -a -- dnfupg 'sudo dnf upgrade'
 
-#+begin_src sh :tangle ~/.zprofile
-  # Use `qt5ct` program to configure qt themes
-  # and use `lxappearance` for gtk
-  export QT_QPA_PLATFORMTHEME=qt5ct
+abbr -a -- brews 'brew search'
+abbr -a -- brewi 'brew install'
+abbr -a -- brewr 'brew uninstall'
+abbr -a -- brewupd 'brew update'
+abbr -a -- brewupg 'brew upgrade'
 
-  export BROWSER=jaro
-  export VISUAL="jaro --method=edit"
-  export EDITOR="jaro --method=edit"
+function nixi
+    nix-env -iA "nixpkgs.$argv[1]"
+end
+alias nixr='nix-env -e'
+alias nixs='nix search nixpkgs'
 
-  export XDG_CONFIG_HOME="$HOME/.config"
-  export BSPWM_SOCKET="/tmp/bspwm-socket"
-  export XDG_CONFIG_DIRS=/usr/etc/xdg:/etc/xdg
-#+end_src
+# * Systemctl
 
-** Dumb mode
-#+begin_src bash :tangle ~/.zshrc
-  # Don't do any configuration if dumb terminal is requested
-  [[ $TERM == "dumb" ]] && unsetopt zle && PS1='$ ' && return
-#+end_src
+abbr -a -- ctl systemctl
+abbr -a -- ctls 'systemctl status'
+abbr -a -- ctlr 'systemctl restart'
+abbr -a -- ctlu 'systemctl --full --user'
+abbr -a -- ctlus 'systemctl --full --user status'
+abbr -a -- ctlur 'systemctl --full --user restart'
+abbr -a -- log 'journalctl --unit'
+abbr -a -- logu 'journalctl --user --unit'
 
-** Custom completions
-You can add completion files under =$HOME/.config/zsh/completions= and zsh will pick them up automatically. This should be one of the first things that appear in ~.zshrc~.
+# * Opening stuff
 
-#+begin_src bash :tangle ~/.zshrc
-  export fpath=($HOME/.config/zsh/completions $fpath)
-#+end_src
+abbr -a -- v 'jaro --method=view'
+abbr -a -- e 'jaro --method=edit'
+abbr -a -- g 'jaro --method=gallery'
+abbr -a -- open jaro
 
-To rebuild completions, if something is not right, use the following:
+# * File/folder stuff
 
-#+begin_src bash
-  rm -f ~/.zcompdump
-  rm -f $ANTIGEN_COMPDUMP
-#+end_src
+abbr -a -- mkx 'chmod +x'
 
-** Installing plugins
-#+begin_src bash :tangle ~/.zshrc
-  # Disable auto-escape-on-insert functionality
-  DISABLE_MAGIC_FUNCTIONS=true
+abbr -a -- tree 'lsd --tree'
 
-  ### Added by Zinit's installer
-  if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
-      print -P "%F{33} %F{220}Installing %F{33}ZDHARMA-CONTINUUM%F{220} Initiative Plugin Manager (%F{33}zdharma-continuum/zinit%F{220})‚Ä¶%f"
-      command mkdir -p "$HOME/.local/share/zinit" && command chmod g-rwX "$HOME/.local/share/zinit"
-      command git clone https://github.com/zdharma-continuum/zinit "$HOME/.local/share/zinit/zinit.git" && \
-          print -P "%F{33} %F{34}Installation successful.%f%b" || \
-              print -P "%F{160} The clone has failed.%f%b"
-  fi
+abbr -a -- ls 'lsd --group-dirs=first --classify'
+abbr -a -- ll 'lsd --group-dirs=first --classify --long --date=relative --timesort --blocks=date,size,name'
+abbr -a -- lls 'lsd --group-dirs=first --classify --long --header --date=relative --timesort --git --hyperlink=auto'
+abbr -a -- lla 'lsd --group-dirs=first --classify --long --header --date=relative --timesort --git --hyperlink=auto --almost-all'
 
-  source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
-  autoload -Uz _zinit
-  (( ${+_comps} )) && _comps[zinit]=_zinit
+abbr -a -- cdtemp 'cd $(mktemp -d)'
+alias cdf='cd $(fd -t d -d 8 | fzf)' # cd fuzzy
 
-  # To make themes work
-  setopt promptsubst
+alias find-dups='find . ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD'
 
-  zinit light-mode for \
-        zdharma-continuum/zinit-annex-as-monitor \
-        zdharma-continuum/zinit-annex-bin-gem-node \
-        zdharma-continuum/zinit-annex-patch-dl \
-        zdharma-continuum/zinit-annex-rust \
-        zsh-users/zsh-autosuggestions \
-        zsh-users/zsh-syntax-highlighting \
-        zsh-users/zsh-history-substring-search \
-        kutsan/zsh-system-clipboard \
-        Aloxaf/fzf-tab
+# * Streaming stuff
 
-  # Required some plugins (like fzf-tab) to work
-  autoload -Uz compinit
-  compinit
-#+end_src
+# Higlight json parts of the stream and print other lines plain
+# ./program_that_may_output_json | logjson
+abbr -a --position anywhere -- @logjson 'jq -R -r ". as \$line | try fromjson catch \$line"'
 
-** Key bindings
-- Enable emacs keybindings
+# Less that supports color
+abbr -a @less --position anywhere --set-cursor "% | less -r"
+# Complements the one above, adds --color=always to current command.
+# somecommand @color @less
+abbr -a --position anywhere -- @color --color=always
 
-#+begin_src bash :tangle ~/.zshrc
-  bindkey -e
-#+end_src
+# * Git
 
-*** Edit command in full screen editor
-Following snippet let's you edit current command with ~C-x C-e~ in your default editor.
+abbr -a -- gcm 'git commit -m'
+abbr -a -- gds 'git diff --staged'
+abbr -a -- gs 'git status'
+abbr -a -- gco 'git chekout'
 
-#+begin_src bash :tangle ~/.zshrc
-  autoload -z edit-command-line
-  zle -N edit-command-line
-  bindkey "^X^E" edit-command-line
+# * Meta
+
+abbr -a :q exit
+
+# * Kubernetes
+
+abbr -a -- kctx 'kubectl config current-context'
+abbr -a -- kctxs-list 'kubectl config get-contexts --output=name'
+abbr -a -- kctx-use 'kubectl config use-context'
+
+# * Network
+
+function ipinfo
+    switch (uname)
+        case Linux
+            set localips (ip addr show | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d/ -f1)
+        case Darwin
+            set localips (ifconfig | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}')
+    end
+
+    echo $localips
+    echo
+    echo ======================
+    echo
+    curl --silent https://ipinfo.io | jq .
+end
 #+end_src
 
-** Theme & module settings
-See the [[https://starship.rs/config/][documentation]] for starship theme. You need to [[https://starship.rs/][install]] it first from your system package manager. And then:
-
-#+begin_src bash :tangle ~/.zshrc
-  eval "$(starship init zsh)"
-#+end_src
-
-The configuration is done externally:
-
+** Starship
 #+begin_src toml :tangle ~/.config/starship.toml
 [cmd_duration]
 # Show system notifications for commands that takes longer than 5 seconds
@@ -1264,506 +1209,136 @@ show_notifications = true
 notification_timeout = 99999
 #+end_src
 
-** Plugin configuration
-*** history-substring-search
-#+begin_src bash :tangle ~/.zshrc
-  # bind UP and DOWN arrow keys to history substring search
-  zmodload zsh/terminfo
-  bindkey '^[[A' history-substring-search-up
-  bindkey '^[[B' history-substring-search-down
-  bindkey -M vicmd 'k' history-substring-search-up
-  bindkey -M vicmd 'j' history-substring-search-down
-#+end_src
-
-*** fzf-tab
-- You also may need to run =build-fzf-tab-module= for the first time.
-
-#+begin_src bash :tangle ~/.zshrc
-  # disable sort when completing `git checkout`
-  zstyle ':completion:*:git-checkout:*' sort false
-  # set descriptions format to enable group support
-  zstyle ':completion:*:descriptions' format '[%d]'
-  # preview directory's content with lsd when completing cd
-  zstyle ':fzf-tab:complete:cd:*' fzf-preview 'lsd -1 --icon=always --color=always $realpath'
-  # replace current query with current candidate's text (so that you
-  # trigger continuous completion with "/")
-  #zstyle ':fzf-tab:*' fzf-bindings 'tab:replace-query'
-  # zstyle ':fzf-tab:*' fzf-command ftb-tmux-popup
-
-  enable-fzf-tab
-#+end_src
-
 ** Utility functions
-*** Generic interactive commands
-#+begin_src bash :tangle ~/.zshrc
-  function mkcd { mkdir -p "$1"; cd "$1"; } # Make and cd to the dir
-  function cpcd { cp "$1" "$2" && cd "$2"; } # Copy and go to the directory
-  function mvcd { mv "$1" "$2" && cd "$2"; } # Move and cd to the dir
-  function cheat { curl http://cheat.sh/"$1"; }
-#+end_src
-
 *** Compression/decompression
-#+begin_src bash :tangle ~/.zshrc
-  function extract {
-      if [[ -f $1 ]] ; then
-          case $1 in
-              ,*.tar.bz2) tar xjf "$1"   ;;
-              ,*.tar.gz)  tar xzf "$1"   ;;
-              ,*.bz2)     bunzip2 "$1"   ;;
-              ,*.rar)     unrar x "$1"   ;;
-              ,*.gz)      gunzip "$1"    ;;
-              ,*.tar)     tar xf "$1"    ;;
-              ,*.tbz2)    tar xjf "$1"   ;;
-              ,*.tgz)     tar xzf "$1"   ;;
-              ,*.zip)     unzip "$1"     ;;
-              ,*.Z)       uncompress "$1";;
-              ,*.7z)      7z x "$1"      ;;
-              ,*)        echo "'$1' cannot be extracted via ex()" ;;
-          esac
-      else
-          echo "Usage:"
-          echo "ex <archive-name>"
-      fi
-  }
+#+begin_src fish :tangle ~/.config/fish/conf.d/compression.fish
+function extract
+    if test -f $argv[1]
+        switch $argv[1]
+            case '*.tar.bz2'
+                tar xjf "$argv[1]"
+            case '*.tar.gz'
+                tar xzf "$argv[1]"
+            case '*.bz2'
+                bunzip2 "$argv[1]"
+            case '*.rar'
+                unrar x "$argv[1]"
+            case '*.gz'
+                gunzip "$argv[1]"
+            case '*.tar'
+                tar xf "$argv[1]"
+            case '*.tbz2'
+                tar xjf "$argv[1]"
+            case '*.tgz'
+                tar xzf "$argv[1]"
+            case '*.zip'
+                unzip "$argv[1]"
+            case '*.Z'
+                uncompress "$argv[1]"
+            case '*.7z'
+                7z x "$argv[1]"
+            case '*'
+                echo "'$argv[1]' cannot be extracted via extract()"
+        end
+    else
+        echo "Usage:"
+        echo "extract <archive-name>"
+    end
+end
 
-  function compress {
-      local EXT="$1"; shift
-      case "$EXT" in
-          -h|--help)
-              echo "Usage:"
-              echo "compress <archive-name>.EXT file1 file2"
-              echo
-              echo "EXT can be one of the following: .7z .tar.gz .tgz .tar.bz2 .zip."
-              echo "Also you can add .nocompress to the end of EXT to archive without compressing."
-              ;;
-          ,*.7z)
-              7z a "$EXT" "$@"
-              ;;
-          ,*.tar.gz|*.tgz)
-              tar -czvf "$EXT" "$@"
-              ;;
-          ,*.tar.gz.nocompress|*.tgz.nocompress)
-              tar -cvf "${EXT%.*}" "$@"
-              ;;
-          ,*.tar.bz2)
-              tar -cjvf "$EXT" "$@"
-              ;;
-          ,*.zip)
-              zip -r "$EXT" "$@"
-              ;;
-          ,*)
-              echo "Unrecognized EXT: $1"
-              echo
-              compress --help
-              ;;
-      esac
-  }
+
+
+function compress
+    set EXT $argv[1]
+    set argv $argv[2..-1]  # Shift the arguments to remove the first one
+
+    switch $EXT
+        case '-h' '--help'
+            echo "Usage:"
+            echo "compress <archive-name>.EXT file1 file2"
+            echo
+            echo "EXT can be one of the following: .7z .tar.gz .tgz .tar.bz2 .zip."
+            echo "Also you can add .nocompress to the end of EXT to archive without compressing."
+            return
+        case '*.7z'
+            7z a "$EXT" $argv
+        case '*.tar.gz' '*.tgz'
+            tar -czvf "$EXT" $argv
+        case '*.tar.gz.nocompress' '*.tgz.nocompress'
+            tar -cvf (string replace .nocompress '' $EXT) $argv
+        case '*.tar.bz2'
+            tar -cjvf "$EXT" $argv
+        case '*.zip'
+            zip -r "$EXT" $argv
+        case '*'
+            echo "Unrecognized EXT: $EXT"
+            echo
+            compress --help
+    end
+end
 #+end_src
 *** Encryption/Decryption
-#+begin_src bash :tangle ~/.zshrc
-  function encrypt {
-      case "$1" in
-          -h|--help)
-              echo "Usage:"
-              echo "encrypt <input-file> [<output-file>]"
-              echo
-              echo "If <output-file> is skipped, then the output will be <input-file>.encrypted"
-              ;;
-          ,*)
-              local INPUT="$1"
-              local OUTPUT="$2"
+#+begin_src fish :tangle ~/.config/fish/conf.d/encryption.fish
+function encrypt
+    switch $argv[1]
+        case '-h' '--help'
+            echo "Usage:"
+            echo "encrypt <input-file> [<output-file>]"
+            echo
+            echo "If <output-file> is skipped, then the output will be <input-file>.encrypted"
+            return
+        case '*'
+            set INPUT $argv[1]
+            set OUTPUT $argv[2]
 
-              if [[ ! -f "$INPUT" ]]; then
-                  echo "$INPUT not found."
-                  exit 1
-              fi
+            if not test -f "$INPUT"
+                echo "$INPUT not found."
+                return 1
+            end
 
-              if [[ -z "$OUTPUT" ]]; then
-                  OUTPUT="${INPUT}.encrypted"
-              fi
+            if test -z "$OUTPUT"
+                set OUTPUT "$INPUT.encrypted"
+            end
 
-              if [[ -f "$OUTPUT" ]]; then
-                  echo "$OUTPUT already exists."
-                  exit 1
-              fi
+            if test -f "$OUTPUT"
+                echo "$OUTPUT already exists."
+                return 1
+            end
 
-              gpg --symmetric --cipher-algo AES256 --output "$OUTPUT" "$INPUT"
-              ;;
-      esac
-  }
+            gpg --symmetric --cipher-algo AES256 --output "$OUTPUT" "$INPUT"
+    end
+end
 
-  function decrypt {
-      case "$1" in
-          -h|--help)
-              echo "Usage:"
-              echo "decrypt <input-file> [<output-file>]"
-              echo
-              echo "If <output-file> is skipped, then the output will be <input-file> but the last suffix is removed"
-              ;;
-          ,*)
-              local INPUT="$1"
-              local OUTPUT="$2"
+function decrypt
+    switch $argv[1]
+        case '-h' '--help'
+            echo "Usage:"
+            echo "decrypt <input-file> [<output-file>]"
+            echo
+            echo "If <output-file> is skipped, then the output will be <input-file> but the last suffix is removed"
+            return
+        case '*'
+            set INPUT $argv[1]
+            set OUTPUT $argv[2]
 
-              if [[ ! -f "$INPUT" ]]; then
-                  echo "$INPUT not found."
-                  exit 1
-              fi
+            if not test -f "$INPUT"
+                echo "$INPUT not found."
+                return 1
+            end
 
-              if [[ -z "$OUTPUT" ]]; then
-                  OUTPUT="${INPUT%.*}"
-              fi
+            if test -z "$OUTPUT"
+                set OUTPUT (string trim --right --chars='.' (basename "$INPUT"))
+            end
 
-              if [[ -f "$OUTPUT" ]]; then
-                  echo "$OUTPUT already exists."
-                  exit 1
-              fi
+            if test -f "$OUTPUT"
+                echo "$OUTPUT already exists."
+                return 1
+            end
 
-              gpg --decrypt --output "$OUTPUT" "$INPUT"
-              ;;
-      esac
-  }
+            gpg --decrypt --output "$OUTPUT" "$INPUT"
+    end
+end
 #+end_src
-*** Some kubernetes commands
-**** kctx
-Easily switch between contexts with completion.
-
-#+begin_src bash :tangle ~/.config/aliases/generic
-  function kctx {
-      if [[ -z "$1" ]]; then
-          kubectl config current-context
-          echo "--"
-          kubectl config get-contexts --output=name
-      else
-          echo "Switching to $1"
-          kubectl config use-context $1
-      fi
-  }
-#+end_src
-
-#+begin_src bash :tangle ~/.config/zsh/completions/_kctx
-  #compdef kctx
-
-  _kctx() {
-      _arguments "1:contexts:($(kubectl config get-contexts --output=name | tr "\\n" " "))"
-  }
-
-  _kctx "$@"
-#+end_src
-
-*** Git utilities
-#+begin_src bash :tangle ~/.zshrc
-  # TODO: Create an emacs wrapper which fuzzy searches through these
-  # results and opens the file on that revision using
-  # (vc-revision-other-window REV)
-  function git-file-hist-grep {
-      case "$1" in
-          -h|--help)
-              echo "Search STRING in all revisions of given FILE."
-              echo
-              echo "Usage:"
-              echo "git-file-hist-grep STRING FILE"
-              ;;
-          ,*)
-              SEARCH_STRING=$1
-              FILE_NAME=$2
-              git rev-list --all "$FILE_NAME" | while read REVISION; do
-                  git --no-pager grep -F "$SEARCH_STRING" "$REVISION" "$FILE_NAME"
-              done
-              ;;
-      esac
-  }
-#+end_src
-*** Print current path in a shorter form
-- =~/Workspace/projects/jaro= → =~/W/p/jaro=
-
-#+begin_src sh :tangle ~/.zshrc
-  # https://github.com/sorin-ionescu/prezto/blob/master/modules/prompt/functions/prompt-pwd
-  function short_dir {
-      setopt localoptions extendedglob
-      local current_pwd="${PWD/#$HOME/~}"
-      local ret_directory
-
-      if [[ "$current_pwd" == (#m)[/~] ]]; then
-          ret_directory="$MATCH"
-          unset MATCH
-      else
-          ret_directory="${${${${(@j:/:M)${(@s:/:)current_pwd}##.#?}:h}%/}//\%/%%}/${${current_pwd:t}//\%/%%}"
-      fi
-
-      unset current_pwd
-      echo "$ret_directory"
-  }
-#+end_src
-** General settings
-#+begin_src bash :tangle ~/.zshrc
-  FILES_TO_SOURCE=(
-      $HOME/.config/aliases/*
-      # ^ All aliases, also sourcing it from other shells
-      /usr/share/fzf/key-bindings.zsh
-      # ^ fzf history search keybindings
-      $HOME/.nix-profile/share/fzf/key-bindings.zsh
-      # ^ fzf history search keybindings
-      $HOME/.config/zsh/*.sh
-      # ^ Stuff that I tangle from other files
-      $HOME/.extrarc
-      # ^ Contains stuff that I don't want to commit to git
-  )
-
-  for file in $FILES_TO_SOURCE; do
-      [[ -f "$file" ]] && source $file
-  done
-
-  # Colors for less
-  export LESS_TERMCAP_mb=$'\E[1;31m'     # begin bold
-  export LESS_TERMCAP_md=$'\E[1;36m'     # begin blink
-  export LESS_TERMCAP_me=$'\E[0m'        # reset bold/blink
-  export LESS_TERMCAP_so=$'\E[01;44;33m' # begin reverse video
-  export LESS_TERMCAP_se=$'\E[0m'        # reset reverse video
-  export LESS_TERMCAP_us=$'\E[1;32m'     # begin underline
-  export LESS_TERMCAP_ue=$'\E[0m'        # reset underline
-  export GROFF_NO_SGR=1                  # for konsole and gnome-terminal
-
-  # Some variables
-  export FZF_DEFAULT_OPTS='--reverse --bind="tab:replace-query"'
-
-  # incappendhistory -> incrementally append history so that if shell
-  #   closes unexpectedly, do not loose the history
-  # nosharehistory -> sharehistory causes open zsh sessions to pick up
-  #   newly added history items immediately. This reserves that
-  # histreduceblanks -> remove superfluous blanks from commands while
-  #   appending them to the history
-  # interactivecomments -> enable comments on interactive shells. I
-  #   sometimes add little notes to my commands so that I can easily find
-  #   them whenever I do a fuzzy history search
-  setopt autocd histignoredups incappendhistory nosharehistory histreduceblanks interactivecomments
-  # unsetopt BEEP
-  unsetopt LIST_BEEP
-
-  # Case insensitive tab completion
-  zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
-  # automatically find new executables in path
-  zstyle ':completion:*' rehash true
-  zstyle ':completion:*' accept-exact '*(N)'
-  zstyle ':completion:*' use-cache on
-  zstyle ':completion:*' cache-path ~/.zsh/cache
-
-  # History settings
-
-  setopt inc_append_history        # Write to the history file immediately, not when the shell exits.
-  setopt hist_ignore_all_dups      # Delete old recorded entry if new entry is a duplicate.
-  setopt hist_find_no_dups         # Do not display a line previously found.
-  setopt hist_reduce_blanks        # Remove superfluous blanks before recording entry.
-
-  HISTSIZE=100000
-  SAVEHIST=100000
-  HISTORY_SUBSTRING_SEARCH_FUZZY=1
-  HISTFILE=~/.zsh_history
-#+end_src
-
-** Emacs configuration
-#+begin_src bash :tangle ~/.zshrc
-# * EAT integration
-[[ -n "$EAT_SHELL_INTEGRATION_DIR" ]] && \
-    source "$EAT_SHELL_INTEGRATION_DIR/zsh"
-
-# * VTERM integration
-
-# With this function we can send elisp commands while we are on emacs vterm
-# for example, "elisp message hey" would send (message "hey") to emacs.
-vterm_cmd() {
-    local vterm_elisp
-    vterm_elisp=""
-    while [[ $# -gt 0 ]]; do
-        vterm_elisp="$vterm_elisp""$(printf '"%s" ' "$(printf "%s" "$1" | sed -e 's|\\|\\\\|g' -e 's|"|\\"|g')")"
-        shift
-    done
-    vterm_printf "51;E$vterm_elisp"
-}
-
-# Changed the following a bit so that it can detect tmux and screen properly
-vterm_printf() {
-    if [[ -n "$TMUX" ]] && [[ "${TERM}" = "tmux"* ]]; then
-        # Tell tmux to pass the escape sequences through
-        printf "\ePtmux;\e\e]%s\007\e\\" "$1"
-    elif [[ "${TERM}" = "screen"* ]]; then
-        # GNU screen (screen, screen-256color, screen-256color-bce)
-        printf "\eP\e]%s\007\e\\" "$1"
-    else
-        printf "\e]%s\e\\" "$1"
-    fi
-}
-
-if [[ "$INSIDE_EMACS" = 'vterm' ]]; then
-    # Rebind clear so that scrollback is also cleared on emacs vterm
-    alias clear='vterm_printf "51;Evterm-clear-scrollback";tput clear'
-
-    function emacs-vterm-precmd() {
-        vterm_printf "51;A$USER@$HOST:$PWD" >$TTY
-    }
-
-    # See this: https://github.com/romkatv/powerlevel10k/issues/2294#issuecomment-1535767681
-    autoload -Uz add-zsh-hook
-    add-zsh-hook precmd emacs-vterm-precmd
-fi
-#+end_src
-** Mac OSX configuration
-#+begin_src shell
-  # - To get the latest pip bin path: echo $(python3 -c 'import site; print(site.USER_BASE)')/bin
-  export PATH="$HOME/Library/Python/3.9/bin:/usr/local/bin:$PATH"
-
-  # Assuming you've installed GNU tools with
-  # $ brew install coreutils findutils gnu-tar gnu-sed gawk gnutls gnu-indent gnu-getopt grep
-  # - Add updated openssl (required for barriers to work) to PATH
-  # - Add pip/bin to PATH
-  # - Add barrier{c,s,} to path
-  # - Add GNU utils to path and replace with mac ones
-  export PATH="/Applications/Barrier.app/Contents/MacOS:$PATH"
-  export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
-  export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/findutils/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/gnu-indent/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/findutils/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/gnu-indent/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
-  export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
-
-  # Hunspell dict path from nix-profile, hunspell picks up this variable
-  export DICPATH=$HOME/.nix-profile/share/hunspell
-  # Without the following, hunspell in emacs for some reason
-  export DICTIONARY=en_US
-
-  # Source fzf keybindings
-  source /usr/local/opt/fzf/shell/key-bindings.zsh
-
-  source $HOME/.nix-profile/etc/profile.d/nix.sh
-  source $HOME/.nix-profile/etc/profile.d/nix-daemon.sh
-#+end_src
-
-** Other
-*** TODO kubectl completions
-For some reason it does not work. However running the same command after shell is started just works fine.
-
-#+begin_src bash :tangle ~/.zshrc
-  if (( $+commands[kubectl] )); then
-    source <(kubectl completion zsh)
-  fi
-#+end_src
-
-** Aliases
-:PROPERTIES:
-:ID:       0B508237-3BBE-416A-A6AD-31C5C78340DB
-:END:
-This file is sourced by both =zsh= and =bash=.
-
-#+begin_src bash :tangle (when-linux "~/.config/aliases/arch")
-  alias aur='trizen'
-  alias aurin='trizen -S'
-  alias aurs='trizen -Ss'
-  alias aurupg='trizen -Syu'
-  alias pac='fuzzy packages'      # A fuzzy, interactive package finder
-  alias pacs='pacman -Ss'
-  alias pacin='sudo pacman -S'
-  alias pacins='sudo pacman -U'   # Install from file
-  alias pacupd='sudo pacman -Sy'
-  alias pacupg='sudo pacman -Syu'
-  alias pacbin='pacman -F'        # Same as above
-  alias pacre='sudo pacman -R'    # Leave dependencies and configurations
-  alias pacrem='sudo pacman -Rns'
-
-  alias ctl='systemctl'
-  alias ctls='systemctl status'
-  alias ctlr='systemctl restart'
-  alias ctlu='systemctl --full --user'
-  alias ctlus='systemctl --full --user status'
-  alias ctlur='systemctl --full --user restart'
-  alias logu='journalctl --user --unit'
-
-  alias xpaste='xclip -selection clipboard -o' # paste cb content
-#+end_src
-
-#+begin_src bash :tangle (when-darwin "~/.config/aliases/mac")
-  alias pacs='brew search'
-  alias pacin='brew install'
-  alias pacupd='brew update'
-  alias pacupg='brew upgrade'
-  alias pacrem='brew uninstall'
-#+end_src
-
-#+begin_src bash :tangle ~/.config/aliases/generic
-# package management
-#eshell nixin='nix-env -iA "nixpkgs.$1"'
-function nixin { nix-env -iA "nixpkgs.$1" }
-alias nixrem='nix-env -e'
-alias nixs='nix search nixpkgs'
-alias nixls='nix-env --query'
-
-# process management
-alias nameof='ps -o comm= -p' # Get the name of given PID (reverse pidof)
-alias fuckall='killall -s 9'
-alias fkill='fuzzy kill'
-
-function fuckemacs {
-    if pgrep Emacs; then
-        kill -USR2 $(pgrep Emacs)
-    else
-        kill -USR2 $(pgrep emacs)
-    fi
-}
-
-# utility
-alias cdtemp='cd $(mktemp -d)'
-alias ...='cd ../..'
-alias ....='cd ../../..'
-alias .....='cd ../../../..'
-alias df='df -H'
-alias du='ncdu'
-alias fastssh='ssh -Y -C -c chacha20-poly1305@openssh.com'
-alias cdd='cd $(fd -t d -d 8 | fzf)'
-
-alias ls='lsd --group-dirs=first --classify'
-alias ll='lsd --group-dirs=first --classify --long --date=relative --timesort --blocks=date,size,name'
-alias lls='lsd --group-dirs=first --classify --long --header --date=relative --timesort --git --hyperlink=auto'
-alias lla='lsd --group-dirs=first --classify --long --header --date=relative --timesort --git --hyperlink=auto --almost-all'
-alias tree='lsd --tree'
-
-alias gcm='git commit -m'
-alias gds='git diff --staged'
-alias gs='git status'
-
-# abbrv
-alias n='nvim'
-alias v='jaro --method=view'
-alias e='jaro --method=edit'
-alias o='jaro'
-alias mt='jaro --mime-type'
-alias mkx='chmod +x'
-alias ytdl='yt-dlp'
-alias ytmp3='yt-dlp --extract-audio --audio-format mp3 --output "%(title)s.%(ext)s"'
-
-# master Wq
-alias :q='exit'
-alias :wq='exit'
-
-# useful
-alias find-dups='find . ! -empty -type f -exec md5sum {} + | sort | uniq -w32 -dD'
-
-# stuff
-alias ipaddr='curl https://api.ipify.org'
-alias ipinfo='curl https://ipinfo.io'
-
-# highlight streams with bat
-alias hjson='bat --language=json --paging=never --style=plain'
-alias hlog='bat --language=log --paging=never --style=plain'
-
-# higlight json parts of the stream and print other lines plain
-# ./program_that_may_output_json | logjson
-alias logjson='jq -R -r ". as \$line | try fromjson catch \$line"'
-#+end_src
-
 * Tmux
 ** Install TPM (Tmux Plugin Manager)
 #+begin_src sh
@@ -1775,100 +1350,100 @@ After issuing the command above, you need to do ~PREFIX I~ to install all plugin
 ** The configuration
 #+begin_src conf :tangle ~/.tmux.conf
 
-  # ####################################################
-  #      __                                         ____
-  #     / /_____ ___  __  ___  __ _________  ____  / __/
-  #    / __/ __ `__ \/ / / / |/_// ___/ __ \/ __ \/ /_
-  #  _/ /_/ / / / / / /_/ />  <_/ /__/ /_/ / / / / __/
-  # (_)__/_/ /_/ /_/\__,_/_/|_(_)___/\____/_/ /_/_/
-  # ####################################################
+# ####################################################
+#      __                                         ____
+#     / /_____ ___  __  ___  __ _________  ____  / __/
+#    / __/ __ `__ \/ / / / |/_// ___/ __ \/ __ \/ /_
+#  _/ /_/ / / / / / /_/ />  <_/ /__/ /_/ / / / / __/
+# (_)__/_/ /_/ /_/\__,_/_/|_(_)___/\____/_/ /_/_/
+# ####################################################
 
-  # Add the plugin manager (PREFIX I -> install them)
-  set -g @plugin 'tmux-plugins/tpm'
+# Add the plugin manager (PREFIX I -> install them)
+set -g @plugin 'tmux-plugins/tpm'
 
-  # PREFIX C-s -> save, PREFIX C-r -> restore
-  set -g @plugin 'tmux-plugins/tmux-resurrect'
+# PREFIX C-s -> save, PREFIX C-r -> restore
+set -g @plugin 'tmux-plugins/tmux-resurrect'
 
-  # Highlight when prefix is pressed, in copy mode etc.
-  set -g @plugin 'tmux-plugins/tmux-prefix-highlight'
-  set -g @prefix_highlight_show_copy_mode 'on'
-  set -g @prefix_highlight_copy_mode_attr 'fg=white,bg=yellow,bold' # default is 'fg=default,bg=yellow'
-  set -g @prefix_highlight_show_sync_mode 'on'
-  set -g @prefix_highlight_sync_mode_attr 'fg=black,bg=green' # default is 'fg=default,bg=yellow'
+# Highlight when prefix is pressed, in copy mode etc.
+set -g @plugin 'tmux-plugins/tmux-prefix-highlight'
+set -g @prefix_highlight_show_copy_mode 'on'
+set -g @prefix_highlight_copy_mode_attr 'fg=white,bg=yellow,bold' # default is 'fg=default,bg=yellow'
+set -g @prefix_highlight_show_sync_mode 'on'
+set -g @prefix_highlight_sync_mode_attr 'fg=black,bg=green' # default is 'fg=default,bg=yellow'
 
-  # PREFIX o -> captures the output of last command
-  set -g @plugin 'artemave/tmux_capture_last_command_output'
-  set -g @command-capture-key o
-  set -g @command-capture-prompt-pattern '➜ '
+# PREFIX o -> captures the output of last command
+set -g @plugin 'artemave/tmux_capture_last_command_output'
+set -g @command-capture-key o
+set -g @command-capture-prompt-pattern '➜ '
 
-  set -g default-shell $PREFIX/bin/fish
-  set -g mouse on
-  set -g base-index 1 # Window indexes starts from 1
-  setw -g pane-base-index 1 # Pane indexes starts from 1
-  set -s escape-time 0 # Remove the delay after hitting <ESC>
-  set-option -g set-titles off
-  set-option -g allow-rename off
+set -g default-shell $PREFIX/bin/fish
+set -g mouse on
+set -g base-index 1 # Window indexes starts from 1
+setw -g pane-base-index 1 # Pane indexes starts from 1
+set -s escape-time 0 # Remove the delay after hitting <ESC>
+set-option -g set-titles off
+set-option -g allow-rename off
 
-  # Reload config
-  bind r source-file ~/.tmux.conf
+# Reload config
+bind r source-file ~/.tmux.conf
 
-  # Open copy mode
-  bind -n M-y copy-mode
+# Open copy mode
+bind -n M-y copy-mode
 
-  # Set prefix to A-a
-  unbind C-b
-  set -g prefix M-a
-  bind-key M-a send-prefix
+# Set prefix to A-a
+unbind C-b
+set -g prefix M-a
+bind-key M-a send-prefix
 
-  # Increase the time of display-panes (PREFIX q)
-  set -g display-panes-time 4000
+# Increase the time of display-panes (PREFIX q)
+set -g display-panes-time 4000
 
-  # Split remaps
-  bind \\ split-window -h -c '#{pane_current_path}'
-  bind - split-window -v -c '#{pane_current_path}'
-  unbind '"'
-  unbind %
+# Split remaps
+bind \\ split-window -h -c '#{pane_current_path}'
+bind - split-window -v -c '#{pane_current_path}'
+unbind '"'
+unbind %
 
-  # Vim-like pane switches
-  bind k selectp -U
-  bind j selectp -D
-  bind h selectp -L
-  bind l selectp -R
+# Vim-like pane switches
+bind k selectp -U
+bind j selectp -D
+bind h selectp -L
+bind l selectp -R
 
-  # Pane switches (without prefix key)
-  bind -n M-h select-pane -L
-  bind -n M-j select-pane -D
-  bind -n M-k select-pane -U
-  bind -n M-l select-pane -R
-  bind -n M-\\ split-window -h -c '#{pane_current_path}'
-  bind -n M--  split-window -v -c '#{pane_current_path}'
+# Pane switches (without prefix key)
+bind -n M-h select-pane -L
+bind -n M-j select-pane -D
+bind -n M-k select-pane -U
+bind -n M-l select-pane -R
+bind -n M-\\ split-window -h -c '#{pane_current_path}'
+bind -n M--  split-window -v -c '#{pane_current_path}'
 
-  # Swapping shortcuts
-  bind-key W choose-tree -Zw "swap-window -t '%%'"
-  bind-key P choose-tree -Zw "swap-pane -t '%%'"
+# Swapping shortcuts
+bind-key W choose-tree -Zw "swap-window -t '%%'"
+bind-key P choose-tree -Zw "swap-pane -t '%%'"
 
-  # Vi keys for copy-mode
-  setw -g mode-keys vi
-  bind-key -T copy-mode-vi v send-keys -X begin-selection
-  bind-key -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel
-  bind-key -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "xclip -selection clipboard"
+# Vi keys for copy-mode
+setw -g mode-keys vi
+bind-key -T copy-mode-vi v send-keys -X begin-selection
+bind-key -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel
+bind-key -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "xclip -selection clipboard"
 
-  bind -n M-s run-shell -b tmux-switch
+bind -n M-s run-shell -b tmux-switch
 
-  # Status bar theme
-  set -g status-position bottom
-  set -g status-left-length 32
+# Status bar theme
+set -g status-position bottom
+set -g status-left-length 32
 
-  set -g status-fg white
-  set -g status-bg black
+set -g status-fg white
+set -g status-bg black
 
-  set -g status-left '#[fg=colour235,bg=colour252,bold] #S #[fg=colour252,bg=colour238,nobold]#[fg=colour245,bg=colour238,bold] #(whoami) #[fg=colour238,bg=black,nobold]'
-  set -g window-status-format "#[fg=white,bg=black] #I #W "
-  set -g window-status-current-format "#[fg=black,bg=colour39]#[fg=colour25,bg=colour39,noreverse,bold] #I  #W #[fg=colour39,bg=black,nobold]"
-  set -g status-right "#{prefix_highlight}"
+set -g status-left '#[fg=colour235,bg=colour252,bold] #S #[fg=colour252,bg=colour238,nobold]#[fg=colour245,bg=colour238,bold] #(whoami) #[fg=colour238,bg=black,nobold]'
+set -g window-status-format "#[fg=white,bg=black] #I #W "
+set -g window-status-current-format "#[fg=black,bg=colour39]#[fg=colour25,bg=colour39,noreverse,bold] #I  #W #[fg=colour39,bg=black,nobold]"
+set -g status-right "#{prefix_highlight}"
 
-  # Load tmux plugin manager
-  run '~/.tmux/plugins/tpm/tpm'
+# Load tmux plugin manager
+run '~/.tmux/plugins/tpm/tpm'
 #+end_src
 * Utilities
 ** git
@@ -1893,167 +1468,151 @@ In this file I define some file associations. Please refer to [[https://github.c
 
 - To experiment associations/jaro, do:
   #+begin_src bash
-    $ guile
-    guile> (load ".local/bin/jaro")
-    guile> (load ".config/associactions")
+$ guile
+guile> (load ".local/bin/jaro")
+guile> (load ".config/associactions")
   #+end_src
 
 #+begin_src scheme :tangle ~/.config/associations
-  (assoc
-   #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
-   #:program '(zathura %f))
+;; -*- mode: scheme; -*-
 
-  (assoc
-   #:pattern '("^text/html" "^application/x?htm")
-   #:program 'browser
-   #:edit 'editor)
+(set! dynamic-menu-program "rofi -dmenu")
 
-  (assoc
-   #:name 'editor
-   #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript|xml)")
-   #:emacs (elisp (find-file %F))
-   #:program '(emacsclient -c %f)
-   #:term '(emacsclient -c %f)
-   #:view 'bat)
+(bind
+ #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
+ #:program '(zathura %f))
 
-  (assoc
-   #:name 'empv
-   #:pattern '("^video/" "^audio/")
-   #:program (elisp (empv-enqueue "%F"))
-   #:on-error '(mpv %f))
+(bind
+ #:pattern '("^text/html" "^application/x?htm")
+ #:program 'browser
+ #:edit 'editor)
 
-  (assoc
-   #:pattern "inode/directory"
-   #:program '(term -e ranger %f)
-   #:term '(ranger %f)
-   #:gallery 'nomacs)
+(bind
+ #:name 'editor
+ #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript|xml)")
+ #:emacs (elisp
+          (find-file "%F")
+          (delete-other-windows))
+ ;; If I simply give the file to emacsclient, it opens it in a split
+ ;; for some reason, instead of making it the only window in the frame
+ #:program '(emacsclient -c --eval "(find-file \"%F\")")
+ #:term '(emacsclient -nw -c --eval "(find-file \"%F\")"))
 
-  (assoc
-   #:pattern "https://.*zoom\\.us/j/(\\w+)\\?pwd=(\\w+)"
-   #:program '(zoom zoommtg://zoom.us/join?confno=%1&pwd=%2))
+(bind
+ #:name 'empv
+ #:pattern '("^video/" "^audio/")
+ #:program (elisp (empv-play "%F"))
+ #:on-error '(mpv %f))
 
-  (assoc
-   #:pattern '("^https?://(www.)?youtube.com/"
-               "^https?://(www.)?youtu.be/"
-               "^https?://(www.)?v.redd.it/\\w+/DASH"
-               "^https?://([a-zA-Z-]+)?streamable.com"
-               "^https?://giant.gfycat.com/.+"
-               "https?://v.redd.it/.+"
-               "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
-   #:program 'empv
-   #:on-error (open-with 'browser))
+(bind
+ #:pattern "inode/directory"
+ #:program '(thunar %f)
+ #:term '(yazi %f)
+ #:gallery 'nomacs)
 
-  (assoc
-   #:name 'feh
-   #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
-   #:program '(feh --start-at %f))
+(bind
+ #:pattern "https://.*zoom\\.us/j/(\\w+)\\?pwd=(\\w+)"
+ #:program '(zoom zoommtg://zoom.us/join?confno=%1&pwd=%2))
 
-  (assoc
-   #:name 'nomacs
-   #:pattern "^image/.*"
-   #:program '(nomacs %f)
-   #:on-error 'feh)
+(bind
+ #:pattern '("^https?://(www.)?youtube.com/"
+             "^https?://(www.)?youtu.be/"
+             "^https?://(www.)?v.redd.it/\\w+/DASH"
+             "^https?://([a-zA-Z-]+)?streamable.com"
+             "^https?://giant.gfycat.com/.+"
+             "https?://v.redd.it/.+"
+             "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
+ #:program 'empv
+ #:on-error (open-with 'browser))
 
-  (assoc
-   #:pattern "^https?://(www.)?reddit.com/r/(\\w+)/comments/(.*?)/"
-   #:program (elisp (reddigg-view-comments "https://www.reddit.com/r/%2/comments/%3"))
-   #:on-error 'browser)
+(bind
+ #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
+ #:program `(imv %f))
 
-  (assoc
-   #:pattern '("^magnet:" "\\.torrent$")
-   #:program '(qbittorrent --skip-dialog=false %f))
+(bind
+ #:name 'nomacs
+ #:pattern "^image/.*"
+ #:program '(nomacs %f)
+ ;; Start with given image, and open the directory of given file
+ #:on-error '(imv -n %f %d))
 
-  (assoc
-   #:name 'browser
-   #:pattern '("^https?://.*" "^.*\\.html?(#[\\w_-]+)?")
-   #:emacs (elisp (eww "%f"))
-   #:program (elisp (eww "%f"))
-   ;; #:program '(qutebrowser %f)
-   ;; #:test '(pgrep qutebrowser)
-   #:on-fail '(firefox %f)
-   #:edit 'editor)
+(bind
+ #:pattern "^https?://(www.)?reddit.com/r/(\\w+)/comments/(.*?)/"
+ #:program (elisp (reddigg-view-comments "https://www.reddit.com/r/%2/comments/%3"))
+ #:on-error 'browser)
 
-  (assoc
-   #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
-   #:program '(xarchiver %f))
+(bind
+ #:pattern '("^magnet:" "\\.torrent$")
+ #:program '(qbittorrent --skip-dialog=false %f))
 
-  (assoc
-   #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
-   #:program '(desktopeditors %F))
+(bind
+ #:name 'browser
+ #:pattern '("^https?://.*" "^.*\\.html?(#[\\w_-]+)?")
+ #:emacs (elisp (eww "%f"))
+ #:program (elisp (eww "%f"))
+ ;; #:program '(qutebrowser %f)
+ ;; #:test '(pgrep qutebrowser)
+ #:on-fail '(firefox %f)
+ #:edit 'editor)
 
-  (assoc
-   #:pattern ".*"
-   #:program (select-alternative-with "dmenu"))
+(bind
+ #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
+ #:program '(xarchiver %f))
 
-  ;;
-  ;; Rest is used only with references
-  ;;
+(bind
+ #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
+ #:program '(desktopeditors %F))
 
-  (assoc
-   #:name 'bat
-   #:pattern ".*"
-   #:program '(bat --paging=always %f))
+(bind
+ #:pattern ".*"
+ #:program (select-one-of "dmenu"))
 
-  ;; vi:syntax=scheme
+;;
+;; Rest is used only with references
+;;
+
+(bind
+ #:name 'bat
+ #:pattern ".*"
+ #:program '(bat --paging=always %f))
+
+;; vi:syntax=scheme
 #+end_src
 
 *** .mailcap
 Just redirect everything to [[jaro]].
 
 #+begin_src conf :tangle ~/.mailcap
-  text/html; w3m -v -F -T text/html %s; edit=jaro --method=edit; compose=jaro --method=edit; nametemplate=%s.html; copiousoutput
-  text/*; jaro '%s'; copiousoutput
-  application/*; jaro '%s'
-  image/*; jaro '%s'
-  audio/*; jaro '%s'
-  video/*; jaro '%s'
-  message/*; jaro '%s'
-  model/*; jaro '%s'
-  ,*/*; jaro '%s'
+text/html; w3m -v -F -T text/html %s; edit=jaro --method=edit; compose=jaro --method=edit; nametemplate=%s.html; copiousoutput
+text/*; jaro '%s'; copiousoutput
+application/*; jaro '%s'
+image/*; jaro '%s'
+audio/*; jaro '%s'
+video/*; jaro '%s'
+message/*; jaro '%s'
+model/*; jaro '%s'
+,*/*; jaro '%s'
 #+end_src
 
 *** .urlview
 Redirect everything to [[jaro]].
 
 #+begin_src conf :tangle ~/.urlview
-  COMMAND jaro
+COMMAND jaro
 #+end_src
 ** scli
 Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
 
 #+begin_src conf :tangle ~/.config/sclirc
-  open-command=jaro %u
-  enable-notifications=true
-  save-history=true
-  use-formatting=true
-  wrap-at=75
-  contacts-autohide=true
-  color=true
-  partition-contacts=true
+open-command=jaro %u
+enable-notifications=true
+save-history=true
+use-formatting=true
+wrap-at=75
+contacts-autohide=true
+color=true
+partition-contacts=true
 #+end_src
-** ranger
-#+begin_src conf :tangle ~/.config/ranger/rc.conf
-  set confirm_on_delete never
-  set preview_images true
-  set preview_images_method «when-on(linux="ueberzug", darwin="iterm2")»
-  set draw_borders both
-  set dirname_in_tabs true
-  set update_tmux_title false
-
-  map gh cd ~
-  map gn cd ~/Documents/notes/
-  map gd cd ~/Downloads/
-  map gD cd ~/Documents/
-  map gs cd ~/Music/Sound Recordings/
-  map gc cd ~/Pictures/f3/Camera/
-
-  map gi eval fm.cd('/run/media/' + os.getenv('USER'))
-#+end_src
-
-#+begin_src conf :tangle ~/.config/ranger/rifle.conf
-  has jaro, flag f = jaro "$@"
-#+end_src
-
 * Media
 ** mpv
 *** Keybindings
@@ -2090,95 +1649,95 @@ Signal messenger for terminal, see [[https://github.com/isamert/scli][scli]].
 | c      | show youtube comments      |
 *** Configuration
 #+begin_src bash :tangle ~/.config/mpv/mpv.conf
-  input-ipc-server=/tmp/mpvsocket
+input-ipc-server=/tmp/mpvsocket
 
-  # Display Turkish subtitles if available, fall back to English otherwise.
-  slang=tr,en
+# Display Turkish subtitles if available, fall back to English otherwise.
+slang=tr,en
 
-  # Play Korean audio if available, fall back to English otherwise.
-  # (I watch Korean stuff a lot and they always gets overridden by English audio)
-  alang=ko,en,eng
+# Play Korean audio if available, fall back to English otherwise.
+# (I watch Korean stuff a lot and they always gets overridden by English audio)
+alang=ko,en,eng
 
-  # If the file seems to be valid UTF-8, prefer UTF-8, otherwise use Turkish
-  # encoding.
-  sub-codepage=cp1254
+# If the file seems to be valid UTF-8, prefer UTF-8, otherwise use Turkish
+# encoding.
+sub-codepage=cp1254
 
-  # Search these directories for subtitles
-  sub-file-paths=sub:Sub:subs:Subs:subtitle:Subtitle:subtitles:Subtitles
+# Search these directories for subtitles
+sub-file-paths=sub:Sub:subs:Subs:subtitle:Subtitle:subtitles:Subtitles
 
-  # Load all subtitles from directories listed above
-  sub-auto=all
+# Load all subtitles from directories listed above
+sub-auto=all
 
-  # 10 from bottom
-  sub-pos=90
+# 10 from bottom
+sub-pos=90
 
-  # Filter subtitle additions for the deaf or hard-of-hearing (SDH)
-  sub-filter-sdh=yes
-  sub-filter-sdh-harder=yes
+# Filter subtitle additions for the deaf or hard-of-hearing (SDH)
+sub-filter-sdh=yes
+sub-filter-sdh-harder=yes
 
-  # Tile properly
-  no-keepaspect-window
+# Tile properly
+no-keepaspect-window
 #+end_src
 *** Bindings configuration
 #+begin_src bash :tangle ~/.config/mpv/input.conf
-  # Show youtube comments
-  # This gets the video ID from filename, as mpv sets it this way.
-  c run "term" "--float" "-e" "/bin/bash" "-c" "pipe-viewer --comments-order=top --comments='${path}' --page=1 --no-interactive"
+# Show youtube comments
+# This gets the video ID from filename, as mpv sets it this way.
+c run "term" "--float" "-e" "/bin/bash" "-c" "pipe-viewer --comments-order=top --comments='${path}' --page=1 --no-interactive"
 
-  # Copy the filename
-  y run "/bin/sh" "-c" "printf ${filename} | xcopy"; show-text "Filename copied: ${filename}"
-  & run "/bin/sh" "-c" "jaro --program=browser '${path}'"; show-text "Opening ${path} in browser..."
+# Copy the filename
+y run "/bin/sh" "-c" "printf ${filename} | xcopy"; show-text "Filename copied: ${filename}"
+& run "/bin/sh" "-c" "jaro --program=browser '${path}'"; show-text "Opening ${path} in browser..."
 
-  ! add chapter -1 # skip to previous chapter
-  @ add chapter 1 # next
+! add chapter -1 # skip to previous chapter
+@ add chapter 1 # next
 
-  # Download subtitle
-  T run     "mediastuff" "mpv-subdl" "${path}" "eng" # english subtitle
-  Alt+t run "mediastuff" "mpv-subdl" "${path}" "tur" # turkish subtitle
+# Download subtitle
+T run     "mediastuff" "mpv-subdl" "${path}" "eng" # english subtitle
+Alt+t run "mediastuff" "mpv-subdl" "${path}" "tur" # turkish subtitle
 
-  l seek 5
-  h seek -5
-  j seek -60
-  k seek 60
+l seek 5
+h seek -5
+j seek -60
+k seek 60
 
-  L no-osd seek  1 exact
-  H no-osd seek -1 exact
-  J no-osd seek  5 exact
-  K no-osd seek -5 exact
+L no-osd seek  1 exact
+H no-osd seek -1 exact
+J no-osd seek  5 exact
+K no-osd seek -5 exact
 
-  f cycle fullscreen
-  p cycle pause
-  m cycle mute
-  b cycle-values loop-file "inf" "no"
+f cycle fullscreen
+p cycle pause
+m cycle mute
+b cycle-values loop-file "inf" "no"
 
-  0 add volume 2
-  9 add volume -2
+0 add volume 2
+9 add volume -2
 
-  s cycle sub
-  a cycle audio  # switch audio streams
+s cycle sub
+a cycle audio  # switch audio streams
 
-  # resize subtitle
-  + add sub-scale +0.1
-  - add sub-scale -0.1
+# resize subtitle
++ add sub-scale +0.1
+- add sub-scale -0.1
 
-  Alt+0 set window-scale 0.25
-  Alt+1 set window-scale 0.5
-  Alt+2 set window-scale 0.75
-  Alt+3 set window-scale 1
-  Alt+4 set window-scale 1.5
-  Alt+5 set window-scale 2
+Alt+0 set window-scale 0.25
+Alt+1 set window-scale 0.5
+Alt+2 set window-scale 0.75
+Alt+3 set window-scale 1
+Alt+4 set window-scale 1.5
+Alt+5 set window-scale 2
 
-  CTRL+l script-message osc-playlist
+CTRL+l script-message osc-playlist
 #+end_src
 
 *** sponsorblock-minimal-plugin
 Use ~b~ key to disable/enable it. It's on by default.
 
 #+begin_src sh
-  mkdir -p ~/.config/mpv/scripts/
-  curl https://codeberg.org/jouni/mpv_sponsorblock_minimal/raw/branch/master/sponsorblock_minimal.lua -o ~/.config/mpv/scripts/sponsorblock_minimal.lua
-  # By default it only skips "sponsor" category, I want more:
-  sed -Ei 's/([ \t]+)categories =.*/\1categories = '"'"'"sponsor","selfpromo","interaction","intro","outro"'"'"'/' ~/.config/mpv/scripts/sponsorblock_minimal.lua
+mkdir -p ~/.config/mpv/scripts/
+curl https://codeberg.org/jouni/mpv_sponsorblock_minimal/raw/branch/master/sponsorblock_minimal.lua -o ~/.config/mpv/scripts/sponsorblock_minimal.lua
+# By default it only skips "sponsor" category, I want more:
+sed -Ei 's/([ \t]+)categories =.*/\1categories = '"'"'"sponsor","selfpromo","interaction","intro","outro"'"'"'/' ~/.config/mpv/scripts/sponsorblock_minimal.lua
 #+end_src
 
 *** uosc
@@ -2197,194 +1756,170 @@ Installation:
 curl https://raw.githubusercontent.com/po5/thumbfast/master/thumbfast.lua -o ~/.config/mpv/scripts/thumbfast.lua
 #+end_src
 
-** nsxiv
-#+begin_src sh :tangle (when-linux "~/.config/nsxiv/exec/key-handler")
-  #!/bin/bash
-  while read -r file; do
-      case "$1" in
-          "d")
-              trash "$file" ;;
-          "D")
-              rm "$file" ;;
-          "greater")
-              convert -rotate 90 "$file" "$file" ;;
-          "less")
-              convert -rotate '-90' "$file" "$file" ;;
-          "y")
-              echo -n "$file" | xclip -selection clipboard ;;
-          "w")
-              feh --bg-scale "$file" ;;
-          "W")
-              rm ~/.config/wall.png
-              cp "$file" ~/.config/wall.png
-              feh --bg-scale "$file" ;;
-      esac
-  done
-#+end_src
 * Editors
 ** Neovim
 I had a fat neovim configuration at past but I don't use vim anymore. This is just the minimal configuration I've started maintaining
 #+begin_src vimrc :tangle ~/.config/nvim/init.vim
-  " ##################################################
-  "                   (_)
-  "         __   ___ _ __ ___  _ __ ___
-  "         \ \ / / | '_ ` _ \| '__/ __|
-  "          \ V /| | | | | | | | | (__
-  "         (_)_/ |_|_| |_| |_|_|  \___|
-  " ##################################################
+" ##################################################
+"                   (_)
+"         __   ___ _ __ ___  _ __ ___
+"         \ \ / / | '_ ` _ \| '__/ __|
+"          \ V /| | | | | | | | | (__
+"         (_)_/ |_|_| |_| |_|_|  \___|
+" ##################################################
 
 
-  " visuals {{{
-  set background=dark                " rearranges colors for dark background
-  set colorcolumn=80                 " 80-col line
-  set termguicolors                  " true color support
-  set number relativenumber          " line numbers relative to current line ()
-  set cursorline                     " highlight current line
-  "hi Normal guibg=none ctermbg=none| " transparent background
-  " }}}
+" visuals {{{
+set background=dark                " rearranges colors for dark background
+set colorcolumn=80                 " 80-col line
+set termguicolors                  " true color support
+set number relativenumber          " line numbers relative to current line ()
+set cursorline                     " highlight current line
+"hi Normal guibg=none ctermbg=none| " transparent background
+" }}}
 
-  " tabs and spaces {{{
-  set mouse=a               " enable mouse (helps precise resizing etc)
-  set tabstop=4             " tab-char width
-  set shiftwidth=4          " indent-level width
-  set softtabstop=4         " column count inserted by the tab key
-  set expandtab             " tabs -> spaces
-  set smartindent           " do it smart
-  filetype plugin indent on " determine indent by plugins
-  " }}}
+" tabs and spaces {{{
+set mouse=a               " enable mouse (helps precise resizing etc)
+set tabstop=4             " tab-char width
+set shiftwidth=4          " indent-level width
+set softtabstop=4         " column count inserted by the tab key
+set expandtab             " tabs -> spaces
+set smartindent           " do it smart
+filetype plugin indent on " determine indent by plugins
+" }}}
 
-  " better defaults {{{
-  " search/completion
-  set ignorecase " ignore case while searching
-  set smartcase  " abc -> Abc and abc, Abc -> only Abc (works in combination with ^^)
-  set splitbelow
-  set splitright
-  set foldmethod=syntax " (indent, marker: fold between {{{ }}})
-  " }}}
+" better defaults {{{
+" search/completion
+set ignorecase " ignore case while searching
+set smartcase  " abc -> Abc and abc, Abc -> only Abc (works in combination with ^^)
+set splitbelow
+set splitright
+set foldmethod=syntax " (indent, marker: fold between {{{ }}})
+" }}}
 
-  " utility {{{
-  set showmatch             " visually indicate matching parens
-  set autoread              " update buffer if file is edited externally
-  set title                 " terminal inherits title
-  set clipboard=unnamedplus " use system clipboard
-  set inccommand=nosplit    " show effects of a command live
-  set spelllang=en_us       " default spelllang
-  set signcolumn=yes        " removes flickering caused by lang server
-  set undofile              " saves undo history to file (nvim's undodir default is OK)
-  set completeopt=menu,menuone,preview,noselect,noinsert
-  " }}}
+" utility {{{
+set showmatch             " visually indicate matching parens
+set autoread              " update buffer if file is edited externally
+set title                 " terminal inherits title
+set clipboard=unnamedplus " use system clipboard
+set inccommand=nosplit    " show effects of a command live
+set spelllang=en_us       " default spelllang
+set signcolumn=yes        " removes flickering caused by lang server
+set undofile              " saves undo history to file (nvim's undodir default is OK)
+set completeopt=menu,menuone,preview,noselect,noinsert
+" }}}
 
-  " netrw (file browser) {{{
-  " :help netrw-quickmap
-  let g:netrw_banner = 0       " remove banner
-  let g:netrw_liststyle = 3    " tree style listing
-  let g:netrw_browse_split = 4 " ...
-  let g:netrw_altv = 1         " spawn it at left split
-  let g:netrw_usetab = 1       " use tab for expanding/shrinking folders
-  let g:netrw_winsize = 10     " occupies 10% of window
-  " }}}
+" netrw (file browser) {{{
+" :help netrw-quickmap
+let g:netrw_banner = 0       " remove banner
+let g:netrw_liststyle = 3    " tree style listing
+let g:netrw_browse_split = 4 " ...
+let g:netrw_altv = 1         " spawn it at left split
+let g:netrw_usetab = 1       " use tab for expanding/shrinking folders
+let g:netrw_winsize = 10     " occupies 10% of window
+" }}}
 
-  " trailing spaces {{{
-  set listchars=tab:▸\ ,trail:·       " Show trailing spaces and tabs
-  set list                            " ^^ enable it
-  autocmd BufWritePre * :%s/\s\+$//e  " remove trailing spaces on save
-  " }}}
+" trailing spaces {{{
+set listchars=tab:▸\ ,trail:·       " Show trailing spaces and tabs
+set list                            " ^^ enable it
+autocmd BufWritePre * :%s/\s\+$//e  " remove trailing spaces on save
+" }}}
 
-  " stuff {{{
-  nmap <space> <leader>
-  inoremap jk <ESC>|         " jk escapes to normal mode
-  tnoremap jk <C-\><C-n>|    " jk escapes to normal mode (in terminal mode)
-  tnoremap <Esc> <C-\><C-n>| " esc escapes to normal mode
-  " }}}
+" stuff {{{
+nmap <space> <leader>
+inoremap jk <ESC>|         " jk escapes to normal mode
+tnoremap jk <C-\><C-n>|    " jk escapes to normal mode (in terminal mode)
+tnoremap <Esc> <C-\><C-n>| " esc escapes to normal mode
+" }}}
 
-  " split mappings {{{
-  " next sections looks pretty much like my i3 config except Win key is replaced
-  " with the Alt key
-  " move between buffers with alt+hjkl
-  nnoremap <A-h> <C-w>h
-  nnoremap <A-j> <C-w>j
-  nnoremap <A-k> <C-w>k
-  nnoremap <A-l> <C-w>l
+" split mappings {{{
+" next sections looks pretty much like my i3 config except Win key is replaced
+" with the Alt key
+" move between buffers with alt+hjkl
+nnoremap <A-h> <C-w>h
+nnoremap <A-j> <C-w>j
+nnoremap <A-k> <C-w>k
+nnoremap <A-l> <C-w>l
 
-  " faster resize for buffers
-  nnoremap <A-J> <C-w>+
-  nnoremap <A-K> <C-w>-
-  nnoremap <A-L> <C-w>>
-  nnoremap <A-H> <C-w><
-  tnoremap <A-J> <C-\><C-n><C-w>+
-  tnoremap <A-K> <C-\><C-n><C-w>-
-  tnoremap <A-L> <C-\><C-n><C-w>>
-  tnoremap <A-H> <C-\><C-n><C-w><
+" faster resize for buffers
+nnoremap <A-J> <C-w>+
+nnoremap <A-K> <C-w>-
+nnoremap <A-L> <C-w>>
+nnoremap <A-H> <C-w><
+tnoremap <A-J> <C-\><C-n><C-w>+
+tnoremap <A-K> <C-\><C-n><C-w>-
+tnoremap <A-L> <C-\><C-n><C-w>>
+tnoremap <A-H> <C-\><C-n><C-w><
 
-  " faster split creation/deletion
-  nnoremap <silent> <A--> :split<CR>
-  nnoremap <silent> <A-\> :vsplit<CR>
-  nnoremap <silent> <A-d> :bd<CR>
+" faster split creation/deletion
+nnoremap <silent> <A--> :split<CR>
+nnoremap <silent> <A-\> :vsplit<CR>
+nnoremap <silent> <A-d> :bd<CR>
 
-  " change buffers
-  nnoremap <silent> <C-l> :bn<CR>
-  nnoremap <silent> <C-h> :bp<CR>
-  " }}}
+" change buffers
+nnoremap <silent> <C-l> :bn<CR>
+nnoremap <silent> <C-h> :bp<CR>
+" }}}
 
-  " tabs {{{
-  nnoremap <silent> <A-.> :tabnext<CR>|               " alt-.  -> next tab
-  tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>|     " alt-.  -> next tab (terminal mode)
-  nnoremap <silent> <A-,> :tabprevious<CR>|           " alt-,  -> prev tab
-  tnoremap <silent> <A-,> <C-\><C-n>:tabprevious<CR>| " alt-,  -> prev tab (terminal mode)
-  nnoremap <silent> <A-1> :1 tabn<CR>|                " alt-1  -> goes to tab 1
-  nnoremap <silent> <A-2> :2 tabn<CR>|                " ^^
-  nnoremap <silent> <A-3> :3 tabn<CR>|                " ^^
-  nnoremap <silent> <A-4> :4 tabn<CR>|                " ^^
-  nnoremap <silent> <A-5> :5 tabn<CR>|                " ^^
-  nnoremap <silent> <C-t> :tabnew<CR>|                " ctrl-t -> new tab
-  " }}}
+" tabs {{{
+nnoremap <silent> <A-.> :tabnext<CR>|               " alt-.  -> next tab
+tnoremap <silent> <A-.> <C-\><C-n>:tabnext<CR>|     " alt-.  -> next tab (terminal mode)
+nnoremap <silent> <A-,> :tabprevious<CR>|           " alt-,  -> prev tab
+tnoremap <silent> <A-,> <C-\><C-n>:tabprevious<CR>| " alt-,  -> prev tab (terminal mode)
+nnoremap <silent> <A-1> :1 tabn<CR>|                " alt-1  -> goes to tab 1
+nnoremap <silent> <A-2> :2 tabn<CR>|                " ^^
+nnoremap <silent> <A-3> :3 tabn<CR>|                " ^^
+nnoremap <silent> <A-4> :4 tabn<CR>|                " ^^
+nnoremap <silent> <A-5> :5 tabn<CR>|                " ^^
+nnoremap <silent> <C-t> :tabnew<CR>|                " ctrl-t -> new tab
+" }}}
 
-  " indention mappings {{{
-  vnoremap <Tab> >gv|     " tab indents in visual mode
-  vnoremap <S-Tab> <gv|   " s-tab de-indents in visual mode
-  inoremap <S-Tab> <C-d>| " s-tab de-indents in insert mode
-  " }}}
+" indention mappings {{{
+vnoremap <Tab> >gv|     " tab indents in visual mode
+vnoremap <S-Tab> <gv|   " s-tab de-indents in visual mode
+inoremap <S-Tab> <C-d>| " s-tab de-indents in insert mode
+" }}}
 
-  " move visual lines (j,k works in traditional way) {{{
-  onoremap <silent> j gj
-  onoremap <silent> k gk
-  nnoremap <silent> j gj
-  nnoremap <silent> k gk
-  vnoremap <silent> j gj
-  vnoremap <silent> k gk
-  " }}}
+" move visual lines (j,k works in traditional way) {{{
+onoremap <silent> j gj
+onoremap <silent> k gk
+nnoremap <silent> j gj
+nnoremap <silent> k gk
+vnoremap <silent> j gj
+vnoremap <silent> k gk
+" }}}
 
-  " Master Wq bindings {{{
-  command! Wq wq
-  command! W w
-  command! Q q
-  nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
-  nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
-  tnoremap <silent> <C-q> <C-\><C-n>:q<CR>|   " ctrl-q -> quit (term)
-  " }}}
+" Master Wq bindings {{{
+command! Wq wq
+command! W w
+command! Q q
+nnoremap <silent> <C-s> :w<CR>|             " ctrl-s -> save
+nnoremap <silent> <C-q> :q<CR>|             " ctrl-q -> quit
+tnoremap <silent> <C-q> <C-\><C-n>:q<CR>|   " ctrl-q -> quit (term)
+" }}}
 
-  " Turkish keyboard mappings {{{
-  nnoremap Ş :
-  nnoremap ı i
-  nnoremap ğ [
-  nnoremap ü ]
-  nnoremap Ğ {
-  nnoremap Ü }
-  nnoremap ç .
-  nnoremap Ö <
-  nnoremap Ç >
-  vnoremap Ş :
-  vnoremap ı i
-  vnoremap ğ [
-  vnoremap ü ]
-  vnoremap Ğ {
-  vnoremap Ü }
-  vnoremap ç .
-  vnoremap Ö <
-  vnoremap Ç >
-  " }}}
+" Turkish keyboard mappings {{{
+nnoremap Ş :
+nnoremap ı i
+nnoremap ğ [
+nnoremap ü ]
+nnoremap Ğ {
+nnoremap Ü }
+nnoremap ç .
+nnoremap Ö <
+nnoremap Ç >
+vnoremap Ş :
+vnoremap ı i
+vnoremap ğ [
+vnoremap ü ]
+vnoremap Ğ {
+vnoremap Ü }
+vnoremap ç .
+vnoremap Ö <
+vnoremap Ç >
+" }}}
 
-  " vi: foldmethod=marker
+" vi: foldmethod=marker
 #+end_src
 * Browsers
 ** Firefox
@@ -3090,27 +2625,13 @@ Enabling uBlock [[https://github.com/gorhill/uBlock/wiki/Cloud-storage][cloud st
 * Some desktop files
 ** .local/share/applications/jaro.desktop
 #+begin_src conf :tangle (when-linux "~/.local/share/applications/jaro.desktop")
-  [Desktop Entry]
-  Name=jaro
-  GenericName=Resource opener
-  Terminal=false
-  Exec=jaro %F
-  Type=Application
-  Categories=Utility;
-#+end_src
-** .local/share/applications/keepassxc-nopass.desktop
-#+begin_src conf :tangle (when-linux "~/.local/share/applications/keepassxc-nopass.desktop")
-  [Desktop Entry]
-  Name=KeePassXC (No password)
-  Comment=KeePassXC but no password required
-  Exec=/bin/sh -c "secret-tool lookup key keepassxc | keepassxc --pw-stdin $HOME/Documents/private/passwords.kdbx"
-  Icon=keepassxc
-  StartupWMClass=keepassxc
-  Terminal=false
-  Type=Application
-  Version=1.0
-  Categories=Utility;Security;Qt;
-  MimeType=application/x-keepass2;
+[Desktop Entry]
+Name=jaro
+GenericName=Resource opener
+Terminal=false
+Exec=jaro %F
+Type=Application
+Categories=Utility;
 #+end_src
 * Scripts
 This part is almost completely untouched. Needs some revamp.
@@ -3912,6 +3433,30 @@ Sicaklik         :: #{durum["sicaklik"]} °C
 Nem              :: #{durum["nem"]}%
 Yagmur olasiligi :: #{durum["yagis00Now"]}%
 HERE
+#+end_src
+** git-file-history-grep
+#+begin_src bash :tangle ~/.bin/git-file-history-grep
+#!/bin/bash
+
+# TODO: Create an emacs wrapper which fuzzy searches through these
+# results and opens the file on that revision using
+# (vc-revision-other-window REV)
+
+case "$1" in
+    -h|--help)
+        echo "Search STRING in all revisions of given FILE."
+        echo
+        echo "Usage:"
+        echo "git-file-hist-grep STRING FILE"
+        ;;
+    ,*)
+        SEARCH_STRING=$1
+        FILE_NAME=$2
+        git rev-list --all "$FILE_NAME" | while read REVISION; do
+            git --no-pager grep -F "$SEARCH_STRING" "$REVISION" "$FILE_NAME"
+        done
+        ;;
+esac
 #+end_src
 * Tools
 - =dconf-editor= :: List and explore gnome/gshell/app settings.
