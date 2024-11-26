@@ -3718,7 +3718,7 @@ it's a list, the first element will be used as the binary name."
   :hook (eat-mode . im-disable-hl-line-mode-for-buffer)
   :config
   (setq eat-enable-shell-prompt-annotation nil)
-  (setq eat-shell "/bin/zsh")
+  (setq eat-shell (executable-find "fish"))
   (setq eat-tramp-shells '(("docker" . "/bin/sh")
                            ("ssh" . "/usr/bin/zsh")))
   (eat-eshell-mode))
@@ -3757,24 +3757,6 @@ it's a list, the first element will be used as the binary name."
   (add-to-list 'eshell-pre-command-hook 'im-eshell-notify--pre-command-hook)
   (add-to-list 'eshell-post-command-hook 'im-eshell-notify--post-command-hook))
 
-;;;;;; Integrate EAT with ZSH
-
-;; This will be automatically sourced within .zshrc.
-
-(im-tangle-file
- :path "~/.config/zsh/eat-zsh-integration.sh"
- :contents "[[ -n $EAT_SHELL_INTEGRATION_DIR ]] && source $EAT_SHELL_INTEGRATION_DIR/zsh")
-
-(defun im-eshell-reset ()
-  "Reset current eshell."
-  (interactive nil eshell-mode)
-  (let ((name (buffer-name))
-        (dir default-directory))
-    (let ((kill-buffer-query-functions '()))
-      (kill-buffer))
-    (let ((default-directory dir))
-      (im-eshell name))))
-
 ;;;;;; Proper command completion
 
 ;; This package provides command, subcommand and argument completion
@@ -3792,6 +3774,7 @@ it's a list, the first element will be used as the binary name."
 
 ;;;;;; Reading bash/zsh aliases into Eshell
 
+;; TODO: Load fish shell aliases/abbreviations somehow?
 (defun im-eshell-load-my-aliases ()
   "Load zsh/bash aliases into eshell.
 '$*' is appended after each alias so that they can take
@@ -3951,6 +3934,18 @@ for defining eshell-specific aliases that is read verbatim:
                            'append 'no-message))))))))
 
 (add-hook 'eshell-post-command-hook #'im-eshell-append-history)
+
+;;;;;; Reset Eshell
+
+(defun im-eshell-reset ()
+  "Reset current eshell."
+  (interactive nil eshell-mode)
+  (let ((name (buffer-name))
+        (dir default-directory))
+    (let ((kill-buffer-query-functions '()))
+      (kill-buffer))
+    (let ((default-directory dir))
+      (im-eshell name))))
 
 ;;;;; bookmark.el
 
@@ -10345,6 +10340,11 @@ SELECT * FROM _ LIMIT 1;
   :defer t
   :config
   (add-hook 'conf-mode-hook #'outli-mode))
+
+;;;;; fish
+
+(use-package fish-mode
+  :mode ("\\.fish\\'"))
 
 ;;;; Window and buffer management
 

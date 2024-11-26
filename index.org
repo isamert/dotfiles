@@ -510,10 +510,13 @@ defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 3
 I use kitty in MacOs as it's easiest one to configure specifically for MacOS and it has sane defaults mostly.
 
 #+begin_src conf :tangle ~/.config/kitty/kitty.conf
+shell fish
 macos_option_as_alt yes
 font_size 16.0
 macos_show_window_title_in none
 hide_window_decorations titlebar-and-corners
+macos_quit_when_last_window_closed yes
+font_family Cascadia Code NF
 #+end_src
 
 * Linux
@@ -1096,7 +1099,7 @@ end
 #+begin_src fish :tangle ~/.config/fish/conf.d/aliases.fish
 # * Stow aliases
 
-alias !ssync="stow -d ~/Nextcloud/Sync/ -t ~"
+alias ssync="stow -d ~/Nextcloud/Sync/ -t ~"
 
 # * Package management
 
@@ -1181,23 +1184,6 @@ abbr -a :q exit
 abbr -a -- kctx 'kubectl config current-context'
 abbr -a -- kctxs-list 'kubectl config get-contexts --output=name'
 abbr -a -- kctx-use 'kubectl config use-context'
-
-# * Network
-
-function ipinfo
-    switch (uname)
-        case Linux
-            set localips (ip addr show | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d/ -f1)
-        case Darwin
-            set localips (ifconfig | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}')
-    end
-
-    echo $localips
-    echo
-    echo ======================
-    echo
-    curl --silent https://ipinfo.io | jq .
-end
 #+end_src
 
 ** Starship
@@ -1210,8 +1196,11 @@ notification_timeout = 99999
 #+end_src
 
 ** Utility functions
+
+Utilizing =~/.config/fish/functions/= instead of the config file or the =conf.d= folder is a better idea because the funcitons inside =functions= folder are lazy loaded.
+
 *** Compression/decompression
-#+begin_src fish :tangle ~/.config/fish/conf.d/compression.fish
+#+begin_src fish :tangle ~/.config/fish/functions/extract.fish
 function extract
     if test -f $argv[1]
         switch $argv[1]
@@ -1245,9 +1234,9 @@ function extract
         echo "extract <archive-name>"
     end
 end
+#+end_src
 
-
-
+#+begin_src fish :tangle ~/.config/fish/functions/compress.fish
 function compress
     set EXT $argv[1]
     set argv $argv[2..-1]  # Shift the arguments to remove the first one
@@ -1278,7 +1267,7 @@ function compress
 end
 #+end_src
 *** Encryption/Decryption
-#+begin_src fish :tangle ~/.config/fish/conf.d/encryption.fish
+#+begin_src fish :tangle ~/.config/fish/functions/encrypt.fish
 function encrypt
     switch $argv[1]
         case '-h' '--help'
@@ -1308,7 +1297,9 @@ function encrypt
             gpg --symmetric --cipher-algo AES256 --output "$OUTPUT" "$INPUT"
     end
 end
+#+end_src
 
+#+begin_src fish :tangle ~/.config/fish/functions/decrypt.fish
 function decrypt
     switch $argv[1]
         case '-h' '--help'
@@ -1339,6 +1330,24 @@ function decrypt
     end
 end
 #+end_src
+*** Network stuff
+#+begin_src fish :tangle ~/.config/fish/functions/ipinfo.fish
+function ipinfo
+    switch (uname)
+        case Linux
+            set localips (ip addr show | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d/ -f1)
+        case Darwin
+            set localips (ifconfig | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}')
+    end
+
+    echo $localips
+    echo
+    echo ======================
+    echo
+    curl --silent https://ipinfo.io | jq .
+end
+#+end_src
+
 * Tmux
 ** Install TPM (Tmux Plugin Manager)
 #+begin_src sh
