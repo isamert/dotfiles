@@ -10399,6 +10399,7 @@ SELECT * FROM _ LIMIT 1;
   ;; (or ~T~) to switch next/prev tab quickly instead of doing ~gt~ (or
   ;; ~gT~) again and again.
   (im-make-repeatable tab-bar-switch
+    "t" evil-tab-next
     "t" tab-bar-switch-to-next-tab
     "T" tab-bar-switch-to-prev-tab))
 
