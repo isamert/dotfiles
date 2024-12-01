@@ -14330,7 +14330,15 @@ If LINK is non-nil, then open the link instead of homepage.  Calling
 this function without a link should open the already existing tuir
 buffer, otherwise it will create one.  Calling it with link kills the
 existing buffer and opens the link in tuir."
-  (interactive)
+  (interactive
+   (list
+    (cond
+     ((s-starts-with? "*reddigg-" (buffer-name))
+      (save-excursion
+        (goto-char (point-min))
+        (when (re-search-forward "https://\\(www\\.\\)?reddit.com")
+          (thing-at-point 'url))))
+     (t (thing-at-point 'url)))))
   (if (and (not link) (get-buffer "*tuir*"))
       (switch-to-buffer "*tuir*")
     (let ((eat-buffer-name "*tuir*")
