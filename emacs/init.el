@@ -5170,6 +5170,8 @@ empty string."
   :general
   (:keymaps 'vc-dir-mode-map :states 'normal
    "r" #'vc-dir-refresh)
+  (:keymaps 'vc-git-log-view-mode-map :states 'normal
+   "<backtab>" #'im-vc-toggle-all-log-view-entries)
   (:keymaps 'diff-mode-map :states 'normal
    "o" #'im-vc-diff-open-file-at-revision-dwim)
   (im-leader
@@ -5233,6 +5235,18 @@ of that revision."
         (when (and buffer-file-name (derived-mode-p 'prog-mode))
           (diff-hl-update)
           (vc-refresh-state))))))
+
+(defun im-vc-toggle-all-log-view-entries ()
+  "Toggle the visibility of all log view entries in the current buffer."
+  (interactive nil vc-git-log-view-mode)
+  (message ">> Toggling all entries. This may take a while...")
+  (save-excursion
+    (goto-char (point-max))
+    (while (not (equal (point) (point-min)))
+      (ignore-errors (log-view-toggle-entry-display))
+      (forward-line -1))
+    (ignore-errors (log-view-toggle-entry-display)))
+  (message ">> Toggling all entries. This may take a while...Done"))
 
 ;;;;;; git-timemachine
 
