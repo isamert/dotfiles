@@ -3764,9 +3764,12 @@ it's a list, the first element will be used as the binary name."
 ;; also helm version that provides argument documentation but I
 ;; haven't tried it yet and I need to make it work with corfu instead
 ;; of helm.
-
+;;
 ;; - In `eshell', fish completion is only used when `pcomplete' fails.
 ;; - Don't forget that pcomplete works with TAB, not M-TAB.
+;;
+;; Also do `fish_update_completions' time to time in a fish shell to
+;; parse and generate completions for fish shell.
 
 (use-package fish-completion
   :after eshell
