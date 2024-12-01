@@ -1108,6 +1108,13 @@ alias ssync="stow -d ~/Nextcloud/Sync/ -t ~"
 
 # * Package management
 
+abbr -a -- paci 'sudo pacman -S'
+abbr -a -- pacr 'sudo pacman -Rns'
+abbr -a -- pacs 'pacman -Ss'
+abbr -a -- pacupd 'sudo pacman -Sy'
+abbr -a -- pacupg 'sudo pacman -Syu'
+abbr -a -- pacbin 'pacman -F'
+
 abbr -a -- dnfi 'sudo dnf install'
 abbr -a -- dnfr 'sudo dnf remove'
 abbr -a -- dnfs 'dnf search'
