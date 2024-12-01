@@ -534,12 +534,15 @@ complicates things or not sufficient."
           (message "Patch applied successfully:\n%s" patch-command-result)
         (error "Error applying patch:\n%s" patch-command-result)))))
 
-;; TODO: implement im-tangle-config Maybe extract the file contents
-;; into another file in this directory (like eat-zsh-integration.sh)
-;; and give that file?
-
-(cl-defun im-tangle-file (&key _doc _path _contents)
-  (message "WARN: Implement im-tangle-file"))
+(cl-defun im-tangle-file (&key doc path contents)
+  "Tangle CONTENTS into PATH.
+DOC is simply for documentation, have no specific use.  If CONTENTS has
+a shebang at the beginning, then the executable bit is set to file."
+  (make-directory (file-name-directory path) t)
+  (write-region (concat contents "\n") nil path)
+  ;; Make it executable if needed
+  (when (s-matches? "^[ \t]*#!" contents)
+    (set-file-modes path (file-modes-symbolic-to-number "+x" (file-modes path)))))
 
 ;;;;;; Elisp utils
 
