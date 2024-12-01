@@ -1497,7 +1497,11 @@ guile> (load ".config/associactions")
 #+begin_src scheme :tangle ~/.config/associations
 ;; -*- mode: scheme; -*-
 
-(set! dynamic-menu-program "rofi -dmenu")
+(set!
+ dynamic-menu-program
+ (on-system
+  #:darwin "choose"
+  #:gnu/linux "rofi -dmenu"))
 
 (bind
  #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
