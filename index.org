@@ -1094,6 +1094,10 @@ include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "
 #+begin_src fish :tangle ~/.config/fish/config.fish
 if status is-interactive
     starship init fish | source
+
+    if test -f ~/.extrarc
+        source ~/.extrarc
+    end
 end
 #+end_src
 

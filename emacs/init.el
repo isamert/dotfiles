@@ -6396,6 +6396,7 @@ appropriate in some cases like terminals."
   ;; the screen size changes, some of the scrollback gets deleted etc.
   ;; [1]: https://github.com/akermu/emacs-libvterm/issues/179#issuecomment-1045331359
 
+  (setq vterm-shell (executable-find "fish"))
   (setq vterm-kill-buffer-on-exit t))
 
 ;;;;;; Utility functions
