@@ -3774,32 +3774,47 @@ it's a list, the first element will be used as the binary name."
 
 ;;;;;; Reading bash/zsh aliases into Eshell
 
-;; TODO: Load fish shell aliases/abbreviations somehow?
 (defun im-eshell-load-my-aliases ()
-  "Load zsh/bash aliases into eshell.
+  "Load fish/zsh/bash aliases/abbreviations into eshell.
 '$*' is appended after each alias so that they can take
-positional parameters in eshell. There is also a special syntax
-for defining eshell-specific aliases that is read verbatim:
+positional parameters in eshell.
 
-#eshell test='ls'"
+Aliases needs to be defined in a particular way:
+
+  alias alias-name='alias value'
+
+- There should be no spaces around the equals sign.
+- Single quote should be used instead of double quoutes.
+
+For fish shel abbreviations, only the following form is accepted:
+
+  abbr -a -- alias-name 'alias value'
+
+There is also a special syntax for defining eshell-specific aliases
+that is read verbatim (meaning that no '$*' is appended):
+
+  #eshell test='ls'"
   (interactive)
   (setq
    eshell-command-aliases-list
    (-filter
     #'identity
     (--map
-     (-when-let ((_ eshell? name imp)
-                 (s-match "^\\(alias\\|#eshell\\) \\([a-zA-Z0-9_-]+\\)='\\(.*\\)'\\( *#.*\\)*$" it))
+     (-when-let ((_ eshell? name _2 imp)
+                 (s-match "^\\(alias\\|#eshell\\|abbr -a --\\) \\([a-zA-Z0-9_-]+\\)\\(=\\| \\)'\\(.*\\)'\\( *#.*\\)*$" it))
        (list name (if (s-prefix? "#eshell" eshell?)
                       imp
                     (concat imp " $*"))))
      (--mapcat
       (s-split "\n" (with-temp-buffer (insert-file-contents it) (buffer-string)))
-      (when (file-exists-p "~/.config/aliases/")
-        (directory-files "~/.config/aliases/" t directory-files-no-dot-files-regexp)))))))
+      (append
+       (when-let* ((path "~/.config/fish/conf.d/aliases.fish")
+                   (_ (file-exists-p path)))
+         (list path))
+       (when (file-exists-p "~/.config/aliases/")
+         (directory-files "~/.config/aliases/" t directory-files-no-dot-files-regexp))))))))
 
 (add-hook 'eshell-alias-load-hook #'im-eshell-load-my-aliases)
-
 
 ;;;;;; Eshell-specific aliases
 
