@@ -2273,6 +2273,8 @@ side window the only window'"
      (shell . t)
      (scheme . t)
      (python . t)
+     (jupyter . t)
+     (julia . t)
      (verb . t)
      (http . t)
      (R . t)
@@ -10383,6 +10385,76 @@ SELECT * FROM _ LIMIT 1;
 (use-package fish-mode
   :mode ("\\.fish\\'"))
 
+;;;;; python
+
+;; * Jupyter & org-mode
+;;
+;; - =jupyter= package enables you to use jupyter notebooks in Emacs.
+;; - It provides two ways, one is through org-mode and it's the one I
+;;   prefer.
+;; - You need to convert =ipynb= files into org-mode files by running:
+;;
+;; #+begin_src sh
+;; pandoc --from ipynb --to org some-file.ipynb # this outputs an org-mode file
+;; #+end_src
+;;
+;; - Do =jupyter-connect-repl=.
+;; - Start (?, not sure, it may be automatic)
+;;   ~jupyter-org-interaction-mode~ and then you will get completion at
+;;   point
+;; - Then you can simply use jupyter-python source blocks to write
+;;   your code and run them exactly as you do with normal org code
+;;   blocks.
+;; - There are also these functions which you can utilize:
+;;   - jupyter-eval-defun
+;;   - jupyter-inspect-at-point      → K
+;;   - jupyter-eval-line-or-region   → C-x C-e
+;;   - jupyter-repl-interrupt-kernel → C-c C-i
+;;   - jupyter-repl-restart-kernel   → C-c C-r
+;;
+;; * Virtual Envs and Jupyter
+;;
+;; If you are using virtualenvironments, then simply do
+;; =pyvenv-activate= and select the virtenv folder.
+;;
+;; You can create a venv like: =python3 -m venv <venv-folder>=. To
+;; install requirements.txt dependencies, do ~pip install -r
+;; requirements.txt~ after activating the venv with ~source
+;; <venv-folder>/bin/activate.{,.fish,.zsh}~.
+;;
+;; After activating the venv, you may need to do
+;; ~jupyter-repl-restart-kernel~.
+
+(use-package pyvenv
+  :defer t)
+
+(use-package jupyter
+  :defer t
+  :config
+  (with-eval-after-load 'ob-core
+    (setq org-babel-default-header-args:jupyter-python
+          '((:async . "yes")      ;; Make outputs async
+            (:session . "py")     ;; A named session
+            (:kernel . "python3") ;; Don't know but works
+            (:pandoc . t)         ;; Convert rich outputs to org-mode format
+            (:display "text/plain text/html")
+            ;; ^ Prefer plain-text outputs from jupyter instead of
+            ;; direct html outputs
+            ))))
+
+(defun im-convert-ipynb-to-org-buffer ()
+  "Convert the current IPython Notebook file to Org format and open it in a new buffer."
+  (interactive)
+  (let* ((org-buffer-name (concat (file-name-sans-extension (buffer-name)) ".org"))
+         (pandoc-output (shell-command-to-string
+                         (format "pandoc --from ipynb --to org '%s'" (buffer-file-name)))))
+    (with-current-buffer (get-buffer-create org-buffer-name)
+      (erase-buffer)
+      (insert pandoc-output)
+      (switch-to-buffer (current-buffer))
+      (goto-char (point-min))
+      (org-mode))))
+
 ;;;; Window and buffer management
 
 ;;;;; tab-bar-mode
@@ -13736,6 +13808,9 @@ attribute for current buffers file or selected file."
   :keymaps '(prog-mode-map)
   "K" #'im-peek-doc)
 
+(with-eval-after-load 'evil
+  (setq evil-lookup-func #'im-peek-doc))
+
 (general-def
   :states 'normal
   :keymaps 'im-peek-mode-map
@@ -13923,6 +13998,12 @@ Use C-n C-p to switch between translation directions."
     ((ignore-errors (symbol-value 'lsp-mode)) #'im-peek-doc--lsp)
     ((-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'im-peek-doc--elisp)
     ((equal major-mode 'clojure-mode) #'im-peek-doc--clojure)
+    ((equal major-mode 'org-mode)
+     (cond
+      (jupyter-org-interaction-mode #'im-peek-doc--jupyter)
+      (t (lambda ()
+           (call-interactively #'wordnut-lookup-current-word)
+           (current-buffer)))))
     (eldoc-mode #'eldoc-doc-buffer))))
 
 ;; TODO: Add lsp mode etc.
@@ -13962,6 +14043,11 @@ Use C-n C-p to switch between translation directions."
   (save-window-excursion
     (cider-doc)
     (current-buffer)))
+
+(defun im-peek-doc--jupyter ()
+  (save-window-excursion
+    (jupyter-inspect-at-point)
+    (get-buffer "*Help*")))
 
 ;;;;; im-extract
 
