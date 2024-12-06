@@ -673,5 +673,31 @@ CALLBACK will be called with the selected commit ref."
                 (message ">> Amend failed!")
                 (switch-to-buffer buffer-name)))))
 
+;;;; im-git-show-stash-diff
+
+(defun im-git-show-stash-diff ()
+  "Show stashed diff."
+  (interactive)
+  (let ((buffer-name "*im-git-stash-diff*"))
+    (im-shell-command
+     :command "git"
+     :args `("--no-pager" "stash" "show" "-p")
+     :switch nil
+     :buffer-name buffer-name
+     :on-finish
+     (lambda (output &rest _)
+       (with-current-buffer buffer-name
+         ;; TODO: gd → drop stash & show next stash
+         ;; TODO: x → drop hunk from the stash? gerekli mi cok
+         ;;       bilemedim ama ise yarar sanki baya.
+         ;; (setq header-line-format "`gd' → drop stash & refresh")
+         (diff-mode)
+         (im-git-diff-mode)
+         (switch-to-buffer (current-buffer))))
+     :on-fail
+     (lambda (&rest _)
+       (message ">> `git stash show -p' failed!")
+       (switch-to-buffer buffer-name)))))
+
 (provide 'im-git)
 ;;; im-git.el ends here
