@@ -5330,7 +5330,8 @@ of that revision."
     "g}" #'diff-hl-show-hunk-next
     ;; FIXME: This does not work on region (can not apply the hunk for some reason?)
     "gS" #'diff-hl-stage-dwim
-    "gr" #'diff-hl-revert-hunk)
+    "gr" #'diff-hl-revert-hunk
+    "gx" #'diff-hl-revert-hunk)
   :config
   (define-advice diff-hl-previous-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))
   (define-advice diff-hl-next-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))

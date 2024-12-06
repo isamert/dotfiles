@@ -1590,7 +1590,7 @@ guile> (load ".config/associactions")
 
 (bind
  #:pattern ".*"
- #:program (select-one-of "dmenu"))
+ #:program (select-one-of #:alternatives #:binaries #:other))
 
 ;;
 ;; Rest is used only with references
