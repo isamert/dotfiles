@@ -1582,7 +1582,7 @@ guile> (load ".config/associactions")
 
 (bind
  #:pattern "^application/(x-)?(tar|gzip|bzip2|lzma|xz|compress|7z|rar|gtar|zip)(-compressed)?"
- #:program '(xarchiver %f))
+ #:program '(file-roller %f))
 
 (bind
  #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
