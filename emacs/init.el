@@ -8114,6 +8114,9 @@ This happens to me on org-buffers, xwidget-at tries to get
    "u" #'evil-collection-notmuch-search-toggle-unread
    "gs" #'notmuch-search
    "gS" #'notmuch-tree)
+  (general-def :keymaps 'notmuch-show-mode-map :states 'normal
+    "o" #'notmuch-show-view-part
+    "O" #'notmuch-show-save-part)
   (im-leader
     "en" #'im-notmuch-inbox
     "eN" #'notmuch-hello)
