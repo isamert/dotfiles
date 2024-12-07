@@ -11726,7 +11726,7 @@ This is done by adding this function to
           (im-nextcloud-put-contact
            contact
            :on-success (lambda (&rest _) (message ">> Contact updated: %s" (plist-get info :header)))
-           :on-error (lambda (&rest _) (message "!! Failed to update contact: %s" (plist-get info :header)))))))))
+           :on-error (lambda (&rest _) (message "!! Failed to update contact: %s. Reason: %s" (plist-get info :header) _))))))))
 
 (add-hook 'im-org-header-changed-hook #'im-contacts--update-contact-on-change)
 
@@ -14298,7 +14298,7 @@ Throw error otherwise."
       :type "PUT"
       :data vcard
       :success (lambda (&rest _) (when on-success (funcall on-success)))
-      :error (lambda (&rest _) (when on-error (funcall on-error))))))
+      :error (lambda (&rest _) (when on-error (funcall on-error _))))))
 
 ;;;;;; Maps
 
