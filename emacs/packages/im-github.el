@@ -364,10 +364,12 @@ This assumes that this function is called on the button itself."
          (buf (progn
                 (ignore-errors (kill-buffer bufname))
                 (get-buffer-create bufname)))
-         (result (lab-github-request (format "repos/%s/readme" repo))))
-    (let-alist result
-      (switch-to-buffer buf)
-      (erase-buffer)
+         (readme (lab-github-request (format "repos/%s/readme" repo)))
+         (repo-info (lab-github-request (format "repos/%s" repo)))
+         (last-commits (lab-github-request (format "repos/%s/commits?per_page=3" repo))))
+    (switch-to-buffer buf)
+    (erase-buffer)
+    (let-alist readme
       (insert-text-button
        "Reload"
        'action (lambda (_button)
@@ -411,14 +413,14 @@ This assumes that this function is called on the button itself."
       (insert " | ")
       (insert-text-button
        "Inspect"
-       'action (lambda (_button) (im-inspect result))
+       'action (lambda (_button) (im-inspect readme))
        'follow-link t)
       (insert "\n\n")
-      (insert repo "\n")
+      (insert "**" repo "**" "\n**Other**\n\n")
       (ignore-errors
         (insert
          (format
-          "(use-package %s :straight (:host github :repo \"%s\"))"
+          "```elisp\n(use-package %s :straight (:host github :repo \"%s\"))\n```"
           (car (s-split "\\." (nth 1 (s-split "/" repo))))
           repo)))
       (insert "\n\n")
@@ -435,7 +437,55 @@ This assumes that this function is called on the button itself."
                   (concat (s-chop-suffix .path .download_url) x))))
            (markdown-display-inline-images)))
         (_ (text-mode)))
-      (page-break-lines-mode))))
+      (page-break-lines-mode))
+    ;; Needs to be called after the mode is initialized so that icons
+    ;; are not mangled
+    (let ((all-the-icons-default-adjust 0)
+          (inhibit-read-only t))
+      (goto-char (point-min))
+      (forward-line 3)
+      (insert
+       (let-alist repo-info
+         (concat
+          "\n"
+          (all-the-icons-faicon "star-o") " "
+          (number-to-string .stargazers_count) " | "
+          (all-the-icons-octicon "repo-forked") " "
+          (number-to-string .forks_count) " | "
+          (all-the-icons-octicon "issue-reopened") " "
+          (number-to-string .open_issues) " | "
+          (all-the-icons-octicon "law") " "
+          .license.key " | "
+          (all-the-icons-octicon "eye") " "
+          (number-to-string .subscribers_count) " | "
+          (all-the-icons-octicon "code") " "
+          .language
+          (when t
+            (concat " | " (all-the-icons-octicon "package") " archived"))
+          "\n\n"
+          (all-the-icons-octicon "rocket") " Created at :: "
+          .created_at "\n"
+          (all-the-icons-octicon "pulse") " Updated at :: "
+          .updated_at "\n"
+          (all-the-icons-octicon "flame") " Pushed at :: "
+          .pushed_at "\n"
+          "\n")))
+      (insert
+       "**Commits**\n\n"
+       (s-join
+        "\n"
+        (--map
+         (let-alist it
+           (concat
+            (all-the-icons-faicon "calendar") " "
+            "*" .commit.author.date "* "
+            (all-the-icons-faicon "user") " "
+            "**" .commit.author.name "** "
+            (all-the-icons-octicon "git-commit") " "
+            (car (s-lines .commit.message))))
+         last-commits))
+       "\n...\n\n"))))
+
 
 ;; TODO: Filter by date
 ;; https://docs.github.com/en/graphql/overview/explorer
