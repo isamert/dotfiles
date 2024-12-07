@@ -675,6 +675,7 @@ CALLBACK will be called with the selected commit ref."
 
 ;;;; im-git-show-stash-diff
 
+;;;###autoload
 (defun im-git-show-stash-diff ()
   "Show stashed diff."
   (interactive)
