@@ -1497,11 +1497,15 @@ guile> (load ".config/associactions")
 #+begin_src scheme :tangle ~/.config/associations
 ;; -*- mode: scheme; -*-
 
+;;; Configuration
+
 (set!
  dynamic-menu-program
  (oscase
   #:darwin "choose"
   #:gnu/linux "rofi -dmenu"))
+
+;;; Bindings
 
 (bind
  #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
@@ -1516,8 +1520,7 @@ guile> (load ".config/associactions")
  #:name 'editor
  #:pattern '("^text/" "^application/(x-)?(shellscript|json|javascript|xml)")
  #:emacs (elisp
-          (find-file "%F")
-          (delete-other-windows))
+          (find-file "%F"))
  ;; If I simply give the file to emacsclient, it opens it in a split
  ;; for some reason, instead of making it the only window in the frame
  #:program '(emacsclient -c --eval "(find-file \"%F\")")
@@ -1548,18 +1551,17 @@ guile> (load ".config/associactions")
              "https?://v.redd.it/.+"
              "^https?://.+/.+\\.(gifv|mp4|webm)(\\?.+)?$")
  #:program 'empv
- #:on-error (open-with 'browser))
+ #:on-error 'browser)
 
 (bind
  #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
  #:program `(imv %f))
 
 (bind
- #:name 'nomacs
  #:pattern "^image/.*"
- #:program '(nomacs %f)
  ;; Start with given image, and open the directory of given file
- #:on-error '(imv -n %f %d))
+ #:program '(imv -n %f %d)
+ #:gallery 'nomacs)
 
 (bind
  #:pattern "^https?://(www.)?reddit.com/r/(\\w+)/comments/(.*?)/"
@@ -1588,18 +1590,27 @@ guile> (load ".config/associactions")
  #:pattern "^application/(x-)?(vnd.)?(ms-|ms)?(excel|powerpoint|word)"
  #:program '(desktopeditors %F))
 
+;;; Catch-all
+
 (bind
  #:pattern ".*"
- #:program (select-one-of #:alternatives #:binaries #:other))
+ #:program (select-one-of
+            #:alternatives
+            #:bindings
+            #:binaries))
 
-;;
-;; Rest is used only with references
-;;
+;;; References
 
 (bind
  #:name 'bat
  #:pattern ".*"
  #:program '(bat --paging=always %f))
+
+
+(bind
+ #:name 'nomacs
+ #:pattern "^image/.*"
+ #:program '(nomacs %f))
 
 ;; vi:syntax=scheme
 #+end_src
