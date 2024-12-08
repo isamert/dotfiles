@@ -7509,12 +7509,11 @@ Fetches missing channels/users first."
     (setq tmr-sound-file "/System/Library/Sounds/Glass.aiff"))
 
   ;; evilify
-  (with-eval-after-load 'tmr-tabulated
-    (define-key tmr-tabulated-mode-map "j" #'next-line)
-    (define-key tmr-tabulated-mode-map "k" #'previous-line)
-    (define-key tmr-tabulated-mode-map "x" #'tmr-remove)
-    (define-key tmr-tabulated-mode-map "d" #'tmr-remove)
-    (evil-set-initial-state 'tmr-tabulated-mode 'emacs))
+  (define-key tmr-tabulated-mode-map "j" #'next-line)
+  (define-key tmr-tabulated-mode-map "k" #'previous-line)
+  (define-key tmr-tabulated-mode-map "x" #'tmr-remove)
+  (define-key tmr-tabulated-mode-map "d" #'tmr-remove)
+  (evil-set-initial-state 'tmr-tabulated-mode 'emacs)
 
   ;; Show upcoming timers in global-mode-string
   (setq global-mode-string (append global-mode-string '(im-tmr-upcoming-string)))
@@ -12390,8 +12389,6 @@ scheduled, schedules them to todays date."
 (defun im-toggle-side-tmr-buffer ()
   (interactive)
   (im-toggle-side-buffer-with-name (get-buffer-create "*tmr-tabulated-view*"))
-  (unless (featurep 'tmr-tabulated)
-    (require 'tmr-tabulated))
   (tmr-tabulated-mode))
 
 ;; Toggle temproary buffers
