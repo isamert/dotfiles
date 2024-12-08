@@ -1499,7 +1499,7 @@ guile> (load ".config/associactions")
 
 (set!
  dynamic-menu-program
- (on-system
+ (oscase
   #:darwin "choose"
   #:gnu/linux "rofi -dmenu"))
 
