@@ -8250,6 +8250,7 @@ mails."
 
 (use-package im-git
   :straight nil
+  :commands (im-git-show-stash-diff)
   :general
   (im-leader
     "gs" #'im-git-status

@@ -460,7 +460,7 @@ This assumes that this function is called on the button itself."
           (number-to-string .subscribers_count) " | "
           (all-the-icons-octicon "code") " "
           .language
-          (when t
+          (unless (equal .archived :false)
             (concat " | " (all-the-icons-octicon "package") " archived"))
           "\n\n"
           (all-the-icons-octicon "rocket") " Created at :: "
