@@ -4517,6 +4517,8 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   "L" #'image-scroll-left
   "J" #'image-scroll-up
   "K" #'image-scroll-down
+  "gg" #'image-scroll-down
+  "G" #'image-scroll-up
   "h" (λ-interactive (image-scroll-right 5))
   "l" (λ-interactive (image-scroll-left 5))
   "j" (λ-interactive (image-scroll-up 5))
