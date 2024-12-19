@@ -1858,7 +1858,7 @@ side window the only window'"
   :config
   (setq evil-escape-key-sequence "jk") ;; Just Kidding bro, I didn't mean that *escapes*
   (setq evil-escape-delay 0.2)
-  (setq evil-escape-excluded-major-modes '(magit-status-mode magit-log-mode magit-diff-mode))
+  (setq evil-escape-excluded-major-modes '(magit-status-mode magit-log-mode magit-diff-mode image-mode))
   (evil-escape-mode 1))
 
 ;;;;; evil-matchit
@@ -4510,7 +4510,17 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 
 (evil-set-initial-state 'image-mode 'normal)
 (evil-define-key 'normal image-mode-map
-  "q" #'evil-delete-buffer
+  ;; "q" #'evil-delete-buffer
+  "+" #'image-increase-size
+  "-" #'image-decrease-size
+  "H" #'image-scroll-right
+  "L" #'image-scroll-left
+  "J" #'image-scroll-up
+  "K" #'image-scroll-down
+  "h" (λ-interactive (image-scroll-right 5))
+  "l" (λ-interactive (image-scroll-left 5))
+  "j" (λ-interactive (image-scroll-up 5))
+  "k" (λ-interactive (image-scroll-down 5))
   "r" #'image-rotate)
 
 ;;;;; calendar & diary & appt
