@@ -681,7 +681,44 @@ sudo udevadm control --reload-rules
     (fs/delete lock-file)))
 #+end_src
 
-* X related
+* X/Wayland related
+** xremap
+I'm probably going to fully replace KMonad with xremap on Linux (and maybe replace KMonad with Karabiner on Mac). KMonad is a bit brittle and having to define full keyboard map is just not scalable.
+
+#+begin_src yaml :tangle (when-linux "~/.config/xremap.yml")
+# Run with `RUST_LOG=debug xremap ~/.config/xremap.yml` to see the
+# debug logs.
+
+virtual_modifiers:
+  - f24
+
+modmap:
+  - name: Global
+    remap:
+      # See: https://github.com/xremap/xremap/pull/339
+      CapsLock:
+        held: [ctrl_l,super_l,shift_l,alt_l]
+        alone: Esc
+      alt_r: f24
+
+keymap:
+  - name: Global
+    remap:
+      f24-q: { launch: ["wtype", "↔"] }
+      f24-r: { launch: ["wtype", "--", "->"] }
+      f24-t: { launch: ["wtype", "✓"] }
+      f24-w: { launch: ["wtype", "↑"] }
+      f24-a: { launch: ["wtype", "←"] }
+      f24-s: { launch: ["wtype", "↓"] }
+      f24-d: { launch: ["wtype", "→"] }
+      f24-e: { launch: ["wtype", "⇄"] }
+      f24-f: { launch: ["wtype", "=>"] }
+      f24-g: { launch: ["wtype", "⇒"] }
+      f24-x: { launch: ["wtype", "✗"] }
+      f24-b: { launch: ["wtype", "λ"] }
+      f24-3: { launch: ["wtype", "«"] }
+      f24-4: { launch: ["wtype", "»"] }
+#+end_src
 ** KMonad
 :PROPERTIES:
 :ID:       DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983
@@ -1009,7 +1046,7 @@ set $up k
 set $right l
 
 set $term foot
-set $menu rofi -terminal '$term' -window-thumbnail -sidebar-mode -markup -show-icons -show combi -combi-modes window#drun#run#recursivebrowser -modes window#drun#filebrowser -combi-modi
+set $menu rofi -recursivebrowser-filter-regex '.*' -terminal '$term' -window-thumbnail -sidebar-mode -markup -show-icons -show combi -combi-modes window#drun#run#recursivebrowser -modes window#drun#filebrowser -combi-modi
 set $calc qalculate-gtk
 
 # * Monitors
@@ -1137,6 +1174,10 @@ bindsym $mod+r mode "resize"
 for_window [app_id="qalculate-gtk"] floating enable
 for_window [app_id="com.github.hluk.copyq"] floating enable
 for_window [app_id="org.kde.CrowTranslate"] floating enable
+
+# * Launch
+
+exec --no-startup-id xremap --watch ~/.config/xremap.yml
 
 # * Include other stuff
 
