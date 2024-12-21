@@ -1078,6 +1078,10 @@ bindsym $hypr+i exec emacsclient --eval "(im-globally (im-select-any-snippet))"
 bindsym $hypr+p exec emacsclient --eval "(im-globally (im-password-act))"
 bindsym Ctrl+Mod1+l exec loginctl lock-session
 
+# * Keybindings - Notifications
+
+bindsym $hypr+y exec dunstctl close-all
+
 # * Keybindings - Window management
 
 bindsym $mod+$left focus left
@@ -1203,6 +1207,11 @@ exec --no-startup-id xremap --watch ~/.config/xremap.yml
 # the trick, it's all in the `wordexp(3)`.
 #
 include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "/etc/sway/config.d/*.conf" "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/*.conf")'
+#+end_src
+** dunst
+#+begin_src conf :tangle (when-linux "~/.config/dunst/dunstrc")
+[global]
+follow = "keyboard"
 #+end_src
 * Shell
 ** Fish
