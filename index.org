@@ -697,7 +697,7 @@ modmap:
     remap:
       # See: https://github.com/xremap/xremap/pull/339
       CapsLock:
-        held: [ctrl_l,super_l,shift_l,alt_l]
+        held: [ctrl_l,super_l,shift_l,alt_l] # "hyper" key
         alone: Esc
       alt_r: f24
 
@@ -716,6 +716,8 @@ keymap:
       f24-g: { launch: ["wtype", "⇒"] }
       f24-x: { launch: ["wtype", "✗"] }
       f24-b: { launch: ["wtype", "λ"] }
+      f24-1: { launch: ["wtype", "("] }
+      f24-2: { launch: ["wtype", ")"] }
       f24-3: { launch: ["wtype", "«"] }
       f24-4: { launch: ["wtype", "»"] }
 #+end_src
