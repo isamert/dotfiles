@@ -4505,9 +4505,6 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 
 ;;;;; image-mode
 
-;; I want to be able to kill image buffers with simply hitting
-;; =q=. This does that.
-
 (evil-set-initial-state 'image-mode 'normal)
 (evil-define-key 'normal image-mode-map
   ;; "q" #'evil-delete-buffer
@@ -4523,7 +4520,9 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   "l" (λ-interactive (image-scroll-left 5))
   "j" (λ-interactive (image-scroll-up 5))
   "k" (λ-interactive (image-scroll-down 5))
-  "r" #'image-rotate)
+  "r" #'image-rotate
+  "_" #'image-flip-horizontally
+  "\\" #'image-flip-horizontally)
 
 ;;;;; calendar & diary & appt
 
