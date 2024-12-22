@@ -126,6 +126,8 @@
   (lab-github-project-select-and-act-on
    (lab-github-request "users/#{user}/repos?per_page=100")))
 
+(defalias 'lab-github-list-my-projects #'lab-github-list-all-owned-projects)
+
 ;;;###autoload
 (defun lab-github-list-project-pull-requests (full-repo-name)
   (interactive "sFull repo name: ")
