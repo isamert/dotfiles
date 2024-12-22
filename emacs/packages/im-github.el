@@ -96,6 +96,21 @@
 (defun lab-github-interactive-url (prompt)
   (read-string prompt (or (eww-current-url) "")))
 
+;;;###autoload
+(defun lab-github-url-to-raw (url)
+  "Convert a GitHub URL to its raw version."
+  (when (string-match "https://github.com/\\([^/]+\\)/\\([^/]+\\)/blob/\\([^/]+\\)/\\(.+\\)" url)
+    (let ((user (match-string 1 url))
+          (repo (match-string 2 url))
+          (branch (match-string 3 url))
+          (path (match-string 4 url)))
+      ;; Check if branch looks like a commit hash or should be a branch reference
+      (setq branch
+            (if (string-match-p "^[0-9a-f]\\{40\\}$" branch)
+                branch
+              (concat "refs/heads/" branch)))
+      (format "https://raw.githubusercontent.com/%s/%s/%s/%s" user repo branch path))))
+
 ;;; Projects
 
 (lab--define-actions-for github-project
@@ -136,7 +151,7 @@
    ;; &state=open
    (lab-github-request (format "repos/%s/issues?per_page=100&state=all" full-repo-name))))
 
-;;; Pull requests & Issues
+;;; Pull requests & Issues & README & Files
 
 (lab--define-actions-for github-pull-request
   :sort? nil
@@ -488,7 +503,6 @@ This assumes that this function is called on the button itself."
          last-commits))
        "\n...\n\n"))))
 
-
 ;; TODO: Filter by date
 ;; https://docs.github.com/en/graphql/overview/explorer
 ;;;###autoload
@@ -594,6 +608,14 @@ issues for given `:account'."
           (insert (format "| [[%s][#%s]] | PR | %s | [[https://github.com/%s][%s]] |\n" .url .number .title (lab-github--get-author-login .author) (lab-github--get-author-login .author)))))))
   (delete-char 1)
   (org-table-align))
+
+(defun lab-github-view-repo-file (url)
+  "Display GitHub file at URL in Emacs.
+Supposed to be used within `browse-url-handlers'."
+  (let* ((raw-url (lab-github-url-to-raw url))
+         (temp-file (make-temp-file "github-raw-")))
+    (url-copy-file raw-url temp-file t)
+    (find-file temp-file)))
 
 ;;; Detect and open issues/comments etc.
 

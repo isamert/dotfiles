@@ -4903,6 +4903,7 @@ properly."
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . ,(im-purified-url-handler #'empv-play-or-enqueue))
         (".*\\.mp3" . ,(im-purified-url-handler #'empv--play-or-enqueue))
         (".*github.com/.*issues/.*" . ,(im-purified-url-handler #'lab-github-issue-view))
+        ("https://github.com/\\([^/]+\\)/\\([^/]+\\)/blob/\\([^/]+\\)/\\(.+\\)" . ,(im-purified-url-handler #'lab-github-view-repo-file))
         (".*github.com/[A-Za-z0-9\\. _-]+/[A-Za-z0-9\\. _-]+\\(\\?tab=readme-ov-file.*\\)?$" . ,(im-purified-url-handler #'lab-github-view-repo-readme))
         (".*zoom.us/j/.*" . ,(im-purified-url-handler #'im-open-zoom-meeting-dwim))
         (".*\\(trendyol\\|gitlab\\|slack\\|docs.google\\).*" . browse-url-firefox)
@@ -7894,6 +7895,7 @@ This happens to me on org-buffers, xwidget-at tries to get
   (consult-gh-code-maxnum 50)
   (consult-gh-default-orgs-list '("isamert"))
   (consult-gh-default-clone-directory "~/Workspace/temp")
+  (consult-gh-file-action #'consult-gh--files-view-action)
   (consult-gh-issue-action
    (lambda (it)
      (browse-url (format "https://github.com/%s/issues/%s" (plist-get (cdr it) :repo) (plist-get (cdr it) :issue)))))
