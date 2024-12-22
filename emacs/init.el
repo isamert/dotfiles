@@ -7888,7 +7888,10 @@ This happens to me on org-buffers, xwidget-at tries to get
   ;; Previews are triggered with `consult-preview-key'
   (consult-gh-show-preview t)
   (consult-gh-issues-state-to-show "all")
-  (consult-gh-issue-maxnum 100)
+  (consult-gh-issue-maxnum 150)
+  (consult-gh-repo-maxnum 150)
+  (consult-gh-pr-maxnum 150)
+  (consult-gh-code-maxnum 50)
   (consult-gh-default-orgs-list '("isamert"))
   (consult-gh-default-clone-directory "~/Workspace/temp")
   (consult-gh-issue-action
@@ -7898,14 +7901,17 @@ This happens to me on org-buffers, xwidget-at tries to get
   (setq
    consult-gh-repo-action
    (lambda (it)
-     (empv--select-action "Action: "
-       "View README" => (browse-url (format "https://github.com/%s.git" (car it)))
-       "Files" => (consult-gh--repo-browse-files-action it)
-       "Issues" => (consult-gh-issue-list (car it))
-       "Clone" => (lab-git-clone
-                   (format "https://github.com/%s.git" (car it))
-                   (read-directory-name "Directory to clone in: " lab-projects-directory)))))
-  (require 'consult-gh-embark))
+     (let ((repo (car (s-split " " (s-trim (substring-no-properties it))))))
+       (empv--select-action "Action: "
+         "View README" => (browse-url (format "https://github.com/%s.git" repo))
+         "Files" => (consult-gh--repo-browse-files-action it)
+         "Issues" => (consult-gh-issue-list repo)
+         "Clone" => (lab-git-clone
+                     (format "https://github.com/%s.git" repo)
+                     (read-directory-name "Directory to clone in: " lab-projects-directory))))))
+  ;; Some aliases so that all GitHub functionality is under same prefix
+  (defalias 'lab-github-search-repo #'consult-gh-search-repos)
+  (defalias 'lab-github-search-code #'consult-gh-search-code))
 
 ;;;;; copilot
 
