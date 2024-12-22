@@ -627,8 +627,6 @@ sudo udevadm control --reload-rules
 (require '[babashka.process :refer [shell process exec]]
          '[babashka.fs :as fs])
 
-;; TODO: Automatically switch UHK layout between Mac and Linux too
-
 ;;; Lock file stuff
 
 ;; This is required because there are lot's of events generated when
@@ -670,6 +668,9 @@ sudo udevadm control --reload-rules
     (and (= "remove" action)
          (= (:action state) "add"))
     (shell "ddcutil" "setvcp" "0x60" usbc)
+    (Thread/sleep 1000)
+    (shell {:dir "/home/isa/Workspace/projects/deno"}
+           "deno" "run" "--allow-all" "switch-uhk-layout.ts" "LNX")
 
     :else (println "Doing nothing..."))
 
