@@ -223,6 +223,10 @@ in my dotfiles repository.")
   (request-log-level 'warn)
   (request-message-level -1))
 
+(use-package llama
+  :straight (:host github :repo "tarsius/llama"))
+
+
 ;;;;;; emacs-async
 
 ;; To be able execute elisp asynchronously. Of course this has lot's
