@@ -1181,6 +1181,7 @@ bindsym $mod+r mode "resize"
 for_window [app_id="qalculate-gtk"] floating enable
 for_window [app_id="com.github.hluk.copyq"] floating enable
 for_window [app_id="org.kde.CrowTranslate"] floating enable
+for_window [app_id="com.nextcloud.desktopclient.nextcloud"] floating enable
 
 # * Launch
 
