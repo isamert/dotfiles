@@ -1078,7 +1078,7 @@ bindsym $hypr+c exec copyq toggle
 bindsym $hypr+t exec crow
 
 bindsym $hypr+i exec emacsclient --eval "(im-globally (im-select-any-snippet))"
-bindsym $hypr+p exec emacsclient --eval "(im-globally (im-password-act))"
+bindsym $hypr+o exec emacsclient --eval "(im-globally (im-people))"
 bindsym Ctrl+Mod1+l exec loginctl lock-session
 
 # * Keybindings - Notifications

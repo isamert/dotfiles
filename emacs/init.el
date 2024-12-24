@@ -12294,7 +12294,7 @@ scheduled, schedules them to todays date."
 
 (defun im-listen-voice-recordings ()
   (interactive)
-  (mapcar #'empv-enqueue (file-expand-wildcards "~/Music/Sound Recordings/*/*.m4a")))
+  (mapcar #'empv-enqueue (file-expand-wildcards "~/Audio/watch-recordings/*/*.m4a")))
 
 (defun im-bullet-org-ensure ()
   (if-let ((buffer (find-buffer-visiting bullet-org)))
@@ -13966,7 +13966,8 @@ contents."
   :init
   (setq google-translate-translation-directions-alist
         ;; Ordered based on my usage:
-        '(("en" . "tr")
+        '(("auto" . "en")
+          ("en" . "tr")
           ("nl" . "en")
           ("tr" . "en")
           ("en" . "nl"))))
