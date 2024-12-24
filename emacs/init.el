@@ -8408,7 +8408,10 @@ mails."
    "M-[" #'puni-barf-forward
    "M-]" #'puni-slurp-forward
    "M-d" #'puni-splice
-   "M-t" #'puni-transpose))
+   "M-t" #'puni-transpose)
+  (:keymaps 'prog-mode-map :states '(normal)
+   "(" #'puni-backward-sexp-or-up-list
+   ")" #'puni-forward-sexp-or-up-list))
 
 ;; `combobulate' provides structural editing for some languages using
 ;; treesit.el, here are the bindings that I find useful (which are
