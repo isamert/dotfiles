@@ -1030,7 +1030,7 @@ This is the configuration for the embedded keyboard on mac.
 
 ** swaywm
 #+begin_src sh :tangle ~/.config/sway/environment
-PATH="$PATH:$HOME/.local/bin:$HOME/.bin"
+PATH="$HOME/.local/bin:$HOME/.bin:$HOME/.nimble/bin:$PATH"
 
 BROWSER=jaro
 VISUAL="jaro --method=edit"
