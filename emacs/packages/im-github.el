@@ -556,6 +556,7 @@ This assumes that this function is called on the button itself."
   (when (and author (not (equal author :null)))
     (alist-get 'login author)))
 
+;;;###autoload
 (defun org-dblock-write:github-issues (params)
   "Print GitHub issues in an org table.
 

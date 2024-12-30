@@ -7614,7 +7614,7 @@ Fetches missing channels/users first."
 ;; open-source work needs instead of regular stuff.
 
 (use-package im-github
-  :autoload (lab-github-issue-at-point lab-github-issue-view)
+  :autoload (lab-github-issue-at-point lab-github-issue-view org-dblock-write:github-issues)
   :commands (lab-github-view-repo-readme)
   :straight nil
   :init
