@@ -5350,6 +5350,9 @@ of that revision."
     "gS" #'diff-hl-stage-dwim
     "gr" #'diff-hl-revert-hunk
     "gx" #'diff-hl-revert-hunk)
+  (:states 'normal
+   (kbd "[g") #'diff-hl-previous-hunk
+   (kbd "]g") #'diff-hl-next-hunk)
   :config
   (define-advice diff-hl-previous-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))
   (define-advice diff-hl-next-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))
