@@ -8195,7 +8195,7 @@ mails."
         (let (count)
           (when interactive?
             (message ">> Checking mail..."))
-          (await (im-shell-command :command "mbsync -a" :async t))
+          (await (im-shell-command :command "mbsync --all --verbose" :async t))
           (await (im-shell-command :command "notmuch new" :async t))
           (await (im-shell-command :command "notmuch tag +work -- not tag:work and folder:work/INBOX" :async t))
           (setq
@@ -8411,7 +8411,10 @@ mails."
    "M-[" #'puni-barf-forward
    "M-]" #'puni-slurp-forward
    "M-d" #'puni-splice
-   "M-t" #'puni-transpose)
+   "M-t" #'puni-transpose
+   "M-\\" #'puni-split
+   "M-(" #'puni-wrap-round
+   "M-{" #'puni-wrap-curly)
   (:keymaps 'prog-mode-map :states '(normal)
    "(" #'puni-backward-sexp-or-up-list
    ")" #'puni-forward-sexp-or-up-list))
@@ -14493,6 +14496,7 @@ existing buffer and opens the link in tuir."
         (when (re-search-forward "https://\\(www\\.\\)?reddit.com")
           (thing-at-point 'url))))
      (t (thing-at-point 'url)))))
+  (require 'eat)
   (if (and (not link) (get-buffer "*tuir*"))
       (switch-to-buffer "*tuir*")
     (let ((eat-buffer-name "*tuir*")
