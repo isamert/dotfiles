@@ -651,10 +651,6 @@ sudo udevadm control --reload-rules
       {}))
   (def action (first *command-line-args*))
 
-;;; Save state
-  ;; Directly save it so that consequent runs are aware of it faster
-  (spit state-file (pr-str {:action action}))
-
 ;;; Act
 
   (def usbc "27")
