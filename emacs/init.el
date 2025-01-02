@@ -8691,6 +8691,10 @@ Useful if .elfeed directory is freshly syncned."
   (add-hook 'empv-init-hook #'empv-override-quit-key)
   (add-hook 'empv-youtube-results-mode-hook #'im-disable-line-wrapping)
 
+  (setq empv-subsonic-url im-navidrome-server)
+  (setq empv-subsonic-username im-navidrome-username)
+  (setq empv-subsonic-password im-navidrome-password)
+
   (evil-make-overriding-map empv-youtube-results-mode-map 'normal)
   (with-eval-after-load 'embark (empv-embark-initialize-extra-actions))
   (with-eval-after-load 'org
