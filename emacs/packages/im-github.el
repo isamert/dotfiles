@@ -383,7 +383,8 @@ This assumes that this function is called on the button itself."
                 (get-buffer-create bufname)))
          (readme (lab-github-request (format "repos/%s/readme" repo)))
          (repo-info (lab-github-request (format "repos/%s" repo)))
-         (last-commits (lab-github-request (format "repos/%s/commits?per_page=3" repo))))
+         (last-commits (lab-github-request (format "repos/%s/commits?per_page=3" repo)))
+         (last-tags (lab-github-request (format "repos/%s/tags?per_page=3" repo))))
     (switch-to-buffer buf)
     (erase-buffer)
     (let-alist readme
@@ -429,8 +430,18 @@ This assumes that this function is called on the button itself."
        'follow-link t)
       (insert " | ")
       (insert-text-button
-       "Inspect"
+       "Inspect (Readme)"
        'action (lambda (_button) (im-inspect readme))
+       'follow-link t)
+      (insert " | ")
+      (insert-text-button
+       "Inspect (Repo)"
+       'action (lambda (_button) (im-inspect repo-info))
+       'follow-link t)
+      (insert " | ")
+      (insert-text-button
+       "Inspect (Last Commits)"
+       'action (lambda (_button) (im-inspect last-commits))
        'follow-link t)
       (insert "\n\n")
       (insert "**" repo "**" "\n**Other**\n\n")
@@ -488,20 +499,37 @@ This assumes that this function is called on the button itself."
           .pushed_at "\n"
           "\n")))
       (insert
-       "**Commits**\n\n"
-       (s-join
-        "\n"
-        (--map
-         (let-alist it
-           (concat
-            (all-the-icons-faicon "calendar") " "
-            "*" .commit.author.date "* "
-            (all-the-icons-faicon "user") " "
-            "**" .commit.author.name "** "
-            (all-the-icons-octicon "git-commit") " "
-            (car (s-lines .commit.message))))
-         last-commits))
+       "**Commits**\n\n")
+      (dolist (it last-commits)
+        (let-alist it
+          (insert
+           (all-the-icons-faicon "calendar") " "
+           "*" .commit.author.date "* "
+           (all-the-icons-faicon "user") " "
+           "**" .commit.author.name "** "
+           (all-the-icons-octicon "git-commit") " ")
+          (insert-text-button
+           (car (s-lines .commit.message))
+           'action (lambda (_button)
+                     ;; TODO: use my implementation in the future
+                     (lab-github-show-diff-for-commit .html_url))
+           'follow-link t)
+          (insert "\n")))
+      (insert "\n...\n\n")
+      (insert
+       "**Tags**\n\n"
+       (s-join "\n" (--map (let-alist it (concat .name)) last-tags))
        "\n...\n\n"))))
+
+(defun lab-github-show-diff-for-commit (html-url &optional description)
+  (let ((patch (im-request (concat html-url ".patch") :-raw t))
+        (buffer (get-buffer-create (format "*lab-github-commit-patch: %s *" description))))
+    (with-current-buffer buffer
+      (insert patch)
+      (goto-char (point-min))
+      (diff-mode)
+      (read-only-mode)
+      (switch-to-buffer (current-buffer)))))
 
 ;; TODO: Filter by date
 ;; https://docs.github.com/en/graphql/overview/explorer
