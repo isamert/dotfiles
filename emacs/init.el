@@ -2044,6 +2044,7 @@ side window the only window'"
 (defconst life-org "~/Documents/notes/life.org")
 (defconst reality-org "~/Documents/notes/reality.org")
 (defconst projects-org "~/Documents/notes/projects.org")
+(defconst gpt-org "~/Documents/notes/extra/gpt.org")
 (defconst people-org "~/Documents/notes/people.org")
 (defconst diary-org "~/Documents/notes/diary.org")
 (defconst snippets-org "~/Documents/notes/snippets.org")
@@ -12428,11 +12429,16 @@ scheduled, schedules them to todays date."
   (im-toggle-side-buffer-with-name (get-buffer-create "*tmr-tabulated-view*"))
   (tmr-tabulated-mode))
 
+(defun im-toggle-side-gpt-buffer ()
+  (interactive)
+  (im-toggle-side-buffer-with-file gpt-org))
+
 ;; Toggle temproary buffers
 (im-leader
   "ts" 'im-toggle-side-scratch-buffer
   "to" 'im-toggle-side-temp-org-buffer
   "th" 'im-toggle-side-bullet-org-buffer
+  "tg" 'im-toggle-side-gpt-buffer
   "tp" 'im-toggle-side-projects-buffer
   "tt" 'im-toggle-side-tmr-buffer
   "tm" 'im-toggle-side-messages-buffer)
