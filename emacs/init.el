@@ -1982,41 +1982,65 @@ side window the only window'"
 (evil-define-text-object im-evil-inner-org-block (count &optional _beg _end _type)
   "Select inner side of org source blocks."
   :extend-selection nil
-  (im-find-hash-positions))
+  (im-find-block-range "^ *#\\+begin" "^ *#\\+end"))
 
 (evil-define-text-object im-evil-outer-org-block (count &optional _beg _end _type)
   "Select outer side of org source blocks."
   :extend-selection nil
-  (im-find-hash-positions t))
+  (im-find-block-range "^ *#\\+begin" "^ *#\\+end" t))
+
+(evil-define-text-object im-evil-inner-org-block (count &optional _beg _end _type)
+  "Select inner side of org source blocks."
+  :extend-selection nil
+  (im-find-block-range "^ *#\\+begin" "^ *#\\+end"))
+
+(evil-define-text-object im-evil-outer-org-block (count &optional _beg _end _type)
+  "Select outer side of org source blocks."
+  :extend-selection nil
+  (im-find-block-range "^ *#\\+begin" "^ *#\\+end" t))
+
+(evil-define-text-object im-evil-inner-markdown-block (count &optional _beg _end _type)
+  "Select inner side of org source blocks."
+  :extend-selection nil
+  (im-find-block-range "^ *```" "^ *```"))
+
+(evil-define-text-object im-evil-outer-markdown-block (count &optional _beg _end _type)
+  "Select outer side of org source blocks."
+  :extend-selection nil
+  (im-find-block-range "^ *```" "^ *```" t))
 
 (define-key evil-inner-text-objects-map "#" 'im-evil-inner-org-block)
 (define-key evil-outer-text-objects-map "#" 'im-evil-outer-org-block)
 
-(defun im-find-hash-positions (&optional include-hash-lines)
-  "Find the positions of the first line starting with '#' upwards and downwards."
+;; Doing vi` already works for `this`, and now ~ works for blocks.
+(define-key evil-inner-text-objects-map "~" 'im-evil-inner-markdown-block)
+(define-key evil-outer-text-objects-map "~" 'im-evil-outer-markdown-block)
+
+(defun im-find-block-range (beginning end &optional include-hash-lines)
+  "Find the range around the cursor between BEGINNING and END."
   (let ((up-pos nil)
         (down-pos nil))
-    ;; Search upwards for the first line starting with "#"
     (save-excursion
       (beginning-of-line)
       (while (and (not up-pos) (not (bobp)))
         (forward-line -1)
         (beginning-of-line)
-        (when (looking-at "^#")
+        (when (looking-at beginning)
           (unless include-hash-lines
             (forward-line 1))
           (setq up-pos (point)))))
-    ;; Search downwards for the first line starting with "#"
-    (save-excursion
-      (beginning-of-line)
-      (while (and (not down-pos) (not (eobp)))
-        (forward-line 1)
+    (when up-pos
+      (save-excursion
         (beginning-of-line)
-        (when (looking-at "^#")
-          (when include-hash-lines
-            (forward-line 1))
-          (setq down-pos (point)))))
-    (list up-pos down-pos)))
+        (while (and (not down-pos) (not (eobp)))
+          (forward-line 1)
+          (beginning-of-line)
+          (when (looking-at end)
+            (when include-hash-lines
+              (forward-line 1))
+            (setq down-pos (point))))))
+    (when (and up-pos down-pos)
+      (list up-pos down-pos))))
 
 ;;;;; Extra repeatable keys for evil
 
