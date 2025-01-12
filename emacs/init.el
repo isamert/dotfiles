@@ -2236,31 +2236,56 @@ side window the only window'"
   (add-hook 'org-src-mode-hook #'evil-normalize-keymaps))
 
 (defun im-org-tree-to-indirect-buffer ()
-  "Same as `org-tree-to-indirect-buffer' but let's you open
-  multiple indirect buffers."
+  "Same as `org-tree-to-indirect-buffer' but let's you open multiple indirect buffers."
   (interactive)
   (let ((current-prefix-arg '(4)))
     (call-interactively #'org-tree-to-indirect-buffer)))
 
-(defmacro im-org-focused-tree-to-indirect-buffer (&rest forms)
-  "Same as `org-tree-to-indirect-buffer' but let's you open
-  multiple indirect buffers."
+(defun im-bullet-focus-inbox-indirect ()
+  "Like `im-bullet-focus-inbox' but in an indirect buffer."
+  (interactive)
+  (im-org-focused-tree-to-indirect-buffer
+   (im-bullet-org-ensure)
+   (im-bullet-focus-inbox)))
+
+(defmacro im-org-focused-tree-to-indirect-buffer (focus-buffer &rest forms)
+  "Open a tree in an indirect buffer.
+First, switch to target buffer by executing FOCUS-BUFFER.  Then execute
+FORMS to focus into the header that you want to open in an
+indirect-buffer.  Then create an indirect buffer of that header.  This
+function does not change any restriction or position of any buffer, so
+it saves everything done in FOCUS-BUFFER and FORMS.  With this, you can
+work simultaneously with different headers of single org buffer."
   `(let ((current-prefix-arg '(4))
          (source-buffer (current-buffer))
-         target-buffer)
-     (save-excursion
-       (save-restriction
-         (widen)
-         ,@forms
-         (call-interactively #'org-tree-to-indirect-buffer)
-         (setq target-buffer (current-buffer))))
+         focused-buffer
+         existing-buffer
+         target-buffer-name)
+     ;; Get the buffer that we want to focus. This is a separate step
+     ;; because I want to save the restriction and excursion inside
+     ;; that buffer.
+     (setq focused-buffer
+           (progn
+             (save-window-excursion
+               (save-restriction
+                 ,focus-buffer
+                 (point)
+                 (current-buffer)))))
+     (save-window-excursion
+       (with-current-buffer focused-buffer
+         (save-excursion
+           (save-restriction
+             (widen)
+             ,@forms
+             (setq target-buffer-name (concat (buffer-name) "::"  (org-get-heading 'no-tags)))
+             (setq existing-buffer (get-buffer target-buffer-name))
+             (unless existing-buffer
+               (call-interactively #'org-tree-to-indirect-buffer))))))
      ;; If the link points to another buffer, current window will start
      ;; showing that buffer. We don't want that, so we are restoring
      ;; the current buffer here:
      (set-window-buffer nil source-buffer)
-     ;; Newly opened indirect buffer is not focused automatically, we
-     ;; fix that here:
-     (im-select-window-with-buffer (format "%s::.*" (buffer-name target-buffer)))
+     (switch-to-buffer target-buffer-name)
      (im-show-outline-only)))
 
 (defun im-org-link-to-indirect-buffer ()
@@ -2271,15 +2296,32 @@ side window the only window'"
    (let ((org-link-frame-setup (cons (cons 'file 'find-file) org-link-frame-setup)))
      (pcase (org-element-property :type (org-element-context))
        ((or "http" "https") (org-open-at-point))
-       (_ (im-org-focused-tree-to-indirect-buffer
-           ;; If we are in an indirect buffer, then find the real
-           ;; buffer and widen it so that org-open-at-point
-           ;; works. This does not restore narrowing but whatever.
-           (when-let (base (buffer-base-buffer))
-             (with-current-buffer base
-               (switch-to-buffer (current-buffer))
-               (widen)))
-           (org-open-at-point)))))))
+       (_
+        (switch-to-buffer-other-window
+         (save-window-excursion
+           (im-org-focused-tree-to-indirect-buffer
+            ;; If we are in an indirect buffer, then find the real
+            ;; buffer and widen it so that org-open-at-point
+            ;; works. This does not restore narrowing but whatever.
+            (progn
+              (when-let* ((base (buffer-base-buffer)))
+                (with-current-buffer base
+                  (switch-to-buffer (current-buffer)))))
+            ;; org-open-at-point opens in other-window, prevent that
+            (switch-to-buffer
+             (save-window-excursion
+               (org-open-at-point)
+               (current-buffer))))
+           (current-buffer))))))))
+
+(defun im-org-clocked-header-to-indirect-buffer ()
+  "Open currently clocked header in an indirect buffer.
+Normally you can go to clocked header with `org-clock-goto', this simply
+opens it in an indirect buffer narrowed to the header so that the
+original buffer is not affected and you can work on them simultaneously."
+  (im-org-focused-tree-to-indirect-buffer
+   (switch-to-buffer (marker-buffer org-clock-marker))
+   (goto-char (marker-position org-clock-marker))))
 
 (defun im-show-outline-only ()
   "Show all headers but hide all bodies."
@@ -12002,6 +12044,7 @@ If it does not exists, create it."
   "Like `im-bullet-focus-tomorrow' but in an indirect buffer."
   (interactive)
   (im-org-focused-tree-to-indirect-buffer
+   (im-bullet-org-ensure)
    (im-bullet-focus-tomorrow)))
 
 (defun im-bullet-focus-yesterday ()
@@ -12013,6 +12056,7 @@ If it does not exists, create it."
   "Like `im-bullet-focus-yesterday' but in an indirect buffer."
   (interactive)
   (im-org-focused-tree-to-indirect-buffer
+   (im-bullet-org-ensure)
    (im-bullet-focus-yesterday)))
 
 (defun im-bullet-focus-heading (heading)
@@ -12034,6 +12078,7 @@ If it does not exists, create it."
   "Like `im-bullet-focus-recurring' but in an indirect buffer."
   (interactive)
   (im-org-focused-tree-to-indirect-buffer
+   (im-bullet-org-ensure)
    (im-bullet-focus-recurring)))
 
 (defun im-bullet-focus-work ()
@@ -12044,6 +12089,7 @@ If it does not exists, create it."
   "Like `im-bullet-focus-work' but in an indirect buffer."
   (interactive)
   (im-org-focused-tree-to-indirect-buffer
+   (im-bullet-org-ensure)
    (im-bullet-focus-work)))
 
 (defun im-bullet-focus-life ()
@@ -12054,6 +12100,7 @@ If it does not exists, create it."
   "Like `im-bullet-focus-life' but in an indirect buffer."
   (interactive)
   (im-org-focused-tree-to-indirect-buffer
+   (im-bullet-org-ensure)
    (im-bullet-focus-life)))
 
 (defun im-bullet-focus-computer ()
@@ -12064,6 +12111,7 @@ If it does not exists, create it."
   "Like `im-bullet-focus-computer' but in an indirect buffer."
   (interactive)
   (im-org-focused-tree-to-indirect-buffer
+   (im-bullet-org-ensure)
    (im-bullet-focus-computer)))
 
 (defun im-bullet-focus-inbox ()
@@ -12074,6 +12122,7 @@ If it does not exists, create it."
   "Like `im-bullet-focus-inbox' but in an indirect buffer."
   (interactive)
   (im-org-focused-tree-to-indirect-buffer
+   (im-bullet-org-ensure)
    (im-bullet-focus-inbox)))
 
 ;;
@@ -12406,7 +12455,8 @@ scheduled, schedules them to todays date."
         (window-list (selected-frame))))
 
 (defun im-toggle-side-buffer-with-file (file-path)
-  "Toggle FILE-PATH in a side buffer. The buffer is opened in side window so it can't be accidentaly removed."
+  "Toggle FILE-PATH in a side buffer.
+The buffer is opened in side window so it can't be accidentaly removed."
   (interactive)
   (let ((fname (file-name-nondirectory file-path)))
     (if (im-buffer-visible-p fname)
@@ -12424,27 +12474,32 @@ scheduled, schedules them to todays date."
     (im-display-buffer-in-side-window (get-buffer buffer-name))))
 
 (defun im-toggle-side-scratch-buffer ()
-  "Toggle the scratch buffer in side window.  The buffer is opened in side window so it can't be accidentaly removed."
+  "Toggle the scratch buffer in side window.
+The buffer is opened in side window so it can't be accidentaly removed."
   (interactive)
   (im-toggle-side-buffer-with-file "~/.emacs.d/scratch.el"))
 
 (defun im-toggle-side-temp-org-buffer ()
-  "Toggle `temp.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+  "Toggle `temp.org` in a side buffer for quick note taking.
+The buffer is opened in side window so it can't be accidentaly removed."
   (interactive)
   (im-toggle-side-buffer-with-file temp-org))
 
 (defun im-toggle-side-bullet-org-buffer ()
-  "Toggle `bullet.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+  "Toggle `bullet.org` in a side buffer for quick note taking.
+The buffer is opened in side window so it can't be accidentaly removed."
   (interactive)
   (im-toggle-side-buffer-with-file bullet-org))
 
 (defun im-toggle-side-projects-buffer ()
-  "Toggle `projects.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+  "Toggle `projects.org` in a side buffer for quick note taking.
+The buffer is opened in side window so it can't be accidentaly removed."
   (interactive)
   (im-toggle-side-buffer-with-file projects-org))
 
 (defun im-toggle-side-messages-buffer ()
-  "Toggle `projects.org` in a side buffer for quick note taking.  The buffer is opened in side window so it can't be accidentaly removed."
+  "Toggle `projects.org` in a side buffer for quick note taking.
+The buffer is opened in side window so it can't be accidentaly removed."
   (interactive)
   (im-toggle-side-buffer-with-name "*Messages*"))
 
@@ -12457,12 +12512,28 @@ scheduled, schedules them to todays date."
   (interactive)
   (im-toggle-side-buffer-with-file gpt-org))
 
+(defun im-toggle-side-clocked-header ()
+  "Toggle currently clocked header in a narrowed side buffer.
+The created buffer is an indirect buffer.  So the narrowing of the
+original buffer is not changed.  This let's you simultaneously work on
+more than one header of a single org buffer."
+  (interactive)
+  (if (org-clocking-p)
+      (progn
+        (im-toggle-side-buffer-with-name
+         (save-window-excursion
+           (im-org-clocked-header-to-indirect-buffer)
+           (buffer-name)))
+        (org-fold-show-all))
+    (user-error "No active clock")))
+
 ;; Toggle temproary buffers
 (im-leader
   "ts" 'im-toggle-side-scratch-buffer
   "to" 'im-toggle-side-temp-org-buffer
   "th" 'im-toggle-side-bullet-org-buffer
   "tg" 'im-toggle-side-gpt-buffer
+  "tH" 'im-toggle-side-clocked-header
   "tp" 'im-toggle-side-projects-buffer
   "tt" 'im-toggle-side-tmr-buffer
   "tm" 'im-toggle-side-messages-buffer)
