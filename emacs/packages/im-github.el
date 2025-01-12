@@ -648,6 +648,7 @@ Supposed to be used within `browse-url-handlers'."
 
 ;;; Detect and open issues/comments etc.
 
+;;;###autoload
 (defun lab-github-issue-at-point (&optional str)
   "Return the issue comment at point or nil, if not found.
 

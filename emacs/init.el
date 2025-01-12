@@ -1589,6 +1589,8 @@ side window the only window'"
   ;; This seems to be the most reliable undo system.  Also see `vundo'
   ;; package down below for undo-tree like functionality
   (setq evil-undo-system 'undo-fu)
+  ;; C-i interferes with TAB key, so disable it
+  (setq evil-want-C-i-jump nil)
   :config
   ;; ...but I want some default evil bindings in insert mode, so just
   ;; remap them
@@ -1605,8 +1607,6 @@ side window the only window'"
   ;; `completion-at-point'
   (define-key evil-command-line-map "C-a" #'beginning-of-line)
 
-  ;; C-i interferes with TAB key, so disable it
-  (setq evil-want-C-i-jump nil)
   ;; C-i is bound to TAB, so I use C-l for `evil-jump-forward'
   (evil-define-key 'normal 'global (kbd "C-l") #'evil-jump-forward)
   (define-advice evil-jump-backward (:after (&rest _) reveal) (reveal-post-command))
@@ -6304,7 +6304,7 @@ When ARG is non-nil, query the whole workspace/project."
   (corfu-cycle t)
   (corfu-auto t)
   (corfu-auto-prefix 2)
-  (corfu-auto-delay 0.4)
+  (corfu-auto-delay 0.2)
   ;; Enabled differently in eshell
   (global-corfu-modes '((not eshell) t))
   :config
@@ -6349,7 +6349,7 @@ When ARG is non-nil, query the whole workspace/project."
   (setq corfu-popupinfo-delay '(1.0 . 0.3))
   (corfu-popupinfo-mode)
   ;; Toggle doc on/off while in corfu
-  (define-key corfu-map (kbd "M-i") #'corfu-popupinfo-toggle)
+  (define-key corfu-map (kbd "M-i") #'corfu-popupinfo-documentation)
   (define-key corfu-map (kbd "M-l") #'corfu-popupinfo-location)
   (define-key corfu-map (kbd "M-p") #'corfu-popupinfo-scroll-down)
   (define-key corfu-map (kbd "M-n") #'corfu-popupinfo-scroll-up))
@@ -7684,8 +7684,6 @@ Fetches missing channels/users first."
 ;; open-source work needs instead of regular stuff.
 
 (use-package im-github
-  :autoload (lab-github-issue-at-point lab-github-issue-view org-dblock-write:github-issues)
-  :commands (lab-github-view-repo-readme)
   :straight nil
   :init
   (add-to-list 'im-open-thing-at-point-alist '(lab-github-issue-at-point . lab-github-open-issue)))
