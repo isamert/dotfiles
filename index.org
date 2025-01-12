@@ -506,20 +506,6 @@ defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 3
 
 - [[https://github.com/dwarvesf/hidden][Hidden Bar]] → This lets you selectively hide some items so that only the things you want stay visible.
 
-** Kitty -- Terminal Emulator
-I use kitty in MacOs as it's easiest one to configure specifically for MacOS and it has sane defaults mostly.
-
-#+begin_src conf :tangle ~/.config/kitty/kitty.conf
-shell fish
-macos_option_as_alt yes
-font_size 16.0
-macos_show_window_title_in none
-hide_window_decorations titlebar-and-corners
-macos_quit_when_last_window_closed yes
-font_family Cascadia Code NF
-scrollback_lines 50000
-#+end_src
-
 * Linux
 ** systemd
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
@@ -1044,7 +1030,7 @@ set $down j
 set $up k
 set $right l
 
-set $term foot
+set $term kitty
 set $menu rofi -recursivebrowser-filter-regex '.*' -terminal '$term' -window-thumbnail -sidebar-mode -markup -show-icons -show combi -combi-modes window#drun#run#recursivebrowser -modes window#drun#filebrowser -combi-modi
 set $calc qalculate-gtk
 
@@ -1590,6 +1576,30 @@ set -g status-right "#{prefix_highlight}"
 # Load tmux plugin manager
 run '~/.tmux/plugins/tpm/tpm'
 #+end_src
+* Kitty
+Kitty is the most sane terminal emulator ever. It simply has all the necessary configuration and most of the time it does not require any intervention to get it working. I don't know why but terminal Emacs was not behaving well under Alacritty and Foot. But with Kitty, it simply works.
+
+#+name: kitty-common
+#+begin_src conf
+shell fish
+hide_window_decorations titlebar-and-corners
+font_family Cascadia Code NF
+scrollback_lines 50000
+cursor_blink_interval 0
+#+end_src
+
+#+begin_src conf :tangle (when-on :darwin "~/.config/kitty/kitty.conf")
+«kitty-common»
+macos_option_as_alt yes
+font_size 16.0
+macos_show_window_title_in none
+macos_quit_when_last_window_closed yes
+#+end_src
+
+#+begin_src conf :tangle (when-on :linux "~/.config/kitty/kitty.conf")
+«kitty-common»
+#+end_src
+
 * Utilities
 ** git
 #+begin_src conf :tangle ~/.gitconfig
