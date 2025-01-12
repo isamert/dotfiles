@@ -3660,6 +3660,20 @@ case "$1" in
         ;;
 esac
 #+end_src
+** fissh
+
+Source: [[https://unix.stackexchange.com/questions/476107/how-to-use-fish-on-remote-servers-that-have-it-installed-without-changing-login][ssh - How to use fish on remote servers that have it installed without changing login shell? - Unix & Linux Stack Exchange]]
+
+
+#+begin_src sh :tangle ~/.bin/fissh
+#!/bin/sh
+ssh "$@" -t "sh -c 'if which fish >/dev/null ; then exec fish -li; else exec \$SHELL -li; fi'"
+#+end_src
+
+#+begin_src fish :tangle ~/.config/fish/completions/fissh.fish
+complete -c fissh -w ssh
+#+end_src
+
 * Tools
 - =dconf-editor= :: List and explore gnome/gshell/app settings.
 - =d-feet= :: List and explore running dbus instances.
