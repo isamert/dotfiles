@@ -12179,6 +12179,10 @@ If it does not exists, create it."
   `(when (= (im-u) 7)
      (s-trim (im-s-interpolated ,template ,@template-args))))
 
+(defmacro im-when-monday (template &rest template-args)
+  `(when (= (im-u) 1)
+     (s-trim (im-s-interpolated ,template ,@template-args))))
+
 ;;
 ;; Daily summary
 ;;
