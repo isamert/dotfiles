@@ -673,16 +673,39 @@ CALLBACK will be called with the selected commit ref."
                 (message ">> Amend failed!")
                 (switch-to-buffer buffer-name)))))
 
-;;;; im-git-show-stash-diff
+;;;; im-git-stash
+
+(defconst im-git--stash-list-buffer-name "*im-git-stash-list*")
 
 ;;;###autoload
-(defun im-git-show-stash-diff ()
-  "Show stashed diff."
+(defun im-git-list-stash ()
   (interactive)
+  (when-let ((buffer (get-buffer im-git--stash-list-buffer-name)))
+    (kill-buffer buffer))
+  (let ((buffer-name im-git--stash-list-buffer-name))
+    (im-shell-command
+     :command "git"
+     :args `("--no-pager" "stash" "list")
+     :switch t
+     :buffer-name buffer-name
+     :on-finish
+     (lambda (output &rest _)
+       (read-only-mode)
+       (text-mode)
+       (im-git-stash-list-mode))
+     :on-fail
+     (lambda (&rest _)
+       (message ">> `git stash show -p' failed!")
+       (switch-to-buffer buffer-name)))))
+
+;;;###autoload
+(defun im-git-show-stash-diff (&optional stash-entry)
+  "Show stashed diff."
+  (interactive (list (im-git--parse-stash-entry-at-point)))
   (let ((buffer-name "*im-git-stash-diff*"))
     (im-shell-command
      :command "git"
-     :args `("--no-pager" "stash" "show" "-p")
+     :args (-non-nil `("--no-pager" "stash" "show" "-p" ,stash-entry))
      :switch nil
      :buffer-name buffer-name
      :on-finish
@@ -699,6 +722,44 @@ CALLBACK will be called with the selected commit ref."
      (lambda (&rest _)
        (message ">> `git stash show -p' failed!")
        (switch-to-buffer buffer-name)))))
+
+(defun im-git-drop-stash ()
+  (interactive nil im-git-stash-list-mode)
+  (when-let* ((stash-entry (im-git--parse-stash-entry-at-point))
+              (begin (line-beginning-position))
+              (end (line-end-position)))
+    (im-shell-command
+     :command "git"
+     :args `("--no-pager" "stash" "drop" ,stash-entry)
+     :switch nil
+     :buffer-name " *im-git-stash-drop*"
+     :on-finish
+     (lambda (output &rest _)
+       (with-current-buffer im-git--stash-list-buffer-name
+         (let ((inhibit-read-only t))
+           (add-text-properties begin end '(face (:strike-through t))))))
+     :on-fail
+     (lambda (output &rest _)
+       (message ">> `git stash drop' failed with: " output)
+       (switch-to-buffer buffer-name)))))
+
+(define-minor-mode im-git-stash-list-mode
+  "A minor mode for interacting with git stash list."
+  :lighter " StashList"
+  :keymap (make-sparse-keymap))
+
+(with-eval-after-load 'evil
+  (evil-define-minor-mode-key 'normal 'im-git-stash-list-mode
+    (kbd "x") #'im-git-drop-stash
+    (kbd "RET") #'im-git-show-stash-diff))
+
+(defun im-git--parse-stash-entry-at-point ()
+  "Return the stash entry name at point.
+Works only if the stash entry is at the beginning of the line."
+  (save-excursion
+    (beginning-of-line)
+    (when (looking-at "stash@{[0-9]+}")
+      (match-string 0))))
 
 (provide 'im-git)
 ;;; im-git.el ends here
