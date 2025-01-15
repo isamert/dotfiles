@@ -2763,9 +2763,11 @@ This way you can insert new entry right after other non-TODO
      (?B :background "goldenrod" :foreground "beige")
      (?C :background "coral" :foreground "beige")
      (?D :background "red3" :foreground "beige")))
-  :hook
-  (org-mode . org-modern-mode)
-  (org-agenda-finalize . org-modern-agenda))
+  :config
+  (add-hook 'org-agenda-finalize #'org-modern-agenda)
+  ;; 99 is important or otherwise org-jupyter-client fails to
+  ;; highlight ansi escape codes for some reason.
+  (add-hook 'org-mode-hook #'org-modern-mode 99))
 
 ;;;;; org-rainbow-tags
 
@@ -10499,16 +10501,10 @@ SELECT * FROM _ LIMIT 1;
 ;; - It provides two ways, one is through org-mode and it's the one I
 ;;   prefer.
 ;; - You need to convert =ipynb= files into org-mode files by running:
+;;   =M-x im-convert-ipynb-to-org-buffer=
 ;;
-;; #+begin_src sh
-;; pandoc --from ipynb --to org some-file.ipynb # this outputs an org-mode file
-;; #+end_src
-;;
-;; - Do =jupyter-connect-repl=.
-;; - Start (?, not sure, it may be automatic)
-;;   ~jupyter-org-interaction-mode~ and then you will get completion at
-;;   point
-;; - Then you can simply use jupyter-python source blocks to write
+;; - =jupyter-org-interaction-mode= is enabled in all org-mode buffers.
+;; - Yan simply use ~jupyter-python~ source blocks to write
 ;;   your code and run them exactly as you do with normal org code
 ;;   blocks.
 ;; - There are also these functions which you can utilize:
@@ -10518,15 +10514,23 @@ SELECT * FROM _ LIMIT 1;
 ;;   - jupyter-repl-interrupt-kernel → C-c C-i
 ;;   - jupyter-repl-restart-kernel   → C-c C-r
 ;;
+;; See ~org-babel-default-header-args:jupyter-python~ down below for
+;; more details on how these blocks are getting executed.
+;;
+;; **WARNING**: org-modern breaks ANSI code escaping of
+;; jupyter-org-client somehow if it starts before jupyter-org-client.
+;; Hence I increased it's depth. See org-modern configuration for more
+;; info.
+;;
 ;; * Virtual Envs and Jupyter
 ;;
 ;; If you are using virtualenvironments, then simply do
 ;; =pyvenv-activate= and select the virtenv folder.
 ;;
-;; You can create a venv like: =python3 -m venv <venv-folder>=. To
-;; install requirements.txt dependencies, do ~pip install -r
-;; requirements.txt~ after activating the venv with ~source
-;; <venv-folder>/bin/activate.{,.fish,.zsh}~.
+;; - =python3 -m venv .venv= to create a virtenv
+;; - ~pip install -r requirements.txt~ to install requirements
+;; - ~source .venv/bin/activate.{,.fish,.zsh}~ to active the venv in terminal
+;; - or =pyvenv-active= to active inside Emacs.
 ;;
 ;; After activating the venv, you may need to do
 ;; ~jupyter-repl-restart-kernel~.
@@ -10535,29 +10539,34 @@ SELECT * FROM _ LIMIT 1;
   :defer t)
 
 (use-package jupyter
-  :defer t
-  :config
-  (with-eval-after-load 'ob-core
-    (setq org-babel-default-header-args:jupyter-python
-          '((:async . "yes")      ;; Make outputs async
-            (:session . "py")     ;; A named session
-            (:kernel . "python3") ;; Don't know but works
-            (:pandoc . t)         ;; Convert rich outputs to org-mode format
-            (:display "text/plain text/html")
-            ;; ^ Prefer plain-text outputs from jupyter instead of
-            ;; direct html outputs
-            ))))
+  :straight (:host github :repo "emacs-jupyter/jupyter"))
+
+(with-eval-after-load 'jupyter-org-client
+  (setq org-babel-default-header-args:jupyter-python
+        '((:async . "yes")      ;; Make outputs async
+          (:session . "py")     ;; A named session
+          (:kernel . "python3") ;; Don't know but works
+          (:pandoc . t)         ;; Convert rich outputs to org-mode format
+          ;; Prefer plain-text outputs from jupyter instead of
+          ;; direct html outputs
+          (:display "text/plain text/html"))))
 
 (defun im-convert-ipynb-to-org-buffer ()
   "Convert the current IPython Notebook file to Org format and open it in a new buffer."
   (interactive)
-  (let* ((org-buffer-name (concat (file-name-sans-extension (buffer-name)) ".org"))
+  (let* ((fname (file-name-sans-extension (buffer-name)))
+         (org-buffer-name (concat fname ".org"))
          (pandoc-output (shell-command-to-string
                          (format "pandoc --from ipynb --to org '%s'" (buffer-file-name)))))
     (with-current-buffer (get-buffer-create org-buffer-name)
       (erase-buffer)
       (insert pandoc-output)
       (switch-to-buffer (current-buffer))
+      ;; Add :session to code blocks so that each file has a separate session
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward " jupyter-python" nil t)
+          (replace-match (concat " jupyter-python :session " fname) nil nil)))
       (goto-char (point-min))
       (org-mode))))
 
