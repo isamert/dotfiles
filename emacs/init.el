@@ -588,12 +588,27 @@ I use this in my `defun' snippet via yasnippet."
           (match-string 1)))
       "im-"))
 
-(defun im-open-region-in-temp-buffer (content)
+(defun im-open-region-in-temp-buffer (content &optional major-mode)
   "Open CONTENT (selected region or given string) in a temporary buffer."
-  (interactive (list (im-region-or 'string)))
+  (interactive (list
+      (im-region-or 'string)
+      (completing-read
+       "Select major mode: " obarray
+       (lambda (x)
+         (and (fboundp x)
+              (commandp x)
+              (string-match "-mode$" (symbol-name x))))
+
+       t
+       nil nil
+       (format "%s" major-mode))))
   (switch-to-buffer (generate-new-buffer "*temp-region*"))
   (insert content)
-  (switch-to-buffer (current-buffer)))
+  (switch-to-buffer (current-buffer))
+  (when major-mode
+    (funcall (intern major-mode))
+    (pcase major-mode
+      ((or "json-ts-mode" "json-mode") (json-pretty-print-buffer)))))
 
 (defun im-kill-this-buffer ()
   "Kill current buffer.
@@ -7401,7 +7416,7 @@ Fetches missing channels/users first."
                 (not (prodigy-service-started-p it)))
        (prodigy-start-service it)))))
 
-;;;;; separaedit -- edit comment blocks/multiline strings etc. indirectly
+;;;;; separedit -- edit comment blocks/multiline strings etc. indirectly
 
 ;; Pop current comment section OR a multiline string into a markdown
 ;; buffer and edit it there. Pretty useful for writing long
