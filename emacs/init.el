@@ -2251,10 +2251,17 @@ side window the only window'"
   (add-hook 'org-src-mode-hook #'evil-normalize-keymaps))
 
 (defun im-org-tree-to-indirect-buffer ()
-  "Same as `org-tree-to-indirect-buffer' but let's you open multiple indirect buffers."
+  "Same as `org-tree-to-indirect-buffer' but let's you open multiple indirect buffers.
+This also restricts the amount of indirect buffers per heading to 1 so
+that you can have multiple indirect buffers for different headers but
+only one indirect buffer per header to prevent unnecessary accumulation
+of indirect buffers.."
   (interactive)
-  (let ((current-prefix-arg '(4)))
-    (call-interactively #'org-tree-to-indirect-buffer)))
+  (if-let* ((target-buffer-name (concat (buffer-name) "::"  (org-get-heading 'no-tags)))
+            (existing-buffer (get-buffer target-buffer-name)))
+      (switch-to-buffer-other-window existing-buffer)
+    (let ((current-prefix-arg '(4)))
+      (call-interactively #'org-tree-to-indirect-buffer))))
 
 (defun im-bullet-focus-inbox-indirect ()
   "Like `im-bullet-focus-inbox' but in an indirect buffer."
