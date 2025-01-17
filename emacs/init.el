@@ -8738,7 +8738,9 @@ Useful if .elfeed directory is freshly syncned."
   :defer t
   :autoload (empv--select-action)
   :general
-  (im-leader "r" empv-map)
+  (im-leader
+    "r" empv-map
+    "r4" #'empv-subsonic-search)
   :config
   (require 'im-radio-channels)
   (setq empv-radio-channels im-radio-channels)
@@ -10701,10 +10703,8 @@ SELECT * FROM _ LIMIT 1;
   :straight (:host github :repo "isamert/tabgo.el")
   :demand t
   :general
-  (:states 'normal
-   "M-r" #'tabgo)
-  (:states 'normal :keymaps 'evil-org-mode-keymap
-   "M-r" #'tabgo))
+  (im-leader
+    "<SPC>" #'tabgo))
 
 ;;;;; ace-window
 
