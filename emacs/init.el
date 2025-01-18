@@ -5568,6 +5568,25 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 ;; Load vertico extensions
 (add-to-list 'load-path (expand-file-name (format "%sstraight/build/vertico/extensions" straight-base-dir)))
 
+(defun im-vertico-preview-and-suspend ()
+  "Preview the candidate at point if possible and then suspend the session."
+  (interactive)
+  (when (and (minibufferp) consult--preview-function)
+    (execute-kbd-macro (kbd consult-preview-key)))
+  (vertico-suspend))
+
+(use-package vertico-suspend
+  :straight nil
+  :after vertico
+  :general
+  (:states '(insert normal)
+   "C-s" #'vertico-suspend)
+  (:keymaps 'vertico-map
+   "C-s" #'im-vertico-preview-and-suspend
+   "C-S-s" #'vertico-suspend)
+  :config
+  (define-key vertico-map "\M-q" #'vertico-quick-exit))
+
 ;; Enable avy style candidate selection
 (use-package vertico-quick
   :straight nil
