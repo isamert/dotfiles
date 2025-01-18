@@ -4,17 +4,17 @@
 
 ;; isamert's configuration
 
-;; This is my Emacs configuration. My main focus is sanity. I'm a
-;; person who get frustrated pretty easily. So instead of optimizing
+;; This is my Emacs configuration.  My main focus is sanity.  I'm a
+;; person who get frustrated pretty easily.  So instead of optimizing
 ;; the time spent on doing things, I try to find ways of doing things
-;; that does not make me frustrated. Most of the time you get speed
+;; that does not make me frustrated.  Most of the time you get speed
 ;; boost as a byproduct.
 
 ;;;; Emacs installation
 
-;; I use my distributions package manager to install Emacs. However,
+;; I use my distributions package manager to install Emacs.  However,
 ;; in MacOS (my work computer) I use /homebrew/ and /emacs-plus/
-;; formula. Here is how you install it:
+;; formula.  Here is how you install it:
 ;;
 ;; #+begin_src sh
 ;;   brew tap d12frosted/emacs-plus
@@ -31,32 +31,32 @@
 ;; - https://github.com/jimeh/emacs-builds
 ;; - https://emacsformacosx.com/
 ;;
-;; But I need the aforementioned switches and patches. Otherwise these
+;; But I need the aforementioned switches and patches.  Otherwise these
 ;; are very good.
 ;;
 ;; * --with-poll
 ;;
 ;; You can read about the options [[https://github.com/d12frosted/homebrew-emacs-plus#options][here]], but the most important one is
-;; ~--with-poll~. Otherwise you'll get lot's of /no file descriptors
+;; ~--with-poll~.  Otherwise you'll get lot's of /no file descriptors
 ;; left, too many files are open/ errors, especially if you are using
 ;; LSP etc..
 ;;
 ;; * --with-debug
 ;;
-;; It is nice for debugging crashes or freezes. Helps you get a better
-;; output from the debugger. When Emacs freezes and ~pkill -USR2 Emacs~
+;; It is nice for debugging crashes or freezes.  Helps you get a better
+;; output from the debugger.  When Emacs freezes and ~pkill -USR2 Emacs~
 ;; is not helping, what you can do to debug the issue is:
 ;;
 ;; #+begin_src sh
 ;;   $ cd ~/Library/Caches/Homebrew/emacs-plus@30--git/src
 ;;   $ lldb --local-lldbinit /opt/homebrew/Cellar/emacs-plus@30/<VERSION>/Emacs.app
-;;   (lldb) r # → Do this to start emacs
+;;   (lldb) r # → Do this to start Emacs
 ;;   # wait for the freeze
 ;;   # C-c to quit the Emacs after freeze
 ;;   (lldb) xbacktrace # or bt
 ;; #+end_src
 ;;
-;; Same story with crashes. Just run Emacs through =lldb= all the time
+;; Same story with crashes.  Just run Emacs through =lldb= all the time
 ;; and be prepared I guess...
 
 ;;;; Usage notes
@@ -65,27 +65,27 @@
 
 ;; - This configuration is meant to be used with /emacs daemon/, so I don't really care about the startup time etc.
 ;; - I try to split package configurations into multiple org src blocks and unify them using ~noweb~ references under a single =use-package= directive.
-;; - I try to put things in way that easily copyable from the configuration. An example would be using multiple =(setq ...)= lines instead of having one =(setq ... ...)= call and setting multiple variables in one go.
-;; - I make use of =use-package= features quite minimally. See [[id:3d974e67-11fc-4f07-8cd4-ec6fd63152c4][here]] for more information that. This is generally related with the item above and future-proofing.
+;; - I try to put things in way that easily copyable from the configuration.  An example would be using multiple =(setq ...)= lines instead of having one =(setq ... ...)= call and setting multiple variables in one go.
+;; - I make use of =use-package= features quite minimally.  See [[id:3d974e67-11fc-4f07-8cd4-ec6fd63152c4][here]] for more information that.  This is generally related with the item above and future-proofing.
 ;; - I use =verbatim text= and ~code text~ completely randomly.
-;; - I try to prefer built-in packages or packages that enhances built-in ones where possible. I'm also trying to simplify my configuration, so another goal is to reduce the package number. Although I intend to keep packages that enhances the overall experience with no special configuration (just install and forget type of packages).
+;; - I try to prefer built-in packages or packages that enhances built-in ones where possible.  I'm also trying to simplify my configuration, so another goal is to reduce the package number.  Although I intend to keep packages that enhances the overall experience with no special configuration (just install and forget type of packages).
 
 ;;;;; Keybinding conventions
 
 ;; - After leader
-;;   - =e= :: is reserved for independent programs, that is not related to editing/programming. For example, "ec" opens calendar, "ee" opens elfeed, "er..." controls the radio.
-;;   - =t= :: is reserved for toggling stuff. Toggle the terminal, toggle a frequently accessed buffer etc.
+;;   - =e= :: is reserved for independent programs, that is not related to editing/programming.  For example, "ec" opens calendar, "ee" opens elfeed, "er..." controls the radio.
+;;   - =t= :: is reserved for toggling stuff.  Toggle the terminal, toggle a frequently accessed buffer etc.
 ;;   - =h= :: is reserved for any menu with fuzzy selection that does not fit anywhere else.
 ;;   - =g= :: is for git related functionality.
 ;;   - =p= :: is for project related functionality.
-;;   - =/= :: is for search/translate related functionality. (Generally external programs)
+;;   - =/= :: is for search/translate related functionality.  (Generally external programs)
 ;;   - =b= :: is for buffers.
-;;   - =w= :: is for windows. I also use =C-w= for this, which is default prefix for window-related functions in vim.
+;;   - =w= :: is for windows.  I also use =C-w= for this, which is default prefix for window-related functions in vim.
 ;;   - =o= :: is for org-mode/outline mode.
 
 ;;;;; Updating packages
 
-;; Just do ~M-x straight-pull-all~. I do this quite infrequently. If
+;; Just do ~M-x straight-pull-all~.  I do this quite infrequently.  If
 ;; everything is working fine as it is, I tend to not update anything.
 
 ;;; Code:
@@ -294,9 +294,9 @@ the header line."
   (x-list-fonts font))
 
 (defun im-assoc-regexp (key list &optional fn)
-  "Like `assoc` but uses `string-match (car pair) KEY` for
-comparison and returns all the matching pairs.  FN is applied to
-the keys before matching, if present."
+  "Like `assoc` but uses `string-match (car pair) KEY` for comparison.
+Returns all the matching pairs.  FN is applied to the keys before
+matching, if present."
   (seq-filter
    (lambda (pair)
      (when (string-match-p (if fn (funcall fn (car pair)) (car pair)) key)
@@ -377,9 +377,9 @@ not found with WHAT, then it is requested from the user."
 
 ;; TODO Add a way to invalidate the file after given date
 (defmacro defmemoizefile (name arglist file &rest body)
-  "Like a normal memoize function but persist the memoize cache to
-a file so that when Emacs is opened freshly, it'll continue using
-the memoize cache."
+  "Like a normal memoize function but persist the memoize cache to a file.
+This way, when Emacs is opened freshly, it'll continue using the memoize
+cache."
   (declare (indent 3) (doc-string 4))
   (let ((origfn (intern (concat (symbol-name name) "---defmemoizefile-origfn")))
         (memoizemap (intern (concat (symbol-name name) "---defmemoizefile-memoizemap"))))
@@ -424,7 +424,8 @@ select the right window using `aw-select'."
        ,@body)))
 
 (defun im-sync-async-command-to-string (command &rest args)
-  "Run async command and wait until it's finished. This may seem stupid but I had to use it."
+  "Run async command and wait until it's finished.
+This may seem stupid but I had to use it."
   (with-temp-buffer
     (let ((process (apply 'start-process `("sync-async-proc" ,(current-buffer) ,command ,@args))))
       (while (process-live-p process)
@@ -555,10 +556,10 @@ a shebang at the beginning, then the executable bit is set to file."
 Additionally, print a message to the *Messages* buffer showing
 the form and its result.
 
-This macro is useful for debugging and inspecting the
-intermediate results of Elisp code without changing your code
-structure. Just wrap the form with `im-tap' that you want to see
-it's output without introducing an intermediate let-form."
+This macro is useful for debugging and inspecting the intermediate
+results of Elisp code without changing your code structure.  Just wrap
+the form with `im-tap' that you want to see it's output without
+introducing an intermediate let-form."
   `(let ((result ,form)
          (print-length nil)
          (print-level nil))
@@ -567,8 +568,7 @@ it's output without introducing an intermediate let-form."
 
 (defalias 'im-inspect #'im-debug)
 (defun im-debug (thing)
-  "Like `im-tap' but uses `pp-display-expression' to display the
-result instead of `message'."
+  "Like `im-tap' but uses `pp-display-expression' to display the result instead of `message'."
   (let ((print-length nil)
         (print-level nil))
     (pp-display-expression thing "*im-debug*"))
@@ -576,7 +576,7 @@ result instead of `message'."
 
 (defmacro im-append! (lst item)
   "Append ITEM to end of the LST.
-Modifies LST. Only meant to be used in configuration."
+Modifies LST.  Only meant to be used in configuration."
   `(setq ,lst (append ,lst (list ,item))))
 
 (defun im-elisp-find-file-prefix ()
@@ -695,27 +695,27 @@ Also see `im-clipboard-contains-image-p' to check if there is one."
 
 (cl-defun im-completing-read
     (prompt objects &key (formatter #'identity) category (sort? t) def multiple?)
-  "Provide an interactive completion interface for selecting an item from a list of objects.
+  "Provide a completion interface for selecting an item from a list of objects.
 
 - PROMPT: The prompt string to display to the user.
 - OBJECTS: A list of objects to choose from.
 - FORMATTER: (Optional) A function that formats each object
-  before displaying it to the user. The default is `'identity',
+  before displaying it to the user.  The default is `'identity',
   which means no formatting.
 - CATEGORY: (Optional) A category symbol associated with the
-  completion. This can be used to provide additional completion
+  completion.  This can be used to provide additional completion
   behavior.
 - SORT?: (Optional) A boolean value indicating whether the
-  completion list should be sorted. The default is t.
+  completion list should be sorted.  The default is t.
 - DEF: (Optional) The default value to return if no selection is
-  made. If multiple selections are allowed, this value will be
+  made.  If multiple selections are allowed, this value will be
   returned as a list.
 - MULTIPLE?: (Optional) A boolean value indicating whether
-  multiple selections are allowed. The default is `nil`.
+  multiple selections are allowed.  The default is `nil`.
 
 If MULTIPLE? is nil, this function returns the selected object
-from the completion list. If MULTIPLE? is t, this function
-returns a list of selected objects. If no selection is made, the
+from the completion list.  If MULTIPLE? is t, this function
+returns a list of selected objects.  If no selection is made, the
 DEF value is returned."
   (let* ((object-table
           (make-hash-table :test 'equal :size (length objects)))
@@ -798,7 +798,7 @@ command."
      :category ,category)))
 
 (defun im-read-string (prompt &rest rest)
-  "Like `read-string' but returns `nil' on empty input."
+  "Like `read-string' but returns nil on empty input."
   (let ((result (string-trim (apply #'read-string prompt rest))))
     (if (string-equal result "")
         nil
@@ -936,10 +936,11 @@ called with the current state of the button."
      &rest params
      &key (-type "GET") (-headers) (-data) (-params) (-async?) (-on-success) (-on-error) (-raw)
      &allow-other-keys)
-  "Like `request' but plist and JSON oriented. JSON responses are
-automatically parsed, query parameters are constructed from
-top-level keywords, request body can be a plist (which will be
-serialized into JSON). Examples:
+  "Like `request' but plist and JSON oriented.
+
+JSON responses are automatically parsed, query parameters are
+constructed from top-level keywords, request body can be a plist (which
+will be serialized into JSON).  Examples:
 
     (im-request \"some/endpoint\")
 
@@ -1010,7 +1011,7 @@ For async requests, simply provide a success handler:
          fn
          (or -on-success (lambda (data) (message "im-request :: Unhandled success. Data: %s" data)))
          (or -on-error (lambda (data) (message "im-request :: Unhandled error. Data: %s" data)))))
-       (t (funcall fn (lambda (data) (setq json data)) (lambda (data) (user-error "Request failed, see earlier logs.")))
+       (t (funcall fn (lambda (data) (setq json data)) (lambda (data) (user-error "Request failed, see earlier logs")))
           (when (called-interactively-p 'interactive)
             (with-current-buffer (get-buffer-create "*im-request-response*")
               (erase-buffer)
@@ -1523,8 +1524,7 @@ function helps me go between these modes easily."
 
 ;; SOURCE: https://www.reddit.com/r/emacs/comments/345vtl/make_helm_window_at_the_bottom_without_using_any/
 (defun im-shackle-window (name size)
-  "Make the buffer NAME appear at bottom of the window, filling
-SIZE percent of the window."
+  "Make the buffer NAME appear at bottom of the window, filling SIZE percent of the window."
   (add-to-list 'display-buffer-alist
                `(,name
                  (display-buffer-in-side-window)
@@ -2251,7 +2251,7 @@ side window the only window'"
   (add-hook 'org-src-mode-hook #'evil-normalize-keymaps))
 
 (defun im-org-tree-to-indirect-buffer ()
-  "Same as `org-tree-to-indirect-buffer' but let's you open multiple indirect buffers.
+  "Like `org-tree-to-indirect-buffer' but let's you open multiple indirect buffers.
 This also restricts the amount of indirect buffers per heading to 1 so
 that you can have multiple indirect buffers for different headers but
 only one indirect buffer per header to prevent unnecessary accumulation
@@ -2403,8 +2403,8 @@ original buffer is not affected and you can work on them simultaneously."
 (defalias 'im-org-babel-split-or-wrap-src-code-block #'org-babel-demarcate-block)
 
 (defun im-org-babel-tangle-current-block ()
-  "Tangle the current source block and all other related
-blocks (the ones that tangles into the same file).
+  "Tangle the current source block and all other related blocks.
+All blocks that tangles to same file are tangled.
 
 This function also works inside `org-edit-special' buffers and
 does not disrupt the current window configuration."
@@ -2849,7 +2849,7 @@ This way you can insert new entry right after other non-TODO
 
 ;; Source: https://emacs.stackexchange.com/a/60555
 (defun im-org-link-copy ()
-  "Extract URL from org-mode link and add it to kill ring."
+  "Extract URL from `org-mode' link and add it to kill ring."
   (interactive)
   (let* ((link (org-element-lineage (org-element-context) '(link) t))
          (type (org-element-property :type link))
@@ -2860,8 +2860,8 @@ This way you can insert new entry right after other non-TODO
     url))
 
 (defun im-org-store-link-dwim ()
-  "Like `org-store-link' but if point is on an org-link, just copy
-    it to clipboard. Otherwise call `org-store-link'."
+  "Like `org-store-link' but if point is on an org-link, just copy it to clipboard.
+Otherwise call `org-store-link'."
   (interactive)
   (if (org-in-regexp org-link-any-re 1)
       (call-interactively #'im-org-link-copy)
@@ -2934,9 +2934,8 @@ not provided then it saves the image into ~/.cache."
       (user-error "Saving file failed!"))))
 
 (defun im-org-make-link-string (url)
-  "Like `org-make-link-string' but fetches URL and extracts the
-title automatically.  Also adds author and duration info to
-YouTube links."
+  "Like `org-make-link-string' but fetch URL and extract the title automatically.
+Also adds author and duration info to YouTube links."
   (cond
    ((im-youtube-link-extract-id url) (im-org-format-youtube-link url))
    (t (org-link-make-string url (im-url-get-title url)))))
@@ -2947,7 +2946,7 @@ YouTube links."
   (nth 4 (s-match "https?://\\(www\\.\\)?\\(youtu\\.be\\|youtube.com\\)/\\(watch\\?v=\\)?\\([a-zA-Z0-9_-]+\\)\\(\\?\\|&\\)?/?" link)))
 
 (defun im-org-format-youtube-link (link)
-  "Format given YouTube link as org-mode link.
+  "Format given YouTube link as `org-mode' link.
 Length, author, title etc. are appended to the link."
   (let ((id (im-youtube-link-extract-id link)))
     (let-alist (im-request (format "%s/videos/%s" empv-invidious-instance id))
@@ -3154,10 +3153,10 @@ Headers are gathered from all the org files found in `org-directory'."
   "Do a regular expression search in given project.
 PARAMS may contain `:root' or `:regexp'.
 
-`:root' - Where to run the search. If it's skipped, it's
+`:root' - Where to run the search.  If it's skipped, it's
 `default-directory'.
 
-`:regexp' - Regexp to grep in given folder. If it's skipped it
+`:regexp' - Regexp to grep in given folder.  If it's skipped it
 searches for TODO/FIXME items in given folder."
   (let* ((root (expand-file-name (or (plist-get params :root) default-directory)))
          (regexp (or (plist-get params :regexp) "(//|#|--|;)+ ?(TODO|FIXME)"))
@@ -3252,14 +3251,14 @@ searches for TODO/FIXME items in given folder."
 (defun im-org-convert-item-to-todo-and-refile (&optional yank-only)
   "Convert org item to todo header and refile.
 I take notes in the following format during the day via
-org-capture template:
+`org-capture' template:
 
     - [2023-04-09 Sun 23:57] Some note
 
 At the end of the day, I convert these notes into tasks if
-applicable. This means rewriting them into a TODO header with
+applicable.  This means rewriting them into a TODO header with
 CREATED_AT property and refiling into the appropriate
-header. This function automatizes that.
+header.  This function automatizes that.
 
 If YANK-ONLY is non-nil (with prefix arg while calling
 interactively), only yank the result, do not refile.
@@ -3422,7 +3421,7 @@ If not, prompt user to clock in."
 (defun im-org-unfill-paragraph (&optional justify region)
   "Unfill the paragraph at point.
 This function unfills the paragraph at point, removing line
-breaks and joining the lines together. This function relies on
+breaks and joining the lines together.  This function relies on
   `org-fill-paragraph' to perform the actual unfilling."
   (interactive (progn
        (barf-if-buffer-read-only)
@@ -4002,7 +4001,7 @@ that is read verbatim (meaning that no '$*' is appended):
                 (widen)
                 (org-find-exact-headline-in-buffer projdir))))
     (unless pos
-      (if (y-or-n-p "Note not found for this project. Want to create?")
+      (if (y-or-n-p "Note not found for this project.  Want to create?")
           (with-current-buffer buf
             (widen)
             (goto-char (point-max))
@@ -4031,7 +4030,7 @@ that is read verbatim (meaning that no '$*' is appended):
 ;; - Blacklisted commands
 (defvar-local im-eshell-append-history nil)
 (defun im-eshell-append-history ()
-  "Call `eshell-write-history' with the `append' parameter set to `t'."
+  "Call `eshell-write-history' with the `append' parameter set to t."
   (if (not im-eshell-append-history)
       ;; Remove the eshell save hook on first run.
       ;; Also don't append on first run to prevent duplication.
@@ -4134,9 +4133,10 @@ that is read verbatim (meaning that no '$*' is appended):
 ;;;;;; Helper functions
 
 (defun im-vtable--pretty-colors ()
-  "Return a (color color) list that can be used with :column-colors and :row-colors.
-Makes the tables more readable."
-  ;; Mini-frame dependency is not cool bot ok. Rest of the config is still look like hell.
+  "Return alternating colors for vtable rows.
+Return a (color color) list that can be used with :column-colors and
+:row-colors.  Makes the tables more readable."
+  ;; Mini-frame dependency is not cool bot ok.  Rest of the config is still look like hell.
   `(,(alist-get 'background-color (frame-parameters)) ,(mini-frame-get-background-color)))
 
 ;;;;; alert & im-notify-posframe
@@ -4401,7 +4401,7 @@ Return parsed seconds from users answer."
       ,message))
    (lambda (proc text)
      (unless (eq (process-exit-status proc) 0)
-       (error ">> [%s] Failed to send message through `ntfy'." (format-time-string "%Y-%m-%dT%H:%M:%S%z"))))))
+       (error ">> [%s] Failed to send message through `ntfy'" (format-time-string "%Y-%m-%dT%H:%M:%S%z"))))))
 
 ;;;;; Hydra
 
@@ -4692,7 +4692,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (im-shackle-window "Calendar" 0.3))
 
 (defun im-calendar-jump-org-agenda ()
-  "Open the currently selected calendar date on org-agenda."
+  "Open the currently selected calendar date on `org-agenda'."
   (interactive nil calendar-mode)
   (let ((org-agenda-window-setup 'other-window)
         (org-agenda-span 1))
@@ -4729,7 +4729,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 (defconst im-work-diary-path (expand-file-name "~/.emacs.d/.cache/work-diary"))
 
 (defun im-update-calendar ()
-  "Sync emacs calendar/diary with my remote calendar."
+  "Sync Emacs calendar/diary with my remote calendar."
   (interactive)
   (message ">> Updating the calender...")
   (url-retrieve
@@ -5742,11 +5742,12 @@ It simply checks for folders with `.git' under them."
                   (call-interactively #'project-switch-project))))
 
 (cl-defmacro im-projectelify (&key cmd desc key non-interactive dont-wrap dir-as-param)
-  "If you add a command to `project-switch-commands', it will not
-work properly everytime becuse the function should be aware of
-what the current project is, provided by the `project-current'
-function. This function simply wraps the original CMD to make it
-work in the `project-current's directory.
+  "Create a project.el compatible command wrap for CMD.
+If you add a command to `project-switch-commands', it will not work
+properly everytime becuse the function should be aware of what the
+current project is, provided by the `project-current' function.  This
+function simply wraps the original CMD to make it work in the
+`project-current's directory.
 
 If CMD is already project.el aware, then pass DONT-WRAP as
 non-nil so that you only add it to `project-prefix-map'."
@@ -6740,8 +6741,7 @@ this command is invoked from."
   (run-with-timer 5 nil #'im-load-snippets-list))
 
 (defun im-select-any-snippet ()
-  "List all templates for all modes and return the applied template
-  as string."
+  "List all templates for all modes and return the applied template as string."
   (interactive)
   (-let* ((selected (completing-read "Select snippet: " im--all-snippets-cache))
           (snippet (alist-get selected im--all-snippets-cache nil nil #'equal))
@@ -6769,7 +6769,7 @@ this command is invoked from."
   (setq git-link-open-in-browser t))
 
 (defun im-git-link-homepage ()
-  "Like git-link-homepage itself but it does not open in browser, simply returns the address as string."
+  "Like `git-link-homepage' itself but it does not open in browser, simply returns the address as string."
   (interactive)
   (let ((git-link-open-in-browser nil))
     (call-interactively 'git-link-homepage)
@@ -7840,13 +7840,13 @@ Also this is required for the above advice to work."
 ;; TODO: scroll to the same section that is open in webkit
 (defun im-xwidget-webkit-visual-mode ()
   "Gather the page source, render it with `shr' and display it.
-This is a simple trick for being able to easily copy stuff from
-the page without using mouse.  Instead of opening the same url
-with `eww' (for that, see `im-xwidget-webkit-open-in-eww') we
-directly render the current pages HTML to be able to get all the
-pages content. Otherwise `eww' might fail to render what we need
-due to lack of JavaScript support or maybe there is a required
-login process that you can't do in `eww' etc.."
+This is a simple trick for being able to easily copy stuff from the page
+without using mouse.  Instead of opening the same url with `eww' (for
+that, see `im-xwidget-webkit-open-in-eww') we directly render the
+current pages HTML to be able to get all the pages content.  Otherwise
+`eww' might fail to render what we need due to lack of JavaScript
+support or maybe there is a required login process that you can't do in
+`eww' etc.."
   (interactive)
   (let ((title (xwidget-webkit-title (xwidget-webkit-current-session))))
     (xwidget-webkit-execute-script
@@ -8275,7 +8275,7 @@ This happens to me on org-buffers, xwidget-at tries to get
 (async-defun im-sync-mail (&optional interactive?)
   "Run mbsync, update notmuch index and check new message count.
 
-This could be a cron job but keeping it in emacs gives me the
+This could be a cron job but keeping it in Emacs gives me the
 opportunity to notify the new email count right after fetching all
 mails."
   (interactive (list t))
@@ -9348,7 +9348,7 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
 ;;;;;; Add node_modules/.bin to PATH automatically
 
 (defun im-add-node-modules-to-path ()
-  "Add node_modules/.bin to `exec-path'."
+  "Add node_modules/.bin to variable `exec-path'."
   (interactive)
   (-some--> (locate-dominating-file "." "node_modules")
     (expand-file-name it)
@@ -10653,7 +10653,7 @@ SELECT * FROM _ LIMIT 1;
 ;; quickly jump a file. I also want to show it in a buffer, not in
 ;; mini-buffer.
 (defun im-tab-bar-new-tab ()
-  "Open a new tab and display consult-buffer."
+  "Open a new tab and display `consult-buffer'."
   (interactive)
   (tab-bar-new-tab)
   (let ((vertico-multiform-commands '((consult-buffer buffer (vertico-buffer-display-action . (display-buffer-same-window)))))
@@ -10962,7 +10962,8 @@ something.")
 
 (defvar im-jira-board-id
   "1332"
-  "Interested board id. TODO: make this a list so that I can access to multiple boards by `im-jira-list-issues'.")
+  "Interested board id.
+TODO: make this a list so that I can access to multiple boards by `im-jira-list-issues'.")
 
 (defun im-jira-open-issue (issue-number)
   "Open given Jira ISSUE-NUMBER."
@@ -11121,7 +11122,8 @@ If PROJECTS is nil, then `im-jira-projects' is used."
   (alist-get 'values (jiralib2-session-call (format "/rest/agile/1.0/board/%s/sprint" im-jira-board-id))))
 
 (defun im-jira-find-sprint (sprint)
-  "Find a sprint. SPRINT can be a full sprint name or one \"active\"|\"future\"."
+  "Find a sprint.
+SPRINT can be a full sprint name or one \"active\"|\"future\"."
   (let ((sprints (im-jira-get-sprints)))
     (or
      (--find (string-equal sprint (alist-get 'name it)) sprints)
@@ -11157,8 +11159,7 @@ If PROJECTS is nil, then `im-jira-projects' is used."
    (im-jira-change-issue-status-to key)))
 
 (defun im-jira-change-issue-status-to-status (issue-id status)
-  "Same as `im-jira-change-issue-status-to' but uses the
-  status name as shown in Jira UI instead of status id."
+  "Same as `im-jira-change-issue-status-to' but uses the status name as shown in Jira UI instead of status id."
   (im-jira-change-issue-status-to
    issue-id
    (alist-get
@@ -11204,7 +11205,7 @@ If PROJECTS is nil, then `im-jira-projects' is used."
     ("Production Bug" "** Description\n\n\n** Steps\n\n\n** Projects\n\n\n** Incident Excel\n\n\n** Links - SS - Video\n\n")))
 
 (defun im-jira--create-branch-name-from-ticket (issue-name)
-  "Create a branch name from given Jira ISSUE-NAME"
+  "Create a branch name from given Jira ISSUE-NAME."
   (thread-last
     issue-name
     (im-string-url-case)
@@ -11215,7 +11216,7 @@ If PROJECTS is nil, then `im-jira-projects' is used."
 
 ;; TODO Color code status etc.
 (defun im-jira--format-ticket-name (it)
-  "Format ticket name for displaying in completing-read window."
+  "Format ticket name for displaying in `completing-read' window."
   (let-alist it
     (format
      "%-7s\t[%-11s]\t%-15s => %-15s\t%s"
@@ -11271,7 +11272,7 @@ If PROJECTS is nil, then `im-jira-projects' is used."
           (cl-return)))))))
 
 (defun im-convert-jira-markup-to-org-mode (jira-markup)
-  "Convert given JIRA-MARKUP string to org-mode format."
+  "Convert given JIRA-MARKUP string to `org-mode' format."
   (with-temp-buffer
     (insert jira-markup)
     ;; This creates loose lists where newlines appear between
@@ -11388,10 +11389,9 @@ If PROJECTS is nil, then `im-jira-projects' is used."
       (org-fold-show-all))))
 
 (defun im-jira-list-current-sprint-assignee-swimlane ()
-  "Draw an org table for the current sprint that resembles assignee
-swimlanes of JIRA.
+  "Draw a table for the current sprint that resembles assignee swimlanes of JIRA.
 It also shows how much story point each assignee has and how much
-story points they have released. See the following figure:
+story points they have released.  See the following figure:
 
   | Assignee  | Total | Done | Sub-total | Status      | Issue         |
   |-----------+-------+------+-----------+-------------+---------------|
@@ -11569,14 +11569,14 @@ When CMD finishes, FN is called with the process output."
     (buffer-string)))
 
 (defun im-send-text-to-my-phone (text)
-  "Send TEXT to my phones clipboard. This only works if the phone
-  is already open."
+  "Send TEXT to my phones clipboard.
+This only works if the phone is already open."
   (interactive "sText: ")
   (im-send-termux-command-async "termux-clipboard-set" (lambda (_) (message ">> Text sent: %s." text)) text))
 
 (defun im-send-clipboard-to-my-phone ()
-  "Send current clipboard content to my phones clipboard. This only
-  works if the phone is already open."
+  "Send current clipboard content to my phones clipboard.
+This only works if the phone is already open."
   (interactive)
   (im-send-text-to-my-phone (current-kill 0)))
 
@@ -11929,7 +11929,9 @@ people.org should contain the following snippet on it's `after-save-hook':
 ;;;;; Google search
 
 (defun im-google-this (input)
-  "Search selected region or current word in Google. Let's you edit the query beforehand."
+  "Search INPUT in Google.
+Interactively, INPUT is either region or current word.  Let's you edit
+the query beforehand."
   (interactive
    (list
     (read-string
@@ -12345,9 +12347,9 @@ If it does not exists, create it."
 ;;
 
 (defun im-bullet-schedule-all-today ()
-  "Schedule all level-2 org mode tasks that have a scheduled date in
-the past to today's date with the same time. If the task is not
-scheduled, schedules them to todays date."
+  "Schedule all level-2 org mode tasks today's date.
+This does not change tasks time.  If the task is not scheduled,
+schedules them to today's date."
   (interactive)
   (let* ((today (im-today))
          (today-time (date-to-time today)))
@@ -12801,7 +12803,7 @@ Version 2020-10-17"
                     (find-file $fpath)
                     (goto-char 1)
                     (search-forward $fractPart ))
-                (when (y-or-n-p (format "file no exist: 「%s」. Create?" $fpath))
+                (when (y-or-n-p (format "File no exist: 「%s」.  Create?" $fpath))
                   (find-file $fpath))))
           (if (string-match "^\\`\\(.+?\\):\\([0-9]+\\)\\(:[0-9]+\\)?\\'" $path)
               (let (
@@ -12812,7 +12814,7 @@ Version 2020-10-17"
                       (find-file $fpath)
                       (goto-char 1)
                       (forward-line (1- $line-num)))
-                  (when (y-or-n-p (format "file no exist: 「%s」. Create?" $fpath))
+                  (when (y-or-n-p (format "File no exist: 「%s」.  Create?" $fpath))
                     (find-file $fpath))))
             (if (file-exists-p $path)
                 (progn ; open f.ts instead of f.js
@@ -12824,7 +12826,7 @@ Version 2020-10-17"
                       (find-file $path))))
               (if (file-exists-p (concat $path ".el"))
                   (find-file (concat $path ".el"))
-                (when (y-or-n-p (format "file no exist: 「%s」. Create?" $path))
+                (when (y-or-n-p (format "File no exist: 「%s」.  Create?" $path))
                   (find-file $path ))))))))))
 
 (define-key evil-normal-state-map (kbd "gf") 'xah-open-file-at-cursor)
@@ -13556,7 +13558,7 @@ already exists otherwise WHERE is interpreted as a file name."
        (and on-fail (funcall on-fail 'abnormal-exit))))))
 
 (cl-defun im-archive-url--reddit (link &key where)
-  "Archive Reddit comment page LINK to WHERE in org-mode.
+  "Archive Reddit comment page LINK to WHERE in `org-mode'.
 See `im-archive-url' for WHERE's definition."
   (setq link (substring link (length "https://www.reddit.com/") nil))
   (promise-chain (reddigg--promise-comments link)
@@ -13666,8 +13668,7 @@ See `im-archive-url' for WHERE's definition."
 ;; calendar from Emacs.
 
 (defun im-calendar-now ()
-  "Show the current calendar item details in a buffer and open the
-  zoom link if it has one."
+  "Show the current calendar item details in a buffer and open the zoom link if it has one."
   (interactive)
   (im-shell-command
    :command "icalBuddy -f -ea eventsNow"
@@ -13686,8 +13687,8 @@ See `im-archive-url' for WHERE's definition."
 
 (defun im-calendar-today ()
   "Show today's calendar in a buffer.
-The resulting buffer has outline-mode enabled, so you can use
-outline-mode specific bindings to jump, hide/show stuff."
+The resulting buffer has `outline-mode' enabled, so you can use
+`outline-mode' specific bindings to jump, hide/show stuff."
   (interactive)
   (im-shell-command
    :command "icalBuddy -f eventsToday"
@@ -13743,7 +13744,9 @@ outline-mode specific bindings to jump, hide/show stuff."
 ;;;;; im-gnuplot
 
 (cl-defmacro im-gnuplot (settings &rest forms)
-  "A horrible hack for using `gnuplot' in emacs-lisp. Example usage:
+  "A horrible hack for using `gnuplot' in emacs-lisp.
+
+Example usage:
 
     (im-gnuplot
         (:persist t)
@@ -13753,16 +13756,14 @@ outline-mode specific bindings to jump, hide/show stuff."
       (plot cos(x)/x)
       (plot sin(x) title \"Sin\", tan(x) title \"Tangent\"))
 
-First argument is a plist which consists gnuplot configs or
-variable definitions.  Configs are`:persist', `:default',
-`:slow'. See `man gnuplot' for more information on these
-settings. They can be either `t' or `nil'. Default is `nil' for
-each one.
+First argument is a plist which consists gnuplot configs or variable
+definitions.  Configs are`:persist', `:default', `:slow'.  See `man
+gnuplot' for more information on these settings.  They can be either t
+or nil.  Default is nil for each one.
 
-Variable definitions are like the `let' form, simply define
-variables and use them in the gnuplot code below. Variable
-namings should follow `:this-style:' and the values can be
-arbitrary elisp.
+Variable definitions are like the `let' form, simply define variables
+and use them in the gnuplot code below.  Variable namings should follow
+`:this-style:' and the values can be arbitrary elisp.
 
     (im-gnuplot
         (:data: (make-temp-file \"im-gnuplot\" nil \".dat\" \"a 1\nb 2\nc 3\")
@@ -13811,9 +13812,9 @@ arbitrary elisp.
 
 (defun im-image-edit-tags (tags image &optional clear-all)
   "Add TAGS to IMAGE.
-If CLEAR-ALL is non-nil, clear all tags before setting TAGS as
-image tags. Otherwise TAGS are appended.  If cursor is on an org
-link, use that as the IMAGE (when called interactively)."
+If CLEAR-ALL is non-nil, clear all tags before setting TAGS as image
+tags.  Otherwise TAGS are appended.  If cursor is on an org link, use
+that as the IMAGE (when called interactively)."
   (interactive
    (let* ((org-link? (org-in-regexp org-link-any-re 1))
           (file
@@ -14247,7 +14248,7 @@ finds the best way to extract and does not overwrite anything."
          (message (s-join "\n" (-map #'car extracted)))))
      :on-fail
      (lambda (&rest _)
-       (error ">> Extraction failed! See *im-extract* buffer."))
+       (error ">> Extraction failed! See *im-extract* buffer"))
      :buffer-name "*im-extract*")))
 
 ;;;;; Etymology lookup inside Emacs
