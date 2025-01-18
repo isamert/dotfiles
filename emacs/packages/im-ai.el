@@ -295,7 +295,7 @@ predefined prompts."
     (deactivate-mark))
   (when empty
     (setq prompt (im-region-or "")))
-  (when-let ((region (im-region-or nil)))
+  (when-let* ((region (im-region-or nil)))
     (cond
      ((s-matches? "#{\\(code\\|region\\)" prompt)
       (setq prompt (s-replace "#{region}" region prompt))

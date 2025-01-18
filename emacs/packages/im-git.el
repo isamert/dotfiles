@@ -400,7 +400,7 @@ configuration, pass it as WINDOW-CONF."
   (let ((curr (1+ (or im-git-commit--current-message-ref -1))))
     (when (>= curr (ring-length im-git-commit-message-history))
       (user-error "End of history"))
-    (when-let ((old (im-git-commit--reset-message (plist-get (ring-ref im-git-commit-message-history curr) :msg))))
+    (when-let* ((old (im-git-commit--reset-message (plist-get (ring-ref im-git-commit-message-history curr) :msg))))
       (when (= curr 0)
         (setq im-git-commit--template old)))
     (setq im-git-commit--current-message-ref curr)))
@@ -680,7 +680,7 @@ CALLBACK will be called with the selected commit ref."
 ;;;###autoload
 (defun im-git-list-stash ()
   (interactive)
-  (when-let ((buffer (get-buffer im-git--stash-list-buffer-name)))
+  (when-let* ((buffer (get-buffer im-git--stash-list-buffer-name)))
     (kill-buffer buffer))
   (let ((buffer-name im-git--stash-list-buffer-name))
     (im-shell-command

@@ -2485,8 +2485,8 @@ that is provided by ob-http."
          (push (nth (1+ it-index) tokens) query-params))
         ((pred (lambda (x) (s-prefix? "http" x)))
          (setq url it))))
-    (when-let ((query-params)
-               (qs (url-build-query-string (--map (s-split-up-to "=" it 2) query-params))))
+    (when-let* ((query-params)
+                (qs (url-build-query-string (--map (s-split-up-to "=" it 2) query-params))))
       (if (s-contains? "?" url)
           (setq url (concat url "&" qs))
         (setq url (concat url "?" qs))))
@@ -3306,7 +3306,7 @@ Version: 2023-06-28
     (let ((line (substring-no-properties (thing-at-point 'line)))
           (timestamp nil)
           (text nil))
-      (when-let (match (s-match "^- \\(\\[[ X-]] \\)?\\(\\[.*?]\\) \\(.*\\)" line))
+      (when-let* ((match (s-match "^- \\(\\[[ X-]] \\)?\\(\\[.*?]\\) \\(.*\\)" line)))
         (setq timestamp (nth 2 match))
         (setq text (nth 3 match))
         (let* ((buffer (current-buffer))
@@ -3399,7 +3399,7 @@ If not, prompt user to clock in."
         (save-restriction
           (org-clock-goto)
           (org-narrow-to-subtree)
-          (let* ((effort (when-let (e (org-entry-get nil "EFFORT"))
+          (let* ((effort (when-let* ((e (org-entry-get nil "EFFORT")))
                            (im-svgcal--time-diff "0:00" e)))
                  (allocated-time
                   (-sum (-map (-lambda ((range start end)) (im-svgcal--time-diff start end)) (im-svgcal--org-entry-timestamps)))))
@@ -3450,7 +3450,7 @@ breaks and joining the lines together. This function relies on
                               (format " [#%s]" priority)
                             "")
                           (s-trim (read-string "Header: ")))
-                  (when-let ((date (im-bullet-current-date)))
+                  (when-let* ((date (im-bullet-current-date)))
                     (format "\nSCHEDULED: <%s>" date))
                   (format
                    "\n:PROPERTIES:\n:CREATED_AT: [%s]\n:END:"
@@ -3561,7 +3561,7 @@ Functions are called separately for each changed entry/header.")
              :properties (org-entry-properties)
              :header header
              :body
-             (when-let (start (org-element-property :contents-begin elem))
+             (when-let* ((start (org-element-property :contents-begin elem)))
                (buffer-substring-no-properties
                 start
                 (org-element-property :contents-end elem))))
@@ -3642,7 +3642,7 @@ open.")
   "Detect and open the thing at point."
   (interactive)
   (--any
-   (when-let (result (funcall (car it)))
+   (when-let* ((result (funcall (car it))))
      (funcall (cdr it) result))
    im-open-thing-at-point-alist))
 
@@ -3903,8 +3903,8 @@ that is read verbatim (meaning that no '$*' is appended):
    (-filter
     #'identity
     (--map
-     (-when-let ((_ eshell? name _2 imp)
-                 (s-match "^\\(alias\\|#eshell\\|abbr -a --\\) \\([a-zA-Z0-9_-]+\\)\\(=\\| \\)'\\(.*\\)'\\( *#.*\\)*$" it))
+     (-when-let* ((_ eshell? name _2 imp)
+                  (s-match "^\\(alias\\|#eshell\\|abbr -a --\\) \\([a-zA-Z0-9_-]+\\)\\(=\\| \\)'\\(.*\\)'\\( *#.*\\)*$" it))
        (list name (if (s-prefix? "#eshell" eshell?)
                       imp
                     (concat imp " $*"))))
@@ -4343,7 +4343,7 @@ First one is the latest one."
   (thread-last
     (buffer-list)
     (--filter (string-prefix-p "*notif" (buffer-name it)))
-    (--map (with-current-buffer it (when-let (x im-notify-posframe--notification-data) (map-insert x :buffer-name (buffer-name)))))
+    (--map (with-current-buffer it (when-let* ((x im-notify-posframe--notification-data)) (map-insert x :buffer-name (buffer-name)))))
     (--filter it)
     (--sort (> (plist-get it :time) (plist-get other :time)))))
 
@@ -5676,7 +5676,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
   (interactive)
   (ignore-errors
     (expand-file-name (project-root (project-current)))))
-;; (when-let (path (locate-dominating-file default-directory ".git"))
+;; (when-let* ((path (locate-dominating-file default-directory ".git")))
 ;;   (expand-file-name path)))
 
 (defvar im-project-name-transformers '()
@@ -9476,7 +9476,7 @@ This is used in my snippets."
   "Get smallest meaningful expression (as something that can be sent to REPL)."
   (let* ((current-node (treesit-node-at (point)))
          (getter (lambda (it)
-                   (when-let (node (im-treesit-find-parent-with-type current-node (car it)))
+                   (when-let* ((node (im-treesit-find-parent-with-type current-node (car it))))
                      (if (numberp (cdr it))
                          (treesit-node-child node (cdr it))
                        node)))))
@@ -11361,7 +11361,7 @@ If PROJECTS is nil, then `im-jira-projects' is used."
 
 (defun im-jira-view-ticket (key)
   (interactive "sIssue key: ")
-  (when-let (match (s-match "browse/\\([a-zA-Z0-9-]+\\)/?" key))
+  (when-let* ((match (s-match "browse/\\([a-zA-Z0-9-]+\\)/?" key)))
     (setq key (nth 1 match)))
   (let ((ticket (jiralib2-get-issue key)))
     (let-alist ticket
@@ -11481,7 +11481,7 @@ story points they have released. See the following figure:
                         .fields.creator.name
                         (alist-get im-jira-story-points-field-name .fields)
                         .fields.status.name
-                        (when-let ((match (s-match "name=\\([^,]+\\)," (or (car .fields.customfield_10004) ""))))
+                        (when-let* ((match (s-match "name=\\([^,]+\\)," (or (car .fields.customfield_10004) ""))))
                           (nth 1 match))
                         (s-truncate 120 (format "%s - %s" .key .fields.summary)))))
        (s-join "\n")
@@ -11811,13 +11811,13 @@ When CMD finishes, FN is called with the process output."
        ;;,(format "REV:%s\n" (format-time-string "%Y-%m-%dT%T"))
        ;; TODO: add notes
        ;; Be careful while exporting and sending contact to other people
-       ,(when-let (image-base64
-                   (-some->>
-                       (org-agenda-get-some-entry-text (point-marker) most-positive-fixnum)
-                     (substring-no-properties)
-                     (s-match "^\\[\\[file:\\(.+\\(\\.jpg\\|jpeg\\|png\\)\\)]]")
-                     (nth 1)
-                     (im-encode-image-base64)))
+       ,(when-let* ((image-base64
+                     (-some->>
+                         (org-agenda-get-some-entry-text (point-marker) most-positive-fixnum)
+                       (substring-no-properties)
+                       (s-match "^\\[\\[file:\\(.+\\(\\.jpg\\|jpeg\\|png\\)\\)]]")
+                       (nth 1)
+                       (im-encode-image-base64))))
           (format "PHOTO:%s\n" image-base64))
        "TITLE:\nEND:VCARD")
      "")))
@@ -11851,7 +11851,7 @@ This is done by adding this function to
       (save-restriction
         (widen)
         (goto-char (plist-get info :begin))
-        (when-let (contact (im-contacts-build-vcard-for-heading))
+        (when-let* ((contact (im-contacts-build-vcard-for-heading)))
           ;; Save buffer in case of
           ;; `im-contacts-build-vcard-for-heading' adds an ID to the
           ;; heading
@@ -12002,7 +12002,7 @@ DATE can be 'now', 'yesterday', 'two days ago' etc."
 (defun im-bullet-create-a-day (date)
   "Create given DATE heading in bullet.org in the appropriate place..
 DATE should be in the form of YYYY-MM-DD."
-  (when-let ((point (im-bullet-find-a-day date)))
+  (when-let* ((point (im-bullet-find-a-day date)))
     (goto-char point)
     (user-error "The day already exists"))
   (widen)
@@ -12037,7 +12037,7 @@ DATE should be in the form of YYYY-MM-DD."
   "Focus to given DAY."
   (im-bullet-org-ensure)
   (widen)
-  (when-let ((day-entry (im-bullet-find-a-day day)))
+  (when-let* ((day-entry (im-bullet-find-a-day day)))
     (goto-char day-entry)
     (beginning-of-line)
     (org-narrow-to-subtree)
@@ -13091,7 +13091,7 @@ If there are multiple accounts registered for one entry, then
 list them as seperate entries."
   (let ((urlobj (url-generic-parse-url url)))
     (setq url (url-host urlobj))
-    (when-let ((port (url-port-if-non-default urlobj)))
+    (when-let* ((port (url-port-if-non-default urlobj)))
       (setq url (format "%s:%s" url port))))
   (let* ((candidates (--filter
                       (when (or (ignore-errors (s-match (plist-get it :match) url))
@@ -13598,7 +13598,7 @@ See `im-archive-url' for WHERE's definition."
      ((which-function) (narrow-to-defun))
      (t (outli-toggle-narrow-to-subtree))))
    ((s-contains? "-ts-" (symbol-name major-mode))
-    (when-let (def (treesit-defun-at-point))
+    (when-let* ((def (treesit-defun-at-point)))
       (narrow-to-region (treesit-node-start def)
                         (treesit-node-end def))))
    (outli-mode (outli-toggle-narrow-to-subtree))))
@@ -13675,7 +13675,7 @@ See `im-archive-url' for WHERE's definition."
    :buffer-name "*calendar-now*"
    :on-start (lambda (&rest _) (erase-buffer))
    :on-finish (lambda (it)
-                (when-let ((zoom (nth 1 (s-match "\\(https://.*zoom.us/j/.*\\)\\(\b\\|\n\\)" it))))
+                (when-let* ((zoom (nth 1 (s-match "\\(https://.*zoom.us/j/.*\\)\\(\b\\|\n\\)" it))))
                   (im-open-zoom-meeting-dwim zoom)))))
 
 (define-derived-mode im-calendar-mode outline-mode "Calendar"
@@ -13899,7 +13899,7 @@ attribute for current buffers file or selected file."
                 minibuffer-completion-table
                 minibuffer-completion-predicate
                 (max 0 (- (point) (minibuffer-prompt-end))))))
-    (when-let (last (last items))
+    (when-let* ((last (last items)))
       (setcdr last nil))
     (with-current-buffer buffer
       (erase-buffer)
@@ -14708,8 +14708,8 @@ existing buffer and opens the link in tuir."
              (format "Select audio output (%s): " current))
    :do (progn
          (shell-command-to-string (format "SwitchAudioSource -t output -s '%s'" it))
-         (when-let (out (-find (lambda (out) (equal it out))
-                               (s-split "\n" (shell-command-to-string "SwitchAudioSource -t input -a"))))
+         (when-let* ((out (-find (lambda (out) (equal it out))
+                                 (s-split "\n" (shell-command-to-string "SwitchAudioSource -t input -a")))))
            (when (y-or-n-p (format "Found an output with the same name (%s), switch to it?" out))
              (shell-command-to-string (format "SwitchAudioSource -t input -s '%s'" out)))))))
 
