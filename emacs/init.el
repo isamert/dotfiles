@@ -3814,12 +3814,15 @@ it's a list, the first element will be used as the binary name."
                      ("integration" "integration/*")
                      (:exclude ".dir-locals.el" "*-tests.el")))
   :autoload (eat-make)
-  :hook (eat-mode . im-disable-hl-line-mode-for-buffer)
   :config
   (setq eat-enable-shell-prompt-annotation nil)
   (setq eat-shell (executable-find "fish"))
   (setq eat-tramp-shells '(("docker" . "/bin/sh")
                            ("ssh" . "/usr/bin/zsh")))
+  (add-hook 'eat-mode-hook #'im-disable-hl-line-mode-for-buffer)
+  ;; While writing, eat buffers sometimes jump around for some unknown
+  ;; reason. I realized that truncating lines helps with that.
+  (add-hook 'eat-mode-hook #'toggle-truncate-lines)
   (eat-eshell-mode))
 
 ;;;;;; Send a notification for long running commands
