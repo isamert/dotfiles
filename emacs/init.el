@@ -3902,8 +3902,8 @@ that is read verbatim (meaning that no '$*' is appended):
    (-filter
     #'identity
     (--map
-     (-when-let* ((_ eshell? name _2 imp)
-                  (s-match "^\\(alias\\|#eshell\\|abbr -a --\\) \\([a-zA-Z0-9_-]+\\)\\(=\\| \\)'\\(.*\\)'\\( *#.*\\)*$" it))
+     (-when-let ((_ eshell? name _2 imp)
+                 (s-match "^\\(alias\\|#eshell\\|abbr -a --\\) \\([a-zA-Z0-9_-]+\\)\\(=\\| \\)'\\(.*\\)'\\( *#.*\\)*$" it))
        (list name (if (s-prefix? "#eshell" eshell?)
                       imp
                     (concat imp " $*"))))
