@@ -10594,7 +10594,10 @@ SELECT * FROM _ LIMIT 1;
   :defer t)
 
 (use-package jupyter
-  :straight (:host github :repo "emacs-jupyter/jupyter"))
+  :straight (:host github :repo "isamert/jupyter")
+  :custom
+  (jupyter-org-want-keybinding . nil)
+  (jupyter-org-want-integration . nil))
 
 (with-eval-after-load 'jupyter-org-client
   (setq org-babel-default-header-args:jupyter-python
