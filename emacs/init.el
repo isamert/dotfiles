@@ -5173,7 +5173,8 @@ empty string."
 ;; way I get a better view.
 
 (defvar im-eww-page-fixers
-  '(("^https://\\(www.\\)?startpage.com/sp/search" . im-eww--fix-startpage)))
+  '(("^https://\\(www.\\)?startpage.com/sp/search" . im-eww--fix-startpage)
+    ("^https://\\(www.\\)?ecosia.org/search" . im-eww--fix-ecosia)))
 
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook #'im-eww-after-render))
@@ -5183,7 +5184,10 @@ empty string."
     (let ((fn (cdr it)))
       (let ((inhibit-read-only t))
         (goto-char (point-min))
-        (funcall fn))
+        (condition-case err
+            (funcall fn)
+          (error
+           (message "im-eww-after-render :: Error while `%s': %s" fn err))))
       (goto-char (point-min)))))
 
 (defun im-eww--fix-startpage ()
@@ -5198,6 +5202,13 @@ empty string."
   (re-search-forward "^Startpage isn’t")
   (forward-line -1)
   (delete-region (point) (point-max))
+  (page-break-lines-mode))
+
+(defun im-eww--fix-ecosia ()
+  (when (re-search-forward "^Search" nil t)
+    (delete-region (point-min) (line-end-position)))
+  (while (re-search-forward "^Submit" nil t)
+    (delete-region (line-beginning-position) (line-end-position)))
   (page-break-lines-mode))
 
 ;;;;;; Language detection and code highlighting in eww buffers
