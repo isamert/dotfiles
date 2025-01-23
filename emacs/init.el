@@ -4073,12 +4073,17 @@ that is read verbatim (meaning that no '$*' is appended):
 ;; using ~consult-bookmark~ and calling ~embark-act~ on them to
 ;; view/delete/edit given bookmark might be easier.
 
-(setq bookmark-save-flag 1)
-;; ^ Save bookmarks automatically
-
-(im-leader
-  "bs" #'bookmark-set
-  "bm" #'consult-bookmark)
+(use-package bookmars
+  :straight (:type built-in)
+  :general
+  (im-leader
+    "bs" #'bookmark-set
+    "bm" #'consult-bookmark)
+  :custom
+  ;; Save bookmarks automatically
+  (bookmark-save-flag . 1)
+  :config
+  (evil-collection-bookmark-setup))
 
 ;;;;; process-menu-mode
 
@@ -5949,7 +5954,9 @@ non-nil so that you only add it to `project-prefix-map'."
 (im-leader "2" #'im-term)
 (bind-key "M-`" (λ-interactive (im-shell-for 'project 'bottom #'im--new-eat)))
 (bind-key "<f2>" (λ-interactive (im-shell-for "~" 'top #'im--new-eat)))
+(bind-key "S-<f2>" (λ-interactive (im-shell-for "~" 'top nil "eshell")))
 (bind-key "<f3>" (λ-interactive (im-shell-for 'dir 'bottom #'im--new-eat)))
+(bind-key "S-<f3>" (λ-interactive (im-shell-for 'dir 'bottom nil "eshell")))
 
 ;;;;; consult
 
