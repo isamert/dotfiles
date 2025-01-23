@@ -39,6 +39,7 @@
 
 (require 's)
 (require 'org-ai)
+(require 'gptel)
 
 ;;;; Customization
 
@@ -57,11 +58,23 @@
   :group 'im-ai)
 
 (defcustom im-ai-snippet-sys-prompt
-  "You are a code snippet assistant focused on providing directly usable code examples that prioritize built-in solutions and standard library functions over ad-hoc implementations. When responding, ensure that the snippets are concise, well-formatted, and easy to modify. Avoid introducing unnecessary functions and provide only the code relevant to the user's request.
+  "For given programming language and 'query', you generate a snippet/code. The request format is as follows:
 
-Your goal is to deliver clear and efficient solutions that users can immediately integrate into their projects, with minimal additional context. Stay focused on the user's specific query and output only the essential code needed for implementation.
+```
+Language: <programming language>
+Query: <the user query>
+Context: <optional context, if any>
+```
 
-Respond ONLY with the code snippet. Present the code in plain text; avoid markdown or any extra formatting. Do not unnecessarily wrap snippets into functions or introduce unnecessary variables."
+You should answer in the following format:
+
+
+```
+<your short reasoning for the solution as comment>
+<your solution>
+```
+
+Your solution should be succinct and to the point without any explanations."
   "System prompt used in `im-ai-snippet'."
   :type 'string
   :group 'im-ai)
@@ -138,6 +151,25 @@ Each element is a property list with the following keys:
   :type 'file
   :group 'im-ai)
 
+;; From gptel-rewrite-highlight-face
+(defface im-ai-before-face
+  '((((class color) (min-colors 88) (background dark))
+     :background "#800000" :extend t)
+    (((class color) (min-colors 88) (background light))
+     :background "light goldenrod yellow" :extend t)
+    (t :inherit secondary-selection))
+  "Face for highlighting regions with pending rewrites."
+  :group 'im-ai)
+
+(defface im-ai-after-face
+  '((((class color) (min-colors 88) (background dark))
+     :background "#063D3A" :extend t)
+    (((class color) (min-colors 88) (background light))
+     :background "light goldenrod yellow" :extend t)
+    (t :inherit secondary-selection))
+  "Face for highlighting regions with pending rewrites."
+  :group 'im-ai)
+
 ;;;; Variables
 
 (defconst im-ai--buffer "*im-ai*")
@@ -194,54 +226,96 @@ OUTPUT-BUFFER."
 
 ;;;; im-ai-snippet*
 
+(defvar im-ai--last-processed-point nil)
+(add-hook 'gptel-post-stream-hook #'im-ai--cleanup-stream)
+(add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
+
 (defun im-ai-snippet (prompt)
   "Ask for a snippet with PROMPT and get it directly inside your buffer."
   (interactive "sQuestion: ")
-  (org-ai-interrupt-current-request)
-  (let* ((region (when (use-region-p)
-                   (prog1
-                       (buffer-substring-no-properties (region-beginning) (region-end))
-                     (delete-region (region-beginning) (region-end)))))
-         (org-ai-default-chat-model im-ai-powerful-model))
-    (org-ai-prompt
-     (s-trim
-      (format
-       "Language: %s
-Snippet for: %s
+  (let ((region (when (use-region-p)
+                  (prog1
+                      (buffer-substring-no-properties (region-beginning) (region-end))
+                    (setq
+                     im-ai--before-overlay
+                     (im-ai--draw-snippet-overlay (region-beginning) (region-end) 'im-ai-before-face))
+                    (goto-char (region-end))
+                    (deactivate-mark)
+                    (insert "\n")
+                    (backward-char))))
+        (gptel-model im-ai-powerful-model))
+    (setq im-ai--last-processed-point (point))
+    (gptel-request
+        (s-trim
+         (format
+          "Language: %s
+Query: %s
 %s"
-       (im-ai--get-current-language)
-       prompt
-       (if region (concat "Relevant context: \n" region) "")))
-     :output-buffer (current-buffer)
-     :sys-prompt im-ai-snippet-sys-prompt
-     :follow nil
-     :callback (lambda () (message ">> AI request finished.")))))
+          (im-ai--get-current-language)
+          prompt
+          (if region (concat "Context: \n" region) "")))
+      :system im-ai-snippet-sys-prompt
+      :stream t)))
 
-(defun im-ai-snippet-superior (input)
-  "Like `im-ai-snippet' but superior and slower.
+(cl-defun im-ai--cleanup-stream ()
+  (when gptel-mode
+    (cl-return-from im-ai--cleanup-stream))
+  (save-excursion
+    (when (> (- (line-number-at-pos (point)) (line-number-at-pos im-ai--last-processed-point)) 2)
+      (let ((contents
+             (replace-regexp-in-string
+              "\n*``.*\n*" "" (buffer-substring-no-properties im-ai--last-processed-point (point)))))
+        (delete-region im-ai--last-processed-point (point))
+        (goto-char im-ai--last-processed-point)
+        (insert contents)
+        ;; (indent-region im-ai--last-processed-point (point))
+        (setq im-ai--last-processed-point (point))))))
 
-Requesting from AI to conform a specific output type reduces it's answer
-quality.  This one, compared to `im-ai-snippet' it simply asks the
-question without any formatting restrictions and then formats the given
-answer with another ai call, but this time with a cheaper model to just
-format the result.
+(cl-defun im-ai--cleanup-after (beg end)
+  (when gptel-mode
+    (cl-return-from im-ai--cleanup-after))
+  (when (and beg end)
+    (save-excursion
+      (let ((contents
+             (replace-regexp-in-string
+              "\n*``.*\n*" ""
+              (buffer-substring-no-properties beg end))))
+        (delete-region beg end)
+        (goto-char beg)
+        (insert contents))
+      ;; Indent the code to match the buffer indentation if it's messed up.
+      (indent-region beg end)
+      (pulse-momentary-highlight-region beg (point))
+      (setq im-ai--after-overlay
+            (im-ai--draw-snippet-overlay beg (1+ (line-end-position)) 'im-ai-after-face)))))
 
-I use this when `im-ai-snippet' fails to give me a meaningful answer."
-  (interactive "sQuestion: ")
-  (let ((prompt (format
-                 "%s in %s"
-                 input
-                 (im-ai--get-current-language))))
-    (im-ai-prompt
-     prompt
-     :sys-prompt im-ai-snippet-superior-sys-prompt
-     :model im-ai-powerful-model
-     :callback
-     (lambda (answer)
-       (im-ai-prompt
-        (format im-ai-snippet-superior-formatter-prompt prompt answer)
-        :model im-ai-default-model
-        :output-buffer (current-buffer))))))
+(defun im-ai--accept ()
+  (interactive)
+  (ignore-errors
+    (delete-region
+     (overlay-start im-ai--before-overlay)
+     (overlay-end im-ai--before-overlay)))
+  (remove-overlays (point-min) (point-max) 'im-ai t))
+
+(defun im-ai--reject ()
+  (interactive)
+  (delete-region
+   (overlay-start im-ai--after-overlay)
+   (overlay-end im-ai--after-overlay))
+  (remove-overlays (point-min) (point-max) 'im-ai t))
+
+(defvar-keymap im-ai-snippet-rewrite-map
+  :doc "Keymap for ai rewrite actions at point."
+  "C-c C-c" #'im-ai--accept
+  "C-c C-k" #'im-ai--reject)
+
+(defun im-ai--draw-snippet-overlay (beg end face)
+  (let ((ov (make-overlay beg end)))
+    (overlay-put ov 'face face)
+    (overlay-put ov 'keymap im-ai-snippet-rewrite-map)
+    (overlay-put ov 'im-ai t)
+    (overlay-put ov 'help-echo (format "accept: \\[im-ai--accept], reject: \\[im-ai--reject]"))
+    ov))
 
 ;;;; im-ai
 
