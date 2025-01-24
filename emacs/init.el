@@ -14983,6 +14983,10 @@ end tell"))
   ;; aerospace as my WM and it does not work with non-native
   ;; fullscreen and I don't use it all.
 
+  ;; ANOTHER UPDATE: I realized that for ESC to work properly, I need
+  ;; to click-focus the Emacs frame. Otherwise ESC closes the
+  ;; fullscreen mode.
+
   ;; (setq ns-use-native-fullscreen nil)
 
   ;; But non-native fullscreen does not play well with posframes for
