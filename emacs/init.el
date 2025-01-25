@@ -694,7 +694,7 @@ Also see `im-clipboard-contains-image-p' to check if there is one."
    alist nil nil #'equal))
 
 (cl-defun im-completing-read
-    (prompt objects &key (formatter #'identity) category (sort? t) def multiple?)
+    (prompt objects &key (formatter #'identity) category (sort? t) def multiple? initial require-match?)
   "Provide a completion interface for selecting an item from a list of objects.
 
 - PROMPT: The prompt string to display to the user.
@@ -738,11 +738,11 @@ DEF value is returned."
                        '((display-sort-function . identity)
                          (cycle-sort-function . identity))))
                (complete-with-action
-                action object-strings string predicate))))))
+                action object-strings string predicate)))
+           nil require-match? initial)))
     (if multiple?
         (or (mapcar (lambda (it) (gethash it object-table)) selected) def)
       (gethash selected object-table (or def selected)))))
-
 
 (defun im-dmenu (prompt items &rest _ignored)
   "Like `completing-read' but instead use dmenu.
@@ -771,6 +771,9 @@ Useful for system-wide scripts."
 (cl-defmacro im-output-select
     (&key cmd prompt keep-order
           (formatter 'it)
+          initial
+          (append '())
+          (prepend '())
           (split "\n")
           (drop 0)
           (filter t)
@@ -783,19 +786,24 @@ command."
   `((lambda (it) ,do)
     (im-completing-read
      ,prompt
-     (seq-filter
-      (lambda (it) ,filter)
-      (seq-map-indexed
-       (lambda (it idx) ,map)
-       (seq-drop
-        (s-split
-         ,split
-         (shell-command-to-string ,cmd)
-         t)
-        ,drop)))
+     (append
+      ,prepend
+      (seq-filter
+       (lambda (it) ,filter)
+       (seq-map-indexed
+        (lambda (it idx) ,map)
+        (seq-drop
+         (s-split
+          ,split
+          (shell-command-to-string ,cmd)
+          t)
+         ,drop)))
+      ,append)
      :formatter (lambda (it) ,formatter)
      :sort? ,(not keep-order)
-     :category ,category)))
+     :initial ,initial
+     :category ,category
+     :require-match? t)))
 
 (defun im-read-string (prompt &rest rest)
   "Like `read-string' but returns nil on empty input."
@@ -8394,7 +8402,6 @@ mails."
 
 (use-package im-git
   :straight nil
-  :commands (im-git-show-stash-diff)
   :general
   (im-leader
     "gs" #'im-git-status
