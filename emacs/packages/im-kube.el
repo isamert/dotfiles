@@ -39,7 +39,6 @@
 ;; --all-namespaces) in a nicely formatted vtable.  Context and
 ;; namespace can be changed with in-buffer configurations.
 
-
 ;;; Code:
 
 (require 's)
@@ -48,8 +47,11 @@
 (require 'page-break-lines)
 (require 'vterm)
 
+(require 'im)
+
 ;;;; Customization
 
+;; ...
 
 ;;;; Variables
 
@@ -85,7 +87,7 @@
     im-kill)))
 
 (defun im-kube-context-overview (&optional context namespace)
-  "Same thing as `im-kube-select-pod' but in friendlier vtable form."
+  "List all pods of CONTEXT and NAMESPACE in a nicely formatted buffer."
   (interactive (progn
        (when current-prefix-arg
          (im-kube-use-context))
@@ -157,7 +159,7 @@
                                       :age (nth (+ offset 5) data)
                                       :context context)))))
        :actions `("RET" im-kube-pod--act
-                  "L" im-kube-pod--logs
+                  ;; "L" im-kube-pod--logs
                   "F" im-kube-pod--logs-follow
                   "x" im-kube-pod--remove
                   "i" im-kube-pod--info)
@@ -183,8 +185,8 @@
                :description im-kube--current-context
                :link
                (format "kubeoverview:context=%s;namespace=%s"
-                       im-kube--current-context
-                       im-kube--current-namespace))))))
+  im-kube--current-context
+  im-kube--current-namespace))))))
 
 ;;;;; Pod actions
 

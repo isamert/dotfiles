@@ -5,7 +5,7 @@
 ;; Author: Isa Mert Gurbuz <isamertgurbuz@gmail.com>
 ;; URL: https://github.com/isamert/dotfiles
 ;; Version: 0.0.1
-;; Package-Requires: ((emacs "25.2"))
+;; Package-Requires: ((emacs "29.2") (async-await "1.1"))
 ;; Keywords: async
 
 ;; This file is not part of GNU Emacs.
