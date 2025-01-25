@@ -891,24 +891,6 @@ I use this only for debugging."
    ((listp val) (mapcar (lambda (key it) (cons key (im-hash-table-to-alist it))) val))
    (t val)))
 
-;;;;;; Quick table
-
-(cl-defun im-output-to-tabulated-list (str &key buffer (sep " "))
-  (with-current-buffer buffer
-    (let* ((lines (s-split "\n" str t))
-           (header-items (s-split sep (car lines) t))
-           (header (cl-coerce (--map (list it (/ 100 (length header-items)) nil) header-items) 'vector))
-           (rows (thread-last lines
-                    (-drop 1)
-                    (--map-indexed (list (number-to-string it-index) (cl-coerce (s-split sep it t) 'vector))))))
-      (tabulated-list-mode)
-      (setq tabulated-list-format header)
-      (setq tabulated-list-entries rows)
-      (setq tabulated-list-padding 4)
-      (tabulated-list-init-header)
-      (tabulated-list-print t))
-    (switch-to-buffer buffer)))
-
 ;;;;;; UI utilities
 
 (cl-defun im-insert-toggle-button (state1 state2 &key help on-toggle)
@@ -13497,24 +13479,6 @@ selecting a pod."
      (plist-get pod :name)
      (plist-get pod :namespace)
      (plist-get pod :context)))))
-
-;;;;; Kafka
-
-;; TODO rewrite this using kafkactl
-;; Also add functions like `im-kafka-switch-context' etc.
-(defun im-kafka-describe-consumer-group ()
-  (interactive)
-  ;; `im-select-kafka-consumers' is a private function that
-  ;; returns a kafka server list
-  (let ((servers (im-select-kafka-consumers)))
-    (im-output-select
-     :cmd (format "kafka-consumer-groups.sh --list --bootstrap-server %s" servers)
-     :prompt "Select a consumer group: "
-     :do (im-output-to-tabulated-list
-          (shell-command-to-string
-           (format "kafka-consumer-groups.sh --describe --group %s --bootstrap-server %s" it servers))
-          :buffer (get-buffer-create "*kafka-describe:%s*" it)))))
-
 ;;;;; Run functions globally
 
 ;; Simply use ~im-dmenu~ function instead of the default
