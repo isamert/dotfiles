@@ -533,8 +533,7 @@ command."
       (seq-filter
        (lambda (it) ,filter)
        (seq-map-indexed
-        (lambda (it idx) ,map)
-        (ignore idx)
+        (lambda (it idx) (ignore idx) ,map)
         (seq-drop
          (s-split
           ,split
@@ -656,6 +655,12 @@ called with the current state of the button."
          (funcall on-toggle state2))))
    'kbd-help help
    'follow-link t))
+
+(defun im-pulse-highlight-region (start end color duration)
+  "Highlight the region from START to END with COLOR for DURATION seconds."
+  (let ((overlay (make-overlay start end)))
+    (overlay-put overlay 'face `(:background ,color))
+    (run-at-time duration nil #'delete-overlay overlay)))
 
 ;;;; API call
 
