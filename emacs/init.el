@@ -8963,7 +8963,15 @@ work.  You need to enter full path while importing by yourself."
   :straight (:host github :repo "isamert/eros")
   :hook (after-init . eros-mode)
   :config
-  (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1))))
+  (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1)))
+  (define-advice eros-eval-defun (:after (&rest _) highlight-expr)
+    "Highlight expression."
+    (pcase-let ((`(,start . ,end) (bounds-of-thing-at-point 'defun)))
+      (im-pulse-highlight-region start end "sea green" 0.3)))
+  (define-advice eros-eval-last-sexp (:after (&rest _) highlight-expr)
+    "Highlight expression."
+    (pcase-let ((`(,start . ,end) (bounds-of-thing-at-point 'sexp)))
+      (im-pulse-highlight-region start end "sea green" 0.3))))
 
 ;;;;;; Pretty stuff
 
