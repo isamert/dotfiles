@@ -77,28 +77,29 @@
 ;;;###autoload
 (defun im-svgcal-run ()
   (interactive)
-  (when (buffer-narrowed-p)
-    (setq im-svgcal--last-entries
-          (->>
-           (org-map-entries
-            (lambda ()
-              (-map
-               (-lambda ((range start end))
-                 (list
-                  :title (org-entry-get nil "ITEM")
-                  :done? (equal (org-entry-get nil "TODO") "DONE")
-                  :range range
-                  :start start
-                  :end end))
-               (im-svgcal--org-entry-timestamps))))
-           (-flatten-n 1)
-           (--filter (plist-get it :end))))
-    (setq im-svgcal--last-entries
-          (append im-svgcal--last-entries (im-svgcal-diary-todays-entries)))
-    (im-svgcal-render-buffer)
-    (unless (im-buffer-visible-p im-svgcal--buffer-name)
-      (im-display-buffer-in-side-window (get-buffer im-svgcal--buffer-name) 35)
-      (set-window-dedicated-p (get-buffer-window im-svgcal--buffer-name) t))))
+  (unless (buffer-narrowed-p)
+    (user-error "Buffer needs to be narrowed for this to work"))
+  (setq im-svgcal--last-entries
+        (->>
+         (org-map-entries
+          (lambda ()
+            (-map
+             (-lambda ((range start end))
+               (list
+                :title (org-entry-get nil "ITEM")
+                :done? (equal (org-entry-get nil "TODO") "DONE")
+                :range range
+                :start start
+                :end end))
+             (im-svgcal--org-entry-timestamps))))
+         (-flatten-n 1)
+         (--filter (plist-get it :end))))
+  (setq im-svgcal--last-entries
+        (append im-svgcal--last-entries (im-svgcal-diary-todays-entries)))
+  (im-svgcal-render-buffer)
+  (unless (im-buffer-visible-p im-svgcal--buffer-name)
+    (im-display-buffer-in-side-window (get-buffer im-svgcal--buffer-name) 35)
+    (set-window-dedicated-p (get-buffer-window im-svgcal--buffer-name) t)))
 
 (defun im-svgcal-render-buffer ()
   (when im-svgcal--last-entries
