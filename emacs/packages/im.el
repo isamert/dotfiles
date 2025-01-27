@@ -485,10 +485,10 @@ DEF value is returned."
         (or (mapcar (lambda (it) (gethash it object-table)) selected) def)
       (gethash selected object-table (or def selected)))))
 
-(defun im-dmenu (_prompt items &rest _ignored)
+(defun im-dmenu (prompt items &rest _ignored)
   "Like `completing-read' but instead use dmenu.
 Useful for system-wide scripts.  ITEMS should be list of
-strings.  _PROMPT and rest are _IGNORED."
+strings.  PROMPT and rest are _IGNORED."
   (with-temp-buffer
     (thread-first
       (cond

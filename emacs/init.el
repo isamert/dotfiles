@@ -8147,9 +8147,9 @@ Useful if .elfeed directory is freshly syncned."
 
 (im-leader-v
   ";" (general-predicate-dispatch (im-eval-dwim #'eros-eval-last-sexp #'eval-region #'eros-eval-defun)
-        (eq major-mode 'java-ts-mode) #'im-jshell-repl-eval
-        (eq major-mode 'js-ts-mode) #'im-deno-repl-eval
-        (eq major-mode 'typescript-ts-mode) #'im-deno-repl-eval
+        (eq major-mode 'java-ts-mode) #'im-repl-eval
+        (eq major-mode 'js-ts-mode) #'im-repl-eval
+        (eq major-mode 'typescript-ts-mode) #'im-repl-eval
         (eq major-mode 'clojure-mode) (im-eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point)
         (eq major-mode 'lisp-mode) (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region)
         (eq major-mode 'racket-mode) (im-eval-dwim #'racket-eval-last-sexp #'racket-send-region #'racket-send-definition)
@@ -8160,16 +8160,6 @@ Useful if .elfeed directory is freshly syncned."
         (eq major-mode 'js-ts-mode) #'im-repl-inspect-last-result
         (eq major-mode 'typescript-ts-mode) #'im-repl-inspect-last-result
         (eq major-mode 'clojure-mode) #'cider-inspect-last-result))
-
-(defconst im-repl-result-buffer "*im-repl-result*")
-(defconst im-repl-last-result "")
-(defvar-local im-repl-send-command nil
-  "REPL send command associated with the buffer.
-This helps some functions to work independent of the REPL itself.")
-(defvar im-registered-repls '()
-  "All available REPLs.
-Through this, we can select interactively which REPL to use if
-it's ambiguous.")
 
 (defun im-eval-dwim (lastf regionf defunf)
   "Generate an interactive function that you can bind to a key.
@@ -8185,198 +8175,6 @@ works for Lispy languages."
       (call-interactively lastf))
      (t
       (call-interactively defunf)))))
-
-
-(defun im-repl-send (code)
-  "Send CODE to REPL.
-If no REPL session is associated with buffer, then let user
-select one interactively."
-  (funcall
-   (or im-repl-send-command
-       (intern (concat "im-" (downcase (completing-read "Select a REPL: " im-registered-repls)) "-repl-send")))
-   code))
-
-(defun im-repl-inspect-last-result ()
-  "Inspect last REPL result in a separate buffer."
-  (interactive)
-  (im-peek-remove)
-  (with-current-buffer (get-buffer-create im-repl-result-buffer)
-    (erase-buffer)
-    (insert im-repl-last-result)
-    (goto-char (point-min))
-    (unless (im-buffer-visible-p (current-buffer))
-      (switch-to-buffer-other-window (current-buffer)))))
-
-(defun im-repl-eval-buffer-top-level-forms ()
-  "Eval buffer but only some selected types of forms.
-Only tested with JS/TS."
-  (interactive)
-  (let ((top-level-forms '("import_statement"
-                           "type_alias_declaration"
-                           "function_declaration"
-                           ;; TODO: lexical_declaration → Run only
-                           ;; if function declarations or a
-                           ;; constant?
-                           "lexical_declaration"
-                           "export_statement"
-                           "interface_declaration"
-                           "class_declaration")))
-    (->>
-     (treesit-buffer-root-node)
-     (treesit-node-children)
-     (--filter (-contains? top-level-forms (treesit-node-type it)))
-     (--map (substring-no-properties (treesit-node-text it)))
-     (-map #'im-repl-send))))
-
-(cl-defmacro im-create-repl (&key name args prefix expr parser input-regexp process-region)
-  "Create family of functions for interacting with given REPL of NAME.
-
-NAME is the binary name of the REPL, like jshell, deno etc. (case-insensitive)
-
-ARGS is the arguments passed to NAME.
-
-PREFIX is the prefix used while showing the result in echo area.
-
-INPUT-REGEXP is used to detect the input line of the REPL.
-
-EXPR is the expression finder at point.  Should return a
-tree-sitter node.
-
-PARSER is result parser.  Process output is sent to this function
-and if the return value is non-nil, result is shown in the echo
-area.
-
-As a result, 3 functions are generated:
-
-- im-NAME-repl-start :: Creates the process and starts the repl.
-  Process is associated with *NAME-repl* buffer.
-
-- im-NAME-repl-send :: Sends given string to REPL.
-
-- im-NAME-repl-eval :: Entry function.  Just bind this to
-  something and it starts a REPL if needed when called and sends
-  the current expression (or the selected expression) to REPL.
-
-It was probably a bad idea to use a macro for writing this but I
-already had an implementation for \"deno\" and it was quite easy
-to turn it into something generic using macros."
-  (let* ((process-var (intern (format "im-%s-repl-process" (downcase name))))
-         (repl-buffer-name (format "*%s-repl*" (downcase name)))
-         (is-repl-running `(lambda ()
-                             (and ,process-var (process-live-p ,process-var))))
-         (repl-send-command (intern (format "im-%s-repl-send" (downcase name))))
-         (repl-eval-command (intern (format "im-%s-repl-eval" (downcase name))))
-         (repl-start-command (intern (format "im-%s-repl-start" (downcase name)))))
-    `(progn
-       (defvar ,process-var nil)
-       (add-to-list 'im-registered-repls ,name)
-
-       ;;; defun im-REPL-repl-start
-       (defun ,repl-start-command ()
-         ,(format "Start (or restart, if already running) the %s REPL on the background." name)
-         (interactive)
-         (when (,is-repl-running)
-           (delete-process ,process-var))
-         (setq-local im-repl-send-command #',repl-send-command)
-         (setq im-repl-last-result "")
-         ;; See this: https://emacs.stackexchange.com/questions/40603/process-input-seems-buggy-in-emacs-on-os-x
-         (let* ((process-connection-type nil)
-                (repl (start-process ,repl-buffer-name
-                                     ,repl-buffer-name
-                                     ,(downcase name)
-                                     ,@args)))
-           (setq ,process-var repl)
-           (set-process-filter
-            repl
-            (lambda (proc out)
-              (with-current-buffer ,repl-buffer-name
-                (goto-char (point-max))
-                (insert (ansi-color-apply out)))
-              (setq im-repl-last-result (concat im-repl-last-result (ansi-color-apply out)))
-              (when (s-matches? ,input-regexp out)
-                (let* ((result (,parser im-repl-last-result)))
-                  (setq im-repl-last-result result)
-                  (when result
-                    (if (get-buffer im-repl-result-buffer)
-                        (im-repl-inspect-last-result)
-                      (progn
-                        (message "%s%s" ,prefix (im-kill result))
-                        ;; Show it inline
-                        (im-peek
-                         (lambda ()
-                           (with-current-buffer (get-buffer-create "*im-repl-result-inline*")
-                             (erase-buffer)
-                             (insert im-repl-last-result)
-                             (current-buffer)))))))))))
-           (set-process-sentinel
-            repl
-            (lambda (proc out)
-              (if (eq (process-exit-status proc) 0)
-                  (message ,(format ">> Closed %s REPL session." name))
-                (message ,(format ">> %s REPL has crashed." name)))))))
-
-       ;;; defun im-REPL-repl-send
-       (defun ,repl-send-command (expr)
-         (setq im-repl-last-result "")
-         (let ((str (concat (s-trim expr) "\n")))
-           (with-current-buffer ,repl-buffer-name
-             (goto-char (point-max))
-             (insert str))
-           (process-send-string ,process-var str)
-           (when (evil-visual-state-p)
-             (evil-force-normal-state))))
-
-       ;;; defun im-REPL-repl-eval
-       (defun ,repl-eval-command ()
-         (interactive)
-         (unless (,is-repl-running)
-           (,repl-start-command))
-         (let ((expr
-                (if (use-region-p)
-                    (funcall
-                     ,process-region
-                     (buffer-substring-no-properties (region-beginning)
-                                                     (region-end)))
-                  (let ((curr ,expr)
-                        (this-command 'evil-paste-after))
-                    (evil-goggles--show-async-hint
-                     (treesit-node-start curr)
-                     (treesit-node-end curr))
-                    (treesit-node-text curr)))))
-           (,repl-send-command expr))))))
-
-(im-create-repl
- :name "Deno"
- :args ()
- :prefix "=> "
- ;; NOTE: After 1.43.1 (?) deno started to return only the results and
- ;; not the prompt
- :input-regexp ""
- :process-region
- (lambda (str)
-   ;; Remove block comments before sending, because Deno repl cant
-   ;; handle them properly.
-   (while (string-match "/\\*\\([^*]\\|\\*[^/]\\)*\\*/" str)
-     (setq str (replace-match "" t t str)))
-   str)
- :expr (im-ts-current-expression)
- ;; See the note above, we don't need any parsing logic
- :parser identity)
-
-(im-create-repl
- :name "JShell"
- :args nil
- :prefix ""
- :process-region 'identity
- :input-regexp "jshell>"
- :expr (im-ts-current-expression)
- :parser
- (lambda (out)
-   (->>
-    out
-    (s-split "\n")
-    (-drop-last 1)
-    (s-join "\n"))))
 
 ;;;;; tree-sitter
 
