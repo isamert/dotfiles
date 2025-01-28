@@ -9057,91 +9057,9 @@ Lisp function does not specify a special indentation."
 
 ;;;;; Couchbase
 
-;; Install couchbase-query package for running interactive queries
-;; inside emacs.
-
-(use-package couchbase-query
-  :straight (:host github :repo "isamert/couchbase-query.el")
-  :defer t
-  :custom
-  (couchbase-query-command "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/cbq"))
-
-;; Create a mode for n1ql and make n1ql code blocks inside org-mode
-;; runnable.
-
-;; Create a dummy derived mode based on sql-mode for n1ql, so that we
-;; get some syntax highlighting for free
-(define-derived-mode n1ql-mode sql-mode "n1ql-mode")
-(add-to-list 'auto-mode-alist (cons (rx ".n1ql" string-end) #'n1ql-mode))
-
-;; Add a function to execute n1ql code blocks in org-mode. It works
-;; just like how sql-mode code blocks is executed
-(defun org-babel-execute:n1ql (body params)
-  (im-cbq
-   body
-   :host (alist-get :host params)
-   :username (alist-get :username params)
-   :password (alist-get :password params)
-   :select (or (alist-get :select params) ".")))
-
-
-(cl-defun im-cbq (query &key host username password (select "."))
-  "Run a couchbase query and return the result."
-  (with-temp-buffer
-    (insert query)
-    (shell-command-on-region
-     (point-min)
-     (point-max)
-     (format "cbq -quiet -engine '%s' -credentials '%s'"
-             host
-             (format "%s:%s" username password))
-     nil t)
-    (replace-regexp-in-region "^cbq> " "" (point-min) (point-max))
-    (shell-command-on-region (point-min) (point-max) (format "jq -r '%s'" select) nil t)
-    (buffer-string)))
-
-;; Create a mode for cbc binary and make cbc-mode code blocks runnable
-;; inside emacs. cbc is not able to read commands from a file, so it
-;; does not really makes sense to create a mode for it but I do this
-;; to be able to create code blocks in org mode for cbc commands so
-;; that I can save some commands in an org file and re-run them
-;; whenever I want.
-
-(define-generic-mode 'cbc-mode
-  '(?!)
-  '("help" "version" "cat" "create" "create" "cp" "incr" "decr" "touch" "rm" "hash" "stats" "observe" "view" "lock" "unlock" "admin" "bucket" "bucket" "bucket" "role" "user" "user" "user" "connstr" "query" "write" "strerror" "ping" "watch" "keygen")
-  nil
-  '("cbc\\'")
-  nil
-  "Simple mode for couchbase cbc commandline utility.")
-
-(defun org-babel-execute:cbc (body params)
-  (im-cbc
-   body
-   :host (alist-get :host params)
-   :username (alist-get :username params)
-   :password (alist-get :password params)
-   :bucket (alist-get :bucket params)
-   :select (or (alist-get :select params) ".")))
-
-(cl-defun im-cbc (cbc-command &key host username password bucket raw (select "."))
-  "Run given cbc command."
-  (let* ((cmd (format "cbc %s --spec=%s/%s --username='%s' --password='%s'"
-                      cbc-command
-                      host
-                      bucket
-                      username
-                      password)))
-    (message "im-cbc :: %s" cmd)
-    (with-temp-buffer
-      (insert (im-shell-command-to-string cmd))
-      (shell-command-on-region
-       (point-min)
-       (point-max)
-       (format "jq %s '%s'" (if raw "-r" "") select)
-       nil
-       t)
-      (buffer-string))))
+(use-package im-couchbase
+  :straight nil
+  :after (sql-mode))
 
 ;;;;; BigQuery
 
