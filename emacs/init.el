@@ -5708,7 +5708,7 @@ appropriate in some cases like terminals."
 
 ;;;;;; Utility functions
 
-(defvar im-terminal-buffer-name-regexp "\\*?\\$?\\(e?shell\\|v?term\\).*")
+(defvar im-terminal-buffer-name-regexp "\\*?\\$?\\(e?shell\\|v?term\\|eat\\).*")
 
 (defun im-run-last-command-on-visible-term ()
   (interactive)
@@ -7643,7 +7643,9 @@ mails."
    "[s" #'jinx-previous
    "]s" #'jinx-next)
   (:keymaps 'evil-visual-state-map
-   "z=" #'jinx-correct-word))
+   "z=" #'jinx-correct-word)
+  :config
+  (add-to-list 'global-jinx-modes 'slack-message-compose-buffer-mode))
 
 ;;;;; puni & combobulate & electric-pair-mode (structrual editing stuff)
 
