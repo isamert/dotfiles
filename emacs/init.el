@@ -5662,6 +5662,92 @@ SORT should be nil to disable sorting."
   :straight (:host github :repo "yveszoundi/eglot-java")
   :hook (java-ts-mode . eglot-java-mode))
 
+;;;;; lsp-mode
+
+(setenv "LSP_USE_PLISTS" "true")
+
+(use-package lsp-mode
+  :commands lsp
+  :general
+  (:keymaps'(lsp-mode-map) :states '(normal)
+   "gr" #'lsp-ui-peek-find-references
+   "gd" #'lsp-ui-peek-find-definitions
+   "gi" #'lsp-ui-peek-find-implementation
+   "ga" #'lsp-execute-code-action
+   "K"  #'im-peek-doc)
+  :init
+  (setq lsp-use-plists t)
+  (setq lsp-keymap-prefix "M-l")
+  :config
+  (setq lsp-enable-xref t)
+  (setq lsp-enable-links t)
+  (setq lsp-enable-folding t)
+  (setq lsp-enable-indentation nil)
+  (setq lsp-enable-on-type-formatting nil)
+  (setq lsp-before-save-edits nil)
+  (setq lsp-eldoc-render-all nil)
+  (setq lsp-headerline-breadcrumb-enable nil)
+  (setq lsp-enable-snippet nil)
+  (setq lsp-modeline-code-actions-enable nil)
+  (setq lsp-modeline-diagnostics-enable nil)
+  (setq lsp-modeline-workspace-status-enable nil)
+  (setq lsp-diagnostics-provider :flymake)
+  (setq lsp-completion-provider :none) ;; for corfu
+
+  (defalias 'im-lsp-list-workspaces #'lsp-describe-session)
+
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\.devbox\\'"))
+
+(use-package lsp-ui
+  :straight (:host github :repo "emacs-lsp/lsp-ui")
+  :after lsp
+  :custom
+  (lsp-ui-doc-include-signature t)
+  (lsp-ui-doc-position 'at-point)
+  (lsp-ui-sideline-show-diagnostics nil))
+
+(use-package consult-lsp
+  :straight (:host github :repo "gagbo/consult-lsp")
+  :after (lsp consult)
+  :general
+  (:keymaps '(lsp-mode-map) :states '(normal)
+   "M-i" #'consult-lsp-file-symbols
+   "M-I" #'consult-lsp-symbols))
+
+;;;;;; Language specific lsp-mode packages
+
+;; Install metals with coursier:
+;;
+;;     cd ~/.local/bin/
+;;     coursier bootstrap org.scalameta:metals_2.13:1.5.1 -o metals -f
+
+(use-package lsp-metals
+  :straight (:host github :repo "emacs-lsp/lsp-metals")
+  :after lsp
+  :custom
+  (lsp-metals-enable-semantic-highlighting t)
+  (lsp-metals-server-args '("-J-Dmetals.allow-multiline-string-formatting=off"
+                            "-J-Dmetals.icons=unicode"))
+  :hook (scala-mode . lsp))
+
+(defun im-switch-java ()
+  "Switch Java version using coursier."
+  (interactive)
+  (im-output-select
+   :cmd "cs java --available | grep -Eo 'adoptium:\\d+\\.\\d+' | cut -d':' -f2 | sort -n | uniq"
+   :prompt "Select Java version: "
+   :do (im-shell-command
+        :command "cs"
+        :args (list "java" "--jvm" it "--env")
+        :switch t
+        :on-finish
+        (lambda (output &rest _)
+          (dolist (var (s-match-strings-all
+                        "export \\([a-zA-Z_-]+\\)=\\(.*\\)"
+                        output))
+            (message ">> Setting %s → %s" (nth 1 var) (nth 2 var))
+            (setenv (nth 1 var) (nth 2 var) t))))))
+
 ;;;;; vterm
 
 ;; Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files
