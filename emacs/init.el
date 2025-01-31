@@ -5070,11 +5070,10 @@ non-nil so that you only add it to `project-prefix-map'."
   "M-|" #'im-terminal-horizontally)
 
 (im-leader "2" #'im-term)
-(bind-key "M-`" (λ-interactive (im-shell-for 'project 'bottom #'im--new-eat)))
 (bind-key "<f2>" (λ-interactive (im-shell-for "~" 'top #'im--new-eat)))
 (bind-key "S-<f2>" (λ-interactive (im-shell-for "~" 'top nil "eshell")))
-(bind-key "<f3>" (λ-interactive (im-shell-for 'dir 'bottom #'im--new-eat)))
-(bind-key "S-<f3>" (λ-interactive (im-shell-for 'dir 'bottom nil "eshell")))
+(bind-key "<f3>" (λ-interactive (im-shell-for 'project 'bottom #'im--new-eat)))
+(bind-key "S-<f3>" (λ-interactive (im-shell-for 'project 'bottom nil "eshell")))
 
 ;;;;; consult
 
@@ -5639,9 +5638,13 @@ SORT should be nil to disable sorting."
 
 ;;;;; eglot
 
-;; TODO: Add hooks for modes, eglot-ensure
 (use-package eglot
   :defer t
+  :general
+  (:states '(normal) :keymaps '(eglot-mode-map)
+   "ga" #'eglot-code-actions
+   "gd" #'xref-find-definitions
+   "gr" #'xref-find-references)
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-size 0)
@@ -8767,11 +8770,13 @@ work.  You need to enter full path while importing by yourself."
   (define-advice eros-eval-defun (:after (&rest _) highlight-expr)
     "Highlight expression."
     (pcase-let ((`(,start . ,end) (bounds-of-thing-at-point 'defun)))
-      (im-pulse-highlight-region start end "sea green" 0.3)))
+      (when (and start end)
+        (im-pulse-highlight-region start end "sea green" 0.3))))
   (define-advice eros-eval-last-sexp (:after (&rest _) highlight-expr)
     "Highlight expression."
     (pcase-let ((`(,start . ,end) (bounds-of-thing-at-point 'sexp)))
-      (im-pulse-highlight-region start end "sea green" 0.3))))
+      (when (and start end)
+        (im-pulse-highlight-region start end "sea green" 0.3)))))
 
 ;;;;;; Pretty stuff
 
