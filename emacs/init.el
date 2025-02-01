@@ -7607,7 +7607,8 @@ mails."
     "gs" #'im-git-status
     "gc" #'im-git-commit
     "ga" #'im-git-commit-amend
-    "ge" #'im-git-list-stash)
+    "ge" #'im-git-list-stash
+    "gE" #'vc-git-stash)
   :init
   (add-hook 'im-git-commit-finished-hook #'im-update-git-state))
 
