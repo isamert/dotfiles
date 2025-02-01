@@ -728,6 +728,8 @@ CALLBACK will be called with the selected commit ref."
   (when-let* ((stash-entry (im-git--parse-stash-entry-at-point))
               (begin (line-beginning-position))
               (end (line-end-position)))
+    (let ((inhibit-read-only t))
+      (add-text-properties begin end '(face (:strike-through t))))
     (im-shell-command
      :command "git"
      :args `("--no-pager" "stash" "drop" ,stash-entry)
@@ -736,8 +738,7 @@ CALLBACK will be called with the selected commit ref."
      :on-finish
      (lambda (output &rest _)
        (with-current-buffer im-git--stash-list-buffer-name
-         (let ((inhibit-read-only t))
-           (add-text-properties begin end '(face (:strike-through t))))))
+         (im-git-list-stash)))
      :on-fail
      (lambda (output &rest _)
        (message ">> `git stash drop' failed with: " output)
