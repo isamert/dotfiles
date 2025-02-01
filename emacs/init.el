@@ -1258,11 +1258,12 @@ side window the only window'"
   ;; ^ No indentation for src blocks
   (org-cycle-include-plain-lists 'integrate)
   ;; ^ Also toggle visibility of plain list with TAB etc. like they are subheadings
-  (org-fold-core-style 'text-properties)
+  (org-fold-core-style 'overlays)
   ;; ^ Documentation says text-properties are more buggy but my
   ;; experience is the opposite. At least for now. overlay folding
   ;; messes things up with indirect buffers which I use quite a
   ;; lot. Haven't reported upstream tho.
+  ;; UPDATE(2025-02-01): overlays seems to work better now.
 
   ;; Put archive files under an archive/ directory
   ;; I don't want them to pollute my directory
