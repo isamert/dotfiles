@@ -30,12 +30,13 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'im)
 
 ;;;; Customization
 
 ;; TODO: ...customization...
 
-;;;; Data Structure Definition
+;;;; REPL definition
 
 (cl-defstruct im-repl
   name       ; REPL name (e.g., "jshell")
@@ -69,6 +70,7 @@
 
 ;;;; Core Implementation
 
+;;;###autoload
 (defun im-repl-start (repl-name)
   "Start a REPL by name."
   (interactive (list (completing-read "REPL type: " (map-keys im-repl-registry) nil t)))
@@ -88,6 +90,7 @@
 
     (message "Started %s REPL" repl-name)))
 
+;;;###autoload
 (defun im-repl-send (input)
   "Send input to active REPL."
   (interactive "sInput: ")
@@ -109,6 +112,7 @@
    im-repl-pool)
   (map-keys im-repl-pool))
 
+;;;###autoload
 (defun im-repl-eval ()
   "Evaluate expression at point or region."
   (interactive)
@@ -331,5 +335,4 @@ Only tested with JS/TS."
 ;;;; Footer
 
 (provide 'im-repl)
-
 ;;; im-repl.el ends here

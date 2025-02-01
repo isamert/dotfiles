@@ -1,4 +1,4 @@
-;;; im-kube.el --- TODO: Package description (don't include the word "Emacs")  -*- lexical-binding: t; -*-
+;;; im-kube.el --- my kubectl wrappers  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Isa Mert Gurbuz
 

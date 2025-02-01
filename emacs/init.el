@@ -8221,37 +8221,24 @@ Useful if .elfeed directory is freshly syncned."
 
 ;;;;;; REPLs
 
-;; I really like being able to do my development inside REPL. It
-;; creates a really nice feedback loop and fastens the development
-;; process. While support for this type of development is not good in
-;; other languages than Lisps, I at least like to have the ability to
-;; run and evaluate pieces of code in given languages REPL.
-
-;; Here I created a function to ease up that process. For given REPL,
-;; this creates a background REPL process (like ~jshell~) and sends
-;; your inputs to REPL and outputs the result to echo area. It's like
-;; ~eval-last-sexp~ but for all languages that has a REPL (and with
-;; much limited execution functionality of course, you are limited by
-;; the REPL.)
-
-;; This creates only one REPL process per language, so you can build
-;; up a context and use that throughout your projects.
-
-(im-leader-v
-  ";" (general-predicate-dispatch (im-eval-dwim #'eros-eval-last-sexp #'eval-region #'eros-eval-defun)
-        (eq major-mode 'java-ts-mode) #'im-repl-eval
-        (eq major-mode 'js-ts-mode) #'im-repl-eval
-        (eq major-mode 'typescript-ts-mode) #'im-repl-eval
-        (eq major-mode 'clojure-mode) (im-eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point)
-        (eq major-mode 'lisp-mode) (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region)
-        (eq major-mode 'racket-mode) (im-eval-dwim #'racket-eval-last-sexp #'racket-send-region #'racket-send-definition)
-        (eq major-mode 'scheme-mode) (im-eval-dwim #'geiser-eval-last-sexp #'geiser-eval-region #'geiser-eval-definition)
-        (eq major-mode 'kotlin-mode) (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line))
-  "'" (general-predicate-dispatch #'eros-inspect-last-result
-        (eq major-mode 'java-ts-mode) #'im-repl-inspect-last-result
-        (eq major-mode 'js-ts-mode) #'im-repl-inspect-last-result
-        (eq major-mode 'typescript-ts-mode) #'im-repl-inspect-last-result
-        (eq major-mode 'clojure-mode) #'cider-inspect-last-result))
+(use-package im-repl
+  :straight nil
+  :general
+  (im-leader-v
+    ";" (general-predicate-dispatch (im-eval-dwim #'eros-eval-last-sexp #'eval-region #'eros-eval-defun)
+          (eq major-mode 'java-ts-mode) #'im-repl-eval
+          (eq major-mode 'js-ts-mode) #'im-repl-eval
+          (eq major-mode 'typescript-ts-mode) #'im-repl-eval
+          (eq major-mode 'clojure-mode) (im-eval-dwim #'cider-eval-last-sexp #'cider-eval-region #'cider-eval-defun-at-point)
+          (eq major-mode 'lisp-mode) (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region)
+          (eq major-mode 'racket-mode) (im-eval-dwim #'racket-eval-last-sexp #'racket-send-region #'racket-send-definition)
+          (eq major-mode 'scheme-mode) (im-eval-dwim #'geiser-eval-last-sexp #'geiser-eval-region #'geiser-eval-definition)
+          (eq major-mode 'kotlin-mode) (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line))
+    "'" (general-predicate-dispatch #'eros-inspect-last-result
+          (eq major-mode 'java-ts-mode) #'im-repl-inspect-last-result
+          (eq major-mode 'js-ts-mode) #'im-repl-inspect-last-result
+          (eq major-mode 'typescript-ts-mode) #'im-repl-inspect-last-result
+          (eq major-mode 'clojure-mode) #'cider-inspect-last-result)))
 
 (defun im-eval-dwim (lastf regionf defunf)
   "Generate an interactive function that you can bind to a key.
@@ -9730,7 +9717,7 @@ SELECT * FROM _ LIMIT 1;
   (aw-ignore-current t)
   (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
   :config
-  (set-face-attribute 'aw-leading-char-face nil :height 4.5 :weight 'bold :foreground "controlAccentColor")
+  (set-face-attribute 'aw-leading-char-face nil :height 4.5 :weight 'bold :foreground "deep sky blue")
   (ace-window-posframe-mode))
 
 (defun im-find-file-ace-window (filename &optional wildcards)

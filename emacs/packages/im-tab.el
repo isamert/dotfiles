@@ -1,12 +1,12 @@
-;;; im-tab.el --- TODO: Package description (don't include the word "Emacs")  -*- lexical-binding: t; -*-
+;;; im-tab.el --- my tab-bar extensions  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2024 Isa Mert Gurbuz
 
 ;; Author: Isa Mert Gurbuz <isamertgurbuz@gmail.com>
 ;; URL: https://github.com/isamert/im-tab.el
 ;; Version: 0.0.1
-;; Package-Requires: ((emacs "25.2"))
-;; Keywords: TODO something
+;; Package-Requires: ((emacs "29.1"))
+;; Keywords: tabs, utility
 
 ;; This file is not part of GNU Emacs.
 
