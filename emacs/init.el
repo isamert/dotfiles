@@ -1193,6 +1193,7 @@ side window the only window'"
 
 ;;;;; Constants
 
+(defconst inbox-org "~/Documents/notes/inbox.org")
 (defconst watchlist-org "~/Documents/notes/watchlist.org")
 (defconst readinglist-org "~/Documents/notes/readinglist.org")
 (defconst courses-org "~/Documents/notes/courses.org")
@@ -1283,7 +1284,7 @@ side window the only window'"
   (setq im-calendar-files
         (when (file-exists-p im-org-calendar-directory)
           (directory-files im-org-calendar-directory 'full (rx ".org" eos))))
-  (setq org-agenda-files `(,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
+  (setq org-agenda-files `(,inbox-org ,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
 
   ;; When I unfold an header if the contents are longer than remaining
   ;; window width then cursor recenters to the top of the window. I
@@ -2724,7 +2725,7 @@ I generally bind this to a key while using by
   :straight (:host github :repo "isamert/corg.el")
   :hook (org-mode . corg-setup))
 
-;;;;; im-svgcal
+;;;;; im-svgcal & org-timeblock
 
 ;; Experimental SVG visual calendar for the current day.
 
@@ -2739,6 +2740,26 @@ I generally bind this to a key while using by
 (use-package im-svgcal
   :commands (im-svgcal-enable im-svgcal-run)
   :straight nil)
+
+(use-package org-timeblock
+  :straight (:host github :repo "ichernyshovvv/org-timeblock")
+  :general
+  (:keymaps 'org-timeblock-mode-map :states 'normal
+   "h" #'org-timeblock-backward-column
+   "j" #'org-timeblock-forward-block
+   "k" #'org-timeblock-backward-block
+   "l" #'org-timeblock-forward-column
+   "t" #'org-timeblock-todo
+   "c" #'org-timeblock-clock-in
+   "n" #'org-timeblock-new-task
+   "r" #'org-timeblock-redraw-buffers
+   "T" #'org-timeblock-list
+   "q" #'org-timeblock-quit
+   "RET" #'org-timeblock-goto)
+  :custom
+  (org-timeblock-inbox-file inbox-org)
+  (org-timeblock-span 5)
+  (org-timeblock-scale-options nil))
 
 ;;;; Extra functionality
 
