@@ -12981,34 +12981,6 @@ Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
   (shell-command-to-string "git config user.email \"isamertgurbuz@gmail.com\"")
   (message "Done."))
 
-;;;;; Scratch project
-
-;; I have a project pre-configured for scratch files. Like default
-;; scratch buffer, I also have different files for different languages
-;; that I use similarly to the scratch buffer. Due to the nature of
-;; other languages, it's not possible to have a simple buffer. Rather,
-;; I have to have a concrete file.
-
-(defvar im-scratch-project-path "~/Workspace/temp/scratch/")
-
-(defun im-initialize-scratch-project ()
-  "Initialize a project where scratch files are kept."
-  (unless (f-exists? im-scratch-project-path)
-    (f-mkdir-full-path im-scratch-project-path)
-    ;; Create scratch.ts
-    (f-write-text "import * as R from 'npm:ramda';" 'utf-8 (f-join im-scratch-project-path "scratch.ts"))
-    (f-write-text ";;; Directory Local Variables            -*- no-byte-compile: t -*-
-  ;;; For more information see (info \"(emacs) Directory Variables\")
-
-  ((typescript-ts-mode . ((lsp-enabled-clients . (deno-ls)))))"
-                  'utf-8 (f-join im-scratch-project-path ".dir-locals.el"))
-    ;; Configure the project
-    (let ((default-directory im-scratch-project-path))
-      (shell-command-to-string "git init"))
-    (message ">> scratch project is ready!")))
-
-(add-hook 'after-init-hook #'im-initialize-scratch-project)
-
 ;;;;; YAML <-> JSON conversation
 
 (defun im-yaml-to-json (yaml &optional replace?)
