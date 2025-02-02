@@ -9861,7 +9861,7 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   (lambda (input)
     (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
       (cons
-       (list "marks" "--no-color" "--null" "--path" default-directory "--query" (s-trim arg))
+       (list "marks" "--no-color" "--null" "--count=25" (s-trim arg) (expand-file-name default-directory))
        (apply-partially #'consult--highlight-regexps (list (regexp-quote arg)) t)))))
 
 (defun im-marks (&optional directory)
