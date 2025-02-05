@@ -12090,6 +12090,7 @@ already exists otherwise WHERE is interpreted as a file name."
 (cl-defun im-archive-url--reddit (link &key where)
   "Archive Reddit comment page LINK to WHERE in `org-mode'.
 See `im-archive-url' for WHERE's definition."
+  (require 'reddigg)
   (setq link (substring link (length "https://www.reddit.com/") nil))
   (promise-chain (reddigg--promise-comments link)
     (then #'reddigg--print-comments)
