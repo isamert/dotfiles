@@ -5271,8 +5271,7 @@ approach."
 
 (defun im-my-files ()
   "Return list of all files I frequently use."
-  `(,@(directory-files im-scratch-project-path t)
-    ;; Org may be loaded lazily
+  `(;; Org may be loaded lazily
     ,@(when (bound-and-true-p org-directory)
         (directory-files org-directory t "^\\w+.*.org$"))
     ,@(directory-files im-load-path t "\\.el$")
