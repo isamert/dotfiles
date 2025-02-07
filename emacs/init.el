@@ -4554,6 +4554,18 @@ of that revision."
   :config
   (evil-collection-git-timemachine-setup))
 
+;;;;; diff-mode
+
+(use-package diff
+  :straight (:type built-in)
+  :config
+  ;; Normally diff-mode uses reliable syntax highlighting by detecting
+  ;; the full file with the support of vc backend but if there is no
+  ;; context, then it does not apply the font lock.  This option makes
+  ;; it use reliable highlighting if available, if not then it uses
+  ;; hunk based dumb highlighting without the context.
+  (setq diff-font-lock-syntax 'hunk-also))
+
 ;;;;; diff-hl -- git gutter alternative
 
 ;; Highlights changed lines in git. You can also stage hunks directly
