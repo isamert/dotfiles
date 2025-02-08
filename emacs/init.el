@@ -4469,10 +4469,12 @@ empty string."
     "gbc" #'vc-create-branch
     "gbs" #'vc-switch-branch
     "gB" #'vc-annotate ;; Git Blame
-    "gL" #'vc-print-root-log
+    "gLr" #'vc-print-root-log
+    "gLf" #'vc-print-log
     ;; TODO: add magit like interface for force pushing and selecting upstream?
     "gP" #'vc-push)
   :config
+  (setq vc-log-short-style '(directory file))
   (evil-collection-vc-git-setup)
   (evil-collection-log-view-setup)
   (evil-collection-vc-dir-setup)
@@ -4564,7 +4566,8 @@ of that revision."
   ;; context, then it does not apply the font lock.  This option makes
   ;; it use reliable highlighting if available, if not then it uses
   ;; hunk based dumb highlighting without the context.
-  (setq diff-font-lock-syntax 'hunk-also))
+  (setq diff-font-lock-syntax 'hunk-also)
+  (setq diff-font-lock-prettify t))
 
 ;;;;; diff-hl -- git gutter alternative
 
