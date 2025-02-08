@@ -4567,7 +4567,31 @@ of that revision."
   ;; it use reliable highlighting if available, if not then it uses
   ;; hunk based dumb highlighting without the context.
   (setq diff-font-lock-syntax 'hunk-also)
-  (setq diff-font-lock-prettify t))
+  (setq diff-font-lock-prettify t)
+
+  (evil-collection-diff-mode-setup)
+
+  (set-face-attribute
+   'diff-file-header nil
+   :weight 'bold
+   :height 1.05
+   :background "unspecified"
+   :box nil
+   :underline nil)
+
+  (set-face-attribute
+   'diff-header nil
+   :background "unspecified"
+   :underline nil)
+
+  (set-face-attribute
+   'diff-hunk-header nil
+   :height 1.1
+   :underline t)
+
+  (define-advice diff-file-next (:after (&rest _) go-to-next-beginning)
+    (forward-line 2)
+    (outline-show-entry)))
 
 (use-package ediff
   :straight (:type built-in)
