@@ -4556,7 +4556,7 @@ of that revision."
   :config
   (evil-collection-git-timemachine-setup))
 
-;;;;; diff-mode
+;;;;; diff-mode & ediff
 
 (use-package diff
   :straight (:type built-in)
@@ -4568,6 +4568,16 @@ of that revision."
   ;; hunk based dumb highlighting without the context.
   (setq diff-font-lock-syntax 'hunk-also)
   (setq diff-font-lock-prettify t))
+
+(use-package ediff
+  :straight (:type built-in)
+  :config
+  (setq ediff-keep-variants nil)
+  (setq ediff-make-buffers-readonly-at-startup nil)
+  (setq ediff-show-clashes-only t)
+  (setq ediff-split-window-function 'split-window-horizontally)
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+  (evil-collection-ediff-setup))
 
 ;;;;; diff-hl -- git gutter alternative
 
