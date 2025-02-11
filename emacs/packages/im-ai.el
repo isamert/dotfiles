@@ -255,7 +255,8 @@ Query: %s
           prompt
           (if region (concat "Context: \n" region) "")))
       :system im-ai-snippet-sys-prompt
-      :stream t)))
+      :stream t
+      :fsm (gptel-make-fsm :handlers gptel-send--handlers))))
 
 (cl-defun im-ai--cleanup-stream ()
   (when gptel-mode

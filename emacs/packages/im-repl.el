@@ -159,11 +159,10 @@
                  (remaining (substring combined (match-end 0)))
                  (parsed (ansi-color-apply (funcall (im-repl-parser-fn repl) result))))
 
-            (setf (im-repl-accumulated-output repl) remaining)
-
             (when parsed
-              (funcall im-repl-display-result-fn (im-repl-prefix repl) parsed)
+              (setf (im-repl-accumulated-output repl) "")
               (setf (im-repl-last-result repl) parsed)
+              (funcall im-repl-display-result-fn (im-repl-prefix repl) parsed)
               (when (im-buffer-visible-p im-repl-result-buffer)
                 (im-repl-inspect-last-result)))))))))
 
