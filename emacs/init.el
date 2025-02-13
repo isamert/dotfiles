@@ -4574,14 +4574,14 @@ of that revision."
   (set-face-attribute
    'diff-file-header nil
    :weight 'bold
-   :height 1.05
-   :background "unspecified"
-   :box nil
+   :height 1.5
+   ;; :background "unspecified"
+   ;; :box nil
    :underline nil)
 
   (set-face-attribute
    'diff-header nil
-   :background "unspecified"
+   ;; :background "unspecified"
    :underline nil)
 
   (set-face-attribute

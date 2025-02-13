@@ -1746,8 +1746,10 @@ guile> (load ".config/associactions")
 ;;; Bindings
 
 (bind
- #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps")
- #:program '(zathura %f))
+ #:pattern '("(application|text)/(x-)?(pdf|postscript|ps|epub.*)" "image/(x-)?eps" ".*pdf")
+ #:program (oscase
+            #:darwin '(open %f)
+            #:gnu/linux '(zathura %f)))
 
 (bind
  #:pattern '("^text/html" "^application/x?htm")
