@@ -6344,10 +6344,7 @@ this command is invoked from."
                (propertize (number-to-string msg-count) 'face '(:weight bold))))))
 
 (async-defun im-slack-notify (message room team)
-  (when (or
-         (slack-message-minep message team)
-         (slack-mpim-p room)
-         (slack-message-notify-p message room team))
+  (unless (slack-room-muted-p room team)
     (let* ((sender-name (slack-message-sender-name message team))
            (room-name (slack-room-name room team))
            (title (format "%s - %s" room-name sender-name))
