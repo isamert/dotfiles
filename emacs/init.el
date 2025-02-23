@@ -4743,7 +4743,7 @@ of that revision."
   (setq enable-recursive-minibuffers t)
 
   ;; Bindings
-  (define-key vertico-map (kbd "M-w") #'vertico-save)
+  (define-key vertico-map (kbd "M-w") #'im-vertico-save)
   (define-key vertico-map (kbd "M-[") #'vertico-previous-group)
   (define-key vertico-map (kbd "M-]") #'vertico-next-group)
   (define-key vertico-map (kbd "M-j") #'next-line)
@@ -5784,6 +5784,17 @@ SORT should be nil to disable sorting."
    "M-i" #'consult-lsp-file-symbols
    "M-I" #'consult-lsp-symbols))
 
+(use-package lsp-java
+  :after lsp
+  :config
+  (require 'lsp-java)
+
+  (defun im-lsp-java-find-lombok-jar ()
+    (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>)))
+
+  (when-let (lombok (im-lsp-java-find-lombok-jar))
+    (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok)))))
+
 ;;;;;; Language specific lsp-mode packages
 
 ;; Install metals with coursier:
@@ -5800,7 +5811,7 @@ SORT should be nil to disable sorting."
                             "-J-Dmetals.icons=unicode"))
   :hook (scala-mode . lsp))
 
-(defun im-switch-java ()
+(defun im-switch-java-version ()
   "Switch Java version using coursier."
   (interactive)
   (im-output-select
