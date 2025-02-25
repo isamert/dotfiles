@@ -8920,11 +8920,18 @@ work.  You need to enter full path while importing by yourself."
   :hook (after-init . eros-mode)
   :config
   (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1)))
+
+  (defun im-set-eros-last-result (orig-val)
+    (setq eros--last-result orig-val)
+    orig-val)
+  (advice-add 'eval-expression :filter-return #'im-set-eros-last-result)
+
   (define-advice eros-eval-defun (:after (&rest _) highlight-expr)
     "Highlight expression."
     (pcase-let ((`(,start . ,end) (bounds-of-thing-at-point 'defun)))
       (when (and start end)
         (im-pulse-highlight-region start end "sea green" 0.3))))
+
   (define-advice eros-eval-last-sexp (:after (&rest _) highlight-expr)
     "Highlight expression."
     (pcase-let ((`(,start . ,end) (bounds-of-thing-at-point 'sexp)))
