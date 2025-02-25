@@ -95,12 +95,7 @@
   "c" #'im-git-commit
   "r" #'im-git-status-reload
   "q" #'im-git-status-cancel
-  "C-c C-k" #'im-git-status-cancel
-  "1" (λ-interactive (outline-hide-sublevels 1))
-  "2" (λ-interactive
-       (outline-show-all)
-       (outline-hide-body))
-  "3" #'outline-show-all)
+  "C-c C-k" #'im-git-status-cancel)
 
 (general-def
   :keymaps 'im-git-diff-mode-map
@@ -109,13 +104,7 @@
   "x" #'im-git-reverse-hunk
   "c" #'im-git-status-commit
   "r" #'im-git-status-reload
-  "q" #'im-git-status-cancel
-  "-" #'diff-split-hunk
-  "1" (λ-interactive (outline-hide-sublevels 1))
-  "2" (λ-interactive
-       (outline-show-all)
-       (outline-hide-body))
-  "3" #'outline-show-all)
+  "q" #'im-git-status-cancel)
 
 (define-derived-mode im-git-diff-mode diff-mode "DS"
   "Mode to show unstaged git diff."

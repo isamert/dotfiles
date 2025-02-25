@@ -773,11 +773,11 @@ side window the only window'"
 
   ;; Move between visual lines instead of real lines
   (evil-define-key 'normal 'global
-    (kbd "<remap> <evil-next-line>") #'evil-next-visual-line
-    (kbd "<remap> <evil-previous-line>") #'evil-previous-visual-line)
+    (kbd "j") #'evil-next-visual-line
+    (kbd "k") #'evil-previous-visual-line)
   (evil-define-key 'motion 'global
-    (kbd "<remap> <evil-next-line>") #'evil-next-visual-line
-    (kbd "<remap> <evil-previous-line>") #'evil-previous-visual-line)
+    (kbd "j") #'evil-next-visual-line
+    (kbd "k") #'evil-previous-visual-line)
 
   ;; Use default yank-pop because it integrates itself with consult
   ;; The binding may seem a bit weird but it's how it's done.
@@ -4461,8 +4461,6 @@ empty string."
    "r" #'vc-dir-refresh)
   (:keymaps 'vc-git-log-view-mode-map :states 'normal
    "<backtab>" #'im-vc-toggle-all-log-view-entries)
-  (:keymaps 'diff-mode-map :states 'normal
-   "o" #'im-vc-diff-open-file-at-revision-dwim)
   (im-leader
     "gp" #'vc-pull
     "gR" #'im-update-git-state
@@ -4569,25 +4567,53 @@ of that revision."
   (setq diff-font-lock-syntax 'hunk-also)
   (setq diff-font-lock-prettify t)
 
-  (evil-collection-diff-mode-setup)
+  (general-def
+    :keymaps 'diff-mode-map
+    :states '(normal motion)
+    ;; This is for preventing strange jumps happening when hunks are
+    ;; folded. evil-{next,previous}-visual-line causes it.
+    "j" #'evil-next-line
+    "k" #'evil-previous-line
 
-  (set-face-attribute
-   'diff-file-header nil
-   :weight 'bold
-   :height 1.5
-   ;; :background "unspecified"
-   ;; :box nil
-   :underline nil)
+    "[[" #'diff-file-prev
+    "]]" #'diff-file-next
+    "gj" #'diff-hunk-next
+    "gk" #'diff-hunk-prev
 
-  (set-face-attribute
-   'diff-header nil
-   ;; :background "unspecified"
-   :underline nil)
+    "A" 'diff-add-change-log-entries-other-window
+    "-" #'diff-split-hunk
+    ;; "u" #'evil-collection-diff-toggle-context-unified
+    "o" #'im-vc-diff-open-file-at-revision-dwim
+    "RET" #'diff-goto-source
+    "D" #'diff-file-kill
+    "d" #'diff-hunk-kill
 
-  (set-face-attribute
-   'diff-hunk-header nil
-   :height 1.1
-   :underline t)
+    "1" (λ-interactive (outline-hide-sublevels 1))
+    "2" (λ-interactive
+         (outline-show-all)
+         (outline-hide-body))
+    "3" #'outline-show-all)
+
+  (defun im-diff-mode-setup ()
+    (set-face-attribute
+     'diff-file-header nil
+     :weight 'bold
+     :height 1.5
+     ;; :background "unspecified"
+     ;; :box nil
+     :underline nil)
+
+    (set-face-attribute
+     'diff-header nil
+     ;; :background "unspecified"
+     :underline nil)
+
+    (set-face-attribute
+     'diff-hunk-header nil
+     :height 1.1
+     :underline t))
+
+  (add-hook 'diff-mode-hook #'im-diff-mode-setup)
 
   (define-advice diff-file-next (:after (&rest _) go-to-next-beginning)
     (forward-line 2)
@@ -12189,6 +12215,7 @@ See `im-archive-url' for WHERE's definition."
    ((use-region-p) (narrow-to-region (region-beginning) (region-end)))
    ((eq major-mode 'org-mode) (org-narrow-to-subtree))
    ((eq major-mode 'markdown-mode) (markdown-narrow-to-subtree))
+   ((derived-mode-p 'diff-mode) (diff-restrict-view))
    ((eq major-mode 'emacs-lisp-mode)
     (cond
      ((which-function) (narrow-to-defun))
