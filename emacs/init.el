@@ -738,7 +738,7 @@ side window the only window'"
   ;; C-a is `completion-at-point' but I like to be standard Emacs
   ;; beginning-of-line. I already bind `M-o p' to
   ;; `completion-at-point'
-  (define-key evil-command-line-map "C-a" #'beginning-of-line)
+  (define-key evil-command-line-map (kbd "C-a") #'beginning-of-line)
 
   ;; C-i is bound to TAB, so I use C-l for `evil-jump-forward'
   (evil-define-key 'normal 'global (kbd "C-l") #'evil-jump-forward)
