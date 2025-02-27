@@ -9255,7 +9255,7 @@ Lisp function does not specify a special indentation."
 
 (use-package im-couchbase
   :straight nil
-  :after (sql-mode))
+  :after (sql))
 
 ;;;;; BigQuery
 

@@ -107,17 +107,18 @@ somehwere around:
 
 ;;;; sql.el integration
 
-(sql-add-product
- 'n1ql
- "Couchbase N1QL"
- :free-software nil
- :sqli-program sql-n1ql-cbq-binary-path
- :sqli-options nil
- :sqli-login 'sql-n1ql-login-params
- :sqli-comint-func 'sql-comint-n1ql
- :list-all "select RAW k.`path` from system:keyspaces k;"
- :prompt-regexp "^cbq> "
- :prompt-cont-regexp "^   >")
+(with-eval-after-load 'sql
+  (sql-add-product
+   'n1ql
+   "Couchbase N1QL"
+   :free-software nil
+   :sqli-program sql-n1ql-cbq-binary-path
+   :sqli-options nil
+   :sqli-login 'sql-n1ql-login-params
+   :sqli-comint-func 'sql-comint-n1ql
+   :list-all "select RAW k.`path` from system:keyspaces k;"
+   :prompt-regexp "^cbq> "
+   :prompt-cont-regexp "^   >"))
 
 ;; (sql-del-product 'n1ql)
 
