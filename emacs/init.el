@@ -4588,11 +4588,16 @@ of that revision."
     "D" #'diff-file-kill
     "d" #'diff-hunk-kill
 
+    "TAB" #'outline-cycle
+    "S-TAB" #'outline-cycle-buffer
+
     "1" (λ-interactive (outline-hide-sublevels 1))
     "2" (λ-interactive
          (outline-show-all)
          (outline-hide-body))
     "3" #'outline-show-all)
+
+  (add-hook 'diff-mode-hook #'outline-minor-mode)
 
   (defun im-diff-mode-setup ()
     (set-face-attribute
@@ -9254,8 +9259,7 @@ Lisp function does not specify a special indentation."
 ;;;;; Couchbase
 
 (use-package im-couchbase
-  :straight nil
-  :after (sql))
+  :straight nil)
 
 ;;;;; BigQuery
 
