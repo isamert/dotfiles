@@ -4277,38 +4277,23 @@ empty string."
   (interactive)
   (->>
    (consult--read
-    (thread-first
-      (consult--async-sink)
-      (consult--async-refresh-immediate)
-      (im-web-autosuggest--gen)
-      (consult--async-throttle)
-      (consult--async-split))
-    :prompt "Search for: "
-    :category 'url
-    :lookup (lambda (selected candidates cand &rest _) selected)
-    :initial (concat "#" initial)
-    :sort nil
-    :history (or history 'im-web-autosuggest-history)
-    :require-match nil)))
-
-(defun im-web-autosuggest--gen (next)
-  (lambda (action)
-    (pcase action
-      ((pred stringp)
+    (empv--consult-async-generator
+     (lambda (action on-result)
        (when (not (string-empty-p (string-trim action)))
          (im-request
            "https://ac.ecosia.org/autocomplete"
            :type "list"
            :q action
-           :-on-success
-           (lambda (data)
-             (funcall next 'flush)
-             (when data
-               (funcall next (cadr data))))
-           :-on-error
-           (lambda (data)
-             (funcall next 'flush)))))
-      (_ (funcall next action)))))
+           :-on-success on-result
+           :-on-error (lambda (x) (list action)))))
+     #'-flatten)
+    :prompt "Search for: "
+    :category 'url
+    :lookup (lambda (selected candidates cand &rest _) selected)
+    :sort nil
+    :history (or history 'im-web-autosuggest-history)
+    :async-wrap #'empv--consult-async-wrapper
+    :require-match nil)))
 
 ;;;;;; Fixing page layouts
 
