@@ -13283,6 +13283,23 @@ existing buffer and opens the link in tuir."
   (add-hook 'org-clock-in-hook #'im-update-global-mode-line)
   (add-hook 'org-clock-out-hook #'im-update-global-mode-line))
 
+;;;;; Set environment variable at point
+
+(defun im-set-env-at-point ()
+  "Set the environment variable from an 'export VAR=value' statement on the current line."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (when (looking-at "export \\([^= ]+\\)=[\"']?\\([^'\"]*\\)[\"']?")
+      (let ((var (match-string 1))
+            (value (match-string 2)))
+        (setenv var value t)
+        (when (equal var "PATH")
+          (setq exec-path
+                ;; This may alter the ordering but let's hope not.
+                (-union (s-split ":" (getenv "PATH")) exec-path)))
+        (message "Set environment variable: %s=%s" var value)))))
+
 ;;;; Operating system related
 
 ;;;;; Sound/audio output chooser
