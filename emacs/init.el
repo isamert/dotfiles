@@ -6917,13 +6917,20 @@ Fetches missing channels/users first."
 ;; Inside a gptel buffer:
 ;;
 ;; - ~C-u C-x RET~ or ~gptel-menu~ → Menu
+;;
+;; By default, it uses authinfo to get api keys. See my netrc
+;; file. The ones with username "apikey" are for gtpel.
 
 (use-package gptel
   :config
   (setq gptel-default-mode #'org-mode)
   (setq gptel-track-media t)
   (setq gptel-prompt-prefix-alist '((org-mode . "[ME]: ")))
-  (setq gptel-response-prefix-alist '((org-mode . "[AI]: "))))
+  (setq gptel-response-prefix-alist '((org-mode . "[AI]: ")))
+  ;; As usual, my key is in netrc file.
+  (gptel-make-deepseek "DeepSeek"
+    :stream t
+    :key gptel-api-key))
 
 ;;;;; tmr.el -- timers, reminders etc.
 
