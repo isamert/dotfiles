@@ -255,7 +255,7 @@ simplifies applying those patches.  I try to utilize advices most
 of the time but this is for those times where advices either
 complicates things or not sufficient."
   (interactive
-   (list (if-let (x (org-babel-where-is-src-block-head))
+   (list (if-let* ((x (org-babel-where-is-src-block-head)))
              x
            (save-excursion
              (org-babel-goto-named-src-block (read-string "Block name: "))
@@ -2314,12 +2314,12 @@ searches for TODO/FIXME items in given folder."
     ;; If we are on a heading and calling this function, we probably
     ;; just want to update/initialize the archive for current
     ;; heading. Otherwise we are creating a new archive.
-    (if-let ((_ (org-at-heading-p))
-             (old-url (or (org-entry-get nil "URL")
-                          ;; There might not be an URL property but
-                          ;; the header itself might be a link, try to
-                          ;; extract it
-                          (or (plist-get (cadr (org-element-context)) :raw-link)))))
+    (if-let* ((_ (org-at-heading-p))
+              (old-url (or (org-entry-get nil "URL")
+                           ;; There might not be an URL property but
+                           ;; the header itself might be a link, try to
+                           ;; extract it
+                           (or (plist-get (cadr (org-element-context)) :raw-link)))))
         (progn
           (setq url old-url)
           (setq update? t))
@@ -2340,7 +2340,7 @@ searches for TODO/FIXME items in given folder."
       (org-set-property
        "ARCHIVED_AT"
        (format "%s[[file:./%s][%s]]"
-               (if-let ((older-archives (org-entry-get nil "ARCHIVED_AT")))
+               (if-let* ((older-archives (org-entry-get nil "ARCHIVED_AT")))
                    (format "%s, " older-archives)
                  "")
                (f-relative archive-path)
@@ -2558,14 +2558,14 @@ breaks and joining the lines together.  This function relies on
   (interactive)
   (let ((content (concat
                   (format "TODO%s %s "
-                          (if-let (priority
-                                   (im-non-blank-or-nil
-                                    (or priority
-                                        (completing-read
-                                         "Select priority:"
-                                         (mapcar #'char-to-string (number-sequence
-                                                                   org-priority-highest
-                                                                   (1+ org-priority-lowest)))))))
+                          (if-let* ((priority
+                                     (im-non-blank-or-nil
+                                      (or priority
+                                          (completing-read
+                                           "Select priority:"
+                                           (mapcar #'char-to-string (number-sequence
+                                                                     org-priority-highest
+                                                                     (1+ org-priority-lowest))))))))
                               (format " [#%s]" priority)
                             "")
                           (s-trim (read-string "Header: ")))
@@ -3717,7 +3717,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
          (resolve-dir (lambda (it) (if (f-dir? it) it (f-dirname it))))
          (fix-remote-files
           (lambda (it)
-            (if-let (host (nth 1 (s-match ssh-regexp it)))
+            (if-let* ((host (nth 1 (s-match ssh-regexp it))))
                 (concat host ":" (string-trim-left it ssh-regexp))
               (shell-quote-argument it))))
          ;; If `default-directory' points to ssh'ed directory, that
@@ -4915,8 +4915,8 @@ Like shortening it in some form etc.")
   (seq-reduce
    (lambda (acc it) (funcall it acc))
    im-project-name-transformers
-   (if-let ((curr-proj (im-current-project-root))
-            (projects-root (expand-file-name im-projects-root)))
+   (if-let* ((curr-proj (im-current-project-root))
+             (projects-root (expand-file-name im-projects-root)))
        (if (string-prefix-p projects-root curr-proj)
            (string-trim (string-remove-prefix projects-root curr-proj) "/" "/")
          (file-name-nondirectory (directory-file-name curr-proj)))
@@ -4964,7 +4964,7 @@ It simply checks for folders with `.git' under them."
 ;; given key.
 
 (im-leader "p" (λ-interactive
-                (if-let (root (im-current-project-root))
+                (if-let* ((root (im-current-project-root)))
                     (project-switch-project root)
                   (call-interactively #'project-switch-project))))
 
@@ -9735,7 +9735,7 @@ SELECT * FROM _ LIMIT 1;
     ;; together. I mostly prefix my buffers like "*XXX: ..." and here
     ;; I delete that prefix to gain a little bit more space while
     ;; displaying.
-    (if-let ((str (s-match " ?\\*[a-zA-Z0-9_-]+: \\(.*\\)" name)))
+    (if-let* ((str (s-match " ?\\*[a-zA-Z0-9_-]+: \\(.*\\)" name)))
         (cadr str)
       name)))
 
@@ -10645,7 +10645,7 @@ This only works if the phone is already open."
      (--filter (s-matches? (s-replace "$1" ".*" contact-property) (car it)))
      (--map (let ((subprop (nth 1 (s-match (s-replace "$1" "\\([a-zA-Z0-9_-]+\\)" contact-property) (car it)))))
               (concat (format (s-replace "$1" subprop template-string) (cdr it)) "\n")))))
-   (t (if-let ((stuff (org-entry-get nil contact-property)))
+   (t (if-let* ((stuff (org-entry-get nil contact-property)))
           (concat (format template-string stuff) "\n")
         ""))))
 
@@ -10791,7 +10791,7 @@ people.org should contain the following snippet on it's `after-save-hook':
                         (s-trim (read-string "Name: " (alist-get "ITEM" info nil nil #'equal)))))))
      ;; Strip out links from addresses
      ((s-prefix? "ADDRESS" prop)
-      (if-let (x (s-match "\\[\\[\\(.*\\)\\]\\[\\(.*\\)\\]\\]" val))
+      (if-let* ((x (s-match "\\[\\[\\(.*\\)\\]\\[\\(.*\\)\\]\\]" val)))
           (progn
             ;; Put them both in clipboard
             (im-kill (car x))
@@ -11240,8 +11240,8 @@ schedules them to today's date."
                      today-time)
                   t))
            (org-schedule nil
-                         (if-let ((entry-date)
-                                  (hour-min (nth 2 (s-split " " entry-date))))
+                         (if-let* ((entry-date)
+                                   (hour-min (nth 2 (s-split " " entry-date))))
                              (concat today " " hour-min)
                            today)))))
      "LEVEL=2")))
@@ -11295,7 +11295,7 @@ schedules them to today's date."
   (mapcar #'empv-enqueue (file-expand-wildcards "~/Audio/watch-recordings/*/*.m4a")))
 
 (defun im-bullet-org-ensure ()
-  (if-let ((buffer (find-buffer-visiting bullet-org)))
+  (if-let* ((buffer (find-buffer-visiting bullet-org)))
       (switch-to-buffer buffer)
     (find-file bullet-org)))
 
