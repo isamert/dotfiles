@@ -1031,7 +1031,7 @@ set $up k
 set $right l
 
 set $term kitty
-set $menu rofi -recursivebrowser-filter-regex '.*' -terminal '$term' -window-thumbnail -sidebar-mode -markup -show-icons -show combi -combi-modes window#drun#run#recursivebrowser -modes window#combi#drun#filebrowser -combi-modi
+set $menu rofi -drun-show-actions -recursivebrowser-filter-regex '.*' -terminal '$term' -window-thumbnail -sidebar-mode -markup -show-icons -show combi -combi-modes window#drun#run -modes window#combi#drun#filebrowser -combi-modi
 set $calc qalculate-gtk
 
 # * Monitors
