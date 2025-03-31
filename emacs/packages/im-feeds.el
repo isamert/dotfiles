@@ -53,7 +53,6 @@
     ;; DOWN: ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay) ;; Gwern
     ("https://www.lesswrong.com/feed.xml?view=curated-rss" blog essay)
     ("https://writings.stephenwolfram.com/feed/" blog essay)
-    ("https://explosm.net/rss.xml" comic)
     ("https://astralcodexten.substack.com/feed" blog essay) ;; Scott Alexander
     ("https://escapingflatland.substack.com/feed" blog essay) ;; Henrik Karlsson
     ("https://www.theinsight.org/feed" blog essay) ;; Zeynep Tufekci
@@ -90,7 +89,6 @@
     ("UC0uTPqBCFIpZxlz_Lv1tk_g" youtube emacs dev) ;; Protesilaos Stavrou
     ("UC2NXVB__-v-hf-l6wcg1zjQ" youtube linux dev cli) ;; Tom on the internet
     ("UC2eYFnH61tmytImy1mTYvhA" youtube linux cli) ;; Luke Smith
-    ("OmegaDungeon" youtube linux cli) ;; Brodie Robertson
     ("UCEbYhDd6c6vngsF5PQpFVWg" youtube dev haskell) ;; Tsoding
     ("UCUgxpaK7ySR-z6AXA5-uDuw" youtube dev haskell) ;; Haskell at Work
     ("MentalOutlawStudios" youtube cli linux)
@@ -115,7 +113,6 @@
     ("UCZRVHEVslkXoqXEYwJhlTxg" youtube fun turkish vlog) ;; Misha Defne
     ("UCB12vt2obajvkegtlpb_F8Q" youtube fun turkish) ;; Kalt
     ("UCMixjxEx6t663lIf0aQBeSg" youtube turkish) ;; Sevan Nisanyan
-    ("UCWXCrItCF6ZgXrdozUS-Idw" youtube fun animation) ; ExplosmEntertainment
 
     ;; Software tracking
     ("alphapapa/org-ql" gh-release app)))
