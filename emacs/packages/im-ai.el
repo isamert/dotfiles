@@ -218,7 +218,7 @@ OUTPUT-BUFFER."
                         (window-height . 15)))
       (insert
        (format
-        "#+begin_ai markdown :model \"%s\"\n[ME]:%s%s\n#+end_ai"
+        "#+begin_ai markdown :service \"openai\" :model \"%s\"\n[ME]:%s%s\n#+end_ai"
         im-ai-powerful-model
         prompt
         context))
@@ -323,7 +323,6 @@ Query: %s
 (cl-defun im-ai (prompt
                  &key
                  (system)
-                 (include-system)
                  (model org-ai-default-chat-model)
                  (callback)
                  (empty))
@@ -331,9 +330,6 @@ Query: %s
 
 - PROMPT is the user input to generate a response for.
 - SYSTEM is the system prompt for the AI assistant.
-- INCLUDE-SYSTEM, if non-nil, includes SYSTEM prompt to PROMPT.
-  I found that it's more reliable to include system prompt to
-  every message.
 - CALLBACK is a function that takes the prompt and the generated
   response as an argument and performs custom actions with it. It
   defaults to a function that displays the response in a separate
@@ -353,8 +349,7 @@ predefined prompts."
           (prompt (or (plist-get selection :prompt) selection))
           (system (plist-get selection :system))
           (model (plist-get selection :model))
-          (empty (plist-get selection :empty))
-          (include-system (plist-get selection :include-system)))
+          (empty (plist-get selection :empty)))
      (list
       prompt
       :model (cond
@@ -363,7 +358,6 @@ predefined prompts."
               (model model)
               (t org-ai-default-chat-model))
       :system system
-      :include-system (or include-system system)
       :empty empty)))
   (when (functionp prompt)
     (setq prompt (funcall prompt))
@@ -387,7 +381,7 @@ predefined prompts."
       (unless empty
         (insert " -- " (s-truncate 50 prompt)))
       (insert "\n")
-      (insert (format "#+begin_ai markdown :model \"%s\" :sys-everywhere %s\n" model include-system))
+      (insert (format "#+begin_ai markdown :service \"openai\" :model \"%s\"\n" model))
       (when system
         (insert (format "[SYS]: %s\n\n" system)))
       (insert (format "[ME]: %s\n" prompt))
@@ -413,21 +407,25 @@ Also removes the answers, if user wants it."
   (interactive)
   (save-excursion
     (when (re-search-backward
-           (format "#\\+begin_ai markdown :model \"\\(%s\\|%s\\)\""
-                   im-ai-default-model
-                   im-ai-powerful-model)
+           "#\\+begin_ai markdown :service \"\\([a-zA-Z0-9_-]+\\)\" :model \"\\([a-zA-Z0-9_-]+\\)\""
            nil t)
-      (let* ((match-start (match-beginning 0))
-             (match-end (match-end 0))
-             (current-model (match-string 1)))
-        (cond ((string= current-model im-ai-default-model)
-               (replace-match (format "#+begin_ai markdown :model \"%s\"" im-ai-powerful-model) nil nil))
-              ((string= current-model im-ai-powerful-model)
-               (replace-match (format "#+begin_ai markdown :model \"%s\"" im-ai-default-model) nil nil)))
+      (-let* ((match-start (match-beginning 0))
+              (match-end (match-end 0))
+              (current-model (match-string 1))
+              (current-service (match-string 2))
+              ((service model)
+               (s-split ":" (completing-read "Select a model: "
+                                             '("openai:gpt-4o"
+                                               "openai:gpt-4o-mini"
+                                               "deepseek:deepseek-chat"
+                                               "deepseek:deepseek-reasoner")))))
+        (replace-match
+         (format "#+begin_ai markdown :service \"%s\" :model \"%s\"" service model)
+         nil nil)
         (when (y-or-n-p "Want to remove AI answers?")
           (let ((start (progn
                          (goto-char match-start)
-                         (re-search-forward "^\\[AI]: ")
+                         (re-search-forward "^\\[AI_?\\w?\\]: ")
                          (beginning-of-line)
                          (point)))
                 (end (progn
