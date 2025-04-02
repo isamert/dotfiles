@@ -197,7 +197,7 @@
     (empv--select-action "Action for"
       "Exec into container" → (im-kube-pod--exec-into-container pod container)
       "Logs (follow)" → (im-kube-pod--logs pod container)
-      "Logs (follow)" → (im-kube-pod--logs-follow pod container)
+      "Logs (follow, term)" → (im-kube-pod--logs-follow pod container)
       "Logs (to a file)" → (im-kube-pod--logs-to-file pod container)
       "Logs (previous pod)" → (im-kube-pod--previous-logs pod container)
       "App logs" → (im-kube-pod--app-logs pod)
