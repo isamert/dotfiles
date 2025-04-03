@@ -362,6 +362,37 @@ Depending on your current keyboard configuration, tangle one of the following:
 «aerospace-mac-keyboard-bindings»
 #+end_src
 
+And here is the command that toggles between the keyboard configurations:
+
+#+begin_src elisp :tangle "~/.emacs.d/load/im-keyboard.el"
+(defun im-toggle-keyboard-configuration-between-mac-and-uhk ()
+  (interactive)
+  (let* ((kmonad (--find (s-prefix? "kmonad" (plist-get it :name)) prodigy-services))
+         (current (if (plist-get kmonad :process)
+                      'mac 'uhk)))
+    (with-current-buffer (find-file-noselect "~/workspace/projects/personal/dotfiles/index.org")
+      (save-excursion
+        (save-restriction
+          (widen)
+          (when current
+            (setq current (if (eq 'uhk current) 'mac 'uhk))
+            (setq im-current-keyboard-config current)
+            (goto-char (org-babel-find-named-block (format "aerospace-%s" (symbol-name current))))
+            (im-org-babel-tangle-current-block))))
+      (cl-case current
+        (mac (prodigy-start-service kmonad)
+             (message ">> Switched to MAC bindings!"))
+        (uhk (prodigy-stop-service kmonad)
+             (message ">> Switched to UHK bindings!"))
+        (t (user-error "WHAT?")))
+      (set-process-sentinel
+       (start-process "*aerospace-reload-config*" nil "aerospace" "reload-config")
+       (lambda (proc event)
+         (if (eq (process-exit-status proc) 0)
+             (message ">> Aerospace reloaded!")
+           (message ">> Failed to reload aerospace!")))))))
+#+end_src
+
 ** skhd
 This is the global keybinding manager for OSX. [[https://github.com/koekeishiya/yabai/blob/master/examples/skhdrc][Here]] is an example configuration for yabai and [[https://github.com/koekeishiya/skhd/blob/master/examples/skhdrc][here]] is a more generic example configuration demonstrating it's capabilities.
 
