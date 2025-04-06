@@ -68,7 +68,8 @@
 
 (defun im-font-exists-p (font)
   "Check if FONT exists."
-  (x-list-fonts font))
+  (when (boundp 'x-list-fonts)
+    (x-list-fonts font)))
 
 (defun im-assoc-regexp (key list &optional fn)
   "Like `assoc` but uses `string-match (car pair) KEY` for comparison.

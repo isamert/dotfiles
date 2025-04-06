@@ -167,6 +167,11 @@ in my dotfiles repository.")
 
 (require 'im-secrets)
 
+;; Plain (require 'im) is not enough, because straight needs to load
+;; dependencies of im.el file. But I experienced some problems with
+;; Emacs daemon using older byte-compiled version of this file time to
+;; time. Removing ~/.emacs.d/straight/build/im was sufficent to
+;; mitigate the issue.
 (straight-use-package `(im :local-repo ,im-packages-path :files ("im.el")))
 
 (require 'im)

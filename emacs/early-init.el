@@ -6,7 +6,7 @@
 
 ;;; Code:
 
-;;; Sane defaults
+;;;; Sane defaults
 
 (setq package-enable-at-startup nil)
 (setq-default lexical-binding 'lv)
@@ -46,11 +46,20 @@
 ;; Ask y/n instead of yes/no
 (fset 'yes-or-no-p 'y-or-n-p)
 
-;; Visuals
-(menu-bar-mode 0)                ;; Disable menubar
-(tool-bar-mode 0)                ;; Disable toolbar
-(blink-cursor-mode 0)            ;; Disable blinking cursor
-(scroll-bar-mode -1)             ;; Disable scrollbars
+;;;; Visuals
+
+(unless (daemonp)
+  ;; Disable menubar
+  (menu-bar-mode 0)
+  ;; Disable toolbar
+  (tool-bar-mode 0)
+  ;; Disable scrollbars
+  (ignore-errors
+    (scroll-bar-mode -1)))
+
+;; Disable blinking cursor
+(blink-cursor-mode 0)
+
 (setq inhibit-startup-message t) ;; Close startup screen
 (setq frame-resize-pixelwise t)  ;; Fix gap issues with tiling WMs
 (defconst im-init-file (expand-file-name "~/.emacs.d/scratch.el"))
