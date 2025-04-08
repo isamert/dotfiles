@@ -90,7 +90,7 @@ LSP also offers a similar command but this is easier."
   (let ((buf (current-buffer)))
     (save-buffer)
     (im-shell-command
-     :command (format "deno cache %s %s"
+     :command (format "deno cache --allow-import %s %s"
                       (if invalidate? "-r" "")
                       (f-relative (buffer-file-name)))
      :on-start
