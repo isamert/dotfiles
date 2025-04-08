@@ -8124,7 +8124,6 @@ Useful if .elfeed directory is freshly syncned."
     "r4" #'empv-subsonic-search)
   :config
   (require 'im-radio-channels)
-  (require 'empv-hydra)
 
   (setq empv-radio-channels im-radio-channels)
   (setq empv-radio-log-file "~/Documents/notes/songs.org")
