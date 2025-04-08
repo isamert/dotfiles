@@ -9671,7 +9671,8 @@ SELECT * FROM _ LIMIT 1;
         (while (re-search-forward " jupyter-python" nil t)
           (replace-match (concat " jupyter-python :session " fname) nil nil)))
       (goto-char (point-min))
-      (org-mode))))
+      (org-mode)
+      (jupyter-org-interaction-mode))))
 
 ;;;; Window and buffer management
 
