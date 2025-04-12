@@ -46,11 +46,11 @@
 
 ;;; Customization
 
-(defvar lab-github-user "isamert")
+(defvar lab-github-user nil)
 
-(defvar lab-github-token im-github-token)
+(defvar lab-github-token nil)
 
-(defvar lab-github-open-issues-projects-blacklist '("isamert.github.io" "addalias" "gedi" "gracer" "scli")
+(defvar lab-github-open-issues-projects-blacklist '()
   "Projects that you want to filter out when you use `lab-github-list-all-open-issues'.")
 
 ;;; Core

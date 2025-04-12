@@ -7075,6 +7075,10 @@ Fetches missing channels/users first."
 
 (use-package im-github
   :straight nil
+  :custom
+  (lab-github-user "isamert")
+  (lab-github-token im-github-token)
+  (lab-github-open-issues-projects-blacklist '("isamert.github.io" "addalias" "gedi" "gracer" "scli"))
   :init
   (add-to-list 'im-open-thing-at-point-alist '(lab-github-issue-at-point . lab-github-open-issue)))
 
