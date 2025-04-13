@@ -11836,7 +11836,7 @@ Version 2017-01-11"
   (let ((results (->>
                   (with-temp-buffer
                     (insert
-                     (shell-command-to-string "curl --silent https://eksisozluk.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq"))
+                     (shell-command-to-string "curl --silent --header \"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0\" https://eksisozluk.com/basliklar/gundem | grep '?a=popular' | sed -E 's/[ ]*href=\"(.*)\">(.*) <small>(.*)<\\/small>(.*)/(\\3) \\2|||\\1/' | sort -V -r | uniq"))
                     (goto-char (point-min))
                     (xml-parse-string))
                   (s-trim)
