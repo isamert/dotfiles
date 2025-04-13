@@ -11492,6 +11492,44 @@ more than one header of a single org buffer."
   "tt" 'im-toggle-side-tmr-buffer
   "tm" 'im-toggle-side-messages-buffer)
 
+;;;;; Scratch project management
+
+(defvar im-scratch-project-path "~/workspace/projects/personal/scratch")
+
+(defun im-new-scratch-file ()
+  "Create a new scratch file in `im-scratch-project-path' with selected major mode."
+  (interactive)
+  (let* ((mode (completing-read
+                "Select major mode: " obarray
+                (lambda (x)
+                  (and (fboundp x)
+                       (commandp x)
+                       (string-match "-mode$" (symbol-name x))))
+                t
+                nil nil
+                (format "%s" major-mode)))
+         (extensions '((python-ts-mode . ".py")
+                       (js-ts-mode . ".js")
+                       (typescript-ts-mode . ".ts")
+                       (java-ts-mode . ".java")
+                       (emacs-lisp-mode . ".el")
+                       (org-mode . ".org")
+                       (markdown-mode . ".md")
+                       (go-ts-mode . ".go")
+                       (bash-ts-mode . ".sh")))
+         (mode-symbol (intern mode))
+         (date (format-time-string "%Y-%m-%d")))
+    (find-file (make-temp-file
+                (concat im-scratch-project-path "/adhoc/" date "_")
+                nil
+                (alist-get mode-symbol extensions ".txt")))
+    (funcall mode-symbol)))
+
+(defun im-toggle-side-scratch-buffer-typescript ()
+  "Toggle the scratch buffer in side window."
+  (interactive)
+  (im-toggle-side-buffer-with-file (concat im-scratch-project-path "/" "scratch.ts")))
+
 ;;;;; org-babel extension functions
 
 (defun im-org-babel-remove-all-results nil
