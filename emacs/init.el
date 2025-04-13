@@ -4304,10 +4304,14 @@ empty string."
 
 (defvar im-eww-page-fixers
   '(("^https://\\(www.\\)?startpage.com/sp/search" . im-eww--fix-startpage)
-    ("^https://\\(www.\\)?ecosia.org/search" . im-eww--fix-ecosia)))
+    ("^https://\\(www.\\)?ecosia.org/search" . im-eww--fix-ecosia)
+    ("^https://\\(www.\\)?eksisozluk.com" . im-eww--fix-eksisozluk)))
 
 (with-eval-after-load 'eww
-  (add-hook 'eww-after-render-hook #'im-eww-after-render))
+  (add-hook 'eww-after-render-hook #'im-eww-after-render)
+  ;; The changes disappear after doing eww-readable, this fixes that.
+  (define-advice eww-readable (:after (&rest _) run-after-render-hook)
+    (im-eww-after-render)))
 
 (defun im-eww-after-render ()
   (--each (im-assoc-regexp (eww-current-url) im-eww-page-fixers)
@@ -4339,6 +4343,15 @@ empty string."
     (delete-region (point-min) (line-end-position)))
   (while (re-search-forward "^Submit" nil t)
     (delete-region (line-beginning-position) (line-end-position)))
+  (page-break-lines-mode))
+
+(defun im-eww--fix-eksisozluk ()
+  (save-excursion
+    (goto-char (point-min))
+    (while-let ((match (text-property-search-forward
+                        'display nil (lambda (_ value) (imagep value)))))
+      (delete-region (1- (prop-match-beginning match)) (prop-match-end match))
+      (insert "\n")))
   (page-break-lines-mode))
 
 ;;;;;; Language detection and code highlighting in eww buffers
