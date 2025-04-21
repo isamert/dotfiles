@@ -732,6 +732,22 @@ keymap:
       f24-3: { launch: ["wtype", "«"] }
       f24-4: { launch: ["wtype", "»"] }
 #+end_src
+
+#+begin_src conf :tangle (when-linux "~/.config/systemd/user/xremap.service")
+[Unit]
+Description=XRemap (Keyboard remapper)
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3
+ExecStart=xremap --watch %h/.config/xremap.yml
+Nice=-20
+
+[Install]
+WantedBy=xdg-desktop-autostart.target
+#+end_src
+
 ** KMonad
 :PROPERTIES:
 :ID:       DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983
