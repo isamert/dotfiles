@@ -95,7 +95,7 @@
         (im-kube--current-context)
         (im-kube--select-namespace))))
   (let ((all-namespaces? (equal namespace "--all-namespaces")))
-    (with-current-buffer (get-buffer-create (format "*im-kube: %s*" context))
+    (with-current-buffer (get-buffer-create (format "*im-kube-context: %s/%s*" context namespace))
       (erase-buffer)
       (setq-local im-kube--current-context context)
       (setq-local im-kube--current-namespace namespace)
