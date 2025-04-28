@@ -71,6 +71,7 @@
     ("BangerTV" youtube music review)
 
     ("commandline" reddit linux cli)
+    ("selfhosted" reddit linux cli)
     ("orgmode" reddit emacs)
     ("emacs" reddit emacs)
     ("bspwm" reddit linux)
