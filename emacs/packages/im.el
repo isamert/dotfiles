@@ -58,6 +58,21 @@
     ('darwin darwin)
     ((or 'gnu/linux 'linux) linux)))
 
+(defun im-port-in-use? (port)
+  "Check if PORT is in use."
+  (let ((process nil)
+        (port-in-use nil))
+    (condition-case nil
+        (progn
+          (setq process (make-network-process :name "test-port"
+                                              :server t
+                                              :host 'local
+                                              :service port))
+          (delete-process process))
+      (file-error
+       (setq port-in-use t)))
+    port-in-use))
+
 ;;;; General utilities
 
 (defun im-mkdir-if-not (dir)
