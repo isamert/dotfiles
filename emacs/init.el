@@ -13689,13 +13689,13 @@ am on because of this."
 (when (file-exists-p custom-file)
   (load custom-file))
 
-;; (require 'server)
-;; (when (and (not (daemonp)) (not (server-running-p)))
-;;   ;; This is good for the cases where emacsclient may be called inside
-;;   ;; emacs (from vterm etc.). Otherwise Emacs acts weird about the
-;;   ;; window placement.
-;;   (setq server-window #'pop-to-buffer)
-;;   (server-start))
+(require 'server)
+(when (and (not (daemonp)) (not (server-running-p)))
+  ;; This is good for the cases where emacsclient may be called inside
+  ;; emacs (from vterm etc.). Otherwise Emacs acts weird about the
+  ;; window placement.
+  (setq server-window #'pop-to-buffer)
+  (server-start))
 
 (message ">>> Started in %s" (emacs-init-time))
 
