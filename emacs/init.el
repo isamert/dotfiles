@@ -5818,18 +5818,24 @@ SORT should be nil to disable sorting."
    "M-i" #'consult-lsp-file-symbols
    "M-I" #'consult-lsp-symbols))
 
+;;;;;; Language specific lsp-mode packages
+
+(defun im-lsp-java-find-lombok-jar ()
+  (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>)))
+
+(defun im-lsp-java-enable-lombok-support ()
+  (interactive)
+  (if-let (lombok (im-lsp-java-find-lombok-jar))
+      (progn (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok)))
+             (when (bound-and-true-p lsp-mode)
+               (message ">> Restarting lsp workspace...")
+               (lsp-workspace-restart)))
+    (message ">> Lombok jar not found.")))
+
 (use-package lsp-java
   :after lsp
   :config
-  (require 'lsp-java)
-
-  (defun im-lsp-java-find-lombok-jar ()
-    (car (sort (file-expand-wildcards "~/.m2/repository/org/projectlombok/lombok/*/lombok-*.jar") #'string>)))
-
-  (when-let (lombok (im-lsp-java-find-lombok-jar))
-    (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok)))))
-
-;;;;;; Language specific lsp-mode packages
+  (im-lsp-java-enable-lombok-support))
 
 ;; Install metals with coursier:
 ;;
