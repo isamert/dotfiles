@@ -2892,6 +2892,11 @@ it's a list, the first element will be used as the binary name."
 
 (use-package hideshow
   :straight (:type built-in)
+  :general
+  (:states 'normal :keymaps 'hs-minor-mode-map
+   ;; Hide all stuff under current level.
+   ;; Useful in Java classes etc.
+   "zf" #'hs-hide-level)
   :custom
   ;; Comment folding results in weird behavior combined with
   ;; outli-mode.  And comments are not that long generally, so this is
@@ -8505,6 +8510,12 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
 
 (use-package web-mode
   :mode "\\.html\\'")
+
+;;;;; java
+
+;; See lsp-java configuration above.
+
+(add-hook 'java-ts-mode-hook #'hs-minor-mode)
 
 ;;;;; javascript
 
