@@ -411,7 +411,7 @@ hyper - i : emacsclient --eval "(im-globally (im-select-any-snippet))"
 hyper - o : emacsclient --eval "(im-globally (im-people))"
 hyper - g : emacsclient --eval "(im-globally (im-gitlab-select-project))"
 hyper - v : emacsclient --eval "(empv-toggle-video)"
-hyper - return : kitty $HOME
+hyper - return : alacritty $HOME
 
 # Define a mode name shortcuts
 :: shortcuts @
@@ -692,6 +692,11 @@ sudo udevadm control --reload-rules
     (fs/delete lock-file)))
 #+end_src
 
+** foot terminal emulator
+#+begin_src conf :tangle ~/.config/foot/foot.ini
+shell=fish
+term=foot-direct # This is for enabling truecolor on emacs/emacsclient
+#+end_src
 * X/Wayland related
 ** xremap
 I'm probably going to fully replace KMonad with xremap on Linux (and maybe replace KMonad with Karabiner on Mac). KMonad is a bit brittle and having to define full keyboard map is just not scalable.
@@ -1074,7 +1079,7 @@ set $down j
 set $up k
 set $right l
 
-set $term kitty
+set $term footclient
 set $menu rofi -drun-show-actions -recursivebrowser-filter-regex '.*' -terminal '$term' -window-thumbnail -sidebar-mode -markup -show-icons -show combi -combi-modes window#drun#run -modes window#combi#drun#filebrowser -combi-modi
 set $calc qalculate-gtk
 
@@ -1724,30 +1729,6 @@ set -g status-right "#{prefix_highlight}"
 # Load tmux plugin manager
 run '~/.tmux/plugins/tpm/tpm'
 #+end_src
-* Kitty
-Kitty is the most sane terminal emulator ever. It simply has all the necessary configuration and most of the time it does not require any intervention to get it working. I don't know why but terminal Emacs was not behaving well under Alacritty and Foot. But with Kitty, it simply works.
-
-#+name: kitty-common
-#+begin_src conf
-shell fish
-hide_window_decorations titlebar-and-corners
-font_family Cascadia Code NF
-scrollback_lines 50000
-cursor_blink_interval 0
-#+end_src
-
-#+begin_src conf :tangle (when-on :darwin "~/.config/kitty/kitty.conf")
-«kitty-common»
-macos_option_as_alt yes
-font_size 16.0
-macos_show_window_title_in none
-macos_quit_when_last_window_closed yes
-#+end_src
-
-#+begin_src conf :tangle (when-on :linux "~/.config/kitty/kitty.conf")
-«kitty-common»
-#+end_src
-
 * Utilities
 ** git
 #+begin_src conf :tangle ~/.gitconfig
