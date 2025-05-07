@@ -83,7 +83,7 @@
 
 (defun im-font-exists-p (font)
   "Check if FONT exists."
-  (when (boundp 'x-list-fonts)
+  (when (fboundp 'x-list-fonts)
     (x-list-fonts font)))
 
 (defun im-assoc-regexp (key list &optional fn)
