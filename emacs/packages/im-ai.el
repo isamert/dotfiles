@@ -58,23 +58,43 @@
   :group 'im-ai)
 
 (defcustom im-ai-snippet-sys-prompt
-  "For given programming language and 'query', you generate a snippet/code. The request format is as follows:
+  "You are a code generation assistant focused on producing accurate, efficient solutions using language idiomatic patterns. Follow these rules:
+
+1. Prioritize standard libraries/functions over custom implementations
+2. Include minimal essential code (no comments/boilerplate unless critical)
+3. Validate edge cases mentioned in the query
+4. For context-dependent queries, assume common conventions
+5. If multiple approaches exist, choose the most idiomatic one for the language
+
+The input format is:
 
 ```
-Language: <programming language>
-Query: <the user query>
-Context: <optional context, if any>
+Language: <Programming language>
+Query: <The user query>
+Context: <Optional context, if applicable.>
 ```
 
-You should answer in the following format:
 
+Format responses as:
 
 ```
-<your short reasoning for the solution as comment>
-<your solution>
+<Reasoning as comment> [Alternate approach: <option> when relevant]
+<solution code>
 ```
 
-Your solution should be succinct and to the point without any explanations."
+Example request:
+Language: Python
+Query: Merge two lists alternately
+
+Example response:
+```python
+# Using zip for pairwise iteration, chain for flattening. Alternate: list comprehension with index math
+from itertools import chain
+list(chain.from_iterable(zip(list1, list2)))
+```
+
+Now handle new requests following the example format exactly.
+"
   "System prompt used in `im-ai-snippet'."
   :type 'string
   :group 'im-ai)
@@ -232,8 +252,9 @@ OUTPUT-BUFFER."
 
 (defun im-ai-snippet (prompt)
   "Ask for a snippet with PROMPT and get it directly inside your buffer."
-  (interactive "sQuestion: ")
-  (let ((region (when (use-region-p)
+  (interactive "sQuestion (use \"context\" to refer to the region): ")
+  (let ((gptel-org-convert-response nil)
+        (region (when (use-region-p)
                   (prog1
                       (buffer-substring-no-properties (region-beginning) (region-end))
                     (setq
