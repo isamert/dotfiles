@@ -8979,6 +8979,14 @@ work.  You need to enter full path while importing by yourself."
 ;; ~eros-inspect-last-result~ which essentially shows the result of
 ;; last evaluation in a pretty printed format in a different buffer.
 
+(defface im-eval-defun-pulse-highlight-face
+  '((((class color) (min-colors 88) (background dark))
+     :background "#00CED1" :extend t) ; bright turquoise
+    (((class color) (min-colors 88) (background light))
+     :background "#32CD32" :extend t) ; vibrant lime green
+    (t :inherit primary-selection))
+  "Face for highlighting evaluated regions.")
+
 (use-package eros
   :straight (:host github :repo "isamert/eros")
   :hook (after-init . eros-mode)
@@ -8994,13 +9002,13 @@ work.  You need to enter full path while importing by yourself."
     "Highlight expression."
     (pcase-let ((`(,start . ,end) (bounds-of-thing-at-point 'defun)))
       (when (and start end)
-        (im-pulse-highlight-region start end "sea green" 0.3))))
+        (im-pulse-highlight-region start end 'im-eval-defun-pulse-highlight-face 0.3))))
 
   (define-advice eros-eval-last-sexp (:after (&rest _) highlight-expr)
     "Highlight expression."
     (pcase-let ((`(,start . ,end) (bounds-of-thing-at-point 'sexp)))
       (when (and start end)
-        (im-pulse-highlight-region start end "sea green" 0.3)))))
+        (im-pulse-highlight-region start end 'im-eval-defun-pulse-highlight-face 0.3)))))
 
 ;;;;;; Pretty stuff
 

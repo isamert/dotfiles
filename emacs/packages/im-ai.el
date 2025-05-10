@@ -174,19 +174,19 @@ Each element is a property list with the following keys:
 ;; From gptel-rewrite-highlight-face
 (defface im-ai-before-face
   '((((class color) (min-colors 88) (background dark))
-     :background "#800000" :extend t)
+     :background "#FF4500" :extend t) ; vivid red-orange
     (((class color) (min-colors 88) (background light))
-     :background "light goldenrod yellow" :extend t)
+     :background "#FFD700" :extend t) ; bright gold
     (t :inherit secondary-selection))
   "Face for highlighting regions with pending rewrites."
   :group 'im-ai)
 
 (defface im-ai-after-face
   '((((class color) (min-colors 88) (background dark))
-     :background "#063D3A" :extend t)
+     :background "#00CED1" :extend t) ; bright turquoise
     (((class color) (min-colors 88) (background light))
-     :background "light goldenrod yellow" :extend t)
-    (t :inherit secondary-selection))
+     :background "#32CD32" :extend t) ; vibrant lime green
+    (t :inherit primary-selection))
   "Face for highlighting regions with pending rewrites."
   :group 'im-ai)
 

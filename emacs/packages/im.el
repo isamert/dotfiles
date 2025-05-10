@@ -673,9 +673,12 @@ called with the current state of the button."
    'follow-link t))
 
 (defun im-pulse-highlight-region (start end color duration)
-  "Highlight the region from START to END with COLOR for DURATION seconds."
+  "Highlight the region from START to END with COLOR for DURATION seconds.
+COLOR can be a face or string (which is interpreted as background color.)"
   (let ((overlay (make-overlay start end)))
-    (overlay-put overlay 'face `(:background ,color))
+    (overlay-put overlay 'face (if (stringp color)
+                                   `(:background ,color)
+                                 color))
     (run-at-time duration nil #'delete-overlay overlay)))
 
 ;;;; API call
