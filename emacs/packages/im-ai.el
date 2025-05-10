@@ -463,9 +463,12 @@ Also removes the answers, if user wants it."
 This is context aware in `org-mode' buffers, takes src blocks into
 consideration."
   (let ((mode-name
-         (if (and (derived-mode-p 'org-mode) (org-in-src-block-p))
-             (org-element-property :language (org-element-at-point))
-           (symbol-name major-mode))))
+         (cond
+          ((and (derived-mode-p 'org-mode) (org-in-src-block-p))
+           (org-element-property :language (org-element-at-point)))
+          ((and (derived-mode-p 'markdown-mode) (markdown-code-block-at-point-p))
+           (save-excursion (markdown-code-block-lang)))
+          (t (symbol-name major-mode)))))
     (->>
      mode-name
      (s-chop-suffix "-mode")
