@@ -3810,7 +3810,10 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   :commands calendar
   :init
   (evil-define-key 'normal diary-fancy-display-mode-map "q" #'evil-delete-buffer)
-  (evil-define-key 'normal calendar-mode-map (kbd "a") #'im-calendar-jump-org-agenda)
+  (evil-define-key 'normal calendar-mode-map
+    (kbd "a") #'im-calendar-jump-org-agenda
+    (kbd "H") #'calendar-backward-month
+    (kbd "L") #'calendar-forward-month)
   :config
   (evil-collection-calendar-setup)
 
@@ -6745,6 +6748,10 @@ Fetches missing channels/users first."
   "[[" 'slack-buffer-goto-prev-message
   "]]" 'slack-buffer-goto-next-message)
 
+(im-make-repeatable slack
+  "[" slack-buffer-goto-prev-message
+  "]" slack-buffer-goto-next-message)
+
 ;;;;; prodigy
 
 (use-package prodigy
@@ -7830,7 +7837,7 @@ mails."
 ;; This is an optional dependency for sozluk.
 (use-package turkish
   :general
-  (im-leader "tc" #'turkish-correct-region))
+  (im-leader-v "tc" #'turkish-correct-region))
 
 ;;;;; jinx -- spellchecker, flyspell alternative
 
@@ -8640,6 +8647,10 @@ This is used in my snippets."
 (add-hook 'tsx-ts-mode-hook #'hs-minor-mode)
 
 (use-package im-deno
+  :straight nil
+  :demand t)
+
+(use-package im-fnm
   :straight nil
   :demand t)
 
@@ -10017,7 +10028,7 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   (lambda (input)
     (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
       (cons
-       (list "marks" "--no-color" "--null" "--count=25" (s-trim arg) (expand-file-name default-directory))
+       (list "marks" "--no-color" "--null" "--limit=25" (s-trim arg) (expand-file-name default-directory))
        (apply-partially #'consult--highlight-regexps (list (regexp-quote arg)) t)))))
 
 (defun im-marks (&optional directory)
@@ -11634,7 +11645,7 @@ more than one header of a single org buffer."
 
 ;;;;; Current file functionality
 
-(im-leader
+(im-leader-v
   "fi" #'im-print-buffer-file-info
   "fc" #'im-copy-current-filename
   "fr" #'im-rename-current-file-name-and-buffer

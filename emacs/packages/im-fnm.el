@@ -52,6 +52,7 @@
   "Call `fnm-use'.
 If current project contains a .node-version file, use that directly.
 Otherwise ask for a node version."
+  (interactive)
   (im-fnm--ensure)
   (let ((auto? (when-let* ((root (im-current-project-root)))
                  (file-exists-p (format "%s/.node-version" root)))))
