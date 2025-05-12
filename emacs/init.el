@@ -1086,7 +1086,7 @@ side window the only window'"
 
 (use-package evil-numbers
   :general
-  (:states 'normal
+  (:states '(normal visual)
    "+" #'evil-numbers/inc-at-pt
    "-" #'evil-numbers/dec-at-pt))
 
