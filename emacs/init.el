@@ -989,19 +989,22 @@ side window the only window'"
   ;; Convert `` to `' in emacs-lisp mode
   (add-hook 'emacs-lisp-mode-hook (lambda () (push '(?` . ("`" . "'")) evil-surround-pairs-alist))))
 
-;;;;; evil-escape
+;;;;; key-chord
 
 ;; Return back to normal mode using ~jk~ from anywhere. It does not
 ;; play well with multiple cursors, so use ~ESC~ to when using evil-mc
 ;; related stuff.
 
-(use-package evil-escape
-  :after evil
+;; I used to use evil-escape but lately it started causing random
+;; freezes (as I understand from the backtraces), so I replaced it
+;; with key-chord. So far so good. It also feels less clunkier
+;; somehow.
+
+(use-package key-chord
   :config
-  (setq evil-escape-key-sequence "jk") ;; Just Kidding bro, I didn't mean that *escapes*
-  (setq evil-escape-delay 0.2)
-  (setq evil-escape-excluded-major-modes '(magit-status-mode magit-log-mode magit-diff-mode image-mode))
-  (evil-escape-mode 1))
+  (key-chord-mode 1)
+  (key-chord-define evil-insert-state-map "jk" #'evil-normal-state)
+  (key-chord-define evil-visual-state-map "jk" #'evil-normal-state))
 
 ;;;;; evil-matchit
 
