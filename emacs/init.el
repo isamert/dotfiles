@@ -13124,9 +13124,9 @@ Throw error otherwise."
          (current-test-class
           (save-excursion
             (goto-char (point-min))
-            (search-forward-regexp "^\\(public \\)?class \\([A-Za-z0-9_]+\\) " nil t)
+            (search-forward-regexp "^\\(public\\|internal\\)? ?class \\([A-Za-z0-9_]+\\)\\( \\|$\\)" nil t)
             (beginning-of-line)
-            (nth 1 (s-match "class \\([A-Za-z0-9_]+\\) " (substring-no-properties (thing-at-point 'line))))))
+            (nth 1 (s-match "class \\([A-Za-z0-9_]+\\)\\( \\|$\\)" (substring-no-properties (thing-at-point 'line))))))
          (current-test-name
           (ignore-errors
             (save-excursion
