@@ -3797,6 +3797,10 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 ;; - ~iw/im/iy/ia/ib~ to insert weekly/monthly/anneversary/block (block being between the marked day and selected day) entry.
 ;; - Set a mark by hitting ~v~, then go to another date and hit ~M-=~ which will show day count between those two dates.
 
+
+(use-package im-holidays
+  :straight nil)
+
 (use-package calendar
   :straight (:type built-in)
   ;; Enable including other diary entries using the #include "..." syntax
@@ -3806,6 +3810,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
          ;; Show week numbers on calendar
          (after-init . im-calendar-week-number-mode)
          ;; Show sunrise/sunset when calendar opens
+         ;; (Also use `gs' to manually show on current date)
          (calendar-today-visible . calendar-sunrise-sunset)
          (calendar-today-visible . calendar-mark-today))
   :general
@@ -3821,6 +3826,15 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (evil-collection-calendar-setup)
 
   (calendar-set-date-style 'european)
+
+  ;; Discard other holiday definitions and use these only
+  (setq calendar-holidays (append im-holidays-dutch-holidays im-holidays-turkish-holidays))
+
+  ;; Mark holidays by default
+  ;; u → unmark them
+  ;; x → mark them again
+  ;; r → show holiday for current date
+  (setq calendar-mark-holidays-flag t)
 
   ;; Start the week from Monday
   (setq calendar-week-start-day 1)
