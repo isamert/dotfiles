@@ -9462,6 +9462,16 @@ This is the format that `bq' tool expects."
     (switch-to-buffer buf)
     (insert (shell-command-to-string (format "bq show %s -j '%s'" (if current-prefix-arg "--format=prettyjson" "") job-id)))))
 
+(defun im-big-query-cancel-job (job-id)
+  "Get status for given job id."
+  (interactive
+   (list (read-string "Job ID: " (im-region-or 'symbol))))
+  (im-shell-command
+   :command "bq"
+   :args `("cancel" ,job-id)
+   :switch t
+   :buffer-name (format "*bq-cancel-job: %s" job-id)))
+
 (defun im-big-query-table-info (table-name)
   "Get summary information for TABLE-NAME.
 This information includes schema summary, last modified date,
