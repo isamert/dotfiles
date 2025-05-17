@@ -100,6 +100,7 @@
 (general-def
   :keymaps 'im-git-diff-mode-map
   :states 'normal
+  "a" #'diff-apply-hunk
   "s" #'im-git-stage-hunk-or-file
   "x" #'im-git-reverse-hunk
   "c" #'im-git-status-commit
