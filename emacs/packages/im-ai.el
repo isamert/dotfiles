@@ -47,14 +47,22 @@
   "Settings for `im-ai'."
   :group 'utils)
 
-(defcustom im-ai-powerful-model "gpt-4o"
-  "Powerful model, possibly more expensive one."
+(defcustom im-ai-model "gpt-4o"
+  "AI model name."
   :type 'string
   :group 'im-ai)
 
-(defcustom im-ai-default-model "gpt-4o-mini"
-  "Default model, possibly a cheaper one."
+(defcustom im-ai-service "openai"
+  "AI service."
   :type 'string
+  :group 'im-ai)
+
+(defcustom im-ai-models '("openai:gpt-4o"
+                          "openai:gpt-4o-mini"
+                          "deepseek:deepseek-chat"
+                          "deepseek:deepseek-reasoner")
+  "AI service:model list."
+  :type 'list
   :group 'im-ai)
 
 (defcustom im-ai-snippet-sys-prompt
@@ -238,8 +246,9 @@ OUTPUT-BUFFER."
                         (window-height . 15)))
       (insert
        (format
-        "#+begin_ai markdown :service \"openai\" :model \"%s\"\n[ME]:%s%s\n#+end_ai"
-        im-ai-powerful-model
+        "#+begin_ai markdown :service \"%s\" :model \"%s\"\n[ME]:%s%s\n#+end_ai"
+        im-ai-service
+        im-ai-model
         prompt
         context))
       (org-ctrl-c-ctrl-c))))
@@ -264,7 +273,8 @@ OUTPUT-BUFFER."
                     (deactivate-mark)
                     (insert "\n")
                     (backward-char))))
-        (gptel-model im-ai-powerful-model))
+        (gptel-backend )
+        (gptel-model im-ai-model))
     (setq im-ai--last-processed-point (point))
     (gptel-request
         (s-trim
@@ -344,7 +354,8 @@ Query: %s
 (cl-defun im-ai (prompt
                  &key
                  (system)
-                 (model org-ai-default-chat-model)
+                 (model im-ai-model)
+                 (service im-ai-service)
                  (callback)
                  (empty))
   "Use the ChatGPT to generate responses to user prompts.
@@ -370,16 +381,18 @@ predefined prompts."
           (prompt (or (plist-get selection :prompt) selection))
           (system (plist-get selection :system))
           (model (plist-get selection :model))
+          (service (plist-get selection :service))
           (empty (plist-get selection :empty)))
-     (list
-      prompt
-      :model (cond
-              (current-prefix-arg
-               (completing-read (format "Model [current=%s]: " org-ai-default-chat-model) org-ai-chat-models))
-              (model model)
-              (t org-ai-default-chat-model))
-      :system system
-      :empty empty)))
+     (-let (((service model) (cond
+                              (current-prefix-arg (im-ai--select-model))
+                              ((and service model) (list service model))
+                              (t (list im-ai-service im-ai-model)))))
+       (list
+        prompt
+        :model model
+        :service service
+        :system system
+        :empty empty))))
   (when (functionp prompt)
     (setq prompt (funcall prompt))
     (deactivate-mark))
@@ -402,7 +415,7 @@ predefined prompts."
       (unless empty
         (insert " -- " (s-truncate 50 prompt)))
       (insert "\n")
-      (insert (format "#+begin_ai markdown :service \"openai\" :model \"%s\"\n" model))
+      (insert (format "#+begin_ai markdown :service \"%s\" :model \"%s\"\n" service model))
       (when system
         (insert (format "[SYS]: %s\n\n" system)))
       (insert (format "[ME]: %s\n" prompt))
@@ -434,12 +447,7 @@ Also removes the answers, if user wants it."
               (match-end (match-end 0))
               (current-model (match-string 1))
               (current-service (match-string 2))
-              ((service model)
-               (s-split ":" (completing-read "Select a model: "
-                                             '("openai:gpt-4o"
-                                               "openai:gpt-4o-mini"
-                                               "deepseek:deepseek-chat"
-                                               "deepseek:deepseek-reasoner")))))
+              ((service model) (im-ai--select-model)))
         (replace-match
          (format "#+begin_ai markdown :service \"%s\" :model \"%s\"" service model)
          nil nil)
@@ -476,6 +484,30 @@ consideration."
      (s-replace-all '(("-" . " ")
                       ("interaction" . "")))
      (s-titleize))))
+
+(defun im-ai--get-gptel-backend (backend-name)
+  (alist-get
+   backend-name gptel--known-backends nil nil
+   (lambda (x y) (equal (s-downcase x) (s-downcase y)))))
+
+(defun im-ai--select-model ()
+  (thread-last
+    (completing-read (format "Select a model (%s:%s): " im-ai-service im-ai-model) im-ai-models)
+    (s-split ":")))
+
+(defun im-ai-switch-model ()
+  "Switch to another model, changes default model for `org-ai' and `gptel' too."
+  (interactive)
+  (-let (((service model) (im-ai--select-model)))
+    (setq im-ai-service service)
+    (setq im-ai-model model)
+    ;; GPTEL
+    (setq gptel-backend (im-ai--get-gptel-backend service))
+    (setq gptel-model (intern model))
+    ;; ORG-AI
+    (setq org-ai-default-chat-model model)
+    (message ">> Model is set to %s" model)))
+
 
 ;;;; Footer
 
