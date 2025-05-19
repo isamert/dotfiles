@@ -6921,7 +6921,7 @@ Fetches missing channels/users first."
   :config
   (setq wolfram-alpha-app-id im-wolfram-alpha-app-id))
 
-;;;;; org-ai & im-ai -- interactions with LLMs
+;;;;; im-ai & org-ai & gptel -- interactions with LLMs
 
 ;; There are bunch of Emacs-ChatGPT integrations and org-ai seems to
 ;; be best as it fits my workflow quite well. Besides being useful in
@@ -6948,10 +6948,10 @@ Fetches missing channels/users first."
     "sa" #'im-ai-snippet
     "sA" #'im-ai-snippet-superior))
 
-;;;;; gptel
-
-;; Seems more capable than org-ai. Probably going to replace org-ai
-;; with this in the long run.
+;; gptel seems more capable than org-ai. Probably going to replace
+;; org-ai with this in the long run or they might just simply
+;; co-exists where I use org-ai for simple cases and for more complex
+;; cases (like tool usage etc.) gptel.
 ;;
 ;; - Supports images etc.
 ;; - Automatically converts markdown responses to org syntax on the fly,
@@ -6984,6 +6984,14 @@ Fetches missing channels/users first."
   (gptel-make-deepseek "DeepSeek"
     :stream t
     :key gptel-api-key))
+
+(general-def :keymaps '(gptel-mode-map org-ai-mode-map) :states '(normal motion)
+  "C-x [" #'im-ai-previous-block
+  "C-x ]" #'im-ai-next-block)
+
+(im-make-repeatable im-ai
+  "[" im-ai-previous-block
+  "]" im-ai-next-block)
 
 ;;;;; tmr.el -- timers, reminders etc.
 

@@ -27,13 +27,15 @@
 
 ;; My AI extensions.  Mostly uses `org-ai' to do the heavy-lifting.
 
-;; `im-ai-snippet' simply generates a snippet you requested in the
-;; language of the current buffer.  `im-ai-snippet-superior' is the
-;; same thing but gives better results at expense of speed.
-
-;; `im-ai' is a function that gives you pre-defined prompts (see
-;; `im-ai-prompts') that you can use (by standalone, or on a region
-;; etc.) and get results in a predefined org buffer.
+;; - `im-ai' is a function that gives you pre-defined prompts (see
+;;   `im-ai-prompts') that you can use (by standalone, or on a region
+;;   etc.) and get results in a predefined org buffer (uses `org-ai').
+;; - `im-ai-snippet' simply generates a snippet you requested in the
+;;   language of the current buffer.
+;; - `im-ai-lookup' is like `im-ai' but opens a fresh buffer (uses
+;;   `gptel')
+;; - `im-ai-switch-model' switches default model for all functions.
+;; - `im-ai-{next,previous}-block' goes to next/prev prompt/ai answer.
 
 ;;; Code:
 
@@ -107,34 +109,6 @@ Now handle new requests following the example format exactly.
   :type 'string
   :group 'im-ai)
 
-(defcustom im-ai-snippet-superior-sys-prompt
-  "You are a code snippet assistant focused on providing directly usable code examples that prioritize built-in solutions and standard library functions over ad-hoc implementations. When responding, ensure that the snippets are concise, well-formatted, and easy to modify. Avoid introducing unnecessary functions and provide only the code relevant to the user's request.
-
-Your goal is to deliver clear and efficient solutions that users can immediately integrate into their projects, with minimal additional context. Stay focused on the user's specific query and output only the essential code needed for implementation."
-  "System prompt used in `im-ai-snippet-superior'."
-  :type 'string
-  :group 'im-ai)
-
-(defcustom im-ai-snippet-superior-formatter-prompt
-  "For the following question and answer, convert it to a snippet:
-
-- Strip out explanations
-- Keep the code only, convert it to something directly usable.
-- Incorporate necessary commentaries as code comments.
-- Do not use any markdown formatting, only include the code snippet in the answer.
-- Get rid of unnecessary functions, variables etc. Only keep the relevant snippet.
-
-The question: %s
-
-The answer:
-
-%s"
-  "Formatter prompt for `im-ai-snippet-superior'.
-First %s will be replaced by the question and the second will be
-replaced by the answer."
-  :type 'string
-  :group 'im-ai)
-
 (defcustom im-ai-prompts
   '((:display "[EMPTY]"
      :empty t)
@@ -202,152 +176,7 @@ Each element is a property list with the following keys:
 
 (defconst im-ai--buffer "*im-ai*")
 
-;;;; Main
-
-(cl-defun im-ai-prompt (prompt &key follow model sys-prompt output-buffer callback)
-  "Like `org-ai-prompt' but do not stream by default.
-CALLBACK is called with the result, if OUTPUT-BUFFER is nil.  If
-OUTPUT-BUFFER is not nil, then the result is streamed to the
-OUTPUT-BUFFER."
-  (org-ai-interrupt-current-request)
-  (let ((buff (or output-buffer (get-buffer-create " *im-ai*")))
-        (org-ai-default-chat-model model))
-    (with-current-buffer buff
-      (unless output-buffer
-        (erase-buffer))
-      (org-ai-prompt
-       prompt
-       :output-buffer buff
-       :sys-prompt sys-prompt
-       :follow follow
-       :callback
-       (lambda ()
-         (im-run-deferred
-          (unless output-buffer
-            (funcall callback (with-current-buffer buff (buffer-string))))))))))
-
-;;;; im-ai-lookup
-
-(defvar im-ai-lookup--history nil)
-
-(defun im-ai-lookup (prompt)
-  (interactive (list (read-string "Ask AI: " nil im-ai-lookup--history)))
-  (when (string= prompt "")
-    (user-error "A prompt is required."))
-  (let ((context (if (use-region-p)
-                     (concat "\n" (s-trim (buffer-substring-no-properties (region-beginning) (region-end))) "\n")
-                   "")))
-    (with-current-buffer (get-buffer-create "*im-ai-lookup*")
-      (erase-buffer)
-      (org-mode)
-      (display-buffer (current-buffer)
-                      `((display-buffer-in-side-window)
-                        (side . bottom)
-                        (window-height . 15)))
-      (insert
-       (format
-        "#+begin_ai markdown :service \"%s\" :model \"%s\"\n[ME]:%s%s\n#+end_ai"
-        im-ai-service
-        im-ai-model
-        prompt
-        context))
-      (org-ctrl-c-ctrl-c))))
-
-;;;; im-ai-snippet*
-
-(defvar im-ai--last-processed-point nil)
-(add-hook 'gptel-post-stream-hook #'im-ai--cleanup-stream)
-(add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
-
-(defun im-ai-snippet (prompt)
-  "Ask for a snippet with PROMPT and get it directly inside your buffer."
-  (interactive "sQuestion (use \"context\" to refer to the region): ")
-  (let ((gptel-org-convert-response nil)
-        (region (when (use-region-p)
-                  (prog1
-                      (buffer-substring-no-properties (region-beginning) (region-end))
-                    (setq
-                     im-ai--before-overlay
-                     (im-ai--draw-snippet-overlay (region-beginning) (region-end) 'im-ai-before-face))
-                    (goto-char (region-end))
-                    (deactivate-mark)
-                    (insert "\n")
-                    (backward-char))))
-        (gptel-backend )
-        (gptel-model im-ai-model))
-    (setq im-ai--last-processed-point (point))
-    (gptel-request
-        (s-trim
-         (format
-          "Language: %s
-Query: %s
-%s"
-          (im-ai--get-current-language)
-          prompt
-          (if region (concat "Context: \n" region) "")))
-      :system im-ai-snippet-sys-prompt
-      :stream t
-      :fsm (gptel-make-fsm :handlers gptel-send--handlers))))
-
-(cl-defun im-ai--cleanup-stream ()
-  (when gptel-mode
-    (cl-return-from im-ai--cleanup-stream))
-  (save-excursion
-    (when (> (- (line-number-at-pos (point)) (line-number-at-pos im-ai--last-processed-point)) 2)
-      (let ((contents
-             (replace-regexp-in-string
-              "\n*``.*\n*" "" (buffer-substring-no-properties im-ai--last-processed-point (point)))))
-        (delete-region im-ai--last-processed-point (point))
-        (goto-char im-ai--last-processed-point)
-        (insert contents)
-        ;; (indent-region im-ai--last-processed-point (point))
-        (setq im-ai--last-processed-point (point))))))
-
-(cl-defun im-ai--cleanup-after (beg end)
-  (when gptel-mode
-    (cl-return-from im-ai--cleanup-after))
-  (when (and beg end)
-    (save-excursion
-      (let ((contents
-             (replace-regexp-in-string
-              "\n*``.*\n*" ""
-              (buffer-substring-no-properties beg end))))
-        (delete-region beg end)
-        (goto-char beg)
-        (insert contents))
-      ;; Indent the code to match the buffer indentation if it's messed up.
-      (indent-region beg end)
-      (pulse-momentary-highlight-region beg (point))
-      (setq im-ai--after-overlay
-            (im-ai--draw-snippet-overlay beg (1+ (line-end-position)) 'im-ai-after-face)))))
-
-(defun im-ai--accept ()
-  (interactive)
-  (ignore-errors
-    (delete-region
-     (overlay-start im-ai--before-overlay)
-     (overlay-end im-ai--before-overlay)))
-  (remove-overlays (point-min) (point-max) 'im-ai t))
-
-(defun im-ai--reject ()
-  (interactive)
-  (delete-region
-   (overlay-start im-ai--after-overlay)
-   (overlay-end im-ai--after-overlay))
-  (remove-overlays (point-min) (point-max) 'im-ai t))
-
-(defvar-keymap im-ai-snippet-rewrite-map
-  :doc "Keymap for ai rewrite actions at point."
-  "C-c C-c" #'im-ai--accept
-  "C-c C-k" #'im-ai--reject)
-
-(defun im-ai--draw-snippet-overlay (beg end face)
-  (let ((ov (make-overlay beg end)))
-    (overlay-put ov 'face face)
-    (overlay-put ov 'keymap im-ai-snippet-rewrite-map)
-    (overlay-put ov 'im-ai t)
-    (overlay-put ov 'help-echo (format "accept: \\[im-ai--accept], reject: \\[im-ai--reject]"))
-    ov))
+(defconst im-ai--block-start-regexp "^\\[\\(ME\\|AI\\|AI_REASON\\)\\]:")
 
 ;;;; im-ai
 
@@ -433,6 +262,129 @@ predefined prompts."
       (switch-to-buffer buffer))
     buffer))
 
+;;;; im-ai-lookup
+
+(defvar im-ai-lookup--history nil)
+
+(defun im-ai-lookup (prompt)
+  (interactive (list (read-string "Ask AI: " nil im-ai-lookup--history)))
+  (when (string= prompt "")
+    (user-error "A prompt is required."))
+  (let ((context (if (use-region-p)
+                     (concat "\n" (s-trim (buffer-substring-no-properties (region-beginning) (region-end))) "\n")
+                   "")))
+    (with-current-buffer (get-buffer-create "*im-ai-lookup*")
+      (erase-buffer)
+      (org-mode)
+      (display-buffer (current-buffer)
+                      `((display-buffer-in-side-window)
+                        (side . bottom)
+                        (window-height . 15)))
+      (insert
+       (format
+        "#+begin_ai markdown :service \"%s\" :model \"%s\"\n[ME]:%s%s\n#+end_ai"
+        im-ai-service
+        im-ai-model
+        prompt
+        context))
+      (org-ctrl-c-ctrl-c))))
+
+;;;; im-ai-snippet*
+
+(defvar im-ai--last-processed-point nil)
+(add-hook 'gptel-post-stream-hook #'im-ai--cleanup-stream)
+(add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
+
+(defun im-ai-snippet (prompt)
+  "Ask for a snippet with PROMPT and get it directly inside your buffer."
+  (interactive "sQuestion (use \"context\" to refer to the region): ")
+  (let ((gptel-org-convert-response nil)
+        (region (when (use-region-p)
+                  (prog1
+                      (buffer-substring-no-properties (region-beginning) (region-end))
+                    (setq
+                     im-ai--before-overlay
+                     (im-ai--draw-snippet-overlay (region-beginning) (region-end) 'im-ai-before-face))
+                    (goto-char (region-end))
+                    (deactivate-mark)
+                    (insert "\n")
+                    (backward-char))))
+        (gptel-backend (im-ai--get-gptel-backend im-ai-service))
+        (gptel-model im-ai-model))
+    (setq im-ai--last-processed-point (point))
+    (gptel-request
+        (s-trim
+         (format
+          "Language: %s
+Query: %s
+%s"
+          (im-ai--get-current-language)
+          prompt
+          (if region (concat "Context: \n" region) "")))
+      :system im-ai-snippet-sys-prompt
+      :stream t
+      :fsm (gptel-make-fsm :handlers gptel-send--handlers))))
+
+(cl-defun im-ai--cleanup-stream ()
+  (when gptel-mode
+    (cl-return-from im-ai--cleanup-stream))
+  (save-excursion
+    (when (> (- (line-number-at-pos (point)) (line-number-at-pos im-ai--last-processed-point)) 2)
+      (let ((contents
+             (replace-regexp-in-string
+              "\n*``.*\n*" "" (buffer-substring-no-properties im-ai--last-processed-point (point)))))
+        (delete-region im-ai--last-processed-point (point))
+        (goto-char im-ai--last-processed-point)
+        (insert contents)
+        ;; (indent-region im-ai--last-processed-point (point))
+        (setq im-ai--last-processed-point (point))))))
+
+(cl-defun im-ai--cleanup-after (beg end)
+  (when gptel-mode
+    (cl-return-from im-ai--cleanup-after))
+  (when (and beg end)
+    (save-excursion
+      (let ((contents
+             (replace-regexp-in-string
+              "\n*``.*\n*" ""
+              (buffer-substring-no-properties beg end))))
+        (delete-region beg end)
+        (goto-char beg)
+        (insert contents))
+      ;; Indent the code to match the buffer indentation if it's messed up.
+      (indent-region beg end)
+      (pulse-momentary-highlight-region beg (point))
+      (setq im-ai--after-overlay
+            (im-ai--draw-snippet-overlay beg (1+ (line-end-position)) 'im-ai-after-face)))))
+
+(defun im-ai--accept ()
+  (interactive)
+  (ignore-errors
+    (delete-region
+     (overlay-start im-ai--before-overlay)
+     (overlay-end im-ai--before-overlay)))
+  (remove-overlays (point-min) (point-max) 'im-ai t))
+
+(defun im-ai--reject ()
+  (interactive)
+  (delete-region
+   (overlay-start im-ai--after-overlay)
+   (overlay-end im-ai--after-overlay))
+  (remove-overlays (point-min) (point-max) 'im-ai t))
+
+(defvar-keymap im-ai-snippet-rewrite-map
+  :doc "Keymap for ai rewrite actions at point."
+  "C-c C-c" #'im-ai--accept
+  "C-c C-k" #'im-ai--reject)
+
+(defun im-ai--draw-snippet-overlay (beg end face)
+  (let ((ov (make-overlay beg end)))
+    (overlay-put ov 'face face)
+    (overlay-put ov 'keymap im-ai-snippet-rewrite-map)
+    (overlay-put ov 'im-ai t)
+    (overlay-put ov 'help-echo (format "accept: \\[im-ai--accept], reject: \\[im-ai--reject]"))
+    ov))
+
 ;;;; org-ai extensions
 
 (defun im-ai-toggle-gpt-model-on-ai-block ()
@@ -464,6 +416,33 @@ Also removes the answers, if user wants it."
             (when (and start end)
               (delete-region start end))))))))
 
+;;;; Interactive utils
+
+(defun im-ai-switch-model ()
+  "Switch to another model, changes default model for `org-ai' and `gptel' too."
+  (interactive)
+  (-let (((service model) (im-ai--select-model)))
+    (setq im-ai-service service)
+    (setq im-ai-model model)
+    ;; GPTEL
+    (setq gptel-backend (im-ai--get-gptel-backend service))
+    (setq gptel-model (intern model))
+    ;; ORG-AI
+    (setq org-ai-default-chat-model model)
+    (message ">> Model is set to %s" model)))
+
+(defun im-ai-next-block ()
+  "Move cursor to the next prompt/response."
+  (interactive)
+  (unless (re-search-forward im-ai--block-start-regexp nil t)
+    (message ">> No next block.")))
+
+(defun im-ai-previous-block ()
+  "Move cursor to the next prompt/response."
+  (interactive)
+  (unless (re-search-forward im-ai--block-start-regexp nil t)
+    (message ">> No previous block.")))
+
 ;;;; Utils
 
 (defun im-ai--get-current-language ()
@@ -487,27 +466,15 @@ consideration."
 
 (defun im-ai--get-gptel-backend (backend-name)
   (alist-get
-   backend-name gptel--known-backends nil nil
+   (s-replace-all '(("openai" . "chatgpt"))
+                  (s-downcase backend-name))
+   gptel--known-backends nil nil
    (lambda (x y) (equal (s-downcase x) (s-downcase y)))))
 
 (defun im-ai--select-model ()
   (thread-last
     (completing-read (format "Select a model (%s:%s): " im-ai-service im-ai-model) im-ai-models)
     (s-split ":")))
-
-(defun im-ai-switch-model ()
-  "Switch to another model, changes default model for `org-ai' and `gptel' too."
-  (interactive)
-  (-let (((service model) (im-ai--select-model)))
-    (setq im-ai-service service)
-    (setq im-ai-model model)
-    ;; GPTEL
-    (setq gptel-backend (im-ai--get-gptel-backend service))
-    (setq gptel-model (intern model))
-    ;; ORG-AI
-    (setq org-ai-default-chat-model model)
-    (message ">> Model is set to %s" model)))
-
 
 ;;;; Footer
 
