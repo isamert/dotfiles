@@ -11363,7 +11363,14 @@ If it does not exists, create it."
 This does not change tasks time.  If the task is not scheduled,
 schedules them to today's date."
   (interactive)
-  (let* ((today (im-today))
+  (unless (buffer-narrowed-p)
+    (user-error ">> Buffer needs to be narrowed for this!"))
+  (let* ((today (save-excursion
+                  (goto-char (point-min))
+                  (let ((line (thing-at-point 'line)))
+                    (if (string-match "\\[\\([^]]+\\)\\]" line)
+                        (match-string 1 line)
+                      (user-error ">> Not on a bullet heading!")))))
          (today-time (date-to-time today)))
     (org-map-entries
      (lambda ()
