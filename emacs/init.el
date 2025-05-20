@@ -5216,6 +5216,13 @@ non-nil so that you only add it to `project-prefix-map'."
 (bind-key "<f3>" (λ-interactive (im-shell-for 'project 'bottom #'im--new-eat)))
 (bind-key "S-<f3>" (λ-interactive (im-shell-for 'project 'bottom nil "eshell")))
 
+;;;;; xref
+
+(use-package xref
+  :straight (:type built-in)
+  :config
+  (define-advice xref-find-definitions (:after (&rest _) reveal) (reveal-post-command)))
+
 ;;;;; consult
 
 ;; Some key points:
