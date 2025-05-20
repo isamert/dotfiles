@@ -3857,14 +3857,21 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (setq diary-display-function #'diary-fancy-display)
   (setq diary-number-of-entries 7)
 
-  (evil-collection-define-key 'normal 'calendar-mode-map
+  (general-def :keymaps 'calendar-mode-map :states '(normal motion)
+    "t"  #'calendar-goto-today
     "ii" #'diary-insert-entry
     "id" #'diary-insert-entry
     "iw" #'diary-insert-weekly-entry
     "im" #'diary-insert-monthly-entry
     "iy" #'diary-insert-yearly-entry
     "ia" #'diary-insert-anniversary-entry
-    "ib" #'diary-insert-block-entry)
+    "ib" #'diary-insert-block-entry
+    ;; Show agenda for selected date
+    "RET" #'(lambda ()
+              (interactive)
+              (org-agenda-list
+               nil
+               (calendar-absolute-from-gregorian (calendar-cursor-to-date)) 1)))
 
   ;; Show suntimes automatically when cursor moves
   (define-advice calendar-forward-day (:after (&rest _) show-suntimes)
@@ -3894,7 +3901,6 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
               (calendar-iso-from-absolute
                (calendar-absolute-from-gregorian (list month day year)))))
      'font-lock-face 'calendar-iso-week-face)))
-
 
 ;;;;;; Automatically syncing with remote calendars
 
