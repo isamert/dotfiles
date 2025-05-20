@@ -3866,6 +3866,11 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
     "ia" #'diary-insert-anniversary-entry
     "ib" #'diary-insert-block-entry)
 
+  ;; Show suntimes automatically when cursor moves
+  (define-advice calendar-forward-day (:after (&rest _) show-suntimes)
+    (let ((message-log-max nil))
+      (calendar-sunrise-sunset)))
+
   ;; Show calendar at the bottom
   (im-shackle-window "Calendar" 0.3))
 
