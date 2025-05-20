@@ -11708,6 +11708,7 @@ more than one header of a single org buffer."
 (im-leader-v
   "fi" #'im-print-buffer-file-info
   "fc" #'im-copy-current-filename
+  "fC" (λ-interactive (im-copy-current-filename :pretty nil))
   "fr" #'im-rename-current-file-name-and-buffer
   "fD" #'im-delete-current-file)
 
@@ -11748,18 +11749,23 @@ more than one header of a single org buffer."
       (kill-buffer (current-buffer)))))
 
 (defalias 'im-copy-current-file-path 'im-copy-current-filename)
-(defun im-copy-current-filename (&optional uri)
+(cl-defun im-copy-current-filename (&key uri pretty)
   "Copy the current buffer file name to the clipboard.
 If the URI is non-nil, then add file:// in front of the
 file-path."
-  (interactive "P")
+  (interactive
+   (list :pretty t))
   (let* ((fname (if (equal major-mode 'dired-mode)
                     default-directory
                   (buffer-file-name)))
-         (filename (if (and fname uri)
-                       (concat "file://" fname)
-                     fname)))
-    (message ">> Copied: '%s'" (im-kill (or fname (buffer-name))))))
+         (filename (cond
+                    ((and fname uri)
+                     (concat "file://" fname))
+                    ((and fname pretty)
+                     (string-replace (expand-file-name "~") "~" fname))
+                    (fname fname)
+                    (t (user-error ">> No filename associated with buffer!")))))
+    (message ">> Copied: '%s'" (im-kill (or filename (buffer-name))))))
 
 (defun im-print-buffer-file-info (&optional kill-file-path)
   (interactive "P")
