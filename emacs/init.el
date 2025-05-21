@@ -5276,6 +5276,9 @@ non-nil so that you only add it to `project-prefix-map'."
   (setq consult-preview-key "M-,")
   ;; ^ When you do M-, on a candidate, it previews it
 
+  ;; Also follow symlinks while grepping
+  (setq consult-ripgrep-args (concat consult-ripgrep-args " --follow"))
+
   ;; xref consult integration
   (setq xref-show-xrefs-function #'consult-xref)
   (setq xref-show-definitions-function #'consult-xref)
