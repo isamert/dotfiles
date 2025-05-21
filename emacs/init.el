@@ -246,6 +246,8 @@ in my dotfiles repository.")
   ;;
   ;; Set it to 10:30am because some jobs require VPN to be open.
   (midnight-delay-set 'midnight-delay (truncate (* 10.5 60 60)))
+  ;; By default it contains `clean-buffer-list' but I don't use it.
+  (setopt midnight-hook '())
   (midnight-mode +1))
 
 ;;;;; Variables and functions
