@@ -11785,15 +11785,19 @@ file-path."
            (proj-name (im-current-project-name))
            (proj-path (or (im-current-project-root) (expand-file-name "~/")))
            (fpath (or (buffer-file-name) (buffer-name)))
-           (fpath-pretty (string-replace (expand-file-name "~") "~" fpath))
+           (fpath-pretty (f-abbrev fpath))
+           (fpath-true buffer-file-truename)
            (in-git? (file-exists-p (expand-file-name ".git" (im-current-project-root))))
            (text
             (format
-             "[%s] %s\n%s\n%s\n%s\n%s%s\n%s\n%s%s%s%s"
+             "[%s] %s\n%s\n%s%s\n%s\n%s%s\n%s\n%s%s%s%s"
              (bold proj-name)
              (plum (string-remove-prefix proj-path fpath))
              (if region? "*region*" "")
              (format "%s%s" (if kill-file-path (bold "Copied: ") "") (italic fpath-pretty))
+             (if (equal fpath-pretty fpath-true)
+                 ""
+               (concat " → " fpath-true))
              (format "%s: %s" (prop "- Size") (yellow (im-human-readable-size (- point-max point-min))))
              (format
               "%s: %s, %s: %s, %s: %s\n"
