@@ -10119,7 +10119,8 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
              jiralib2-session-call
              jiralib2-update-summary-description
              jiralib2-create-issue
-             jiralib2-jql-search)
+             jiralib2-jql-search
+             jiralib2-board-issues)
   :custom
   (jiralib2-url ty-jira-url)
   (jiralib2-auth 'basic)
@@ -10157,10 +10158,11 @@ something.")
   "project = AI AND (fixVersion in unreleasedVersions() OR fixVersion is EMPTY) AND createdDate >= -2w ORDER BY Rank ASC"
   "Query to get kanban board issues.")
 
-(defvar im-jira-board-id
-  "1332"
-  "Interested board id.
-TODO: make this a list so that I can access to multiple boards by `im-jira-list-issues'.")
+(defvar im-jira-board-ids
+  '(("STA" . "2307")
+    ("PRA" . "2306"))
+  "Interested board ids.
+See `im-jira-list-issues'.")
 
 (defun im-jira-open-issue (issue-number)
   "Open given Jira ISSUE-NUMBER."
@@ -10185,7 +10187,10 @@ TODO: make this a list so that I can access to multiple boards by `im-jira-list-
   (jiralib2-jql-search im-jira-kanban-board-query))
 
 (defun im-jira-get-board-issues ()
-  (jiralib2-board-issues im-jira-board-id nil))
+  (let ((board-id (if (= 1 (length im-jira-board-ids))
+                      (cdar im-jira-board-ids)
+                    (cdr (assoc (completing-read "Select board: " im-jira-board-ids) im-jira-board-ids)))))
+    (jiralib2-board-issues board-id nil)))
 
 (defun im-jira-jql (jql)
   (interactive (list (read-string "Enter JQL: " "text ~ \"...\" AND statusCategory = \"To Do|In Progress|Done\"")) "sEnter JQL: ")
