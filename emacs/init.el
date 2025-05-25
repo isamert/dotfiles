@@ -3841,6 +3841,8 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   ;; Start the week from Monday
   (setq calendar-week-start-day 1)
 
+  (setq calendar-mark-holidays-flag t)
+
   ;; lng and lat for my location, to get sunrise/sunset times on my
   ;; calendar (press `gs'). `calendar-sunrise-sunset' shows the
   ;; sunrise/sunset times for time under the cursor which means you
