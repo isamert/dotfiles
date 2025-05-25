@@ -11731,19 +11731,26 @@ more than one header of a single org buffer."
 ;; Slightly modified from:
 ;; http://steve.yegge.googlepages.com/my-dot-emacs-file
 (defalias 'im-rename-this-file-name-and-buffer #'im-rename-current-file-name-and-buffer)
-(defun im-rename-current-file-name-and-buffer (new-name)
+(defun im-rename-current-file-name-and-buffer ()
   "Renames both current buffer and file it's visiting to NEW-NAME."
-  (interactive "FNew name: ")
-  (let ((name (buffer-name))
-        (filename (buffer-file-name)))
-    (when (not filename)
-      (user-error "Buffer '%s' is not visiting a file!" name))
-    (when (get-buffer new-name)
-      (user-error "A buffer named '%s' already exists!" new-name))
-    (rename-file filename new-name 1)
-    (rename-buffer new-name)
-    (set-visited-file-name new-name)
-    (set-buffer-modified-p nil)))
+  (interactive)
+  (cond
+   ;; Rename file at point if we have one
+   ((and (derived-mode-p 'org-mode)
+         (equal "file" (org-element-property :type (org-element-context))))
+    (im-org-rename-file-at-point))
+   ;; Otherwise rename current buffer
+   (t (let* ((new-name (read-file-name "New name: " nil nil nil (f-filename (buffer-file-name))))
+             (name (buffer-name))
+             (filename (buffer-file-name)))
+        (unless filename
+          (user-error "Buffer '%s' is not visiting a file!" name))
+        (when (get-buffer new-name)
+          (user-error "A buffer named '%s' already exists!" new-name))
+        (rename-file filename new-name 1)
+        (rename-buffer new-name)
+        (set-visited-file-name new-name)
+        (set-buffer-modified-p nil)))))
 
 (defalias 'im-delete/remove-this-file #'im-delete-current-file)
 ;; Slightly modified version of: http://www.ergoemacs.org/emacs/elisp_delete-current-file.html
