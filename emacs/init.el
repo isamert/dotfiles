@@ -5022,7 +5022,7 @@ Like shortening it in some form etc.")
 It simply checks for folders with `.git' under them."
   (->>
    (expand-file-name im-projects-root)
-   (format "fd . '%s' --type directory --maxdepth 6 --absolute-path")
+   (format "fd . '%s' --type directory --maxdepth 8 --absolute-path")
    (shell-command-to-string)
    (s-trim)
    (s-split "\n")
