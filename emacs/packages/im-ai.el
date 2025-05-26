@@ -297,7 +297,7 @@ predefined prompts."
 
 (defun im-ai-snippet (prompt)
   "Ask for a snippet with PROMPT and get it directly inside your buffer."
-  (interactive "sQuestion (use \"context\" to refer to the region): ")
+  (interactive "sQuestion (\"this\" refers to region, @file includes full file): ")
   (let ((gptel-org-convert-response nil)
         (region (when (use-region-p)
                   (prog1
@@ -312,15 +312,18 @@ predefined prompts."
         (gptel-backend (im-ai--get-gptel-backend im-ai-service))
         (gptel-model im-ai-model))
     (setq im-ai--last-processed-point (point))
+    ;; TODO: Move this expansion features to other functions too
     (gptel-request
         (s-trim
          (format
           "Language: %s
 Query: %s
+%s
 %s"
           (im-ai--get-current-language)
-          prompt
-          (if region (concat "Context: \n" region) "")))
+          (s-replace-all '(("@file" . "")) prompt)
+          (if region (concat "Context (referred as \"this\" above):\n```\n" region "\n```") "")
+          (if (s-matches? "\\b@file\\b" prompt) (concat "Full file contents: \n```\n" (buffer-substring-no-properties (point-min) (point-max)) "\n```") "")))
       :system im-ai-snippet-sys-prompt
       :stream t
       :fsm (gptel-make-fsm :handlers gptel-send--handlers))))
