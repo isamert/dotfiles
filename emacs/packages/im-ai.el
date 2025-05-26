@@ -440,7 +440,7 @@ Also removes the answers, if user wants it."
 (defun im-ai-previous-block ()
   "Move cursor to the next prompt/response."
   (interactive)
-  (unless (re-search-forward im-ai--block-start-regexp nil t)
+  (unless (re-search-backward im-ai--block-start-regexp nil t)
     (message ">> No previous block.")))
 
 ;;;; Utils
