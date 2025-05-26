@@ -5890,6 +5890,15 @@ SORT should be nil to disable sorting."
    "M-i" #'consult-lsp-file-symbols
    "M-I" #'consult-lsp-symbols))
 
+(use-package consult-eglot
+  :straight (:host github :repo "mohkale/consult-eglot")
+  :after (eglot consult)
+  :general
+  (:keymaps '(eglot-mode-map) :states '(normal)
+   ;; eglot already integrates with imenu
+   ;; "M-i" #'consult-eglot-file-symbols
+   "M-I" #'consult-eglot-symbols))
+
 ;;;;;; Language specific lsp-mode packages
 
 (defun im-lsp-java-find-lombok-jar ()
