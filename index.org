@@ -1367,7 +1367,7 @@ end
 #+begin_src fish :tangle ~/.config/fish/conf.d/aliases.fish
 # * Stow aliases
 
-alias ssync="stow -d ~/Nextcloud/Sync/ -t ~"
+alias ssync='stow -d ~/Nextcloud/Sync/ -t ~'
 
 # * Package management
 
