@@ -2134,7 +2134,8 @@ Length, author, title etc. are appended to the link."
 
 (im-leader-v
   "ol" #'im-org-link-header
-  "oj" #'im-org-jump-to-header)
+  ;; "oj" is bound to consult-org-agenda
+  "oJ" #'im-org-jump-to-header)
 
 ;; Utility
 
@@ -4906,11 +4907,6 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
            buffer
            (vertico-buffer-display-action . (display-buffer-in-side-window
                                              (side . right)
-                                             (window-width . 0.4))))
-          (consult-imenu
-           buffer
-           (vertico-buffer-display-action . (display-buffer-in-side-window
-                                             (side . right)
                                              (window-width . 0.4))))))
   (vertico-multiform-mode))
 
@@ -5244,13 +5240,17 @@ non-nil so that you only add it to `project-prefix-map'."
   :general
   (im-leader
     "fo" #'find-file
+    "fd" #'consult-dir
     "fb" #'switch-to-buffer
     "fs" #'save-buffer
-    "fd" #'consult-dir
+
     "fl" #'consult-line
-    ;; Normally searches within project buffers, with prefix arg
-    ;; searches within all buffers.
-    "fL" #'consult-line-multi
+    "fL" #'consult-line-multi ;; All open project buffers
+    "fm" #'consult-imenu
+    "fM" #'consult-imenu-multi ;; All open project buffers
+
+    "oj" #'consult-org-agenda
+
     "cr" #'consult-history
     "RET" #'consult-buffer)
   (:keymaps 'minibuffer-mode-map
