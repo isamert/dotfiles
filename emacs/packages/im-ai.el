@@ -449,20 +449,13 @@ Also removes the answers, if user wants it."
   "Get the current programming language of the buffer.
 This is context aware in `org-mode' buffers, takes src blocks into
 consideration."
-  (let ((mode-name
-         (cond
-          ((and (derived-mode-p 'org-mode) (org-in-src-block-p))
-           (org-element-property :language (org-element-at-point)))
-          ((and (derived-mode-p 'markdown-mode) (markdown-code-block-at-point-p))
-           (save-excursion (markdown-code-block-lang)))
-          (t (symbol-name major-mode)))))
-    (->>
-     mode-name
-     (s-chop-suffix "-mode")
-     (s-chop-suffix "-ts")
-     (s-replace-all '(("-" . " ")
-                      ("interaction" . "")))
-     (s-titleize))))
+  (->>
+   (im-major-mode-at-point)
+   (s-chop-suffix "-mode")
+   (s-chop-suffix "-ts")
+   (s-replace-all '(("-" . " ")
+                    ("interaction" . "")))
+   (s-titleize)))
 
 (defun im-ai--get-gptel-backend (backend-name)
   (alist-get

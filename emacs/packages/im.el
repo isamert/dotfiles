@@ -344,6 +344,21 @@ I use this in my `defun' snippet via yasnippet."
 
 (declare-function json-pretty-print-buffer "json")
 
+(defun im-major-mode-at-point ()
+  "Get the major mode at point, treats `org-mode' and `markdown-mode' differently.
+This is a convenience function that returns the buffer's major mode in
+string format, but if buffer is currently in org-mode or markdown-mode,
+then checks if cursor is at a source block and if so, returns the
+major-mode of that block.  Useful for language-aware functionality."
+  (cond
+   ((and (derived-mode-p 'org-mode) (org-in-src-block-p))
+    (concat
+     (org-element-property :language (org-element-at-point))
+     "-mode"))
+   ((and (derived-mode-p 'markdown-mode) (markdown-code-block-at-point-p))
+    (save-excursion (concat (markdown-code-block-lang) "-mode")))
+   (t (symbol-name major-mode))))
+
 (defun im-open-region-in-temp-buffer (content &optional majormode)
   "Open CONTENT in a temporary buffer with MAJORMODE.
 When called interactively, CONTENT selected region or given string."
@@ -358,7 +373,7 @@ When called interactively, CONTENT selected region or given string."
 
        t
        nil nil
-       (format "%s" major-mode))))
+       (im-major-mode-at-point))))
   (switch-to-buffer (generate-new-buffer "*temp-region*"))
   (insert content)
   (switch-to-buffer (current-buffer))
