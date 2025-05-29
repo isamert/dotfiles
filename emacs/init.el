@@ -3238,6 +3238,9 @@ that is read verbatim (meaning that no '$*' is appended):
   :custom
   ;; Save bookmarks automatically
   (bookmark-save-flag 1)
+  ;; If it's a symlink, point to the real one so that bookmark.el can
+  ;; detect changes
+  (bookmark-default-file (file-truename bookmark-default-file))
   :config
   (evil-collection-bookmark-setup))
 
