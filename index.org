@@ -1399,9 +1399,9 @@ alias nixs='nix search nixpkgs'
 
 # * Systemctl
 
-abbr -a -- ctl systemctl
-abbr -a -- ctls 'systemctl status'
-abbr -a -- ctlr 'systemctl restart'
+abbr -a -- ctl 'sudo systemctl'
+abbr -a -- ctls 'sudo systemctl --full status'
+abbr -a -- ctlr 'sudo systemctl --full restart'
 abbr -a -- ctlu 'systemctl --full --user'
 abbr -a -- ctlus 'systemctl --full --user status'
 abbr -a -- ctlur 'systemctl --full --user restart'
