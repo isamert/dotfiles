@@ -371,14 +371,15 @@ When called interactively, CONTENT selected region or given string."
               (commandp x)
               (string-match "-mode$" (symbol-name x))))
 
-       t
-       nil nil
-       (im-major-mode-at-point))))
+       t nil nil (im-major-mode-at-point))))
   (switch-to-buffer (generate-new-buffer "*temp-region*"))
   (insert content)
   (switch-to-buffer (current-buffer))
   (when majormode
-    (funcall (intern majormode))
+    (if (fboundp (intern majormode))
+        (funcall (intern majormode))
+      (message ">> %s not found, falling back to prog-mode!")
+      (prog-mode))
     (pcase majormode
       ((or "json-ts-mode" "json-mode") (json-pretty-print-buffer)))))
 
