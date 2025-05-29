@@ -383,6 +383,11 @@ When called interactively, CONTENT selected region or given string."
     (pcase majormode
       ((or "json-ts-mode" "json-mode") (json-pretty-print-buffer)))))
 
+(defun im-temp-buffer ()
+  "Open a freshly generated temp buffer."
+  (interactive)
+  (im-open-region-in-temp-buffer (im-region-or 'string) "prog-mode"))
+
 (defun im-kill-this-buffer ()
   "Kill current buffer.
 Function `kill-this-buffer' does not work reliably.  See
