@@ -3784,7 +3784,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   "k" (λ-interactive (image-scroll-down 5))
   "r" #'image-rotate
   "_" #'image-flip-horizontally
-  "\\" #'image-flip-horizontally)
+  "\\" #'image-flip-vertically)
 
 ;;;;; calendar & diary & appt
 
