@@ -4922,6 +4922,25 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
   ;; See the following: https://github.com/minad/vertico?tab=readme-ov-file#tramp-hostname-and-username-completion
   (setq completion-styles '(orderless partial-completion basic))
   (setq completion-category-defaults nil)
+
+  ;; This is the default `orderless-affix-dispatch-alist', only
+  ;; changed the orderless-annotation binding to @ from &. Copied
+  ;; everything here for documentation purposes.
+  (setq orderless-affix-dispatch-alist
+        `(
+          ;; Match anything that resembles given string,
+          ;; like %3a → "[3³₃③３𝟑𝟛𝟥𝟯𝟹🯳]\\(?:a[̀-̄̆-̨̣̥̊̌̏̑]\\|[aªà-åāăąǎǟǡǻȁȃȧᵃḁạảấầẩẫậắằẳẵặₐⓐａ𝐚𝑎𝒂𝒶𝓪𝔞𝕒𝖆𝖺𝗮𝘢𝙖𝚊]\\)"
+          (?% . ,#'char-fold-to-regexp)
+          (?! . ,#'orderless-not)
+          ;; Search inside marginalia annotations
+          (?@ . ,#'orderless-annotation)
+          ;; Given character should appear at word beginnings
+          (?, . ,#'orderless-initialism)
+          (?= . ,#'orderless-literal)
+          ;; Line begins with
+          (?^ . ,#'orderless-literal-prefix)
+          ;; Match chars in given order
+          (?~ . ,#'orderless-flex)))
   (setq completion-category-overrides '((file (styles basic partial-completion)))))
 
 (use-package marginalia
