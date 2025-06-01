@@ -1080,7 +1080,7 @@ set $up k
 set $right l
 
 set $term footclient
-set $menu rofi -drun-show-actions -recursivebrowser-filter-regex '.*' -terminal '$term' -window-thumbnail -sidebar-mode -markup -show-icons -show combi -combi-modes window#drun#run -modes window#combi#drun#filebrowser -combi-modi
+set $menu walker
 set $calc qalculate-gtk
 
 # * Monitors
@@ -1217,6 +1217,7 @@ for_window [app_id="com.nextcloud.desktopclient.nextcloud"] floating enable
 # * Launch
 
 exec --no-startup-id xremap --watch ~/.config/xremap.yml
+exec --no-startup-id walker --gapplication-service
 
 # * Include other stuff
 
@@ -1247,110 +1248,6 @@ include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "
 #+begin_src conf :tangle (when-linux "~/.config/dunst/dunstrc")
 [global]
 follow = "keyboard"
-#+end_src
-** rofi
-#+begin_src conf :tangle (when-linux "~/.config/rofi/config.rasi")
-,* {
-  white:            #cccccc;
-  black:            #000000;
-  blue:             #a6e1ff;
-  darkblue:         #B48EAD;
-  cyan:             #95e6cb;
-  lightcyan:        #11d1a1;
-  green:            #33bd91;
-  red:              #ff6666;
-  dark:             #2e2e2e;
-  accent:           #C0A0FF;
-
-  background-color: @dark;
-  border-color:     @dark;
-  text-color:       @white;
-  dark-text-color:  @black;
-  main-color:       @white;
-  highlight:        #337ab7;
-  urgent-color:     @red;
-  selected-color:   @accent;
-}
-
-window {
-  background-color: @background-color;
-  width:            60%;
-  height:           60%;
-  border-radius:    7.5px;
-  border-color:     @border-color;
-  color: white;
-}
-
-element {
-  border-radius:    3px;
-  padding:          10px;
-  margin:           5px 7.5px 0 7.5px;
-}
-
-element normal.normal {
-  padding:          0px 15px;
-  background-color: @background-color;
-  text-color:       @text-color;
-}
-
-element normal.urgent {
-  background-color: @background-color;
-  text-color:       @urgent-color;
-}
-
-element normal.active {
-  background-color: @background-color;
-  text-color:       @main-color;
-}
-
-element selected.normal {
-  background-color: @selected-color;
-  text-color:       @black;
-}
-
-element selected.urgent {
-  background-color: @urgent-color;
-  text-color:       @dark-text-color;
-}
-
-element selected.active {
-  background-color: @selected-color;
-  text-color:       @black;
-}
-
-element alternate.normal {
-  background-color: @background-color;
-  text-color:       @text-color;
-}
-
-element alternate.urgent {
-  background-color: @background-color;
-  text-color:       @urgent-color;
-}
-
-element alternate.active {
-  background-color: @background-color;
-  text-color:       @main-color;
-}
-
-button {
-  background-color: @background-color;
-  text-color:       @text-color;
-  padding:          10px;
-  margin:           5px;
-  border-radius:    5px;
-}
-
-inputbar {
-  background-color: @background-color;
-  children:         [ entry ];
-  padding:          15px;
-  text-color:       @text-color;
-}
-
-entry {
-  text-color:       @text-color;
-}
 #+end_src
 * Shell
 ** Fish
