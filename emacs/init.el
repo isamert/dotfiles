@@ -3232,7 +3232,7 @@ that is read verbatim (meaning that no '$*' is appended):
 ;; using ~consult-bookmark~ and calling ~embark-act~ on them to
 ;; view/delete/edit given bookmark might be easier.
 
-(use-package bookmarks
+(use-package bookmark
   :straight (:type built-in)
   :general
   (im-leader
@@ -3243,9 +3243,9 @@ that is read verbatim (meaning that no '$*' is appended):
   (bookmark-save-flag 1)
   ;; If it's a symlink, point to the real one so that bookmark.el can
   ;; detect changes
-  (bookmark-default-file (file-truename bookmark-default-file))
   :config
-  (evil-collection-bookmark-setup))
+  (evil-collection-bookmark-setup)
+  (setq bookmark-default-file (file-truename bookmark-default-file)))
 
 ;;;;; process-menu-mode
 
