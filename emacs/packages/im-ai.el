@@ -409,7 +409,7 @@ Also removes the answers, if user wants it."
         (when (y-or-n-p "Want to remove AI answers?")
           (let ((start (progn
                          (goto-char match-start)
-                         (re-search-forward "^\\[AI_?\\w?\\]: ")
+                         (re-search-forward "^\\[AI_?\\w*\\]: ")
                          (beginning-of-line)
                          (point)))
                 (end (progn
