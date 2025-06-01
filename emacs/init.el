@@ -1090,6 +1090,9 @@ side window the only window'"
 ;; with ~+,-~ in normal mode.
 
 (use-package evil-numbers
+  :custom
+  (evil-numbers-use-cursor-at-end-of-number t)
+  (evil-numbers-pad-default t)
   :general
   (:states '(normal visual)
    "+" #'evil-numbers/inc-at-pt
