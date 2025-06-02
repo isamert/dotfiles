@@ -159,21 +159,20 @@ Each element is a property list with the following keys:
   :type 'file
   :group 'im-ai)
 
-;; From gptel-rewrite-highlight-face
 (defface im-ai-before-face
   '((((class color) (min-colors 88) (background dark))
-     :background "#FF4500" :extend t) ; vivid red-orange
+     :background "#8b1a1a" :extend t)
     (((class color) (min-colors 88) (background light))
-     :background "#FFD700" :extend t) ; bright gold
+     :background "#ffdddd" :extend t)
     (t :inherit secondary-selection))
   "Face for highlighting regions with pending rewrites."
   :group 'im-ai)
 
 (defface im-ai-after-face
   '((((class color) (min-colors 88) (background dark))
-     :background "#00CED1" :extend t) ; bright turquoise
+     :background "#29422d" :extend t)
     (((class color) (min-colors 88) (background light))
-     :background "#32CD32" :extend t) ; vibrant lime green
+     :background "#ddffdd" :extend t)
     (t :inherit primary-selection))
   "Face for highlighting regions with pending rewrites."
   :group 'im-ai)

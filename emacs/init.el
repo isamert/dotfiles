@@ -9076,9 +9076,9 @@ work.  You need to enter full path while importing by yourself."
 
 (defface im-eval-defun-pulse-highlight-face
   '((((class color) (min-colors 88) (background dark))
-     :background "#00CED1" :extend t) ; bright turquoise
+     :background "#00CED1" :extend t :foreground "black") ; bright turquoise
     (((class color) (min-colors 88) (background light))
-     :background "#32CD32" :extend t) ; vibrant lime green
+     :background "#32CD32" :extend t :foreground "black") ; vibrant lime green
     (t :inherit primary-selection))
   "Face for highlighting evaluated regions.")
 
