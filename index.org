@@ -539,38 +539,41 @@ defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 3
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
 
 #+begin_src conf :tangle (when-linux "/sudo::/etc/systemd/journald.conf.d/max-journal-size.conf")
-  [Journal]
-  SystemMaxUse=500M
+[Journal]
+SystemMaxUse=500M
 #+end_src
 
 Unit files started with ~--user~ will have the following variables.
 
 #+name: path-variable
 #+begin_src text
-  $HOME/.bin:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/bin:$HOME/.cargo/bin:$PATH
+$HOME/.bin:$HOME/.local/bin:$NPM_PACKAGES/bin:$GOPATH/bin:$HOME/.cargo/bin:$PATH
 #+end_src
 
 #+name: env-variables
 #+begin_src conf :tangle (when-linux "~/.config/environment.d/paths.conf")
-  GOPATH="$HOME/.go"
-  R_LIBS_USER="$HOME/.rlibs"
-  NPM_PACKAGES="$HOME/.npm-packages"
-  NODE_PATH="$HOME/.npm-packages/lib/node_modules"
-  PATH=«path-variable»
+GOPATH="$HOME/.go"
+R_LIBS_USER="$HOME/.rlibs"
+NPM_PACKAGES="$HOME/.npm-packages"
+NODE_PATH="$HOME/.npm-packages/lib/node_modules"
+BROWSER=jaro
+VISUAL="jaro --method=edit"
+EDITOR="jaro --method=edit"
+PATH="«path-variable»"
 #+end_src
 
 KDE fucks-up the PATH variable (and only the PATH variable) while booting up. This fixes that:
 
 #+begin_src sh :tangle (when-linux "~/.config/plasma-workspace/env/path.sh")
-  export PATH=«path-variable»
+export PATH=«path-variable»
 #+end_src
 
 After tangling all unit files, run this:
 
 #+begin_src sh
-  systemctl --user daemon-reload
-  systemctl --user enable emacsd
-  systemctl --user enable syncthing
+systemctl --user daemon-reload
+systemctl --user enable emacsd
+systemctl --user enable syncthing
 #+end_src
 
 ** Pacman configuration
@@ -1061,11 +1064,7 @@ This is the configuration for the embedded keyboard on mac.
 
 ** swaywm
 #+begin_src sh :tangle ~/.config/sway/environment
-PATH="$HOME/.local/bin:$HOME/.bin:$HOME/.nimble/bin:$PATH"
-
-BROWSER=jaro
-VISUAL="jaro --method=edit"
-EDITOR="jaro --method=edit"
+«env-variables»
 #+end_src
 
 #+begin_src conf :tangle ~/.config/sway/config
@@ -1261,6 +1260,10 @@ if status is-interactive
 end
 #+end_src
 
+#+begin_src fish :tangle (when-linux "~/.config/fish/conf.d/variables.fish")
+export «env-variables»
+#+end_src
+
 #+begin_src fish :tangle ~/.config/fish/conf.d/aliases.fish
 # * Stow aliases
 
@@ -1368,7 +1371,6 @@ notification_timeout = 99999
 #+end_src
 
 ** Utility functions
-
 Utilizing =~/.config/fish/functions/= instead of the config file or the =conf.d= folder is a better idea because the funcitons inside =functions= folder are lazy loaded.
 
 *** Compression/decompression
