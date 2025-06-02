@@ -25,7 +25,8 @@
 
 ;;; Commentary:
 
-;; My AI extensions.  Mostly uses `org-ai' to do the heavy-lifting.
+;; My AI extensions.  Mostly uses `org-ai'/`gptel' to do the
+;; heavy-lifting.
 
 ;; - `im-ai' is a function that gives you pre-defined prompts (see
 ;;   `im-ai-prompts') that you can use (by standalone, or on a region
@@ -58,8 +59,8 @@
   "AI service."
   :type 'string
   :group 'im-ai)
-
-(defcustom im-ai-models '("openai:gpt-4o"
+(defcustom im-ai-models '("openai:gpt-4.1"
+                          "openai:gpt-4o"
                           "openai:gpt-4o-mini"
                           "deepseek:deepseek-chat"
                           "deepseek:deepseek-reasoner")
@@ -80,25 +81,30 @@ The input format is:
 
 ```
 Language: <Programming language>
-Query: <The user query>
+Query: <The user query, user may refer to the Context.>
 Context: <Optional context, if applicable.>
+Full file contents: <Optional file contents for the currently worked on file, if applicable.>
+Workspace contents: <Optional list of all workspace symbols, if applicable.>
 ```
-
 
 Format responses as:
 
 ```
-<Reasoning as comment> [Alternate approach: <option> when relevant]
+<Reasoning as comment line>
 <solution code>
 ```
 
 Example request:
+
+```
 Language: Python
 Query: Merge two lists alternately
+```
 
 Example response:
+
 ```python
-# Using zip for pairwise iteration, chain for flattening. Alternate: list comprehension with index math
+# Using zip for pairwise iteration, chain for flattening.
 from itertools import chain
 list(chain.from_iterable(zip(list1, list2)))
 ```
@@ -289,6 +295,139 @@ predefined prompts."
         context))
       (org-ctrl-c-ctrl-c))))
 
+;;;; im-ai-context
+
+(defvar im-ai--typescript-treesit-typescript-toplevel-query
+  (treesit-query-compile
+   'typescript
+   '((program (function_declaration) @func)
+     (program (export_statement (function_declaration) @func))
+
+     (program (lexical_declaration
+               (variable_declarator
+                name: (_)
+                value: (arrow_function))) @lexical_func)
+     (program (export_statement (lexical_declaration
+                                 (variable_declarator
+                                  name: (_)
+                                  value: (arrow_function))) @lexical_func))
+
+     (program (class_declaration (class_body (method_definition))) @class)
+     (program (export_statement (class_declaration (class_body (method_definition))) @class))
+
+     (program (type_alias_declaration) @type)
+     (program (export_statement (type_alias_declaration) @type))
+
+     (program (interface_declaration) @interface)
+     (program (export_statement (interface_declaration) @interface)))))
+
+(defvar im-ai--treesit-typescript-class-methods-query
+  (treesit-query-compile
+   'typescript
+   '((class_body (method_definition) @method))))
+
+(defun im-ai--treesit-query (language query file)
+  (treesit-query-capture
+   (treesit-parse-string
+    (with-temp-buffer
+      (insert-file-contents file)
+      (buffer-string))
+    language)
+   query))
+
+(defun im-ai--compact-text (str)
+  (s-replace-regexp "[ \t\n]+" " " str))
+
+(defun im-ai--treesit-node-header (node)
+  (->>
+   node
+   (treesit-node-children)
+   (-butlast)
+   (-map #'treesit-node-text)
+   (s-join " ")
+   (im-ai--compact-text)))
+
+(defun im-ai--treesit-export-if-exported (node text)
+  (if-let* ((parent (treesit-node-parent node)))
+      (if (string= (treesit-node-type parent) "export_statement")
+          (concat "export " text)
+        text)
+    text))
+
+(defun im-ai-file-context (root file)
+  (let* ((mode-name (symbol-name (assoc-default file auto-mode-alist 'string-match)))
+         (ts-mode? (s-suffix? "-ts-mode" mode-name))
+         (language (intern (s-chop-suffixes '("-ts-mode" "-mode") mode-name))))
+    (if (not ts-mode?)
+        (list :file file)
+      (let ((nodes (im-ai--treesit-query
+                    language
+                    im-ai--typescript-treesit-typescript-toplevel-query
+                    (f-join root file))))
+        (list
+         :file file
+         :types
+         (--map
+          (im-ai--treesit-export-if-exported (cdr it) (im-ai--compact-text (treesit-node-text (cdr it))))
+          (--filter (eq 'type (car it)) nodes))
+         :interfaces
+         (--map
+          (im-ai--treesit-export-if-exported (cdr it) (im-ai--compact-text (treesit-node-text (cdr it))))
+          (--filter (eq 'interface (car it)) nodes))
+         :classes
+         (--map
+          (list
+           :class (im-ai--treesit-export-if-exported (cdr it) (im-ai--treesit-node-header (cdr it)))
+           :methods (--map (im-ai--treesit-node-header (cdr it))
+                           (treesit-query-capture
+                            (cdr it)
+                            im-ai--treesit-typescript-class-methods-query)))
+          (--filter (eq 'class (car it)) nodes))
+         :functions
+         (append
+          (--map
+           (im-ai--treesit-export-if-exported (cdr it) (im-ai--treesit-node-header (cdr it)))
+           (--filter (eq 'func (car it)) nodes))
+          (--map
+           (let* ((node (cdr it))
+                  (variable-declarator (treesit-node-child node 0 t)))
+             (concat
+              (im-ai--treesit-export-if-exported node (treesit-node-text (treesit-node-child node 0)))
+              " "
+              (treesit-node-text (treesit-node-child-by-field-name variable-declarator "name"))
+              (when-let* ((type (treesit-node-text (treesit-node-child-by-field-name variable-declarator "type"))))
+                (concat ": " type))
+              " = "
+              (im-ai--treesit-node-header (treesit-node-child-by-field-name variable-declarator "value"))
+              " ..."))
+           (--filter (eq 'lexical_func (car it)) nodes))))))))
+
+(defconst im-ai--code-file-extensions
+  '("*.ts" "*.tsx" "*.js" "*.jsx" "*.py" "*.rb" "*.java" "*.c" "*.cpp" "*.go"
+    "*.rs" "*.html" "*.css" "*.lua" "*.php" "*.json" "*.swift" "*.kotlin" "*.kt"
+    "*.el"))
+
+;; TODO: Only supports typescript file for now.
+(defun im-ai-workspace-context ()
+  "Generate context for current workspace using treesit."
+  (with-temp-buffer
+    (let* ((repo-root (im-current-project-root))
+           (result))
+      (dolist (file (apply #'process-lines "git" "-C" repo-root "ls-files" "--" im-ai--code-file-extensions) result)
+        (let ((context (im-ai-file-context repo-root file)))
+          (insert "./" (plist-get context :file) "\n")
+          (dolist (function (plist-get context :functions))
+            (insert "    - " function "\n"))
+          (dolist (type (plist-get context :types))
+            (insert "    - " type "\n"))
+          (dolist (interface (plist-get context :interfaces))
+            (insert "    - " interface "\n"))
+          (dolist (class (plist-get context :classes))
+            (insert "    - " (plist-get class :class) "\n")
+            (dolist (method (plist-get class :methods))
+              (insert "        - " method "\n"))))))
+    (buffer-string)))
+
 ;;;; im-ai-snippet*
 
 (defvar im-ai--last-processed-point nil)
@@ -296,21 +435,34 @@ predefined prompts."
 (add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
 
 (defun im-ai-snippet (prompt)
-  "Ask for a snippet with PROMPT and get it directly inside your buffer."
-  (interactive "sQuestion (\"this\" refers to region, @file includes full file): ")
-  (let ((gptel-org-convert-response nil)
-        (region (when (use-region-p)
-                  (prog1
-                      (buffer-substring-no-properties (region-beginning) (region-end))
-                    (setq
-                     im-ai--before-overlay
-                     (im-ai--draw-snippet-overlay (region-beginning) (region-end) 'im-ai-before-face))
-                    (goto-char (region-end))
-                    (deactivate-mark)
-                    (insert "\n")
-                    (backward-char))))
-        (gptel-backend (im-ai--get-gptel-backend im-ai-service))
-        (gptel-model im-ai-model))
+  "Ask for a snippet with PROMPT and get it directly inside your buffer.
+
+If you select some region and prompt, then this will change the
+region but if you refer the region as @region, instead of
+changing the region, it will add the answer below the region.
+
+Use @file to include full file contents to the prompt and use
+@workspace to include all workspace symbols to the prompt."
+  (interactive "sQuestion (Use @region, @file, @workspace): ")
+  (let* ((gptel-org-convert-response nil)
+         (edit-region? (and (use-region-p)
+                            (not (s-matches? (rx (or bos space) "@region" (or space eos)) prompt))))
+         (region (buffer-substring-no-properties (region-beginning) (region-end)))
+         (gptel-backend (im-ai--get-gptel-backend im-ai-service))
+         (gptel-model im-ai-model))
+    (if edit-region?
+        (progn
+          (message "OVE YEA")
+          (setq
+           im-ai--before-overlay
+           (im-ai--draw-snippet-overlay (region-beginning) (region-end) 'im-ai-before-face))
+          (goto-char (region-end))
+          (deactivate-mark)
+          (insert "\n")
+          (backward-char))
+      (let ((end (region-end)))
+        (deactivate-mark)
+        (goto-char end)))
     (setq im-ai--last-processed-point (point))
     ;; TODO: Move this expansion features to other functions too
     (gptel-request
@@ -319,12 +471,20 @@ predefined prompts."
           "Language: %s
 Query: %s
 %s
+%s
 %s"
           (im-ai--get-current-language)
-          (s-replace-all '(("@file" . "")) prompt)
-          (if region (concat "Context (referred as \"this\" above):\n```\n" region "\n```") "")
-          (if (s-matches? "\\b@file\\b" prompt) (concat "Full file contents: \n```\n" (buffer-substring-no-properties (point-min) (point-max)) "\n```") "")))
-      :system im-ai-snippet-sys-prompt
+          (s-replace-all `(("@file" . "")
+                           ("@workspace" . "")
+                           ("@region" . ,(concat "\n```\n" region "\n```\n")))
+                         prompt)
+          (if edit-region? (concat "Context: \n```\n" region "\n```") "")
+          (if (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
+              (concat "Full file contents: \n```\n" (region (buffer-substring-no-properties (point-min) (point-max)))  "\n```")
+            "")
+          (if (s-matches? (rx (or bos space) "@workspace" (or space eos)) prompt)
+              (concat "Workspace contents: \n```\n"  (im-ai-workspace-context) "\n```")
+            "")))
       :stream t
       :fsm (gptel-make-fsm :handlers gptel-send--handlers))))
 
@@ -335,7 +495,7 @@ Query: %s
     (when (> (- (line-number-at-pos (point)) (line-number-at-pos im-ai--last-processed-point)) 2)
       (let ((contents
              (replace-regexp-in-string
-              "\n*``.*\n*" "" (buffer-substring-no-properties im-ai--last-processed-point (point)))))
+              "^[\n ]*```.*[\n ]*$" "" (buffer-substring-no-properties im-ai--last-processed-point (point)))))
         (delete-region im-ai--last-processed-point (point))
         (goto-char im-ai--last-processed-point)
         (insert contents)
@@ -349,7 +509,7 @@ Query: %s
     (save-excursion
       (let ((contents
              (replace-regexp-in-string
-              "\n*``.*\n*" ""
+              "^[\n ]*```.*[\n ]*$" ""
               (buffer-substring-no-properties beg end))))
         (delete-region beg end)
         (goto-char beg)
