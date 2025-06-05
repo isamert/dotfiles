@@ -451,7 +451,6 @@ Use @file to include full file contents to the prompt and use
          (gptel-model im-ai-model))
     (if edit-region?
         (progn
-          (message "OVE YEA")
           (setq
            im-ai--before-overlay
            (im-ai--draw-snippet-overlay (region-beginning) (region-end) 'im-ai-before-face))
@@ -485,6 +484,7 @@ Query: %s
               (concat "Workspace contents: \n```\n"  (im-ai-workspace-context) "\n```")
             "")))
       :stream t
+      :system im-ai-snippet-sys-prompt
       :fsm (gptel-make-fsm :handlers gptel-send--handlers))))
 
 (cl-defun im-ai--cleanup-stream ()
