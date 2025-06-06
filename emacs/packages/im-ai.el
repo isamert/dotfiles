@@ -549,6 +549,23 @@ Query: %s
 
 ;;;; org-ai extensions
 
+(defun im-ai-remove-answers (&optional beginning)
+  (interactive)
+  (save-excursion
+    (let ((start (progn
+                   (goto-char (or beginning (point-min)))
+                   (re-search-forward "^\\[AI_?\\w*\\]: ")
+                   (beginning-of-line)
+                   (point)))
+          (end (progn
+                 (or
+                  (when (re-search-forward "^#\\+end_ai" nil t)
+                    (beginning-of-line)
+                    (point))
+                  (point-max)))))
+      (when (and start end)
+        (delete-region start end)))))
+
 (defun im-ai-toggle-gpt-model-on-ai-block ()
   "Toggle GPT model of current org-ai block.
 Also removes the answers, if user wants it."
@@ -566,17 +583,7 @@ Also removes the answers, if user wants it."
          (format "#+begin_ai markdown :service \"%s\" :model \"%s\"" service model)
          nil nil)
         (when (y-or-n-p "Want to remove AI answers?")
-          (let ((start (progn
-                         (goto-char match-start)
-                         (re-search-forward "^\\[AI_?\\w*\\]: ")
-                         (beginning-of-line)
-                         (point)))
-                (end (progn
-                       (re-search-forward "^#\\+end_ai")
-                       (beginning-of-line)
-                       (point))))
-            (when (and start end)
-              (delete-region start end))))))))
+          (im-ai-remove-answers match-start))))))
 
 ;;;; Interactive utils
 
