@@ -720,6 +720,73 @@ buffer."
   (im-ai--gptel-update-bounds)
   (gptel-mode 1))
 
+
+;;;;; Tools
+
+(with-eval-after-load 'gptel
+  (gptel-make-tool
+   :name "write_file"
+   :function (lambda (contents fname)
+               (let ((default-directory (im-current-project-root)))
+                 (write-region contents nil fname)))
+   :description "Write given text to file."
+   :args '((:name "contents"
+            :type string
+            :description "Text contents to write into the file")
+           (:name "file_path"
+            :type string
+            :description "Path to the file. Path is relative to the current project's root."))
+   :category "files")
+
+  (gptel-make-tool
+   :name "read_file"
+   :function (lambda (filepath)
+               (let ((default-directory (im-current-project-root)))
+                 (with-temp-buffer
+                   (insert-file-contents filepath)
+                   (buffer-string))))
+   :description "Return the contents of the file."
+   :args '((:name "file_path"
+            :type string
+            :description "Path to the file. Path is relative to the current project's root."))
+   :category "files")
+
+  (gptel-make-tool
+   :name "list_project_files"
+   :function (lambda ()
+               (->>
+                (im-directory-files-recursively (im-current-project-root))
+                (s-join "\n")))
+   :description "List all file names in the current project, relative to the project dir."
+   :category "files")
+
+  (gptel-make-tool
+   :name "get_webpage_contents"
+   :function (lambda (callback url)
+               (require 'async)
+               ;; Instead of using async fetch, I use async-start to
+               ;; offload the parsing of the webpage because it may
+               ;; also take some noticeable time and block Emacs.
+               (async-start
+                (lambda ()
+                  (require 'shr)
+                  (require 'url-handlers)
+                  (with-temp-buffer
+                    (url-insert-file-contents url)
+                    (shr-insert-document
+                     (prog1
+                         (libxml-parse-html-region (point-min) (point-max))
+                       (erase-buffer)))
+                    (buffer-substring-no-properties (point-min) (point-max))))
+                (lambda (result) (funcall callback result))))
+   :async t
+   :description "Return the contents of a webpage."
+   :args '((:name "url"
+            :type string
+            :description "URL of the webpage to fetch contents from."))
+   :category "web"))
+
+
 ;;;; Footer
 
 (provide 'im-ai)
