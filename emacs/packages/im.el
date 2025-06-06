@@ -874,16 +874,21 @@ Linux), 1 secs for Mac."
   "Get latest file in PATH."
   (car (directory-files (or path default-directory) 'full "^\\([^.]\\|\\.[^.]\\|\\.\\..\\)" #'file-newer-than-file-p)))
 
-(defun im-directory-files-recursively (dir regexp)
-  "Faster alternative to `directory-files-recursively'."
-  (->>
-   (format
-    "fd '%s' '%s' --type file --maxdepth 4 --absolute-path"
-    regexp
-    (expand-file-name dir))
-   (shell-command-to-string)
-   (s-trim)
-   (s-split "\n")))
+(cl-defun im-directory-files-recursively (dir &key (regexp ".*") (max-depth 8) absolute-path)
+  (let ((default-directory dir))
+    (->>
+     (format
+      "fd '%s' '%s' --type file --maxdepth %s %s"
+      regexp
+      (if absolute-path
+          (expand-file-name dir)
+        "./")
+      max-depth
+      (if absolute-path "--absolute-path" "--relative-path"))
+     (shell-command-to-string)
+     (s-trim)
+     (s-split "\n"))))
+
 
 (defun im-encode-image-base64 (path)
   (let* ((type (nth 1 (s-match ".*\\.\\(jpg\\|jpeg\\|png\\)" path)))
