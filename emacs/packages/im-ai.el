@@ -445,7 +445,10 @@ Use @file to include full file contents to the prompt and use
   (interactive "sQuestion (Use @region, @file, @workspace): ")
   (let* ((gptel-org-convert-response nil)
          (edit-region? (and (use-region-p)
-                            (not (s-matches? (rx (or bos space) "@region" (or space eos)) prompt))))
+                            (not (s-matches? (rx (or bos space)
+                                                 "@region"
+                                                 (or space "," eos))
+                                             prompt))))
          (region (buffer-substring-no-properties (region-beginning) (region-end)))
          (gptel-backend (im-ai--get-gptel-backend im-ai-service))
          (gptel-model im-ai-model))
