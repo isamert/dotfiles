@@ -354,60 +354,79 @@ predefined prompts."
         text)
     text))
 
+(defun im-ai-file-context-typescript (root file)
+  (let* ((language 'typescript)
+         (nodes (im-ai--treesit-query
+                 language
+                 im-ai--typescript-treesit-typescript-toplevel-query
+                 (f-join root file))))
+    (list
+     :file file
+     :types
+     (--map
+      (im-ai--treesit-export-if-exported (cdr it) (im-ai--compact-text (treesit-node-text (cdr it))))
+      (--filter (eq 'type (car it)) nodes))
+     :interfaces
+     (--map
+      (im-ai--treesit-export-if-exported (cdr it) (im-ai--compact-text (treesit-node-text (cdr it))))
+      (--filter (eq 'interface (car it)) nodes))
+     :classes
+     (--map
+      (list
+       :class (im-ai--treesit-export-if-exported (cdr it) (im-ai--treesit-node-header (cdr it)))
+       :methods (--map (im-ai--treesit-node-header (cdr it))
+                       (treesit-query-capture
+                        (cdr it)
+                        im-ai--treesit-typescript-class-methods-query)))
+      (--filter (eq 'class (car it)) nodes))
+     :functions
+     (append
+      (--map
+       (im-ai--treesit-export-if-exported (cdr it) (im-ai--treesit-node-header (cdr it)))
+       (--filter (eq 'func (car it)) nodes))
+      (--map
+       (let* ((node (cdr it))
+              (variable-declarator (treesit-node-child node 0 t)))
+         (concat
+          (im-ai--treesit-export-if-exported node (treesit-node-text (treesit-node-child node 0)))
+          " "
+          (treesit-node-text (treesit-node-child-by-field-name variable-declarator "name"))
+          (when-let* ((type (treesit-node-text (treesit-node-child-by-field-name variable-declarator "type"))))
+            (concat ": " type))
+          " = "
+          (im-ai--treesit-node-header (treesit-node-child-by-field-name variable-declarator "value"))
+          " ..."))
+       (--filter (eq 'lexical_func (car it)) nodes))))))
+
+(defun im-ai-file-context-elisp (root file)
+  (with-temp-buffer
+    (let* ((fname (im-tap (f-join root file))) ; required to make `set-auto-mode' work
+           (buffer-file-name fname))
+      (insert-file-contents fname)
+      (delay-mode-hooks (set-auto-mode))
+      (imenu--cleanup)
+      (->>
+       (imenu--make-index-alist)
+       (--filter (listp (cdr it)))
+       (--map (list
+               (intern (concat ":" (downcase (car it))))
+               (-map #'car (cdr it))))
+       (append `(:file ,file))
+       (-flatten-n 1)))))
+
 (defun im-ai-file-context (root file)
   (let* ((mode-name (symbol-name (assoc-default file auto-mode-alist 'string-match)))
-         (ts-mode? (s-suffix? "-ts-mode" mode-name))
          (language (intern (s-chop-suffixes '("-ts-mode" "-mode") mode-name))))
-    (if (not ts-mode?)
-        (list :file file)
-      (let ((nodes (im-ai--treesit-query
-                    language
-                    im-ai--typescript-treesit-typescript-toplevel-query
-                    (f-join root file))))
-        (list
-         :file file
-         :types
-         (--map
-          (im-ai--treesit-export-if-exported (cdr it) (im-ai--compact-text (treesit-node-text (cdr it))))
-          (--filter (eq 'type (car it)) nodes))
-         :interfaces
-         (--map
-          (im-ai--treesit-export-if-exported (cdr it) (im-ai--compact-text (treesit-node-text (cdr it))))
-          (--filter (eq 'interface (car it)) nodes))
-         :classes
-         (--map
-          (list
-           :class (im-ai--treesit-export-if-exported (cdr it) (im-ai--treesit-node-header (cdr it)))
-           :methods (--map (im-ai--treesit-node-header (cdr it))
-                           (treesit-query-capture
-                            (cdr it)
-                            im-ai--treesit-typescript-class-methods-query)))
-          (--filter (eq 'class (car it)) nodes))
-         :functions
-         (append
-          (--map
-           (im-ai--treesit-export-if-exported (cdr it) (im-ai--treesit-node-header (cdr it)))
-           (--filter (eq 'func (car it)) nodes))
-          (--map
-           (let* ((node (cdr it))
-                  (variable-declarator (treesit-node-child node 0 t)))
-             (concat
-              (im-ai--treesit-export-if-exported node (treesit-node-text (treesit-node-child node 0)))
-              " "
-              (treesit-node-text (treesit-node-child-by-field-name variable-declarator "name"))
-              (when-let* ((type (treesit-node-text (treesit-node-child-by-field-name variable-declarator "type"))))
-                (concat ": " type))
-              " = "
-              (im-ai--treesit-node-header (treesit-node-child-by-field-name variable-declarator "value"))
-              " ..."))
-           (--filter (eq 'lexical_func (car it)) nodes))))))))
+    (pcase language
+      ('typescript (im-ai-file-context-typescript root file))
+      ;; The rest is handled by imenu elements
+      (_ (im-ai-file-context-elisp root file)))))
 
 (defconst im-ai--code-file-extensions
   '("*.ts" "*.tsx" "*.js" "*.jsx" "*.py" "*.rb" "*.java" "*.c" "*.cpp" "*.go"
     "*.rs" "*.html" "*.css" "*.lua" "*.php" "*.json" "*.swift" "*.kotlin" "*.kt"
     "*.el"))
 
-;; TODO: Only supports typescript file for now.
 (defun im-ai-workspace-context ()
   "Generate context for current workspace using treesit."
   (with-temp-buffer
@@ -416,12 +435,14 @@ predefined prompts."
       (dolist (file (apply #'process-lines "git" "-C" repo-root "ls-files" "--" im-ai--code-file-extensions) result)
         (let ((context (im-ai-file-context repo-root file)))
           (insert "./" (plist-get context :file) "\n")
-          (dolist (function (plist-get context :functions))
-            (insert "    - " function "\n"))
-          (dolist (type (plist-get context :types))
-            (insert "    - " type "\n"))
-          (dolist (interface (plist-get context :interfaces))
-            (insert "    - " interface "\n"))
+          (dolist (x (plist-get context :functions))
+            (insert "    - " x "\n"))
+          (dolist (x (plist-get context :types))
+            (insert "    - " x "\n"))
+          (dolist (x (plist-get context :interfaces))
+            (insert "    - " x "\n"))
+          (dolist (x (plist-get context :variables))
+            (insert "    - " x "\n"))
           (dolist (class (plist-get context :classes))
             (insert "    - " (plist-get class :class) "\n")
             (dolist (method (plist-get class :methods))
