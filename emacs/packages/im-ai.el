@@ -648,9 +648,7 @@ consideration."
    (im-major-mode-at-point)
    (s-chop-suffix "-mode")
    (s-chop-suffix "-ts")
-   (s-replace-all '(("-" . " ")
-                    ("interaction" . "")))
-   (s-titleize)))
+   (s-replace-all '(("interaction" . "")))))
 
 (defun im-ai--get-gptel-backend (backend-name)
   (alist-get
@@ -665,6 +663,48 @@ consideration."
     (s-split ":")))
 
 ;;;; GPTEL
+
+;;;;; DWIM
+
+(defun im-ai-gptel-dwim (&optional new?)
+  "Open and switch to a GPTEL buffer for the current project.
+- If a buffer already exists, switch to it.
+- With a prefix argument, create and switch to a new GPTEL buffer.
+- If multiple buffers exist for the current project, prompt the user to select one.
+- If some text is selected, put that into the buffer that we are going to switch into."
+  (interactive "P")
+  (if (and (bound-and-true-p gptel-mode) (not new?))
+      (gptel-menu)
+    (let* ((proj (expand-file-name (im-current-project-root)))
+           (buff (format "*gptel: %s*" (im-current-project-name)))
+           (existing (--filter (s-prefix? buff (buffer-name it)) (buffer-list)))
+           (final-buffer (if (and (length> existing 1) (not new?))
+                             (read-buffer "Switch to: " nil nil
+                                          (lambda (b)
+                                            (and-let* ((buf (get-buffer (or (car-safe b) b))))
+                                              (s-prefix? buff (buffer-name buf)))))
+                           (when (and (length= existing 1) (not new?))
+                             (setq buff (car existing)))
+                           (when new?
+                             (setq buff (generate-new-buffer-name buff)))
+                           (or (get-buffer buff)
+                               (gptel buff))
+                           buff)))
+      (when-let* ((region (im-region-or nil)))
+        (let ((lang (im-ai--get-current-language)))
+          (with-current-buffer final-buffer
+            (goto-char (point-max))
+            (insert "\n#+begin_src " lang "\n" region "\n#+end_src"))))
+      (switch-to-buffer final-buffer))))
+
+(defun im-ai-gptel-toggle-side-buffer (&optional new?)
+  "Same as `im-ai-gptel-dwim' but toggle buffer in side buffer."
+  (interactive)
+  (im-toggle-side-buffer-with-name
+   (save-window-excursion
+     (im-ai-gptel-dwim new?)
+     (buffer-name))))
+
 
 ;;;;; Higlighting prompts
 

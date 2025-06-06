@@ -7005,7 +7005,9 @@ Fetches missing channels/users first."
     "eg" #'im-ai
     "sl" #'im-ai-lookup
     "sa" #'im-ai-snippet
-    "sA" #'im-ai-snippet-superior))
+    "sg" #'im-ai-gptel-dwim
+    "sG" (λ-interactive (im-ai-gptel-dwim 'new))
+    "ta" #'im-ai-gptel-toggle-side-buffer))
 
 ;; gptel seems more capable than org-ai. Probably going to replace
 ;; org-ai with this in the long run or they might just simply
@@ -7034,14 +7036,11 @@ Fetches missing channels/users first."
 ;; file. The ones with username "apikey" are for gtpel.
 
 (use-package gptel
-  :general
-  (im-leader-v
-    "sg" #'gptel-menu)
   :config
   (setq gptel-default-mode #'org-mode)
   (setq gptel-track-media t)
-  (setq gptel-prompt-prefix-alist '((org-mode . "[ME]: ")))
-  (setq gptel-response-prefix-alist '((org-mode . "[AI]: ")))
+  (setq gptel-prompt-prefix-alist '((org-mode . "-----\n[ME]: ")))
+  (setq gptel-response-prefix-alist '((org-mode . "-----\n[AI]: ")))
   ;; As usual, my key is in netrc file.
   (gptel-make-deepseek "DeepSeek"
     :stream t
