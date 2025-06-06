@@ -50,7 +50,7 @@
   "Settings for `im-ai'."
   :group 'utils)
 
-(defcustom im-ai-model "gpt-4o"
+(defcustom im-ai-model "gpt-4.1-mini"
   "AI model name."
   :type 'string
   :group 'im-ai)
@@ -59,9 +59,10 @@
   "AI service."
   :type 'string
   :group 'im-ai)
+
 (defcustom im-ai-models '("openai:gpt-4.1"
-                          "openai:gpt-4o"
-                          "openai:gpt-4o-mini"
+                          "openai:gpt-4.1-mini"
+                          "openai:gpt-4.1-nano"
                           "deepseek:deepseek-chat"
                           "deepseek:deepseek-reasoner")
   "AI service:model list."
@@ -685,7 +686,6 @@ mental model of the whole interaction where I frequently edit both mine
 and AI's answers.  Thus, I simply recalculate the all bounds in the
 buffer."
   (when (and gptel-mode (null (car args)))
-    (message ">> recomputing bounds...")
     (im-ai--gptel-purge-bounds)))
 
 ;; Source: https://github.com/karthink/gptel/discussions/321#discussioncomment-12878768
