@@ -641,6 +641,17 @@ consideration."
     (completing-read (format "Select a model (%s:%s): " im-ai-service im-ai-model) im-ai-models)
     (s-split ":")))
 
+;;;; GPTEL
+
+;;;;; Higlighting prompts
+
+(define-advice gptel-mode (:after (&rest _) highlight-prompts)
+  "Highlight prompt prefixes."
+  (if gptel-mode
+      (font-lock-add-keywords nil '(("^\\[ME\\]: " . font-lock-warning-face)
+                                    ("^\\[AI\\]: " . font-lock-function-name-face)) t)
+    (font-lock-remove-keywords nil '(("^\\[ME\\]: " . font-lock-warning-face)
+                                     ("^\\[AI\\]: " . font-lock-function-name-face)))))
 ;;;; Footer
 
 (provide 'im-ai)
