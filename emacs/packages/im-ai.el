@@ -652,6 +652,74 @@ consideration."
                                     ("^\\[AI\\]: " . font-lock-function-name-face)) t)
     (font-lock-remove-keywords nil '(("^\\[ME\\]: " . font-lock-warning-face)
                                      ("^\\[AI\\]: " . font-lock-function-name-face)))))
+
+;;;;; Recomputing bounds before sending the request
+
+(define-advice gptel-send (:before (&rest args) purge-bounds)
+  "Re-compute bounds before sending the query.
+This gets rid of bunch of problems, at the expense of some speed.
+Tracking of answers through text properties does not align with my
+mental model of the whole interaction where I frequently edit both mine
+and AI's answers.  Thus, I simply recalculate the all bounds in the
+buffer."
+  (when (and gptel-mode (null (car args)))
+    (message ">> recomputing bounds...")
+    (im-ai--gptel-purge-bounds)))
+
+;; Source: https://github.com/karthink/gptel/discussions/321#discussioncomment-12878768
+
+(defun im-ai--gptel-recompute-bounds ()
+  (beginning-of-buffer)
+  (let ((ai-f
+         (lambda () (ignore-errors
+                 (list
+                  (progn
+                    (search-forward (gptel-response-prefix-string))
+                    (point))
+                  (-
+                   (or
+                    (ignore-errors
+                      (progn
+                        (search-forward (gptel-prompt-prefix-string))
+                        (goto-char (- (match-beginning 0) 1))))
+                    (point-max))
+                   1)))))
+        (tally nil)
+        (ai-bound nil))
+    (while (setq ai-bound (funcall ai-f))
+      (when ai-bound
+        (push ai-bound tally)))
+
+    (when tally
+      (concat
+       "((response "
+       (string-join
+        (-map (apply-partially #'format "%s")
+              (reverse tally))
+        " ")
+       "))"))))
+
+(defun im-ai--gptel-update-bounds (&rest _)
+  (save-excursion
+    (org-with-wide-buffer
+     (goto-char (point-min))
+     (when (org-at-heading-p)
+       (org-open-line 1)))
+
+    (when-let ((bounds (im-ai--gptel-recompute-bounds)))
+      (beginning-of-buffer)
+      (org-set-property "GPTEL_BOUNDS" bounds)
+
+      ;; Changing the bounds might change all positions in the
+      ;; buffer. Redo them if they differ after the change
+      (unless (string= bounds (im-ai--gptel-recompute-bounds))
+        (im-ai--gptel-update-bounds)))))
+
+(defun im-ai--gptel-purge-bounds ()
+  (gptel-mode -1)
+  (im-ai--gptel-update-bounds)
+  (gptel-mode 1))
+
 ;;;; Footer
 
 (provide 'im-ai)
