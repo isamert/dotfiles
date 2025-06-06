@@ -7034,6 +7034,9 @@ Fetches missing channels/users first."
 ;; file. The ones with username "apikey" are for gtpel.
 
 (use-package gptel
+  :general
+  (im-leader-v
+    "sg" #'gptel-menu)
   :config
   (setq gptel-default-mode #'org-mode)
   (setq gptel-track-media t)
