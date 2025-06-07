@@ -11514,7 +11514,7 @@ schedules them to today's date."
   "Intelligently suggest a filename for the current context."
   (let ((fname (if path (f-filename path) "")))
     (if (and (equal
-              (expand-file-name (buffer-file-name (buffer-base-buffer (current-buffer))))
+              (expand-file-name (or (buffer-file-name (buffer-base-buffer (current-buffer))) "NOT_A_FILE"))
               (expand-file-name bullet-org))
              (not (s-prefix? "bullet_" fname)))
         (f-join
