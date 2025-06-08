@@ -2344,13 +2344,16 @@ searches for TODO/FIXME items in given folder."
     ;; Precautionary call
     (org-id-get-create)
 
-    (let* ((url-title (read-string "Title: " (im-url-get-title url)))
+    (let* ((url-title (if update?
+                          (im-org-header-line-to-title (org-entry-get nil "ITEM"))
+                        (read-string "Title: " (im-url-get-title url))))
            (archive-path (format
-                          "%s/%s_%s_%s.html"
+                          "%s/%s_%s_%s%s"
                           im-org-archive-url-path
                           (org-id-get-create)
                           (format-time-string "%Y%m%dT%H%M%S")
-                          (im-string-url-case url-title))))
+                          (im-string-url-case url-title)
+                          (plist-get (cdar (im-assoc-regexp url im-archive-handlers)) :extension))))
       (org-set-property
        "ARCHIVED_AT"
        (format "%s[[file:./%s][%s]]"
@@ -2368,10 +2371,7 @@ searches for TODO/FIXME items in given folder."
 
       ;; Create the archive
       (f-mkdir im-org-archive-url-path)
-      (im-archive-url
-       url
-       :where archive-path
-       :tidy t))))
+      (im-archive-url url archive-path))))
 
 (with-eval-after-load 'org-capture
   (add-to-list
@@ -12293,108 +12293,6 @@ list them as seperate entries."
 (defmacro im-globally (&rest body)
   `(let ((completing-read-function #'im-dmenu))
      ,@body))
-
-;;;;; Archive URLs with single-file
-
-(cl-defun im-archive-url (url &key where (backend 'chrome) crawl tidy on-finish on-fail)
-  "Archive the URL into WHERE.
-WHERE can be a directory or a file.  If it's a directory, it should
-already exists otherwise WHERE is interpreted as a file name."
-  (interactive
-   (list (or
-          (im-org-link-copy)
-          (thing-at-point 'url)
-          (read-string "URL: "))
-         (read-directory-name "Save files into: ")))
-  (setq where (expand-file-name where))
-  (cond
-   ((s-matches? im-reddit-comment-url-regexp url)
-    (im-archive-url--reddit url :where where))
-   (t
-    (im-archive-url--helper
-     url
-     :where where
-     :backend backend
-     :crawl crawl
-     :tidy tidy
-     :on-finish on-finish
-     :on-fail on-fail))))
-
-(cl-defun im-archive-url--helper (url &key where (backend 'chrome) crawl tidy on-finish on-fail)
-  (interactive
-   (list (or
-          (im-org-link-copy)
-          (thing-at-point 'url)
-          (read-string "URL: "))
-         (read-directory-name "Save files into: ")))
-  (setq where (expand-file-name where))
-  (let* ((command
-          (format
-           "%s --filename-replacement-character='-' %s %s %s \"%s\" \"%s\""
-           (im-ensure-binary "deno run -A npm:single-file-cli" :installer "Install deno and thats it.")
-           (if (eq system-type 'darwin)
-               "--browser-executable-path=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\""
-             "--browser-executable-path=chromium-browser")
-           (if (eq backend 'firefox)
-               "--back-end=webdriver-gecko"
-             "")
-           (if crawl
-               ;; FIXME --crawl-replace-urls=true does not work
-               "--crawl-links=true --crawl-external-links-max-depth=1 --crawl-max-depth=1 --crawl-replace-urls=true --crawl-inner-links-only=false --crawl-no-parent=true"
-             "")
-           url
-           (cond
-            ((f-dir? where)
-             (format "--output-directory=%s" where))
-            (where where)
-            (t (format "--output-directory=%s" default-directory))))))
-    (im-shell-command
-     :command command
-     :switch nil
-     :buffer-name "*single-file output*"
-     :on-finish
-     (lambda (&rest _)
-       (when (called-interactively-p 'any)
-         (message "Archived `%s'!" url)
-         (kill-new command))
-       ;; single-file does not return the created file name, finding that manually
-       (let ((created-file (cond
-                            ((f-file? where) where)
-                            ((f-dir? where) (im-latest-file where))
-                            (t (error "Can't find file created backup file")))))
-         (when tidy
-           (shell-command
-            (format "%s -q -w 120 -m '%s'"
-                    (im-ensure-binary "tidy")
-                    created-file)))
-         (and on-finish (funcall on-finish created-file))))
-     :on-fail
-     (lambda (&rest _)
-       (when (called-interactively-p 'any)
-         (message "Archiving failed: '%s'. Command is copied to your kill ring." url)
-         (kill-new command))
-       (and on-fail (funcall on-fail 'abnormal-exit))))))
-
-(cl-defun im-archive-url--reddit (link &key where)
-  "Archive Reddit comment page LINK to WHERE in `org-mode'.
-See `im-archive-url' for WHERE's definition."
-  (require 'reddigg)
-  (setq link (substring link (length "https://www.reddit.com/") nil))
-  (promise-chain (reddigg--promise-comments link)
-    (then #'reddigg--print-comments)
-    (then (lambda (&rest _)
-            (write-region
-             (with-current-buffer (reddigg--get-cmt-buffer)
-               (buffer-substring-no-properties (point-min) (point-max)))
-             nil
-             (cond
-              ;; NOTE: I don't have a use case where I pass `nil' for
-              ;; `where'.  If I do, it's better to include the page
-              ;; title to the filename.
-              ((f-dir? where) (f-join where (format-time-string "%Y%m%dT%H%M%S-reddit-comments.org")))
-              (where where)))))
-    (promise-catch (lambda (reason)
-                     (message "im-archive-url--reddit failed: %s" reason)))))
 
 ;;;;; narrow-indirect & im-narrow-dwim
 
