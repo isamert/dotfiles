@@ -73,6 +73,27 @@
        (setq port-in-use t)))
     port-in-use))
 
+(cl-defun im-ensure-binary (command &key package installer)
+  "Ensures that the binary COMMAND is installed.
+If not, alerts the user and copies the installation instructions
+to the kill ring.
+
+COMMAND can be a string or a list.  If it's a string, it will be
+split and the first element will be used as the binary name.  If
+it's a list, the first element will be used as the binary name."
+  (let ((binary (cond
+                 ((stringp command) (car (split-string command " ")))
+                 ((listp command) (car command))
+                 (t (error ">> Invalid command: '%s'" command)))))
+    (if (not (executable-find binary))
+        (let* ((installer (or installer
+                              (im-when-on :darwin "brew install" :linux "pacman -S")))
+               (package (or package binary))
+               (install-cmd (format "%s %s" installer package)))
+          (kill-new install-cmd)
+          (error (format "Binary '%s' not found. Do `%s'" binary install-cmd)))
+      command)))
+
 ;;;; General utilities
 
 (defun im-mkdir-if-not (dir)
