@@ -852,6 +852,12 @@ side window the only window'"
   :config
   (evil-collection-grep-setup))
 
+(use-package man
+  :defer t
+  :straight (:type built-in)
+  :config
+  (evil-collection-man-setup))
+
 (use-package replace
   :defer t
   :straight (:type built-in)
