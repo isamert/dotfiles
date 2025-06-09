@@ -709,6 +709,12 @@ side window the only window'"
 (use-package page-break-lines
   :autoload (page-break-lines-mode))
 
+;; C-x [,] are bound to {backward,forward}-page, let's make them
+;; repeatable:
+(im-make-repeatable page-movement
+  "[" backward-page
+  "]" forward-page)
+
 ;;;; evil-mode
 
 ;;;;; Basic configuration
