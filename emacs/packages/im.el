@@ -577,6 +577,7 @@ strings.  PROMPT and rest are _IGNORED."
           (split "\n")
           (drop 0)
           (filter t)
+          (require-match? t)
           (map 'it) (do 'it) category)
   "Run given CMD and do a `completing-read' on it.
 This macro is intended to quicken up the process of running a
@@ -603,7 +604,7 @@ command."
      :sort? ,(not keep-order)
      :initial ,initial
      :category ,category
-     :require-match? t)))
+     :require-match? ,require-match?)))
 
 (defun im-read-string (prompt &rest rest)
   "Like `read-string' but returns nil on empty input."

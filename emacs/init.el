@@ -7696,7 +7696,10 @@ mails."
     "gc" #'im-git-commit
     "ga" #'im-git-commit-amend
     "ge" #'im-git-list-stash
-    "gE" #'vc-git-stash)
+    "gE" #'vc-git-stash
+    "gwa" #'im-git-worktree-add
+    "gws" #'im-git-worktree-switch
+    "gwd" #'im-git-worktree-delete)
   :init
   (add-hook 'im-git-commit-finished-hook #'im-update-git-state))
 
@@ -10065,9 +10068,6 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
 ;; My completing-read based JIRA utilities
 ;;
 
-(defvar im-git-worktrees-root "~/Workspace/projects/worktrees"
-  "Directory to create worktrees in.")
-
 (defvar im-git-main-branch "master"
   "Main branch name.")
 
@@ -10184,25 +10184,6 @@ If PROJECTS is nil, then `im-jira-projects' is used."
       (user-error "Cannot git fetch --all"))
     (message "Creating branch...")
     (magit-branch-and-checkout branch-name im-jira-base-branch)
-    (vc-refresh-state)
-    (im-jira-change-issue-status-to-status key "In Progress")
-    (message "Currently on %s." (lab-git-current-branch))))
-
-(defun im-jira-ticket-to-worktree (key summary)
-  (interactive "sIssue name: ")
-  (let* ((branch-name (im-jira--create-branch-name-from-ticket (concat key summary)))
-         (worktree (expand-file-name (format "%s/%s" im-git-worktrees-root (s-replace "/" "-" branch-name)))))
-    (message "Updating...")
-    (unless (= 0 (shell-command "git fetch --all"))
-      (user-error "Cannot git fetch --all"))
-    (message "Creating worktree...")
-    (if (-contains? (vc-git-branches) branch-name)
-        (magit-worktree-checkout worktree branch-name)
-      (magit-worktree-branch worktree branch-name im-jira-base-branch))
-    (tab-bar-new-tab)
-    (tab-bar-rename-tab worktree)
-    (cd worktree)
-    (find-file)
     (vc-refresh-state)
     (im-jira-change-issue-status-to-status key "In Progress")
     (message "Currently on %s." (lab-git-current-branch))))

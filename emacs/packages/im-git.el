@@ -61,6 +61,7 @@
 ;;; Code:
 
 (require 's)
+(require 'f)
 (require 'diff)
 (require 'diff-mode)
 (require 'outline)
@@ -751,6 +752,123 @@ Works only if the stash entry is at the beginning of the line."
     (beginning-of-line)
     (when (looking-at "stash@{[0-9]+}")
       (match-string 0))))
+
+;;;; git worktrees
+
+;; - `im-git-worktree-add': Creates a new git worktree from an existing or
+;; new branch under a common directory, then opens it in dired.
+;; - `im-git-worktree-switch': Prompts to select an existing git worktree
+;; and then opens it in dired.
+;; - `im-git-worktree-delete-current': Deletes the current git worktree
+;; (with option to force if dirty) and kills related buffers.
+;;
+;; Typical workflow:
+;; 1. Use im-git-worktree-switch to navigate and open an existing worktree.
+;; 2. Use im-git-worktree-add to create a new worktree from a branch and start working there.
+;; 3. Use im-git-worktree-delete-current to clean up and remove a worktree when done.
+;;
+;; These commands takes care of edge cases, like deleting a dirty
+;; worktree, pruning before switching, copying necessary untracked
+;; files while creating worktrees etc.
+
+(defvar im-git-worktrees-root "~/Workspace/worktrees"
+  "Directory to create worktrees in.")
+
+(defun im-git-worktree-switch ()
+  (interactive)
+  (cl-flet ((get-worktree
+             (it)
+             (nth 1 (s-split-up-to " " (nth 0 (s-split "\n" it t)) 1 t))))
+    (im-output-select
+     :cmd "git worktree list --porcelain"
+     :prompt "Select a worktree: "
+     :formatter
+     (format "%s"
+             (s-replace-all
+              `((,(expand-file-name im-projects-root) . ,(propertize "$PROJECTS" 'face '(:weight bold)))
+                (,(expand-file-name im-git-worktrees-root) . ,(propertize "$WORKTREES" 'face '(:weight bold))))
+              (expand-file-name (get-worktree it))))
+     :split "\n\n"
+     :require-match? nil
+     :do (dired (get-worktree it)))))
+
+(defun im-git-worktree-add ()
+  "Create a new worktree from a branch (or with a new branch).
+This creates every worktree under a common directory (see
+`im-git-worktrees-root') with a common
+pattern (project-name--branch-name).
+
+Also copies some predefined list of untracked files/folders with
+COW (copy on write)."
+  (interactive)
+  (unless (= 0 (shell-command "git fetch --all"
+                              " *im-git-worktree: git fetch stdout*"
+                              " *im-git-worktree: git fetch stderr*"))
+    (user-error "Cannot git fetch --all"))
+  (unless (= 0 (shell-command "git worktree prune"
+                              " *im-git-worktree: git worktree prune stdout*"
+                              " *im-git-worktree: git worktree prune stderr*"))
+    (user-error "Cannot git worktree prune"))
+  (let* ((old-proj (im-current-project-root))
+         (source (im-output-select
+                  :cmd "git branch -a --format='%(refname:short)'"
+                  :prompt "From (or enter new): "
+                  :require-match? nil))
+         (branch-name (read-string "New branch name: "))
+         (worktree-name
+          (format "%s--%s"
+                  (im-string-url-case (im-current-project-name))
+                  (im-string-url-case branch-name)))
+         (worktree (expand-file-name (f-join im-git-worktrees-root worktree-name))))
+    (unless (= 0 (shell-command (format "git worktree add -b '%s' '%s' '%s'" branch-name worktree source)
+                                " *im-git-worktree: git worktree add stdout*"
+                                " *im-git-worktree: git worktree add stderr*"))
+      (user-error "Can't create worktree, see buffer `*im-git-worktrees: git worktree add stderr*'"))
+    (message ">> Created the worktree...")
+
+    ;; Copy node_modules with COW, if user wants it
+    ;; If I need anything else, I'll simply edit here.
+
+    (let ((src (f-join old-proj "node_modules"))
+          (dst (f-join worktree "node_modules")))
+      (when (and (file-directory-p src)
+                 (y-or-n-p "Copy node_modules from old-proj to current folder with COW? "))
+        (unless (= 0 (shell-command
+                      (concat (im-when-on
+                               :linux "cp -R --reflink=always"
+                               :darwin "cp -Rc")
+                              (expand-file-name src)
+                              (expand-file-name dst))
+                      " *im-git-worktree: cp stdout*"
+                      " *im-git-worktree: cp stderr*"))
+          (user-error "Can't copy files, see buffer `*im-git-worktrees: cp stderr*'"))))
+    (dired worktree)
+    (vc-refresh-state)))
+
+(defun im-git-worktree-delete ()
+  "Remove current worktree and close all buffers.
+If worktree is dirty, asks user if they want to force delete it."
+  (interactive)
+  (when-let* ((proj (im-current-project-root))
+              (y/n (y-or-n-p (format "Want to delete: %s?" proj))))
+    (let ((default-directory proj)
+          (args (if (im-git-dirty?)
+                    (if (y-or-n-p "Worktree is dirty, force remove?")
+                        "--force"
+                      (user-error "Aborted by user"))
+                  "")))
+      (project-kill-buffers)
+      (if (= 0 (shell-command (format "git worktree remove %s '%s'" args proj)
+                              " *im-git-worktree: git worktree remove stdout*"
+                              " *im-git-worktree: git worktree remove stderr*"))
+          (message ">> Removed")
+        (user-error "Can't remove worktree, see  *im-git-worktree: git worktree remove stderr*")))))
+
+;;;; git utils
+
+(defun im-git-dirty? ()
+  "Check if current git dir is dirty."
+  (not (s-blank? (shell-command-to-string "git status --porcelain"))))
 
 (provide 'im-git)
 ;;; im-git.el ends here
