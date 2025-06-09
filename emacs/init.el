@@ -7867,6 +7867,21 @@ mails."
 (use-package im-kube
   :straight nil)
 
+;;;;; ereader --- ebook reader with org integration
+
+(use-package ereader
+  :straight (:host github :repo "bddean/emacs-ereader")
+  :config
+  ;; For org links integration
+  (require 'org-ebook)
+  (defun im-ereader-setup ()
+    (interactive)
+    ;; Otherwise it gets weird due to `variable-pitch-mode'
+    (setq-local page-break-lines-max-width 80)
+    (page-break-lines-mode)
+    (variable-pitch-mode))
+  (add-hook 'ereader-mode-hook 'im-ereader-setup))
+
 ;;;; Editing
 
 ;;;;; Breaking long texts/comments into multiple lines
