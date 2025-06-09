@@ -4212,9 +4212,8 @@ properly."
    "F" (λ-interactive (im-eww-avy-follow :new-session))
    "r" #'eww-reload
    "R" #'eww-readable
-   "<f2>" #'im-eww-open-in-xwidget-webkit
-   "<f3>" (λ-interactive (browse-url (eww-current-url)))
-   "<f4>" (λ-interactive (browse-url-default-browser (eww-current-url)))
+   "<f2>" (λ-interactive (browse-url (eww-current-url)))
+   "<f3>" (λ-interactive (browse-url-default-browser (eww-current-url)))
    "&" (λ-interactive (funcall browse-url-secondary-browser-function (eww-current-url))))
   :custom
   ;; Gifs make my computer suffer, so I just disable them
@@ -4284,14 +4283,6 @@ for why."
             (read-file-name "Save to: "  nil default-directory nil))
       (insert (plist-get (cdr image) :data))
       (save-buffer))))
-
-(defun im-eww-open-in-xwidget-webkit ()
-  (interactive nil eww-mode)
-  (xwidget-webkit-browse-url (plist-get eww-data :url) t))
-
-(defun im-xwidget-webkit-open-in-eww ()
-  (interactive nil xwidget-webkit-mode)
-  (eww (xwidget-webkit-uri (xwidget-webkit-current-session)) t))
 
 ;;;;;; im-web-autosuggest -- autosuggestions for web searches
 
@@ -7252,120 +7243,6 @@ Fetches missing channels/users first."
 
 (use-package reveal-in-osx-finder
   :if (eq system-type 'darwin))
-
-;;;;; xwidget-webkit & xwwp
-
-;; Dependency of xwwp
-(use-package ctable
-  :after xwwp
-  :straight (:host github :repo "kiwanami/emacs-ctable"  :files (:defaults "*.el")))
-
-(use-package xwwp
-  :straight (:host github :repo "kchanqvq/xwwp"  :files (:defaults "*"))
-  :commands (xwwp)
-  :general
-  (:keymaps 'xwidget-webkit-mode-map
-   :states 'normal
-   "f" #'xwwp-ace-toggle
-   "b" #'evil-collection-xwidget-webkit-search-tabs
-   "o" #'xwwp
-   "O" #'xwidget-webkit-browse-url
-   "i" #'xwidget-webkit-insert-string
-   "e" #'xwidget-webkit-edit-mode
-   "v" #'im-xwidget-webkit-visual-mode
-   "<f2>" #'im-xwidget-webkit-open-in-eww
-   "<f3>" (λ-interactive (browse-url (xwidget-webkit-uri (xwidget-webkit-current-session))))
-   "<f4>" (λ-interactive (browse-url-default-browser (xwidget-webkit-uri (xwidget-webkit-current-session)))))
-  :config
-  (evil-collection-xwidget-setup)
-
-  (require 'xwwp-full)
-  (setq xwidget-webkit-buffer-name-format "*webkit: %T*")
-  (setq xwidget-webkit-cookie-file "~/.cache/emacs-webkit-cookies"))
-
-(define-advice xwidget-webkit-begin-edit-textarea (:after (&rest _) fix)
-  "Now doing `C-c C-c' sends the text to webkit."
-  (with-current-buffer "textarea"
-    (use-local-map (copy-keymap text-mode-map))
-    (local-set-key (kbd "C-c C-c") #'xwidget-webkit-end-edit-textarea)))
-
-(define-advice xwidget-webkit-end-edit-textarea (:after (&rest _) fix)
-  "The textarea buffer is not needed anymore.
-Also this is required for the above advice to work."
-  (kill-buffer "textarea"))
-
-;; TODO: scroll to the same section that is open in webkit
-(defun im-xwidget-webkit-visual-mode ()
-  "Gather the page source, render it with `shr' and display it.
-This is a simple trick for being able to easily copy stuff from the page
-without using mouse.  Instead of opening the same url with `eww' (for
-that, see `im-xwidget-webkit-open-in-eww') we directly render the
-current pages HTML to be able to get all the pages content.  Otherwise
-`eww' might fail to render what we need due to lack of JavaScript
-support or maybe there is a required login process that you can't do in
-`eww' etc.."
-  (interactive)
-  (let ((title (xwidget-webkit-title (xwidget-webkit-current-session))))
-    (xwidget-webkit-execute-script
-     (xwidget-webkit-current-session)
-     "document.documentElement.outerHTML"
-     (lambda (document)
-       (save-window-excursion
-         (with-current-buffer (get-buffer-create "*im-xwidget-webkit-html*")
-           (erase-buffer)
-           (insert document)
-           (shr-render-buffer (current-buffer))))
-       (switch-to-buffer "*html*")
-       (rename-buffer (format "*webkit-visual: %s*" title))))))
-
-(define-advice xwidget-at (:around (original &rest args) handle-errors)
-  "Sometimes `xwidget-at' fails for no real reason, this fixes that.
-This happens to me on org-buffers, xwidget-at tries to get
-  `display' property of `point-min' but this fails"
-  (ignore-errors
-    (apply original args)))
-
-;; TODO: I haven't figured out what to do with `im-apply-patch-from-src-block' after migrating from org-mode based config.
-;; I made some changes to xwwp to make it work.
-;; [[elisp:(im-apply-patch-from-src-block "xwwp-patch" (f-join straight-base-dir "straight/repos/xwwp"))][Apply the following patch]]:
-
-;; diff --git a/xwwp-history.el b/xwwp-history.el
-;; index 29afa20..6e311af 100644
-;; --- a/xwwp-history.el
-;; +++ b/xwwp-history.el
-;; @@ -65,7 +65,7 @@
-;; (existed (gethash url xwwp-history-table)))
-;; (when existed
-;;   (setq item existed)
-;;   -      (incf (xwwp-history-item-visit-count existed)))
-;; +      (cl-incf (xwwp-history-item-visit-count existed)))
-;; (puthash url item xwwp-history-table)
-;; (when existed
-;;   (setq xwwp-history-visualization-list
-;;         @@ -160,6 +160,9 @@
-;;         ""
-;;         (cond
-;;          ((eq xwwp-follow-link-completion-system 'default)
-;;           -    (completing-read prompt xwwp-history-completion-list nil nil default))
-;;          +    (let ((result (completing-read prompt xwwp-history-completion-list nil nil default)))
-;;                 +      (if-let (data (assoc result xwwp-history-completion-list #'equal))
-;;                            +          (cdr data)
-;;                            +        result)))
-;;         ((eq xwwp-follow-link-completion-system 'helm)
-;;          (helm :sources
-;;            diff --git a/xwwp.el b/xwwp.el
-;;            index acd4ea2..00b6cff 100644
-;;            --- a/xwwp.el
-;;            +++ b/xwwp.el
-;;            @@ -161,7 +161,7 @@ Interactively, URL defaults to the string looking like a url around point."
-;;        (if new-session
-;;            (xwidget-webkit-new-session url)
-;;          (progn (xwidget-webkit-goto-url url)
-;;   -             (switch-to-buffer-other-window (xwidget-buffer (xwidget-webkit-current-session)))))))
-;;   +             (switch-to-buffer (xwidget-buffer (xwidget-webkit-current-session)))))))
-;;
-;;    ;;; Adapted from EWW code to provide a DWIM style XWWP command
-;;    (require 'eww)
 
 ;;;;; vundo -- unto-tree like branching undo
 
