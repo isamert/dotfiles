@@ -6942,18 +6942,6 @@ Fetches missing channels/users first."
   :init
   (im-leader "il" #'imenu-list))
 
-;;;;; wolfram
-
-;; Easy way to interact with WolframAlpha. I generally use it for unit conversions or stuff like that.
-
-(use-package wolfram
-  :straight (:host github :repo "hsjunnesson/wolfram.el")
-  :defer t
-  :init
-  (im-leader-v "iw" #'wolfram-alpha)
-  :config
-  (setq wolfram-alpha-app-id im-wolfram-alpha-app-id))
-
 ;;;;; im-ai & org-ai & gptel -- interactions with LLMs
 
 ;; There are bunch of Emacs-ChatGPT integrations and org-ai seems to
