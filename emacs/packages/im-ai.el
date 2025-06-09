@@ -472,7 +472,9 @@ Use @file to include full file contents to the prompt and use
                                                  "@region"
                                                  (or space "," eos))
                                              prompt))))
-         (region (buffer-substring-no-properties (region-beginning) (region-end)))
+         (region (if (use-region-p)
+                     (buffer-substring-no-properties (region-beginning) (region-end))
+                   ""))
          (gptel-backend (im-ai--get-gptel-backend im-ai-service))
          (gptel-model im-ai-model))
     (if edit-region?
@@ -484,9 +486,10 @@ Use @file to include full file contents to the prompt and use
           (deactivate-mark)
           (insert "\n")
           (backward-char))
-      (let ((end (region-end)))
-        (deactivate-mark)
-        (goto-char end)))
+      (when (use-region-p)
+        (let ((end (region-end)))
+          (deactivate-mark)
+          (goto-char end))))
     (setq im-ai--last-processed-point (point))
     ;; TODO: Move this expansion features to other functions too
     (gptel-request
@@ -504,7 +507,11 @@ Query: %s
                          prompt)
           (if edit-region? (concat "Context: \n```\n" region "\n```") "")
           (if (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
-              (concat "Full file contents: \n```\n" (region (buffer-substring-no-properties (point-min) (point-max)))  "\n```")
+              (concat "Full file contents: \n```\n"
+                      (save-restriction
+                        (widen)
+                        (buffer-substring-no-properties (point-min) (point-max)))
+                      "\n```")
             "")
           (if (s-matches? (rx (or bos space) "@workspace" (or space eos)) prompt)
               (concat "Workspace contents: \n```\n"  (im-ai-workspace-context) "\n```")
@@ -598,7 +605,7 @@ Also removes the answers, if user wants it."
   (interactive)
   (save-excursion
     (when (re-search-backward
-           "#\\+begin_ai markdown :service \"\\([a-zA-Z0-9_-]+\\)\" :model \"\\([a-zA-Z0-9_-]+\\)\""
+           "#\\+begin_ai markdown :service \"\\([a-zA-Z0-9_-]+\\)\" :model \"\\([a-zA-Z0-9_\\.-]+\\)\""
            nil t)
       (-let* ((match-start (match-beginning 0))
               (match-end (match-end 0))
