@@ -7882,6 +7882,24 @@ mails."
     (variable-pitch-mode))
   (add-hook 'ereader-mode-hook 'im-ereader-setup))
 
+;;;;; pdf-tools --- advanced pdf viewer
+
+(use-package pdf-tools
+  :general
+  ;; P → Fit to page
+  ;; W → Fit to window
+  (:states '(normal visual) :keymaps 'pdf-view-mode-map
+   "J" #'pdf-view-next-page-command
+   "K" #'pdf-view-previous-page-command
+   "s" 'pdf-occur)
+  ;; :init
+  ;; (pdf-tools-install)
+  :config
+  (defun im-pdf-view-setup ()
+    (hl-line-mode -1))
+  (evil-collection-pdf-setup)
+  (add-hook 'pdf-view-mode #'im-pdf-view-setup))
+
 ;;;; Editing
 
 ;;;;; Breaking long texts/comments into multiple lines
