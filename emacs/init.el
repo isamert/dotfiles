@@ -2526,6 +2526,11 @@ TODO state."
 
 (im-leader "ocb" #'im-bullet-clock-in-a-task)
 
+;; TODO: If user says n, then ask for a number. Or better yet instead
+;; of using a y/n answer, simply use free text input and ask for
+;; y/n/minutes and expect them to hit enter, like tmr.
+
+;; TODO: Also stop working during midnight?
 (defun im-org-check-clock ()
   "Check if are we currently clocked in or not.
 If not, prompt user to clock in."
@@ -2536,25 +2541,28 @@ If not, prompt user to clock in."
     (with-current-buffer (find-file-noselect "~/Documents/notes/bullet.org")
       (save-window-excursion
         (save-restriction
-          (org-clock-goto)
-          (org-narrow-to-subtree)
-          (let* ((effort (when-let* ((e (org-entry-get nil "EFFORT")))
-                           (im-svgcal--time-diff "0:00" e)))
-                 (allocated-time
-                  (-sum (-map (-lambda ((range start end)) (im-svgcal--time-diff start end)) (im-svgcal--org-entry-timestamps)))))
-            (when (and
-                   (> (org-clock-get-clocked-time) (if (> allocated-time 0) allocated-time effort))
-                   (y-or-n-p (format ">> You are still clocked in to '%s'! Want to clock out now?" (org-entry-get nil "ITEM"))))
-              ;; TODO: Maybe ask how many minutes have been elapsed since the
-              ;; task is done.
-              (org-clock-out)))))))
+          (save-excursion
+            (org-clock-goto)
+            (org-narrow-to-subtree)
+            (let* ((effort (when-let* ((e (org-entry-get nil "EFFORT")))
+                             (im-svgcal--time-diff "0:00" e)))
+                   (allocated-time
+                    (-sum (-map (-lambda ((range start end)) (im-svgcal--time-diff start end)) (im-svgcal--org-entry-timestamps)))))
+              (when (and
+                     (> (org-clock-get-clocked-time) (if (> allocated-time 0) allocated-time effort))
+                     (y-or-n-p (format ">> You are still clocked in to '%s'! Want to clock out now?" (org-entry-get nil "ITEM"))))
+                ;; TODO: Maybe ask how many minutes have been elapsed since the
+                ;; task is done.
+                (org-clock-out))))))))
    (t
     (alert "You are not clocked in!" :title "CLOCKING")
     (when (y-or-n-p "Want to clock in?")
       (im-bullet-clock-in-a-task)))))
 
-;; I disabled this for now because it does not work well.
-;; (run-with-timer 60 600 #'im-org-check-clock)
+;; TODO: After implementing the TODO above, lower the time to 1 minute
+;; or something.
+;; TODO: Also hook to clock-in, clock-out hooks and when clocked out, ask user what to clock in?
+(run-with-timer 60 600 #'im-org-check-clock)
 
 ;;;;; im-org-unfill-paragraph
 
