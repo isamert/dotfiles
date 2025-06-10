@@ -673,7 +673,8 @@ CALLBACK will be called with the selected commit ref."
   (interactive)
   (when-let* ((buffer (get-buffer im-git--stash-list-buffer-name)))
     (kill-buffer buffer))
-  (let ((buffer-name im-git--stash-list-buffer-name))
+  (let ((default-directory (im-current-project-root))
+        (buffer-name im-git--stash-list-buffer-name))
     (im-shell-command
      :command "git"
      :args `("--no-pager" "stash" "list")
@@ -693,7 +694,8 @@ CALLBACK will be called with the selected commit ref."
 (defun im-git-show-stash-diff (&optional stash-entry)
   "Show stashed diff."
   (interactive (list (im-git--parse-stash-entry-at-point)))
-  (let ((buffer-name "*im-git-stash-diff*"))
+  (let ((default-directory (im-current-project-root))
+        (buffer-name "*im-git-stash-diff*"))
     (im-shell-command
      :command "git"
      :args (-non-nil `("--no-pager" "stash" "show" "-p" ,stash-entry))

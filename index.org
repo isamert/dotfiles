@@ -1388,7 +1388,7 @@ function extract
                 unrar x "$argv[1]"
             case '*.gz'
                 gunzip "$argv[1]"
-            case '*.tar'
+            case '*.tar' '*.tar.xz'
                 tar xf "$argv[1]"
             case '*.tbz2'
                 tar xjf "$argv[1]"
