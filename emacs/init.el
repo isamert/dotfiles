@@ -2544,6 +2544,7 @@ If not, prompt user to clock in."
    ;; If we are clocked in and we have been clocking longer than the
    ;; effort or allocated time, ask if we want to clock out.
    ((org-clocking-p)
+    (require 'im-svgcal)
     (with-current-buffer (find-file-noselect "~/Documents/notes/bullet.org")
       (save-window-excursion
         (save-restriction
@@ -2556,14 +2557,15 @@ If not, prompt user to clock in."
                     (-sum (-map (-lambda ((range start end)) (im-svgcal--time-diff start end)) (im-svgcal--org-entry-timestamps)))))
               (when (and
                      (> (org-clock-get-clocked-time) (if (> allocated-time 0) allocated-time effort))
-                     (y-or-n-p (format ">> You are still clocked in to '%s'! Want to clock out now?" (org-entry-get nil "ITEM"))))
+                     (yes-or-no-p (format ">> You are still clocked in to '%s'! Want to clock out now?" (org-entry-get nil "ITEM"))))
                 ;; TODO: Maybe ask how many minutes have been elapsed since the
                 ;; task is done.
                 (org-clock-out))))))))
    (t
-    (alert "You are not clocked in!" :title "CLOCKING")
-    (when (y-or-n-p "Want to clock in?")
-      (im-bullet-clock-in-a-task)))))
+    (unless (> (* 60 5) (time-to-seconds (current-idle-time)))
+      (alert "You are not clocked in!" :title "CLOCKING")
+      (when (yes-or-no-p "Want to clock in?")
+        (im-bullet-clock-in-a-task))))))
 
 ;; TODO: After implementing the TODO above, lower the time to 1 minute
 ;; or something.
@@ -7563,7 +7565,8 @@ Fetches missing channels/users first."
    ;; C → compose mail
    "u" #'evil-collection-notmuch-search-toggle-unread
    "gs" #'notmuch-search
-   "gS" #'notmuch-tree)
+   "gS" #'notmuch-tree
+   "o" #'notmuch-search-show-thread)
   (general-def :keymaps 'notmuch-show-mode-map :states 'normal
     "o" #'notmuch-show-view-part
     "O" #'notmuch-show-save-part)

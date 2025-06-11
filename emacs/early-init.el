@@ -43,8 +43,6 @@
 ;; not behaving the way I wanted before this in evil mode)
 (setq vc-follow-symlinks t)
 ;; ^ Don't ask about following symlinks
-;; Ask y/n instead of yes/no
-(fset 'yes-or-no-p 'y-or-n-p)
 
 ;;;; Visuals
 
