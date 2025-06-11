@@ -796,8 +796,15 @@ buffer."
   (gptel-make-tool
    :name "write_file"
    :function (lambda (contents fname)
-               (let ((default-directory (im-current-project-root)))
-                 (write-region contents nil fname)))
+               (message "gptel :: write_file(%s)" fname)
+               (if (or (s-blank? contents) (s-blank? fname))
+                   "Operation failed: contents and/or file_path cant be empty."
+                 (let ((default-directory (im-current-project-root)))
+                   (write-region contents nil fname)
+                   (when-let* ((buff (find-buffer-visiting fname)))
+                     (with-current-buffer buff
+                       (revert-buffer)))
+                   "File written successfully.")))
    :description "Write given text to file."
    :args '((:name "contents"
             :type string
@@ -810,10 +817,13 @@ buffer."
   (gptel-make-tool
    :name "read_file"
    :function (lambda (filepath)
-               (let ((default-directory (im-current-project-root)))
-                 (with-temp-buffer
-                   (insert-file-contents filepath)
-                   (buffer-string))))
+               (message "gptel :: read_file(%s)" filepath)
+               (if (s-blank? filepath)
+                   "Operation failed: file_path can't be empty."
+                 (let ((default-directory (im-current-project-root)))
+                   (with-temp-buffer
+                     (insert-file-contents filepath)
+                     (buffer-string)))))
    :description "Return the contents of the file."
    :args '((:name "file_path"
             :type string
@@ -823,6 +833,7 @@ buffer."
   (gptel-make-tool
    :name "list_project_files"
    :function (lambda ()
+               (message "gptel :: list_project_files()")
                (->>
                 (im-directory-files-recursively (im-current-project-root))
                 (s-join "\n")))
@@ -830,8 +841,33 @@ buffer."
    :category "files")
 
   (gptel-make-tool
+   :name "grep_project"
+   :function (lambda (callback regexp)
+               (message "gptel :: grep_project(%s)" regexp)
+               (if (s-blank? regexp)
+                   "Operation failed: regexp can't be blank."
+                 (let ((default-directory (im-current-project-root))
+                       (buf (generate-new-buffer "*gptel-grep*")))
+                   (make-process
+                    :name "*gptel-grep*"
+                    :buffer buf
+                    :command `("rg" "--vimgrep" ,regexp)
+                    :sentinel (lambda (proc _)
+                                (when (eq (process-status proc) 'exit)
+                                  (with-current-buffer buf
+                                    (funcall callback (buffer-string)))
+                                  (kill-buffer buf)))))))
+   :description "Run grep inside the project."
+   :async t
+   :args '((:name "regexp"
+            :type string
+            :description "Regexp to search inside the project."))
+   :category "files")
+
+  (gptel-make-tool
    :name "get_webpage_contents"
    :function (lambda (callback url)
+               (message "gptel :: get_webpage_contents(%s)" filepath)
                (require 'async)
                ;; Instead of using async fetch, I use async-start to
                ;; offload the parsing of the webpage because it may
