@@ -802,6 +802,7 @@ buffer."
                  (let ((default-directory (im-current-project-root)))
                    (write-region contents nil fname)
                    (when-let* ((buff (find-buffer-visiting fname)))
+
                      (with-current-buffer buff
                        (revert-buffer)))
                    "File written successfully.")))
