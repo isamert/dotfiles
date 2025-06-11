@@ -84,6 +84,7 @@
 
 ;;;; Main
 
+;;;###autoload
 (cl-defun im-archive-url (url where &key on-finish on-fail)
   "Archive the URL into WHERE.
 WHERE can be a directory or a file.  If it's a directory, it should
@@ -133,6 +134,8 @@ is called with a symbol/string indicating the failure."
 ;; Handlers also can be interactive functions.
 
 ;; TODO: Maybe add a transient UI for this?
+
+;;;###autoload
 (cl-defun im-archive-url-singlefile (url where &rest _ &key crawl (tidy t)
                                          handler
                                          (on-finish (lambda (file) (message "Archived into: %s" file)))

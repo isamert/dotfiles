@@ -2331,11 +2331,15 @@ searches for TODO/FIXME items in given folder."
 
 ;;;;; Archiving URLS
 
+(use-package im-archive
+  :straight nil)
+
 (defvar im-org-archive-url-path "~/Documents/notes/data/archvive/")
 
 (defun im-org-archive-url ()
   "Archive URL and generate an new org entry for it."
   (interactive)
+  (require 'im-archive)
   (let (url update?)
     ;; If we are on a heading and calling this function, we probably
     ;; just want to update/initialize the archive for current
