@@ -7760,6 +7760,7 @@ mails."
 
 (use-package ereader
   :straight (:host github :repo "bddean/emacs-ereader")
+  :after (org)
   :config
   ;; For org links integration
   (require 'org-ebook)
