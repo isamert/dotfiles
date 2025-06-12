@@ -1260,7 +1260,7 @@ if status is-interactive
 end
 #+end_src
 
-#+begin_src fish :tangle (when-linux "~/.config/fish/conf.d/variables.fish")
+#+begin_src fish :tangle "~/.config/fish/conf.d/variables.fish"
 export «env-variables»
 #+end_src
 

@@ -897,6 +897,8 @@ Linux), 1 secs for Mac."
   (car (directory-files (or path default-directory) 'full "^\\([^.]\\|\\.[^.]\\|\\.\\..\\)" #'file-newer-than-file-p)))
 
 (cl-defun im-directory-files-recursively (dir &key (regexp ".*") (max-depth 8) absolute-path)
+  "Faster alternative to `directory-files-recursively'.
+Uses `fd' so that it automatically respects .gitignore etc."
   (let ((default-directory dir))
     (->>
      (format
