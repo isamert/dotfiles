@@ -2512,7 +2512,7 @@ TODO state."
 (defun im-bullet-clock-in-a-task ()
   "Display today's tasks and require user to select one to clock in."
   (interactive)
-  (with-current-buffer (find-file-noselect "~/Documents/notes/bullet.org")
+  (with-current-buffer (find-file-noselect bullet-org)
     (save-restriction
       (im-bullet-focus-today)
       (let ((task (cdr
@@ -2536,11 +2536,6 @@ TODO state."
 
 (im-leader "ocb" #'im-bullet-clock-in-a-task)
 
-;; TODO: If user says n, then ask for a number. Or better yet instead
-;; of using a y/n answer, simply use free text input and ask for
-;; y/n/minutes and expect them to hit enter, like tmr.
-
-;; TODO: Also stop working during midnight?
 (defun im-org-check-clock ()
   "Check if are we currently clocked in or not.
 If not, prompt user to clock in."
@@ -2559,22 +2554,16 @@ If not, prompt user to clock in."
                              (im-svgcal--time-diff "0:00" e)))
                    (allocated-time
                     (-sum (-map (-lambda ((range start end)) (im-svgcal--time-diff start end)) (im-svgcal--org-entry-timestamps)))))
-              (when (and
-                     (> (org-clock-get-clocked-time) (if (> allocated-time 0) allocated-time effort))
-                     (yes-or-no-p (format ">> You are still clocked in to '%s'! Want to clock out now?" (org-entry-get nil "ITEM"))))
-                ;; TODO: Maybe ask how many minutes have been elapsed since the
-                ;; task is done.
-                (org-clock-out))))))))
+              (when (> (org-clock-get-clocked-time)
+                       (if (> allocated-time 0)
+                           allocated-time
+                         effort))
+                (message ">> You are still clocked in to '%s'! Want to clock out now?" (org-entry-get nil "ITEM")))))))))
    (t
     (unless (> (* 60 5) (time-to-seconds (current-idle-time)))
-      (alert "You are not clocked in!" :title "CLOCKING")
-      (when (yes-or-no-p "Want to clock in?")
-        (im-bullet-clock-in-a-task))))))
+      (message ">> You are not clocked in!")))))
 
-;; TODO: After implementing the TODO above, lower the time to 1 minute
-;; or something.
-;; TODO: Also hook to clock-in, clock-out hooks and when clocked out, ask user what to clock in?
-(run-with-timer 60 600 #'im-org-check-clock)
+(run-with-timer 60 300 #'im-org-check-clock)
 
 ;;;;; im-org-unfill-paragraph
 
@@ -13275,11 +13264,12 @@ existing buffer and opens the link in tuir."
             (all-the-icons-faicon "calendar-check-o")
             " "
             appt-mode-string))
-       ,@(when (and (functionp #'org-clocking-p) (org-clocking-p))
-           (list
-            (all-the-icons-fileicon "org")
-            " "
-            org-mode-line-string))
+       ,@(if (and (functionp #'org-clocking-p) (org-clocking-p))
+             (list
+              (all-the-icons-fileicon "org")
+              " "
+              org-mode-line-string)
+           (list (all-the-icons-fileicon "xmos") " "))
        ,@(when display-time-string
            (list
             (all-the-icons-wicon
