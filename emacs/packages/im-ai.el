@@ -816,6 +816,24 @@ buffer."
    :category "files")
 
   (gptel-make-tool
+   :name "mkdir"
+   :function (lambda (dir)
+               (message "gptel :: mkdir(%s)" dir)
+               (if (s-blank? dir)
+                   "Operation failed: directory path cannot be empty."
+                 (let ((default-directory (im-current-project-root))
+                       (dir-path (expand-file-name dir)))
+                   (if (file-directory-p dir-path)
+                       "Directory already exists."
+                     (make-directory dir-path t)
+                     "Directory created successfully."))))
+   :description "Create a directory relative to the current project's root."
+   :args '((:name "directory"
+            :type string
+            :description "Relative path of the directory to create."))
+   :category "files")
+
+  (gptel-make-tool
    :name "read_file"
    :function (lambda (filepath)
                (message "gptel :: read_file(%s)" filepath)
