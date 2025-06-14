@@ -2542,7 +2542,7 @@ If not, prompt user to clock in."
   (cond
    ;; If we are clocked in and we have been clocking longer than the
    ;; effort or allocated time, ask if we want to clock out.
-   ((org-clocking-p)
+   ((and (featurep 'org-clock) (org-clocking-p))
     (require 'im-svgcal)
     (with-current-buffer (find-file-noselect "~/Documents/notes/bullet.org")
       (save-window-excursion
