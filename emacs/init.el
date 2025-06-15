@@ -3301,38 +3301,28 @@ Return a (color color) list that can be used with :column-colors and
   ;; Mini-frame dependency is not cool bot ok.  Rest of the config is still look like hell.
   `(,(alist-get 'background-color (frame-parameters)) ,(mini-frame-get-background-color)))
 
-;;;;; alert & im-notify-posframe
-
-;;;;;; Alert package
+;;;;; Alert & im-notif
 
 ;; Several packages are using this package to show system-level
 ;; notifications. Here I set some defaults/fallback values.
 
 (use-package alert
   :general
-  (im-leader
-    "yy" #'im-notify-posframe-notifications
-    "yu" #'im-notify-posframe-enable-dnd
-    "yU" #'im-notify-posframe-disable-dnd
-    "yb" #'im-notify-posframe-blacklist
-    "ys" #'im-notify-posframe-snooze-last
-    "yc" #'im-notify-posframe-clear-all
-    "yC" (λ-interactive  (im-notify-posframe-clear-all t)))
   :config
+  (setq alert-log-messages nil) ; im-notif already logs them
   (alert-define-style
-   'im-alert-posframe
-   :title "Posframe alerts"
+   'im-notif
+   :title "im-notif"
    :notifier
    (lambda (info)
-     (im-notify-posframe
+     (im-notif
       :title (plist-get info :title)
       :message (plist-get info :message)
       :margin t
       :duration (unless (plist-get info :persistent) alert-fade-time)
       :severity (plist-get info :severity))))
+  (setq alert-default-style 'im-notif)
   (setq alert-fade-time 15)
-  (setq alert-default-style 'im-alert-posframe)
-
   (when (eq system-type 'darwin)
     ;; Re-define osx-notifier to handle strings better.
     (defun alert-osx-notifier-notify (info)
@@ -3340,195 +3330,33 @@ Return a (color color) list that can be used with :column-colors and
                               (substring-no-properties (plist-get info :message))
                               (substring-no-properties (plist-get info :title))))
       (alert-message-notify info)))
-
   ;; org-clock sends notification if the current tasks estimated effort is met.
   (setq
    org-show-notification-handler
    (lambda (notification)
-     (im-notify-posframe :title "*org-mode*" :message notification :margin t))))
+     (alert notification :title "*org-mode*"))))
+(alert "hahaah")
+(use-package im-notif
+  :straight nil
+  :general
+  (im-leader
+    "y" #'im-notif-menu)
+  :custom
+  (defun im-notif--send-to-ntfy ()
+    "Send notifications to ntfy after some idle time."
+    (when (or (and (current-idle-time)
+                   (>= (time-to-seconds (current-idle-time)) 30))
+              ;; If we are sharing a screen, that means the
+              ;; notification will only show REDACTED. Then send it
+              ;; to my phone so that I can see it privately through
+              ;; my watch.
+              (await (im-screen-sharing-now?)))
+      (im-ntfy
+       (plist-get data :message)
+       :title (or (plist-get data :title) "Emacs"))))
+  (add-hook 'im-notif-post-notify-hooks #'im-notif--send-to-ntfy))
 
-;;;;;; im-notify-posframe
-
-(defvar im-notify-posframe-blacklist-regexp nil)
-(defvar im-notify-posframe-dnd nil)
-(defvar im-notify-posframe--active '())
-(defvar-local im-notify-posframe--notification-data nil)
-(async-cl-defun im-notify-posframe (&rest data &key id title message duration margin (severity 'normal) &allow-other-keys)
-  (setq title (propertize title 'face '(:weight bold)))
-  (let ((bname (format "*notif-%s*"
-                       (or id (format "%s-%s" (if title (im-string-url-case title) "") (random))))))
-
-    (when (and (not im-notify-posframe-dnd)
-               (not (and im-notify-posframe-blacklist-regexp
-                         (s-matches?
-                          (if (stringp im-notify-posframe-blacklist-regexp)
-                              im-notify-posframe-blacklist-regexp
-                            (eval im-notify-posframe-blacklist-regexp))
-                          (concat (or title "") "\n" message)))))
-
-      (let ((message (if (await (im-screen-sharing-now?))
-                         "[REDACTED due to screensharing]"
-                       message)))
-        (posframe-show
-         (with-current-buffer (get-buffer-create bname)
-           (setq im-notify-posframe--notification-data
-                 (thread-first
-                   data
-                   (map-insert :time (float-time))
-                   (map-insert :id (substring-no-properties bname))))
-           (current-buffer))
-         :string
-         (if margin
-             (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
-           (format "%s\n%s" title message))
-         :poshandler
-         (lambda (info)
-           (let ((posy (* (line-pixel-height)
-                          (--reduce-from (+ acc
-                                            (with-current-buffer it
-                                              (count-lines (point-min) (point-max))))
-                                         0
-                                         (remove bname im-notify-posframe--active)))))
-             (cons (- (plist-get info :parent-frame-width)
-                      (plist-get info :posframe-width)
-                      20)
-                   (if (> posy 0)
-                       (+ posy (+ 3 3 15))
-                     30))))
-         :border-width 3
-         :max-height 10
-         :min-width 30
-         :max-width 80
-         :border-color (pcase severity
-                         ((or 'high 'urgent) "red3")
-                         ('normal "yellow3")
-                         (_ nil)))
-        (push bname im-notify-posframe--active)
-
-        ;; Clear the notification after a certain time, if requested
-        (when duration
-          (run-with-timer
-           duration nil
-           (lambda ()
-             (posframe-hide bname)
-             (push bname im-notify-posframe--active)
-             (setq im-notify-posframe--active (delete bname im-notify-posframe--active)))))
-
-        ;; Also use native notifications if Emacs is not focused
-        (unless (frame-focus-state)
-          (let ((alert-default-style
-                 (im-when-on
-                  :linux 'libnotify
-                  :darwin 'osx-notifier)))
-            (ignore-errors
-              (alert message :title title :severity severity)))))
-
-      ;; Send it to my phone but only if Emacs is idle for a certain
-      ;; time
-      (when (or (and (current-idle-time)
-                     (>= (time-to-seconds (current-idle-time)) 30))
-                ;; If we are sharing a screen, that means the
-                ;; notification will only show REDACTED. Then send it
-                ;; to my phone so that I can see it privately through
-                ;; my watch.
-                (await (im-screen-sharing-now?)))
-        (im-ntfy
-         message
-         :title (or title "Emacs"))))))
-
-(defun im-notify-posframe-clear-all (&optional delete?)
-  (interactive "P")
-  (--each
-      (--filter (s-prefix? "*notif" (buffer-name it)) (buffer-list))
-    (if delete?
-        (posframe-delete it)
-      (posframe-hide it)))
-  (setq im-notify-posframe--active '()))
-
-(defun im-dummy-notification ()
-  (interactive)
-  (im-notify-posframe :title (format "%s" (random)) :message (with-temp-buffer (spook) (buffer-string)) :margin t))
-
-(defun im-notify-posframe-notifications ()
-  (interactive)
-  (let ((notification (im-notify-posframe--select)))
-    (empv--select-action "Act on notification"
-      "Open" → (switch-to-buffer-other-window (plist-get notification :buffer-name))
-      "Delete" → (progn (posframe-delete (plist-get notification :buffer-name)) (message ">> Deleted."))
-      "Snooze" → (im-notify-posframe-snooze notification (im-read-duration)))))
-
-(defun im-notify-posframe-enable-dnd (seconds)
-  "Enable DND mode for SECONDS."
-  (interactive (list (im-read-duration)))
-  (setq im-notify-posframe-dnd t)
-  (message ">> Disabling notifications for %s seconds." seconds)
-  (run-with-timer seconds nil #'im-notify-posframe-disable-dnd))
-
-(defun im-notify-posframe-disable-dnd ()
-  "Disable DND mode."
-  (interactive)
-  (setq im-notify-posframe-dnd nil))
-
-(defun im-notify-posframe-blacklist ()
-  (interactive)
-  (let* ((pp-use-max-width t)
-         (result (read-string
-                  "Blacklist expr: "
-                  (if (stringp im-notify-posframe-blacklist-regexp)
-                      im-notify-posframe-blacklist-regexp
-                    (s-trim (pp-to-string im-notify-posframe-blacklist-regexp))))))
-    (setq im-notify-posframe-blacklist-regexp
-          (if (s-blank? result)
-              nil
-            (if (s-prefix? "(rx" result)
-                (car (read-from-string result))
-              result)))))
-
-;; TODO Add ack, like tmr? Maybe add ack option to im-notify-posframe
-;; itself and call with ack within this function
-(defun im-notify-posframe-snooze (notification seconds)
-  (interactive (list
-                (im-notify-posframe--select)
-                (im-read-duration)))
-  (run-with-timer
-   seconds nil
-   (lambda () (apply #'im-notify-posframe notification)))
-  (message ">> You will be reminded about '%s' in %s seconds." (plist-get notification :title) seconds))
-
-(defun im-notify-posframe-snooze-last ()
-  (interactive)
-  (im-notify-posframe-snooze (car (im-notify-posframe-notifications-list)) (im-read-duration)))
-
-(defun im-notify-posframe-notifications-list ()
-  "Return notification datas in sorted order.
-First one is the latest one."
-  (thread-last
-    (buffer-list)
-    (--filter (string-prefix-p "*notif" (buffer-name it)))
-    (--map (with-current-buffer it (when-let* ((x im-notify-posframe--notification-data)) (map-insert x :buffer-name (buffer-name)))))
-    (--filter it)
-    (--sort (> (plist-get it :time) (plist-get other :time)))))
-
-(defun im-notify-posframe--format-notification (it)
-  (format "%s | %s - %s"
-          (format-time-string "%Y-%m-%d %H:%M" (plist-get it :time))
-          (plist-get it :title)
-          (plist-get it :message)))
-
-(defun im-notify-posframe--select ()
-  (im-completing-read
-   "Select notification: "
-   (im-notify-posframe-notifications-list)
-   :formatter #'im-notify-posframe--format-notification
-   :category 'im-notification
-   :sort? nil))
-
-(defun im-read-duration ()
-  "Ask the user to type a duration in a human-readable way.
-Return parsed seconds from users answer."
-  (tmr--parse-duration (current-time) (tmr--read-duration)))
-
-;;;;;; im-ntfy -- ntfy wrapper
+;;;;; im-ntfy -- ntfy wrapper
 
 (cl-defun im-ntfy
     (message
@@ -3998,6 +3826,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
            (org-agenda-to-appt 'refresh)
            appt-time-msg-list)
         (lambda (result)
+          (require 'appt)
           ;; Clear the properties that comes with it. I'm not quite
           ;; sure why is this needed but otherwise appt-check fails.
           (setq appt-time-msg-list (--map (list (car it) (car (nth 1 it)) (nth 2 it)) result))
