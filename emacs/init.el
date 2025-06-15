@@ -6763,14 +6763,6 @@ Fetches missing channels/users first."
 (use-package hnreader
   :defer t)
 
-;;;;; jq-mode
-
-;; A mode for editing ~jq~ scripts. Mostly using it for ~jq-interactively~ function which enables you to write a jq query and update the buffer accordingly in real time.
-
-(use-package jq-mode
-  :mode "\\.jq\\'"
-  :commands jq-interactively)
-
 ;;;;; imenu-list
 
 ;; You can also do ~consult-imenu~ and ~embark-collect~ but it does not have a refresh feature.
@@ -13360,40 +13352,6 @@ end tell"))
   ;; this setting is done according to that.
   (setq ns-option-modifier 'meta)
   (setq ns-right-alternate-modifier 'none))
-
-;;;;;; Fix fullscreen
-
-(when (eq system-type 'darwin)
-  ;; On MacOS, native fullscreen fucks with ESC, so I simply don't use
-  ;; it. Native fullscreen is also quite bad in itself, I can't assign
-  ;; keybindings to switch to a dedicated fullscreen app.
-
-  ;; UPDATE: After an MacOS update (or Emacs update?) ESC problem is
-  ;; solved and I can use the native fullscreen. And now I use
-  ;; aerospace as my WM and it does not work with non-native
-  ;; fullscreen and I don't use it all.
-
-  ;; ANOTHER UPDATE: I realized that for ESC to work properly, I need
-  ;; to click-focus the Emacs frame. Otherwise ESC closes the
-  ;; fullscreen mode.
-
-  ;; (setq ns-use-native-fullscreen nil)
-
-  ;; But non-native fullscreen does not play well with posframes for
-  ;; some reason. It creates some visual artifacts. So I simply remove
-  ;; them each time fullscreen is toggled.
-
-  ;; (define-advice toggle-frame-fullscreen (:after (&rest _) fix-fullscreen-artifacts)
-  ;;   (posframe-delete-all)
-  ;;   (ignore-errors (im-notify-posframe-clear-all t))
-  ;;   (ignore-errors (kill-buffer "*blamer*"))
-  ;;   (ignore-errors (kill-buffer "*lsp-ui-doc-1*"))
-  ;;   (ignore-errors (kill-buffer "*flycheck-posframe-buffer*"))
-  ;;   (ignore-errors (kill-buffer " *lsp-ui-doc-1*"))
-  ;;   (ignore-errors (kill-buffer "*lsp-documentation*"))
-  ;;   (ignore-errors (kill-buffer " *corfu-popupinfo*"))
-  ;;   (ignore-errors (kill-buffer " *corfu*")))
-  )
 
 ;;;;;; Hammerspoon integration
 
