@@ -5621,7 +5621,7 @@ SORT should be nil to disable sorting."
                              ,completion)))
              (append
               (list beg end
-                    (cape--properties-table (funcall ,extractor xs) :sort ,sort)
+                    (funcall ,extractor xs)
                     :exclusive ',exclusive)
               (when ,annotate
                 (list :annotation-function (apply-partially ,annotate xs)))
