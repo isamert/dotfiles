@@ -2804,7 +2804,8 @@ the thing (which is the thing return by the THING-DETECTOR) and
 open.")
 
 (im-leader-v
-  "eo" #'im-open-thing-at-point)
+  "eo" #'im-open-thing-at-point
+  "eO" #'im-open-thing)
 
 (defun im-open-thing-at-point ()
   "Detect and open the thing at point."
@@ -2813,6 +2814,16 @@ open.")
    (when-let* ((result (funcall (car it))))
      (funcall (cdr it) result))
    im-open-thing-at-point-alist))
+
+(defun im-open-thing (thing)
+  "Detect and open the thing at point."
+  (interactive "sThing: ")
+  (with-temp-buffer
+    (insert thing)
+    (--any
+     (when-let* ((result (funcall (car it))))
+       (funcall (cdr it) result))
+     im-open-thing-at-point-alist)))
 
 (add-to-list 'im-open-thing-at-point-alist `(,(apply-partially #'thing-at-point 'url) . browse-url))
 
