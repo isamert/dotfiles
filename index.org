@@ -1257,6 +1257,15 @@ if status is-interactive
     if test -f ~/.extrarc
         source ~/.extrarc
     end
+
+    # I like fish's own ctrl-r interface but it messes everything up
+    # when it encounters a very long command. fzf handles it much
+    # better, with preview.
+    function fzf_fish_history
+        commandline --replace $(history --null | fzf --read0 --reverse --style full --height 30 --preview "echo {} | fish_indent --ansi")
+    end
+
+    bind \cr fzf_fish_history
 end
 #+end_src
 
