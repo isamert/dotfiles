@@ -246,7 +246,7 @@ otherwise, it is taken as a plain string regexp."
 
 (defun im-notif--log-notif (data)
   (im-notif--log
-   (im-tap (alist-get (plist-get data :severity) im-notif--severity-log-mapping 'info))
+   (alist-get (plist-get data :severity) im-notif--severity-log-mapping 'info)
    (prin1-to-string data)))
 
 (add-hook 'im-notif-post-notify-hooks #'im-notif--log-notif)

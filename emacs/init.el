@@ -6996,10 +6996,18 @@ Fetches missing channels/users first."
   :straight (:host github :repo "natrys/whisper.el")
   :bind ("C-M-r" . whisper-run)
   :config
-  (setq whisper-install-directory (expand-file-name "~/Workspace/apps/whisper/")
-        whisper-model "small"
-        whisper-language "en"
-        whisper-translate nil))
+  ;; Override `whisper-command' as instructed, to be able to use my
+  ;; whisper server installation on my home lab.
+  (setq whisper-install-whispercpp nil) ; Opt-out from local whisper installation
+  (defun whisper-command (input-file)
+    ;; No support for `whisper-translate',
+    ;; `whisper-show-progress-in-mode-line' and `whisper-language'.
+    `("curl"
+      ,(concat im-server "/whisper/inference")
+      "-H" ,(concat "isamert-token: " isamert-token)
+      "-H" "Content-Type: multipart/form-data"
+      "-F" ,(concat "file=@" (expand-file-name input-file))
+      "-F" "response_format=text")))
 
 (define-advice whisper-run (:before (&rest _) set-microphone)
   (unless whisper--ffmpeg-input-device
