@@ -7444,6 +7444,7 @@ Fetches missing channels/users first."
 
 ;;;;;; Sync mail
 
+(defvar im-unread-mail-count 0)
 (async-defun im-sync-mail (&optional interactive?)
   "Run mbsync, update notmuch index and check new message count.
 
@@ -7465,8 +7466,9 @@ mails."
             (await (im-shell-command :command "notmuch count tag:inbox and tag:unread" :async t))))
           (when interactive?
             (message "You have %s new mail." count))
-          (when (> count 0)
-            (alert (format "You have %s new mail!" count)
+          (when (and (> count 0) (not (eq im-unread-mail-count count)))
+            (setq im-unread-mail-count count)
+            (alert (format "You have %s new mail!" 5)
                    :title "New Mail!")))
       (error (alert (format "Exit code: %s. See buffers *notmuch* and *mbsync*." reason)
                     :title "Checking for mail failed!")))))
