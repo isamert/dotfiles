@@ -3346,9 +3346,10 @@ Return a (color color) list that can be used with :column-colors and
    org-show-notification-handler
    (lambda (notification)
      (alert notification :title "*org-mode*"))))
-(alert "hahaah")
+
 (use-package im-notif
   :straight nil
+  :autoload (im-notif)
   :general
   (im-leader
     "y" #'im-notif-menu)

@@ -5,7 +5,7 @@
 ;; Author: Isa Mert Gurbuz <isamertgurbuz@gmail.com>
 ;; URL: https://github.com/isamert/im-notif.el
 ;; Version: 0.0.1
-;; Package-Requires: ((emacs "25.2"))
+;; Package-Requires: ((emacs "29.1") (posframe "1.4.4") (transient "0.8.7"))
 ;; Keywords: utility notificatins
 
 ;; This file is not part of GNU Emacs.
@@ -36,6 +36,7 @@
 (require 'posframe)
 (require 'alert)
 (require 'transient)
+(require 'log4e)
 
 ;;;; Customization
 
@@ -62,7 +63,8 @@ By default it logs every notification (\\='trivial)."
                  (const :tag "Trivial" trivial))
   :set (lambda (symbol value)
          (set-default symbol value)
-         (im-notif--log-set-level (alist-get value im-notif--severity-log-mapping))))
+         (when (functionp 'im-notif--log-set-level)
+           (im-notif--log-set-level (alist-get value im-notif--severity-log-mapping)))))
 
 (defcustom im-notif-post-notify-hooks nil
   "Functions to run after showing the notification.
@@ -79,6 +81,7 @@ By default it logs every notification (\\='trivial)."
 (defvar im-notif--active '())
 (defvar-local im-notif--notification-data nil)
 
+;;;###autoload
 (async-cl-defun im-notif (&rest data &key id title message duration margin (severity 'normal) &allow-other-keys)
   (setq title (propertize title 'face '(:weight bold)))
   (let ((bname (format "*notif-%s*"
@@ -240,7 +243,8 @@ otherwise, it is taken as a plain string regexp."
 
 ;; See `im-notif-log-level' variable.
 
-(log4e:deflogger "im-notif" "%t [%l] %m" "%H:%M:%S")
+(unless (functionp 'im-notif--log)
+  (log4e:deflogger "im-notif" "%t [%l] %m" "%H:%M:%S"))
 (im-notif--log-enable-logging)
 (im-notif--log-set-level (alist-get im-notif-log-level im-notif--severity-log-mapping))
 
