@@ -29,17 +29,22 @@
 ;;
 ;; - Support deno:/ links with Eglot.
 ;; - Functions for enabling Deno LSP support (for projects without
-;;   deno.json)
+;;   deno.json). See `im-deno-enable-lsp-for-project'.
 ;; - Function for caching dependencies.
 
 ;;; Code:
+
+(defvar im-deno-options '(:enable t
+                          :lint t
+                          :unstable t))
 
 (with-eval-after-load 'eglot
   (add-to-list 'auto-mode-alist '("deno:/" . im-deno-uri-handler))
   (add-to-list
    'eglot-server-programs
-   '((typescript-ts-mode :language-id "typescript")
-     . ("deno" "lsp" :initializationOptions (:enable t)))))
+   `((typescript-ts-mode :language-id "typescript")
+     . ("deno" "lsp"
+        :initializationOptions ,im-deno-options))))
 
 ;;;###autoload
 (defun im-deno-uri-handler ()
@@ -74,7 +79,7 @@ Also see: https://docs.deno.com/runtime/manual/advanced/language_server/overview
   "Enable Deno LSP for current folder."
   (interactive)
   (add-dir-local-variable 'typescript-ts-mode 'eglot-workspace-configuration
-                          '(:deno (:enable t)))
+                          `(:deno ,im-deno-options))
   (message
    (substitute-command-keys
     ">> Call \\[eglot-signal-didChangeConfiguration] after save after saving and returning to buffer.")))
