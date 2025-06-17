@@ -886,7 +886,7 @@ buffer."
   (gptel-make-tool
    :name "get_webpage_contents"
    :function (lambda (callback url)
-               (message "gptel :: get_webpage_contents(%s)" filepath)
+               (message "gptel :: get_webpage_contents(%s)" url)
                (require 'async)
                ;; Instead of using async fetch, I use async-start to
                ;; offload the parsing of the webpage because it may

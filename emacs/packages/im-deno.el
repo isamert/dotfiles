@@ -92,17 +92,20 @@ of just pulling non-cached ones.
 LSP also offers a similar command but this is easier."
   (interactive "P")
   ;; TODO reload lsp on file on save?
-  (let ((buf (current-buffer)))
+  (let ((buf (current-buffer))
+        (proc-buffer "*im-deno-cache-deps*"))
     (save-buffer)
     (im-shell-command
      :command (format "deno cache --allow-import %s %s"
                       (if invalidate? "-r" "")
                       (f-relative (buffer-file-name)))
+     :buffer-name proc-buffer
      :on-start
      (lambda (&rest _)
        (message ">> Downloading deps..."))
      :on-fail
      (lambda (&rest _)
+       (switch-to-buffer proc-buffer)
        (user-error ">> Downloading deps...Failed!"))
      :on-finish
      (lambda (&rest _)
