@@ -2997,26 +2997,33 @@ open.")
 ;; prompt. This is just an enhanced eshell implementation.
 
 (with-eval-after-load 'eshell
+  (defvar-local im-eshell-notify-enabled t)
   (defvar im-eshell-notify-duration 1
     "Minimum time in seconds that a command takes for a notification to fire.")
 
   (defvar-local im-eshell-notify--last-execution-time nil)
 
+  (defun im-eshell-notify-toggle-for-buffer ()
+    (interactive nil eshell-mode)
+    (setq im-eshell-notify-enabled (not im-eshell-notify-enabled))
+    (message ">> eshell-notify :: %s" im-eshell-notify-enabled))
+
   (defun im-eshell-notify--pre-command-hook ()
     (setq im-eshell-notify--last-execution-time (float-time)))
 
   (defun im-eshell-notify--post-command-hook ()
-    (when im-eshell-notify--last-execution-time
-      (let ((execution-time (- (float-time) im-eshell-notify--last-execution-time)))
-        (when (> execution-time im-eshell-notify-duration)
-          ;; Only send a notification if user focused to another buffer or
-          ;; Emacs is out of focus.
-          (when (or
-                 (not (frame-focus-state))
-                 (not (eq (current-buffer) (window-buffer (selected-window)))))
-            (alert
-             (format "Execution took %s seconds." execution-time)
-             :title (format "Command finished: %s!" eshell-last-command-name)))))))
+    (when im-eshell-notify-enabled
+      (when im-eshell-notify--last-execution-time
+        (let ((execution-time (- (float-time) im-eshell-notify--last-execution-time)))
+          (when (> execution-time im-eshell-notify-duration)
+            ;; Only send a notification if user focused to another buffer or
+            ;; Emacs is out of focus.
+            (when (or
+                   (not (frame-focus-state))
+                   (not (eq (current-buffer) (window-buffer (selected-window)))))
+              (alert
+               (format "Execution took %s seconds." execution-time)
+               :title (format "Command finished: %s!" eshell-last-command-name))))))))
 
   (add-to-list 'eshell-pre-command-hook 'im-eshell-notify--pre-command-hook)
   (add-to-list 'eshell-post-command-hook 'im-eshell-notify--post-command-hook))
@@ -3150,6 +3157,10 @@ that is read verbatim (meaning that no '$*' is appended):
    s-lines
    (-take 20)
    (s-join "\n")))
+
+(defun im-autodir-show-doc-force ()
+  (interactive nil eshell-mode)
+  (im-eshell-handle-dir-change))
 
 (add-hook 'eshell-directory-change-hook #'im-eshell-handle-dir-change)
 ;; eshell-directory-change-hook is not get triggered when eshell is opened, hence:
@@ -7016,7 +7027,7 @@ Fetches missing channels/users first."
     ;; `whisper-show-progress-in-mode-line' and `whisper-language'.
     `("curl"
       ,(concat im-server "/whisper/inference")
-      "-H" ,(concat "isamert-token: " isamert-token)
+      "-H" ,(concat "isamert-token: " im-token)
       "-H" "Content-Type: multipart/form-data"
       "-F" ,(concat "file=@" (expand-file-name input-file))
       "-F" "response_format=text")))
