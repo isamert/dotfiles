@@ -737,6 +737,28 @@ CALLBACK will be called with the selected commit ref."
        (message ">> `git stash drop' failed with: " output)
        (switch-to-buffer buffer-name)))))
 
+(defun im-git-pop-stash ()
+  (interactive nil im-git-stash-list-mode)
+  (when-let* ((stash-entry (im-git--parse-stash-entry-at-point))
+              (begin (line-beginning-position))
+              (end (line-end-position)))
+    (let ((inhibit-read-only t))
+      (add-text-properties begin end '(face (:strike-through t))))
+    (im-shell-command
+     :command "git"
+     :args `("--no-pager" "stash" "pop" ,stash-entry)
+     :switch nil
+     :buffer-name " *im-git-stash-pop*"
+     :on-finish
+     (lambda (output &rest _)
+       (with-current-buffer im-git--stash-list-buffer-name
+         (im-git-list-stash)
+         (message ">> Successfully popped!")))
+     :on-fail
+     (lambda (output &rest _)
+       (message ">> `git stash pop' failed with: " output)
+       (switch-to-buffer buffer-name)))))
+
 (define-minor-mode im-git-stash-list-mode
   "A minor mode for interacting with git stash list."
   :lighter " StashList"
@@ -745,6 +767,7 @@ CALLBACK will be called with the selected commit ref."
 (with-eval-after-load 'evil
   (evil-define-minor-mode-key 'normal 'im-git-stash-list-mode
     (kbd "x") #'im-git-drop-stash
+    (kbd "p") #'im-git-pop-stash
     (kbd "RET") #'im-git-show-stash-diff))
 
 (defun im-git--parse-stash-entry-at-point ()
