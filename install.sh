@@ -32,11 +32,11 @@ find "${EMACS_LOAD_DIR}" -xtype l -exec unlink {} \;
 echo "=> Cleaning old files..."
 rm -f ~/.emacs.d/init.el
 rm -f ~/.emacs.d/early-init.el
-for file in "${PWD}/emacs/packages"/*.el; do
+for file in "${PWD}/emacs/packages"/*.{el,js}; do
     echo "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
     rm -f "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
 done
-for file in "${PWD}/emacs/load"/*.el; do
+for file in "${PWD}/emacs/load"/*.{el,js}; do
     echo "${EMACS_LOAD_DIR}/$(basename "${file}")"
     rm -f "${EMACS_LOAD_DIR}/$(basename "${file}")"
 done
@@ -49,11 +49,11 @@ echo "=> Installing Emacs configuration..."
 ln -s "${PWD}/emacs/init.el" ~/.emacs.d/init.el
 ln -s "${PWD}/emacs/early-init.el" ~/.emacs.d/early-init.el
 
-for file in "${PWD}/emacs/packages"/*.el; do
+for file in "${PWD}/emacs/packages"/*.{el,js}; do
     echo "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
     ln -s "${file}" "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
 done
-for file in "${PWD}/emacs/load"/*.el; do
+for file in "${PWD}/emacs/load"/*.{el,js}; do
     echo "${EMACS_LOAD_DIR}/$(basename "${file}")"
     ln -s "${file}" "${EMACS_LOAD_DIR}/$(basename "${file}")"
 done

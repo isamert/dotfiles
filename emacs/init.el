@@ -8552,13 +8552,20 @@ This is used in my snippets."
 
 ;;;;;; Running JQ or Javascript on given JSON
 
-;; I work with JSON a lot. Here I have some functions that let's you run given expression on selected JSON.
+;; I work with JSON a lot. Here I have some functions that let's you
+;; run given expression on selected JSON.
 
 (defvar im-nodejs-runner-preface
-  "const R = require(\"ramda\");")
+  (concat "const R = require(\"ramda\");\n"
+          (with-temp-buffer
+            (insert-file-contents (f-join im-packages-path "functions.js"))
+            (buffer-string))))
 
 (defvar im-deno-runner-preface
-  "const R = await import(\"https://esm.sh/v122/ramda@0.29.0\");")
+  (concat "const R = await import(\"https://esm.sh/v122/ramda@0.29.0\");\n"
+          (with-temp-buffer
+            (insert-file-contents (f-join im-packages-path "functions.js"))
+            (buffer-string))))
 
 (defun im-run-jq-on-json (json expression &optional replace)
   "Run given EXPRESSION with jq on JSON and return the result.
