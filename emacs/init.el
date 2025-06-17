@@ -7469,7 +7469,7 @@ mails."
             (message "You have %s new mail." count))
           (when (and (> count 0) (not (eq im-unread-mail-count count)))
             (setq im-unread-mail-count count)
-            (alert (format "You have %s new mail!" 5)
+            (alert (format "You have %s new mail!" count)
                    :title "New Mail!")))
       (error (alert (format "Exit code: %s. See buffers *notmuch* and *mbsync*." reason)
                     :title "Checking for mail failed!")))))
