@@ -1729,7 +1729,7 @@ that is provided by ob-http."
   :after org
   :defer t
   :custom
-  (org-caldav-url (format "%s/remote.php/dav/calendars/%s" im-nextcloud-url im-nextcloud-user))
+  (org-caldav-url (format "%s/remote.php/dav/calendars/%s" im-secrets-nextcloud-url im-secrets-nextcloud-user))
   (org-caldav-calendars (--map
                          (list
                           :calendar-id it
@@ -7599,6 +7599,16 @@ mails."
 (use-package im-kube
   :straight nil)
 
+;;;;; im-nextcloud --- my nextcloud integration
+
+(use-package im-nextcloud
+  :straight nil
+  :demand t
+  :custom
+  (im-nextcloud-url im-secrets-nextcloud-url)
+  (im-nextcloud-user im-secrets-nextcloud-user)
+  (im-nextcloud-auth im-secrets-nextcloud-auth))
+
 ;;;;; ereader --- ebook reader with org integration
 
 (use-package ereader
@@ -10645,31 +10655,7 @@ I use \"Simple Contacts Pro\" to import contacts to my phone."
    nil
    file-name))
 
-;; TODO: This does not delete the contact if header is removed
-;; completely. I probably need something like
-;; `im-org-header-deleted-hook', akin to `im-org-header-changed-hook'.
-(defun im-contacts--update-contact-on-change (info)
-  "Whenever a contact changes in people.org, push changes to Nextcloud.
-This is done by adding this function to
-  `im-org-header-changed-hook'.  See down below."
-  (when (s-ends-with? "people.org" (buffer-file-name))
-    (save-excursion
-      (save-restriction
-        (widen)
-        (goto-char (plist-get info :begin))
-        (when-let* ((contact (im-contacts-build-vcard-for-heading)))
-          ;; Save buffer in case of
-          ;; `im-contacts-build-vcard-for-heading' adds an ID to the
-          ;; heading
-          (let ((before-save-hook nil)
-                (after-save-hook nil))
-            (save-buffer))
-          (im-nextcloud-put-contact
-           contact
-           :on-success (lambda (&rest _) (message ">> Contact updated: %s" (plist-get info :header)))
-           :on-error (lambda (&rest _) (message "!! Failed to update contact: %s. Reason: %s" (plist-get info :header) _))))))))
-
-(add-hook 'im-org-header-changed-hook #'im-contacts--update-contact-on-change)
+;; Also see im-nextcloud.el/Contacts
 
 ;;;;; people.org - Quick info selection
 
@@ -12890,128 +12876,6 @@ Throw error otherwise."
                           (format "#%s" current-test-name)
                         ""))
      :switch t)))
-
-;;;;; NextCloud integration
-
-;;;;;; Contacts
-
-(cl-defun im-nextcloud-put-contact (vcard &key on-success on-error)
-  "Add given VCARD definition to my Nextcloud contacts."
-  (let ((uuid (->>
-               vcard
-               (s-split "\n")
-               (--find (s-prefix? "UID" it))
-               (s-split ":")
-               -last-item)))
-    (request (format
-              "%s/remote.php/dav/addressbooks/users/%s/contacts/%s.vcf"
-              im-nextcloud-url im-nextcloud-user uuid)
-      :headers `(("Content-Type" . "text/vcard; charset=utf-8;")
-                 ("Authorization" . ,(concat "Basic " im-nextcloud-auth)))
-      :type "PUT"
-      :data vcard
-      :success (lambda (&rest _) (when on-success (funcall on-success)))
-      :error (lambda (&rest _) (when on-error (funcall on-error _))))))
-
-;;;;;; Maps
-
-(cl-defun im-nextcloud-maps-put-favorite (&key id name lat lng category comment)
-  "Create or update a favorite named NAME.
-NAME, LAT, LNG, CATEGORY, COMMENT are required.
-
-If ID is non-nil, then the favorite with ID is updated, otherwise
-a new favorite is created.
-
-This function returns a promise."
-  (im-request-json-async
-   (format
-    "%s/index.php/apps/maps/api/1.0/favorites%s"
-    im-nextcloud-url
-    (if id (format "/%s" id) ""))
-   :headers `(("Authorization" . ,(concat "Basic " im-nextcloud-auth)))
-   :type (if id "PUT" "POST")
-   :data (json-encode
-          `((name . ,name)
-            (lat . ,lat)
-            (lng . ,lng)
-            (category . ,category)
-            (comment . ,comment)))))
-
-(async-defun im-nextcloud-maps-remove-all-favorites ()
-  "Delete ALL favorites from Nextcloud Maps."
-  (interactive)
-  (dolist (id (--map
-               (alist-get 'id it)
-               (await (im-request-json-async
-                       (format "%s/index.php/apps/maps/api/1.0/favorites" im-nextcloud-url)
-                       :headers `(("Authorization" . ,(concat "Basic " im-nextcloud-auth)))))))
-    (message ">> Removing %s..." id)
-    (await
-     (im-request-json-async
-      (format "%s/index.php/apps/maps/api/1.0/favorites/%s" im-nextcloud-url id)
-      :type "DELETE"
-      :headers `(("Authorization" . ,(concat "Basic " im-nextcloud-auth)))))
-    (message ">> Removing %s...Done" id))
-  ;; Remove all NC_IDs too
-  (save-restriction
-    (save-excursion
-      (widen)
-      (goto-char (point-min))
-      (delete-matching-lines ":NC_ID:"))))
-
-(defun im-nextcloud-maps-add-all-in-buffer ()
-  "Add all GEO entries to Nextcloud Maps favorites."
-  (interactive)
-  (org-map-entries
-   (lambda () (im-nextcloud-maps-put-favorite-from-org))))
-
-(async-defun im-nextcloud-maps-put-favorite-from-org ()
-  "Create or update map favorite under cursor.
-A favorite is defined as an entry with GEO property, containing
-an org geo: link.
-
-If NC_ID property is non-nil, then favorite with NC_ID id is
-updated, otherwise it a new favorite is created and then the
-NC_ID property is set to the entry."
-  (interactive)
-  (-when-let* ((prop (org-entry-get nil "GEO"))
-               ((_ lat lng _z address) (s-match "\\[\\[geo:\\([0-9\\.]+\\),\\([0-9\\.]+\\);z=\\([0-9]+\\)\\]\\[\\(.*\\)\\]\\]" prop)))
-    (let* ((nc-id (-some->> (org-entry-get nil "NC_ID")
-                    (string-to-number)))
-           (name (org-entry-get nil "ITEM"))
-           (id (org-id-get-create))
-           (result (await
-                    (im-nextcloud-maps-put-favorite
-                     :id nc-id
-                     :name name
-                     :lat lat
-                     :lng lng
-                     ;; TODO: Multiple tags/categories are not supported in upstream.
-                     ;; See https://github.com/nextcloud/maps/issues/1154
-                     :category (car (org-get-tags))
-                     :comment
-                     (format
-                      "- Created at :: %s\n- Tags :: %s\n\n%s"
-                      (org-entry-get nil "CREATED_AT")
-                      (org-entry-get nil "TAGS")
-                      (org-agenda-get-some-entry-text (point-marker) most-positive-fixnum))))))
-      (if nc-id
-          (message ">> Updated map info.")
-        (let-alist result
-          (save-window-excursion
-            (save-excursion
-              (org-id-goto id)
-              (org-set-property "NC_ID" (number-to-string .id))))
-          (message ">> Updated %s with NC_ID=%s." name .id))))))
-
-(defun im-nextcloud-maps--on-org-entry-changed (info)
-  (save-excursion
-    (save-restriction
-      (widen)
-      (goto-char (plist-get info :begin))
-      (im-nextcloud-maps-put-favorite-from-org))))
-
-(add-hook 'im-org-header-changed-hook #'im-nextcloud-maps--on-org-entry-changed)
 
 ;;;;; Shopping Mode
 
