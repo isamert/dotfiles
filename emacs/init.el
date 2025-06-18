@@ -4883,67 +4883,71 @@ It simply checks for folders with `.git' under them."
 
 (add-hook 'after-init-hook #'im-load-projects-list)
 
-;; project.el offers ~C-x p~ keymap with very useful bindings. I also
-;; keep my project related bindings under ~SPC p~.
+(im-leader "p" #'im-project-menu)
+(setq project-switch-commands #'im-project-menu)
 
-;; After doing ~project-switch-project~, you are expected to hit a key
-;; to trigger a project action, like finding a file in the project or
-;; doing a project grep. You need to add these actions into
-;; ~project-switch-commands~ list and you need to define a key in
-;; ~project-prefix-map~ (that is ~C-x p~) to make it triggerable by
-;; given key.
+(defvar im-project-menu--current nil)
+(defun im-project-menu ()
+  (interactive)
+  (let ((default-directory (or project-current-directory-override
+                               (project-root (project-current t)))))
+    (setq im-project-menu--current default-directory)
+    (im-project-transient)))
 
-(im-leader "p" (λ-interactive
-                (if-let* ((root (im-current-project-root)))
-                    (project-switch-project root)
-                  (call-interactively #'project-switch-project))))
+(defun im-project-transient--wrapper (children)
+  (cl-loop
+   for (type . data) in children
+   as command = (plist-get data :command)
+   as wrapped-name = (intern (concat (symbol-name command) "--within-project"))
+   do (eval `(defun ,wrapped-name ()
+               (interactive)
+               (let ((default-directory im-project-menu--current))
+                 (call-interactively ',command))))
+   collect `(,type ,@(plist-put data :command wrapped-name))))
 
-(cl-defmacro im-projectelify (&key cmd desc key non-interactive dont-wrap dir-as-param)
-  "Create a project.el compatible command wrap for CMD.
-If you add a command to `project-switch-commands', it will not work
-properly everytime becuse the function should be aware of what the
-current project is, provided by the `project-current' function.  This
-function simply wraps the original CMD to make it work in the
-`project-current's directory.
-
-If CMD is already project.el aware, then pass DONT-WRAP as
-non-nil so that you only add it to `project-prefix-map'."
-  (let ((fn (if dont-wrap
-                (symbol-name cmd)
-              (concat (symbol-name cmd) "-projectel"))))
-    `(progn
-       (unless ,dont-wrap
-         (defun ,(intern fn) ()
-           (interactive)
-           (let ((default-directory (project-root (project-current t))))
-             (cond
-              (,non-interactive (funcall #',cmd))
-              (,dir-as-param (funcall #',cmd default-directory))
-              (t (call-interactively #',cmd))))))
-       (when ,desc
-         (add-to-list 'project-switch-commands '(,(intern fn) ,desc)))
-       (when ,key
-         (define-key project-prefix-map ,(kbd key) #',(intern fn))))))
-
-(setq project-switch-commands '())
-(im-projectelify :cmd im-shell-for :desc "Eshell" :key "e")
-(im-projectelify :cmd project-query-replace-regexp :desc "Replace in project (regexp)" :key "r" :dont-wrap t)
-(im-projectelify :cmd project-kill-buffers :desc "Kill buffers" :key "k" :dont-wrap t)
-(im-projectelify :cmd im-term :desc "terminal" :key "t" :dont-wrap t)
-(im-projectelify :cmd im-shell-command :desc "Run shell command" :key "!")
-(im-projectelify :cmd im-find-file-in :desc "Files" :key "f" :non-interactive t)
-(im-projectelify :cmd dired :desc "Dired" :key "RET" :dir-as-param t)
-(im-projectelify :cmd magit-status :desc "Magit" :key "m")
-(im-projectelify :cmd consult-ripgrep :desc "Grep" :key "g")
-(im-projectelify :cmd lab-list-project-merge-requests :desc "Merge requests" :key "M")
-(im-projectelify :cmd lab-list-project-pipelines :desc "Pipelines" :key "P")
-(im-projectelify :cmd lab-act-on-last-failed-pipeline-job :desc "Last failed pipeline job" :key "K")
-(im-projectelify :cmd project-switch-project :desc "Switch" :key "s" :dont-wrap t)
-(im-projectelify :cmd project-vc-dir :desc "VC dir" :key "v" :dont-wrap t)
-(im-projectelify :cmd im-select-any-project-file :desc "Files (all projects)" :key "F" :dont-wrap t)
-(im-projectelify :cmd im-consult-ripgrep-all-projects :desc "Grep (all projects)" :key "G" :dont-wrap t)
-(im-projectelify :cmd git-link-homepage :desc "Link (homepage)" :key "H")
-(im-projectelify :cmd im-git-link-homepage :desc "Link (copy)" :key "l")
+(transient-define-prefix im-project-transient ()
+  "Project Commands"
+  [:description (lambda () (format
+                       "%s: %s"
+                       (propertize "Project" 'face '(:weight bold))
+                       (propertize (f-abbrev im-project-menu--current) 'face '(:foreground "green"))))
+   ("s" "Switch" project-switch-project)]
+  [["Core"
+    :setup-children im-project-transient--wrapper
+    ("RET" "Dired" dirvish-dwim)
+    ("e" "Eshell" im-shell-for)
+    ("t" "terminal" im-term)
+    ("!" "Run shell command" im-shell-command)
+    ("k" "Kill buffers" project-kill-buffers)]
+   ["Grep & Find"
+    :setup-children im-project-transient--wrapper
+    ("f" "Files" im-find-file-in)
+    ("F" "Files (all projects)" im-select-any-project-file)
+    ("g" "Grep" consult-ripgrep)
+    ("d" "Deadgrep" deadgrep)
+    ("G" "Grep (all projects)" im-consult-ripgrep-all-projects)
+    ("r" "Replace regexp in project" project-query-replace-regexp)]
+   ["Git (VC)"
+    :setup-children im-project-transient--wrapper
+    ("vd" "Status" vc-dir)
+    ("vs" "Git status" im-git-status)
+    ("vl" "Show stash" im-git-list-stash)
+    ("vc" "Clone URL" lab-git-clone)
+    ("wl" "Worktrees (list)" im-git-worktree-switch)
+    ("wc" "Worktree (create)" im-git-worktree-add)
+    ("wd" "Worktree (delete)" im-git-worktree-delete)]
+   ["GitLab"
+    :setup-children im-project-transient--wrapper
+    ("M" "Merge requests" lab-list-project-merge-requests)
+    ("P" "Pipelines" lab-list-project-pipelines)
+    ("K" "Last failed pipeline job" lab-act-on-last-failed-pipeline-job)
+    ("ms" "Search projects" lab-search-project)
+    ("mc" "Create MR" lab-create-merge-request)]
+   ["URLs"
+    :setup-children im-project-transient--wrapper
+    ("uh" "Homepage link" git-link-homepage)
+    ("uc" "Copy homepage link" im-git-link-homepage)
+    ("ul" "Link branch (region)" im-git-link-on-branch)]])
 
 ;; All-projects commands
 
