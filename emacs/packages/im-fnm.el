@@ -34,7 +34,7 @@
   "Set necessary FNM env vars."
   (unless (getenv "FNM_DIR")
     (let ((fnm-env (json-parse-string
-                    (shell-command-to-string "fnm env --json")
+                    (shell-command-to-string (im-ensure-binary "fnm env --json"))
                     :object-type 'alist)))
       (message "Initializing FNM...")
       (dolist (it fnm-env)
@@ -48,6 +48,7 @@
               (setenv "PATH" bin t)
               (setq exec-path (cons bin exec-path)))))))))
 
+(defalias 'im-switch-node-version #'im-fnm-use)
 (defun im-fnm-use ()
   "Call `fnm-use'.
 If current project contains a .node-version file, use that directly.
