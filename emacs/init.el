@@ -5504,9 +5504,8 @@ When ARG is non-nil, query the whole workspace/project."
   :straight (:files (:defaults "extensions/*.el"))
   :custom
   (corfu-cycle t)
-  ;; Disabled due to `corfu-candidate-overlay-mode'
-  ;; (corfu-auto t)
-  ;; (corfu-auto-delay 0.3)
+  (corfu-auto t)
+  (corfu-auto-delay 0.2)
   (corfu-auto-prefix 3)
   ;; Enabled differently in eshell
   (global-corfu-modes '((not eshell) t))
@@ -5530,22 +5529,6 @@ When ARG is non-nil, query the whole workspace/project."
        (consult-completion-in-region beg end table pred)))))
 (keymap-set corfu-map "M-m" #'corfu-move-to-minibuffer)
 (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
-
-(use-package corfu-candidate-overlay
-  :straight (:type git
-             :repo "https://code.bsdgeek.org/adam/corfu-candidate-overlay"
-             :files (:defaults "*.el"))
-  :general
-  (:states '(insert)
-   "<right>" #'im-corfu-candidate-overlay-maybe-complete)
-  :after corfu
-  :config
-  (corfu-candidate-overlay-mode +1)
-  (defun im-corfu-candidate-overlay-maybe-complete ()
-    (interactive)
-    (if (string= "" (corfu-candidate-overlay--show))
-        (right-char)
-      (corfu-candidate-overlay-complete-at-point))))
 
 (use-package corfu-quick
   :straight nil
