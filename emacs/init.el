@@ -4905,49 +4905,51 @@ It simply checks for folders with `.git' under them."
                  (call-interactively ',command))))
    collect `(,type ,@(plist-put data :command wrapped-name))))
 
-(transient-define-prefix im-project-transient ()
-  "Project Commands"
-  [:description (lambda () (format
-                       "%s: %s"
-                       (propertize "Project" 'face '(:weight bold))
-                       (propertize (f-abbrev im-project-menu--current) 'face '(:foreground "green"))))
-   ("s" "Switch" project-switch-project)]
-  [["Core"
-    :setup-children im-project-transient--wrapper
-    ("RET" "Dired" dirvish-dwim)
-    ("e" "Eshell" im-shell-for)
-    ("t" "terminal" im-term)
-    ("!" "Run shell command" im-shell-command)
-    ("k" "Kill buffers" project-kill-buffers)]
-   ["Grep & Find"
-    :setup-children im-project-transient--wrapper
-    ("f" "Files" im-find-file-in)
-    ("F" "Files (all projects)" im-select-any-project-file)
-    ("g" "Grep" consult-ripgrep)
-    ("d" "Deadgrep" deadgrep)
-    ("G" "Grep (all projects)" im-consult-ripgrep-all-projects)
-    ("r" "Replace regexp in project" project-query-replace-regexp)]
-   ["Git (VC)"
-    :setup-children im-project-transient--wrapper
-    ("vd" "Status" vc-dir)
-    ("vs" "Git status" im-git-status)
-    ("vl" "Show stash" im-git-list-stash)
-    ("vc" "Clone URL" lab-git-clone)
-    ("wl" "Worktrees (list)" im-git-worktree-switch)
-    ("wc" "Worktree (create)" im-git-worktree-add)
-    ("wd" "Worktree (delete)" im-git-worktree-delete)]
-   ["GitLab"
-    :setup-children im-project-transient--wrapper
-    ("M" "Merge requests" lab-list-project-merge-requests)
-    ("P" "Pipelines" lab-list-project-pipelines)
-    ("K" "Last failed pipeline job" lab-act-on-last-failed-pipeline-job)
-    ("ms" "Search projects" lab-search-project)
-    ("mc" "Create MR" lab-create-merge-request)]
-   ["URLs"
-    :setup-children im-project-transient--wrapper
-    ("uh" "Homepage link" git-link-homepage)
-    ("uc" "Copy homepage link" im-git-link-homepage)
-    ("ul" "Link branch (region)" im-git-link-on-branch)]])
+(with-eval-after-load 'project
+  (require 'transient)
+  (transient-define-prefix im-project-transient ()
+    "Project Commands"
+    [:description (lambda () (format
+                         "%s: %s"
+                         (propertize "Project" 'face '(:weight bold))
+                         (propertize (f-abbrev im-project-menu--current) 'face '(:foreground "green"))))
+     ("s" "Switch" project-switch-project)]
+    [["Core"
+      :setup-children im-project-transient--wrapper
+      ("RET" "Dired" dirvish-dwim)
+      ("e" "Eshell" im-shell-for)
+      ("t" "terminal" im-term)
+      ("!" "Run shell command" im-shell-command)
+      ("k" "Kill buffers" project-kill-buffers)]
+     ["Grep & Find"
+      :setup-children im-project-transient--wrapper
+      ("f" "Files" im-find-file-in)
+      ("F" "Files (all projects)" im-select-any-project-file)
+      ("g" "Grep" consult-ripgrep)
+      ("d" "Deadgrep" deadgrep)
+      ("G" "Grep (all projects)" im-consult-ripgrep-all-projects)
+      ("r" "Replace regexp in project" project-query-replace-regexp)]
+     ["Git (VC)"
+      :setup-children im-project-transient--wrapper
+      ("vd" "Status" vc-dir)
+      ("vs" "Git status" im-git-status)
+      ("vl" "Show stash" im-git-list-stash)
+      ("vc" "Clone URL" lab-git-clone)
+      ("wl" "Worktrees (list)" im-git-worktree-switch)
+      ("wc" "Worktree (create)" im-git-worktree-add)
+      ("wd" "Worktree (delete)" im-git-worktree-delete)]
+     ["GitLab"
+      :setup-children im-project-transient--wrapper
+      ("M" "Merge requests" lab-list-project-merge-requests)
+      ("P" "Pipelines" lab-list-project-pipelines)
+      ("K" "Last failed pipeline job" lab-act-on-last-failed-pipeline-job)
+      ("ms" "Search projects" lab-search-project)
+      ("mc" "Create MR" lab-create-merge-request)]
+     ["URLs"
+      :setup-children im-project-transient--wrapper
+      ("uh" "Homepage link" git-link-homepage)
+      ("uc" "Copy homepage link" im-git-link-homepage)
+      ("ul" "Link branch (region)" im-git-link-on-branch)]]))
 
 ;; All-projects commands
 
