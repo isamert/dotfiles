@@ -7438,9 +7438,9 @@ Fetches missing channels/users first."
    "gs" #'notmuch-search
    "gS" #'notmuch-tree
    "o" #'notmuch-search-show-thread)
-  (general-def :keymaps 'notmuch-show-mode-map :states 'normal
-    "o" #'notmuch-show-view-part
-    "O" #'notmuch-show-save-part)
+  (:keymaps 'notmuch-show-mode-map :states 'normal
+   "o" #'notmuch-show-view-part
+   "O" #'notmuch-show-save-part)
   (im-leader
     "en" #'im-notmuch-inbox
     "eN" #'notmuch-hello)
