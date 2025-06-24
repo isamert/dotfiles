@@ -2554,10 +2554,11 @@ If not, prompt user to clock in."
                              (im-svgcal--time-diff "0:00" e)))
                    (allocated-time
                     (-sum (-map (-lambda ((range start end)) (im-svgcal--time-diff start end)) (im-svgcal--org-entry-timestamps)))))
-              (when (> (org-clock-get-clocked-time)
-                       (if (> allocated-time 0)
-                           allocated-time
-                         effort))
+              (when (ignore-errors
+                      (> (org-clock-get-clocked-time)
+                         (if (> allocated-time 0)
+                             allocated-time
+                           effort)))
                 (message ">> You are still clocked in to '%s'! Want to clock out now?" (org-entry-get nil "ITEM")))))))))
    (t
     (unless (> (* 60 5) (time-to-seconds (current-idle-time)))
@@ -5195,7 +5196,7 @@ path of the file in the results.  I don't want that."
   "Find file in DIR.
 `fd' is already fast enough, no need for `consult-find's async
 approach."
-  (interactive "DFind files in: ")
+  (interactive)
   (let ((default-directory (or dir default-directory)))
     (im-output-select
      :cmd "fd --exclude '.git' --exclude 'node_modules' --hidden ."
@@ -5541,6 +5542,7 @@ When ARG is non-nil, query the whole workspace/project."
 (use-package corfu-history
   :straight nil
   :after corfu
+  :config
   (corfu-history-mode))
 
 (use-package kind-icon
