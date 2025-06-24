@@ -401,7 +401,7 @@ predefined prompts."
 
 (defun im-ai-file-context-elisp (root file)
   (with-temp-buffer
-    (let* ((fname (im-tap (f-join root file))) ; required to make `set-auto-mode' work
+    (let* ((fname (f-join root file)) ; required to make `set-auto-mode' work
            (buffer-file-name fname))
       (insert-file-contents fname)
       (delay-mode-hooks (set-auto-mode))

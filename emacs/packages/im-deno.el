@@ -82,7 +82,7 @@ Also see: https://docs.deno.com/runtime/manual/advanced/language_server/overview
                           `(:deno ,im-deno-options))
   (message
    (substitute-command-keys
-    ">> Call \\[eglot-signal-didChangeConfiguration] after save after saving and returning to buffer.")))
+    ">> Call \\[hack-dir-local-variables] & \\[eglot-signal-didChangeConfiguration] after save after saving and returning to buffer.")))
 
 (defun im-deno-cache-buffer-dependencies (invalidate?)
   "Install and cache dependencies stated in current Deno file.

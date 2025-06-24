@@ -5215,7 +5215,7 @@ approach."
   (pcase-let* ((default-directory (im-current-project-root))
                (result (save-window-excursion
                          (prog1 (consult-git-grep (list branch))
-                           (kill-buffer (im-tap (current-buffer))))))
+                           (kill-buffer (current-buffer)))))
                (`(,fname ,line-no) (s-split-up-to ":" (s-chop-prefix (concat branch ":") result) 2)))
     (with-current-buffer (get-buffer-create (format "*%s at %s*" fname branch))
       (erase-buffer)
@@ -9335,7 +9335,7 @@ total {rows,bytes} etc. and first 10 rows of the table."
     (im-shell-command
      :buffer-name buffer-name
      :switch t
-     :command (format "bq show '%s'" (im-tap table-name))
+     :command (format "bq show '%s'" table-name)
      :on-start
      (lambda (&rest _)
        (toggle-truncate-lines +1)
