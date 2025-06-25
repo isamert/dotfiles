@@ -3170,9 +3170,7 @@ that is read verbatim (meaning that no '$*' is appended):
 (defun im-org-jump-to-project-documentation ()
   "Jump to *my* documentation for current project."
   (interactive)
-  (unless (im-current-project-root)
-    (switch-to-buffer (find-file-noselect directory-notes-org)))
-  (let* ((projdir (abbreviate-file-name (im-current-project-root)))
+  (let* ((projdir (abbreviate-file-name (or (im-current-project-root) default-directory)))
          (buf (find-file-noselect directory-notes-org))
          (pos (with-current-buffer buf
                 (widen)
@@ -4884,7 +4882,9 @@ It simply checks for folders with `.git' under them."
 
 (add-hook 'after-init-hook #'im-load-projects-list)
 
-(im-leader "p" #'im-project-menu)
+(im-leader
+  "p" #'im-project-menu
+  "P" #'im-project-menu-for-dir)
 (setq project-switch-commands #'im-project-menu)
 
 (defvar im-project-menu--current nil)
@@ -4894,6 +4894,11 @@ It simply checks for folders with `.git' under them."
                                (project-root (project-current t)))))
     (setq im-project-menu--current default-directory)
     (im-project-transient)))
+
+(defun im-project-menu-for-dir ()
+  (interactive)
+  (setq im-project-menu--current default-directory)
+  (im-project-transient))
 
 (defun im-project-transient--wrapper (children)
   (cl-loop
@@ -4921,7 +4926,8 @@ It simply checks for folders with `.git' under them."
       ("e" "Eshell" im-shell-for)
       ("t" "terminal" im-term)
       ("!" "Run shell command" im-shell-command)
-      ("k" "Kill buffers" project-kill-buffers)]
+      ("k" "Kill buffers" project-kill-buffers)
+      ("n" "Project notes" im-org-jump-to-project-documentation)]
      ["Grep & Find"
       :setup-children im-project-transient--wrapper
       ("f" "Files" im-find-file-in)
@@ -5171,10 +5177,18 @@ It simply checks for folders with `.git' under them."
   (setq consult-ripgrep-command "rg  --hidden --null --line-buffered --color=always --max-columns=500 --no-heading --smart-case --line-number . -e ARG OPTS")
   (setq consult-project-root-function #'im-current-project-root))
 
+(transient-define-prefix im-find-and-grep-transient ()
+  "Finding and grepping."
+  [["Find"
+    ("f" "Find file in current directory" im-find-file-in)]
+   ["Grep"
+    ("d" "Deadgrep" deadgrep)
+    ("b" "Grep selected branch" im-consult-git-grep-branch)
+    ("g" "Ripgrep in current directory" im-consult-ripgrep-current-directory)
+    ("G" "Ripgrep in given directory" im-consult-ripgrep-in-given-directory)]])
+
 (im-leader
-  "cf"  #'im-find-file-in
-  "cG"  #'im-consult-ripgrep-in-given-directory
-  "cg"  #'im-consult-ripgrep-current-directory)
+  "c" #'im-find-and-grep-transient)
 
 (defun im-consult-ripgrep (&optional path)
   "`consult-ripgrep' in PATH (or in current project, if path is nil).
