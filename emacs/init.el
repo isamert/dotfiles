@@ -6800,7 +6800,10 @@ Fetches missing channels/users first."
     "sa" #'im-ai-snippet
     "sg" #'im-ai-gptel-dwim
     "sG" (λ-interactive (im-ai-gptel-dwim 'new))
-    "ta" #'im-ai-gptel-toggle-side-buffer))
+    "ta" #'im-ai-gptel-toggle-side-buffer
+    "tA" (λ-interactive (im-ai-gptel-toggle-side-buffer 'new)))
+  :config
+  (add-hook 'gptel-mode-hook #'tab-line-mode))
 
 ;; gptel seems more capable than org-ai. Probably going to replace
 ;; org-ai with this in the long run or they might just simply
@@ -9711,18 +9714,26 @@ SELECT * FROM _ LIMIT 1;
     ;; together. I mostly prefix my buffers like "*XXX: ..." and here
     ;; I delete that prefix to gain a little bit more space while
     ;; displaying.
-    (if-let* ((str (s-match " ?\\*[a-zA-Z0-9_-]+: \\(.*\\)" name)))
+    (if-let* ((str (s-match " ?\\*[a-zA-Z0-9_$-]+: \\(.*\\)" name)))
         (cadr str)
       name)))
 
 (defun im-tab-line-buffers ()
-  "Return related project buffers (not limited to files, shells etc.) to display in tab-line."
-  (let* ((proj (or (im-current-project-root)
-                   (expand-file-name default-directory)))
-         (buffer-name (buffer-name))
-         (buffer-filter (if (s-matches? "^\\*\\|\\$" buffer-name)
-                            (apply-partially #'im-tab-line--buffer-same-group? buffer-name)
-                          (apply-partially #'im-tab-line--buffer-same-project? proj))))
+  "Return a list of buffers grouped by common characteristics for tab-line display.
+
+A \"group\" consists of buffers that:
+
+- Share the same project root directory (as determined by
+`im-current-project-root').
+
+- Have buffer names starting with the same prefix (typically for buffers
+such as '*eshell:', '*gptel:', and other duplicable special modes).
+
+This function is intended for use with `tab-line-mode' to conveniently
+group related buffers (e.g., multiple shells or AI chat sessions in the
+same project) together on the tab line, improving navigation in projects
+where these special buffers may be duplicated."
+  (let* ((buffer-filter (apply-partially #'im-tab-line--buffer-same-group? (current-buffer))))
     (seq-sort-by
      #'buffer-name #'string<
      (seq-filter (lambda (b)
@@ -9734,13 +9745,14 @@ SELECT * FROM _ LIMIT 1;
 (defun im-tab-line--buffer-valid? ()
   (not (s-matches? im-tab-line-hidden-buffer-name-regexp (buffer-name))))
 
-(defun im-tab-line--buffer-same-project? (project-dir)
-  (and
-   (s-prefix? project-dir (expand-file-name default-directory))
-   (not (s-matches? "^\\*\\|\\$" (buffer-name)))))
-
-(defun im-tab-line--buffer-same-group? (orig-buffer-name)
-  (s-prefix? (substring orig-buffer-name 0 4) (buffer-name)))
+(defun im-tab-line--buffer-same-group? (orig-buffer proj-dir)
+  (and (equal
+        (or (im-current-project-root)
+            default-directory)
+        (with-current-buffer orig-buffer
+          (or (im-current-project-root)
+              default-directory)))
+       (s-prefix? (substring (buffer-name orig-buffer) 0 4) (buffer-name))))
 
 ;;;;; tabgo.el
 
