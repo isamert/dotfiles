@@ -2101,9 +2101,6 @@ Length, author, title etc. are appended to the link."
 
 ;;;;;; Find backlinks dynamically
 
-(im-leader
-  "oB" #'im-org-link-find-backlinks)
-
 (defun im-org-link-find-backlinks (&optional id)
   "Find backlinks for ID (or current heading)."
   (interactive)
@@ -3328,7 +3325,6 @@ Return a (color color) list that can be used with :column-colors and
 ;; notifications. Here I set some defaults/fallback values.
 
 (use-package alert
-  :general
   :config
   (setq alert-log-messages nil) ; im-notif already logs them
   (alert-define-style
@@ -3508,7 +3504,6 @@ Return a (color color) list that can be used with :column-colors and
   :general
   (im-leader
     "ed" #'dirvish-dwim
-    "fh" #'dirvish-side
     "eD" #'im-dirvish)
   ;; Add a way to open dirvish in selected directory using Embark
   (:keymaps 'embark-file-map "J" #'im-dirvish)
@@ -4345,16 +4340,6 @@ empty string."
    "r" #'vc-dir-refresh)
   (:keymaps 'vc-git-log-view-mode-map :states 'normal
    "<backtab>" #'im-vc-toggle-all-log-view-entries)
-  (im-leader
-    "gp" #'vc-pull
-    "gR" #'im-update-git-state
-    "gbc" #'vc-create-branch
-    "gbs" #'vc-switch-branch
-    "gB" #'vc-annotate ;; Git Blame
-    "gLr" #'vc-print-root-log
-    "gLf" #'vc-print-log
-    ;; TODO: add magit like interface for force pushing and selecting upstream?
-    "gP" #'vc-push)
   :config
   (setq vc-log-short-style '(directory file))
   (evil-collection-vc-git-setup)
@@ -4432,9 +4417,6 @@ of that revision."
 
 (use-package git-timemachine
   :commands (git-timemachine-toggle)
-  :general
-  (im-leader-v
-    "gt" #'git-timemachine-toggle)
   :config
   (evil-collection-git-timemachine-setup))
 
@@ -4554,16 +4536,6 @@ of that revision."
   (diff-hl-show-staged-changes nil)
   (diff-hl-draw-borders nil)
   :general
-  (im-leader-v
-    "g[" #'diff-hl-previous-hunk
-    "g]" #'diff-hl-next-hunk
-    ;; FIXME: Shortcuts that appear on "show" dialog are not usable (due to evil mode?)
-    "g{" #'diff-hl-show-hunk-previous
-    "g}" #'diff-hl-show-hunk-next
-    ;; FIXME: This does not work on region (can not apply the hunk for some reason?)
-    "gS" #'diff-hl-stage-dwim
-    "gr" #'diff-hl-revert-hunk
-    "gx" #'diff-hl-revert-hunk)
   (:states 'normal
    (kbd "[g") #'diff-hl-previous-hunk
    (kbd "]g") #'diff-hl-next-hunk)
@@ -4581,10 +4553,7 @@ of that revision."
 ;;;;; blamer -- git blame
 
 (use-package blamer
-  :commands (blamer-show-posframe-commit-info)
-  :general
-  (im-leader
-    "gi" #'blamer-show-posframe-commit-info))
+  :commands (blamer-show-posframe-commit-info))
 
 ;;;;; avy
 
@@ -5112,18 +5081,7 @@ It simply checks for folders with `.git' under them."
 (use-package consult
   :general
   (im-leader
-    "fo" #'find-file
-    "fd" #'consult-dir
-    "fb" #'switch-to-buffer
-    "fs" #'save-buffer
-
-    "fl" #'consult-line
-    "fL" #'consult-line-multi ;; All open project buffers
-    "fm" #'consult-imenu
-    "fM" #'consult-imenu-multi ;; All open project buffers
-
     "oj" #'consult-org-agenda
-
     "cr" #'consult-history
     "RET" #'consult-buffer)
   (:keymaps 'minibuffer-mode-map
@@ -6072,13 +6030,6 @@ this command is invoked from."
 
 (use-package git-link
   :demand t
-  :general
-  (im-leader-v
-    "glm" #'im-git-link-merge-requests
-    "gll" #'im-git-link-on-branch
-    "glL" #'im-git-link-commit
-    "glc" #'git-link-commit
-    "glh" #'git-link-homepage)
   :config
   (setq git-link-open-in-browser t))
 
@@ -6980,13 +6931,6 @@ Fetches missing channels/users first."
 (use-package lab
   :straight (:host github :repo "isamert/lab.el")
   :autoload (lab--git lab--time-ago lab-git-clone lab-current-branch lab-git-origin-switch-to-ssh)
-  :general
-  (im-leader
-    "gmb" #'lab-list-branch-merge-requests
-    "gmm" #'lab-list-my-merge-requests
-    "gma" #'lab-list-group-merge-requests
-    "gmp" #'lab-list-project-merge-requests
-    "gmc" #'lab-create-merge-request)
   :init
   ;; Add advices for automatically starting to watch pipelines
   (with-eval-after-load 'magit
@@ -7567,18 +7511,60 @@ mails."
 
 (use-package im-git
   :straight nil
-  :general
-  (im-leader
-    "gs" #'im-git-status
-    "gc" #'im-git-commit
-    "ga" #'im-git-commit-amend
-    "ge" #'im-git-list-stash
-    "gE" #'vc-git-stash
-    "gwa" #'im-git-worktree-add
-    "gws" #'im-git-worktree-switch
-    "gwd" #'im-git-worktree-delete)
   :init
   (add-hook 'im-git-commit-finished-hook #'im-update-git-state))
+
+(transient-define-prefix im-git-link-transient ()
+  )
+
+;; To invoke: (im-git-link-transient)
+
+
+(transient-define-prefix im-git-transient ()
+  [["Status"
+    ("s" "Show status" im-git-status)
+    ("B" "Blame annotate" vc-annotate)
+    ("i" "Show blame at point" blamer-show-posframe-commit-info)
+    ("t" "Open timemachine" git-timemachine-toggle)
+    ("R" "Refresh state" im-update-git-state)]
+   ["Commit/Branch"
+    ("c" "Commit changes" im-git-commit)
+    ("a" "Amend last commit" im-git-commit-amend)
+    ("bc" "New branch" vc-create-branch)
+    ("bs" "Switch branch" vc-switch-branch)
+    ("P" "Push" vc-push)
+    ("p" "Pull" vc-pull)]
+   ["Log"
+    ("Lr" "Repo log" vc-print-root-log)
+    ("Lf" "File log" vc-print-log)]
+   ["Stash"
+    ("E" "Stash changes" vc-git-stash)
+    ("e" "Show stashes" im-git-list-stash)]
+   ["Worktrees"
+    ("wa" "Add worktree" im-git-worktree-add)
+    ("ws" "Switch worktree" im-git-worktree-switch)
+    ("wd" "Remove worktree" im-git-worktree-delete)]
+   ["Diff"
+    ("[" "Prev hunk" diff-hl-previous-hunk)
+    ("]" "Next hunk" diff-hl-next-hunk)
+    ("{" "Show prev hunk" diff-hl-show-hunk-previous)
+    ("}" "Show next hunk" diff-hl-show-hunk-next)
+    ("S" "Stage hunk" diff-hl-stage-dwim)
+    ("r" "Revert hunk" diff-hl-revert-hunk)]
+   ["Merge Requests (GitLab)"
+    ("mb" "Branches" lab-list-branch-merge-requests)
+    ("mm" "Assigned to me" lab-list-my-merge-requests)
+    ("ma" "In group" lab-list-group-merge-requests)
+    ("mp" "In project" lab-list-project-merge-requests)
+    ("mc" "Create" lab-create-merge-request)]
+   ["Git Link"
+    ("lm" "Merge Requests" im-git-link-merge-requests)
+    ("ll" "On Branch" im-git-link-on-branch)
+    ("lL" "Commit hash" im-git-link-commit)
+    ("lc" "Commit (hash at point)" git-link-commit)
+    ("lh" "Homepage" git-link-homepage)]])
+
+(im-leader-v "g" #'im-git-transient)
 
 ;;;;; im-shiori -- Shiori bookmark manager integration
 
@@ -10780,22 +10766,29 @@ the query beforehand."
 ;; Keybindings
 
 (im-leader
-  "obb" 'im-bullet-focus-non-day-header
-  "oby" 'im-bullet-focus-yesterday
-  "obY" 'im-bullet-focus-yesterday-indirect
-  "obt" 'im-bullet-focus-today
-  "obT" 'im-bullet-focus-tomorrow
-  "obf" 'im-bullet-focus-given-day
-  "obr" 'im-bullet-focus-recurring
-  "obR" 'im-bullet-focus-recurring-indirect
-  "obw" 'im-bullet-focus-work
-  "obW" 'im-bullet-focus-work-indirect
-  "obl" 'im-bullet-focus-life
-  "obL" 'im-bullet-focus-life-indirect
-  "obc" 'im-bullet-focus-computer
-  "obC" 'im-bullet-focus-computer-indirect
-  "obi" 'im-bullet-focus-inbox
-  "obI" 'im-bullet-focus-inbox-indirect)
+  "ob" 'im-bullet-transient)
+
+(transient-define-prefix im-bullet-transient ()
+  "IM Bullet Focus Commands"
+  [["Focus"
+    ("n" "Non-day header" im-bullet-focus-non-day-header)
+    ("y" "Yesterday" im-bullet-focus-yesterday)
+    ("Y" "Yesterday indirect" im-bullet-focus-yesterday-indirect)
+    ("t" "Today" im-bullet-focus-today)
+    ("T" "Tomorrow" im-bullet-focus-tomorrow)
+    ("f" "Given day" im-bullet-focus-given-day)
+    ("r" "Recurring" im-bullet-focus-recurring)
+    ("R" "Recurring indirect" im-bullet-focus-recurring-indirect)
+    ("w" "Work" im-bullet-focus-work)
+    ("W" "Work indirect" im-bullet-focus-work-indirect)
+    ("l" "Life" im-bullet-focus-life)
+    ("L" "Life indirect" im-bullet-focus-life-indirect)
+    ("c" "Computer" im-bullet-focus-computer)
+    ("C" "Computer indirect" im-bullet-focus-computer-indirect)
+    ("i" "Inbox" im-bullet-focus-inbox)
+    ("I" "Inbox indirect" im-bullet-focus-inbox-indirect)]
+   ["Linking"
+    ("b" "Backlinks" im-org-link-find-backlinks)]])
 
 ;;
 ;; Date utils
@@ -11503,11 +11496,27 @@ more than one header of a single org buffer."
 ;;;;; Current file functionality
 
 (im-leader-v
-  "fi" #'im-print-buffer-file-info
-  "fc" #'im-copy-current-filename
-  "fC" (λ-interactive (im-copy-current-filename :pretty nil))
-  "fr" #'im-rename-current-file-name-and-buffer
-  "fD" #'im-delete-current-file)
+  "f" #'im-file-transient)
+
+(transient-define-prefix im-file-transient ()
+  [["File Operations"
+    ("s" "Save buffer" save-buffer)
+    ("r" "Rename file & buffer" im-rename-current-file-name-and-buffer)
+    ("D" "Delete file" im-delete-current-file)
+    ("i" "Show file info" im-print-buffer-file-info)]
+   ["Copy Path"
+    ("c" "Copy path (pretty)" im-copy-current-filename)
+    ("C" "Copy path (raw)" (lambda () (interactive) (im-copy-current-filename :pretty nil)))]
+   ["Navigate"
+    ("o" "Open file" find-file)
+    ("d" "Open directory" consult-dir)
+    ("h" "Dirvish sidebar" dirvish-side)
+    ("b" "Switch buffer" switch-to-buffer)]
+   ["Search/Index"
+    ("l" "Search lines in file" consult-line)
+    ("L" "Search lines in project" consult-line-multi)
+    ("m" "Jump to symbol in file" consult-imenu)
+    ("M" "Jump to symbol in project" consult-imenu-multi)]])
 
 ;; Sometimes I just want to delete/rename/move etc. the current file
 ;; without resorting to dired or any other file manager. Here are some
@@ -11555,8 +11564,7 @@ more than one header of a single org buffer."
 (defalias 'im-copy-current-file-path 'im-copy-current-filename)
 (cl-defun im-copy-current-filename (&key uri pretty)
   "Copy the current buffer file name to the clipboard.
-If the URI is non-nil, then add file:// in front of the
-file-path."
+If the URI is non-nil, then add file:// in front of the file-path."
   (interactive
    (list :pretty t))
   (let* ((fname (if (equal major-mode 'dired-mode)
@@ -11741,10 +11749,10 @@ Version 2017-01-11"
 
 (defun xah-unescape-quotes (@begin @end)
   "Replace  「\\\"」 by 「\"」 in current line or text selection.
-See also: `xah-escape-quotes'
+  See also: `xah-escape-quotes'
 
-URL `http://ergoemacs.org/emacs/elisp_escape_quotes.html'
-Version 2017-01-11"
+  URL `http://ergoemacs.org/emacs/elisp_escape_quotes.html'
+  Version 2017-01-11"
   (interactive
    (if (use-region-p)
        (list (region-beginning) (region-end))
