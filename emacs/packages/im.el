@@ -41,6 +41,22 @@
 ;;;; Variables
 
 ;; TODO ...
+;;;; Project utils
+
+(defsubst im-current-project-root ()
+  "Return the root path of current project."
+  (interactive)
+  ;; The following is possible more correct but slower.
+  ;; (ignore-errors
+  ;;   (expand-file-name (project-root (project-current))))
+
+  ;; This simply finds the .git folder and 99% of the time it's the
+  ;; right directory.
+  (when-let* ((path (locate-dominating-file default-directory ".git")))
+    (expand-file-name path)))
+
+(defsubst im-is-git-dir (dir)
+  (file-directory-p (concat dir "/.git")))
 
 ;;;; OS Utils
 

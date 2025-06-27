@@ -4796,14 +4796,6 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 
 (defconst im-projects-root "~/Workspace/projects")
 
-(defun im-current-project-root ()
-  "Return the root path of current project."
-  (interactive)
-  (ignore-errors
-    (expand-file-name (project-root (project-current)))))
-;; (when-let* ((path (locate-dominating-file default-directory ".git")))
-;;   (expand-file-name path)))
-
 (defvar im-project-name-transformers '()
   "List of functions to do transformations on the function name.
 Like shortening it in some form etc.")
@@ -4819,9 +4811,6 @@ Like shortening it in some form etc.")
            (string-trim (string-remove-prefix projects-root curr-proj) "/" "/")
          (file-name-nondirectory (directory-file-name curr-proj)))
      (file-name-nondirectory (directory-file-name default-directory)))))
-
-(defun im-is-git-dir (dir)
-  (file-directory-p (concat dir "/.git")))
 
 (defun im-all-project-roots ()
   "Find every project dir under `im-projects-root'.

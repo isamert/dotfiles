@@ -702,16 +702,25 @@ consideration."
           (with-current-buffer final-buffer
             (goto-char (point-max))
             (insert "\n#+begin_src " lang "\n" region "\n#+end_src"))))
-      (switch-to-buffer final-buffer))))
+      (if (im-buffer-visible-p final-buffer)
+          (select-window (get-buffer-window final-buffer))
+        (switch-to-buffer final-buffer))
+      (goto-char (point-max))
+      (recenter))))
 
 (defun im-ai-gptel-toggle-side-buffer (&optional new?)
   "Same as `im-ai-gptel-dwim' but toggle buffer in side buffer."
   (interactive)
-  (im-toggle-side-buffer-with-name
-   (save-window-excursion
-     (im-ai-gptel-dwim new?)
-     (buffer-name))))
-
+  (let ((buffer (save-window-excursion
+                  (im-ai-gptel-dwim new?)
+                  (current-buffer))))
+    (if (and (im-buffer-visible-p buffer)
+             (use-region-p))
+        (progn
+          (im-display-buffer-in-side-window buffer)
+          (goto-char (point-max))
+          (recenter))
+      (im-toggle-side-buffer-with-name (buffer-name buffer)))))
 
 ;;;;; Higlighting prompts
 
