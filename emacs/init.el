@@ -6980,7 +6980,9 @@ Fetches missing channels/users first."
 
 (use-package whisper
   :straight (:host github :repo "natrys/whisper.el")
-  :bind ("C-M-r" . whisper-run)
+  :general
+  (im-leader
+    "er" #'whisper-run)
   :config
   ;; Override `whisper-command' as instructed, to be able to use my
   ;; whisper server installation on my home lab.
