@@ -329,16 +329,25 @@ outer.top =        0
 outer.right =      0
 
 [workspace-to-monitor-force-assignment]
-1 = 'main'
-2 = 'main'
-3 = 'main'
-4 = 'main'
-5 = 'main'
-6 = 'main'
-7 = 'secondary'
-8 = 'secondary'
-9 = 'secondary'
-0 = 'secondary'
+#  When a second monitor is connected, assign workspaces 1-5 to it,
+# regardless of whether it's set as the system's main or secondary
+# display. This ensures the external monitor effectively serves as the
+# main workspace without extra configuration. Additionally, by not
+# setting it as the "main" monitor in system settings, the top bar
+# remains hidden on the external display as I would like it to
+# be. Workspaces 1-5 on the external monitor provide main-monitor
+# functionality while keeping system UI elements on the primary
+# screen.
+1 = ['secondary', 'main', 'built-in']
+2 = ['secondary', 'main', 'built-in']
+3 = ['secondary', 'main', 'built-in']
+4 = ['secondary', 'main', 'built-in']
+5 = ['secondary', 'main', 'built-in']
+6 = ['built-in', 'secondary']
+7 = ['built-in', 'secondary']
+8 = ['built-in', 'secondary']
+9 = ['built-in', 'secondary']
+0 = ['built-in', 'secondary']
 
 # See https://nikitabobko.github.io/AeroSpace/guide#exec-env-vars
 [exec]
