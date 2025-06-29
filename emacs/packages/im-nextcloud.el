@@ -39,6 +39,7 @@
 ;;
 ;; - Send files.
 ;; - Revert command (`gr'?) for `im-nextcloud-talk-list-rooms'
+;; - Load more of past history in a room on demand
 
 ;;; Code:
 
@@ -102,6 +103,18 @@ If you are using app passwords, then you need to do the following:
 
 ;;;; Talk
 
+(defvar-local im-nextcloud-talk--room nil
+  "Room info for current buffer.")
+
+(define-derived-mode im-nextcloud-talk-room-mode markdown-mode "TalkRoom"
+  "NextCloud chat room major mode."
+  (setq markdown-hide-urls t))
+
+(define-derived-mode im-nextcloud-talk-room-list-mode fundamental-mode "TalkRooms"
+  "NextCloud chat room list major mode.")
+
+(define-key im-nextcloud-talk-room-mode-map (kbd "C-c C-c") #'im-nextcloud-talk-room-send-message)
+
 ;;;###autoload
 (defun im-nextcloud-talk-list-rooms ()
   "List all Nextcloud Talk rooms using vtable."
@@ -115,6 +128,7 @@ If you are using app passwords, then you need to do the following:
        (with-current-buffer buf
          (read-only-mode +1)
          (let ((inhibit-read-only t))
+           (im-nextcloud-talk-room-list-mode)
            (erase-buffer)
            (make-vtable
             :row-colors (im-vtable--pretty-colors)
@@ -129,10 +143,24 @@ If you are using app passwords, then you need to do the following:
                         (pcase (vtable-column vtable column)
                           ("Name" .displayName)
                           ("Last Message" (s-truncate 100 (s-replace "\n" "…" .lastMessage.message))))))
-            :actions `("RET" im-nextcloud-talk-open-chat)))
+            :actions `("RET" im-nextcloud-talk-open-room)))
          (switch-to-buffer buf))))))
 
-(defun im-nextcloud-talk-open-chat (room)
+(defun im-nextcloud-talk-room-send-message ()
+  "Send message."
+  (interactive nil im-nextcloud-talk-room-mode)
+  (let ((buf (current-buffer)))
+    (when-let* ((start (save-excursion (im-nextcloud-talk--goto-prompt)))
+                (end (point-max))
+                (msg (buffer-substring-no-properties start end)))
+      (im-nextcloud-talk--send-message
+       (alist-get 'token im-nextcloud-talk--room) (s-trim msg)
+       (lambda ()
+         (with-current-buffer buf
+           (delete-region start end)
+           (insert "\n")))))))
+
+(defun im-nextcloud-talk-open-room (room)
   (im-nextcloud-request
    (format "/ocs/v2.php/apps/spreed/api/v1/chat/%s?lookIntoFuture=0" (alist-get 'token room))
    :json? t
@@ -141,51 +169,38 @@ If you are using app passwords, then you need to do the following:
      (let ((buf (get-buffer-create (format "*nextcloud-talk: %s*" (alist-get 'displayName room)))))
        (with-current-buffer buf
          (let ((inhibit-read-only t))
+           (unless (derived-mode-p 'im-nextcloud-talk-room-mode)
+             (im-nextcloud-talk-room-mode)
+             (page-break-lines-mode)
+             (message ">> Polling started...")
+             (cl-labels ((poll
+                          (msgid)
+                          (im-nextcloud-talk--poll-messages
+                           (alist-get 'token room) msgid
+                           ;; TODO: handle errors and reconnection
+                           (lambda (messages)
+                             (when (buffer-live-p buf)
+                               (with-current-buffer buf
+                                 (save-excursion
+                                   (im-nextcloud-talk--goto-last-message)
+                                   (-each (reverse messages)
+                                     (lambda (it)
+                                       (unless (get-buffer-window buf 'visible)
+                                         (let-alist it
+                                           (alert (format "%s: %s" .actorId .message)
+                                                  :title "NextCloud Talk")))
+                                       (im-nextcloud-talk--insert-message it))))
+                                 (poll (alist-get 'id (car messages) msgid))))))))
+               (poll (alist-get 'id (car messages)))))
            (erase-buffer)
            (-each (reverse messages) #'im-nextcloud-talk--insert-message)
-           (let ((markdown-hide-urls t)
-                 (markdown-italic-underscore nil)
-                 (markdown-enable-html nil)
-                 (markdown-enable-math nil))
-             (markdown-mode))
-           (page-break-lines-mode)
-           ;; (font-lock-add-keywords nil '(("^\\[[a-zA-Z_\\.-]+\\]: " . font-lock-function-name-face)) t)
-           (insert "\n\n> \n")
-           (insert-button
-            "Send"
-            'action
-            (lambda (_button)
-              (when-let* ((start (save-excursion (im-nextcloud-talk--goto-prompt)))
-                          (end (line-beginning-position))
-                          (msg (buffer-substring-no-properties start end)))
-                (im-nextcloud-talk--send-message
-                 (alist-get 'token room) (s-trim msg)
-                 (lambda ()
-                   (with-current-buffer buf
-                     (delete-region start (1- end)))))))
-            'face custom-button
-            'follow-link t)
-           (insert "\n")
-           (im-nextcloud-talk--goto-prompt)
-           (cl-labels ((poll
-                        (msgid)
-                        (im-nextcloud-talk--poll-messages
-                         (alist-get 'token room) msgid
-                         ;; TODO: handle errors and reconnection
-                         (lambda (messages)
-                           (when (buffer-live-p buf)
-                             (with-current-buffer buf
-                               (save-excursion
-                                 (im-nextcloud-talk--goto-last-message)
-                                 (-each (reverse messages)
-                                   (lambda (it)
-                                     (unless (get-buffer-window buf 'visible)
-                                       (let-alist it
-                                         (alert (format "%s: %s" .actorId .message) :title "NextCloud Talk")))
-                                     (im-nextcloud-talk--insert-message it))))
-                               (poll (alist-get 'id (car messages) msgid))))))))
-             (poll (alist-get 'id (car messages))))
-           (switch-to-buffer buf)))))))
+           (insert "\n\n\n")
+           (setq im-nextcloud-talk--room room)
+           (setq header-line-format
+                 (format "NC Talk :: %s (%s)" (let-alist room .displayName)
+                         (substitute-command-keys "\\[im-nextcloud-talk-room-send-message] → Send")))
+           (switch-to-buffer buf)
+           (im-nextcloud-talk--goto-prompt)))))))
 
 ;;;;; Talk utils
 
@@ -217,8 +232,8 @@ Return point."
 
 (defun im-nextcloud-talk--goto-prompt ()
   "Go to new message prompt."
-  ;; \n> -> 4 chars
-  (let ((pt (+ 4 (im-nextcloud-talk--goto-last-message))))
+  ;; \n\n -> 3 chars
+  (let ((pt (+ 3 (im-nextcloud-talk--goto-last-message))))
     (goto-char pt)
     pt))
 
