@@ -29,14 +29,16 @@
 ;; various Nextcloud services, including Talk, Files, Contacts, and
 ;; Maps.  It allows users to:
 ;;
-;; - List and view Nextcloud Talk chat rooms (read-only)
+;; - List and view Nextcloud Talk chat rooms
+;; - Send & recieve messages within room buffers (no message polling outside message buffers)
 ;; - Download/view files (from chats)
 ;; - Synchronize Nextcloud contacts through org-mode
 ;; - Synchronize Nextcloud Maps favorites through org-mode
 ;;
 ;; TODO:
 ;;
-;; - Make chats interactive (send/receive basic messages)
+;; - Send files.
+;; - Revert command (`gr'?) for `im-nextcloud-talk-list-rooms'
 
 ;;; Code:
 
@@ -86,9 +88,12 @@ If you are using app passwords, then you need to do the following:
     :type (or type (if data "POST" "GET"))
     :data (json-serialize data)
     :parser (when json?
-              (apply-partially #'json-parse-buffer :object-type 'alist :array-type 'list))
+              (lambda ()
+                (if (= (buffer-size) 0)
+                    nil
+                  (json-parse-buffer :object-type 'alist :array-type 'list))))
     :success (cl-function
-              (lambda (&key data &allow-other-keys)
+              (lambda (&key data response &allow-other-keys)
                 (funcall success (let-alist data .ocs.data))))
     :error (cl-function
             (lambda (&key data symbol-status error-thrown &allow-other-keys)
@@ -137,29 +142,104 @@ If you are using app passwords, then you need to do the following:
        (with-current-buffer buf
          (let ((inhibit-read-only t))
            (erase-buffer)
-           (--each (reverse messages)
-             (let-alist it
-               (insert "[" .actorId "]: " .message "\n")
-               (when .messageParameters.file
-                 (insert (format "[%s](%s) (%s)  "
-                                 .messageParameters.file.name
-                                 .messageParameters.file.link
-                                 .messageParameters.file.mimetype))
-                 (insert-button
-                  "Download..."
-                  'action
-                  (lambda (_button)
-                    (im-nextcloud-download-file
-                     .messageParameters.file.id
-                     :name .messageParameters.file.name))
-                  'face custom-button
-                  'follow-link t))
-               (insert "\n\n")))
-           (markdown-view-mode)
+           (-each (reverse messages) #'im-nextcloud-talk--insert-message)
+           (let ((markdown-hide-urls t)
+                 (markdown-italic-underscore nil)
+                 (markdown-enable-html nil)
+                 (markdown-enable-math nil))
+             (markdown-mode))
            (page-break-lines-mode)
            ;; (font-lock-add-keywords nil '(("^\\[[a-zA-Z_\\.-]+\\]: " . font-lock-function-name-face)) t)
-           (switch-to-buffer buf)
-           (goto-char (point-max))))))))
+           (insert "\n\n> \n")
+           (insert-button
+            "Send"
+            'action
+            (lambda (_button)
+              (when-let* ((start (save-excursion (im-nextcloud-talk--goto-prompt)))
+                          (end (line-beginning-position))
+                          (msg (buffer-substring-no-properties start end)))
+                (im-nextcloud-talk--send-message
+                 (alist-get 'token room) (s-trim msg)
+                 (lambda ()
+                   (with-current-buffer buf
+                     (delete-region start (1- end)))))))
+            'face custom-button
+            'follow-link t)
+           (insert "\n")
+           (im-nextcloud-talk--goto-prompt)
+           (cl-labels ((poll
+                        (msgid)
+                        (im-nextcloud-talk--poll-messages
+                         (alist-get 'token room) msgid
+                         ;; TODO: handle errors and reconnection
+                         (lambda (messages)
+                           (when (buffer-live-p buf)
+                             (with-current-buffer buf
+                               (save-excursion
+                                 (im-nextcloud-talk--goto-last-message)
+                                 (-each (reverse messages)
+                                   (lambda (it)
+                                     (unless (get-buffer-window buf 'visible)
+                                       (let-alist it
+                                         (alert (format "%s: %s" .actorId .message) :title "NextCloud Talk")))
+                                     (im-nextcloud-talk--insert-message it))))
+                               (poll (alist-get 'id (car messages) msgid))))))))
+             (poll (alist-get 'id (car messages))))
+           (switch-to-buffer buf)))))))
+
+;;;;; Talk utils
+
+(defun im-nextcloud-talk--poll-messages (token last-message-id callback)
+  (im-nextcloud-request
+   (format "/ocs/v2.php/apps/spreed/api/v1/chat/%s?lookIntoFuture=1&lastKnownMessageId=%s" ; timeout is 30 secs by default
+           token last-message-id)
+   :json? t
+   :success
+   (lambda (messages)
+     (funcall callback messages))))
+
+(defun im-nextcloud-talk--send-message (token message callback)
+  (im-nextcloud-request
+   (format "/ocs/v2.php/apps/spreed/api/v1/chat/%s" token)
+   :data `((message . ,message))
+   :json? t
+   :success
+   (lambda (_data)
+     (funcall callback))))
+
+(defun im-nextcloud-talk--goto-last-message ()
+  "Go to end of the last message.
+Return point."
+  (goto-char (point-max))
+  (search-backward "" nil t)
+  (backward-char)
+  (point))
+
+(defun im-nextcloud-talk--goto-prompt ()
+  "Go to new message prompt."
+  ;; \n> -> 4 chars
+  (let ((pt (+ 4 (im-nextcloud-talk--goto-last-message))))
+    (goto-char pt)
+    pt))
+
+(defun im-nextcloud-talk--insert-message (it)
+  (let-alist it
+    (insert "\n[" .actorId "]: " .message)
+    (when .messageParameters.file
+      (insert "\n")
+      (insert (format "[%s](%s) (%s)  "
+                      .messageParameters.file.name
+                      .messageParameters.file.link
+                      .messageParameters.file.mimetype))
+      (insert-button
+       "Download..."
+       'action
+       (lambda (_button)
+         (im-nextcloud-download-file
+          .messageParameters.file.id
+          :name .messageParameters.file.name))
+       'face custom-button
+       'follow-link t))))
 
 ;;;; Files
 
