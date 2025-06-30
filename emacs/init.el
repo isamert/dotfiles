@@ -11579,8 +11579,8 @@ If the URI is non-nil, then add file:// in front of the file-path."
                     ((and fname pretty)
                      (string-replace (expand-file-name "~") "~" fname))
                     (fname fname)
-                    (t (user-error ">> No filename associated with buffer!")))))
-    (message ">> Copied: '%s'" (im-kill (or filename (buffer-name))))))
+                    (t (buffer-name)))))
+    (message ">> Copied: '%s'" (im-kill filename))))
 
 (defun im-print-buffer-file-info (&optional kill-file-path)
   (interactive "P")
