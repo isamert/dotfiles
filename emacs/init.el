@@ -4889,10 +4889,8 @@ It simply checks for folders with `.git' under them."
      ["Grep & Find"
       :setup-children im-project-transient--wrapper
       ("f" "Files" im-find-file-in)
-      ("F" "Files (all projects)" im-select-any-project-file)
       ("g" "Grep" consult-ripgrep)
       ("d" "Deadgrep" deadgrep)
-      ("G" "Grep (all projects)" im-consult-ripgrep-all-projects)
       ("r" "Replace regexp in project" project-query-replace-regexp)]
      ["Git (VC)"
       :setup-children im-project-transient--wrapper
@@ -5127,12 +5125,18 @@ It simply checks for folders with `.git' under them."
 (transient-define-prefix im-find-and-grep-transient ()
   "Finding and grepping."
   [["Find"
-    ("f" "Find file in current directory" im-find-file-in)]
+    ("f" "Find file in current directory" im-find-file-in)
+    ("F" "Files (all projects)" im-select-any-project-file)]
+   ["Marks"
+    ("M" "Marks (current dir)" im-marks)
+    ("m" "Marks my docs" im-marks-my-docs)]
    ["Grep"
-    ("d" "Deadgrep" deadgrep)
-    ("b" "Grep selected branch" im-consult-git-grep-branch)
-    ("g" "Ripgrep in current directory" im-consult-ripgrep-current-directory)
-    ("G" "Ripgrep in given directory" im-consult-ripgrep-in-given-directory)]])
+    ("G" "Ripgrep (all projects)" im-consult-ripgrep-all-projects)
+    ("gd" "Deadgrep" deadgrep)
+    ("gb" "Grep selected branch" im-consult-git-grep-branch)
+    ("gd" "Ripgrep in current directory" im-consult-ripgrep-current-directory)
+    ("gD" "Ripgrep in given directory" im-consult-ripgrep-in-given-directory)
+    ("gg" "Git grep" consult-git-grep)]])
 
 (im-leader
   "c" #'im-find-and-grep-transient)
@@ -9899,9 +9903,6 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
 ;; [[https://github.com/im-marks][marks]] is a grep-like tool for
 ;; searching org-mode and markdown files. The following snippet
 ;; provides a ~consult~ support for marks.
-
-
-(im-leader "cm" #'im-marks-my-docs)
 
 (defun im-consult--marks-builder (paths)
   (lambda (input)
