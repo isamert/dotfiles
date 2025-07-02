@@ -9728,7 +9728,7 @@ This function is intended for use with `tab-line-mode' to conveniently
 group related buffers (e.g., multiple shells or AI chat sessions in the
 same project) together on the tab line, improving navigation in projects
 where these special buffers may be duplicated."
-  (let* ((buffer-filter (apply-partially #'im-tab-line--buffer-same-group? (current-buffer))))
+  (let* ((buffer-filter (apply-partially #'im-tab-line--buffer-same-group? (current-buffer) (im-current-project-root))))
     (seq-sort-by
      #'buffer-name #'string<
      (seq-filter (lambda (b)
