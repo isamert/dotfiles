@@ -6290,7 +6290,8 @@ this command is invoked from."
            (room-name (slack-room-name room team))
            (title (format "%s - %s" room-name sender-name))
            (msg-str (im-slack--stringify-message
-                     (list :message message :team team))))
+                     (list :message message :team team)))
+           (msg-str-short (s-truncate 80 (s-replace "\n" "" msg-str))))
       (push
        (list :room room
              :team team
@@ -6318,7 +6319,7 @@ this command is invoked from."
           (ignore-errors
             (unless im-slack-dnd
               (alert
-               msg-str
+               msg-str-short
                :title title
                :category "slack"))))
         (unless im-slack-dnd
@@ -6327,7 +6328,7 @@ this command is invoked from."
            title
            (if (await (im-screen-sharing-now?))
                "[REDACTED due to screensharing]"
-             (s-truncate 80 (s-replace "\n" "" msg-str)))))))))
+             msg-str-short)))))))
 
 (defun im-slack-yank-last-message ()
   "Yank the contents of the last received message as text."
