@@ -682,7 +682,7 @@ consideration."
   (interactive "P")
   (if (and (bound-and-true-p gptel-mode) (not new?))
       (gptel-menu)
-    (let* ((proj (expand-file-name (im-current-project-root)))
+    (let* ((default-directory (expand-file-name (or (im-current-project-root) default-directory)))
            (buff (format "*gptel: %s*" (im-current-project-name)))
            (existing (--filter (s-prefix? buff (buffer-name it)) (buffer-list)))
            (final-buffer (if (and (length> existing 1) (not new?))
