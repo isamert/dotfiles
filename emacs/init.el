@@ -6659,20 +6659,6 @@ Fetches missing channels/users first."
     "T" #'prodigy-clear-filters
     (kbd "RET") #'prodigy-display-process))
 
-(prodigy-define-service
-  :name "kmonad - keyboard remapper"
-  :command (expand-file-name "~/workspace/apps/kmonad/result/bin/kmonad")
-  :args (lambda (x y)
-          (->>
-           (format
-            "~/.config/kmonad-%s"
-            (completing-read
-             "Which configuration?"
-             (--map (s-chop-left 7 it) (directory-files "~/.config/" nil "kmonad-.*"))))
-           (expand-file-name)
-           (list)))
-  :sudo t)
-
 (defun im-prodigy-autostart ()
   "Start all services with the `:auto-start' set to non-nil if they are not already started."
   (interactive)

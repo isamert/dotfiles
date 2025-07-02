@@ -371,37 +371,6 @@ Depending on your current keyboard configuration, tangle one of the following:
 «aerospace-mac-keyboard-bindings»
 #+end_src
 
-And here is the command that toggles between the keyboard configurations:
-
-#+begin_src elisp :tangle "~/.emacs.d/load/im-keyboard.el"
-(defun im-toggle-keyboard-configuration-between-mac-and-uhk ()
-  (interactive)
-  (let* ((kmonad (--find (s-prefix? "kmonad" (plist-get it :name)) prodigy-services))
-         (current (if (plist-get kmonad :process)
-                      'mac 'uhk)))
-    (with-current-buffer (find-file-noselect "~/workspace/projects/personal/dotfiles/index.org")
-      (save-excursion
-        (save-restriction
-          (widen)
-          (when current
-            (setq current (if (eq 'uhk current) 'mac 'uhk))
-            (setq im-current-keyboard-config current)
-            (goto-char (org-babel-find-named-block (format "aerospace-%s" (symbol-name current))))
-            (im-org-babel-tangle-current-block))))
-      (cl-case current
-        (mac (prodigy-start-service kmonad)
-             (message ">> Switched to MAC bindings!"))
-        (uhk (prodigy-stop-service kmonad)
-             (message ">> Switched to UHK bindings!"))
-        (t (user-error "WHAT?")))
-      (set-process-sentinel
-       (start-process "*aerospace-reload-config*" nil "aerospace" "reload-config")
-       (lambda (proc event)
-         (if (eq (process-exit-status proc) 0)
-             (message ">> Aerospace reloaded!")
-           (message ">> Failed to reload aerospace!")))))))
-#+end_src
-
 ** skhd
 This is the global keybinding manager for OSX. [[https://github.com/koekeishiya/yabai/blob/master/examples/skhdrc][Here]] is an example configuration for yabai and [[https://github.com/koekeishiya/skhd/blob/master/examples/skhdrc][here]] is a more generic example configuration demonstrating it's capabilities.
 
@@ -442,6 +411,253 @@ shortcuts < m : skhd -k "f13";  emacsclient --eval "(im-toggle-mic)"
     "Firefox" : skhd -k "0x61"
     * ~
   ]
+#+end_src
+
+** KMonad
+:PROPERTIES:
+:ID:       DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983
+:END:
+
+I use KMonad only for MacOS, on Linux xremap & wtype does the job in a quite simple way.
+
+Some references for editing this configuration:
+- https://github.com/kmonad/kmonad/blob/master/doc/quick-reference.md
+- https://github.com/kmonad/kmonad/blob/master/keymap/tutorial.kbd
+- https://github.com/kmonad/kmonad/blob/master/src/KMonad/Keyboard/Keycode.hs
+- https://old.reddit.com/r/emacs/comments/oyzfz9/kmonad_and_the_power_of_infinite_leader_keys/
+
+*** Installation
+#+begin_src sh
+  git clone --recursive https://github.com/kmonad/kmonad.git
+  cd kmonad
+  nix build "./nix?submodules=1"
+#+end_src
+*** Generic configuration
+#+name: kmonad-cfg
+#+begin_src kbd
+  (defcfg
+    input  (iokit-name)
+    output (kext)
+    fallthrough true
+    allow-cmd true)
+#+end_src
+
+*** Unicode characters
+Here I use an external program (~xtype~, which is explained below) to type unicode characters instead of utilizing XCompose as suggested by KMonad. Managing, making it running is hard with XCompose. Also it does not work on Mac.
+
+Also see these:
+- https://en.wikibooks.org/wiki/Unicode/List_of_useful_symbols
+- https://isamert.net/2022/08/12/typing-unicode-characters-programmatically-on-linux-and-macos.html
+
+#+name: kmonad-unicode
+#+begin_src kbd
+  (defalias
+    ;; Cool unicode chars
+    ¿ (cmd-button "xtype ¿")
+    λ (cmd-button "xtype λ")
+    ≤ (cmd-button "xtype ≤")
+    ≥ (cmd-button "xtype ≥")
+    ¬ (cmd-button "xtype ¬")
+    ✓ (cmd-button "xtype ✓")
+    ↑ (cmd-button "xtype ↑")
+    ↓ (cmd-button "xtype ↓")
+    ← (cmd-button "xtype ←")
+    → (cmd-button "xtype →")
+    ≠ (cmd-button "xtype ≠")
+    « (cmd-button "xtype «")
+    » (cmd-button "xtype »")
+    ⇒ (cmd-button "xtype ⇒")
+    ↣ (cmd-button "xtype ↣")
+    ↢ (cmd-button "xtype ↢")
+    ⇄ (cmd-button "xtype ⇄")
+
+    ;; Turkish chars
+    ş (cmd-button "xtype ş")
+    ğ (cmd-button "xtype ğ")
+    ü (cmd-button "xtype ü")
+    ı (cmd-button "xtype ı")
+    ö (cmd-button "xtype ö")
+    ç (cmd-button "xtype ç"))
+#+end_src
+
+**** xtype for macos
+This is a simple program for inserting given characters (including unicode) to currently open application. Taken from [[https://apple.stackexchange.com/questions/288536/is-it-possible-to-keystroke-special-characters-in-applescript/289046#289046][here]].
+
+#+begin_src objc :tangle (when-darwin "~/.cache/TypeChars.m")
+  #import <Foundation/Foundation.h>
+  #import <CoreGraphics/CoreGraphics.h>
+
+  int main(int argc, const char * argv[]) {
+    @autoreleasepool {
+      if (argc > 1) {
+        NSString *theString = [NSString stringWithUTF8String:argv[1]];
+        NSUInteger len = [theString length];
+        NSUInteger n, i = 0;
+        CGEventRef keyEvent = CGEventCreateKeyboardEvent(nil, 0, true);
+        unichar uChars[20];
+        while (i < len) {
+          n = i + 20;
+          if (n>len){n=len;}
+          [theString getCharacters:uChars range:NSMakeRange(i, n-i)];
+          CGEventKeyboardSetUnicodeString(keyEvent, n-i, uChars);
+          CGEventPost(kCGHIDEventTap, keyEvent); // key down
+          CGEventSetType(keyEvent, kCGEventKeyUp);
+          CGEventPost(kCGHIDEventTap, keyEvent); // key up (type 20 characters maximum)
+          CGEventSetType(keyEvent, kCGEventKeyDown);
+          i = n;
+          [NSThread sleepForTimeInterval:0.004]; // wait 4/1000 of second, 0.002 it's OK on my computer, I use 0.004 to be safe, increase it If you still have issues
+        }
+        CFRelease(keyEvent);
+      }
+    }
+    return 0;
+  }
+#+end_src
+
+Run this to install it:
+
+#+begin_src sh
+  cd ~/.cache
+  clang -framework Foundation -framework ApplicationServices TypeChars.m -l objc -o xtype
+  cp ./xtype ~/.local/bin/xtype
+#+end_src
+
+*** Coding macros
+
+#+name: kmonad-macros
+#+begin_src kbd
+  (defalias
+    ;; Fat arrow
+    fa  #(= >)
+    ;; light arrow
+    la  #(- >)
+    ;; home path
+    hm #(~ /))
+#+end_src
+
+*** Generic layers
+
+#+name: kmonad-generate-aliases-for-hyper-layer
+#+begin_src emacs-lisp
+  (string-join
+   (mapcar
+    (lambda (it)
+      (let ((chr (downcase (char-to-string it))))
+        (format "p%s C-M-A-S-%s" chr chr)))
+    (seq-remove (lambda (it) (seq-contains '(?\( ?_ ?\)) it))
+                (number-sequence ?! ?`)))
+   "\n")
+#+end_src
+
+#+name: kmonad-layers
+#+begin_src kbd
+  (defalias
+    sym (layer-toggle symbols)
+    hyp (tap-next esc (layer-toggle hyper)))
+
+  (deflayer symbols
+    _   _    _    _    _    _    _    _    _    _    _    _    _
+    _   @«   @»   "    @⇒    @↢    @↣    @⇄    _    _    _    _    @≠   _
+    _   \(   @↑   \)  @la  @✓   _    @ü   @ı   @ö   _    \(   \)
+    _   @←   @ş   @→   @fa  @ğ   left down up   rght _    _    _    _
+    _   _    _    @↓   @ç   _    @λ   @¬   _    @≤   @≥   _    _
+    _   _    _    _              _              _    _    _    _)
+
+  (defalias
+    pret C-M-A-S-ret
+    pspc C-M-A-S-spc
+    ptb  C-M-A-S-tab
+    «kmonad-generate-aliases-for-hyper-layer()»)
+
+  ;; Instead of utilizing Hyper key for creating shortcuts like I did
+  ;; with my Xmodmap configuration, I use C-M-A-S as the so called hyper
+  ;; key. This makes the key behave exactly same on Linux and Mac.
+  (deflayer hyper
+    _    _    _    _    _    _    _    _    _    _    _    _    _
+    @p`  @p1  @p2  @p3  @p4  @p5  @p6  @p7  @p8  vold volu @p-  @p=  _
+    @ptb @pq  @pw  @pe  @pr  @pt  @py  @pu  @pi  @po  @pp  @p[  @p]
+    _    @pa  @ps  @pd  @pf  @pg  @ph  @pj  @pk  @pl  @p;  @p'  @p\  @pret
+    _    @p\  @pz  @px  @pc  @pv  @pb  @pn  @pm  @p,  @p.  @p/  _
+    _    _    _    _              @pspc          _    _    _    _)
+#+end_src
+
+*** Generic keyboard config
+
+This is the configuration for my external keyboard. Some of the uses of ~\~ character is just to make the total key count same as the generic layers I defined above. They are mapped to itself again in the main layer.
+
+#+begin_src kbd :tangle "~/.config/kmonad-linux.kbd"
+  «kmonad-cfg»
+  «kmonad-unicode»
+  «kmonad-macros»
+
+  (defsrc
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
+    \    lctl lmet lalt           spc            ralt rmet cmp  rctl)
+
+  (deflayer main
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
+    \    lctl lmet lalt           spc            @sym rmet cmp rctl)
+
+  «kmonad-layers»
+#+end_src
+
+*** Mac config
+This is the configuration for the embedded and external magic keyboard on mac.
+
+#+begin_src kbd :tangle (when-darwin "~/.config/kmonad-mac.kbd")
+  «kmonad-cfg»
+  «kmonad-unicode»
+  «kmonad-macros»
+
+  (defsrc
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
+    fn   lctl lmet lalt           spc            rmet ralt  cmp  rctl)
+
+  (deflayer main
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
+    lctl fn   lalt lmet           spc            @sym rmet rctrl rctl)
+
+  «kmonad-layers»
+#+end_src
+
+#+begin_src kbd :tangle (when-darwin "~/.config/kmonad-mac-magic.kbd")
+  «kmonad-cfg»
+  «kmonad-unicode»
+  «kmonad-macros»
+
+  (defsrc
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
+    lctl lmet lalt fn             spc            rmet ralt  cmp  rctl)
+
+  (deflayer main
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
+    lctl lalt lmet fn             spc            @sym rmet rctrl rctl)
+
+  «kmonad-layers»
 #+end_src
 
 ** Rootless sshd
@@ -763,312 +979,6 @@ Nice=-20
 
 [Install]
 WantedBy=xdg-desktop-autostart.target
-#+end_src
-
-** KMonad
-:PROPERTIES:
-:ID:       DF9E83D5-CA3E-4E3A-990A-ED2AEBA00983
-:END:
-
-In the past I used [[https://isamert.net/2020/05/30/better-keyboard-experience-in-linux.html][Xmodmap & xcpae based solution]] for remapping keys. Now I am experimenting with KMonad which give more or less the same flexibility with a better configuration format. It's killer feature is that it also works on Mac[fn:: Well, almost. I had to change a few stuff in source to make it work.]. This means that I can truly keep my work computer and personal computers keyboard layouts & keyboard shortcuts in sync.
-
-Some references for editing this configuration:
-- https://github.com/kmonad/kmonad/blob/master/doc/quick-reference.md
-- https://github.com/kmonad/kmonad/blob/master/keymap/tutorial.kbd
-- https://github.com/kmonad/kmonad/blob/master/src/KMonad/Keyboard/Keycode.hs
-- https://old.reddit.com/r/emacs/comments/oyzfz9/kmonad_and_the_power_of_infinite_leader_keys/
-
-*** Installation, Linux
-I use the AUR package ~kmonad-git~ for my Linux machine and compile it manually on Mac. Following configuration is needed for Linux and taken from [[https://github.com/kmonad/kmonad/blob/master/doc/faq.md#q-how-do-i-get-uinput-permissions][here]].
-
-#+begin_src sh
-  # Add uinput group
-  sudo groupadd uinput
-  # Add current user to input and uinput groups
-  sudo usermod -aG input $USER
-  sudo usermod -aG uinput $USER
-#+end_src
-
-#+begin_src conf :tangle  (when-linux "/sudo::/etc/udev/rules.d/50-udev-kmonad.rules")
-  KERNEL=="uinput", MODE="0660", GROUP="uinput", OPTIONS+="static_node=uinput"
-#+end_src
-
-Restart your machine.
-
-*** Installation, MacOS
-#+begin_src sh
-  git clone --recursive https://github.com/kmonad/kmonad.git
-  cd kmonad
-  nix build "./nix?submodules=1"
-#+end_src
-*** Generic configuration
-#+name: kmonad-device
-#+begin_src emacs-lisp
-  (let ((usb-kbd (car (file-expand-wildcards "/dev/input/by-*/usb-*Microsoft*kbd")))
-        (onboard-kbd (car (file-expand-wildcards "/dev/input/by-*/platform*kbd"))))
-    (cond
-     ((eq system-type 'darwin) "(iokit-name)")
-     ((and usb-kbd (file-exists-p usb-kbd)) (format "(device-file \"%s\")" usb-kbd))
-     ((and onboard-kbd (file-exists-p onboard-kbd)) (format "(device-file \"%s\")" onboard-kbd))))
-#+end_src
-
-#+name: kmonad-cfg
-#+begin_src kbd
-  (defcfg
-    input  «kmonad-device()»
-    output «when-on(linux="(uinput-sink \"My KMonad output\")", darwin="(kext)")»
-    fallthrough true
-    allow-cmd true)
-#+end_src
-
-*** Unicode characters
-Here I use an external program (~xtype~, which is explained below) to type unicode characters instead of utilizing XCompose as suggested by KMonad. Managing, making it running is hard with XCompose. Also it does not work on Mac.
-
-Also see these:
-- https://en.wikibooks.org/wiki/Unicode/List_of_useful_symbols
-- https://isamert.net/2022/08/12/typing-unicode-characters-programmatically-on-linux-and-macos.html
-
-#+name: kmonad-unicode
-#+begin_src kbd
-  (defalias
-    ;; Cool unicode chars
-    ¿ (cmd-button "xtype ¿")
-    λ (cmd-button "xtype λ")
-    ≤ (cmd-button "xtype ≤")
-    ≥ (cmd-button "xtype ≥")
-    ¬ (cmd-button "xtype ¬")
-    ✓ (cmd-button "xtype ✓")
-    ↑ (cmd-button "xtype ↑")
-    ↓ (cmd-button "xtype ↓")
-    ← (cmd-button "xtype ←")
-    → (cmd-button "xtype →")
-    ≠ (cmd-button "xtype ≠")
-    « (cmd-button "xtype «")
-    » (cmd-button "xtype »")
-    ⇒ (cmd-button "xtype ⇒")
-    ↣ (cmd-button "xtype ↣")
-    ↢ (cmd-button "xtype ↢")
-    ⇄ (cmd-button "xtype ⇄")
-
-    ;; Turkish chars
-    ş (cmd-button "xtype ş")
-    ğ (cmd-button "xtype ğ")
-    ü (cmd-button "xtype ü")
-    ı (cmd-button "xtype ı")
-    ö (cmd-button "xtype ö")
-    ç (cmd-button "xtype ç"))
-#+end_src
-
-**** xtype for linux
-This uses ~pynput~ python package (which can be installed with ~pip install pynput~ or with aur ~trizen -S python-pynput~). The alternative is using ~xdotool type~ (or ~ydotool type~) but they both fail on unicode inputs, they simply skip them. ~pynput~ works quite well. I found it [[https://superuser.com/a/1669624/902059][here]].
-
-THIS ALSO WORKS FOR MAC. But I decided to not to use it for two reasons:
-- It's a bit slow on Mac.
-- It's a bit hard to manage python dependencies on Mac.
-
-#+begin_src python :tangle (when-linux "~/.bin/xtype")
-  #!/usr/bin/env python
-
-  import sys
-  from pynput.keyboard import Controller
-
-  Controller().type(' '.join(sys.argv[1:]))
-#+end_src
-
-**** xtype for macos
-This is a simple program for inserting given characters (including unicode) to currently open application. Taken from [[https://apple.stackexchange.com/questions/288536/is-it-possible-to-keystroke-special-characters-in-applescript/289046#289046][here]].
-
-#+begin_src objc :tangle (when-darwin "~/.cache/TypeChars.m")
-  #import <Foundation/Foundation.h>
-  #import <CoreGraphics/CoreGraphics.h>
-
-  int main(int argc, const char * argv[]) {
-    @autoreleasepool {
-      if (argc > 1) {
-        NSString *theString = [NSString stringWithUTF8String:argv[1]];
-        NSUInteger len = [theString length];
-        NSUInteger n, i = 0;
-        CGEventRef keyEvent = CGEventCreateKeyboardEvent(nil, 0, true);
-        unichar uChars[20];
-        while (i < len) {
-          n = i + 20;
-          if (n>len){n=len;}
-          [theString getCharacters:uChars range:NSMakeRange(i, n-i)];
-          CGEventKeyboardSetUnicodeString(keyEvent, n-i, uChars);
-          CGEventPost(kCGHIDEventTap, keyEvent); // key down
-          CGEventSetType(keyEvent, kCGEventKeyUp);
-          CGEventPost(kCGHIDEventTap, keyEvent); // key up (type 20 characters maximum)
-          CGEventSetType(keyEvent, kCGEventKeyDown);
-          i = n;
-          [NSThread sleepForTimeInterval:0.004]; // wait 4/1000 of second, 0.002 it's OK on my computer, I use 0.004 to be safe, increase it If you still have issues
-        }
-        CFRelease(keyEvent);
-      }
-    }
-    return 0;
-  }
-#+end_src
-
-Run this to install it:
-
-#+begin_src sh
-  cd ~/.cache
-  clang -framework Foundation -framework ApplicationServices TypeChars.m -l objc -o xtype
-  cp ./xtype ~/.local/bin/xtype
-#+end_src
-
-*** Coding macros
-
-#+name: kmonad-macros
-#+begin_src kbd
-  (defalias
-    ;; Fat arrow
-    fa  #(= >)
-    ;; light arrow
-    la  #(- >)
-    ;; home path
-    hm #(~ /))
-#+end_src
-
-*** Generic layers
-
-#+name: kmonad-generate-aliases-for-hyper-layer
-#+begin_src emacs-lisp
-  (string-join
-   (mapcar
-    (lambda (it)
-      (let ((chr (downcase (char-to-string it))))
-        (format "p%s C-M-A-S-%s" chr chr)))
-    (seq-remove (lambda (it) (seq-contains '(?\( ?_ ?\)) it))
-                (number-sequence ?! ?`)))
-   "\n")
-#+end_src
-
-#+name: kmonad-layers
-#+begin_src kbd
-  (defalias
-    sym (layer-toggle symbols)
-    hyp (tap-next esc (layer-toggle hyper)))
-
-  (deflayer symbols
-    _   _    _    _    _    _    _    _    _    _    _    _    _
-    _   @«   @»   "    @⇒    @↢    @↣    @⇄    _    _    _    _    @≠   _
-    _   \(   @↑   \)  @la  @✓   _    @ü   @ı   @ö   _    \(   \)
-    _   @←   @ş   @→   @fa  @ğ   left down up   rght _    _    _    _
-    _   _    _    @↓   @ç   _    @λ   @¬   _    @≤   @≥   _    _
-    _   _    _    _              _              _    _    _    _)
-
-  (defalias
-    pret C-M-A-S-ret
-    pspc C-M-A-S-spc
-    ptb  C-M-A-S-tab
-    «kmonad-generate-aliases-for-hyper-layer()»)
-
-  ;; Instead of utilizing Hyper key for creating shortcuts like I did
-  ;; with my Xmodmap configuration, I use C-M-A-S as the so called hyper
-  ;; key. This makes the key behave exactly same on Linux and Mac.
-  (deflayer hyper
-    _    _    _    _    _    _    _    _    _    _    _    _    _
-    @p`  @p1  @p2  @p3  @p4  @p5  @p6  @p7  @p8  vold volu @p-  @p=  _
-    @ptb @pq  @pw  @pe  @pr  @pt  @py  @pu  @pi  @po  @pp  @p[  @p]
-    _    @pa  @ps  @pd  @pf  @pg  @ph  @pj  @pk  @pl  @p;  @p'  @p\  @pret
-    _    @p\  @pz  @px  @pc  @pv  @pb  @pn  @pm  @p,  @p.  @p/  _
-    _    _    _    _              @pspc          _    _    _    _)
-#+end_src
-
-*** Linux config
-
-I use this config on both linux and mac. This is the configuration for my external keyboard. Some of the uses of ~\~ character is just to make the total key count same as the generic layers I defined above. They are mapped to itself again in the main layer.
-
-#+begin_src kbd :tangle "~/.config/kmonad-linux.kbd"
-  «kmonad-cfg»
-  «kmonad-unicode»
-  «kmonad-macros»
-
-  (defsrc
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
-    \    lctl lmet lalt           spc            ralt rmet cmp  rctl)
-
-  (deflayer main
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
-    \    lctl lmet lalt           spc            @sym rmet cmp rctl)
-
-  «kmonad-layers»
-#+end_src
-
-*** SystemD service entry
-#+begin_src desktop :tangle (when-linux "~/.config/systemd/user/kmonad.service")
-  [Unit]
-  Description=KMonad keyboard config
-
-  [Service]
-  Type=simple
-  Restart=always
-  RestartSec=3
-  ExecStart=which("kmonad") %h/.config/kmonad-linux.kbd -l warn
-  Nice=-20
-
-  [Install]
-  WantedBy=xdg-desktop-autostart.target
-#+end_src
-
-*** Mac config
-This is the configuration for the embedded keyboard on mac.
-
-#+begin_src kbd :tangle (when-darwin "~/.config/kmonad-mac.kbd")
-  «kmonad-cfg»
-  «kmonad-unicode»
-  «kmonad-macros»
-
-  (defsrc
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
-    fn   lctl lmet lalt           spc            rmet ralt  cmp  rctl)
-
-  (deflayer main
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
-    lctl fn   lalt lmet           spc            @sym rmet rctrl rctl)
-
-  «kmonad-layers»
-#+end_src
-
-#+begin_src kbd :tangle (when-darwin "~/.config/kmonad-mac-magic.kbd")
-  «kmonad-cfg»
-  «kmonad-unicode»
-  «kmonad-macros»
-
-  (defsrc
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft \    z    x    c    v    b    n    m    ,    .    /    rsft
-    lctl lmet lalt fn             spc            rmet ralt  cmp  rctl)
-
-  (deflayer main
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
-    @hyp a    s    d    f    g    h    j    k    l    ;    '    \    ret
-    lsft #    z    x    c    v    b    n    m    ,    .    /    rsft
-    lctl lalt lmet fn             spc            @sym rmet rctrl rctl)
-
-  «kmonad-layers»
 #+end_src
 
 ** swaywm
