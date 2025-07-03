@@ -9700,10 +9700,14 @@ SELECT * FROM _ LIMIT 1;
         (cadr str)
       name)))
 
+(defvar-local im-buffer-project-root nil
+  "Cached value for project root of a buffer.
+Looping all buffers and re-calculating their roots are quite expensive,
+hence the cache.")
 (defun im-tab-line-buffers ()
-  "Return a list of buffers grouped by common characteristics for tab-line display.
+  "Return buffers grouped for tab-line display.
 
-A \"group\" consists of buffers that:
+A group consists of buffers that:
 
 - Share the same project root directory (as determined by
 `im-current-project-root').
@@ -9715,26 +9719,26 @@ This function is intended for use with `tab-line-mode' to conveniently
 group related buffers (e.g., multiple shells or AI chat sessions in the
 same project) together on the tab line, improving navigation in projects
 where these special buffers may be duplicated."
-  (let* ((buffer-filter (apply-partially #'im-tab-line--buffer-same-group? (current-buffer) (im-current-project-root))))
+  (let* ((current (current-buffer))
+         (cur-root (or (im-current-project-root) default-directory))
+         (orig-name (buffer-name current))
+         (prefix (if (> (length orig-name) 3)
+                     (substring orig-name 0 4)
+                   orig-name)))
     (seq-sort-by
      #'buffer-name #'string<
-     (seq-filter (lambda (b)
-                   (with-current-buffer b
-                     (and (im-tab-line--buffer-valid?)
-                          (funcall buffer-filter))))
-                 (funcall tab-line-tabs-buffer-list-function)))))
-
-(defun im-tab-line--buffer-valid? ()
-  (not (s-matches? im-tab-line-hidden-buffer-name-regexp (buffer-name))))
-
-(defun im-tab-line--buffer-same-group? (orig-buffer proj-dir)
-  (and (equal
-        (or (im-current-project-root)
-            default-directory)
-        (with-current-buffer orig-buffer
-          (or (im-current-project-root)
-              default-directory)))
-       (s-prefix? (substring (buffer-name orig-buffer) 0 4) (buffer-name))))
+     (cl-loop for buf in (buffer-list)
+              for buf-name = (buffer-name buf)
+              unless (string-match-p im-tab-line-hidden-buffer-name-regexp buf-name)
+              when (when-let* ((proj-root
+                                (or (buffer-local-value 'im-buffer-project-root buf)
+                                    (with-current-buffer buf
+                                      (setq-local im-buffer-project-root
+                                                  (or (im-current-project-root)
+                                                      default-directory))))))
+                     (and (equal proj-root cur-root)
+                          (string-prefix-p prefix buf-name)))
+              collect buf))))
 
 ;;;;; tabgo.el
 
