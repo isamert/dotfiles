@@ -2543,8 +2543,8 @@ If not, prompt user to clock in."
     (require 'im-svgcal)
     (with-current-buffer (find-file-noselect "~/Documents/notes/bullet.org")
       (save-window-excursion
-        (save-restriction
-          (save-excursion
+        (save-excursion
+          (save-restriction
             (org-clock-goto)
             (org-narrow-to-subtree)
             (let* ((effort (when-let* ((e (org-entry-get nil "EFFORT")))
@@ -6619,6 +6619,9 @@ Fetches missing channels/users first."
   "mrr" 'slack-message-add-reaction
   "mR" 'slack-message-remove-reaction
   "mrs" (im-slack--add-reaction-to-message "seen")
+  "mre" (im-slack--add-reaction-to-message "eyes")
+  "mrd" (im-slack--add-reaction-to-message "white_check_mark")
+  "mrc" (im-slack--add-reaction-to-message "cigara")
   "mr1" (im-slack--add-reaction-to-message "+1")
   "mr2" (im-slack--add-reaction-to-message "ok_hand")
   "mr3" (im-slack--add-reaction-to-message "eyes")
