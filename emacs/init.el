@@ -4862,12 +4862,15 @@ It simply checks for folders with `.git' under them."
   (cl-loop
    for (type . data) in children
    as command = (plist-get data :command)
-   as wrapped-name = (intern (concat (symbol-name command) "--within-project"))
-   do (eval `(defun ,wrapped-name ()
-               (interactive)
-               (let ((default-directory im-project-menu--current))
-                 (call-interactively ',command))))
-   collect `(,type ,@(plist-put data :command wrapped-name))))
+   as command-name = (symbol-name command)
+   as wrapped-name = (concat command-name "--within-project")
+   as already-wrapped? = (s-suffix? "--within-project" command-name)
+   do (unless already-wrapped?
+        (eval `(defun ,(intern wrapped-name) ()
+                 (interactive)
+                 (let ((default-directory im-project-menu--current))
+                   (call-interactively ',command)))))
+   collect `(,type ,@(plist-put data :command (if already-wrapped? (intern command-name) (intern wrapped-name))))))
 
 (with-eval-after-load 'project
   (require 'transient)
@@ -6931,6 +6934,7 @@ Fetches missing channels/users first."
   ;; And jump to that project
   (add-hook 'lab-after-git-clone-functions (lambda () (dired default-directory)))
 
+  (setq lab-result-count 30)
   (setq lab-projects-directory im-projects-root)
   (setq lab-pipeline-watcher-initial-delay 30)
   (setq lab-pipeline-watcher-debounce-time 15)
@@ -7502,12 +7506,6 @@ mails."
   :init
   (add-hook 'im-git-commit-finished-hook #'im-update-git-state))
 
-(transient-define-prefix im-git-link-transient ()
-  )
-
-;; To invoke: (im-git-link-transient)
-
-
 (transient-define-prefix im-git-transient ()
   [["Status"
     ("s" "Show status" im-git-status)
@@ -7522,9 +7520,9 @@ mails."
     ("bs" "Switch branch" vc-switch-branch)
     ("P" "Push" vc-push)
     ("p" "Pull" vc-pull)]
-   ["Log"
-    ("Lr" "Repo log" vc-print-root-log)
-    ("Lf" "File log" vc-print-log)]
+   ["Log/History"
+    ("hr" "Repo log" vc-print-root-log)
+    ("hf" "File log" vc-print-log)]
    ["Stash"
     ("E" "Stash changes" vc-git-stash)
     ("e" "Show stashes" im-git-list-stash)]
@@ -7539,12 +7537,12 @@ mails."
     ("}" "Show next hunk" diff-hl-show-hunk-next)
     ("S" "Stage hunk" diff-hl-stage-dwim)
     ("r" "Revert hunk" diff-hl-revert-hunk)]
-   ["Merge Requests (GitLab)"
-    ("mb" "Branches" lab-list-branch-merge-requests)
-    ("mm" "Assigned to me" lab-list-my-merge-requests)
-    ("ma" "In group" lab-list-group-merge-requests)
-    ("mp" "In project" lab-list-project-merge-requests)
-    ("mc" "Create" lab-create-merge-request)]
+   ["GitLab"
+    ("ms" "Search projects" lab-search-project)
+    ("mm" "MRs assigned to me" lab-list-my-merge-requests)
+    ("ma" "Group MRs" lab-list-group-merge-requests)
+    ("mp" "Project MRs" lab-list-project-merge-requests)
+    ("mc" "Create MR" lab-create-merge-request)]
    ["Git Link"
     ("lm" "Merge Requests" im-git-link-merge-requests)
     ("ll" "On Branch" im-git-link-on-branch)
