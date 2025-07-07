@@ -201,6 +201,14 @@ I used to use [[https://github.com/koekeishiya/yabai][yabai]] but my main pain p
 
 #+begin_src sh
 brew install --cask nikitabobko/tap/aerospace
+
+# From guide: https://nikitabobko.github.io/AeroSpace/guide
+
+# This helps with expose functionality
+defaults write com.apple.dock expose-group-apps -bool true && killall Dock
+
+# This helps generally
+defaults write com.apple.spaces spans-displays -bool true && killall SystemUIServer
 #+end_src
 
 #+name: aerospace-mac-keyboard-bindings
