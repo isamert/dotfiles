@@ -4080,7 +4080,7 @@ properly."
   ;; Use browse-url for each link opening. This way my
   ;; `browse-url-handlers' take precedence over eww.
   (eww-use-browse-url ".*")
-  (eww-search-prefix "https://www.ecosia.org/search?q=")
+  (eww-search-prefix "https://www.kagi.com/html/search?q=")
   (eww-auto-rename-buffer
    (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "..."))))
   :config
@@ -4186,6 +4186,7 @@ empty string."
 (defvar im-eww-page-fixers
   '(("^https://\\(www.\\)?startpage.com/sp/search" . im-eww--fix-startpage)
     ("^https://\\(www.\\)?ecosia.org/search" . im-eww--fix-ecosia)
+    ("^https://\\(www.\\)?kagi.com(:443)?/html/search" . im-eww--fix-kagi)
     ("^https://\\(www.\\)?eksisozluk.com" . im-eww--fix-eksisozluk)))
 
 (with-eval-after-load 'eww
@@ -4225,6 +4226,12 @@ empty string."
   (while (re-search-forward "^Submit" nil t)
     (delete-region (line-beginning-position) (line-end-position)))
   (page-break-lines-mode))
+
+(defun im-eww--fix-kagi ()
+  (when (re-search-forward "^[0-9]+ relevant results" nil t)
+    (delete-region (point-min) (line-beginning-position)))
+  (when (re-search-forward "^Advanced Search" nil t)
+    (delete-region (line-beginning-position) (point-max))))
 
 (defun im-eww--fix-eksisozluk ()
   (save-excursion
