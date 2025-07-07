@@ -4918,11 +4918,11 @@ It simply checks for folders with `.git' under them."
       ("K" "Last failed pipeline job" lab-act-on-last-failed-pipeline-job)
       ("ms" "Search projects" lab-search-project)
       ("mc" "Create MR" lab-create-merge-request)]
-     ["URLs"
+     ["Links"
       :setup-children im-project-transient--wrapper
-      ("uh" "Homepage link" git-link-homepage)
-      ("uc" "Copy homepage link" im-git-link-homepage)
-      ("ul" "Link branch (region)" im-git-link-on-branch)]]))
+      ("lh" "Homepage link" git-link-homepage)
+      ("lc" "Copy homepage link" im-git-link-homepage)
+      ("ll" "Link branch (region)" im-git-link-on-branch)]]))
 
 ;; All-projects commands
 
