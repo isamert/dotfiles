@@ -4186,7 +4186,7 @@ empty string."
 (defvar im-eww-page-fixers
   '(("^https://\\(www.\\)?startpage.com/sp/search" . im-eww--fix-startpage)
     ("^https://\\(www.\\)?ecosia.org/search" . im-eww--fix-ecosia)
-    ("^https://\\(www.\\)?kagi.com(:443)?/html/search" . im-eww--fix-kagi)
+    ("^https://\\(www.\\)?kagi.com\\(:443\\)?/html" . im-eww--fix-kagi)
     ("^https://\\(www.\\)?eksisozluk.com" . im-eww--fix-eksisozluk)))
 
 (with-eval-after-load 'eww
@@ -4201,7 +4201,9 @@ empty string."
       (let ((inhibit-read-only t))
         (goto-char (point-min))
         (condition-case err
-            (funcall fn)
+            (progn
+              (message "Cleaning page with: `%s'" fn)
+              (funcall fn))
           (error
            (message "im-eww-after-render :: Error while `%s': %s" fn err))))
       (goto-char (point-min)))))
