@@ -7830,7 +7830,7 @@ mails."
 (use-package dumb-jump
   :defer t
   :init
-  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate 90)
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate 80)
   :config
   ;; ag is supported by nearly every rule but rg is not.
   ;; also see: https://github.com/jacktasia/dumb-jump/issues/376
