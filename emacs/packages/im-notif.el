@@ -265,7 +265,8 @@ otherwise, it is taken as a plain string regexp."
   "Manage notifications."
   [["Basic"
     ("l" "List" im-notif-notifications)
-    ("c" "Clear all" im-notif-clear-all)
+    ("c" "Hide all" im-notif-clear-all)
+    ("C" "Clear all" (lambda () (interactive) (im-notif-clear-all :delete)))
     ("L" "Logs" im-notif-logs)
     ("d" "Dummy notification" im-dummy-notification)]
    ["DND/Blacklist"
