@@ -304,6 +304,9 @@ a shebang at the beginning, then the executable bit is set to file."
  :contents "#!/bin/bash
 emacsclient --eval \"(browse-url \\\"$1\\\")\"")
 
+;; Echo area max 2 lines
+(setq max-mini-window-height 2)
+
 ;;;;;; M-Backspace should delete, instead of killing
 
 ;; https://www.emacswiki.org/emacs/BackwardDeleteWord
@@ -1916,6 +1919,7 @@ This way you can insert new entry right after other non-TODO
   :custom
   (org-modern-timestamp nil)
   (org-use-sub-superscripts nil)
+  (org-modern-block-fringe nil)
   (org-modern-table nil)
   (org-modern-hide-stars " ")
   (org-modern-list
@@ -5144,7 +5148,7 @@ It simply checks for folders with `.git' under them."
     ("m" "Marks my docs" im-marks-my-docs)]
    ["Grep"
     ("G" "Ripgrep (all projects)" im-consult-ripgrep-all-projects)
-    ("gd" "Deadgrep" deadgrep)
+    ("d" "Deadgrep" deadgrep)
     ("gb" "Grep selected branch" im-consult-git-grep-branch)
     ("gd" "Ripgrep in current directory" im-consult-ripgrep-current-directory)
     ("gD" "Ripgrep in given directory" im-consult-ripgrep-in-given-directory)
