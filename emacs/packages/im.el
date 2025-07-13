@@ -815,10 +815,13 @@ For async requests, simply provide a success handler:
                          ((and -data (json-plist-p -data)) (json-encode (im-plist-to-alist -data)))
                          ((stringp -data) -data)
                          (t nil))
-                  :params (cond
-                           ((and -params (json-alist-p -params)) -params)
-                           ((and -params (json-plist-p params)) (im-plist-to-alist -params))
-                           (t (im-plist-to-alist params)))))))
+                  :params (cl-remove
+                           nil
+                           (cond
+                            ((and -params (json-alist-p -params)) -params)
+                            ((and -params (json-plist-p params)) (im-plist-to-alist -params))
+                            (t (im-plist-to-alist params)))
+                           :key #'cdr )))))
       (cond
        (-async? (promise-new fn))
        ((or -on-success -on-error)
