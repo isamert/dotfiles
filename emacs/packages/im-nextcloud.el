@@ -153,12 +153,10 @@ If you are using app passwords, then you need to do the following:
     (when-let* ((start (save-excursion (im-nextcloud-talk--goto-prompt)))
                 (end (point-max))
                 (msg (buffer-substring-no-properties start end)))
+      (delete-region start end)
+      (insert "\n")
       (im-nextcloud-talk--send-message
-       (alist-get 'token im-nextcloud-talk--room) (s-trim msg)
-       (lambda ()
-         (with-current-buffer buf
-           (delete-region start end)
-           (insert "\n")))))))
+       (alist-get 'token im-nextcloud-talk--room) (s-trim msg)))))
 
 (defun im-nextcloud-talk-open-room (room)
   (im-nextcloud-request
@@ -213,14 +211,15 @@ If you are using app passwords, then you need to do the following:
    (lambda (messages)
      (funcall callback messages))))
 
-(defun im-nextcloud-talk--send-message (token message callback)
+(defun im-nextcloud-talk--send-message (token message &optional callback)
   (im-nextcloud-request
    (format "/ocs/v2.php/apps/spreed/api/v1/chat/%s" token)
    :data `((message . ,message))
    :json? t
    :success
    (lambda (_data)
-     (funcall callback))))
+     (when callback
+       (funcall callback)))))
 
 (defun im-nextcloud-talk--goto-last-message ()
   "Go to end of the last message.
