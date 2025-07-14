@@ -905,11 +905,8 @@ buffer."
                   (require 'shr)
                   (require 'url-handlers)
                   (with-temp-buffer
-                    (url-insert-file-contents url)
-                    (shr-insert-document
-                     (prog1
-                         (libxml-parse-html-region (point-min) (point-max))
-                       (erase-buffer)))
+                    (url-insert-file-contents "https://www.eksisozluk.com/basliklar/gundem")
+                    (shr-render-region (point-min) (point-max))
                     (buffer-substring-no-properties (point-min) (point-max))))
                 (lambda (result) (funcall callback result))))
    :async t
