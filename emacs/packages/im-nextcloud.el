@@ -133,7 +133,7 @@ If you are using app passwords, then you need to do the following:
            (make-vtable
             :row-colors (im-vtable--pretty-colors)
             :column-colors (im-vtable--pretty-colors)
-            :columns '("Name" "Last Message")
+            :columns '("Name" "Last Message" "Token")
             :objects (--sort
                       (> (let-alist it .lastMessage.timestamp)
                          (let-alist other .lastMessage.timestamp))
@@ -142,6 +142,7 @@ If you are using app passwords, then you need to do the following:
                       (let-alist object
                         (pcase (vtable-column vtable column)
                           ("Name" .displayName)
+                          ("Name" .token)
                           ("Last Message" (s-truncate 100 (s-replace "\n" "…" .lastMessage.message))))))
             :actions `("RET" im-nextcloud-talk-open-room)))
          (switch-to-buffer buf))))))
