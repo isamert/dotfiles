@@ -704,6 +704,8 @@ CALLBACK will be called with the selected commit ref."
      :on-finish
      (lambda (output &rest _)
        (with-current-buffer buffer-name
+         (let ((inhibit-read-only t))
+           (erase-buffer))
          ;; TODO: gd → drop stash & show next stash
          ;; TODO: x → drop hunk from the stash? gerekli mi cok
          ;;       bilemedim ama ise yarar sanki baya.
