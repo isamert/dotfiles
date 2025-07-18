@@ -593,7 +593,8 @@ Just a simple wrapper around `prettify-symbols-mode`"
 ;; windows. I use ~rofi~ to switch between windows in my DE, so it
 ;; helps to have buffer name in window title.
 
-(setq frame-title-format "%b - emacs")
+(setq frame-title-format "emacs: %F")
+(set-frame-name "Main")
 
 ;;;;; Parentheses
 
