@@ -3508,10 +3508,10 @@ Return a (color color) list that can be used with :column-colors and
   :after dired
   :general
   (im-leader
-    "ed" #'dirvish-dwim
-    "eD" #'im-dirvish)
+    "ed" #'im-dired-dwim
+    "eD" #'im-dired)
   ;; Add a way to open dirvish in selected directory using Embark
-  (:keymaps 'embark-file-map "J" #'im-dirvish)
+  (:keymaps 'embark-file-map "J" #'im-dired)
   (:keymaps 'dirvish-mode-map :states 'normal
    "\\"    #'im-dired-find-file-ace-window
    "h"     #'dired-up-directory
@@ -3538,10 +3538,15 @@ Return a (color color) list that can be used with :column-colors and
   (add-hook 'dired-mode-hook #'im-disable-line-wrapping)
   (add-hook 'dired-mode-hook #'im-disable-tab-line))
 
-(defun im-dirvish (dir)
+(defun im-dired (dir)
   "Start dirvish in selected DIR."
   (interactive "DOpen Dirvish in: ")
-  (dirvish dir))
+  (dired dir))
+
+(defun im-dired-dwim ()
+  "Start dirvish in `default-directory'."
+  (interactive)
+  (dired default-directory))
 
 (defun im-disable-line-wrapping ()
   (let ((inhibit-message t))
@@ -4897,7 +4902,7 @@ It simply checks for folders with `.git' under them."
      ("s" "Switch" project-switch-project)]
     [["Core"
       :setup-children im-project-transient--wrapper
-      ("RET" "Dired" dirvish-dwim)
+      ("RET" "Dired" im-dired-dwim)
       ("e" "Eshell" im-shell-for)
       ("t" "terminal" im-term)
       ("!" "Run shell command" im-shell-command)
