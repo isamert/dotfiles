@@ -4241,6 +4241,9 @@ empty string."
   (page-break-lines-mode))
 
 (defun im-eww--fix-kagi ()
+  (flush-lines "^More results")
+  (replace-string "›" "»" nil (point-min) (point-max))
+  (goto-char (point-min))
   (when (re-search-forward "^[0-9]+ relevant results" nil t)
     (delete-region (point-min) (line-beginning-position)))
   (when (re-search-forward "^Advanced Search" nil t)
