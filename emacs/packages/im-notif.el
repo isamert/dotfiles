@@ -98,50 +98,51 @@ By default it logs every notification (\\='trivial)."
       (let ((message (if (await (im-screen-sharing-now?))
                          "[REDACTED due to screensharing]"
                        message)))
-        (posframe-show
-         (with-current-buffer (get-buffer-create bname)
-           (setq im-notif--notification-data
-                 (thread-first
-                   data
-                   (map-insert :time (float-time))
-                   (map-insert :id (substring-no-properties bname))))
-           (current-buffer))
-         :string
-         (if margin
-             (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
-           (format "%s\n%s" title message))
-         :poshandler
-         (lambda (info)
-           (let ((posy (* (line-pixel-height)
-                          (--reduce-from (+ acc
-                                            (with-current-buffer it
-                                              (count-lines (point-min) (point-max))))
-                                         0
-                                         (remove bname im-notif--active)))))
-             (cons (- (plist-get info :parent-frame-width)
-                      (plist-get info :posframe-width)
-                      20)
-                   (if (> posy 0)
-                       (+ posy (+ 3 3 15))
-                     30))))
-         :border-width 3
-         :max-height 10
-         :min-width 30
-         :max-width 80
-         :border-color (pcase severity
-                         ((or 'high 'urgent) "red3")
-                         ('normal "yellow3")
-                         (_ nil)))
-        (push bname im-notif--active)
+        (when (frame-focus-state) ; Only show posframe if frame is focused
+          (posframe-show
+           (with-current-buffer (get-buffer-create bname)
+             (setq im-notif--notification-data
+                   (thread-first
+                     data
+                     (map-insert :time (float-time))
+                     (map-insert :id (substring-no-properties bname))))
+             (current-buffer))
+           :string
+           (if margin
+               (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
+             (format "%s\n%s" title message))
+           :poshandler
+           (lambda (info)
+             (let ((posy (* (line-pixel-height)
+                            (--reduce-from (+ acc
+                                              (with-current-buffer it
+                                                (count-lines (point-min) (point-max))))
+                                           0
+                                           (remove bname im-notif--active)))))
+               (cons (- (plist-get info :parent-frame-width)
+                        (plist-get info :posframe-width)
+                        20)
+                     (if (> posy 0)
+                         (+ posy (+ 3 3 15))
+                       30))))
+           :border-width 3
+           :max-height 10
+           :min-width 30
+           :max-width 80
+           :border-color (pcase severity
+                           ((or 'high 'urgent) "red3")
+                           ('normal "yellow3")
+                           (_ nil)))
+          (push bname im-notif--active)
 
-        ;; Clear the notification after a certain time, if requested
-        (when duration
-          (run-with-timer
-           duration nil
-           (lambda ()
-             (posframe-hide bname)
-             (push bname im-notif--active)
-             (setq im-notif--active (delete bname im-notif--active)))))
+          ;; Clear the notification after a certain time, if requested
+          (when duration
+            (run-with-timer
+             duration nil
+             (lambda ()
+               (posframe-hide bname)
+               (push bname im-notif--active)
+               (setq im-notif--active (delete bname im-notif--active))))))
 
         ;; Also use native notifications if Emacs is not focused
         (unless (frame-focus-state)
