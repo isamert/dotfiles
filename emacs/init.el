@@ -7518,7 +7518,6 @@ mails."
     ("s" "Show status" im-git-status)
     ("B" "Blame annotate" vc-annotate)
     ("i" "Show blame at point" blamer-show-posframe-commit-info)
-    ("t" "Open timemachine" git-timemachine-toggle)
     ("R" "Refresh state" im-update-git-state)]
    ["Commit/Branch"
     ("c" "Commit changes" im-git-commit)
@@ -7528,6 +7527,7 @@ mails."
     ("P" "Push" vc-push)
     ("p" "Pull" vc-pull)]
    ["Log/History"
+    ("t" "Open timemachine" git-timemachine-toggle)
     ("hr" "Repo log" vc-print-root-log)
     ("hf" "File log" vc-print-log)]
    ["Stash"
