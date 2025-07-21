@@ -2988,7 +2988,8 @@ open.")
   ;; While writing, eat buffers sometimes jump around for some unknown
   ;; reason. I realized that truncating lines helps with that.
   (add-hook 'eat-mode-hook #'toggle-truncate-lines)
-  (eat-eshell-mode))
+  (eat-eshell-mode)
+  (eat-eshell-visual-command-mode))
 
 ;;;;;; Send a notification for long running commands
 
@@ -5004,23 +5005,13 @@ It simply checks for folders with `.git' under them."
     "eshell new" → (call-interactively #'im-eshell)
     "vterm project" → (im-shell-for 'project nil #'im--new-vterm "vterm")
     "vterm dir" → (im-shell-for 'dir nil #'im--new-vterm "vterm")
-    "vterm new" → (call-interactively #'im-vterm)
-    "eat project" → (im-shell-for 'project nil #'im--new-eat "eat")
-    "eat dir" → (im-shell-for 'dir nil #'im--new-eat "eat")
-    "eat new" → (call-interactively #'im-eat)))
+    "vterm new" → (call-interactively #'im-vterm)))
 
 (defun im--suggest-shell-name (type)
   (format "$%s: %s/%s" type (im-current-project-name)
           (if (buffer-file-name (current-buffer))
               (buffer-name)
             (symbol-name major-mode))))
-
-(defun im-eat (name)
-  "Like `im-eshell'."
-  (interactive (list (read-string "Buffer name: " (im--suggest-shell-name "eat"))))
-  (require 'eat)
-  (let* ((eat-buffer-name name))
-    (eat nil t)))
 
 (defun im-vterm (name)
   "Like `im-eshell'."
@@ -5034,12 +5025,6 @@ It simply checks for folders with `.git' under them."
   (with-current-buffer (eshell t)
     (rename-buffer name t)
     (current-buffer)))
-
-(defun im--new-eat (name)
-  (require 'eat)
-  (save-window-excursion
-    (let ((eat-buffer-name name))
-      (eat nil t))))
 
 (defun im--new-vterm (name)
   (require 'vterm)
@@ -5062,10 +5047,10 @@ It simply checks for folders with `.git' under them."
   "M-|" #'im-terminal-horizontally)
 
 (im-leader "2" #'im-term)
-(bind-key "<f2>" (λ-interactive (im-shell-for "~" 'top #'im--new-eat)))
-(bind-key "S-<f2>" (λ-interactive (im-shell-for "~" 'top nil "eshell")))
-(bind-key "<f3>" (λ-interactive (im-shell-for 'project 'bottom #'im--new-eat)))
-(bind-key "S-<f3>" (λ-interactive (im-shell-for 'project 'bottom nil "eshell")))
+(bind-key "<f2>" (λ-interactive (im-shell-for "~" 'top nil "eshell")))
+(bind-key "S-<f2>" (λ-interactive (im-shell-for "~" 'top #'im--new-vterm)))
+(bind-key "<f3>" (λ-interactive (im-shell-for 'project 'bottom nil "eshell")))
+(bind-key "S-<f3>" (λ-interactive (im-shell-for 'project 'bottom #'im--new-vterm)))
 
 ;;;;; xref
 
