@@ -6161,15 +6161,7 @@ this command is invoked from."
   :defer t
   :general
   (im-leader-v
-    "ess" #'im-slack-select-room
-    "esd" #'im-slack-dms
-    "esS" #'slack-select-unread-rooms
-    "esm" #'im-slack-send-message
-    "est" #'slack-all-threads
-    "esr" #'im-slack-last-messages-alternative
-    "esR" #'im-slack-last-messages
-    "esl" #'im-slack-open-last-message
-    "esy" #'im-slack-yank-last-message)
+    "es" #'im-slack-transient)
   :config
   (setq slack-log-level 'error)
   ;; ^ info level shows unnecessary stuff that distracts me
@@ -6219,6 +6211,24 @@ this command is invoked from."
                   slack-message-compose-buffer-mode-hook))
     (add-hook mode #'im-slack--enable-completion-at-point)
     (add-hook mode #'visual-line-mode)))
+
+(transient-define-prefix im-slack-transient ()
+  "Slack transient."
+  [["Overview"
+    ("t" "All threads" slack-all-threads)
+    ("a" "Activity feed" slack-activity-feed-show)]
+   ["Rooms"
+    ("s" "Select room" im-slack-select-room)
+    ("S" "Select unread rooms" slack-select-unread-rooms)
+    ("d" "DMs" im-slack-dms)]
+   ["Message"
+    ("m" "Send message" im-slack-send-message)
+    ("y" "Yank last message" im-slack-yank-last-message)
+    ("l" "Open last message" im-slack-open-last-message)
+    ("r" "Last messages (all)" im-slack-last-messages-alternative)
+    ("R" "Last messages (per room)" im-slack-last-messages)]
+   ["Utils"
+    ("uu" "User info" slack-user-select)]])
 
 (defun im-slack-initialize ()
   (interactive)
@@ -6614,12 +6624,17 @@ Fetches missing channels/users first."
 (general-def :keymaps '(slack-message-buffer-mode-map slack-thread-message-buffer-mode-map slack-all-threads-buffer-mode-map) :states '(normal motion)
   "q" #'im-quit
 
-  "@" 'slack-message-embed-mention
-  "mc" 'slack-message-embed-channel
+  "@@" 'slack-message-embed-mention
+  "@c" 'slack-message-embed-channel
+
+  "mf" 'slack-file-upload-quick
+  "mc" 'im-slack-clipboard-image-upload
+
   "mm" 'slack-message-write-another-buffer
   "md" 'slack-message-delete
   "my" 'slack-message-copy-link
   "ml" 'slack-message-copy-link
+  "ms" 'slack-message-share
   "me" 'slack-message-edit
   "mt" 'slack-thread-show-or-create
   "mq" 'im-slack-quote-message
@@ -6643,6 +6658,10 @@ Fetches missing channels/users first."
 
   "[[" 'slack-buffer-goto-prev-message
   "]]" 'slack-buffer-goto-next-message)
+
+(general-def :keymaps '(slack-thread-message-buffer-mode-map) :states '(normal motion)
+  ;; Jump back to channel from a thread with the same keybinding that created it
+  "mt" 'slack-thread-message-buffer-jump-to-channel-buffer)
 
 (im-make-repeatable slack
   "[" slack-buffer-goto-prev-message

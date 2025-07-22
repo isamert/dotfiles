@@ -465,7 +465,9 @@ changing the region, it will add the answer below the region.
 
 Use @file to include full file contents to the prompt and use
 @workspace to include all workspace symbols to the prompt."
-  (interactive "sQuestion (Use @region, @file, @workspace): ")
+  (interactive (list
+      (read-string
+       (format "Question (Use @region, @file, @workspace, current model: %s): " im-ai-model))))
   (let* ((gptel-org-convert-response nil)
          (edit-region? (and (use-region-p)
                             (not (s-matches? (rx (or bos space)
