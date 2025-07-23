@@ -1003,6 +1003,16 @@ the header line."
 
 (autoload 'parse-csv-string-rows "parse-csv")
 
+;;;; User interface (tabs)
+
+(defun im-tab-bar-current-tab-name ()
+  "Get current tab's name."
+  (let* ((tabs (funcall tab-bar-tabs-function))
+         (tab-number (or current-prefix-arg
+                         (1+ (tab-bar--current-tab-index tabs))))
+         (tab-name (alist-get 'name (nth (1- tab-number) tabs))))
+    tab-name))
+
 ;;;; Footer
 
 (provide 'im)
