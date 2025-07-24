@@ -2398,92 +2398,6 @@ searches for TODO/FIXME items in given folder."
      (file+headline ,bookmarks-org "Unsorted")
      "** (call-interactively #'im-org-archive-url)\n- Don't forget to TAG!")))
 
-;;;;; Convert items to TODO entries
-
-(defun im-org-convert-item-to-todo-and-refile (&optional yank-only)
-  "Convert org item to todo header and refile.
-I take notes in the following format during the day via
-`org-capture' template:
-
-    - [2023-04-09 Sun 23:57] Some note
-
-At the end of the day, I convert these notes into tasks if
-applicable.  This means rewriting them into a TODO header with
-CREATED_AT property and refiling into the appropriate
-header.  This function automatizes that.
-
-If YANK-ONLY is non-nil (with prefix arg while calling
-interactively), only yank the result, do not refile.
-
->> (with-temp-buffer
-    (insert \"- [2023-06-28 Wed 10:13] Test\\n\")
-    (beginning-of-buffer)
-    (im-org-convert-item-to-todo-and-refile t))
-=> \"** TODO [#B] Test
-:PROPERTIES:
-:CREATED_AT: [2023-06-28 Wed 10:13]
-:END:
-\"
-
->> (with-temp-buffer
-    (insert \"- [2023-06-28 Wed 10:13] Test :: The body.\\n\")
-    (beginning-of-buffer)
-    (im-org-convert-item-to-todo-and-refile t))
-=> \"** TODO [#B] Test
-:PROPERTIES:
-:CREATED_AT: [2023-06-28 Wed 10:13]
-:END:
-The body.
-\"
-
->> (with-temp-buffer
-    (insert \"- [2023-06-28 Wed 10:13] Test and a link [[here]] :: The body.\\n\")
-    (beginning-of-buffer)
-    (im-org-convert-item-to-todo-and-refile t))
-=> \"** TODO [#B] Test and a link [[here]]
-:PROPERTIES:
-:CREATED_AT: [2023-06-28 Wed 10:13]
-:END:
-The body.
-\"
-
-Version: 2023-07-31
-- Fixed not being able to parse headers with links.
-Version: 2023-06-28
-- Initial version."
-  (interactive "P")
-  (save-excursion
-    (beginning-of-line)
-    (let ((line (substring-no-properties (thing-at-point 'line)))
-          (timestamp nil)
-          (text nil))
-      (when-let* ((match (s-match "^- \\(\\[[ X-]] \\)?\\(\\[.*?]\\) \\(.*\\)" line)))
-        (setq timestamp (nth 2 match))
-        (setq text (nth 3 match))
-        (let* ((buffer (current-buffer))
-               (data (s-split " :: " text))
-               (header (nth 0 data))
-               (body (nth 1 data))
-               result)
-          (with-temp-buffer
-            (insert
-             (concat "** TODO [#B] " header "\n"
-                     ":PROPERTIES:" "\n"
-                     ":CREATED_AT: " timestamp "\n"
-                     ":END:" "\n"
-                     (if body (concat body "\n") "")))
-            (setq result (buffer-string))
-            ;; To be able to refile
-            (org-mode)
-            (if yank-only
-                (im-kill result)
-              (let ((org-refile-targets nil))
-                (org-refile nil buffer))
-              ;; Remove the line after everything to prevent loss of data
-              (with-current-buffer buffer
-                (delete-region (line-beginning-position) (1+ (line-end-position))))
-              result)))))))
-
 ;;;;; Sort entries intelligently
 
 (defun im-org-sort-entries-best ()
@@ -2503,70 +2417,6 @@ TODO state."
     (org-sort-entries nil ?o)
     ;; Move non-TODO headers to top
     (org-sort-entries nil ?F (lambda () (if (or (org-entry-is-done-p) (org-entry-is-todo-p)) -1 (- 1000 (length (org-entry-get nil "ITEM"))))))))
-
-;;;;; Remembering to clock in
-
-;; I forget to clock in (and out) most of the time, so I want Emacs to
-;; remind clocking to me. This function regularly checks if I'm
-;; clocked in or not and tries to remind me to take the appropriate
-;; action.
-
-(defun im-bullet-clock-in-a-task ()
-  "Display today's tasks and require user to select one to clock in."
-  (interactive)
-  (with-current-buffer (find-file-noselect bullet-org)
-    (save-restriction
-      (im-bullet-focus-today)
-      (let ((task (cdr
-                   (im-completing-read
-                    "Select task: "
-                    (->>
-                     (org-map-entries
-                      (lambda ()
-                        (let ((props (org-entry-properties)))
-                          (when-let* ((todo (alist-get "TODO" props nil nil #'equal))
-                                      (_ (not (equal "DONE" todo))))
-                            (let ((bounds (bounds-of-thing-at-point 'line)))
-                              (cons (buffer-substring (car bounds) (cdr bounds)) (point)))))))
-                     (-filter #'identity))
-                    :formatter #'car))))
-        (when task
-          (widen)
-          (goto-char task)
-          (let ((elapsed-minutes (read-number "How may minutes you've already spent?" 1)))
-            (org-clock-in nil (time-subtract (current-time) (seconds-to-time (* elapsed-minutes 60))))))))))
-
-(im-leader "ocb" #'im-bullet-clock-in-a-task)
-
-(defun im-org-check-clock ()
-  "Check if are we currently clocked in or not.
-If not, prompt user to clock in."
-  (cond
-   ;; If we are clocked in and we have been clocking longer than the
-   ;; effort or allocated time, ask if we want to clock out.
-   ((and (featurep 'org-clock) (org-clocking-p))
-    (require 'im-svgcal)
-    (with-current-buffer (find-file-noselect "~/Documents/notes/bullet.org")
-      (save-window-excursion
-        (save-excursion
-          (save-restriction
-            (org-clock-goto)
-            (org-narrow-to-subtree)
-            (let* ((effort (when-let* ((e (org-entry-get nil "EFFORT")))
-                             (im-svgcal--time-diff "0:00" e)))
-                   (allocated-time
-                    (-sum (-map (-lambda ((range start end)) (im-svgcal--time-diff start end)) (im-svgcal--org-entry-timestamps)))))
-              (when (ignore-errors
-                      (> (org-clock-get-clocked-time)
-                         (if (> allocated-time 0)
-                             allocated-time
-                           effort)))
-                (message ">> You are still clocked in to '%s'! Want to clock out now?" (org-entry-get nil "ITEM")))))))))
-   (t
-    (unless (> (* 60 5) (time-to-seconds (current-idle-time)))
-      (message ">> You are not clocked in!")))))
-
-(run-with-timer 60 300 #'im-org-check-clock)
 
 ;;;;; im-org-unfill-paragraph
 
@@ -3379,43 +3229,6 @@ Return a (color color) list that can be used with :column-colors and
        (plist-get data :message)
        :title (or (plist-get data :title) "Emacs"))))
   (add-hook 'im-notif-post-notify-hooks #'im-notif--send-to-ntfy))
-
-;;;;; im-ntfy -- ntfy wrapper
-
-(cl-defun im-ntfy
-    (message
-     &rest options
-     &key
-     title
-     priority
-     (icon (concat im-server "/assets/emacs.png"))
-     (channel "emacs")
-     file
-     &allow-other-keys)
-  "Send a notification to my phone."
-  (interactive
-   (list
-    (im-read-string "Message: ")
-    :title (im-read-string "Title: ")
-    :file (when (y-or-n-p "Attach local file? ")
-            (expand-file-name (read-file-name "Attachment: ")))
-    :channel (completing-read "Channel: " '("phone" "emacs"))))
-  (set-process-sentinel
-   (apply
-    #'start-process
-    "ntfy" "*ntfy-out*"
-    `("ntfy"
-      "publish"
-      ,@(map-apply
-         (lambda (opt val) (format "--%s=%s" (s-chop-prefix ":" (symbol-name opt)) val))
-         (map-into ;; ← To remove the duplicates
-          (map-filter (lambda (opt val) (and val (not (-contains? '(:channel) opt)))) `(:icon ,icon ,@options))
-          'hash-table))
-      ,channel
-      ,message))
-   (lambda (proc text)
-     (unless (eq (process-exit-status proc) 0)
-       (error ">> [%s] Failed to send message through `ntfy'" (format-time-string "%Y-%m-%dT%H:%M:%S%z"))))))
 
 ;;;;; Hydra
 
@@ -4515,6 +4328,7 @@ of that revision."
 
 (use-package ediff
   :straight (:type built-in)
+  :defer t
   :config
   (setq ediff-keep-variants nil)
   (setq ediff-make-buffers-readonly-at-startup nil)
@@ -5429,9 +5243,7 @@ KEY should not contain the leader key."
 
 (use-package flymake
   :straight (:type built-in)
-  ;; :hook ((prog-mode . flymake-mode)
-  ;;        (after-init . (lambda () (setq ))))
-  )
+  :hook ((prog-mode . flymake-mode)))
 
 (use-package flymake-popon
   :straight (:host codeberg  :repo "akib/emacs-flymake-popon")
@@ -5934,16 +5746,6 @@ this command is invoked from."
                  (lambda (title)
                    (with-current-buffer buffer (rename-buffer (format "*se: %s*" title) :unique)))))))))
 
-;;;;; tldr
-
-;; tldr client for Emacs.
-
-(use-package tldr
-  :commands tldr
-  :general
-  (im-leader
-    "it" #'tldr))
-
 ;;;;; yasnippet & yankpad: template manager
 
 (use-package yasnippet
@@ -6140,19 +5942,6 @@ this command is invoked from."
   :config
   (add-to-list 'aggressive-indent-protected-commands 'evil-undo)
   (add-to-list 'aggressive-indent-protected-commands 'format-all-buffer))
-
-;;;;; xmodmap-mode
-
-;; Simple mode for editing =~/.Xmodmap= file.
-;; Source:  https://www.emacswiki.org/emacs/XModMapMode
-
-(define-generic-mode 'xmodmap-mode
-  '(?!)
-  '("add" "clear" "keycode" "keysym" "pointer" "remove")
-  nil
-  '("[xX]modmap\\(rc\\)?\\'")
-  nil
-  "Simple mode for xmodmap files.")
 
 ;;;;; slack
 
@@ -6776,15 +6565,6 @@ Fetches missing channels/users first."
 (use-package hnreader
   :defer t)
 
-;;;;; imenu-list
-
-;; You can also do ~consult-imenu~ and ~embark-collect~ but it does not have a refresh feature.
-
-(use-package imenu-list
-  :defer t
-  :init
-  (im-leader "il" #'imenu-list))
-
 ;;;;; im-ai & org-ai & gptel -- interactions with LLMs
 
 ;; There are bunch of Emacs-ChatGPT integrations and org-ai seems to
@@ -6981,6 +6761,7 @@ Fetches missing channels/users first."
 
 (use-package im-github
   :straight nil
+  :defer t
   :custom
   (lab-github-user "isamert")
   (lab-github-token im-github-token)
@@ -7183,26 +6964,6 @@ Fetches missing channels/users first."
   (defalias 'lab-github-search-repo #'consult-gh-search-repos)
   (defalias 'lab-github-search-code #'consult-gh-search-code))
 
-;;;;; copilot
-
-;; - Do ~copilot-login~ to activate.
-;; - Turn on ~copilot-mode~ to use it.
-
-;; [2024-04-12 Fri 18:28] I don't use it anymore. Tried it for one
-;; month and decided that it's counter-productive. Utilizing org-ai is
-;; much better when needed.
-
-;; (use-package copilot
-;;   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
-;;   :general
-;;   (:keymaps 'copilot-completion-map
-;;    "<right>" #'copilot-accept-completion
-;;    "<left>" #'copilot-cancel-completion
-;;    "<up>" #'copilot-previous-completion
-;;    "<down>" #'copilot-next-completion)
-;;   (:modes 'insert
-;;    "M-o z" #'copilot-complete))
-
 ;;;;; artist-mode
 
 ;; Here I simply add some bindings form artist-mode and a cheatsheet in the header line.
@@ -7258,25 +7019,25 @@ Fetches missing channels/users first."
   (--each (map-keys biome-query-coords)
     (eval
      `(biome-def-preset ,(intern (concat "im-biome-weather-daily-" (downcase (car (s-split ", " it)))))
-        ((:name . "Weather Forecast")
-         (:group . "daily")
-         (:params
-          ("daily" "shortwave_radiation_sum" "uv_index_clear_sky_max" "uv_index_max" "precipitation_probability_max"
-           "precipitation_hours" "precipitation_sum" "sunset" "sunrise" "apparent_temperature_min" "apparent_temperature_max"
-           "temperature_2m_min" "temperature_2m_max" "weathercode")
-          ("latitude" . ,(car (map-elt biome-query-coords it)))
-          ("longitude" . ,(cadr (map-elt biome-query-coords it))))))))
+                        ((:name . "Weather Forecast")
+                         (:group . "daily")
+                         (:params
+                          ("daily" "shortwave_radiation_sum" "uv_index_clear_sky_max" "uv_index_max" "precipitation_probability_max"
+                           "precipitation_hours" "precipitation_sum" "sunset" "sunrise" "apparent_temperature_min" "apparent_temperature_max"
+                           "temperature_2m_min" "temperature_2m_max" "weathercode")
+                          ("latitude" . ,(car (map-elt biome-query-coords it)))
+                          ("longitude" . ,(cadr (map-elt biome-query-coords it))))))))
 
   (--each (map-keys biome-query-coords)
     (eval
      `(biome-def-preset ,(intern (concat "im-biome-weather-hourly-" (downcase (car (s-split ", " it)))))
-        ((:name . "Weather Forecast")
-         (:group . "hourly")
-         (:params
-          ("hourly" "uv_index_clear_sky" "uv_index" "relativehumidity_2m" "precipitation"
-           "precipitation_probability" "apparent_temperature" "temperature_2m" "is_day"  "weathercode")
-          ("latitude" . ,(car (map-elt biome-query-coords it)))
-          ("longitude" . ,(cadr (map-elt biome-query-coords it)))))))))
+                        ((:name . "Weather Forecast")
+                         (:group . "hourly")
+                         (:params
+                          ("hourly" "uv_index_clear_sky" "uv_index" "relativehumidity_2m" "precipitation"
+                           "precipitation_probability" "apparent_temperature" "temperature_2m" "is_day"  "weathercode")
+                          ("latitude" . ,(car (map-elt biome-query-coords it)))
+                          ("longitude" . ,(cadr (map-elt biome-query-coords it)))))))))
 
 ;;;;; outli -- outlier for code files
 
@@ -7525,6 +7286,43 @@ mails."
 (use-package easysession
   :straight (:host github :repo "jamescherti/easysession.el"))
 
+;;;;; im-ntfy -- ntfy wrapper
+
+(cl-defun im-ntfy
+    (message
+     &rest options
+     &key
+     title
+     priority
+     (icon (concat im-server "/assets/emacs.png"))
+     (channel "emacs")
+     file
+     &allow-other-keys)
+  "Send a notification to my phone."
+  (interactive
+   (list
+    (im-read-string "Message: ")
+    :title (im-read-string "Title: ")
+    :file (when (y-or-n-p "Attach local file? ")
+            (expand-file-name (read-file-name "Attachment: ")))
+    :channel (completing-read "Channel: " '("phone" "emacs"))))
+  (set-process-sentinel
+   (apply
+    #'start-process
+    "ntfy" "*ntfy-out*"
+    `("ntfy"
+      "publish"
+      ,@(map-apply
+         (lambda (opt val) (format "--%s=%s" (s-chop-prefix ":" (symbol-name opt)) val))
+         (map-into ;; ← To remove the duplicates
+          (map-filter (lambda (opt val) (and val (not (-contains? '(:channel) opt)))) `(:icon ,icon ,@options))
+          'hash-table))
+      ,channel
+      ,message))
+   (lambda (proc text)
+     (unless (eq (process-exit-status proc) 0)
+       (error ">> [%s] Failed to send message through `ntfy'" (format-time-string "%Y-%m-%dT%H:%M:%S%z"))))))
+
 ;;;;; im-git -- my git workflow, magit alternative
 
 (use-package im-git
@@ -7622,7 +7420,8 @@ mails."
 ;;;;; im-kube --- my kubernetes interface
 
 (use-package im-kube
-  :straight nil)
+  :straight nil
+  :defer t)
 
 ;;;;; im-nextcloud --- my nextcloud integration
 
@@ -8821,11 +8620,6 @@ work.  You need to enter full path while importing by yourself."
   ;; ki is a better REPL for Kotlin. You can save and reload your session.
   (kotlin-command "ki"))
 
-;;;;; gradle/groovy
-
-(use-package groovy-mode
-  :mode "\\.gradle\\'")
-
 ;;;;; yaml
 
 (use-package yaml-ts-mode
@@ -9079,34 +8873,6 @@ Lisp function does not specify a special indentation."
 (use-package racket-mode
   :mode "\\.rkt\\'")
 
-;;;;; dhall
-
-(use-package dhall-mode
-  :mode "\\.dhall\\'"
-  :config
-  ;; I use dhall-lsp-server, so I don't need this
-  (setq dhall-use-header-line nil))
-
-;;;;; nix
-
-(use-package nix-mode
-  :mode "\\.nix\\'")
-
-(defun im-import-env-from-nix-shell ()
-  (interactive)
-  (let ((default-directory (im-current-project-root)))
-    (when (not (and (file-exists-p "shell.nix") (executable-find "nix-shell")))
-      (error "Failed to find shell.nix or nix-shell"))
-    (--> (shell-command-to-string "nix-shell --quiet --run 'env'")
-         (split-string it "\n")
-         (--map (-let (((name val) (s-split-up-to "=" it 1)))
-                  (setenv name val)
-                  (when (string-equal name "PATH")
-                    (setq exec-path (split-string val path-separator)))
-                  `(,name ,val))
-                it))
-    (message "Done.")))
-
 ;;;;; swift
 
 (use-package swift-mode :defer t)
@@ -9155,12 +8921,6 @@ Lisp function does not specify a special indentation."
   (evil-define-key 'normal docker-network-mode-map   (kbd "a") #'docker-network-help)
   (evil-define-key 'normal docker-volume-mode-map    (kbd "a") #'docker-volume-help))
 
-;;;;; vimrc
-
-;; Mostly for editing tridactyl and sometimes real vimrc.
-
-(use-package vimrc-mode :defer t)
-
 ;;;;; Graphviz/dot
 
 (use-package graphviz-dot-mode
@@ -9168,7 +8928,6 @@ Lisp function does not specify a special indentation."
   :init
   (with-eval-after-load 'org-src
     (add-to-list 'org-src-lang-modes '("dot" . graphviz-dot))))
-
 
 ;;;;; PlantUML
 
@@ -9185,7 +8944,8 @@ Lisp function does not specify a special indentation."
 ;;;;; Couchbase
 
 (use-package im-couchbase
-  :straight nil)
+  :straight nil
+  :defer t)
 
 ;;;;; BigQuery
 
@@ -9410,23 +9170,6 @@ total {rows,bytes} etc. and first 10 rows of the table."
  :category symbol
  :key "M-o b")
 
-;;;;; kbd-mode
-
-;; For working with KMonad kbd files. Do ~C-c C-c~ (~kbd-start-demo~)
-;; to apply your config and try it in a buffer.
-
-(use-package kbd-mode
-  :straight (:host github :repo "kmonad/kbd-mode")
-  :mode "\\.kbd\\'"
-  :config
-  (setq kbd-mode-kill-kmonad "pkill -9 kmonad")
-  (setq kbd-mode-start-kmonad "kmonad ~/.config/kmonad.kbd"))
-
-;;;;; lua-mode
-
-(use-package lua-mode
-  :mode "\\.lua\\'")
-
 ;;;;; jsonnet-mode
 
 (use-package jsonnet-mode
@@ -9584,6 +9327,7 @@ SELECT * FROM _ LIMIT 1;
 
 (use-package jupyter
   :straight (:host github :repo "isamert/jupyter")
+  :defer t
   :custom
   (jupyter-org-want-keybinding . nil)
   (jupyter-org-want-integration . nil))
@@ -12625,6 +12369,7 @@ contents."
 
 (use-package google-translate
   :defines (google-translate-pop-up-buffer-set-focus)
+  :defer t
   :custom
   (google-translate-listen-program "mpv")
   ;; Try 'curl or 'wget if getting any errors

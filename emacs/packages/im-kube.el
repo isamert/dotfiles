@@ -60,6 +60,7 @@
 
 ;;;; Main
 
+;;;###autoload
 (defun im-kube-use-context ()
   (interactive)
   (im-output-select
@@ -69,6 +70,8 @@
    :do (shell-command-to-string (format "kubectl config use-context '%s'" it))))
 
 (defalias 'im-kube-get-context-server-ip 'im-kube-get-cluster-server-ip)
+
+;;;###autoload
 (defun im-kube-get-cluster-server-ip ()
   (interactive)
   (im-output-select
@@ -86,6 +89,7 @@
     shell-command-to-string
     im-kill)))
 
+;;;###autoload
 (defun im-kube-context-overview (&optional context namespace)
   "List all pods of CONTEXT and NAMESPACE in a nicely formatted buffer."
   (interactive (progn
