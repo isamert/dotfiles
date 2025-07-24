@@ -96,7 +96,7 @@
 
 ;; Useful to see which packages take long time to load
 ;; (require 'use-package)
-;; (setq use-package-compute-statistics t)
+(setq use-package-compute-statistics t)
 (setq use-package-enable-imenu-support t) ;; With that, IMenu will show packages section
 
 (defvar bootstrap-version)
@@ -850,53 +850,29 @@ side window the only window'"
   (evil-collection-want-unimpaired-p t)
   (evil-collection-unimpaired-want-repeat-mode-integration t))
 
-(use-package grep
-  :defer t
-  :straight (:type built-in)
-  :config
+(with-eval-after-load 'grep
   (evil-collection-grep-setup))
 
-(use-package man
-  :defer t
-  :straight (:type built-in)
-  :config
+(with-eval-after-load 'man
   (evil-collection-man-setup))
 
-(use-package replace
-  :defer t
-  :straight (:type built-in)
-  :config
+(with-eval-after-load 'replace
   (evil-collection-replace-setup))
 
-(use-package compile
-  :defer t
-  :straight (:type built-in)
-  :config
+(with-eval-after-load 'compile
   (evil-collection-compile-setup))
 
-(use-package xref
-  :defer t
-  :straight (:type built-in)
-  :config
+(with-eval-after-load 'xref
   (evil-collection-xref-setup))
 
-(use-package help
-  :defer t
-  :straight (:type built-in)
-  :config
+(with-eval-after-load 'help
   (evil-collection-help-setup))
 
-(use-package imenu
-  :defer t
-  :straight (:type built-in)
-  :config
+(with-eval-after-load 'imenu
   (evil-collection-imenu-setup)
   (evil-collection-imenu-list-setup))
 
-(use-package custom
-  :defer t
-  :straight (:type built-in)
-  :config
+(with-eval-after-load 'custom
   (evil-collection-custom-setup))
 
 ;;;;;; evil-unimpaired
@@ -2692,10 +2668,7 @@ open.")
 
 ;;;;; doc-view-mode
 
-(use-package doc-view
-  :defer t
-  :straight (:type built-in)
-  :config
+(with-eval-after-load 'doc-view
   (evil-collection-doc-view-setup))
 
 ;;;;; world-clock
@@ -3135,11 +3108,7 @@ that is read verbatim (meaning that no '$*' is appended):
 ;; - =a= key to a function that lists all the actions that can be taken on current column.
 ;; - =Enter= to the default action (generally opening something etc.)
 
-
-(use-package tabulated-list
-  :straight (:type built-in)
-  :defer t
-  :config
+(with-eval-after-load 'tabulated-list
   (evil-define-key 'normal tabulated-list-mode-map
     (kbd "{") #'tabulated-list-narrow-current-column
     (kbd "}") #'tabulated-list-widen-current-column
@@ -3313,9 +3282,10 @@ Return a (color color) list that can be used with :column-colors and
   (dired-recursive-copies 'always)
   (dired-recursive-deletes 'always)
   (dired-dwim-target t)
-  :config
-  (evil-collection-dired-setup)
-  (put 'dired-find-alternate-file 'disabled nil))
+  :init
+  (with-eval-after-load 'dired
+    (evil-collection-dired-setup)
+    (put 'dired-find-alternate-file 'disabled nil)))
 
 (use-package dirvish
   :straight (:host github :repo "hlissner/dirvish")
@@ -4329,13 +4299,15 @@ of that revision."
 (use-package ediff
   :straight (:type built-in)
   :defer t
-  :config
-  (setq ediff-keep-variants nil)
-  (setq ediff-make-buffers-readonly-at-startup nil)
-  (setq ediff-show-clashes-only t)
-  (setq ediff-split-window-function 'split-window-horizontally)
-  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
-  (evil-collection-ediff-setup))
+  :custom
+  (ediff-keep-variants nil)
+  (ediff-make-buffers-readonly-at-startup nil)
+  (ediff-show-clashes-only t)
+  (ediff-split-window-function 'split-window-horizontally)
+  (ediff-window-setup-function 'ediff-setup-windows-plain)
+  :init
+  (with-eval-after-load 'ediff
+    (evil-collection-ediff-setup)))
 
 ;;;;; diff-hl -- git gutter alternative
 
@@ -6762,6 +6734,16 @@ Fetches missing channels/users first."
 (use-package im-github
   :straight nil
   :defer t
+  :commands (lab-github-url-to-raw
+             lab-github-act-on-project
+             lab-github-list-all-owned-projects
+             lab-github-list-project-pull-requests
+             lab-github-issue-view
+             lab-github-view-repo-readme
+             lab-github-list-all-open-issues
+             org-dblock-write:github-issues
+             lab-github-issue-at-point
+             lab-github-open-issue)
   :custom
   (lab-github-user "isamert")
   (lab-github-token im-github-token)
@@ -7073,7 +7055,8 @@ Fetches missing channels/users first."
 ;; `epkg-list-packages'.
 
 (use-package epkg
-  :defer t)
+  :defer t
+  :commands (epkg-list-packages))
 
 ;;;;; upver -- update dependencies interactively
 
@@ -7421,13 +7404,20 @@ mails."
 
 (use-package im-kube
   :straight nil
-  :defer t)
+  :defer t
+  :commands (im-kube-use-context
+             im-kube-context-overview
+             im-kube-get-cluster-server-ip))
 
 ;;;;; im-nextcloud --- my nextcloud integration
 
 (use-package im-nextcloud
   :straight nil
   :demand t
+  :commands (im-nextcloud-talk-list-rooms
+             im-nextcloud-maps-remove-all-favorites
+             im-nextcloud-maps-add-all-in-buffer
+             im-nextcloud-maps-put-favorite-from-org)
   :custom
   (im-nextcloud-url im-secrets-nextcloud-url)
   (im-nextcloud-user im-secrets-nextcloud-user)
@@ -7485,7 +7475,6 @@ mails."
 ;; one of it's synonyms.
 
 (use-package synosaurus
-  :commands synosaurus-choose-and-replace
   :general
   (im-leader "mr" #'synosaurus-choose-and-replace)
   :custom
