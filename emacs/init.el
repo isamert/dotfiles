@@ -4143,42 +4143,6 @@ empty string."
   (evil-collection-vc-dir-setup)
   (evil-collection-vc-annotate-setup))
 
-(defun im-vc-diff-open-file-at-revision-dwim ()
-  "Open the file at revision.
-Simply works like you hit enter on a magit diff window.  Useful
-when displaying old diffs and you want to jump to the full file
-of that revision."
-  (interactive nil diff-mode)
-  (pcase-let* ((`(,old ,new) diff-vc-revisions)
-               (file-path (s-trim
-                           (s-chop-prefixes
-                            '("--- a/" "+++ a/")
-                            (save-excursion
-                              (diff-beginning-of-file)
-                              (thing-at-point 'line)))))
-               (old? (equal "-" (char-to-string (char-after (point-at-bol)))))
-               (rev (if old? old new))
-               (line-info (save-excursion
-                            (diff-beginning-of-hunk)
-                            (s-split " " (s-trim (nth 1 (s-split "@@" (thing-at-point 'line)))))))
-               (line (string-to-number
-                      (car (s-split
-                            ","
-                            (s-chop-prefixes
-                             '("-" "+")
-                             (if old? (car line-info) (nth 1 line-info))))))))
-    (with-current-buffer (get-buffer-create (format "%s.%s" file-path rev))
-      (insert
-       (shell-command-to-string
-        (format
-         "git show %s:%s" rev file-path)))
-      (switch-to-buffer (current-buffer))
-      (goto-char (point-min))
-      (delay-mode-hooks
-        (funcall (assoc-default file-path auto-mode-alist 'string-match))
-        (reveal-mode))
-      (forward-line line))))
-
 (defun im-update-git-state (&rest _)
   "Update all diff-hl overlays and vc state for current project."
   (interactive)
@@ -4245,7 +4209,8 @@ of that revision."
     "A" 'diff-add-change-log-entries-other-window
     "-" #'diff-split-hunk
     ;; "u" #'evil-collection-diff-toggle-context-unified
-    "o" #'im-vc-diff-open-file-at-revision-dwim
+    ;; "o" #'im-vc-diff-open-file-at-revision-dwim
+    "o" (λ-interactive (diff-goto-source :goto-old-file))
     "RET" #'diff-goto-source
     "D" #'diff-file-kill
     "d" #'diff-hunk-kill
