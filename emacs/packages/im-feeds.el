@@ -106,14 +106,12 @@
     ("MrDanielmac" youtube movie)
     ("CineFix" youtube movie fun)
     ("UCn8zNIfYAQNdrFRrr8oibKw" youtube news documentary) ;; VICE
-    ("hotbananastud" youtube fun skit) ;; Brandon Rogers
     ("199sokak" youtube fun turkish skit) ;; Kamusal Mizah
     ("UC3Xu0FQeizzXhUtthFjFs8g" youtube fun skit vlog) ;; Deniz Bagdas
     ("UCGSGPehp0RWfca-kENgBJ9Q" youtube fun skit) ;; jREG
     ("codyko69" youtube fun commentary)
     ("UCZRVHEVslkXoqXEYwJhlTxg" youtube fun turkish vlog) ;; Misha Defne
     ("UCB12vt2obajvkegtlpb_F8Q" youtube fun turkish) ;; Kalt
-    ("UCMixjxEx6t663lIf0aQBeSg" youtube turkish) ;; Sevan Nisanyan
 
     ;; Software tracking
     ("alphapapa/org-ql" gh-release app)))
