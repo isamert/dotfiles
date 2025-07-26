@@ -5719,11 +5719,13 @@ this command is invoked from."
 
 (defun im-load-snippets-list ()
   (interactive)
-  (make-thread
-   (lambda ()
-     (message ">> Loading snippets...")
-     (setq
-      im--all-snippets-cache
+  (message ">> Loading snippets...")
+  (async-start
+   `(lambda ()
+      ,(async-inject-variables "^load-path$")
+      (require 'dash)
+      (require 'yankpad)
+      (setq yankpad-file ,snippets-org)
       (-mapcat
        (lambda (category)
          (--map (cons (format "%s :: %s" category (car it)) it)
@@ -5737,7 +5739,9 @@ this command is invoked from."
                  (ignore-errors
                    (yankpad--snippets category)))))
        (yankpad--categories)))
-     (message ">> Loading snippets... Done"))))
+   (lambda (result)
+     (message ">> Loading snippets... Done")
+     (setq im--all-snippets-cache result))))
 
 ;; Load snippets for the first time, after the startup
 ;; This may take a bit of time
