@@ -1127,16 +1127,6 @@ side window the only window'"
   :extend-selection nil
   (im-find-block-range "^ *#\\+begin" "^ *#\\+end" t))
 
-(evil-define-text-object im-evil-inner-org-block (count &optional _beg _end _type)
-  "Select inner side of org source blocks."
-  :extend-selection nil
-  (im-find-block-range "^ *#\\+begin" "^ *#\\+end"))
-
-(evil-define-text-object im-evil-outer-org-block (count &optional _beg _end _type)
-  "Select outer side of org source blocks."
-  :extend-selection nil
-  (im-find-block-range "^ *#\\+begin" "^ *#\\+end" t))
-
 (evil-define-text-object im-evil-inner-markdown-block (count &optional _beg _end _type)
   "Select inner side of org source blocks."
   :extend-selection nil
@@ -10263,88 +10253,6 @@ instead of acting on issue."
           (insert .key " - ")
         (im-jira-issue-actions issue)))))
 
-
-;;;;; My Android phone and Emacs
-
-;; I have an Android phone that is running
-;; [[https://termux.com/][Termux]] all the time. If you install Termux
-;; through [[https://www.f-droid.org/][F-Droid]] you can also install
-;; [[https://f-droid.org/en/packages/com.termux.api/][Termux:API]]
-;; package which brings bunch of commands like =termux-clipboard-set=,
-;; =termux-sms-list= etc. Much of the commands requires to be called
-;; in foreground, so they are not very useful over SSH but you can
-;; work around that by starting a =tmux= session on the phone and
-;; executing commands on that tmux session through SSH. This way I can
-;; send arbitrary text to my phones clipboard using the commands
-;; below.
-
-
-(im-leader
-  "ept" #'im-send-text-to-my-phone
-  "epc" #'im-send-clipboard-to-my-phone)
-
-(defvar im-phone-hostname
-  "f3"
-  "Hostname or local address to connect to my phone by SSH.")
-
-(defun im-send-termux-command-async (cmd fn &rest args)
-  "Send CMD to my phone.
-When CMD finishes, FN is called with the process output."
-  (interactive "sText: ")
-  (let (output
-        (txt
-         (concat cmd " " (s-join "" (--map (concat "\"" (s-replace "\"" "\\\"" it) "\"" " ") args))))
-        (proc (start-process
-               "*im-termux-cmd*"
-               nil
-               "ssh"
-               "-T"
-               im-phone-hostname)))
-    (set-process-filter proc (lambda (proc out) (setq output (concat output out))))
-    (set-process-sentinel proc (lambda (proc event) (funcall fn output)))
-    (process-send-string proc txt)
-    (process-send-eof proc)
-    (process-send-eof proc)
-    proc))
-
-(defun im-send-termux-command (cmd &rest args)
-  "Send CMD to my phone."
-  (interactive "sText: ")
-  (with-temp-buffer
-    (insert cmd " ")
-    (--each args
-      (insert "\"" (s-replace "\"" "\\\"" it) "\"" " "))
-    (shell-command-on-region
-     (point-min)
-     (point-max)
-     (format "ssh -T %s" im-phone-hostname)
-     t t)
-    (buffer-string)))
-
-(defun im-send-text-to-my-phone (text)
-  "Send TEXT to my phones clipboard.
-This only works if the phone is already open."
-  (interactive "sText: ")
-  (im-send-termux-command-async "termux-clipboard-set" (lambda (_) (message ">> Text sent: %s." text)) text))
-
-(defun im-send-clipboard-to-my-phone ()
-  "Send current clipboard content to my phones clipboard.
-This only works if the phone is already open."
-  (interactive)
-  (im-send-text-to-my-phone (current-kill 0)))
-
-(defun im-list-phone-text-messages ()
-  "List messages from my phone."
-  (interactive)
-  (let ((result (completing-read
-                 "Messages: "
-                 (seq-map
-                  (lambda (msg) (let-alist msg (format "%s :: %s" .number .body)))
-                  (json-read-from-string
-                   (im-send-termux-command "termux-sms-list"))))))
-    (switch-to-buffer-other-window (get-buffer-create "*im-message*"))
-    (insert result)))
-
 ;;;;; people.org - Contact management
 
 ;; Please see
@@ -11856,8 +11764,6 @@ list them as seperate entries."
                         (treesit-node-end def))))
    (outli-mode (outli-toggle-narrow-to-subtree))))
 
-
-
 ;;;;; im-meme-downloader
 
 (defun im-meme-downloader (url &optional file-title)
@@ -12140,52 +12046,6 @@ attribute for current buffers file or selected file."
       attr
       (read-string (format "Value for '%s': " attr)))))
   (shell-command-to-string (format "setfattr --name='%s' --value='%s' '%s'" name value (expand-file-name file))))
-
-;;;;; Converting minibuffer candidates to a table automatically
-
-(defun im-minibuffer-to-table ()
-  (interactive)
-  (let ((buffer (get-buffer-create "*im-minibuffer-table*"))
-        (items (completion-all-completions
-                (minibuffer-contents)
-                minibuffer-completion-table
-                minibuffer-completion-predicate
-                (max 0 (- (point) (minibuffer-prompt-end))))))
-    (when-let* ((last (last items)))
-      (setcdr last nil))
-    (with-current-buffer buffer
-      (erase-buffer)
-      (goto-char (point-min))
-      (thread-last
-        (cdr items)
-        (s-join "\n")
-        (insert))
-      (goto-char (point-min))
-      (push-mark (point-max) t t)
-      (orgtbl-create-or-convert-from-region nil)
-      (deactivate-mark)
-      (org-mode))
-    (run-with-timer 0.1 nil (lambda () (switch-to-buffer-other-window buffer)))
-    (abort-recursive-edit)))
-
-(define-key minibuffer-local-map (kbd "M-|") #'im-minibuffer-to-table)
-
-;;;;; im-pair-prog-mode -- Minor mode for pair programming
-
-(define-minor-mode im-pair-prog-mode
-  "Pair programming mode so that everyone can enjoy the beauty of Emacs."
-  :lighter " PairProg"
-  :global t
-  (unless im-pair-prog-mode
-    (message "Restoring normal environment...")
-    (global-display-line-numbers-mode -1)
-    (default-text-scale-reset)
-    (message "Restoring normal environment...Done."))
-  (when im-pair-prog-mode
-    (message "Preparing pair programming environment...")
-    (global-display-line-numbers-mode t)
-    (default-text-scale-increment (* 2 default-text-scale-amount))
-    (message "Preparing pair programming environment...Done.")))
 
 ;;;;; im-read-time
 
@@ -12697,63 +12557,6 @@ Throw error otherwise."
       (insert (format "\n%s" thing))
       (message "Done."))))
 
-;;;;; im-tuir  -- Emacs tuir (reddit terminal viewer) wrapper
-
-;; Tuir can be installed like:
-;;
-;; #+begin_src sh
-;; python3 -m venv .
-;; bin/activate
-;; python3 -m pip install tuir-continued
-;; #+end_src
-;;
-;; I had to change the ~open_browser~ function of tuir so that it works
-;; properly on MacOS.
-;;
-;; The file can be found under:
-;; =tuir/lib/python3.12/site-packages/tuir/terminal.py=
-;;
-;; #+begin_src python
-;; def open_browser(self, url):
-;;     with self.suspend():
-;;         if self.config['force_new_browser_window']:
-;;             webbrowser.open_new(url)
-;;         else:
-;;             webbrowser.open_new_tab(url)
-;; #+end_src
-
-(defun im-tuir (&optional link)
-  "A wrapper for terminal `tuir' command.
-If LINK is non-nil, then open the link instead of homepage.  Calling
-this function without a link should open the already existing tuir
-buffer, otherwise it will create one.  Calling it with link kills the
-existing buffer and opens the link in tuir."
-  (interactive
-   (list
-    (cond
-     ((s-starts-with? "*reddigg-" (buffer-name))
-      (save-excursion
-        (goto-char (point-min))
-        (when (re-search-forward "https://\\(www\\.\\)?reddit.com")
-          (thing-at-point 'url))))
-     (t (thing-at-point 'url)))))
-  (require 'eat)
-  (if (and (not link) (get-buffer "*tuir*"))
-      (switch-to-buffer "*tuir*")
-    (let ((eat-buffer-name "*tuir*")
-          (eat-kill-buffer-on-exit t)
-          (evil-default-state 'insert))
-      (when (and link (get-buffer "*tuir*"))
-        (let ((kill-buffer-query-functions nil))
-          (kill-buffer "*tuir*")))
-      (eat
-       (let ((path "~/workspace/apps/tuir/bin/tuir"))
-         (if link
-             (format "%s '%s'" path link)
-           path)))
-      (with-current-buffer "*tuir*"
-        (setq-local evil-escape-inhibit t)))))
-
 ;;;;; Global Mode Line formatting
 
 ;; Automatically format global mode-line just like I wanted.  There is
@@ -12800,23 +12603,6 @@ existing buffer and opens the link in tuir."
 (with-eval-after-load 'org
   (add-hook 'org-clock-in-hook #'im-update-global-mode-line)
   (add-hook 'org-clock-out-hook #'im-update-global-mode-line))
-
-;;;;; Set environment variable at point
-
-(defun im-set-env-at-point ()
-  "Set the environment variable from an 'export VAR=value' statement on the current line."
-  (interactive)
-  (save-excursion
-    (beginning-of-line)
-    (when (looking-at "export \\([^= ]+\\)=[\"']?\\([^'\"]*\\)[\"']?")
-      (let ((var (match-string 1))
-            (value (match-string 2)))
-        (setenv var value t)
-        (when (equal var "PATH")
-          (setq exec-path
-                ;; This may alter the ordering but let's hope not.
-                (-union (s-split ":" (getenv "PATH")) exec-path)))
-        (message "Set environment variable: %s=%s" var value)))))
 
 ;;;; Operating system related
 

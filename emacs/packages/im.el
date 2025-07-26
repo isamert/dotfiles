@@ -439,6 +439,21 @@ Useful for adding something to Emacs' PATH without restarting it."
   (add-to-list 'exec-path (expand-file-name path))
   (setenv "PATH" (concat (getenv "PATH") ":" (expand-file-name path))))
 
+(defun im-set-env-at-point ()
+  "Set the environment variable from an 'export VAR=value' statement on the current line."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (when (looking-at "export \\([^= ]+\\)=[\"']?\\([^'\"]*\\)[\"']?")
+      (let ((var (match-string 1))
+            (value (match-string 2)))
+        (setenv var value t)
+        (when (equal var "PATH")
+          (setq exec-path
+                ;; This may alter the ordering but let's hope not.
+                (-union (s-split ":" (getenv "PATH")) exec-path)))
+        (message "Set environment variable: %s=%s" var value)))))
+
 (defun im-get-reset-buffer (buffer)
   "Create BUFFER and return it.
 If it exists, it's killed first and return a new buffer."
