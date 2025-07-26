@@ -780,6 +780,28 @@ Works only if the stash entry is at the beginning of the line."
     (when (looking-at "stash@{[0-9]+}")
       (match-string 0))))
 
+;;;; im-git-search-history
+
+(defun im-git-search-diff-history (regexp &optional all-branches?)
+  "Search through git diffs for REGEXP.
+If ALL-BRANCHES? is non-nil, also search for all other branches for
+REGEXP."
+  (interactive
+   (list (read-string (if current-prefix-arg
+                          "Search for regexp (in all branches): "
+                        "Search for regexp: "))
+         current-prefix-arg))
+  (let ((default-directory (or (im-current-project-root) default-directory))
+        (buffer-name "*git-history-search*"))
+    (when (get-buffer buffer-name)
+      (kill-buffer buffer-name))
+    (im-shell-command
+     :command "git"
+     :args `("--no-pager" "log" "-G" ,regexp ,@(when all-branches? '("--branches" "--all")) "-p")
+     :switch t
+     :eat t
+     :buffer-name buffer-name)))
+
 ;;;; git worktrees
 
 ;; - `im-git-worktree-add': Creates a new git worktree from an existing or

@@ -2793,6 +2793,7 @@ open.")
                      (:exclude ".dir-locals.el" "*-tests.el")))
   :autoload (eat-make)
   :config
+  (setq eat-term-scrollback-size nil)
   (setq eat-enable-shell-prompt-annotation nil)
   (setq eat-shell (executable-find "fish"))
   (setq eat-tramp-shells '(("docker" . "/bin/sh")
