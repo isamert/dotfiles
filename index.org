@@ -1144,6 +1144,7 @@ for_window [app_id="com.nextcloud.desktopclient.nextcloud"] floating enable
 
 exec --no-startup-id xremap --watch ~/.config/xremap.yml
 exec --no-startup-id walker --gapplication-service
+exec --no-startup-id wacom.sh --monitor-and-remap
 
 # * Include other stuff
 
@@ -1174,6 +1175,64 @@ include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "
 #+begin_src conf :tangle (when-linux "~/.config/dunst/dunstrc")
 [global]
 follow = "keyboard"
+#+end_src
+** wacom
+#+begin_src bash :tangle ~/.bin/wacom.sh
+#!/bin/bash
+
+# remap-tablet-to-monitor MONITOR_NAME
+remap-tablet-to-monitor() {
+    MONITOR_NAME="$1"
+    SWAY_INPUTS="$(swaymsg -t get_inputs -r)"
+    SWAY_OUTPUTS="$(swaymsg -t get_outputs -r)"
+    LIBINPUT_DEVICES="$(libinput list-devices)"
+    read MON_WIDTH MON_HEIGHT <<<$(echo "$SWAY_OUTPUTS" | jq -r ".[] | select(.name==\"$MONITOR_NAME\") | .current_mode | .width, .height" | xargs)
+    IDENTIFIER=$(echo "$SWAY_INPUTS" | jq -r '.[] | select(.type=="tablet_tool") | .identifier' | head -1)
+    TABLET_NAME=$(echo "$SWAY_INPUTS" | jq -r '.[] | select(.type=="tablet_tool") | .name' | head -1)
+    TAB_SIZE_LINE=$(echo "$LIBINPUT_DEVICES" | awk -v name="$TABLET_NAME" '
+      BEGIN{found=0}
+      $0 ~ "Device: *"name"$" {found=1}
+      found && $0 ~ /Size: / {print $0; exit}
+    ')
+    TAB_WIDTH=$(echo "$TAB_SIZE_LINE" | grep -oP '([0-9]+)x' | tr -d 'x')
+    TAB_HEIGHT=$(echo "$TAB_SIZE_LINE" | grep -oP 'x([0-9]+)' | tr -d 'x')
+    USABLE_RATIO=$(awk -v w="$MON_HEIGHT" -v tw="$TAB_WIDTH" -v mw="$MON_WIDTH" -v th="$TAB_HEIGHT" \
+                       'BEGIN { printf "%.3f", (w * tw / mw) / th }')
+
+    # I could simply set USABLE_RATIO=0.9 since my tablet is 16:10 and my
+    # monitor is 16:9, but this method calculates USABLE_RATIO generically.
+    # If I ever change tablets (which I doubt), this script will still work
+    # without needing modification.
+
+    swaymsg input "$IDENTIFIER" map_to_output $MONITOR_NAME
+    swaymsg input type:tablet_tool map_from_region 0x0 1x$USABLE_RATIO
+    swaymsg input type:tablet_tool left_handed enabled # Rotates the device by 180 degrees
+    echo "Mapped tablet '$TABLET_NAME' ($IDENTIFIER) to monitor '$MONITOR_NAME' 1.0x$USABLE_RATIO"
+}
+
+# This script remaps a connected tablet tool device to the currently
+# focused Sway monitor, adjusting the input area to match the
+# monitor's aspect ratio.  It listens for workspace focus changes in
+# Sway and, when the focus changes, it finds the tablet device and
+# monitor dimensions, calculates a scaling ratio, and applies the
+# mapping and input transformation using swaymsg commands.
+--monitor-and-remap() {
+    # Run it first time for the focused monitor
+    remap-tablet-to-monitor $(swaymsg -t get_outputs | jq -r '.[] | select(.focused) | .name')
+
+    # Main: subscribe to Sway workspace focus, emit output name, run remap per event
+    export -f remap-tablet-to-monitor
+    exec swaymsg -t subscribe -m '["workspace"]' \
+        | jq --unbuffered -r 'select(.change == "focus") | .current.output' \
+        | xargs  -I{} bash -c 'remap-tablet-to-monitor "$@"' _ {}
+}
+
+
+# ...other wacom related commands...
+
+SUBCMD=$1
+shift
+$SUBCMD "$@"
 #+end_src
 * Shell
 ** Fish
