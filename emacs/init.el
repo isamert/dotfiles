@@ -2370,19 +2370,28 @@ searches for TODO/FIXME items in given folder."
   "Best sorting mechanism for your backlog.
 Entries are sorted by priority, with most effort entries being
 on top in their priority range.  Also entries are sorted by their
-TODO state."
+TODO state, prioritizing in-progress items."
   (interactive)
-  (progn
-    ;; Sort by creation time
-    (org-sort-entries nil ?R nil nil "CREATED_AT")
-    ;; Sort by Effort, the one with least effort is at top
-    (org-sort-entries nil ?R nil nil "Effort")
-    ;; Sort by priority
-    (org-sort-entries nil ?p)
-    ;; Sort by TODO state
-    (org-sort-entries nil ?o)
-    ;; Move non-TODO headers to top
-    (org-sort-entries nil ?F (lambda () (if (or (org-entry-is-done-p) (org-entry-is-todo-p)) -1 (- 1000 (length (org-entry-get nil "ITEM"))))))))
+  ;; Sort by creation time
+  (org-sort-entries nil ?R nil nil "CREATED_AT")
+  ;; Sort by Effort, the one with least effort is at top
+  (org-sort-entries nil ?R nil nil "Effort")
+  ;; Sort by priority
+  (org-sort-entries nil ?p)
+  ;; Sort by TODO state, prioritizing in progress items.
+  (org-sort-entries nil ?f (lambda ()
+                             (let ((todo-state (org-get-todo-state)))
+                               (cond
+                                ((string= todo-state "PROG") 1)
+                                ((string= todo-state "WAIT") 2)
+                                ((string= todo-state "TODO") 3)
+                                ((string= todo-state "DONE") 4)
+                                (t 0)))))
+  ;; Move non-TODO headers to top
+  (org-sort-entries nil ?F (lambda ()
+                             (if (or (org-entry-is-done-p) (org-entry-is-todo-p))
+                                 -1
+                               (- 1000 (length (org-entry-get nil "ITEM")))))))
 
 ;;;;; im-org-unfill-paragraph
 
