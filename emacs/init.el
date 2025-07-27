@@ -872,6 +872,9 @@ side window the only window'"
   (evil-collection-imenu-setup)
   (evil-collection-imenu-list-setup))
 
+(with-eval-after-load 'woman
+  (evil-collection-woman-setup))
+
 (with-eval-after-load 'custom
   (evil-collection-custom-setup))
 
