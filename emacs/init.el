@@ -11704,10 +11704,7 @@ list them as seperate entries."
 
 (im-leader-v
   "n" #'im-narrow-dwim
-  "N" (im-eval-dwim
-       #'ni-narrow-to-page-indirect-other-window
-       #'ni-narrow-to-region-indirect-other-window
-       #'ni-narrow-to-defun-indirect-other-window))
+  "N" #'im-narrow-indirect-dwim)
 
 (defun im-narrow-dwim ()
   "Smart narrowing."
@@ -11726,6 +11723,23 @@ list them as seperate entries."
       (narrow-to-region (treesit-node-start def)
                         (treesit-node-end def))))
    (outli-mode (outli-toggle-narrow-to-subtree))))
+
+(defun im-narrow-indirect-dwim ()
+  "Smart indirect narrowing.
+Does the same thing as `im-narrow-dwim' but opens the narrowed part in
+an indirect buffer."
+  (interactive)
+  (pcase-let ((`(,min ,max ,title) (save-excursion
+                                     (save-restriction
+                                       (widen)
+                                       (im-narrow-dwim)
+                                       (list (point-min)
+                                             (point-max)
+                                             (progn
+                                               (goto-char (point-min))
+                                               (s-trim (thing-at-point 'line))))))))
+    (ni-narrow-to-region-indirect-other-window
+     min max (point) (format "*narrow-indirect: %s:%s*" (buffer-name) title))))
 
 ;;;;; im-meme-downloader
 
