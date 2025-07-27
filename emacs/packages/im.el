@@ -119,9 +119,9 @@ it's a list, the first element will be used as the binary name."
   dir)
 
 (defun im-font-exists-p (font)
-  "Check if FONT exists."
-  (when (fboundp 'x-list-fonts)
-    (x-list-fonts font)))
+  "Check if FONT exists, return FONT if exists otherwise nil."
+  (when (and (fboundp 'x-list-fonts) (x-list-fonts font))
+    font))
 
 (defun im-assoc-regexp (key list &optional fn)
   "Like `assoc` but uses `string-match (car pair) KEY` for comparison.
