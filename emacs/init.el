@@ -2648,14 +2648,6 @@ open.")
 
 ;;;; Other packages
 
-;;;;; which-key
-
-(use-package which-key
-  :config
-  (setq which-key-max-display-columns 4)
-  (which-key-setup-minibuffer)
-  (which-key-mode))
-
 ;;;;; doc-view-mode
 
 (with-eval-after-load 'doc-view
@@ -5082,7 +5074,7 @@ approach."
 (use-package embark-consult)
 
 (use-package embark
-  :commands (embark embark-act-all)
+  :commands (embark embark-act-all embark-prefix-help-command)
   :config
   (bind-key (kbd "M-a") #'embark-act)
   (bind-key (kbd "M-A") #'embark-act-all)
@@ -5099,7 +5091,8 @@ approach."
   ;; Hitting C-h after any prefix command will open a completing-read
   ;; interface to select a command that prefix has. Complements
   ;; which-key.
-  (setq prefix-help-command 'embark-prefix-help-command)
+  (setq prefix-help-command #'embark-prefix-help-command)
+  (add-to-list 'vertico-multiform-categories '(embark-keybinding grid))
 
   (setq embark-quit-after-action '((kill-buffer . nil)
                                    (t . t)))
