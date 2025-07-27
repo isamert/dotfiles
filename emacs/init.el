@@ -12225,6 +12225,7 @@ contents."
   "Simple `google-translate-smooth-translate' wrapper.
 Use C-n C-p to switch between translation directions."
   (interactive)
+  (require 'google-translate)
   (im-peek
    (lambda ()
      (let ((google-translate-pop-up-buffer-set-focus t))
