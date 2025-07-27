@@ -142,7 +142,7 @@ If you are using app passwords, then you need to do the following:
                       (let-alist object
                         (pcase (vtable-column vtable column)
                           ("Name" .displayName)
-                          ("Name" .token)
+                          ("Token" .token)
                           ("Last Message" (s-truncate 100 (s-replace "\n" "…" .lastMessage.message))))))
             :actions `("RET" im-nextcloud-talk-open-room)))
          (switch-to-buffer buf))))))
