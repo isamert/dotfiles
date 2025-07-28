@@ -150,14 +150,13 @@ If you are using app passwords, then you need to do the following:
 (defun im-nextcloud-talk-room-send-message ()
   "Send message."
   (interactive nil im-nextcloud-talk-room-mode)
-  (let ((buf (current-buffer)))
-    (when-let* ((start (save-excursion (im-nextcloud-talk--goto-prompt)))
-                (end (point-max))
-                (msg (buffer-substring-no-properties start end)))
-      (delete-region start end)
-      (insert "\n")
-      (im-nextcloud-talk--send-message
-       (alist-get 'token im-nextcloud-talk--room) (s-trim msg)))))
+  (when-let* ((start (save-excursion (im-nextcloud-talk--goto-prompt)))
+              (end (point-max))
+              (msg (buffer-substring-no-properties start end)))
+    (delete-region start end)
+    (insert "\n")
+    (im-nextcloud-talk--send-message
+     (alist-get 'token im-nextcloud-talk--room) (s-trim msg))))
 
 (defun im-nextcloud-talk-open-room (room)
   (im-nextcloud-request
