@@ -2660,6 +2660,16 @@ open.")
 
 ;;;; Other packages
 
+;;;;; which-key
+
+(use-package which-key
+  :config
+  ;; Disabling this because I use `embark-prefix-help-command' as the `prefix-help-command'
+  (setq which-key-use-C-h-commands nil)
+  (setq which-key-max-display-columns 4)
+  (which-key-setup-minibuffer)
+  (which-key-mode))
+
 ;;;;; doc-view-mode
 
 (with-eval-after-load 'doc-view
