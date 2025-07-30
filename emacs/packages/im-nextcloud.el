@@ -46,6 +46,7 @@
 (require 'im)
 (require 'request)
 (require 's)
+(require 'f)
 (require 'dash)
 (require 'vtable)
 (require 'cus-edit)
@@ -87,7 +88,7 @@ If you are using app passwords, then you need to do the following:
                ,@(when (s-contains? "/ocs/" endpoint)
                    '(("OCS-APIRequest" . "true"))))
     :type (or type (if data "POST" "GET"))
-    :data (json-serialize data)
+    :data (if json? (json-serialize data) data)
     :parser (when json?
               (lambda ()
                 (if (= (buffer-size) 0)
@@ -95,7 +96,11 @@ If you are using app passwords, then you need to do the following:
                   (json-parse-buffer :object-type 'alist :array-type 'list))))
     :success (cl-function
               (lambda (&key data response &allow-other-keys)
-                (funcall success (let-alist data .ocs.data))))
+                (funcall
+                 success
+                 (if (and data (listp data))
+                     (let-alist data .ocs.data)
+                   data))))
     :error (cl-function
             (lambda (&key data symbol-status error-thrown &allow-other-keys)
               (error "NextCloud request failed: error-thrown=%s, status=%s, data=%s"
@@ -114,6 +119,7 @@ If you are using app passwords, then you need to do the following:
   "NextCloud chat room list major mode.")
 
 (define-key im-nextcloud-talk-room-mode-map (kbd "C-c C-c") #'im-nextcloud-talk-room-send-message)
+(define-key im-nextcloud-talk-room-mode-map (kbd "C-c C-f") #'im-nextcloud-talk-room-send-file)
 
 ;;;###autoload
 (defun im-nextcloud-talk-list-rooms ()
@@ -158,6 +164,16 @@ If you are using app passwords, then you need to do the following:
     (im-nextcloud-talk--send-message
      (alist-get 'token im-nextcloud-talk--room) (s-trim msg))))
 
+(defun im-nextcloud-talk-room-send-file ()
+  "Send message."
+  (interactive nil im-nextcloud-talk-room-mode)
+  (let ((file (read-file-name "Select file to send: ")))
+    (im-nextcloud-talk--send-message
+     (alist-get 'token im-nextcloud-talk--room)
+     (s-trim (read-string "Message: "))
+     :file file)))
+
+
 (defun im-nextcloud-talk-open-room (room)
   (im-nextcloud-request
    (format "/ocs/v2.php/apps/spreed/api/v1/chat/%s?lookIntoFuture=0" (alist-get 'token room))
@@ -196,7 +212,7 @@ If you are using app passwords, then you need to do the following:
            (setq im-nextcloud-talk--room room)
            (setq header-line-format
                  (format "NC Talk :: %s (%s)" (let-alist room .displayName)
-                         (substitute-command-keys "\\[im-nextcloud-talk-room-send-message] → Send")))
+                         (substitute-command-keys "\\[im-nextcloud-talk-room-send-message] send, \\[im-nextcloud-talk-room-send-file] send file")))
            (switch-to-buffer buf)
            (im-nextcloud-talk--goto-prompt)))))))
 
@@ -211,15 +227,34 @@ If you are using app passwords, then you need to do the following:
    (lambda (messages)
      (funcall callback messages))))
 
-(defun im-nextcloud-talk--send-message (token message &optional callback)
-  (im-nextcloud-request
-   (format "/ocs/v2.php/apps/spreed/api/v1/chat/%s" token)
-   :data `((message . ,message))
-   :json? t
-   :success
-   (lambda (_data)
-     (when callback
-       (funcall callback)))))
+(cl-defun im-nextcloud-talk--send-message (token message &key file callback)
+  (cond
+   (file
+    (let ((fpath (format "/Talk/%s_%s" (format-time-string "%Y%m%d_%H%M") (f-filename file))))
+      (im-nextcloud-upload-file
+       file fpath
+       (lambda (&rest _)
+         (im-nextcloud-request
+          "/ocs/v2.php/apps/files_sharing/api/v1/shares"
+          :data `((shareType . 10)
+                  (path . ,fpath)
+                  (shareWith . ,token)
+                  (referenceId . ,(secure-hash 'sha256 fpath))
+                  (talkMetaData . ,(json-encode `((caption . ,message)))))
+          :json? t
+          :success
+          (lambda (_data)
+            (when callback
+              (funcall callback))))))))
+   (t
+    (im-nextcloud-request
+     (format "/ocs/v2.php/apps/spreed/api/v1/chat/%s" token)
+     :data `((message . ,message))
+     :json? t
+     :success
+     (lambda (_data)
+       (when callback
+         (funcall callback)))))))
 
 (defun im-nextcloud-talk--goto-last-message ()
   "Go to end of the last message.
@@ -268,9 +303,23 @@ If NAME is given, then use it as suffix to the temp file."
    :success
    (lambda (file)
      (let ((url (alist-get 'url file))
-           (file (make-temp-file "image" nil (or name ".dat"))))
+           (file (make-temp-file "talk-" nil (or name ".dat"))))
        (url-copy-file url file t)
        (find-file file)))))
+
+(cl-defun im-nextcloud-upload-file (file path on-success)
+  "Upload FILE to NextCloud.
+PATH is full path (after user folder) including extension etc., like
+\"/Talk/some-file.txt\" (Should start with /).  ON-SUCCESS is called
+when file is uploaded."
+  (im-nextcloud-request
+   (format "/remote.php/dav/files/%s%s" im-nextcloud-user path)
+   :type "PUT"
+   :json? nil
+   :data (with-temp-buffer
+           (insert-file-contents-literally file nil)
+           (buffer-string))
+   :success on-success))
 
 ;;;; Contacts
 
