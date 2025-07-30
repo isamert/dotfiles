@@ -357,7 +357,9 @@ With argument, do this that many times."
   :config
   ;; Clipboard selections are copied into the kill-ring
   (setq save-interprogram-paste-before-kill t)
-  (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
+  (add-to-list 'savehist-additional-variables 'kill-ring)
+  (add-to-list 'savehist-additional-variables 'search-ring)
+  (add-to-list 'savehist-additional-variables 'regexp-search-ring)
   (setq savehist-file "~/.emacs.d/savehist"))
 
 
@@ -4876,6 +4878,8 @@ It simply checks for folders with `.git' under them."
    'consult-buffer-filter
    "\\`\\*\\(Help\\|Backtrace\\|Messages\\|Buffer List\\|Flycheck.*\\|scratch.*\\)\\'")
 
+  (add-to-list 'savehist-additional-variables 'consult--buffer-history)
+
   ;; This also supports previews. Use the `consult-preview-key'.
   (defalias 'im-switch-theme #'consult-theme))
 
@@ -5273,7 +5277,8 @@ When ARG is non-nil, query the whole workspace/project."
   :straight nil
   :after corfu
   :config
-  (corfu-history-mode))
+  (corfu-history-mode)
+  (add-to-list 'savehist-additional-variables 'corfu-history))
 
 (use-package kind-icon
   :after corfu
