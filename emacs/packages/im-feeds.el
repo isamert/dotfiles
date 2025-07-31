@@ -48,6 +48,7 @@
     ("https://beepb00p.xyz/rss.xml" blog dev)
     ("https://www.rousette.org.uk/index.xml" blog dev emacs essay)
     ("https://jao.io/blog/rss.xml" blog dev emacs)
+    ("https://www.matem.unam.mx/~omar/apropos-emacs.xml" blog emacs)
     ;; DOWN: ("https://psachin.gitlab.io/index.xml" blog dev emacs lisp)
     ("https://fuco1.github.io/rss.xml" blog dev emacs lisp)
     ;; DOWN: ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay) ;; Gwern
