@@ -9605,6 +9605,7 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
 (im-leader-v
   "b0" #'erase-buffer
   "br" #'rename-buffer
+  "bg" #'revert-buffer
   "bo" #'im-open-region-in-temp-buffer
   "bO" #'im-temp-buffer)
 
