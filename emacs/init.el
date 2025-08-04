@@ -4236,9 +4236,7 @@ empty string."
     "S-TAB" #'outline-cycle-buffer
 
     "1" (λ-interactive (outline-hide-sublevels 1))
-    "2" (λ-interactive
-         (outline-show-all)
-         (outline-hide-body))
+    "2" (λ-interactive (outline-hide-sublevels 2))
     "3" #'outline-show-all)
 
   (add-hook 'diff-mode-hook #'outline-minor-mode)
