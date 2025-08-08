@@ -5102,6 +5102,7 @@ approach."
   :config
   (bind-key (kbd "M-a") #'embark-act)
   (bind-key (kbd "M-A") #'embark-act-all)
+  ;; If you want to clear selections, then do: `embark-act-all' → `embark-select'
   (bind-key (kbd "M-c") #'embark-select)
   (setq embark-prompter #'embark-completing-read-prompter)
   ;; ^ This directly shows the actions in a completing read window.
@@ -5147,7 +5148,7 @@ approach."
 ;;;;;; search actions
 
 (define-key embark-general-map (kbd "G") #'im-google-this)
-(define-key embark-general-map (kbd "C") #'im-gpt)
+(define-key embark-general-map (kbd "C") #'im-ai-lookup)
 
 ;;;;;; URI-encode/hexify action
 
@@ -5164,7 +5165,7 @@ approach."
 
 (define-key embark-command-map  (kbd "m") #'im-embark-bind-leader-command)
 
-(defun im-embark-bind-leader-command (command key)
+(defun im-embark-bind-leader-key-command (command key)
   "Bind KEY to COMMAND in `im-leader' map.
 KEY should not contain the leader key."
   (interactive

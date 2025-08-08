@@ -285,8 +285,8 @@ predefined prompts."
       (org-mode)
       (display-buffer (current-buffer)
                       `((display-buffer-in-side-window)
-                        (side . bottom)
-                        (window-height . 15)))
+                        (side . right)
+                        (window-width . 80)))
       (insert
        (format
         "#+begin_ai markdown :service \"%s\" :model \"%s\"\n[ME]:%s%s\n#+end_ai"
