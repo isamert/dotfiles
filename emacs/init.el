@@ -1336,7 +1336,7 @@ side window the only window'"
     ;; general
     "op"  #'org-set-property
     "oi"  #'org-toggle-inline-images
-    "oI"  #'org-redisplay-inline-images
+    "oI"  #'im-org-insert-image-file-with-width
     "or"  #'org-refile
     "oR"  #'org-mode-restart
     "oh"  #'outline-show-only-headings
@@ -4876,7 +4876,8 @@ It simply checks for folders with `.git' under them."
    'consult-buffer-filter
    "\\`\\*\\(Help\\|Backtrace\\|Messages\\|Buffer List\\|Flycheck.*\\|scratch.*\\)\\'")
 
-  (add-to-list 'savehist-additional-variables 'consult--buffer-history)
+  (with-eval-after-load 'savehist
+    (add-to-list 'savehist-additional-variables 'consult--buffer-history))
 
   ;; This also supports previews. Use the `consult-preview-key'.
   (defalias 'im-switch-theme #'consult-theme))
@@ -5277,7 +5278,8 @@ When ARG is non-nil, query the whole workspace/project."
   :after corfu
   :config
   (corfu-history-mode)
-  (add-to-list 'savehist-additional-variables 'corfu-history))
+  (with-eval-after-load 'savehist
+    (add-to-list 'savehist-additional-variables 'corfu-history)))
 
 (use-package kind-icon
   :after corfu
