@@ -5117,7 +5117,14 @@ approach."
   ;; Hitting C-h after any prefix command will open a completing-read
   ;; interface to select a command that prefix has. Complements
   ;; which-key.
-  (setq prefix-help-command #'embark-prefix-help-command)
+  (add-hook
+   'after-init-hook
+   (lambda ()
+     ;; HACK: transient disables which-key temporarily and this causes
+     ;; `prefix-help-command' to be set to this backup cmd. To prevent
+     ;; this, I'm setting it here manually.
+     (setq which-key--prefix-help-cmd-backup #'embark-prefix-help-command)
+     (setq prefix-help-command #'embark-prefix-help-command)) 99)
   (add-to-list 'vertico-multiform-categories '(embark-keybinding grid))
 
   (setq embark-quit-after-action '((kill-buffer . nil)
