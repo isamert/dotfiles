@@ -907,8 +907,14 @@ buffer."
                   (require 'shr)
                   (require 'url-handlers)
                   (with-temp-buffer
-                    (url-insert-file-contents url)
-                    (shr-render-region (point-min) (point-max))
+                    (let ((url-user-agent
+                           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.10 Safari/605.1.1"))
+                      (url-insert-file-contents url))
+                    (let ((shr-use-fonts nil)
+                          (shr-fill-text nil)
+                          (shr-use-colors nil)
+                          (shr-inhibit-images t))
+                      (shr-render-region (point-min) (point-max)))
                     (buffer-substring-no-properties (point-min) (point-max))))
                 (lambda (result) (funcall callback result))))
    :async t
