@@ -692,20 +692,24 @@ CALLBACK will be called with the selected commit ref."
 
 ;;;###autoload
 (defun im-git-show-stash-diff (&optional stash-entry)
-  "Show stashed diff."
+  "Show stashed diff for STASH-ENTRY."
   (interactive (list (im-git--parse-stash-entry-at-point)))
   (let ((default-directory (im-current-project-root))
-        (buffer-name "*im-git-stash-diff*"))
+        (buffer-name (format "*im-git-stash-diff: %s {%s}*"
+                             (im-current-project-name)
+                             stash-entry)))
+    (when-let* ((buffer (get-buffer buffer-name)))
+      (with-current-buffer buffer
+        (let ((inhibit-read-only t))
+          (erase-buffer))))
     (im-shell-command
      :command "git"
      :args (-non-nil `("--no-pager" "stash" "show" "-p" ,stash-entry))
      :switch nil
      :buffer-name buffer-name
      :on-finish
-     (lambda (output &rest _)
+     (lambda (_output &rest _)
        (with-current-buffer buffer-name
-         (let ((inhibit-read-only t))
-           (erase-buffer))
          ;; TODO: gd → drop stash & show next stash
          ;; TODO: x → drop hunk from the stash? gerekli mi cok
          ;;       bilemedim ama ise yarar sanki baya.

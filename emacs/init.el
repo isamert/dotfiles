@@ -4573,36 +4573,6 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
   :straight (:type built-in)
   :autoload (project--find-in-directory))
 
-(defconst im-projects-root "~/Workspace/projects")
-
-(defvar im-project-name-transformers '()
-  "List of functions to do transformations on the function name.
-Like shortening it in some form etc.")
-
-(defun im-current-project-name ()
-  "Return current projects name."
-  (seq-reduce
-   (lambda (acc it) (funcall it acc))
-   im-project-name-transformers
-   (if-let* ((curr-proj (im-current-project-root))
-             (projects-root (expand-file-name im-projects-root)))
-       (if (string-prefix-p projects-root curr-proj)
-           (string-trim (string-remove-prefix projects-root curr-proj) "/" "/")
-         (file-name-nondirectory (directory-file-name curr-proj)))
-     (file-name-nondirectory (directory-file-name default-directory)))))
-
-(defun im-all-project-roots ()
-  "Find every project dir under `im-projects-root'.
-It simply checks for folders with `.git' under them."
-  (->>
-   (expand-file-name im-projects-root)
-   (format "fd . '%s' --type directory --maxdepth 8 --absolute-path")
-   (shell-command-to-string)
-   (s-trim)
-   (s-split "\n")
-   (--filter (im-is-git-dir it))
-   (--map (abbreviate-file-name (f-full it)))))
-
 (defalias 'im-import-projects #'im-load-projects-list)
 (defun im-load-projects-list ()
   (interactive)

@@ -41,7 +41,14 @@
 ;;;; Variables
 
 ;; TODO ...
+
 ;;;; Project utils
+
+(defconst im-projects-root "~/Workspace/projects")
+
+(defvar im-project-name-transformers '()
+  "List of functions to do transformations on the function name.
+Like shortening it in some form etc.")
 
 (defsubst im-current-project-root ()
   "Return the root path of current project."
@@ -57,6 +64,30 @@
 
 (defsubst im-is-git-dir (dir)
   (file-directory-p (concat dir "/.git")))
+
+(defun im-current-project-name ()
+  "Return current projects name."
+  (seq-reduce
+   (lambda (acc it) (funcall it acc))
+   im-project-name-transformers
+   (if-let* ((curr-proj (im-current-project-root))
+             (projects-root (expand-file-name im-projects-root)))
+       (if (string-prefix-p projects-root curr-proj)
+           (string-trim (string-remove-prefix projects-root curr-proj) "/" "/")
+         (file-name-nondirectory (directory-file-name curr-proj)))
+     (file-name-nondirectory (directory-file-name default-directory)))))
+
+(defun im-all-project-roots ()
+  "Find every project dir under `im-projects-root'.
+It simply checks for folders with `.git' under them."
+  (->>
+   (expand-file-name im-projects-root)
+   (format "fd . '%s' --type directory --maxdepth 8 --absolute-path")
+   (shell-command-to-string)
+   (s-trim)
+   (s-split "\n")
+   (--filter (im-is-git-dir it))
+   (--map (abbreviate-file-name (f-full it)))))
 
 ;;;; OS Utils
 
@@ -765,7 +796,7 @@ COLOR can be a face or string (which is interpreted as background color.)"
 (cl-defun im-request
     (endpoint
      &rest params
-     &key (-type "GET") (-headers) (-data) (-params) (-async?) (-on-success) (-on-error) (-raw)
+     &key (-type "GET") (-headers) (-data) (-params) (-async?) (-on-success) (-on-error) (-raw) (-timeout)
      &allow-other-keys)
   "Like `request' but plist and JSON oriented.
 
@@ -799,10 +830,7 @@ For async requests, simply provide a success handler:
                     ...use the parsed json DATA...)))"
   (declare (indent defun))
   (interactive (list (read-string "URL: ") :-raw t))
-  (let (json
-        (json-object-type 'alist)
-        (json-array-type #'list)
-        (json-key-type 'symbol))
+  (let (json)
     ;; Remove request related items from params list
     (dolist (key '(:-type :-headers :-data :-params :-async? :-on-success :-raw :-on-error))
       (cl-remf params key))
@@ -811,11 +839,12 @@ For async requests, simply provide a success handler:
                 (request
                   endpoint
                   :type -type
+                  :timeout -timeout
                   :headers (cond
                             ((and -headers (json-alist-p -headers)) -headers)
                             ((and -headers (json-plist-p -headers)) (im-plist-to-alist -headers))
                             (t nil))
-                  :parser (if -raw #'buffer-string (apply-partially #'json-parse-buffer :object-type 'alist :array-type 'list))
+                  :parser (if -raw #'buffer-string (apply-partially #'json-parse-buffer :object-type 'alist :array-type 'list :null-object nil))
                   :success (cl-function
                             (lambda (&key data &allow-other-keys)
                               (funcall resolve data)))
