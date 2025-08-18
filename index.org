@@ -368,13 +368,13 @@ PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${HOME}/.bin:${PATH}'
 Depending on your current keyboard configuration, tangle one of the following:
 
 #+name: aerospace-uhk
-#+begin_src toml :noweb yes :tangle (if (eq im-current-keyboard-config 'uhk) (when-darwin "~/.aerospace.toml") "no")
+#+begin_src toml :noweb yes :tangle (when-darwin "~/.aerospace.toml")
 «aerospace-config»
 «aerospace-uhk-bindings»
 #+end_src
 
 #+name: aerospace-mac
-#+begin_src toml :noweb yes :tangle (if (eq im-current-keyboard-config 'mac) (when-darwin "~/.aerospace.toml") "no")
+#+begin_src toml :noweb yes :tangle (when-darwin "~/.aerospace.toml")
 «aerospace-config»
 «aerospace-mac-keyboard-bindings»
 #+end_src
