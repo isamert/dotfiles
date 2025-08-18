@@ -339,8 +339,8 @@
 
 (defun im-kube-pod--exec-into-container (pod &optional container)
   (let ((container (or container (im-kube-pod--select-container pod))))
-    (with-current-buffer (im-eshell (format "$pod: %s" (plist-get pod :name)))
-      (insert
+    (with-current-buffer (im-vterm (format "$pod: %s" (plist-get pod :name)))
+      (vterm-insert
        (im-kill (format "kubectl exec %s --container='%s' -i -t '%s' --context='%s' -- bash"
                         (plist-get pod :namespace)
                         container
