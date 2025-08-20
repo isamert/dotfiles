@@ -9558,10 +9558,13 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   "wJ" #'evil-window-move-very-bottom
   "wK" #'evil-window-move-very-top
   ;; window-size
-  "w+" #'enlarge-window
+  ;; "w<right>" #'shrink-window
+  ;; "w<left>" #'enlarge-window
   "w-" #'shrink-window
   "w>" #'enlarge-window-horizontally
   "w<" #'shrink-window-horizontally
+  "w," #'enlarge-window-horizontally
+  "w." #'shrink-window-horizontally
   ;; workspace (tab-bar-mode)
   "W" #'tab-bar-switch-to-tab
   "wu" #'tab-bar-history-back ;; undo
@@ -9570,14 +9573,15 @@ Inspired by `meow-quit' but I changed it in a way to make it work with side wind
   "wT" #'im-tab-bar-new-tab-with-current-buffer ;; tab
   "wn" #'tab-bar-rename-tab ;; name
   "wm" #'tab-move ;; move
-  "ws" #'tab-bar-switch-to-tab ;; switch
   "wl" #'tab-bar-switch-to-recent-tab ;; last
-  "wk" #'tab-close ;; kill
+  "wx" #'tab-close ;; kill
   ;; buffer
   "wb" #'bufler
   ;; ace-window
   "wa" #'ace-window
-  "ws" #'ace-swap-window)
+  "ws" #'ace-swap-window
+  "wh" #'im-split-window-right
+  "wj" #'im-split-window-below)
 
 ;; Buffer related bindings
 (im-leader-v
