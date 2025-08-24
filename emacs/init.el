@@ -9360,6 +9360,22 @@ SELECT * FROM _ LIMIT 1;
 
 ;;;; Window and buffer management
 
+;; With the following. previous-buffer or next-buffer will only cycle
+;; through the given window's buffer history. Normally if the history
+;; is exhausted previous/next-buffer determines some buffer as the
+;; next/prev, quite randomly in effect (I mean there are heuristics,
+;; yes, but it is impossible to predict what is going to happen as a
+;; user), so this disables that behavior. I would like
+;; prev/next-buffer to stop when the history is exhausted but that is
+;; seemingly impossible and this is the best we can get in terms of
+;; having some determinism.
+(setq
+ switch-to-prev-buffer-skip
+ (lambda (window tobuffer _)
+   (not (seq-contains-p
+         (mapcar #'car (window-prev-buffers window))
+         tobuffer))))
+
 ;;;;; tab-bar-mode
 
 ;; It's a great workspace manager that comes bundled with Emacs. I was
