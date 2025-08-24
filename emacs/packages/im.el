@@ -255,33 +255,6 @@ cache."
              (im-serialize-into-file ,file ,memoizemap)
              ___result))))))
 
-(declare-function aw-select "ace-window")
-
-(defun im-select-window-with-buffer (buffer-name)
-  "Select the visible window that matches given BUFFER-NAME.
-If more than one buffer is matched, then let user interactively
-select the right window using `aw-select'."
-  (declare (indent 1))
-  (let* ((curr (buffer-name (current-buffer)))
-         (windows (--filter
-                   (-as-> (window-buffer it) buffer
-                          (buffer-name buffer)
-                          (and (string-match buffer-name buffer) (not (equal curr buffer))))
-                   (window-list))))
-    (select-window
-     (if (= 1 (length windows))
-         (car windows)
-       (cl-letf (((symbol-function 'aw-window-list)
-                  (lambda () (sort `(,@windows ,(selected-window)) 'aw-window<))))
-         (aw-select nil))))))
-
-(defmacro im-with-visible-buffer (buffer-name &rest body)
-  "Evaluate BODY within the BUFFER-NAME that is currently visible."
-  (declare (indent 1))
-  `(with-selected-window (selected-window)
-     (when (im-select-window-with-buffer ,buffer-name)
-       ,@body)))
-
 (defun im-sync-async-command-to-string (command &rest args)
   "Run async command and wait until it's finished.
 This may seem stupid but I had to use it."
@@ -427,6 +400,50 @@ major-mode of that block.  Useful for language-aware functionality."
     (save-excursion (concat (markdown-code-block-lang) "-mode")))
    (t (symbol-name major-mode))))
 
+(defun im-set-env-at-point ()
+  "Set the environment variable from an 'export VAR=value' statement on the current line."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (when (looking-at "export \\([^= ]+\\)=[\"']?\\([^'\"]*\\)[\"']?")
+      (let ((var (match-string 1))
+            (value (match-string 2)))
+        (setenv var value t)
+        (when (equal var "PATH")
+          (setq exec-path
+                ;; This may alter the ordering but let's hope not.
+                (-union (s-split ":" (getenv "PATH")) exec-path)))
+        (message "Set environment variable: %s=%s" var value)))))
+
+;;;; Windows & buffers
+
+(declare-function aw-select "ace-window")
+
+(defun im-select-window-with-buffer (buffer-name)
+  "Select the visible window that matches given BUFFER-NAME.
+If more than one buffer is matched, then let user interactively
+select the right window using `aw-select'."
+  (declare (indent 1))
+  (let* ((curr (buffer-name (current-buffer)))
+         (windows (--filter
+                   (-as-> (window-buffer it) buffer
+                          (buffer-name buffer)
+                          (and (string-match buffer-name buffer) (not (equal curr buffer))))
+                   (window-list))))
+    (select-window
+     (if (= 1 (length windows))
+         (car windows)
+       (cl-letf (((symbol-function 'aw-window-list)
+                  (lambda () (sort `(,@windows ,(selected-window)) 'aw-window<))))
+         (aw-select nil))))))
+
+(defmacro im-with-visible-buffer (buffer-name &rest body)
+  "Evaluate BODY within the BUFFER-NAME that is currently visible."
+  (declare (indent 1))
+  `(with-selected-window (selected-window)
+     (when (im-select-window-with-buffer ,buffer-name)
+       ,@body)))
+
 (defun im-open-region-in-temp-buffer (content &optional majormode)
   "Open CONTENT in a temporary buffer with MAJORMODE.
 When called interactively, CONTENT selected region or given string."
@@ -446,7 +463,7 @@ When called interactively, CONTENT selected region or given string."
   (when majormode
     (if (fboundp (intern majormode))
         (funcall (intern majormode))
-      (message ">> %s not found, falling back to prog-mode!")
+      (message ">> %s not found, falling back to prog-mode!" majormode)
       (prog-mode))
     (pcase majormode
       ((or "json-ts-mode" "json-mode") (json-pretty-print-buffer)))))
@@ -456,12 +473,43 @@ When called interactively, CONTENT selected region or given string."
   (interactive)
   (im-open-region-in-temp-buffer (im-region-or 'string) "prog-mode"))
 
+(defun im-quit ()
+  "Quit current window or buffer.
+Inspired by `meow-quit' but I changed it in a way to make it work with
+side windows properly."
+  (interactive)
+  (if (or
+       (window-parameter (selected-window) 'window-side)
+       (> (seq-length (seq-filter (lambda (it) (not (window-parameter it 'window-side))) (window-list (selected-frame)))) 1))
+      (delete-window)
+    (if (window-prev-buffers)
+        (previous-buffer)
+      (user-error "Already at the last buffer"))))
+
+(defun im-split-window-below ()
+  "Split window below and focus."
+  (interactive)
+  (split-window-below)
+  (other-window 1))
+
+(defun im-split-window-right ()
+  "Split window right and focus."
+  (interactive)
+  (split-window-right)
+  (other-window 1))
+
 (defun im-kill-this-buffer ()
   "Kill current buffer.
 Function `kill-this-buffer' does not work reliably.  See
-documentation of it."
+documentation of it.
+
+This also calls `im-quit' if the current buffer is the last buffer in
+the windows buffer history."
   (interactive)
-  (kill-buffer (current-buffer)))
+  (let ((buff (current-buffer)))
+    (when (null (window-prev-buffers))
+      (im-quit))
+    (kill-buffer buff)))
 
 (defun im-add-to-path (path)
   "Add given PATH to PATH variable.
@@ -469,21 +517,6 @@ Useful for adding something to Emacs' PATH without restarting it."
   (interactive "sPath: ")
   (add-to-list 'exec-path (expand-file-name path))
   (setenv "PATH" (concat (getenv "PATH") ":" (expand-file-name path))))
-
-(defun im-set-env-at-point ()
-  "Set the environment variable from an 'export VAR=value' statement on the current line."
-  (interactive)
-  (save-excursion
-    (beginning-of-line)
-    (when (looking-at "export \\([^= ]+\\)=[\"']?\\([^'\"]*\\)[\"']?")
-      (let ((var (match-string 1))
-            (value (match-string 2)))
-        (setenv var value t)
-        (when (equal var "PATH")
-          (setq exec-path
-                ;; This may alter the ordering but let's hope not.
-                (-union (s-split ":" (getenv "PATH")) exec-path)))
-        (message "Set environment variable: %s=%s" var value)))))
 
 (defun im-get-reset-buffer (buffer)
   "Create BUFFER and return it.

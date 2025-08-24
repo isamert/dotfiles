@@ -9556,30 +9556,6 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
     (kbd "M-,") #'bufler-list-buffer-peek
     (kbd "p") #'bufler-list-buffer-peek))
 
-;;;;; Functions
-
-(defun im-quit ()
-  "Quit current window or buffer.
-Inspired by `meow-quit' but I changed it in a way to make it work with side windows properly."
-  (interactive)
-  (if (or
-       (window-parameter (selected-window) 'window-side)
-       (> (seq-length (seq-filter (lambda (it) (not (window-parameter it 'window-side))) (window-list (selected-frame)))) 1))
-      (delete-window)
-    (previous-buffer)))
-
-(defun im-split-window-below ()
-  "Split window below and focus."
-  (interactive)
-  (split-window-below)
-  (other-window 1))
-
-(defun im-split-window-right ()
-  "Split window right and focus."
-  (interactive)
-  (split-window-right)
-  (other-window 1))
-
 ;;;;; Keybindings
 
 (evil-define-key 'normal 'global
