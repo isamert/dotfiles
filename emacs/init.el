@@ -11139,7 +11139,8 @@ more than one header of a single org buffer."
     ("s" "Save buffer" save-buffer)
     ("r" "Rename file & buffer" im-rename-current-file-name-and-buffer)
     ("D" "Delete file" im-delete-current-file)
-    ("i" "Show file info" im-print-buffer-file-info)]
+    ("i" "Show file info" im-print-buffer-file-info)
+    ("g" "Revert to disk" revert-buffer)]
    ["Copy Path"
     ("c" "Copy path (pretty)" im-copy-current-filename)
     ("C" "Copy path (raw)" (lambda () (interactive) (im-copy-current-filename :pretty nil)))]

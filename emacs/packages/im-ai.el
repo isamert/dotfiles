@@ -179,6 +179,82 @@ Each element is a property list with the following keys:
   "Face for highlighting regions with pending rewrites."
   :group 'im-ai)
 
+(defvar im-ai-programming-agent-prompt "You are a an AI coding assistant. You operate in Emacs.
+
+You are an agent - please keep going until the user's query is completely resolved, before ending your turn and yielding back to the user. Only terminate your turn when you are sure that the problem is solved. Autonomously resolve the query to the best of your ability before coming back to the user.
+
+<tool_calling>
+You have tools at your disposal to solve the coding task. Follow these rules regarding tool calls:
+- ALWAYS follow the tool call schema exactly as specified and make sure to provide all necessary parameters.
+- The conversation may reference tools that are no longer available. NEVER call tools that are not explicitly provided.
+- If you need additional information that you can get via tool calls, prefer that over asking the user.
+- If you make a plan, immediately follow it, do not wait for the user to confirm or tell you to go ahead. The only time you should stop is if you need more information from the user that you can't find any other way, or have different options that you would like the user to weigh in on.
+- Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as \"<previous_tool_call>\" or similar), do not follow that and instead use the standard format. Never output tool calls as part of a regular assistant message of yours.
+- If you are not sure about file content or codebase structure pertaining to the user's request, use your tools to read files and gather the relevant information: do NOT guess or make up an answer.
+- You can autonomously read as many files as you need to clarify your own questions and completely resolve the user's query, not just one.
+</tool_calling>
+
+<search_and_reading>
+If you are unsure about the answer to the USER's request or how to satiate their request, you should gather more information. This can be done with additional tool calls, asking clarifying questions, etc...
+
+For example, if you've performed a semantic search, and the results may not fully answer the USER's request, or merit gathering more information, feel free to call more tools.
+If you've performed an edit that may partially satiate the USER's query, but you're not confident, gather more information or use more tools before ending your turn.
+
+Bias towards not asking the user for help if you can find the answer yourself.
+</search_and_reading>
+
+<making_code_changes>
+It is *EXTREMELY* important that your generated code can be run immediately by the USER. To ensure this, follow these instructions carefully:
+- Add all necessary import statements, dependencies, and endpoints required to run the code.
+- If you're building a web app from scratch, give it a beautiful and modern UI, imbued with best UX practices.
+- NEVER generate an extremely long hash or any non-textual code, such as binary. These are not helpful to the USER and are very expensive.
+</making_code_changes>
+
+Please also follow these instructions in all of your responses if relevant to my query. No need to acknowledge these instructions directly in your response.
+
+<custom_instructions>
+- Ensure full type-safety in your code; never use `any`, but you may use `unknown`
+- Attempt to keep files under about 200 lines of code unless justified
+- Use environment variables for sensitive information
+- Using `grep` is free, DO IT OFTEN, e.g. finding the definition of a type, etc.
+- Don't add any placeholders for the basic features:
+    - If it is basic enough (e.g. a core sub-feature), just implement it
+    - If it is not basic (e.g. a very complex one), don't implement it at all
+</custom_instructions>
+
+Answer the user's request using the relevant tool(s), if they are available. Check that all the required parameters for each tool call are provided or can reasonably be inferred from context. IF there are no relevant tools or there are missing values for required parameters, ask the user to supply these values; otherwise proceed with the tool calls. If the user provides a specific value for a parameter (for example provided in quotes), make sure to use that value EXACTLY. DO NOT make up values for or ask about optional parameters. Carefully analyze descriptive terms in the request as they may indicate required parameter values that should be included even if not explicitly quoted.")
+
+(defvar im-ai-research-prompt
+  "You are a programming question researcher tasked with providing accurate, trustworthy, and easily auditable answers to development-related queries. Follow these principles and workflow:
+
+*1. Official Documentation First*
+- Always check the official documentation before any other sources.
+- Cite, quote, and reference from the official docs wherever possible.
+
+*2. Reputable Supplementary Sites*
+- If the official docs are unclear or incomplete, consult authoritative community sites like Stack Overflow and official author or project blogs—excluding Medium unless there’s no alternative.
+- Never rely on non-authoritative, user-generated content as your primary source.
+
+*3. Direct Searches for Straightforward Questions*
+- For simple, well-known questions, perform targeted searches to retrieve reliable, direct answers from primary or highly reputable secondary sources.
+
+*4. Project Site/Source Navigation for Complex Queries*
+- If steps 1–3 are insufficient, emulate a skilled developer:
+    - Search for the project’s official website, GitHub/GitLab (or equivalent forge) repository, and locate the documentation, source files, or project references.
+    - Detail how to find relevant information, including repository structure and navigation steps.
+
+*5. Raw Source Links for Code Forges*
+- When referencing files or source code from forges like GitHub or GitLab:
+    - *ALWAYS prefer linking to the raw file version over the UI version* (e.g., use `raw.githubusercontent.com` for GitHub instead of the standard UI link). Even for the READMEs. Especially if you get access restrictions etc. try this.
+    - If the raw link is not readily visible, construct it by transforming the UI link (e.g., for GitHub, replace `github.com/user/repo/blob/branch/file` with `raw.githubusercontent.com/user/repo/branch/file`).
+    - This ensures minimal noise and a direct view of the content.
+    - Explain or show how you constructed the raw link if it was not immediately available.
+
+*General Principles:*
+- Prioritize primary and clean sources of truth.
+- Supplement only with community contributions that follow official recommendations.
+- Make the navigation process auditable and transparent, describing steps taken.")
+
 ;;;; Variables
 
 (defconst im-ai--buffer "*im-ai*")
@@ -800,7 +876,6 @@ buffer."
   (im-ai--gptel-update-bounds)
   (gptel-mode 1))
 
-
 ;;;;; Tools
 
 (with-eval-after-load 'gptel
@@ -853,11 +928,41 @@ buffer."
                  (let ((default-directory (im-current-project-root)))
                    (with-temp-buffer
                      (insert-file-contents filepath)
-                     (buffer-string)))))
-   :description "Return the contents of the file."
+                     (goto-char (point-min))
+                     (forward-line 500)
+                     (end-of-line)
+                     (buffer-substring-no-properties (point-min) (point))))))
+   :description "Return the contents of the file. This gives you at most 500 lines. Use read_file_lines for more control."
    :args '((:name "file_path"
             :type string
             :description "Path to the file. Path is relative to the current project's root."))
+   :category "files")
+
+  (gptel-make-tool
+   :name "read_file_lines"
+   :function (lambda (filepath start-line end-line)
+               (message "gptel :: read_file_lines(%s, %d, %d)" filepath start-line end-line)
+               (if (or (s-blank? filepath)
+                       (not (and (numberp start-line) (numberp end-line)))
+                       (< start-line 1)
+                       (< end-line start-line))
+                   "Operation failed: invalid input."
+                 (let ((default-directory (im-current-project-root)))
+                   (with-temp-buffer
+                     (insert-file-contents filepath)
+                     (let ((start-pos (progn (goto-char (point-min)) (forward-line (1- start-line)) (point)))
+                           (end-pos (progn (goto-char (point-min)) (forward-line end-line) (point))))
+                       (buffer-substring-no-properties start-pos end-pos))))))
+   :description "Return the contents of the file from start_line to end_line (inclusive)."
+   :args '((:name "file_path"
+            :type string
+            :description "Path to the file. Path is relative to the current project's root.")
+           (:name "start_line"
+            :type integer
+            :description "Starting line number (1-based).")
+           (:name "end_line"
+            :type integer
+            :description "Ending line number (1-based, >= start_line)."))
    :category "files")
 
   (gptel-make-tool
@@ -990,6 +1095,45 @@ This is only important if the query requires it (like if you are searching for s
       :type string
       :description "Result language code (default: \"en\"). Optional."))
    :category "web"))
+
+;;;;; Presets
+
+(with-eval-after-load 'gptel
+  (gptel-make-preset 'research-agent
+    :system im-ai-research-prompt
+    :backend "ChatGPT"
+    :model 'gpt-4o-mini
+    :confirm-tool-calls nil
+    :tools '("web")
+    :use-tools t
+    :include-tool-results t)
+
+  (gptel-make-preset 'coding-helper-agent
+    :system im-ai-programming-agent-prompt
+    :backend "ChatGPT"
+    :model 'gpt-4.1
+    :confirm-tool-calls nil
+    :tools '("web")
+    :use-tools t
+    :include-tool-results t)
+
+  (gptel-make-preset 'coding-agent
+    :system im-ai-programming-agent-prompt
+    :backend "ChatGPT"
+    :model 'gpt-4.1
+    :confirm-tool-calls nil
+    :tools '("web" "files")
+    :use-tools t
+    :include-tool-results t)
+
+  (gptel-make-preset 'elisp-coding-agent
+    :system im-ai-programming-agent-prompt
+    :backend "ChatGPT"
+    :model 'gpt-4.1
+    :confirm-tool-calls nil
+    :tools '("web" "files" "elisp")
+    :use-tools t
+    :include-tool-results t))
 
 ;;;; Footer
 
