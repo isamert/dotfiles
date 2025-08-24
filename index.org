@@ -704,7 +704,8 @@ To enable it, run this:
 ** Clear all notifications with a keypress
 Save the script by running the next code block:
 #+begin_src sh
-  curl 'https://gist.githubusercontent.com/lancethomps/a5ac103f334b171f70ce2ff983220b4f/raw/50a04a65f16349a70884f490f856f27021ac396e/close_notifications_applescript.js' > ~/.local/bin/macos-clear-all-notifications.js
+# This fetches the latest version of the script, be sure to verify before
+curl 'https://gist.githubusercontent.com/lancethomps/a5ac103f334b171f70ce2ff983220b4f/raw' > ~/.local/bin/macos-clear-all-notifications.js
 #+end_src
 
 And here is the skhd binding:
