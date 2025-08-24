@@ -499,6 +499,11 @@ using this function."
 
 ;;;;; Themes
 
+;;;;;; Installing themes
+
+(use-package acme-theme
+  :straight (:host github :repo "ianyepan/acme-emacs-theme"))
+
 (use-package modus-themes
   :defer t)
 
@@ -523,7 +528,8 @@ using this function."
   (im-adaptive-theme-detect-geolocation-automatically t)
   (im-adaptive-theme-day-themes
    '(;; Pinkish white theme, really nice to look at.
-     ef-summer))
+     ef-summer
+     acme))
   (im-adaptive-theme-night-themes
    '(;; Grayish theme with great colors.
      doom-one
@@ -535,6 +541,49 @@ using this function."
      ef-cherie
      ;; Nice dark theme with good contrast.
      doom-Iosvkem)))
+
+;;;;;; Theme customizations
+
+(defvar im-after-load-theme-hook nil
+  "Hook to run after a theme is loaded using `load-theme'.")
+
+(define-advice load-theme (:after (theme &rest _) run-after-load-theme-hook)
+  "Run `after-load-theme-hook'."
+  (seq-each (lambda (it) (funcall it theme)) im-after-load-theme-hook))
+
+(defun im-setup-themes (theme)
+  (pcase theme
+    ('acme
+     (setq tab-bar-separator "  ❯  ")
+     (custom-theme-set-faces
+      'acme
+      '(font-lock-builtin-face
+        ((t (:foreground "DarkOrchid3" :weight bold))))
+      ;; tab-bar stuff
+      '(tab-bar
+        ((t (:background "#EFEFD8" :foreground "#444444" :box nil))))
+      '(tab-bar-tab
+        ((t (;; :background "#E8EB98"
+             :foreground "#444444" :weight bold
+             :underline (:color "#888838" :style line)
+             :overline (:color "#F8FCE8" :style wave)
+             :box nil))))
+      '(tab-bar-tab-inactive
+        ((t (:background "#EFEFD8" :foreground "#444444" :slant italic
+             :box nil :overline (:color "#CCCCB7" :style wave)))))
+      '(tab-bar-tab-group-current
+        ((t (;; :background "#E8EB98"
+             :foreground "#1054AF" :weight bold
+             :underline (:color "#1054AF" :style line)
+             :overline (:color "#F8FCE8" :style wave)
+             :box nil))))
+      '(tab-bar-tab-group-inactive
+        ((t (:background "#EFEFD8" :foreground "#1054AF" :slant italic
+             :box nil :overline (:color "#CCCCB7" :style wave)))))
+      '(tab-bar-tab-ungrouped
+        ((t (:background "#EFEFD8" :foreground "#007777" :slant italic :box nil))))))))
+
+(add-hook 'im-after-load-theme-hook #'im-setup-themes)
 
 ;;;;; Fonts
 
@@ -9332,6 +9381,7 @@ SELECT * FROM _ LIMIT 1;
   (tab-bar-tab-hints t)
   (tab-bar-auto-width nil)
   (tab-bar-auto-width-max t)
+  (tab-bar-tab-hints nil)
   (tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
   (tab-bar-tab-name-function #'tab-bar-tab-name-current)
   ;; FIXME: For some reason, my function gets slower over time. Dunno
