@@ -1003,25 +1003,19 @@ buffer."
    :name "get_webpage_contents"
    :function (lambda (callback url)
                (message "gptel :: get_webpage_contents(%s)" url)
-               (require 'async)
-               ;; Instead of using async fetch, I use async-start to
-               ;; offload the parsing of the webpage because it may
-               ;; also take some noticeable time and block Emacs.
-               (async-start
-                (lambda ()
-                  (require 'shr)
-                  (require 'url-handlers)
-                  (with-temp-buffer
-                    (let ((url-user-agent
-                           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.10 Safari/605.1.1"))
-                      (url-insert-file-contents url))
-                    (let ((shr-use-fonts nil)
-                          (shr-fill-text nil)
-                          (shr-use-colors nil)
-                          (shr-inhibit-images t))
-                      (shr-render-region (point-min) (point-max)))
-                    (buffer-substring-no-properties (point-min) (point-max))))
-                (lambda (result) (funcall callback result))))
+               (request url
+                 :headers `(("User-Agent" . "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.10 Safari/605.1.1"))
+                 :parser (lambda ()
+                           (let ((shr-use-fonts nil)
+                                 (shr-fill-text nil)
+                                 (shr-use-colors nil)
+                                 (shr-inhibit-images t))
+                             (shr-render-region (point-min) (point-max)))
+                           (buffer-substring-no-properties (point-min) (point-max)) )
+                 :success
+                 (cl-function
+                  (lambda (&key data &allow-other-keys)
+                    (funcall callback data)))))
    :async t
    :description "Return the contents of a webpage."
    :args '((:name "url"
@@ -1069,7 +1063,7 @@ buffer."
                            "---\n")))
                       .web.results "")))))
    :description
-   "Perform a web search and receive concise results."
+   "Perform a web search and receive concise results and links to sources."
    :args
    '((:name "query"
       :type string
@@ -1082,15 +1076,15 @@ buffer."
      ;; - query
      ;; - videos
      ;; - web")
-     (:name "freshness"
-      :type string
-      :description "Restrict to recency (\"pd\", \"pw\", \"pm\", \"py\", or date range). Optional.
-- pd: Discovered within the last 24 hours.
-- pw: Discovered within the last 7 Days.
-- pm: Discovered within the last 31 Days.
-- py: Discovered within the last 365 Days.
+     ;; (:name "freshness"
+     ;;       :type string
+     ;;       :description "Restrict to recency (\"pd\", \"pw\", \"pm\", \"py\", or date range). Optional.
+     ;; - pd: Discovered within the last 24 hours.
+     ;; - pw: Discovered within the last 7 Days.
+     ;; - pm: Discovered within the last 31 Days.
+     ;; - py: Discovered within the last 365 Days.
 
-This is only important if the query requires it (like if you are searching for something new, like news). Otherwise dont' use this.")
+     ;; This is only important if the query requires it (like if you are searching for something new, like news). Otherwise dont' use this.")
      (:name "search_lang"
       :type string
       :description "Result language code (default: \"en\"). Optional."))
