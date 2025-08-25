@@ -8789,6 +8789,7 @@ Lisp function does not specify a special indentation."
 
 (use-package redshank
   ;; All interactive redshank commands
+  :straight (:host github :repo "isamert/redshank")
   :commands (redshank-maybe-splice-progn
              redshank-point-at-enclosing-let-form
              redshank-ignore-event
