@@ -7894,7 +7894,17 @@ Useful if .elfeed directory is freshly syncned."
 
 (evil-define-key 'normal 'global (kbd "M-d") #'im-kill-this-buffer)
 
-(im-leader "1" (λ-interactive (call-interactively (local-key-binding (kbd "C-c C-c")))))
+(im-leader
+  "1" (λ-interactive
+       (call-interactively (local-key-binding (kbd "C-c C-c")))))
+
+(im-leader-v
+  "x" #'execute-extended-command
+  "/k" #'helpful-key
+  "/f" #'helpful-callable
+  "/v" #'helpful-variable
+  "/l" #'find-library
+  "/F" #'describe-face)
 
 ;;;; Programming languages
 
@@ -9354,6 +9364,7 @@ SELECT * FROM _ LIMIT 1;
   (tab-bar-auto-width nil)
   (tab-bar-auto-width-max t)
   (tab-bar-tab-hints nil)
+  (tab-bar-separator "  ❯  ")
   (tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
   (tab-bar-tab-name-function #'tab-bar-tab-name-current)
   ;; FIXME: For some reason, my function gets slower over time. Dunno
@@ -11138,7 +11149,8 @@ more than one header of a single org buffer."
     ("r" "Rename file & buffer" im-rename-current-file-name-and-buffer)
     ("D" "Delete file" im-delete-current-file)
     ("i" "Show file info" im-print-buffer-file-info)
-    ("g" "Revert to disk" revert-buffer)]
+    ("g" "Revert to disk" revert-buffer)
+    ("F" "Open in another frame" im-display-buffer-other-frame)]
    ["Copy Path"
     ("c" "Copy path (pretty)" im-copy-current-filename)
     ("C" "Copy path (raw)" (lambda () (interactive) (im-copy-current-filename :pretty nil)))]
