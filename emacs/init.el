@@ -7385,6 +7385,12 @@ mails."
   (im-nextcloud-user im-secrets-nextcloud-user)
   (im-nextcloud-auth im-secrets-nextcloud-auth))
 
+;;;;; im-char-picker --- insert utf8 chars easily
+
+(use-package im-char-picker
+  :straight nil
+  :general (im-leader "ic" #'im-char-picker))
+
 ;;;;; ereader --- ebook reader with org integration
 
 (use-package ereader
