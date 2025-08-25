@@ -833,6 +833,10 @@ side window the only window'"
   :keymaps 'override
   :states 'normal)
 
+(general-create-definer im-leader-lesser
+  :prefix "<SPC>"
+  :states 'normal)
+
 (general-create-definer im-leader-v
   :prefix "<SPC>"
   :keymaps 'override
@@ -6568,9 +6572,11 @@ Fetches missing channels/users first."
     :stream t
     :key gptel-api-key))
 
-(general-def :keymaps '(gptel-mode-map org-ai-mode-map) :states '(normal motion)
-  "C-x [" #'im-ai-previous-block
-  "C-x ]" #'im-ai-next-block)
+(im-leader
+  :keymaps '(gptel-mode-map org-ai-mode-map)
+  :states '(normal motion)
+  "<left>" #'im-ai-previous-block
+  "<right>" #'im-ai-next-block)
 
 (im-make-repeatable im-ai
   "[" im-ai-previous-block
@@ -6999,7 +7005,12 @@ Fetches missing channels/users first."
   (:keymaps 'outli-mode-map
    "C-x [" #'outline-previous-heading
    "C-x ]" #'outline-next-heading)
-
+  (im-leader :keymaps 'outli-mode-map
+    "<left>" #'outline-previous-heading
+    "<right>" #'outline-next-heading)
+  (im-leader-lesser
+    "<left>" #'backward-page
+    "<right>" #'forward-page)
   ;; Here are some org-mode like bindings for outli:
   (:keymaps 'outli-mode-map :states 'normal
    "gh" #'outline-up-heading
@@ -7910,6 +7921,7 @@ Useful if .elfeed directory is freshly syncned."
   "/f" #'helpful-callable
   "/v" #'helpful-variable
   "/l" #'find-library
+  "/." #'display-local-help
   "/F" #'describe-face)
 
 ;;;; Programming languages
