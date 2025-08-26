@@ -6724,7 +6724,18 @@ Fetches missing channels/users first."
   (setq lab-token ty-gitlab-token)
   (setq lab-group ty-gitlab-group)
   (setq lab-should-open-pipeline-on-manual-action? t)
-  (add-hook 'midnight-hook #'im-update-all-projects))
+  (add-hook 'midnight-hook #'im-update-all-projects)
+  (add-hook
+   'lab-open-merge-request-diff-hook
+   (cl-function
+    (lambda (&key project &allow-other-keys)
+      (when (or (not (project-current))
+                (not (string-suffix-p (project-name (project-current))
+                                      (plist-get project :path)
+                                      'ignore-case)))
+        (cd (minibuffer-with-setup-hook
+                (lambda () (insert (plist-get project :path)))
+              (funcall project-prompter))))))))
 
 (defun im-update-all-projects ()
   (lab-pull-bulk (lab-all-project-roots im-projects-root))
