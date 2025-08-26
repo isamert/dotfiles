@@ -499,6 +499,21 @@ using this function."
 
 ;;;;; Themes
 
+;;;;;; Run stuff on theme changes
+
+(defvar im-after-load-theme-hook nil
+  "Hook to run after a theme is loaded using `load-theme'.
+
+This is good for fixing some themes after they are loaded.  I quite
+frequently switch between themes, so a single `set-face-attribute' won't
+cut it. I need to run those statements on every theme change.")
+
+(define-advice enable-theme (:after (theme &rest _) run-after-load-theme-hook)
+  "Run `after-load-theme-hook'."
+  (seq-each (lambda (it) (funcall it theme)) im-after-load-theme-hook))
+
+;;;;;; Install some themes
+
 (use-package acme-theme
   :straight (:host github :repo "isamert/acme-emacs-theme"))
 
@@ -9433,7 +9448,13 @@ SELECT * FROM _ LIMIT 1;
   (im-make-repeatable tab-bar-switch
     "t" evil-tab-next
     "t" tab-bar-switch-to-next-tab
-    "T" tab-bar-switch-to-prev-tab))
+    "T" tab-bar-switch-to-prev-tab)
+
+  (defun im-fix-tab-bar-faces (&rest _)
+    "Most of the themes I use does not support tab-bar, this mostly fixes it."
+    (set-face-attribute 'tab-bar-tab nil :background nil :box nil :bold t :underline t)
+    (set-face-attribute 'tab-bar-tab-inactive nil :background nil :box nil :bold nil :underline nil :italic t))
+  (add-hook 'im-after-load-theme-hook #'im-fix-tab-bar-faces))
 
 ;; I want to show ~consult-buffer~ when I open a new tab to be able to
 ;; quickly jump a file. I also want to show it in a buffer, not in
@@ -12570,7 +12591,10 @@ Throw error otherwise."
 
 (with-eval-after-load 'org
   (add-hook 'org-clock-in-hook #'im-update-global-mode-line)
-  (add-hook 'org-clock-out-hook #'im-update-global-mode-line))
+  (add-hook 'org-clock-out-hook #'im-update-global-mode-line)
+  (add-hook 'im-after-load-theme-hook
+            #'(lambda (&rest _)
+                (set-face-attribute 'org-mode-line-clock nil :inherit nil :italic t))))
 
 ;;;; Operating system related
 
