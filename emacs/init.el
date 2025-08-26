@@ -1280,7 +1280,14 @@ side window the only window'"
   (org-directory "~/Documents/notes")
   (org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
-
+  (org-log-states-order-reversed nil)
+  ;; ^ add log entries from top the bottom, in chronological order
+  (org-log-note-clock-out t)
+  ;; ^ Add notes to LOGBOOK while clocking out from a task
+  (org-log-state-notes-insert-after-drawers t)
+  ;; ^ Insert notes (added by `org-add-note') after the drawer
+  (org-log-into-drawer t)
+  ;; ^ Insert notes (added by `org-add-note') inside the drawer, this overrides the one above but keeping both for reference
   :config
   ;; Automatically invoke `org-indent-mode' which gives nice little
   ;; indentation under subsections. It makes reading easier. This does
@@ -1316,6 +1323,16 @@ side window the only window'"
 
 (add-hook 'org-mode-hook #'im-disable-electric-indent)
 
+(defun im-org-add-note-to-currently-clocked-in-header ()
+  "Add note to currently clocked in header.
+If not clocked in, ask a header among one of the latest clocked in
+headers."
+  (interactive)
+  (save-window-excursion
+    (save-excursion
+      (org-clock-goto (not org-clock-current-task))
+      (org-add-note))))
+
 ;;;;; Keybindings
 
 (use-package evil-org
@@ -1330,14 +1347,15 @@ side window the only window'"
     "oyy" #'im-org-store-link-dwim
     "oa"  #'org-agenda
     "ow"  #'widen
+    "on"  #'im-org-add-note-to-currently-clocked-in-header
     ;; org-capture
     "og" #'org-capture
     "oG" #'org-capture-goto-last-stored
     ;; org-clock
     "occ" #'org-clock-in
     "ocC" #'org-clock-cancel
-    "ocr" #'org-clock-in-last
-    "ocl" #'org-clock-in-last
+    "ocr" (λ-interactive (org-clock-in-last '(4)))
+    "ocl" (λ-interactive (org-clock-in-last '(4)))
     "oco" #'org-clock-out
     "ocg" #'org-clock-goto)
   (im-leader :keymaps 'org-mode-map
