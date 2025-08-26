@@ -224,4 +224,5 @@ Covers programming, math, text, currency, and box drawing symbols."
          (choice (completing-read "Insert UTF-8 char: " (mapcar #'car utf8-chars))))
     (insert (cdr (assoc choice utf8-chars)))))
 
-;;;  im-char-picker.el ends here
+(provide 'im-char-picker)
+;;; im-char-picker.el ends here
