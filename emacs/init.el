@@ -2745,12 +2745,15 @@ open.")
 ;; I started using Emacs in full screen (Emacs maximalism goes on), so
 ;; this is helpful.
 
-(use-package display-time
-  :straight (:type built-in)
-  :hook (after-init . display-time-mode)
-  :init
-  (setq display-time-format "%b %d, %H:%M %a")
-  (setq display-time-default-load-average nil))
+;; UPDATE: Now I manually put this info into the modeline, in
+;; `im-update-global-mode-line' function.
+
+;; (use-package display-time
+;;   :straight (:type built-in)
+;;   :hook (after-init . display-time-mode)
+;;   :init
+;;   (setq display-time-format "%b %d, %H:%M %a")
+;;   (setq display-time-default-load-average nil))
 
 ;;;;; outline-mode
 
@@ -12557,37 +12560,51 @@ Throw error otherwise."
 (when tab-bar-show
   (run-at-time 10 45 #'im-update-global-mode-line))
 
-(defun im-update-global-mode-line (&optional force)
+(defun im-update-global-mode-line (&rest _)
   (interactive)
   (let ((all-the-icons-default-adjust 0))
     (setq
      global-mode-string
      `(""
+       ,@(when (bound-and-true-p empv-current-media-title)
+           (list
+            (all-the-icons-faicon "music")
+            " "
+            (s-truncate 30 empv-current-media-title)
+            "  ·  "))
        ,@(when im-is-mic-muted?
            (list
             (all-the-icons-faicon "microphone-slash")
-            " | "))
+            "  ·  "))
        ,@(when (bound-and-true-p appt-mode-string)
            (list
             (all-the-icons-faicon "calendar-check-o")
             " "
-            appt-mode-string))
+            appt-mode-string
+            " ·  "))
        ,@(if (and (functionp #'org-clocking-p) (org-clocking-p))
              (list
               (all-the-icons-fileicon "org")
               " "
-              org-mode-line-string)
-           (list (all-the-icons-fileicon "xmos") " "))
-       ,@(when display-time-string
+              org-mode-line-string
+              " ·  ")
+           (list (all-the-icons-fileicon "xmos") "  ·  "))
+       ,@(when t
+           (list
+            (all-the-icons-material
+             "date_range")
+            " "
+            (format-time-string "%b %d")
+            " ·  "))
+       ,@(when t
            (list
             (all-the-icons-wicon
              (format "time-%s"
                      ;; Convert to number first so that leading 0s are stripped away
                      (string-to-number (format-time-string "%I"))))
             " "
-            display-time-string)))))
-  (when force
-    (force-mode-line-update)))
+            (format-time-string "%H:%M %a"))))))
+  (force-mode-line-update :force))
 
 (with-eval-after-load 'org
   (add-hook 'org-clock-in-hook #'im-update-global-mode-line)
@@ -12682,7 +12699,7 @@ Asks for STATUS if called interactively."
                    :persistent nil
                    :never-persist t)))
         (setq im-is-mic-muted? muted?)
-        (im-update-global-mode-line :force)
+        (im-update-global-mode-line)
         (message
          "Your mic is %s %s"
          (propertize status 'face 'bold)
