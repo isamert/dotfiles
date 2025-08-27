@@ -5567,20 +5567,12 @@ SORT should be nil to disable sorting."
 ;; normal mode from emacs mode) emacs state so that you can make use
 ;; of use vi-mode in zsh.
 
-(defun evil-collection-vterm-escape-stay ()
-  "Go back to normal state but don't move cursor backwards.
-Moving cursor backwards is the default vim behavior but it is not
-appropriate in some cases like terminals."
-  (setq-local evil-move-cursor-back nil))
-
 (im-make-repeatable im-vterm-prompt
   "[" vterm-previous-prompt
   "]" vterm-next-prompt)
 
 (use-package vterm
-  :hook ((vterm-mode . evil-collection-vterm-escape-stay)
-         (vterm-mode . im-disable-hl-line-mode-for-buffer)
-         (vterm-mode . evil-emacs-state))
+  :hook ((vterm-mode . im-disable-hl-line-mode-for-buffer))
   :general
   (im-leader-v
     "tj" #'im-jump-to-visible-term
@@ -7447,7 +7439,10 @@ mails."
 
 (use-package im-char-picker
   :straight nil
-  :general (im-leader "ic" #'im-char-picker))
+  :general
+  (im-leader "ic" #'im-char-picker)
+  (:states '(insert)
+   "M-u" #'im-char-picker))
 
 ;;;;; ereader --- ebook reader with org integration
 
