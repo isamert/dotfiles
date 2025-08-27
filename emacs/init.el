@@ -9430,6 +9430,7 @@ SELECT * FROM _ LIMIT 1;
   (tab-bar-auto-width-max t)
   (tab-bar-tab-hints nil)
   (tab-bar-separator "  ❯  ")
+  (tab-bar-close-button nil)
   (tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
   (tab-bar-tab-name-function #'tab-bar-tab-name-current)
   ;; FIXME: For some reason, my function gets slower over time. Dunno
@@ -9500,6 +9501,8 @@ SELECT * FROM _ LIMIT 1;
    "\\|dir-data"
    "\\|.*-ls\\*"
    "\\|.*stderr\\*"
+   "\\|.*Dirvish-.*\\*"
+   "\\| \\*"
    "")
   "Regexp to filter out buffer names on tab line.")
 
@@ -9510,7 +9513,17 @@ SELECT * FROM _ LIMIT 1;
   (tab-line-close-button-show 'selected)
   (tab-line-tabs-function #'im-tab-line-buffers)
   (tab-line-tab-name-truncated-max 32)
-  (tab-line-tab-name-function #'im-tab-line-buffer-name))
+  (tab-line-tab-name-function #'im-tab-line-buffer-name)
+  (tab-line-separator " • ")
+  (tab-line-close-button nil)
+  :config
+  (defun im-fix-tab-line-faces (&rest _)
+    "Most of the themes I use does not support tab-bar, this mostly fixes it."
+    (set-face-attribute 'tab-line-tab nil :background nil :box nil :bold t :underline t)
+    (set-face-attribute 'tab-line-tab-current nil :background nil :box nil :bold t :underline t)
+    (set-face-attribute 'tab-line-highlight nil :background nil :box nil :bold t :underline t)
+    (set-face-attribute 'tab-line-tab-inactive nil :background nil :box nil :bold nil :underline nil :italic t))
+  (add-hook 'im-after-load-theme-hook #'im-fix-tab-line-faces))
 
 (defun im-tab-line-buffer-name (buffer &optional _buffers)
   (let ((name (tab-line-tab-name-truncated-buffer buffer)))
@@ -9541,26 +9554,28 @@ This function is intended for use with `tab-line-mode' to conveniently
 group related buffers (e.g., multiple shells or AI chat sessions in the
 same project) together on the tab line, improving navigation in projects
 where these special buffers may be duplicated."
-  (let* ((current (current-buffer))
-         (cur-root (or (im-current-project-root) default-directory))
-         (orig-name (buffer-name current))
-         (prefix (if (> (length orig-name) 3)
-                     (substring orig-name 0 4)
-                   orig-name)))
-    (seq-sort-by
-     #'buffer-name #'string<
-     (cl-loop for buf in (buffer-list)
-              for buf-name = (buffer-name buf)
-              unless (string-match-p im-tab-line-hidden-buffer-name-regexp buf-name)
-              when (when-let* ((proj-root
-                                (or (buffer-local-value 'im-buffer-project-root buf)
-                                    (with-current-buffer buf
-                                      (setq-local im-buffer-project-root
-                                                  (or (im-current-project-root)
-                                                      default-directory))))))
-                     (and (equal proj-root cur-root)
-                          (string-prefix-p prefix buf-name)))
-              collect buf))))
+  (let ((orig-name (buffer-name (current-buffer))))
+    (if (string-prefix-p "*" orig-name) ; Handle special buffers
+        (let* ((cur-root (or (im-current-project-root) default-directory))
+               (prefix (if (> (length orig-name) 3)
+                           (substring orig-name 0 4)
+                         orig-name)))
+          (seq-sort-by
+           #'buffer-name #'string<
+           (cl-loop for buf in (buffer-list)
+                    as buf-name = (buffer-name buf)
+                    unless (string-match-p im-tab-line-hidden-buffer-name-regexp buf-name)
+                    when (when-let* ((proj-root
+                                      (or (buffer-local-value 'im-buffer-project-root buf)
+                                          (with-current-buffer buf
+                                            (setq-local im-buffer-project-root
+                                                        (or (im-current-project-root)
+                                                            default-directory))))))
+                           (and (equal proj-root cur-root)
+                                (string-prefix-p prefix buf-name)))
+                    collect buf)))
+      ;; Normal buffers uses this.
+      (tab-line-tabs-fixed-window-buffers))))
 
 ;;;;; tabgo.el
 
