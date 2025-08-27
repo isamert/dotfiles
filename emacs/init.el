@@ -11598,7 +11598,7 @@ COMMAND and args as ARGS.
 ENV is a list of environment variables and values in the
 following form:
 
-    '(\"DISPLAY=\" \"X=5\" \"Y=6\")
+    \\='(\"DISPLAY=\" \"X=5\" \"Y=6\")
 
 If EAT is non nil, use eat shell to display output which handles
 terminal outputs way better.  ARGS must be a list.
@@ -11864,11 +11864,14 @@ an indirect buffer."
                  im-string-url-case
                  s-downcase))))
          (dir (expand-file-name "~/Documents/memes"))
-         (default-directory dir)
-         (cmd (format "yt-dlp --output '%s.%%(ext)s' '%s'" title url)))
-    (message "im-meme-downloader :: %s" cmd)
+         (default-directory dir))
+    (message "im-meme-downloader :: Downloading...")
+    (when-let* ((buf (get-buffer "*im-meme-downloader*")))
+      (kill-buffer buf))
     (im-shell-command
-     :command cmd
+     :buffer-name "*im-meme-downloader*"
+     :command "yt-dlp"
+     :args `( "--output" ,(format "%s.%%(ext)s" title) ,url)
      :switch nil
      :on-finish
      (lambda (output &rest _)
@@ -11879,10 +11882,12 @@ an indirect buffer."
                  (fname (abbreviate-file-name (nth 1 matches))))
            (progn
              (alert (format "Downloaded: %s!" fname))
+             (message "im-meme-downloader :: Downloading...Done. Copied to clipboard")
              (kill-new (format "%s/%s" dir fname)))
          (alert "Can't parse yt-dlp output!")))
      :on-fail
      (lambda (&rest _)
+       (message "im-meme-downloader :: Downloading...Failed")
        (alert (format "Error while downloading: %s!" url))))))
 
 ;;;;; zoom
