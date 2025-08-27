@@ -1345,7 +1345,7 @@ headers."
   (interactive)
   (save-window-excursion
     (save-excursion
-      (org-clock-goto (not org-clock-current-task))
+      (org-clock-goto (not org-clock-clocking-in))
       (org-add-note))))
 
 ;;;;; Keybindings
@@ -12594,9 +12594,11 @@ Throw error otherwise."
      `(""
        ,@(when (bound-and-true-p empv-current-media-title)
            (list
-            (all-the-icons-faicon "music")
+            (pcase empv-player-state
+              ('playing (all-the-icons-faicon "music"))
+              ('paused (all-the-icons-faicon "pause")))
             " "
-            (s-truncate 30 empv-current-media-title)
+            (s-truncate 45 empv-media-title "…")
             "  ·  "))
        ,@(when im-is-mic-muted?
            (list
@@ -12606,21 +12608,21 @@ Throw error otherwise."
            (list
             (all-the-icons-faicon "calendar-check-o")
             " "
-            appt-mode-string
+            (propertize appt-mode-string 'face '(:underline t))
             " ·  "))
        ,@(if (and (functionp #'org-clocking-p) (org-clocking-p))
              (list
               (all-the-icons-fileicon "org")
               " "
-              org-mode-line-string
+              (s-truncate 45 org-mode-line-string "…")
               " ·  ")
-           (list (all-the-icons-fileicon "xmos") "  ·  "))
+           (list (all-the-icons-faicon "bed") "  ·  "))
        ,@(when t
            (list
-            (all-the-icons-material
-             "date_range")
+            (all-the-icons-faicon
+             "calendar")
             " "
-            (format-time-string "%b %d")
+            (format-time-string "%b %d, %a")
             " ·  "))
        ,@(when t
            (list
@@ -12629,7 +12631,7 @@ Throw error otherwise."
                      ;; Convert to number first so that leading 0s are stripped away
                      (string-to-number (format-time-string "%I"))))
             " "
-            (format-time-string "%H:%M %a"))))))
+            (format-time-string "%H:%M "))))))
   (force-mode-line-update :force))
 
 (with-eval-after-load 'org
