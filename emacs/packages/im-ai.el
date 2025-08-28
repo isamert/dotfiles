@@ -73,46 +73,68 @@
   "You are a code generation assistant focused on producing accurate, efficient solutions using best-practice and idiomatic code. Adhere strictly to the following rules:
 
 1. Always prefer standard libraries and built-in functions over custom code, unless a standard solution is impractical.
-2. Output concise solutions—include only essential code. Omit comments, type hints, or boilerplate unless they are explicitly required or critical for understanding.
-3. If the query mentions edge cases or constraints, ensure your solution properly handles or documents them.
-4. When context (such as file content or workspace symbols) is provided, tailor your solution to integrate cleanly, minimizing unnecessary changes.
-5. If multiple idiomatic solutions exist, pick the shortest and simplest idiomatic approach for the requested language. Do not explain alternatives unless the query requests them.
-6. If user input, output, or error handling is required by the query, provide only the minimal viable code.
-7. When in doubt about unspecified details, assume standard programming conventions for the given language.
+2. Output concise solutions—include only essential code.
+3. When context (such as file content or workspace symbols) is provided, tailor your solution to integrate cleanly, minimizing unnecessary changes.
+4. Pick the shortest and simplest idiomatic approach for the requested language.
+5. Assume standard programming conventions for the given language.
+
+# Request format:
+
+<language>
+Programming Language
+</language>
+
+<user_query>
+The thing that user wants you to do/provide.
+</user_query>
+
+<context>
+The context that you need to work on. Optionally provided.
+</context>
+
+<full_file_contents>
+Full file context. Optionally provided.
+</full_file_contents>
+
+<surrounding_context>
+The surrounding context.
+</surrounding_contents>
+
+<workspace_contents>
+All workspace items, symbols etc. Optionally provided.
+</workspace_contents>
+
+# Response:
+
+Only respond with a file for the given language, starting with a succinct code comment explaining your reasoning (unless forbidden by user query)."
+  "System prompt used in `im-ai-snippet'."
+  :type 'string
+  :group 'im-ai)
+
+(defcustom im-ai-snippet-dumb-prompt
+  "You are an helpful assistant. You will get a requirement from user and handle that as simple as possible.
 
 **Request Format:**
 
 ```
-Language: <Programming language>
-Query: <The user query.>
-Context: <Optional context.>
-Full file contents: <Optional, if relevant.>
-Workspace contents: <Optional, if relevant.>
+<user_query>
+The thing that user wants you to do/provide.
+</user_query>
+
+<context>
+The context that you need to work on. Optionally provided.
+</context>
+
+<full_file_contents>
+Full file context. Optionally provided.
+</full_file_contents>
+
+<workspace_contents>
+All workspace items, symbols etc. Optionally provided.
+</workspace_contents>
 ```
 
-**Response Format:**
-
-```
-<Reasoning lines as a comment, if relevant.>
-<Code solution>
-```
-
-**Example Request:**
-
-```
-Language: Python
-Query: Merge two lists alternately
-```
-
-**Example Response:**
-
-```python
-# Use zip and chain for alternate merging of lists.
-from itertools import chain
-list(chain.from_iterable(zip(list1, list2)))
-```
-
-Handle further requests in this precise format. Do not provide explanations outside the required reasoning comment."
+ONLY output your answer to the query, with no explanations."
   "System prompt used in `im-ai-snippet'."
   :type 'string
   :group 'im-ai)
@@ -543,16 +565,17 @@ Use @file to include full file contents to the prompt and use
 @workspace to include all workspace symbols to the prompt."
   (interactive (list
       (read-string
-       (format "Question (Use @region, @file, @workspace, current model: %s): " im-ai-model))))
+       (format "Question (Use @region, @file, @workspace, @context, @dumb, @noexp, current model: %s): " im-ai-model))))
   (let* ((gptel-org-convert-response nil)
+         (dumb? (s-matches? (rx (or bos space) "@dumb" (or space eos)) prompt))
          (edit-region? (and (use-region-p)
-                            (not (s-matches? (rx (or bos space)
-                                                 "@region"
-                                                 (or space "," eos))
+                            (not (s-matches? (rx (or bos space) "@region" (or space "," eos))
                                              prompt))))
          (region (if (use-region-p)
                      (buffer-substring-no-properties (region-beginning) (region-end))
                    ""))
+         (rbegin (region-beginning))
+         (rend (region-end))
          (gptel-backend (im-ai--get-gptel-backend im-ai-service))
          (gptel-model im-ai-model))
     (if edit-region?
@@ -569,33 +592,57 @@ Use @file to include full file contents to the prompt and use
           (deactivate-mark)
           (goto-char end))))
     (setq im-ai--last-processed-point (point))
-    ;; TODO: Move this expansion features to other functions too
     (gptel-request
-        (s-trim
-         (format
-          "Language: %s
-Query: %s
-%s
-%s
-%s"
-          (im-ai--get-current-language)
-          (s-replace-all `(("@file" . "")
-                           ("@workspace" . "")
-                           ("@region" . ,(concat "\n```\n" region "\n```\n")))
-                         prompt)
-          (if edit-region? (concat "Context: \n```\n" region "\n```") "")
-          (if (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
-              (concat "Full file contents: \n```\n"
-                      (save-restriction
-                        (widen)
-                        (buffer-substring-no-properties (point-min) (point-max)))
-                      "\n```")
-            "")
-          (if (s-matches? (rx (or bos space) "@workspace" (or space eos)) prompt)
-              (concat "Workspace contents: \n```\n"  (im-ai-workspace-context) "\n```")
-            "")))
+        (s-join
+         "\n"
+         `(,@(when (not dumb?)
+               (list
+                "<language>"
+                (im-ai--get-current-language)
+                "</language>"
+                "\n"))
+           "<user_query>"
+           ,(s-replace-all `(("@file" . "")
+                             ("@context" . "")
+                             ("@dumb" . "")
+                             ("@workspace" . "")
+                             ("@noexp" . ". Do not include any explanations, only output the solution.")
+                             ("@region" . ,(concat "<region>\n" (s-trim region) "\n</region>")))
+                           prompt)
+           "</user_query>"
+           "\n"
+           ,@(when edit-region?
+               (list
+                "<context>"
+                (s-trim region)
+                "</context>"
+                "\n"))
+           ,@(when (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
+               (list
+                "<full_file_contents>"
+                (save-restriction
+                  (widen)
+                  (buffer-substring-no-properties (point-min) (point-max)))
+                "</full_file_contents>"
+                "\n"))
+           ,@(when (s-matches? (rx (or bos space) "@workspace" (or space eos)) prompt)
+               (list
+                "<workspace_contents>"
+                (im-ai-workspace-context)
+                "</workspace_contents>"
+                "\n"))
+           ,@(when (s-matches? (rx (or bos space) "@context" (or space eos)) prompt)
+               (list
+                "<surrounding_context>"
+                "..."
+                (let* ((start (save-excursion (goto-char rbegin) (forward-line -10) (line-beginning-position)))
+                       (end (save-excursion (goto-char rend) (forward-line 10) (line-end-position))))
+                  (buffer-substring-no-properties start end))
+                "..."
+                "</surrounding_context>"
+                "\n"))))
       :stream t
-      :system im-ai-snippet-sys-prompt
+      :system (if dumb? im-ai-snippet-dumb-prompt im-ai-snippet-sys-prompt)
       :fsm (gptel-make-fsm :handlers gptel-send--handlers))))
 
 (cl-defun im-ai--cleanup-stream ()
