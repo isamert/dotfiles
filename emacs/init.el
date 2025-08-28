@@ -5996,12 +5996,12 @@ this command is invoked from."
    :token ty-slack-token
    :enterprise-token ty-slack-enterprise-token
    :cookie ty-slack-cookie
-   :subscribed-channels ty-slack-channels
    :visible-threads nil
    :mark-as-read-immediately t)
   (slack-start)
   (slack-change-current-team)
-  (run-at-time nil 3600 #'im-slack-check))
+  (run-at-time nil 3600 #'im-slack-check)
+  (setq slack-extra-subscribed-channels ty-slack-channels))
 
 (defun im-slack--enable-completion-at-point ()
   (setq-local

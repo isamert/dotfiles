@@ -220,7 +220,64 @@ Covers programming, math, text, currency, and box drawing symbols."
             ("Other: ♠ (spade, card, game)" . "♠")
             ("Other: ♣ (club, card, game)" . "♣")
             ("Other: ♦ (diamond, card, game)" . "♦")
-            ("Other: ♡ (heart hollow, love)" . "♡")))
+            ("Other: ♡ (heart hollow, love)" . "♡")
+
+            ;; Toggles and switches
+            ("Toggle: ⏻ (power, on/off, switch)" . "⏻")
+            ("Toggle: ⏽ (power on, switch)" . "⏽")
+            ("Toggle: ⏼ (power sleep, standby)" . "⏼")
+            ("Toggle: ⭮ (toggle, refresh switch direction, shuffle)" . "⭮")
+
+            ;; Media controls
+            ("Media: ▶ (play, start, go)" . "▶")
+            ("Media: ⏸ (pause, hold)" . "⏸")
+            ("Media: ⏹ (stop, end)" . "⏹")
+            ("Media: ⏺ (record, circle dot)" . "⏺")
+            ("Media: ⏭ (next, fast forward, skip)" . "⏭")
+            ("Media: ⏮ (previous, rewind, skip back)" . "⏮")
+            ("Media: ⏩ (fast forward double, advance)" . "⏩")
+            ("Media: ⏪ (rewind double, back)" . "⏪")
+            ("Media: 🔈 (volume low, audio on)" . "🔈")
+            ("Media: 🔉 (volume medium, sound)" . "🔉")
+            ("Media: 🔊 (volume high, loud)" . "🔊")
+            ("Media: 🔇 (mute, volume off)" . "🔇")
+
+            ;; Common annotation and pointer symbols
+            ("Pointer: ➔ (black right arrow, point, select)" . "➔")
+            ("Pointer: ➤ (black right arrowhead, point, select)" . "➤")
+            ("Pointer: ➥ (rightwards arrow with corner downwards, respond, annotation)" . "➥")
+            ("Pointer: ⇢ (right dashed arrow, guide)" . "⇢")
+            ("Pointer: ⇠ (left dashed arrow, guide)" . "⇠")
+            ("Pointer: ↑︎ (upwards arrow, shortcut, home)" . "↑︎")
+            ("Pointer: ↓︎ (downwards arrow, shortcut, end)" . "↓︎")
+
+            ;; Logic and math extensions
+            ("Logic: ⊻ (xor, exclusive or, logical xor)" . "⊻")
+            ("Logic: ⊕ (plus in circle, direct sum, logical exclusive or)" . "⊕")
+            ("Logic: ⊖ (minus in circle, symmetric difference)" . "⊖")
+            ("Logic: ⊗ (tensor, multiplication, times, direct product)" . "⊗")
+            ("Logic: ∴ (therefore, conclusion)" . "∴")
+            ("Logic: ∵ (because, since, reason)" . "∵")
+            ("Logic: ∤ (does not divide)" . "∤")
+            ("Logic: ∥ (parallel, such that)" . "∥")
+
+            ;; Progress and marks
+            ("Progress: ░ (progress bar low, shade)" . "░")
+            ("Progress: ▒ (progress bar medium, shade)" . "▒")
+            ("Progress: ▓ (progress bar high, shade)" . "▓")
+            ("Progress: █ (progress bar full, shade)" . "█")
+            ("Progress: ▀ (upper half block, status)" . "▀")
+            ("Progress: ▄ (lower half block, status)" . "▄")
+
+            ;; Misc
+            ("Date: 📅 (calendar, date, event)" . "📅")
+            ("Date: 🕒 (clock, time, hour)" . "🕒")
+            ("Filter: ⊞ (filter, add, plus in box)" . "⊞")
+            ("Filter: ⊟ (filter, subtract, minus in box)" . "⊟")
+            ("Filter: ⊠ (filter, exclude, times in box)" . "⊠")
+            ("Misc: ✿ (flower, decorative, pretty)" . "✿")
+            ("Misc: ☠ (skull, danger, dead, critical)" . "☠")
+            ("Misc: ♻ (recycle, refresh, circular)" . "♻")))
          (choice (completing-read "Insert UTF-8 char: " (mapcar #'car utf8-chars))))
     (insert (cdr (assoc choice utf8-chars)))))
 
