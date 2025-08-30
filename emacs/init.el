@@ -12600,7 +12600,8 @@ Throw error otherwise."
     (setq
      global-mode-string
      `(""
-       ,@(when (bound-and-true-p empv-current-media-title)
+       ,@(when (and (bound-and-true-p empv-media-title)
+                    (not (eq empv-player-state 'stopped)))
            (list
             (pcase empv-player-state
               ('playing (all-the-icons-faicon "music"))
