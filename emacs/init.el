@@ -1297,7 +1297,8 @@ side window the only window'"
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
   (org-log-states-order-reversed nil)
   ;; ^ add log entries from top the bottom, in chronological order
-  (org-log-note-clock-out t)
+  ;; TODO: note functions are fucking up the buffer restriction for some reason, disabled temporarily
+  (org-log-note-clock-out nil)
   ;; ^ Add notes to LOGBOOK while clocking out from a task
   (org-log-state-notes-insert-after-drawers t)
   ;; ^ Insert notes (added by `org-add-note') after the drawer
