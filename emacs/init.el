@@ -2703,6 +2703,14 @@ open.")
 
 ;;;; Other packages
 
+;;;;; transient
+
+;; Bind esc to quit
+(with-eval-after-load 'transient
+  (define-key transient-base-map (kbd "<escape>") 'transient-quit-one)
+  (define-key transient-predicate-map (kbd "<escape>") 'transient-quit-one)
+  (define-key transient-sticky-map (kbd "<escape>") 'transient-quit-one))
+
 ;;;;; which-key
 
 (use-package which-key
