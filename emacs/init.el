@@ -304,8 +304,8 @@ a shebang at the beginning, then the executable bit is set to file."
  :contents "#!/bin/bash
 emacsclient --eval \"(browse-url \\\"$1\\\")\"")
 
-;; Echo area max 2 lines
-(setq max-mini-window-height 2)
+;; Echo area max 5 lines
+(setq max-mini-window-height 5)
 
 ;;;;;; M-Backspace should delete, instead of killing
 
