@@ -463,6 +463,9 @@ configuration, pass it as WINDOW-CONF."
                   (im-git-commit--reset-message "<!-- No need to update the message -->")))))
    'kbd-help "RET: Select commit to fixup"
    'follow-link t)
+  ;; TODO: maybe also add this version so that I can also change the commit message if I want
+  ;; git commit --squash=<commit-hash> -m "New message you want"
+  ;; git rebase --autosquash --no-edit <commit-hash>^
   (insert "\n")
   (goto-char (point-min))
   (im-help-at-point-mode)
@@ -642,7 +645,9 @@ CALLBACK will be called with the selected commit ref."
   :lighter " SelectCommit"
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c C-c") #'im-git-select-commit-finalize)
-            map))
+            map)
+  (setq header-line-format
+        (substitute-command-keys "Move to a commit and do \\[im-git-select-commit-finalize] to select it.")))
 
 ;;;; im-git-commit-amend
 
@@ -663,6 +668,31 @@ CALLBACK will be called with the selected commit ref."
      :on-fail (lambda (&rest _)
                 (message ">> Amend failed!")
                 (switch-to-buffer buffer-name)))))
+
+;;;; im-git-commit-fixup
+
+;;;###autoload
+(defun im-git-commit-fixup ()
+  "Interactively select a commit and fixup."
+  (interactive)
+  (im-git-select-commit
+   (lambda (hash)
+     (set-process-sentinel
+      (funcall #'start-process "*im-git-commit*" "*im-git-commit*" "git" "commit" "--fixup" hash)
+      (lambda (proc _event)
+        (if (eq (process-exit-status proc) 0)
+            (progn
+              (message "im-git-commit :: Committed")
+              (--each im-git-commit-finished-hook (funcall it nil))
+              (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
+                (set-process-sentinel
+                 (start-process "*im-git-fixup*" " *im-git-fixup*"
+                                "git" "rebase" "--interactive" "--autosquash" (concat hash "^"))
+                 (lambda (proc _event)
+                   (if (eq (process-exit-status proc) 0)
+                       (message ">> im-git-fixup :: Commit %s fixed." hash)
+                     (message "!! Failed to fixup. See *im-git-fixup* buffer for further details."))))) )
+          (message "im-git-commit :: Failed. See buffer *im-git-commit*")))))))
 
 ;;;; im-git-stash
 
