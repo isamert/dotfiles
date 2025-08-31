@@ -802,6 +802,7 @@ CALLBACK will be called with the selected commit ref."
 
 (with-eval-after-load 'evil
   (evil-define-minor-mode-key 'normal 'im-git-stash-list-mode
+    (kbd "gr") #'im-git-list-stash
     (kbd "x") #'im-git-drop-stash
     (kbd "p") #'im-git-pop-stash
     (kbd "RET") #'im-git-show-stash-diff))
@@ -813,6 +814,169 @@ Works only if the stash entry is at the beginning of the line."
     (beginning-of-line)
     (when (looking-at "stash@{[0-9]+}")
       (match-string 0))))
+
+;;;; im-git-tags
+
+(defconst im-git--tag-list-buffer-name "*im-git-tag-list*")
+
+;;;###autoload
+(defun im-git-list-tags ()
+  (interactive)
+  (when-let* ((buffer (get-buffer im-git--tag-list-buffer-name)))
+    (kill-buffer buffer))
+  (let ((default-directory (im-current-project-root))
+        (buffer-name im-git--tag-list-buffer-name))
+    (im-shell-command
+     :command "git"
+     :args `("for-each-ref" "--sort=-creatordate" "--format" "%(refname:short) • %(objectname:short) • %(creatordate:short) • %(subject)" "refs/tags")
+     :switch t
+     :buffer-name buffer-name
+     :on-finish
+     (lambda (_output &rest _)
+       (im-shell-command
+        :command "git"
+        :args `("ls-remote" "--tags" "origin")
+        :on-finish
+        (lambda (output &rest _)
+          (with-current-buffer buffer-name
+            (let ((inhibit-read-only t))
+              (let ((lines (s-lines (s-trim (buffer-string))))
+                    (remote-tags (->> (s-lines (s-trim (im-tap output)))
+                                    (--map (-let (((hash tag) (s-split "\t" it)))
+                                             (list (s-chop-prefix "refs/tags/" tag)
+                                                   (substring hash 0 7))))
+                                    (delete-dups)))
+                    (local-tags '()))
+                (goto-char (point-min))
+                (while (< (point) (point-max))
+                  (let* ((tag (im-git--parse-tag-at-point))
+                         (remote? (-contains? remote-tags tag)))
+                    (push tag local-tags)
+                    (add-text-properties
+                     (line-beginning-position)
+                     (line-end-position)
+                     `(face ,(if remote? 'success 'warning)
+                            tag-info (:name ,(car tag)
+                                      :hash ,(cdr tag)
+                                      :remote? ,remote?
+                                      :local? t))))
+                  (forward-line 1))
+                (when-let* ((remote-only (cl-set-difference remote-tags local-tags :test #'equal)))
+                  (insert "========== (remote only) ==========\n")
+                  (--each remote-only
+                    (let ((start (point)))
+                      (insert (format "%s • %s\n" (car it) (cadr it)))
+                      (add-text-properties
+                       start (1- (point))
+                       `(tag-info (:name ,(car it)
+                                   :hash ,(cdr it)
+                                   :remote? t
+                                   :local? nil))))))
+                (goto-char (point-min)))))))
+       (align-regexp (point-min) (point-max) "\\(\\s-*\\)•" nil 1 t)
+       (read-only-mode)
+       (text-mode)
+       (im-git-tag-list-mode))
+     :on-fail
+     (lambda (&rest _)
+       (message ">> Listing tags failed!")
+       (switch-to-buffer buffer-name)))))
+
+(defun im-git-remove-tag ()
+  (interactive nil im-git-stash-list-mode)
+  (when-let* ((tag-info (im-git--tag-info-at-point))
+              (begin (line-beginning-position))
+              (end (line-end-position))
+              (_ (y-or-n-p (format ">> Remove tag %s? " (plist-get tag-info :name)))))
+    (let ((inhibit-read-only t))
+      (add-text-properties begin end '(face (:strike-through t))))
+    (cl-flet ((remove-remote-tag
+               (tag-info)
+               (im-shell-command
+                :command "git"
+                :args `("push" "origin" "--delete" ,(plist-get tag-info :name))
+                :switch nil
+                :buffer-name " *im-git-tag-remove-remote*"
+                :on-finish
+                (lambda (_output &rest _)
+                  (message ">> Also removed from remote.")
+                  (with-current-buffer im-git--tag-list-buffer-name
+                    (im-git-list-tags)))
+                :on-fail
+                (lambda (output &rest _)
+                  (message ">> Failed to remove from remote: %s" output)
+                  (switch-to-buffer " *im-git-tag-remove-remote*")))))
+      (if (and (plist-get tag-info :remote?)
+               (not (plist-get tag-info :local?)))
+          (remove-remote-tag tag-info)
+        (im-shell-command
+         :command "git"
+         :args `("tag" "-d" ,(plist-get tag-info :name))
+         :switch nil
+         :buffer-name " *im-git-tag-remove*"
+         :on-finish
+         (lambda (_output &rest _)
+           (if (and
+                (plist-get tag-info :remote?)
+                (y-or-n-p ">> Also remove from remote? "))
+               (remove-remote-tag tag-info)
+             (with-current-buffer im-git--tag-list-buffer-name
+               (im-git-list-tags))))
+         :on-fail
+         (lambda (output &rest _)
+           (message ">> `git tag -d' failed with: " output)
+           (switch-to-buffer " *im-git-tag-remove*")))))))
+
+(defun im-git-open-file-at-tag ()
+  (interactive nil im-git-tag-list-mode)
+  (when-let* ((default-directory (im-current-project-root))
+              (tag-info (im-git--tag-info-at-point))
+              (tag (plist-get tag-info :name))
+              (file (im-output-select
+                     :cmd (concat "git ls-tree --name-only -r " tag)
+                     :prompt (format "File at %s: " tag)
+                     :require-match? t))
+              (buffer-name (format "*im-git-file-at: %s:%s*" tag file)))
+    (when-let* ((buffer (get-buffer buffer-name)))
+      (kill-buffer buffer))
+    (im-shell-command
+     :command "git"
+     :args `("--no-pager" "show" ,(format "%s:%s" tag file))
+     :switch nil
+     :buffer-name buffer-name
+     :on-finish
+     (lambda (_output &rest _)
+       (with-current-buffer buffer-name
+         (funcall (assoc-default file auto-mode-alist 'string-match #'prog-mode))
+         (setq header-line-format (format "File %s at tag %s" file tag))
+         (switch-to-buffer (current-buffer))))
+     :on-fail
+     (lambda (&rest _)
+       (message ">> `git show %s:%s' failed!" tag file)
+       (switch-to-buffer buffer-name)))))
+
+(define-minor-mode im-git-tag-list-mode
+  "A minor mode for interacting with git tag list."
+  :lighter " TagList"
+  :keymap (make-sparse-keymap)
+  (setq header-line-format
+        (substitute-command-keys "Tags :: \\[im-git-list-tags] ⟶ Refresh, \\[im-git-open-file-at-tag] ⟶ Open file at tag, \\[im-git-remove-tag] ⟶ Remove tag")))
+
+(with-eval-after-load 'evil
+  (evil-define-minor-mode-key 'normal 'im-git-tag-list-mode
+    (kbd "gr") #'im-git-list-tags
+    (kbd "o") #'im-git-open-file-at-tag
+    (kbd "x") #'im-git-remove-tag))
+
+(defun im-git--parse-tag-at-point ()
+  "Return (TAG HASH) at point."
+  (save-excursion
+    (beginning-of-line)
+    (when (looking-at "\\([^ ]+\\) *• *\\([^ ]+\\) ")
+      (list (match-string 1) (match-string 2)))))
+
+(defun im-git--tag-info-at-point ()
+  (get-text-property (point) 'tag-info))
 
 ;;;; im-git-search-history
 

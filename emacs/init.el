@@ -7352,9 +7352,10 @@ mails."
     ("t" "Open timemachine" git-timemachine-toggle)
     ("hr" "Repo log" vc-print-root-log)
     ("hf" "File log" vc-print-log)]
-   ["Stash"
+   ["Stash/tags/..."
     ("E" "Stash changes" vc-git-stash)
-    ("e" "Show stashes" im-git-list-stash)]
+    ("e" "Show stashes" im-git-list-stash)
+    ("T" "Show tags" im-git-list-tags)]
    ["Worktrees"
     ("wa" "Add worktree" im-git-worktree-add)
     ("ws" "Switch worktree" im-git-worktree-switch)
