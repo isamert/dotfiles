@@ -7343,6 +7343,7 @@ mails."
    ["Commit/Branch"
     ("c" "Commit changes" im-git-commit)
     ("a" "Amend last commit" im-git-commit-amend)
+    ("A" "Fixup commit" im-git-commit-fixup)
     ("bc" "New branch" vc-create-branch)
     ("bs" "Switch branch" vc-switch-branch)
     ("P" "Push" vc-push)
