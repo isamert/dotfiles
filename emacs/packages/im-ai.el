@@ -550,7 +550,8 @@ predefined prompts."
 
 ;;;; im-ai-snippet*
 
-(defvar im-ai--last-processed-point nil)
+(defvar-local im-ai--last-processed-point nil)
+(defvar-local im-ai--before-overlay nil)
 (add-hook 'gptel-post-stream-hook #'im-ai--cleanup-stream)
 (add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
 
