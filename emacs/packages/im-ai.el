@@ -1159,6 +1159,15 @@ buffer."
     :use-tools t
     :include-tool-results t)
 
+  (gptel-make-preset 'elisp-coding-helper-agent
+    :system im-ai-programming-agent-prompt
+    :backend "ChatGPT"
+    :model 'gpt-4.1
+    :confirm-tool-calls nil
+    :tools '("web" "elisp")
+    :use-tools t
+    :include-tool-results t)
+
   (gptel-make-preset 'coding-agent
     :system im-ai-programming-agent-prompt
     :backend "ChatGPT"
