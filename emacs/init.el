@@ -9435,7 +9435,7 @@ SELECT * FROM _ LIMIT 1;
   (tab-bar-auto-width nil)
   (tab-bar-auto-width-max t)
   (tab-bar-tab-hints nil)
-  (tab-bar-separator "  ❯  ")
+  (tab-bar-separator " ❯ ")
   (tab-bar-close-button nil)
   (tab-bar-tab-name-format-function #'tab-bar-tab-name-format-default)
   (tab-bar-tab-name-function #'tab-bar-tab-name-current)
@@ -12610,24 +12610,26 @@ Throw error otherwise."
               ('playing (all-the-icons-faicon "music"))
               ('paused (all-the-icons-faicon "pause")))
             " "
-            (s-truncate 45 empv-media-title "…")
-            "  ·  "))
+            (s-truncate 25 empv-media-title "…")
+            " · "))
        ,@(when im-is-mic-muted?
            (list
             (all-the-icons-faicon "microphone-slash")
-            "  ·  "))
+            " · "))
        ,@(when (bound-and-true-p appt-mode-string)
            (list
             (all-the-icons-faicon "calendar-check-o")
             " "
             (propertize appt-mode-string 'face '(:underline t))
-            " ·  "))
+            "· "))
        ,@(if (and (functionp #'org-clocking-p) (org-clocking-p))
              (list
               (all-the-icons-fileicon "org")
               " "
-              (s-truncate 45 org-mode-line-string "…")
-              " ·  ")
+              (s-replace-regexp
+               "[()]" ""
+               (s-truncate 25 org-mode-line-string "…"))
+              "· ")
            (list (all-the-icons-faicon "bed") "  ·  "))
        ,@(when t
            (list
@@ -12635,7 +12637,7 @@ Throw error otherwise."
              "calendar")
             " "
             (format-time-string "%b %d, %a")
-            " ·  "))
+            "· "))
        ,@(when t
            (list
             (all-the-icons-wicon
