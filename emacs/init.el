@@ -7866,6 +7866,7 @@ Useful if .elfeed directory is freshly syncned."
   ;; ^ see https://api.invidious.io/
   (setq empv-youtube-use-tabulated-results t)
   (add-to-list 'empv-mpv-args "--ytdl-format=bestvideo+bestaudio/best[ext=mp4]/best")
+  (add-to-list 'empv-mpv-args "--ytdl-raw-options=cookies-from-browser=firefox")
   (add-to-list 'empv-mpv-args "--save-position-on-quit")
   (setq empv-reset-playback-speed-on-quit t)
   (add-hook 'empv-init-hook #'empv-override-quit-key)
