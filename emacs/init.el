@@ -8116,6 +8116,7 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
           (c "https://github.com/tree-sitter/tree-sitter-c" nil nil nil nil)
           (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp" nil nil nil nil)
           (clojure "https://github.com/sogaiu/tree-sitter-clojure" nil nil nil nil)
+          (kdl "https://github.com/tree-sitter-grammars/tree-sitter-kdl")
           (cmake "https://github.com/uyha/tree-sitter-cmake" nil nil nil nil)
           (commonlisp "https://github.com/tree-sitter-grammars/tree-sitter-commonlisp" nil nil nil nil)
           (cpp "https://github.com/tree-sitter/tree-sitter-cpp" nil nil nil nil)
