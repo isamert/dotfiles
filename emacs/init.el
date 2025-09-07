@@ -4016,7 +4016,8 @@ empty string."
      (lambda (action on-result)
        (when (not (string-empty-p (string-trim action)))
          (im-request
-           "https://ac.ecosia.org/autocomplete"
+           ;; "https://ac.ecosia.org/autocomplete"
+           "https://kagi.com/api/autosuggest"
            :type "list"
            :q action
            :-on-success on-result
@@ -4024,7 +4025,7 @@ empty string."
      #'-flatten)
     :prompt "Search for: "
     :category 'url
-    :lookup (lambda (selected candidates cand &rest _) selected)
+    :lookup (lambda (selected _candidates _cand &rest _) selected)
     :sort nil
     :history (or history 'im-web-autosuggest-history)
     :async-wrap #'empv--consult-async-wrapper
