@@ -877,7 +877,10 @@ For async requests, simply provide a success handler:
                             ((and -headers (json-alist-p -headers)) -headers)
                             ((and -headers (json-plist-p -headers)) (im-plist-to-alist -headers))
                             (t nil))
-                  :parser (if -raw #'buffer-string (apply-partially #'json-parse-buffer :object-type 'alist :array-type 'list :null-object nil))
+                  :parser (cond
+                           ((and -raw (functionp -raw)) -raw)
+                           (-raw #'buffer-string)
+                           (t (apply-partially #'json-parse-buffer :object-type 'alist :array-type 'list :null-object nil)))
                   :success (cl-function
                             (lambda (&key data &allow-other-keys)
                               (funcall resolve data)))
@@ -1089,6 +1092,53 @@ the header line."
                          (1+ (tab-bar--current-tab-index tabs))))
          (tab-name (alist-get 'name (nth (1- tab-number) tabs))))
     tab-name))
+
+;;;; Web search
+
+;; (defvar im-kagi-token)
+;; (defvar im-brave-token)
+
+(defun im-brave-search (query &key freshness search-lang success error)
+  (im-request
+    "https://api.search.brave.com/res/v1/web/search"
+    :q query
+    :text_decorations "false"
+    :freshness freshness
+    :search_lang search-lang
+    :-headers `(:X-Subscription-Token ,im-brave-token)
+    :-on-success success
+    :-on-error error))
+
+(defun im-kagi--extract-result (node)
+  "Extract a single search result NODE into an alist."
+  (let* ((title-node (or (car (dom-by-class node "__sri-title-box"))
+                         (car (dom-by-class node "__srgi-title"))))
+         (link-node  (car (dom-by-tag title-node 'a)))
+         (desc-node  (car (dom-by-class node "__sri-desc"))))
+    (when link-node
+      `((title       . ,(s-trim (s-replace-regexp "\n[\t ]+" " " (dom-texts link-node))))
+        (url         . ,(s-trim (s-replace-regexp "\n[\t ]+" " " (dom-attr link-node 'href))))
+        (description . ,(when desc-node (s-replace-regexp
+                                         "\n[\t ]+" " "
+                                         (string-trim (dom-texts desc-node)))))))))
+
+(cl-defun im-kagi-search (term &key success error)
+  (im-request "https://kagi.com/html/search"
+    :token im-kagi-token
+    :q term
+    :-raw
+    (lambda ()
+      (let* ((dom (libxml-parse-html-region (point-min) (point-max)))
+             (results (dom-by-class dom "search-result")))
+        (-flatten-n
+         1
+         (mapcar (lambda (res)
+                   (let ((main (im-kagi--extract-result res))
+                         (groups (dom-by-class res "__srgi")))
+                     (delq nil (cons main (mapcar #'im-kagi--extract-result groups)))))
+                 results))))
+    :-on-success success
+    :-on-error error))
 
 ;;;; Footer
 

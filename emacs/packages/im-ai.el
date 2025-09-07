@@ -1087,55 +1087,33 @@ buffer."
 
   (gptel-make-tool
    :name "web_search"
-   :function (lambda (query &optional freshness search-lang)
-               (let ((results (im-request
-                                "https://api.search.brave.com/res/v1/web/search"
-                                :q query
-                                ;; :result_filter result-filter ; Need to implement serializing other filters down below
-                                :text_decorations "false"
-                                :freshness freshness
-                                :search_lang search-lang
-                                :-headers `(:X-Subscription-Token ,im-brave-search-api-key))))
-                 (let-alist results
-                   (if (or (not .web.results) (length= .web.results 0))
-                       "No results are found for this search."
-                     (mapconcat
-                      (lambda (res)
-                        (let-alist res
-                          (concat
-                           (when .title (format "Title: %s\n" .title))
-                           (when .url (format "URL: %s\n" .url))
-                           (when .description (format "Desc: %s\n" .description))
-                           (when (or .profile.long_name .profile.name)
-                             (format "Source: %s\n" (or .profile.long_name .profile.name)))
-                           "---\n")))
-                      .web.results "")))))
+   :function (lambda (callback query)
+               (im-kagi-search
+                query
+                :success
+                (lambda (results)
+                  (funcall
+                   callback
+                   (mapconcat
+                    (lambda (res)
+                      (let-alist res
+                        (concat
+                         (when .title (format "Title: %s\n" .title))
+                         (when .url (format "URL: %s\n" .url))
+                         (when .description (format "Desc: %s\n" .description))
+                         "---\n")))
+                    results "")))
+                :error (lambda (it)
+                         (funcall
+                          callback
+                          (format "Error while searching: %s" it)))))
    :description
    "Perform a web search and receive concise results and links to sources."
+   :async t
    :args
    '((:name "query"
       :type string
-      :description "The search query.")
-     ;;      (:name "result_filter"
-     ;;       :type string
-     ;;       :description "Comma-delimited list of types (e.g. \"web,news\"). Optional, by default it's \"web\".
-     ;; Available result filter values are:
-     ;; - news
-     ;; - query
-     ;; - videos
-     ;; - web")
-     ;; (:name "freshness"
-     ;;       :type string
-     ;;       :description "Restrict to recency (\"pd\", \"pw\", \"pm\", \"py\", or date range). Optional.
-     ;; - pd: Discovered within the last 24 hours.
-     ;; - pw: Discovered within the last 7 Days.
-     ;; - pm: Discovered within the last 31 Days.
-     ;; - py: Discovered within the last 365 Days.
-
-     ;; This is only important if the query requires it (like if you are searching for something new, like news). Otherwise dont' use this.")
-     (:name "search_lang"
-      :type string
-      :description "Result language code (default: \"en\"). Optional."))
+      :description "The search query."))
    :category "web"))
 
 ;;;;; Presets
