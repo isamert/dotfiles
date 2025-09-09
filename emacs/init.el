@@ -7871,6 +7871,8 @@ Useful if .elfeed directory is freshly syncned."
   (setq empv-reset-playback-speed-on-quit t)
   (add-hook 'empv-init-hook #'empv-override-quit-key)
   (add-hook 'empv-youtube-results-mode-hook #'im-disable-line-wrapping)
+  (add-hook 'empv-media-title-changed-hook #'im-update-global-mode-line)
+  (add-hook 'empv-player-state-changed-hook #'im-update-global-mode-line)
 
   (setq empv-subsonic-url im-navidrome-server)
   (setq empv-subsonic-username im-navidrome-username)
