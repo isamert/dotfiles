@@ -7492,6 +7492,13 @@ mails."
   (evil-collection-pdf-setup)
   (add-hook 'pdf-view-mode #'im-pdf-view-setup))
 
+;;;;; im-macos -- my macos extensions
+
+(use-package im-macos
+  :straight nil
+  :if (eq system-type 'darwin)
+  :demand t)
+
 ;;;; Editing
 
 ;;;;; Breaking long texts/comments into multiple lines
@@ -8084,7 +8091,9 @@ Useful if .elfeed directory is freshly syncned."
           (eq major-mode 'lisp-mode) (im-eval-dwim #'slime-eval-last-expression #'slime-eval-region #'slime-eval-region)
           (eq major-mode 'racket-mode) (im-eval-dwim #'racket-eval-last-sexp #'racket-send-region #'racket-send-definition)
           (eq major-mode 'scheme-mode) (im-eval-dwim #'geiser-eval-last-sexp #'geiser-eval-region #'geiser-eval-definition)
-          (eq major-mode 'kotlin-mode) (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line))
+          (eq major-mode 'kotlin-mode) (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line)
+          ;; I only use lua for hammerspoon
+          (eq major-mode 'lua-mode) (im-eval-dwim #'im-eval-hammerspoon #'im-eval-hammerspoon #'im-eval-hammerspoon))
     "'" (general-predicate-dispatch #'eros-inspect-last-result
           (eq major-mode 'java-ts-mode) #'im-repl-inspect-last-result
           (eq major-mode 'js-ts-mode) #'im-repl-inspect-last-result
@@ -12880,64 +12889,6 @@ end tell"))
                       :filter
                       (lambda (_proc string)
                         (funcall resolve (equal "true" (s-trim string))))))))))
-
-;;;;; MacOS
-
-;;;;;; Keybindings
-
-(when (eq system-type 'darwin)
-  ;; I use an external keyboard, this makes AltGr and Meta (Alt) work as expected
-  ;; I have also inverted Meta and Control keys system-wide or something, so
-  ;; this setting is done according to that.
-  (setq ns-option-modifier 'meta)
-  (setq ns-right-alternate-modifier 'none))
-
-;;;;;; Hammerspoon integration
-
-;; I have a menubar that shows my current tab and currently clocked in
-;; task. I disable the tab-bar visually and check which tab I
-;; currently am in through this Hammerspoon menubar.
-
-(when (eq system-type 'darwin)
-  (defvar im-hammerspoon-server "http://localhost:4562")
-  (defvar im-hammerspoon-handle-clock-p t
-    "Whether to handle org clock stuff in hammerspoon or not.")
-
-  (defun im-toggle-hammerspoon-handle-clock ()
-    "Toggle the value of `im-hammerspoon-handle-clock-p'.
-This is useful when using laptop screen only as the menubar disappears
-because of the notch if the text is too long and I can't see which tab I
-am on because of this."
-    (interactive)
-    (setq im-hammerspoon-handle-clock-p (not im-hammerspoon-handle-clock-p))
-    ;; Reset text if disabled
-    (unless im-hammerspoon-handle-clock-p
-      (request (concat im-hammerspoon-server "/task")
-        :type "POST"
-        :data ""))
-    (message ">> `im-hammerspoon-handle-clock-p' is now %s" im-hammerspoon-handle-clock-p))
-
-  (add-hook 'org-clock-in-hook #'im-hammerspoon-handle-clock-in)
-  (add-hook 'org-clock-out-hook #'im-hammerspoon-handle-clock-in)
-
-  (defun im-hammerspoon-handle-clock-in ()
-    (when im-hammerspoon-handle-clock-p
-      (request (concat im-hammerspoon-server "/task")
-        :type "POST"
-        :data (if (org-clock-is-active)
-                  (substring-no-properties (org-clock-get-clock-string))
-                ""))))
-
-  (define-advice tab-bar-select-tab (:after (&rest _) report-tab-change-to-hammerspoon)
-    (request (concat im-hammerspoon-server "/workspace")
-      :type "POST"
-      :data (or (alist-get 'name (tab-bar--current-tab))
-                (tab-bar-tab-name-current))))
-
-  (define-advice org-clock-update-mode-line (:after (&rest _) report-to-hammerspoon)
-    (im-hammerspoon-handle-clock-in))
-
-  (run-with-timer 30 30 #'im-hammerspoon-handle-clock-in))
 
 ;;;; Postamble
 
