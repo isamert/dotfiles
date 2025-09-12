@@ -1051,6 +1051,7 @@ buffer."
    :name "get_webpage_contents"
    :function (lambda (callback url)
                (message "gptel :: get_webpage_contents(%s)" url)
+               ;; TODO: Maybe do this asyncly cause rendering can take some time.
                (request url
                  :headers `(("User-Agent" . "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.10 Safari/605.1.1"))
                  :parser (lambda ()
@@ -1058,8 +1059,21 @@ buffer."
                                  (shr-fill-text nil)
                                  (shr-use-colors nil)
                                  (shr-inhibit-images t))
-                             (shr-render-region (point-min) (point-max)))
-                           (buffer-substring-no-properties (point-min) (point-max)) )
+                             (shr-render-region (point-min) (point-max))
+                             (goto-char (point-min))
+                             ;; Links are encoded to text
+                             ;; properties. Here we extract them and
+                             ;; encode those links in markdown format
+                             ;; to buffer so that agent can follow
+                             ;; these links.
+                             (while-let ((match (text-property-search-forward 'shr-url nil nil t))
+                                         (begin (prop-match-beginning match))
+                                         (end (prop-match-end match))
+                                         (str (format "[%s](%s)"
+                                                      (buffer-substring-no-properties begin end)
+                                                      (get-text-property begin 'shr-url))))
+                               (replace-region-contents begin end (lambda () str))))
+                           (buffer-substring-no-properties (point-min) (point-max)))
                  :success
                  (cl-function
                   (lambda (&key data &allow-other-keys)
