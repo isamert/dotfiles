@@ -1111,6 +1111,7 @@ the header line."
 
 (defun im-kagi--extract-result (node)
   "Extract a single search result NODE into an alist."
+  (require 'dom)
   (let* ((title-node (or (car (dom-by-class node "__sri-title-box"))
                          (car (dom-by-class node "__srgi-title"))))
          (link-node  (car (dom-by-tag title-node 'a)))
