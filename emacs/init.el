@@ -878,6 +878,9 @@ side window the only window'"
 (with-eval-after-load 'grep
   (evil-collection-grep-setup))
 
+(with-eval-after-load 'info
+  (evil-collection-info-setup))
+
 (with-eval-after-load 'man
   (evil-collection-man-setup))
 
