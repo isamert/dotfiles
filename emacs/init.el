@@ -212,6 +212,8 @@ in my dotfiles repository.")
   :straight `(:local-repo ,im-packages-path :files ("im-async-await.el"))
   :demand t)
 
+(use-package plz)
+
 (use-package request
   :custom
   (request-log-level 'warn)
@@ -3187,16 +3189,17 @@ that is read verbatim (meaning that no '$*' is appended):
 ;; - r :: Refresh the table
 ;; - {,} :: narrow/widen column
 
-;; Unbind g first
-(general-def :keymaps 'vtable-map "g" nil)
+(with-eval-after-load 'vtable
+  ;; Unbind g first
+  (general-def :keymaps 'vtable-map "g" nil)
 
-;; Add evil bindings for vtable mode
-(general-def
-  :keymaps 'vtable-map
-  :states 'normal
-  "r" #'vtable-revert-command
-  "H" #'vtable-previous-column
-  "L" #'vtable-next-column)
+  ;; Add evil bindings for vtable mode
+  (general-def
+    :keymaps 'vtable-map
+    :states 'normal
+    "r" #'vtable-revert-command
+    "H" #'vtable-previous-column
+    "L" #'vtable-next-column))
 
 ;;;;;; Helper functions
 
@@ -5993,8 +5996,8 @@ this command is invoked from."
     ("m" "Send message" im-slack-send-message)
     ("y" "Yank last message" im-slack-yank-last-message)
     ("l" "Open last message" im-slack-open-last-message)
-    ("r" "Last messages (all)" im-slack-last-messages-alternative)
-    ("R" "Last messages (per room)" im-slack-last-messages)]
+    ("r" "Last messages (per room)" im-slack-last-messages)
+    ("R" "Last messages (all)" im-slack-last-messages-alternative)]
    ["Utils"
     ("uu" "User info" slack-user-select)]])
 
@@ -6178,14 +6181,15 @@ this command is invoked from."
 
 (defun im-slack--format-message (it)
   (let-plist it
-    (format "%s (%s) - %s"
+    (format "%30s ➔ %s (%s) ➤ %s"
             (propertize .room-name 'face '(:weight bold :foreground "systemPinkColor"))
+            (propertize .sender-name 'face '(:weight bold :foreground "VioletRed1"))
             (when .message
               (propertize
                (lab--time-ago
                 (im-slack--message-ts it))
                'face '(:slant italic :foreground "systemGrayColor")))
-            (s-truncate 50 .message-string))))
+            (s-replace "\n" "|" (s-truncate 100 .message-string)))))
 
 (defun im-slack-last-messages-alternative ()
   "Like `im-slack-last-messages' but only show the last message per room."
@@ -10789,6 +10793,10 @@ If it does not exists, create it."
   `(when (= (im-u) 1)
      (s-trim (im-s-interpolated ,template ,@template-args))))
 
+(defmacro im-when-friday (template &rest template-args)
+  `(when (= (im-u) 5)
+     (s-trim (im-s-interpolated ,template ,@template-args))))
+
 ;;
 ;; Daily summary
 ;;
@@ -12638,15 +12646,14 @@ Throw error otherwise."
             " "
             (propertize appt-mode-string 'face '(:underline t))
             "· "))
-       ,@(if (and (functionp #'org-clocking-p) (org-clocking-p))
-             (list
-              (all-the-icons-fileicon "org")
-              " "
-              (s-replace-regexp
-               "[()]" ""
-               (s-truncate 25 org-mode-line-string "…"))
-              "· ")
-           (list (all-the-icons-faicon "bed") "  ·  "))
+       ,@(when (and (functionp #'org-clocking-p) (org-clocking-p))
+           (list
+            (all-the-icons-fileicon "org")
+            " "
+            (s-replace-regexp
+             "[()]" ""
+             (s-truncate 25 org-mode-line-string "…"))
+            "· "))
        ,@(when t
            (list
             (all-the-icons-faicon
