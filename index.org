@@ -931,8 +931,12 @@ sudo udevadm control --reload-rules
 
 ** foot terminal emulator
 #+begin_src conf :tangle ~/.config/foot/foot.ini
-shell=fish
-term=foot-direct # This is for enabling truecolor on emacs/emacsclient
+shell = fish
+font = Courier New:pixelsize=18
+resize-by-cells = no
+
+[csd]
+preferred = none
 #+end_src
 * X/Wayland related
 ** xremap
