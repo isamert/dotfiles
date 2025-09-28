@@ -3937,7 +3937,7 @@ properly."
   ;; Use browse-url for each link opening. This way my
   ;; `browse-url-handlers' take precedence over eww.
   (eww-use-browse-url ".*")
-  (eww-search-prefix "https://www.kagi.com/html/search?q=")
+  (eww-search-prefix (format "https://www.kagi.com/html/search?token=%s&q=" im-kagi-token))
   (eww-auto-rename-buffer
    (lambda () (format "*eww: %s*" (or (plist-get eww-data :title) "..."))))
   :config
@@ -6753,7 +6753,6 @@ Fetches missing channels/users first."
 
 (use-package im-github
   :straight nil
-  :defer t
   :commands (lab-github-url-to-raw
              lab-github-act-on-project
              lab-github-list-all-owned-projects
