@@ -5702,14 +5702,19 @@ this command is invoked from."
 (use-package howdoyou
   :commands (howdoyou-query howdoyou--get-buffer)
   :general
-  (:keymaps 'howdoyou-mode-keymap :states '(normal motion)
+  (:keymaps 'howdoyou-mode-map :states '(normal motion)
    "gn" #'howdoyou-next-link
    "gp" #'howdoyou-previous-link)
   (im-leader
     "is" #'howdoyou-query)
   :config
   (setq howdoyou-switch-to-answer-buffer t)
-  (setq howdoyou-number-of-answers 5))
+  (setq howdoyou-number-of-answers 5)
+  (add-hook
+   'howdoyou-mode-hook
+   (lambda ()
+     (setq header-line-format "gn ➔ next, gp ➔ prev")
+     (evil-normalize-keymaps))))
 
 (defun im-open-stackexchange-link (link)
   "Open stackexchange LINK in a nicely formatted org buffer."
@@ -5723,6 +5728,27 @@ this command is invoked from."
                  link
                  (lambda (title)
                    (with-current-buffer buffer (rename-buffer (format "*se: %s*" title) :unique)))))))))
+
+(with-eval-after-load 'howdoyou
+  ;; Now that we cannot parse google reliably, I replaced this
+  ;; function with my Kagi search.
+  (defun howdoyou-promise-answer (query)
+    "Process QUERY and print answers to *How Do You* buffer."
+    (howdoyou--print-message "Searching...")
+    (im-kagi-search
+     (concat
+      query
+      " site:stackoverflow.com OR site:stackexchange.com OR site:superuser.com OR site:serverfault.com OR site:askubuntu.com")
+     :success (lambda (results)
+                (setq
+                 howdoyou--links
+                 (--map (alist-get 'url it) results))
+                (setq howdoyou--current-link-index 0)
+                (if howdoyou--links
+                    (howdoyou-n-link 0)
+                  (howdoyou--print-message "No results: \"%s\"" query)))
+     :error (lambda (err)
+              (error "Failed to search: %s" err)))))
 
 ;;;;; yasnippet & yankpad: template manager
 
