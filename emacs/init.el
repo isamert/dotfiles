@@ -4131,17 +4131,6 @@ empty string."
   (evil-collection-vc-dir-setup)
   (evil-collection-vc-annotate-setup))
 
-(defun im-update-git-state (&rest _)
-  "Update all diff-hl overlays and vc state for current project."
-  (interactive)
-  (when-let* ((project (project-current nil))
-              (buffers (project-buffers project)))
-    (--each buffers
-      (with-current-buffer it
-        (when (and buffer-file-name (derived-mode-p 'prog-mode))
-          (diff-hl-update)
-          (vc-refresh-state))))))
-
 (defun im-vc-toggle-all-log-view-entries ()
   "Toggle the visibility of all log view entries in the current buffer."
   (interactive nil vc-git-log-view-mode)
@@ -7276,7 +7265,8 @@ mails."
 (use-package im-git
   :straight nil
   :init
-  (add-hook 'im-git-commit-finished-hook #'im-update-git-state))
+  (add-hook 'im-git-commit-finished-hook #'im-update-git-state)
+  (add-to-list 'im-git-commit-pre-hook #'im-git-check-commit))
 
 (transient-define-prefix im-git-transient ()
   [["Status"
@@ -7325,6 +7315,55 @@ mails."
     ("lh" "Homepage" git-link-homepage)]])
 
 (im-leader-v "g" #'im-git-transient)
+
+(async-defun im-git-check-commit (diff)
+  "Create an automated TODO list for my commit.
+This checks for some mistakes I repeadetly do and tries to warn me in
+the commit buffer."
+  (goto-char (point-min))
+  (let (todo)
+    (condition-case reason
+        (progn
+          (when (s-matches? "^-;; Version: " diff)
+            (setq todo t)
+            (insert "- [ ] Version updated: Add tag with new version\n"))
+          (when (and (not (f-parent-of?
+                           im-git-work-root
+                           default-directory))
+                     (save-excursion (search-forward im-work-email nil t)))
+            (setq todo t)
+            (insert "- [ ] Wrong email: using work, should be personal\n"))
+          (let* ((new-files (s-split "\n" (await (lab--git "ls-files" "--others" "--exclude-standard")) t)))
+            (when (length> new-files 0)
+              (setq todo t)
+              (goto-char (point-min))
+              (insert (format "- [ ] %s new file, stage or delete them\n" (length new-files)))))
+          (let* ((last-tag  (await (lab--git "describe" "--tags" "--abbrev=0")))
+                 (last-tag-date (await (lab--git "log" "-1" "--format=%ai" last-tag)))
+                 (commit-count-since-last-tag (string-to-number (or (await (lab--git "rev-list" (format "%s..HEAD" last-tag) "--count")) 0))))
+            (when (and (> commit-count-since-last-tag 0))
+              (setq todo t)
+              (goto-char (point-min))
+              (insert (format "- [ ] Check: commits since last tag is **%s**\n"
+                              commit-count-since-last-tag)
+                      (format "- [ ] Check: last tag date is *%s*\n"
+                              last-tag-date)))))
+      (error (message "im-git :: warn: Failed to run all commit checkers: %s" reason)))
+    (when todo
+      (goto-char (point-min))
+      (insert "\n# TODO\n"))))
+
+(defun im-update-git-state (&rest _)
+  "Update all diff-hl overlays and vc state for current project."
+  (interactive)
+  (when-let* ((project (project-current nil))
+              (buffers (project-buffers project)))
+    (--each buffers
+      (when (im-buffer-visible-p it)
+        (with-current-buffer it
+          (when (and buffer-file-name (derived-mode-p 'prog-mode))
+            (diff-hl-update)
+            (vc-refresh-state)))))))
 
 ;;;;; im-readeck -- Readeck bookmark manager integration
 

@@ -986,9 +986,9 @@ May return false on slow connections.  Checks blocking, max 150 ms (for
 Linux), 1 secs for Mac."
   (im-when-on
    :linux
-   (= 0 (call-process "nc" nil nil nil "-w" "150ms" "-z" "www.google.com" "80"))
+   (= 0 (call-process "nc" nil nil nil "-w" "1" "-z" "isamert.net" "80"))
    :darwin
-   (= 0 (call-process "nc" nil nil nil  "-G" "1" "-z" "www.google.com" "80"))))
+   (= 0 (call-process "nc" nil nil nil  "-G" "1" "-z" "isamert.net" "80"))))
 
 ;;;; File operations
 
