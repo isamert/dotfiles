@@ -30,6 +30,10 @@
 ;; Offers `im-shiori-add-bookmark' function to add bookmark to shiori
 ;; and `im-shiori-enable-elfeed-support' for adding some entries from
 ;; elfeed to Shiori automatically.
+;;
+;; UPDATE (2025-10-04): I switched to Readeck (see im-readeck.el) from
+;; Shiori.  I am leaving this file as-is for others as a reference but
+;; I am not sure if it works or not anymore.
 
 ;;; Code:
 

@@ -7326,18 +7326,17 @@ mails."
 
 (im-leader-v "g" #'im-git-transient)
 
-;;;;; im-shiori -- Shiori bookmark manager integration
+;;;;; im-readeck -- Readeck bookmark manager integration
 
-(use-package im-shiori
+(use-package im-readeck
   :straight nil
   :custom
-  (im-shiori-url im-homeserver-shiori-url)
-  (im-shiori-username im-homeserver-username)
-  (im-shiori-password im-homeserver-password)
-  (im-shiori-elfeed-tags '(later bookmark shiori))
+  (im-readeck-url im-homeserver-readeck-url)
+  (im-readeck-token im-homeserver-readeck-token)
+  (im-readeck-elfeed-tags '(later bookmark readeck))
   :init
   (with-eval-after-load 'elfeed
-    (im-shiori-enable-elfeed-support)))
+    (im-readeck-enable-elfeed-support)))
 
 ;;;;; im-tab --- my tab related extensions
 
