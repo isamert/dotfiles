@@ -277,6 +277,10 @@ is called after the hunk is applied with no arguments."
   "Functions to run after successfully committing.
 Each function is called with COMMIT-MSG, inside project root.")
 
+(defvar im-git-commit-pre-hook '()
+  "Functions to run after opening the commit window.
+Each function is called with DIFF, inside project root.")
+
 (defconst im-git-commit-message-buffer "*im-git-commit-message*")
 (defconst im-git-commit-diff-buffer "*im-git-diff-staged*")
 (defconst im-git-commit-config-prefix "⚙")
@@ -306,7 +310,8 @@ configuration, pass it as WINDOW-CONF."
     (delete-other-windows)
     (select-window (split-window-right))
     (switch-to-buffer (im-git-commit--reload-diff-buffer diff))
-    (other-window 1)))
+    (other-window 1)
+    (--each im-git-commit-pre-hook (funcall it diff))))
 
 (defun im-git-commit--reload-diff-buffer (diff)
   (with-current-buffer (im-get-reset-buffer im-git-commit-diff-buffer)
