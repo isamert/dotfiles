@@ -71,6 +71,8 @@
 (require 'page-break-lines)
 (require 'async-await)
 (require 'general)
+(require 'im)
+(require 'lab)
 
 ;;;; diff-mode improvements
 
@@ -999,6 +1001,55 @@ REGEXP."
      :switch t
      :eat t
      :buffer-name buffer-name)))
+
+;;;; im-git-list-dirty
+
+(defun im-git--dirty? ()
+  "Return t if there are uncommitted changes in the working tree."
+  (eq 1 (call-process "git" nil nil nil "diff-index" "--quiet" "HEAD" "--")))
+
+(defun im-git-list-dirty-projects ()
+  "List all dirty projects or projects that are not on main branch.
+I keep projects clean in my local and do developments inside worktrees
+but sometimes projects gets dirty and this fixes that."
+  (interactive)
+  (with-current-buffer (im-get-reset-buffer "*im-dirty-projects*")
+    (switch-to-buffer (current-buffer))
+    (dolist (project (im-all-project-roots))
+      (let* ((default-directory (expand-file-name project))
+             (main-branch (lab--find-main-branch))
+             (main? (let ((branch (string-trim
+                                   (with-output-to-string
+                                     (with-current-buffer standard-output
+                                       (funcall #'call-process "git" nil (current-buffer) nil "symbolic-ref" "--short" "HEAD"))))))
+                      (string= branch main-branch)))
+             (dirty? (im-git--dirty?)))
+        (when dirty?
+          (insert (format "- %s is dirty!\n" project))
+          (insert "  ")
+          (insert-button
+           "Stash"
+           'follow-link t
+           'face custom-button
+           'action (lambda (_button)
+                     (let ((default-directory (expand-file-name project)))
+                       (call-interactively #'vc-git-stash))))
+          (insert "\n"))
+        (when (not main?)
+          (insert (format "- %s not on master!\n" project))
+          (insert "  ")
+          (insert-button
+           "Switch to MAIN"
+           'follow-link t
+           'face custom-button
+           'action (lambda (_button)
+                     (let ((default-directory (expand-file-name project)))
+                       (if (eq 0 (call-process "git" nil nil nil "checkout" main-branch))
+                           (message ">> Switched! isDirty=%s" (im-git--dirty?))
+                         (message "!! Failed to switch!")))))
+          (insert "\n"))
+        (when (or dirty? (not main?))
+          (redisplay t))))))
 
 ;;;; git worktrees
 
