@@ -5987,12 +5987,7 @@ this command is invoked from."
         ,reaction
         (slack-get-ts)))))
 
-(defvar im-slack-dnd nil)
 (defvar im-slack--last-messages '())
-
-(defun im-slack-toggle-dnd ()
-  (interactive)
-  (message "slack :: DND is %s." (setq im-slack-dnd (not im-slack-dnd))))
 
 (defun im-slack-check ()
   (interactive)
@@ -6012,21 +6007,20 @@ this command is invoked from."
            (title (format "%s - %s" room-name sender-name))
            (msg-str (im-slack--stringify-message
                      (list :message message :team team)))
-           (msg-str-short (s-truncate 80 (s-replace "\n" "" msg-str))))
-      (push
-       (list :room room
-             :team team
-             :message message
-             :sender-name sender-name
-             :room-name room-name
-             :title title
-             :message-string msg-str)
-       im-slack--last-messages)
+           (msg-str-short (s-truncate 80 (s-replace "\n" "─" msg-str)))
+           (message-data (list :room room
+                               :team team
+                               :message message
+                               :sender-name sender-name
+                               :room-name room-name
+                               :title title
+                               :message-string msg-str)))
+      (push message-data im-slack--last-messages)
       (unless (or (slack-message-minep message team)
                   (s-contains? "message deleted" msg-str)
                   (s-contains? "has joined the" msg-str)
                   (s-contains? "has left the" msg-str)
-                  ;; Dont show notifications for visible slack windows if emacs is not idle
+                  ;; Don't show notifications for visible slack windows if emacs is not idle
                   (and
                    (< (time-to-seconds (or (current-idle-time) 0)) 15)
                    (--some
@@ -6035,21 +6029,18 @@ this command is invoked from."
         ;; Only send desktop notifications for the things I'm interested
         ;; mpim || group || in subscribed channels
         (when (slack-message-notify-p message room team)
-          ;; msg-str sometimes causes errors with `alert'. Thats why I
-          ;; used `ignore-errors'.
-          (ignore-errors
-            (unless im-slack-dnd
-              (alert
-               msg-str-short
-               :title title
-               :category "slack"))))
-        (unless im-slack-dnd
-          (message
-           ">> Slack: %s // %s"
-           title
-           (if (await (im-screen-sharing-now?))
-               "[REDACTED due to screensharing]"
-             msg-str-short)))))))
+          (im-notif
+           :message msg-str-short
+           :title title
+           :source (lambda ()
+                     (im-slack--open-message-or-thread message-data))
+           :labels '("slack")))
+        (message
+         ">> Slack: %s // %s"
+         title
+         (if (await (im-screen-sharing-now?))
+             "[REDACTED due to screensharing]"
+           msg-str-short))))))
 
 (defun im-slack-yank-last-message ()
   "Yank the contents of the last received message as text."

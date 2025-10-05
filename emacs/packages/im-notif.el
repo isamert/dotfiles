@@ -82,11 +82,33 @@ By default it logs every notification (\\='trivial)."
 (defvar-local im-notif--notification-data nil)
 
 ;;;###autoload
-(async-cl-defun im-notif (&rest data &key id title message duration margin (severity 'normal) &allow-other-keys)
+(async-cl-defun im-notif (&rest data &key id title message duration margin (severity 'normal) source &allow-other-keys)
+  "Displays a notification message.
+
+DATA -- a property list of keyword arguments:
+
+  ID -- (optional) unique identifier for the notification.
+
+  MESSAGE -- content of the notification.
+
+  TITLE -- (optional) notification title.
+
+  DURATION -- (optional) display time in seconds.  If nil,
+  notification persists.
+
+  LABELS -- (optional) labels/tags for the notification.  Used for
+  filtering.
+
+  MARGIN -- (optional) margin for notification popup.
+
+  SEVERITY -- (optional, default: \\='normal) notification severity.
+
+  SOURCE -- (optional) origin or source of the notification.  This can
+  be a function or a buffer object."
   (setq title (propertize title 'face '(:weight bold)))
   (let ((bname (format "*notif-%s*"
-                       (or id (format "%s-%s" (if title (im-string-url-case title) "") (random))))))
-
+                       (or id (format "%s-%s" (if title (im-string-url-case title) "") (random)))))
+        (source-buffer (current-buffer)))
     (when (and (not im-notif-dnd)
                (not (and im-notif-blacklist-regexp
                          (s-matches?
@@ -94,7 +116,6 @@ By default it logs every notification (\\='trivial)."
                               im-notif-blacklist-regexp
                             (eval im-notif-blacklist-regexp))
                           (concat (or title "") "\n" message)))))
-
       (let ((message (if (await (im-screen-sharing-now?))
                          "[REDACTED due to screensharing]"
                        message)))
@@ -105,6 +126,7 @@ By default it logs every notification (\\='trivial)."
                    (thread-first
                      data
                      (map-insert :time (float-time))
+                     (map-insert :source-buffer source-buffer)
                      (map-insert :id (substring-no-properties bname))))
              (current-buffer))
            :string
@@ -181,6 +203,8 @@ By default it logs every notification (\\='trivial)."
   (let ((notification (im-notif--select)))
     (empv--select-action "Act on notification"
       "Open" → (switch-to-buffer-other-window (plist-get notification :buffer-name))
+      "Buffer (origin)" → (switch-to-buffer (plist-get notification :source-buffer))
+      "Go to Source" → (im-notif-go-to-source notification)
       "Delete" → (progn (posframe-delete (plist-get notification :buffer-name)) (message ">> Deleted."))
       "Snooze" → (im-notif-snooze notification (im-notif--read-duration)))))
 
@@ -223,6 +247,13 @@ otherwise, it is taken as a plain string regexp."
                 (car (read-from-string result))
               result)))))
 
+(defun im-notif-go-to-source (notification)
+  (let ((source (plist-get notification :source)))
+    (cond
+     ((functionp source) (funcall source))
+     ((bufferp source) (switch-to-buffer (plist-get notification :source)))
+     (t (message "Can't open: %s" source)))))
+
 ;; TODO Add ack, like tmr? Maybe add ack option to im-notif
 ;; itself and call with ack within this function
 (defun im-notif-snooze (notification seconds)
@@ -239,6 +270,11 @@ otherwise, it is taken as a plain string regexp."
   "Interactively snooze the last notification for a duration read from the user."
   (interactive)
   (im-notif-snooze (car (im-notif-notifications-list)) (im-notif--read-duration)))
+
+(defun im-notif-go-to-source-last ()
+  "Go to source of the last notification."
+  (interactive)
+  (im-notif-go-to-source (car (im-notif-notifications-list))))
 
 ;;;;; Logging
 
@@ -290,10 +326,13 @@ otherwise, it is taken as a plain string regexp."
     (--sort (> (plist-get it :time) (plist-get other :time)))))
 
 (defun im-notif--format-notification (it)
-  (format "%s | %s - %s"
+  (format "%s │ ✍️ %s 📰 %s%s"
           (format-time-string "%Y-%m-%d %H:%M" (plist-get it :time))
           (plist-get it :title)
-          (plist-get it :message)))
+          (plist-get it :message)
+          (if-let* ((labels (plist-get it :labels)))
+              (concat " #️⃣ " (s-join " " (--map (format "#%s" it) labels)))
+            "")))
 
 (defun im-notif--select ()
   (im-completing-read
