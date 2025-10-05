@@ -10942,7 +10942,7 @@ schedules them to today's date."
 (defun im-bullet-open-weekly-plan ()
   "Open weekly planning entry in an indirect buffer."
   (interactive)
-  (with-current-buffer (find-buffer-visiting bullet-org)
+  (with-current-buffer (find-buffer-visiting life-org)
     (save-restriction
       (save-excursion
         (when (or
