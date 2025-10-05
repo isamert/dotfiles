@@ -78,6 +78,8 @@ By default it logs every notification (\\='trivial)."
 
 (defvar im-notif-blacklist-regexp nil)
 (defvar im-notif-dnd nil)
+(defvar im-notif-dnd-labels nil
+  "List of labels with DND enabled.")
 (defvar im-notif--active '())
 (defvar-local im-notif--notification-data nil)
 
@@ -108,8 +110,12 @@ DATA -- a property list of keyword arguments:
   (setq title (propertize title 'face '(:weight bold)))
   (let ((bname (format "*notif-%s*"
                        (or id (format "%s-%s" (if title (im-string-url-case title) "") (random)))))
-        (source-buffer (current-buffer)))
+        (source-buffer (current-buffer))
+        (labels (plist-get data :labels)))
     (when (and (not im-notif-dnd)
+               ;; Check if any label has DND enabled
+               (not (and labels
+                         (--any? (member it im-notif-dnd-labels) labels)))
                (not (and im-notif-blacklist-regexp
                          (s-matches?
                           (if (stringp im-notif-blacklist-regexp)
@@ -174,8 +180,6 @@ DATA -- a property list of keyword arguments:
                   :darwin 'osx-notifier)))
             (ignore-errors
               (alert message :title title :severity severity)))))
-      ;; Send it to my phone but only if Emacs is idle for a certain
-      ;; time
       (dolist (fn im-notif-post-notify-hooks)
         (funcall fn data)))))
 
@@ -221,6 +225,38 @@ DATA -- a property list of keyword arguments:
   "Disable DND mode."
   (interactive)
   (setq im-notif-dnd nil))
+
+;;;###autoload
+(defun im-notif-enable-dnd-for-labels ()
+  "Enable DND mode for selected labels for a given duration."
+  (interactive)
+  (let* ((labels (im-notif--get-all-labels))
+         (selected-labels (if labels
+                              (completing-read-multiple "Select labels for DND: " labels)
+                            (user-error "No labels found in current notifications")))
+         (seconds (im-notif--read-duration)))
+    (dolist (label selected-labels)
+      (cl-pushnew label im-notif-dnd-labels :test #'equal))
+    (message ">> DND enabled for labels: %s for %s seconds."
+             (s-join ", " selected-labels)
+             seconds)
+    (run-with-timer seconds nil
+                    (lambda (labels-to-remove)
+                      (dolist (label labels-to-remove)
+                        (setq im-notif-dnd-labels
+                              (delete label im-notif-dnd-labels))))
+                    selected-labels)))
+
+;;;###autoload
+(defun im-notif-disable-dnd-for-label (label)
+  "Disable DND mode for a specific LABEL."
+  (interactive
+   (list (completing-read "Disable DND for label: "
+                          im-notif-dnd-labels
+                          nil t)))
+  (setq im-notif-dnd-labels
+        (delete label im-notif-dnd-labels))
+  (message ">> DND disabled for label: %s" label))
 
 ;;;###autoload
 (defun im-notif-blacklist ()
@@ -288,7 +324,9 @@ otherwise, it is taken as a plain string regexp."
 (defun im-notif--log-notif (data)
   (im-notif--log
    (alist-get (plist-get data :severity) im-notif--severity-log-mapping 'info)
-   (prin1-to-string data)))
+   (let ((print-level 2)
+         (print-length 25))
+     (prin1-to-string data))))
 
 (add-hook 'im-notif-post-notify-hooks #'im-notif--log-notif)
 
@@ -309,15 +347,28 @@ otherwise, it is taken as a plain string regexp."
    ["DND/Blacklist"
     ("e" "Enable DND" im-notif-enable-dnd)
     ("E" "Disable DND" im-notif-disable-dnd)
+    ("D" "Enable DND for labels" im-notif-enable-dnd-for-labels)
+    ("x" "Disable DND for label" im-notif-disable-dnd-for-label)
     ("z" "Edit blacklist" im-notif-blacklist)]
-   ["Snooze"
-    ("s" "Snooze last" im-notif-snooze-last)]])
+   ["Other"
+    ("s" "Snooze last" im-notif-snooze-last)
+    ("g" "Go to source last" im-notif-go-to-source-last)]])
 
 ;;;;; Utility
 
+(defun im-notif--get-all-labels ()
+  "Return a list of all unique labels from current notifications."
+  (thread-last
+    (im-notif-notifications-list)
+    (--map (plist-get it :labels))
+    (--filter it)
+    (-flatten)
+    (-uniq)
+    (--sort (string< it other))))
+
 (defun im-notif-notifications-list ()
   "Return notification datas in sorted order.
-  First one is the latest one."
+First one is the latest one."
   (thread-last
     (buffer-list)
     (--filter (string-prefix-p "*notif" (buffer-name it)))

@@ -3232,7 +3232,8 @@ Return a (color color) list that can be used with :column-colors and
       :message (plist-get info :message)
       :margin t
       :duration (unless (plist-get info :persistent) alert-fade-time)
-      :severity (plist-get info :severity))))
+      :severity (plist-get info :severity)
+      :labels '("alert"))))
   (setq alert-default-style 'im-notif)
   (setq alert-fade-time 15)
   (when (eq system-type 'darwin)
@@ -3246,7 +3247,8 @@ Return a (color color) list that can be used with :column-colors and
   (setq
    org-show-notification-handler
    (lambda (notification)
-     (alert notification :title "*org-mode*"))))
+     (im-notif :message notification :title "*org-mode*"
+               :labels '("org")))))
 
 (use-package im-notif
   :straight nil
@@ -3254,8 +3256,8 @@ Return a (color color) list that can be used with :column-colors and
   :general
   (im-leader
     "y" #'im-notif-menu)
-  :custom
-  (defun im-notif--send-to-ntfy ()
+  :config
+  (async-defun im-notif--send-to-ntfy (data)
     "Send notifications to ntfy after some idle time."
     (when (or (and (current-idle-time)
                    (>= (time-to-seconds (current-idle-time)) 30))
@@ -3721,23 +3723,20 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
         (im-appt-notify--helper (car it) new-time (cdr it)))
     (im-appt-notify--helper min-to-appt new-time appt-msg)))
 
-(defun im-appt-notify--helper (min-to-appt new-time appt-msg)
+(defun im-appt-notify--helper (min-to-appt _new-time appt-msg)
   (setq min-to-appt (string-to-number min-to-appt))
   (message ">> appt :: %s, remaining %s mins" appt-msg min-to-appt)
   (let ((important? (cond
                      ((s-contains? "meeting" (s-downcase appt-msg)) t)
                      (t nil))))
-    (alert
-     (im-org-header-line-to-title appt-msg)
-     :title (format "Reminder, %s mins left" min-to-appt new-time)
+    (im-notif
+     :message (format "Reminder, %s mins left" min-to-appt)
+     :title (im-org-header-line-to-title appt-msg)
      :severity (if important? 'high 'normal)
-     :persistent important?
-     :category 'appt
-     :id appt-msg)))
-
+     :duration (if important? nil 10)
+     :labels '("appt"))))
 
 ;;;;;; More org-mode and diary integration and utilities
-
 
 (defun im-diary-kill-entry-as-bullet-task (&optional include-description)
   "Copy current diary entry as a bullet.org task."
