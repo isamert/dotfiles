@@ -7587,8 +7587,8 @@ the commit buffer."
 ;; treesit.el, here are the bindings that I find useful (which are
 ;; enabled by `combobulate-mode'):
 
-;; - M-P :: combobulate-drag-up
-;; - M-N :: combobulate-drag-down
+;; - M-P (also M-k) :: combobulate-drag-up
+;; - M-N (also M-j) :: combobulate-drag-down
 
 ;; I also replace `expand-region' with combobulate equivalent and also
 ;; re-bind some of the bindings from `puni' with their combobulate
@@ -7608,7 +7608,9 @@ the commit buffer."
          (tsx-ts-mode . combobulate-mode))
   :general
   (:keymaps 'combobulate-key-map :states '(normal insert)
-   "M-w" #'combobulate-mark-node-dwim)
+   "M-w" #'combobulate-mark-node-dwim
+   "M-k" #'combobulate-drag-up
+   "M-j" #'combobulate-drag-down)
   (:keymaps 'combobulate-key-map :states '(insert)
    "M-t" #'combobulate-transpose-sexps)
   :custom
