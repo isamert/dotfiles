@@ -561,6 +561,7 @@ cut it. I need to run those statements on every theme change.")
 
 (defconst im-fonts
   '("Cascadia Code NF"
+    "CaskaydiaCove Nerd Font"
     "FiraCode Nerd Font"
     "Iosevka Nerd Font"
     "IBM Plex Mono"
@@ -576,13 +577,16 @@ One of `im-fonts'.")
 
 (defconst im-font-height (im-when-on :linux 108 :darwin 150))
 
-(defun im-set-font (&optional next)
+(defun im-set-font ()
   "Set the first available font from the `im-fonts' list.
 If NEXT is non-nil, then use the next font."
-  (interactive "P")
+  (interactive)
   (and-let* ((fonts (-filter #'im-font-exists-p im-fonts))
-             (font (if next
-                       (or (cadr (member im-current-font fonts)) (car fonts))
+             (font (if (called-interactively-p 'interactive)
+                       (let* ((display-fonts (mapcar (lambda (f)
+                                                       (propertize f 'face `(:family ,f)))
+                                                     fonts)))
+                         (completing-read "Font: " display-fonts nil t))
                      (car fonts))))
     (set-face-attribute 'default nil
                         :font font
