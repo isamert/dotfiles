@@ -7266,7 +7266,7 @@ mails."
   :straight nil
   :init
   (add-hook 'im-git-commit-finished-hook #'im-update-git-state)
-  (add-to-list 'im-git-commit-pre-hook #'im-git-check-commit))
+  (add-hook 'im-git-commit-pre-hook #'im-git-check-commit))
 
 (transient-define-prefix im-git-transient ()
   [["Status"
