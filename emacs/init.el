@@ -6028,19 +6028,20 @@ this command is invoked from."
         ;; Only send desktop notifications for the things I'm interested
         ;; mpim || group || in subscribed channels
         (when (slack-message-notify-p message room team)
-          (im-notif
-           :message msg-str-short
-           :title title
-           :source (lambda ()
-                     (im-slack--open-message-or-thread message-data))
-           :labels '("slack")))
-        (unless im-notif-dnd
-          (message
-           ">> Slack: %s // %s"
-           title
-           (if (await (im-screen-sharing-now?))
-               "[REDACTED due to screensharing]"
-             msg-str-short)))))))
+          (unless im-notif-dnd
+            (message
+             ">> Slack: %s // %s"
+             title
+             (if (await (im-screen-sharing-now?))
+                 "[REDACTED due to screensharing]"
+               msg-str-short)))
+          (ignore-errors
+            (im-notif
+             :message msg-str-short
+             :title title
+             :source (lambda ()
+                       (im-slack--open-message-or-thread message-data))
+             :labels '("slack"))))))))
 
 (defun im-slack-yank-last-message ()
   "Yank the contents of the last received message as text."
