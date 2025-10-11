@@ -1009,10 +1009,6 @@ REGEXP."
 
 ;;;; im-git-list-dirty
 
-(defun im-git--dirty? ()
-  "Return t if there are uncommitted changes in the working tree."
-  (eq 1 (call-process "git" nil nil nil "diff-index" "--quiet" "HEAD" "--")))
-
 (defun im-git-list-dirty-projects ()
   "List all dirty projects or projects that are not on main branch.
 I keep projects clean in my local and do developments inside worktrees
@@ -1028,7 +1024,7 @@ but sometimes projects gets dirty and this fixes that."
                                      (with-current-buffer standard-output
                                        (funcall #'call-process "git" nil (current-buffer) nil "symbolic-ref" "--short" "HEAD"))))))
                       (string= branch main-branch)))
-             (dirty? (im-git--dirty?)))
+             (dirty? (im-git-dirty?)))
         (when dirty?
           (insert (format "- %s is dirty!\n" project))
           (insert "  ")
@@ -1050,7 +1046,7 @@ but sometimes projects gets dirty and this fixes that."
            'action (lambda (_button)
                      (let ((default-directory (expand-file-name project)))
                        (if (eq 0 (call-process "git" nil nil nil "checkout" main-branch))
-                           (message ">> Switched! isDirty=%s" (im-git--dirty?))
+                           (message ">> Switched! isDirty=%s" (im-git-dirty?))
                          (message "!! Failed to switch!")))))
           (insert "\n"))
         (when (or dirty? (not main?))
@@ -1170,8 +1166,8 @@ If worktree is dirty, asks user if they want to force delete it."
 ;;;; git utils
 
 (defun im-git-dirty? ()
-  "Check if current git dir is dirty."
-  (not (s-blank? (shell-command-to-string "git status --porcelain"))))
+  "Return t if there are uncommitted changes in the working tree."
+  (eq 1 (call-process "git" nil nil nil "diff-index" "--quiet" "HEAD" "--")))
 
 (provide 'im-git)
 ;;; im-git.el ends here
