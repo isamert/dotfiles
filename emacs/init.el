@@ -2121,7 +2121,7 @@ Also adds author and duration info to YouTube links."
   "Format given YouTube link as `org-mode' link.
 Length, author, title etc. are appended to the link."
   (let ((id (im-youtube-link-extract-id link)))
-    (let-alist (im-request (format "%s/videos/%s" empv-invidious-instance id))
+    (let-alist (empv--request (format "%s/videos/%s" empv-invidious-instance id))
       (org-link-make-string
        link
        (format "%0.2f mins, by %s || %s" (/ .lengthSeconds 60.0) .author .title)))))
@@ -7319,7 +7319,8 @@ mails."
 This checks for some mistakes I repeadetly do and tries to warn me in
 the commit buffer."
   (goto-char (point-min))
-  (let (todo)
+  (let (todo
+        (default-directory (im-current-project-root)))
     (condition-case reason
         (progn
           (when (s-matches? "^-;; Version: " diff)
