@@ -767,7 +767,52 @@ defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 3
 #+end_src
 
 - [[https://github.com/dwarvesf/hidden][Hidden Bar]] → This lets you selectively hide some items so that only the things you want stay visible.
+** Alacritty
+#+begin_src toml :tangle ~/.config/alacritty.toml
+live_config_reload = false
 
+[colors]
+draw_bold_text_with_bright_colors = true
+
+[colors.bright]
+black = "#928374"
+blue = "#83a598"
+cyan = "#8ec07c"
+green = "#b8bb26"
+magenta = "#d3869b"
+red = "#fb4934"
+white = "#ebdbb2"
+yellow = "#fabd2f"
+
+[colors.normal]
+black = "#282828"
+blue = "#458588"
+cyan = "#689d6a"
+green = "#98971a"
+magenta = "#b16286"
+red = "#cc241d"
+white = "#a89984"
+yellow = "#d79921"
+
+[colors.primary]
+background = "#282828"
+foreground = "#ebdbb2"
+
+[font]
+size = 14
+
+[font.normal]
+family = "FiraCode Nerd Font"
+
+[shell]
+program = "/opt/homebrew/bin/tmux"
+
+[window]
+dynamic_title = true
+option_as_alt = "Both"
+decorations = "Buttonless"
+# opacity = 0.8
+#+end_src
 * Linux
 ** systemd
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
