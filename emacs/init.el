@@ -552,8 +552,8 @@ cut it. I need to run those statements on every theme change.")
      modus-vivendi
      ;; Like solarized but much nicer colors.
      ef-melissa-dark
-     ;; like ef-summer but dark. Black and purple.
-     ef-cherie
+     ;; Cool
+     doom-nord
      ;; Nice dark theme with good contrast.
      doom-Iosvkem)))
 

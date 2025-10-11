@@ -931,8 +931,8 @@ sudo udevadm control --reload-rules
 
 ** foot terminal emulator
 #+begin_src conf :tangle ~/.config/foot/foot.ini
-shell = fish
-font = Courier New:pixelsize=18
+shell = tmux
+font = CaskaydiaCove Nerd Font:pixelsize=18
 resize-by-cells = no
 
 [csd]
@@ -1523,42 +1523,8 @@ end
 #+end_src
 
 * Tmux
-** Install TPM (Tmux Plugin Manager)
-#+begin_src sh
-  git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-#+end_src
-
-After issuing the command above, you need to do ~PREFIX I~ to install all plugins.
-
-** The configuration
+I use tmux for it's vi mode. Other than that I generally use my window manager for multiple terminals (which is rarely needed because I'm mostly in Emacs.)
 #+begin_src conf :tangle ~/.tmux.conf
-
-# ####################################################
-#      __                                         ____
-#     / /_____ ___  __  ___  __ _________  ____  / __/
-#    / __/ __ `__ \/ / / / |/_// ___/ __ \/ __ \/ /_
-#  _/ /_/ / / / / / /_/ />  <_/ /__/ /_/ / / / / __/
-# (_)__/_/ /_/ /_/\__,_/_/|_(_)___/\____/_/ /_/_/
-# ####################################################
-
-# Add the plugin manager (PREFIX I -> install them)
-set -g @plugin 'tmux-plugins/tpm'
-
-# PREFIX C-s -> save, PREFIX C-r -> restore
-set -g @plugin 'tmux-plugins/tmux-resurrect'
-
-# Highlight when prefix is pressed, in copy mode etc.
-set -g @plugin 'tmux-plugins/tmux-prefix-highlight'
-set -g @prefix_highlight_show_copy_mode 'on'
-set -g @prefix_highlight_copy_mode_attr 'fg=white,bg=yellow,bold' # default is 'fg=default,bg=yellow'
-set -g @prefix_highlight_show_sync_mode 'on'
-set -g @prefix_highlight_sync_mode_attr 'fg=black,bg=green' # default is 'fg=default,bg=yellow'
-
-# PREFIX o -> captures the output of last command
-set -g @plugin 'artemave/tmux_capture_last_command_output'
-set -g @command-capture-key o
-set -g @command-capture-prompt-pattern '➜ '
-
 set -g default-shell $PREFIX/bin/fish
 set -g mouse on
 set -g base-index 1 # Window indexes starts from 1
@@ -1567,14 +1533,11 @@ set -s escape-time 0 # Remove the delay after hitting <ESC>
 set-option -g set-titles off
 set-option -g allow-rename off
 
-# Reload config
-bind r source-file ~/.tmux.conf
-
 # Open copy mode
 bind -n M-y copy-mode
 
 # Set prefix to A-a
-unbind C-b
+# unbind C-b
 set -g prefix M-a
 bind-key M-a send-prefix
 
@@ -1593,40 +1556,13 @@ bind j selectp -D
 bind h selectp -L
 bind l selectp -R
 
-# Pane switches (without prefix key)
-bind -n M-h select-pane -L
-bind -n M-j select-pane -D
-bind -n M-k select-pane -U
-bind -n M-l select-pane -R
-bind -n M-\\ split-window -h -c '#{pane_current_path}'
-bind -n M--  split-window -v -c '#{pane_current_path}'
-
-# Swapping shortcuts
-bind-key W choose-tree -Zw "swap-window -t '%%'"
-bind-key P choose-tree -Zw "swap-pane -t '%%'"
-
 # Vi keys for copy-mode
 setw -g mode-keys vi
 bind-key -T copy-mode-vi v send-keys -X begin-selection
 bind-key -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel
-bind-key -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "xclip -selection clipboard"
+bind-key -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "wl-copy"
 
-bind -n M-s run-shell -b tmux-switch
-
-# Status bar theme
-set -g status-position bottom
-set -g status-left-length 32
-
-set -g status-fg white
-set -g status-bg black
-
-set -g status-left '#[fg=colour235,bg=colour252,bold] #S #[fg=colour252,bg=colour238,nobold]#[fg=colour245,bg=colour238,bold] #(whoami) #[fg=colour238,bg=black,nobold]'
-set -g window-status-format "#[fg=white,bg=black] #I #W "
-set -g window-status-current-format "#[fg=black,bg=colour39]#[fg=colour25,bg=colour39,noreverse,bold] #I  #W #[fg=colour39,bg=black,nobold]"
-set -g status-right "#{prefix_highlight}"
-
-# Load tmux plugin manager
-run '~/.tmux/plugins/tpm/tpm'
+set-option -g destroy-unattached on
 #+end_src
 * Utilities
 ** git
