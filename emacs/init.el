@@ -7849,6 +7849,7 @@ Useful if .elfeed directory is freshly syncned."
   (setq empv-audio-dir `("~/Music" ,(format "/run/media/%s/BINGUS/Music" (user-login-name)) ,(format "/run/media/%s/FLOPPA/Music" (user-login-name))))
   (setq empv-allow-insecure-connections t)
   (setq empv-invidious-instance im-empv-invidious-instance)
+  (setq empv-invidious-request-headers `(("isamert-token" . ,im-token)))
   ;; ^ see https://api.invidious.io/
   (setq empv-youtube-use-tabulated-results t)
   (add-to-list 'empv-mpv-args "--ytdl-format=bestvideo+bestaudio/best[ext=mp4]/best")
@@ -7903,7 +7904,7 @@ Useful if .elfeed directory is freshly syncned."
   :config
   (setq orgmdb-omdb-apikey im-orgmdb-omdb-apikey)
   (setq orgmdb-poster-folder "~/Documents/notes/data/posters")
-  (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore actors poster plot)))
+  (setq orgmdb-fill-property-list '(genre runtime director country imdb-id imdb-link imdb-rating metascore tomatometer actors poster plot)))
 
 ;;;;; rcirc -- simple, built-in irc client
 
