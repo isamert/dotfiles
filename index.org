@@ -219,6 +219,9 @@ cmd-comma = 'focus-monitor left'
 cmd-shift-period = 'move-node-to-monitor right'
 cmd-shift-comma = 'move-node-to-monitor left'
 
+cmd-r = 'mode resize'
+cmd-f = 'fullscreen'
+
 cmd-f1 = 'layout v_accordion'
 cmd-f2 = 'layout h_accordion'
 cmd-f3 = 'layout tiles horizontal vertical'
@@ -233,9 +236,6 @@ cmd-shift-h = 'move left'
 cmd-shift-j = 'move down'
 cmd-shift-k = 'move up'
 cmd-shift-l = 'move right'
-
-cmd-shift-minus = 'resize smart -50'
-cmd-shift-equal = 'resize smart +50'
 
 cmd-1 = 'workspace 1'
 cmd-2 = 'workspace 2'
@@ -259,53 +259,11 @@ cmd-shift-8 = 'move-node-to-workspace 8'
 cmd-shift-9 = 'move-node-to-workspace 9'
 
 cmd-tab = 'workspace-back-and-forth'
-#+end_src
 
-#+name: aerospace-uhk-bindings
-#+begin_src toml
-[mode.main.binding]
-cmd-alt-ctrl-f13 = 'layout floating tiling'
-cmd-alt-ctrl-f14 = 'fullscreen'
-
-cmd-alt-ctrl-f11 = 'resize smart -50'
-cmd-alt-ctrl-f12 = 'resize smart +50'
-
-cmd-alt-ctrl-f19 = 'focus-monitor left'
-cmd-alt-ctrl-f20 = 'focus-monitor right'
-cmd-alt-ctrl-shift-f19 = 'move-node-to-monitor left'
-cmd-alt-ctrl-shift-f20 = 'move-node-to-monitor right'
-
-cmd-alt-ctrl-f15 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop left'
-cmd-alt-ctrl-f16 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop down'
-cmd-alt-ctrl-f17 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop up'
-cmd-alt-ctrl-f18 = 'focus --boundaries all-monitors-outer-frame --boundaries-action stop right'
-
-cmd-alt-ctrl-shift-f15 = 'move left'
-cmd-alt-ctrl-shift-f16 = 'move down'
-cmd-alt-ctrl-shift-f17 = 'move up'
-cmd-alt-ctrl-shift-f18 = 'move right'
-
-cmd-alt-ctrl-f1 = 'workspace 1'
-cmd-alt-ctrl-f2 = 'workspace 2'
-cmd-alt-ctrl-f3 = 'workspace 3'
-cmd-alt-ctrl-f4 = 'workspace 4'
-cmd-alt-ctrl-f5 = 'workspace 5'
-cmd-alt-ctrl-f6 = 'workspace 6'
-cmd-alt-ctrl-f7 = 'workspace 7'
-cmd-alt-ctrl-f8 = 'workspace 8'
-cmd-alt-ctrl-f9 = 'workspace 9'
-cmd-alt-ctrl-f10 = 'workspace 0'
-
-cmd-alt-ctrl-shift-f1 = 'move-node-to-workspace 1'
-cmd-alt-ctrl-shift-f2 = 'move-node-to-workspace 2'
-cmd-alt-ctrl-shift-f3 = 'move-node-to-workspace 3'
-cmd-alt-ctrl-shift-f4 = 'move-node-to-workspace 4'
-cmd-alt-ctrl-shift-f5 = 'move-node-to-workspace 5'
-cmd-alt-ctrl-shift-f6 = 'move-node-to-workspace 6'
-cmd-alt-ctrl-shift-f7 = 'move-node-to-workspace 7'
-cmd-alt-ctrl-shift-f8 = 'move-node-to-workspace 8'
-cmd-alt-ctrl-shift-f9 = 'move-node-to-workspace 9'
-cmd-alt-ctrl-shift-f10 = 'move-node-to-workspace 0'
+[mode.resize.binding]
+h = 'resize smart -50'
+l = 'resize smart +50'
+esc = 'mode main'
 #+end_src
 
 #+name: aerospace-config
@@ -367,13 +325,6 @@ PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${HOME}/.bin:${PATH}'
 
 Depending on your current keyboard configuration, tangle one of the following:
 
-#+name: aerospace-uhk
-#+begin_src toml :noweb yes :tangle (when-darwin "~/.aerospace.toml")
-«aerospace-config»
-«aerospace-uhk-bindings»
-#+end_src
-
-#+name: aerospace-mac
 #+begin_src toml :noweb yes :tangle (when-darwin "~/.aerospace.toml")
 «aerospace-config»
 «aerospace-mac-keyboard-bindings»
