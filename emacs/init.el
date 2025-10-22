@@ -5472,9 +5472,9 @@ SORT should be nil to disable sorting."
         :on-finish
         (lambda (output &rest _)
           (dolist (var (s-match-strings-all
-                        "export \\([a-zA-Z_-]+\\)=\\(.*\\)"
+                        "\\(export\\|set -x\\) \\([a-zA-Z_-]+\\)\\(=\\| \\)\\(.*\\)"
                         output))
-            (message ">> Setting %s → %s" (nth 1 var) (nth 2 var))
+            (message ">> Setting %s → %s" (nth 2 var) (nth 4 var))
             (setenv (nth 1 var) (nth 2 var) t))))))
 
 ;;;;; vterm
