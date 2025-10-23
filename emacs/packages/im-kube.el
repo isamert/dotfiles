@@ -208,6 +208,7 @@
       "Top" → (im-kube-pod--top pod)
       "Remove" → (im-kube-pod--remove pod)
       "Events" → (im-kube-pod--events pod)
+      "Describe" → (im-kube-pod--describe pod)
       "Info" → (im-kube-pod--info pod))))
 
 (defun im-kube-pod--select-container (pod)
@@ -265,6 +266,16 @@
      (plist-get pod :namespace)
      (plist-get pod :context)))
    (format "*im-kube-events:%s*" (plist-get pod :name))))
+
+(defun im-kube-pod--describe (pod)
+  (shell-command
+   (im-kill
+    (format
+     "kubectl describe 'pod/%s' %s --context='%s'"
+     (plist-get pod :name)
+     (plist-get pod :namespace)
+     (plist-get pod :context)))
+   (format "*im-kube-describe:%s*" (plist-get pod :name))))
 
 (defun im-kube-pod--app-logs (pod &optional container)
   ;; Logs from all pods combined for given pod's app
