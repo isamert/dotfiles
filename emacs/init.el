@@ -5437,7 +5437,7 @@ SORT should be nil to disable sorting."
       (progn (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok)))
              (when (bound-and-true-p lsp-mode)
                (message ">> Restarting lsp workspace...")
-               (lsp-workspace-restart)))
+               (call-interactively #'lsp-workspace-restart)))
     (message ">> Lombok jar not found.")))
 
 (use-package lsp-java
@@ -5474,8 +5474,10 @@ SORT should be nil to disable sorting."
           (dolist (var (s-match-strings-all
                         "\\(export\\|set -x\\) \\([a-zA-Z_-]+\\)\\(=\\| \\)\\(.*\\)"
                         output))
-            (message ">> Setting %s → %s" (nth 2 var) (nth 4 var))
-            (setenv (nth 1 var) (nth 2 var) t))))))
+            (let ((key (nth 2 var))
+                  (val (nth 4 var)))
+              (message ">> Setting %s → %s" key val)
+              (setenv key val t)))))))
 
 ;;;;; vterm
 
