@@ -3247,8 +3247,10 @@ Return a (color color) list that can be used with :column-colors and
   (setq
    org-show-notification-handler
    (lambda (notification)
-     (im-notif :message notification :title "*org-mode*"
-               :labels '("org")))))
+     (im-notif :message notification
+               :title "*org-mode*"
+               :labels '("org"))))
+  (add-to-list 'im-notif-dnd-whitelist-labels "org"))
 
 (use-package im-notif
   :straight nil
@@ -3257,17 +3259,13 @@ Return a (color color) list that can be used with :column-colors and
   (im-leader
     "y" #'im-notif-menu)
   :config
+  (setq im-notif-dnd-whitelist-regexp "check slack")
   (async-defun im-notif--send-to-ntfy (data)
     "Send notifications to ntfy after some idle time."
     (when (and
            (not im-notif-dnd)
-           (or (and (current-idle-time)
-                    (>= (time-to-seconds (current-idle-time)) 30))
-               ;; If we are sharing a screen, that means the
-               ;; notification will only show REDACTED. Then send it
-               ;; to my phone so that I can see it privately through
-               ;; my watch.
-               (await (im-screen-sharing-now?))))
+           (current-idle-time)
+           (>= (time-to-seconds (current-idle-time)) 30))
       (im-ntfy
        (plist-get data :message)
        :title (or (plist-get data :title) "Emacs"))))
@@ -3687,6 +3685,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (setq appt-disp-window-function #'im-appt-notify)
   (setq appt-message-warning-time 10)
   (setq appt-display-interval 4)
+  (add-to-list 'im-notif-dnd-whitelist-labels "appt")
 
   (save-window-excursion
     (appt-activate 1)))
@@ -5887,6 +5886,7 @@ this command is invoked from."
   (setq lui-time-stamp-format "[%a %b %d %H:%M]")
   (setq slack-message-custom-notifier #'im-slack-notify)
   (setq slack-message-custom-delete-notifier #'im-slack-notify)
+  (add-to-list 'im-notif-label-default-durations '("slack" . 5))
 
   (setq slack-visible-thread-sign "╚═> ")
 
@@ -6580,13 +6580,10 @@ Fetches missing channels/users first."
   :config
   ;; Replace the notification function so that it works on my Mac
   (remove-hook 'tmr-timer-finished-functions #'tmr-notification-notify)
-
-  ;; Acknowledge using the GUI dialog as it requires mouse which makes
-  ;; me more conscious (and also works when emacs is unfocued)
-  (remove-hook 'tmr-timer-finished-functions #'tmr-acknowledge-minibuffer)
-  (add-hook 'tmr-timer-finished-functions #'im-tmr-ack 90)
-
   (add-hook 'tmr-timer-finished-functions #'im-tmr-notify)
+  ;; Show tmr notifications even if we are in DND
+  (add-to-list 'im-notif-dnd-whitelist-labels "tmr")
+
   (when (eq system-type 'darwin)
     (setq tmr-sound-file "/System/Library/Sounds/Glass.aiff"))
 
@@ -6601,19 +6598,13 @@ Fetches missing channels/users first."
   (setq global-mode-string (append global-mode-string '(im-tmr-upcoming-string)))
   (run-with-timer 1 15 #'im-tmr-format-upcoming))
 
-(defun im-tmr-ack (timer)
-  (when (tmr--timer-acknowledgep timer)
-    (im-force-focus-emacs)
-    ;; Doing jk escapes the acknowledge dialog, so I disable it here
-    (let ((evil-escape-inhibit t))
-      (tmr-acknowledge-minibuffer timer))))
-
 (defun im-tmr-notify (timer)
-  (alert
-   (tmr--long-description-for-finished-timer timer)
+  (im-notif
    :title "TMR"
+   :message (tmr--long-description-for-finished-timer timer)
    ;; TMR events are high priority for me
-   :severity 'high))
+   :severity 'urgent
+   :labels '("tmr")))
 
 (defvar im-tmr-upcoming-string nil)
 (put 'im-tmr-upcoming-string 'risky-local-variable t) ;; This is required to make propertize work

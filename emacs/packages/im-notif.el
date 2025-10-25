@@ -68,64 +68,108 @@ By default it logs every notification (\\='trivial)."
 
 (defcustom im-notif-post-notify-hooks nil
   "Functions to run after showing the notification.
-  Functions should take one argument where the argument is a plist of
-  notification data."
-  :type 'list)
+Functions should take one argument where the argument is a plist of
+notification data."
+  :group 'im-notif
+  :type 'hooks)
+
+(defcustom im-notif-dnd-whitelist-regexp nil
+  "Show matching notifications even if in DND."
+  :group 'im-notif
+  :type 'string)
+
+(defcustom im-notif-dnd-whitelist-labels nil
+  "Show notifications with matching labels even if in DND."
+  :group 'im-notif
+  :type '(repeat string))
+
+(defcustom im-notif-dnd-labels nil
+  "List of labels with DND enabled.
+This can be controlled interactively by
+`im-notif-enable-dnd-for-labels'."
+  :group 'im-notif
+  :type '(repeat string))
+
+(defcustom im-notif-blacklist-regexp nil
+  "Disable showing notifications that matches this regexp.
+This can be controlled intreactively by `im-notif-blacklist'."
+  :group 'im-notif
+  :type 'string)
+
+(defcustom im-notif-label-default-durations '()
+  "An alist of (label . duration) pairs to assign default duration to labels.
+Each element should be a cons cell where the car is a label (string) and
+the cdr is the duration in seconds (number).
+
+Notifications can have more than one label, first label that matches
+wins.  If :duration is explicitly given while calling `im-notif', that
+overrides everything."
+  :type '(alist :key-type (choice symbol string)
+                :value-type number)
+  :group 'im-notif)
 
 ;;;; Main
 
 ;;;;; im-notif
 
-(defvar im-notif-blacklist-regexp nil)
 (defvar im-notif-dnd nil)
-(defvar im-notif-dnd-labels nil
-  "List of labels with DND enabled.")
 (defvar im-notif--active '())
 (defvar-local im-notif--notification-data nil)
 
 ;;;###autoload
-(async-cl-defun im-notif (&rest data &key id title message duration margin (severity 'normal) source &allow-other-keys)
+(async-cl-defun im-notif (&rest data &key id title message duration (margin t) (severity 'normal) labels source &allow-other-keys)
   "Displays a notification message.
 
 DATA -- a property list of keyword arguments:
 
-  ID -- (optional) unique identifier for the notification.
+ID -- (optional) unique identifier for the notification.
 
-  MESSAGE -- content of the notification.
+MESSAGE -- content of the notification.
 
-  TITLE -- (optional) notification title.
+TITLE -- (optional) notification title.
 
-  DURATION -- (optional) display time in seconds.  If nil,
-  notification persists.
+DURATION -- (optional) display time in seconds.  If nil,
+notification persists.
 
-  LABELS -- (optional) labels/tags for the notification.  Used for
-  filtering.
+LABELS -- (optional) labels/tags for the notification.  Used for
+filtering.
 
-  MARGIN -- (optional) margin for notification popup.
+MARGIN -- (optional) margin for notification popup.
 
-  SEVERITY -- (optional, default: \\='normal) notification severity.
+SEVERITY -- (optional, default: \\='normal) notification severity.
 
-  SOURCE -- (optional) origin or source of the notification.  This can
-  be a function or a buffer object."
+SOURCE -- (optional) origin or source of the notification.  This can
+be a function or a buffer object."
   (setq title (propertize title 'face '(:weight bold)))
-  (let ((bname (format "*notif-%s*"
-                       (or id (format "%s-%s" (if title (im-string-url-case title) "") (random)))))
-        (source-buffer (current-buffer))
-        (labels (plist-get data :labels)))
-    (when (not (and im-notif-blacklist-regexp
-                    (s-matches?
-                     (if (stringp im-notif-blacklist-regexp)
-                         im-notif-blacklist-regexp
-                       (eval im-notif-blacklist-regexp))
-                     (concat (or title "") "\n" message))))
-      (let* ((message (if (await (im-screen-sharing-now?))
-                          "[REDACTED due to screensharing]"
-                        message))
-             (should-show? (and (not im-notif-dnd)
-                                ;; Check if any label has DND enabled
-                                (not (and labels
-                                          (--any? (member it im-notif-dnd-labels) labels)))))
-             (notif-buffer (with-current-buffer (get-buffer-create bname)
+  (let* ((bname (format "*notif-%s*"
+                        (or id (format "%s-%s" (if title (im-string-url-case title) "") (random)))))
+         (source-buffer (current-buffer))
+         (duration (or duration
+                       (cl-loop for label in labels
+                                for duration = (cdr (assoc label im-notif-label-default-durations))
+                                when duration
+                                return duration)))
+         (blacklisted? (and im-notif-blacklist-regexp
+                            (s-matches?
+                             (if (stringp im-notif-blacklist-regexp)
+                                 im-notif-blacklist-regexp
+                               (eval im-notif-blacklist-regexp))
+                             (concat (or title "") "\n" message))))
+         (in-dnd? (or im-notif-dnd
+                      ;; Check if any label has DND enabled
+                      (and labels
+                           (--any? (member it im-notif-dnd-labels) labels))))
+         (dnd-whitelisted? (and
+                            in-dnd? ; check only if we are in dnd right now
+                            (or
+                             (and
+                              im-notif-dnd-whitelist-regexp
+                              (or (s-matches? im-notif-dnd-whitelist-regexp message)
+                                  (s-matches? im-notif-dnd-whitelist-regexp title)))
+                             (-intersection im-notif-dnd-whitelist-labels labels))))
+         (should-show? (or (not in-dnd?) dnd-whitelisted?)))
+    (when (not blacklisted?)
+      (let* ((notif-buffer (with-current-buffer (get-buffer-create bname)
                              (setq im-notif--notification-data
                                    (thread-first
                                      data
@@ -170,10 +214,13 @@ DATA -- a property list of keyword arguments:
               (run-with-timer
                duration nil
                (lambda ()
-                 (posframe-hide bname)
-                 (setq im-notif--active (delete bname im-notif--active))))))
+                 ;; Only remove if Emacs is not idle
+                 (unless (and (current-idle-time)
+                              (>= (time-to-seconds (current-idle-time)) duration))
+                   (posframe-hide bname)
+                   (setq im-notif--active (delete bname im-notif--active)))))))
 
-          ;; Also use native notifications if Emacs is not focused
+          ;; Use native notifications if Emacs is not focused
           (unless (frame-focus-state)
             (let ((alert-default-style
                    (im-when-on
@@ -199,7 +246,8 @@ DATA -- a property list of keyword arguments:
 ;;;###autoload
 (defun im-dummy-notification ()
   (interactive)
-  (im-notif :title (format "%s" (random)) :message (with-temp-buffer (spook) (buffer-string)) :margin t))
+  (im-notif :title (format "%s" (random))
+            :message (with-temp-buffer (spook) (buffer-string))))
 
 ;;;###autoload
 (defun im-notif-notifications ()
@@ -348,6 +396,13 @@ otherwise, it is taken as a plain string regexp."
 
 (transient-define-prefix im-notif-menu ()
   "Manage notifications."
+  [:description
+   (lambda ()
+     (format
+      "%s: %s"
+      (propertize "Do Not Disturb" 'face '(:weight bold))
+      (propertize (if im-notif-dnd "Enabled" "Disabled") 'face `(:foreground ,(if im-notif-dnd "red" "green")))))
+   "───"]
   [["Basic"
     ("l" "List" im-notif-notifications)
     ("c" "Hide all" im-notif-clear-all)
