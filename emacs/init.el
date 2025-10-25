@@ -7096,13 +7096,14 @@ Fetches missing channels/users first."
    "u" #'evil-collection-notmuch-search-toggle-unread
    "gs" #'notmuch-search
    "gS" #'notmuch-tree
-   "o" #'notmuch-search-show-thread)
+   "o" #'notmuch-search-show-thread
+   "d" #'im-notmuch-toggle-delete)
   (:keymaps 'notmuch-show-mode-map :states 'normal
    "o" #'notmuch-show-view-part
    "O" #'notmuch-show-save-part)
   (im-leader
-    "en" #'im-notmuch-inbox
-    "eN" #'notmuch-hello)
+    "eN" #'im-notmuch-inbox
+    "en" #'notmuch-hello)
   :config
   (setq-default notmuch-search-oldest-first nil)
   (evil-collection-notmuch-setup)
@@ -7137,7 +7138,18 @@ Fetches missing channels/users first."
 (defun im-notmuch-inbox ()
   "Open Inbox directly."
   (interactive)
-  (notmuch-search (plist-get (car notmuch-saved-searches) :query)))
+  (let ((unread-query (plist-get (nth 1 notmuch-saved-searches) :query)))
+    (notmuch-search unread-query)))
+
+(defun im-notmuch-toggle-delete ()
+  "Toggle the deleted tag on the current notmuch message.
+If adding deleted, also add read."
+  (interactive)
+  (let ((tags (notmuch-search-get-tags)))
+    (if (member "deleted" tags)
+        (notmuch-search-tag (list "-deleted"))
+      (notmuch-search-tag (list "+deleted" "-unread")))
+    (notmuch-search-next-thread)))
 
 ;;;;;; Sync mail
 
