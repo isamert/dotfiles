@@ -5472,7 +5472,7 @@ SORT should be nil to disable sorting."
         :on-finish
         (lambda (output &rest _)
           (dolist (var (s-match-strings-all
-                        "\\(export\\|set -x\\) \\([a-zA-Z_-]+\\)\\(=\\| \\)\\(.*\\)"
+                        "\\(export\\|set -x\\) \\([a-zA-Z_-]+\\)\\(=\\| \\)\"?\\([^\"]*\\)\"?"
                         output))
             (let ((key (nth 2 var))
                   (val (nth 4 var)))
