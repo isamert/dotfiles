@@ -3259,13 +3259,15 @@ Return a (color color) list that can be used with :column-colors and
   :config
   (async-defun im-notif--send-to-ntfy (data)
     "Send notifications to ntfy after some idle time."
-    (when (or (and (current-idle-time)
-                   (>= (time-to-seconds (current-idle-time)) 30))
-              ;; If we are sharing a screen, that means the
-              ;; notification will only show REDACTED. Then send it
-              ;; to my phone so that I can see it privately through
-              ;; my watch.
-              (await (im-screen-sharing-now?)))
+    (when (and
+           (not im-notif-dnd)
+           (or (and (current-idle-time)
+                    (>= (time-to-seconds (current-idle-time)) 30))
+               ;; If we are sharing a screen, that means the
+               ;; notification will only show REDACTED. Then send it
+               ;; to my phone so that I can see it privately through
+               ;; my watch.
+               (await (im-screen-sharing-now?))))
       (im-ntfy
        (plist-get data :message)
        :title (or (plist-get data :title) "Emacs"))))

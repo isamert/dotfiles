@@ -112,74 +112,75 @@ DATA -- a property list of keyword arguments:
                        (or id (format "%s-%s" (if title (im-string-url-case title) "") (random)))))
         (source-buffer (current-buffer))
         (labels (plist-get data :labels)))
-    (when (and (not im-notif-dnd)
-               ;; Check if any label has DND enabled
-               (not (and labels
-                         (--any? (member it im-notif-dnd-labels) labels)))
-               (not (and im-notif-blacklist-regexp
-                         (s-matches?
-                          (if (stringp im-notif-blacklist-regexp)
-                              im-notif-blacklist-regexp
-                            (eval im-notif-blacklist-regexp))
-                          (concat (or title "") "\n" message)))))
-      (let ((message (if (await (im-screen-sharing-now?))
-                         "[REDACTED due to screensharing]"
-                       message)))
-        (when (frame-focus-state) ; Only show posframe if frame is focused
-          (posframe-show
-           (with-current-buffer (get-buffer-create bname)
-             (setq im-notif--notification-data
-                   (thread-first
-                     data
-                     (map-insert :time (float-time))
-                     (map-insert :source-buffer source-buffer)
-                     (map-insert :id (substring-no-properties bname))))
-             (current-buffer))
-           :string
-           (if margin
-               (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
-             (format "%s\n%s" title message))
-           :poshandler
-           (lambda (info)
-             (let ((posy (* (line-pixel-height)
-                            (--reduce-from (+ acc
-                                              (with-current-buffer it
-                                                (count-lines (point-min) (point-max))))
-                                           0
-                                           (remove bname im-notif--active)))))
-               (cons (- (plist-get info :parent-frame-width)
-                        (plist-get info :posframe-width)
-                        20)
-                     (if (> posy 0)
-                         (+ posy (+ 3 3 15))
-                       30))))
-           :border-width 3
-           :max-height 10
-           :min-width 30
-           :max-width 80
-           :border-color (pcase severity
-                           ((or 'high 'urgent) "red3")
-                           ('normal "yellow3")
-                           (_ nil)))
-          (push bname im-notif--active)
+    (when (not (and im-notif-blacklist-regexp
+                    (s-matches?
+                     (if (stringp im-notif-blacklist-regexp)
+                         im-notif-blacklist-regexp
+                       (eval im-notif-blacklist-regexp))
+                     (concat (or title "") "\n" message))))
+      (let* ((message (if (await (im-screen-sharing-now?))
+                          "[REDACTED due to screensharing]"
+                        message))
+             (should-show? (and (not im-notif-dnd)
+                                ;; Check if any label has DND enabled
+                                (not (and labels
+                                          (--any? (member it im-notif-dnd-labels) labels)))))
+             (notif-buffer (with-current-buffer (get-buffer-create bname)
+                             (setq im-notif--notification-data
+                                   (thread-first
+                                     data
+                                     (map-insert :time (float-time))
+                                     (map-insert :source-buffer source-buffer)
+                                     (map-insert :id (substring-no-properties bname))))
+                             (current-buffer))))
+        (when should-show?
+          (when (frame-focus-state) ; Only show posframe if frame is focused
+            (posframe-show
+             notif-buffer
+             :string
+             (if margin
+                 (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
+               (format "%s\n%s" title message))
+             :poshandler
+             (lambda (info)
+               (let ((posy (* (line-pixel-height)
+                              (--reduce-from (+ acc
+                                                (with-current-buffer it
+                                                  (count-lines (point-min) (point-max))))
+                                             0
+                                             (remove bname im-notif--active)))))
+                 (cons (- (plist-get info :parent-frame-width)
+                          (plist-get info :posframe-width)
+                          20)
+                       (if (> posy 0)
+                           (+ posy (+ 3 3 15))
+                         30))))
+             :border-width 3
+             :max-height 10
+             :min-width 30
+             :max-width 80
+             :border-color (pcase severity
+                             ((or 'high 'urgent) "red3")
+                             ('normal "yellow3")
+                             (_ nil)))
+            (push bname im-notif--active)
 
-          ;; Clear the notification after a certain time, if requested
-          (when duration
-            (run-with-timer
-             duration nil
-             (lambda ()
-               (posframe-hide bname)
-               (push bname im-notif--active)
-               (setq im-notif--active (delete bname im-notif--active))))))
+            ;; Clear the notification after a certain time, if requested
+            (when duration
+              (run-with-timer
+               duration nil
+               (lambda ()
+                 (posframe-hide bname)
+                 (setq im-notif--active (delete bname im-notif--active))))))
 
-        ;; Also use native notifications if Emacs is not focused
-        (unless (frame-focus-state)
-          (let ((alert-default-style
-                 (im-when-on
-                  :linux 'libnotify
-                  :darwin 'osx-notifier)))
-            (ignore-errors
-              (alert message :title title :severity severity)))))
+          ;; Also use native notifications if Emacs is not focused
+          (unless (frame-focus-state)
+            (let ((alert-default-style
+                   (im-when-on
+                    :linux 'libnotify
+                    :darwin 'osx-notifier)))
+              (ignore-errors
+                (alert message :title title :severity severity))))))
       (dolist (fn im-notif-post-notify-hooks)
         (funcall fn data)))))
 
