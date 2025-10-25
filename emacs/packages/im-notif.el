@@ -218,13 +218,22 @@ DATA -- a property list of keyword arguments:
   (interactive (list (im-notif--read-duration)))
   (setq im-notif-dnd t)
   (message ">> Disabling notifications for %s seconds." seconds)
+  (im-notif--set-gnome-dnd 'enabled)
   (run-with-timer seconds nil #'im-notif-disable-dnd))
+
+(defun im-notif--set-gnome-dnd (x)
+  (when (executable-find "gsettings")
+    (call-process "gsettings" nil nil nil
+                  "set" "org.gnome.desktop.notifications" "show-banners" (if (eq x 'enabled)
+                                                                             "false" "true"))))
 
 ;;;###autoload
 (defun im-notif-disable-dnd ()
   "Disable DND mode."
   (interactive)
-  (setq im-notif-dnd nil))
+  (setq im-notif-dnd nil)
+  (im-notif--set-gnome-dnd 'disabled)
+  (message ">> DND disabled!"))
 
 ;;;###autoload
 (defun im-notif-enable-dnd-for-labels ()
@@ -395,7 +404,7 @@ First one is the latest one."
 
 (defun im-notif--read-duration ()
   "Ask the user to type a duration in a human-readable way.
-  Return parsed seconds from users answer."
+Return parsed seconds from users answer."
   (tmr--parse-duration (current-time) (tmr--read-duration)))
 
 ;;;; Footer

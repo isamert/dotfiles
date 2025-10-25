@@ -575,7 +575,7 @@ cut it. I need to run those statements on every theme change.")
   "Holds the currently used font name.
 One of `im-fonts'.")
 
-(defconst im-font-height (im-when-on :linux 108 :darwin 150))
+(defconst im-font-height (im-when-on :linux 123 :darwin 150))
 
 (defun im-set-font ()
   "Set the first available font from the `im-fonts' list.
@@ -6537,6 +6537,9 @@ Fetches missing channels/users first."
   (setq gptel-prompt-prefix-alist '((org-mode . "-----\n[ME]: ")))
   (setq gptel-response-prefix-alist '((org-mode . "-----\n[AI]: ")))
   ;; As usual, my key is in netrc file.
+  (gptel-make-anthropic "Claude"
+    :stream t
+    :key gptel-api-key)
   (gptel-make-deepseek "DeepSeek"
     :stream t
     :key gptel-api-key))
