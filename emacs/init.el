@@ -1337,7 +1337,27 @@ side window the only window'"
   ;; ^ More info: https://orgmode.org/manual/Link-Abbreviations.html
 
   ;; With the following, I can call functions defined inside this file in other org files
-  (org-babel-lob-ingest (concat org-directory "/utils.org")))
+  (org-babel-lob-ingest (concat org-directory "/utils.org"))
+
+  (defun im--maybe-enable-dnd ()
+    (when (and (not im-notif-dnd)
+               (y-or-n-p "Enable Do Not Disturb? "))
+      (call-interactively #'im-notif-enable-dnd)))
+
+  (add-hook 'org-clock-in-hook #'im-notif-maybe-enable 90)
+
+  (defun im--maybe-disable-dnd ()
+    (when (and im-notif-dnd
+               (y-or-n-p "Disable Do Not Disturb? "))
+      (im-notif-disable-dnd)))
+
+  (add-hook 'org-clock-out-hook #'im--maybe-disable-dnd 90)
+
+  (add-hook 'org-clock-out-hook
+            (lambda ()
+              (when (and im-notif-dnd
+                         (y-or-n-p "Disable Do Not Disturb? "))
+                (im-notif-disable-dnd))) 90))
 
 (use-package org-contrib :after org)
 
@@ -12625,6 +12645,11 @@ Throw error otherwise."
            (list
             (all-the-icons-faicon "microphone-slash")
             " · "))
+       ,@(when im-notif-dnd
+           (let ((all-the-icons-default-adjust -0.15))
+             (list
+              (all-the-icons-material "do_not_disturb_on")
+              " · ")))
        ,@(when (bound-and-true-p appt-mode-string)
            (list
             (all-the-icons-faicon "calendar-check-o")

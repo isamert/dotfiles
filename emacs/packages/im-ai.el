@@ -50,7 +50,7 @@
   "Settings for `im-ai'."
   :group 'utils)
 
-(defcustom im-ai-model "gpt-4.1-mini"
+(defcustom im-ai-model "Claude:claude-sonnet-4-5-latest"
   "AI model name."
   :type 'string
   :group 'im-ai)
@@ -63,8 +63,11 @@
 (defcustom im-ai-models '("openai:gpt-4.1"
                           "openai:gpt-4.1-mini"
                           "openai:gpt-4.1-nano"
+                          "openai:gpt-5-chat-latest"
+                          "openai:gpt-5-mini"
                           "deepseek:deepseek-chat"
-                          "deepseek:deepseek-reasoner")
+                          "deepseek:deepseek-reasoner"
+                          "Claude:claude-sonnet-4-5-latest")
   "AI service:model list."
   :type 'list
   :group 'im-ai)
@@ -552,6 +555,9 @@ predefined prompts."
 
 (defvar-local im-ai--last-processed-point nil)
 (defvar-local im-ai--before-overlay nil)
+(defvar-local im-ai--after-overlay nil)
+(defvar-local im-ai-reenable-aggressive-indent nil
+  "Aggressive indent may fuck things up while the AI is streaming.")
 (add-hook 'gptel-post-stream-hook #'im-ai--cleanup-stream)
 (add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
 
@@ -597,6 +603,9 @@ Use @file to include full file contents to the prompt and use
           (deactivate-mark)
           (goto-char end))))
     (setq im-ai--last-processed-point (point))
+    (when (bound-and-true-p aggressive-indent-mode)
+      (setq im-ai-reenable-aggressive-indent t)
+      (aggressive-indent-mode -1))
     (gptel-request
         (s-join
          "\n"
@@ -680,7 +689,10 @@ Use @file to include full file contents to the prompt and use
       (indent-region beg end)
       (pulse-momentary-highlight-region beg (point))
       (setq im-ai--after-overlay
-            (im-ai--draw-snippet-overlay beg (1+ (line-end-position)) 'im-ai-after-face)))))
+            (im-ai--draw-snippet-overlay beg (1+ (line-end-position)) 'im-ai-after-face))
+      (when im-ai-reenable-aggressive-indent
+        (aggressive-indent-mode +1)
+        (setq im-ai-reenable-aggressive-indent nil)))))
 
 (defun im-ai--accept ()
   (interactive)
