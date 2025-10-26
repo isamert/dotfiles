@@ -1340,24 +1340,18 @@ side window the only window'"
   (org-babel-lob-ingest (concat org-directory "/utils.org"))
 
   (defun im--maybe-enable-dnd ()
-    (when (and (not im-notif-dnd)
+    (when (and (not (bound-and-true-p im-notif-dnd))
                (y-or-n-p "Enable Do Not Disturb? "))
       (call-interactively #'im-notif-enable-dnd)))
 
-  (add-hook 'org-clock-in-hook #'im-notif-maybe-enable 90)
+  (add-hook 'org-clock-in-hook #'im--maybe-enable-dnd 90)
 
   (defun im--maybe-disable-dnd ()
-    (when (and im-notif-dnd
+    (when (and (bound-and-true-p im-notif-dnd)
                (y-or-n-p "Disable Do Not Disturb? "))
       (im-notif-disable-dnd)))
 
-  (add-hook 'org-clock-out-hook #'im--maybe-disable-dnd 90)
-
-  (add-hook 'org-clock-out-hook
-            (lambda ()
-              (when (and im-notif-dnd
-                         (y-or-n-p "Disable Do Not Disturb? "))
-                (im-notif-disable-dnd))) 90))
+  (add-hook 'org-clock-out-hook #'im--maybe-disable-dnd 90))
 
 (use-package org-contrib :after org)
 
@@ -3270,11 +3264,11 @@ Return a (color color) list that can be used with :column-colors and
      (im-notif :message notification
                :title "*org-mode*"
                :labels '("org"))))
-  (add-to-list 'im-notif-dnd-whitelist-labels "org"))
+  (with-eval-after-load 'im-notif
+    (add-to-list 'im-notif-dnd-whitelist-labels "org")))
 
 (use-package im-notif
   :straight nil
-  :autoload (im-notif)
   :general
   (im-leader
     "y" #'im-notif-menu)
@@ -3705,7 +3699,8 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (setq appt-disp-window-function #'im-appt-notify)
   (setq appt-message-warning-time 10)
   (setq appt-display-interval 4)
-  (add-to-list 'im-notif-dnd-whitelist-labels "appt")
+  (with-eval-after-load 'im-notif
+    (add-to-list 'im-notif-dnd-whitelist-labels "appt"))
 
   (save-window-excursion
     (appt-activate 1)))
@@ -5906,7 +5901,8 @@ this command is invoked from."
   (setq lui-time-stamp-format "[%a %b %d %H:%M]")
   (setq slack-message-custom-notifier #'im-slack-notify)
   (setq slack-message-custom-delete-notifier #'im-slack-notify)
-  (add-to-list 'im-notif-label-default-durations '("slack" . 5))
+  (with-eval-after-load 'im-notif
+    (add-to-list 'im-notif-label-default-durations '("slack" . 5)))
 
   (setq slack-visible-thread-sign "╚═> ")
 
@@ -6602,7 +6598,8 @@ Fetches missing channels/users first."
   (remove-hook 'tmr-timer-finished-functions #'tmr-notification-notify)
   (add-hook 'tmr-timer-finished-functions #'im-tmr-notify)
   ;; Show tmr notifications even if we are in DND
-  (add-to-list 'im-notif-dnd-whitelist-labels "tmr")
+  (with-eval-after-load 'im-notif
+    (add-to-list 'im-notif-dnd-whitelist-labels "tmr"))
 
   (when (eq system-type 'darwin)
     (setq tmr-sound-file "/System/Library/Sounds/Glass.aiff"))
@@ -12645,7 +12642,7 @@ Throw error otherwise."
            (list
             (all-the-icons-faicon "microphone-slash")
             " · "))
-       ,@(when im-notif-dnd
+       ,@(when (bound-and-true-p im-notif-dnd)
            (let ((all-the-icons-default-adjust -0.15))
              (list
               (all-the-icons-material "do_not_disturb_on")
