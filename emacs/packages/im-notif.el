@@ -268,6 +268,7 @@ be a function or a buffer object."
   (setq im-notif-dnd t)
   (message ">> Disabling notifications for %s seconds." seconds)
   (im-notif--set-gnome-dnd 'enabled)
+  (im-notif--set-macos-dnd 'enabled)
   (run-with-timer seconds nil #'im-notif-disable-dnd))
 
 (defun im-notif--set-gnome-dnd (x)
@@ -276,12 +277,28 @@ be a function or a buffer object."
                   "set" "org.gnome.desktop.notifications" "show-banners" (if (eq x 'enabled)
                                                                              "false" "true"))))
 
+(defun im-notif--set-macos-dnd (x)
+  "Enable/disable MacOS Focus/DnD.
+To make this work, you need to have the Shortcuts app and the following
+shortcut installed:
+https://www.icloud.com/shortcuts/65840b635c7d4073b4319c1ddabcdce5
+
+Source: https://mskelton.dev/bytes/20230927123410"
+  (when (eq system-type 'darwin)
+    (with-temp-buffer
+      (insert (if (eq x 'enabled)
+                  "on" "off"))
+      (call-process-region (point-min) (point-max)
+                           "shortcuts" nil 0 nil
+                           "run" "Focus"))))
+
 ;;;###autoload
 (defun im-notif-disable-dnd ()
   "Disable DND mode."
   (interactive)
   (setq im-notif-dnd nil)
   (im-notif--set-gnome-dnd 'disabled)
+  (im-notif--set-macos-dnd 'disabled)
   (message ">> DND disabled!"))
 
 ;;;###autoload
