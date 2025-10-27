@@ -211,8 +211,61 @@ defaults write com.apple.dock expose-group-apps -bool true && killall Dock
 defaults write com.apple.spaces spans-displays -bool true && killall SystemUIServer
 #+end_src
 
-#+name: aerospace-mac-keyboard-bindings
-#+begin_src toml
+#+begin_src toml :tangle (when-darwin "~/.aerospace.toml")
+# https://nikitabobko.github.io/AeroSpace/guide
+# https://nikitabobko.github.io/AeroSpace/commands
+
+after-login-command = []
+after-startup-command = []
+start-at-login = true
+enable-normalization-flatten-containers = true
+enable-normalization-opposite-orientation-for-nested-containers = true
+accordion-padding = 30
+default-root-container-layout = 'tiles'
+default-root-container-orientation = 'auto'
+key-mapping.preset = 'qwerty'
+
+# Mouse lazily follows focused monitor (default in i3)
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+# Mouse lazily follows any focus (window or workspace)
+#on-focus-changed = ['move-mouse window-lazy-center']
+
+[gaps]
+inner.horizontal = 10
+inner.vertical =   10
+outer.left =       10
+outer.bottom =     10
+outer.top =        10
+outer.right =      10
+
+[workspace-to-monitor-force-assignment]
+#  When a second monitor is connected, assign workspaces 1-5 to it,
+# regardless of whether it's set as the system's main or secondary
+# display. This ensures the external monitor effectively serves as the
+# main workspace without extra configuration. Additionally, by not
+# setting it as the "main" monitor in system settings, the top bar
+# remains hidden on the external display as I would like it to
+# be. Workspaces 1-5 on the external monitor provide main-monitor
+# functionality while keeping system UI elements on the primary
+# screen.
+1 = ['secondary', 'main', 'built-in']
+2 = ['secondary', 'main', 'built-in']
+3 = ['secondary', 'main', 'built-in']
+4 = ['secondary', 'main', 'built-in']
+5 = ['secondary', 'main', 'built-in']
+6 = ['built-in', 'secondary']
+7 = ['built-in', 'secondary']
+8 = ['built-in', 'secondary']
+9 = ['built-in', 'secondary']
+0 = ['built-in', 'secondary']
+
+# See https://nikitabobko.github.io/AeroSpace/guide#exec-env-vars
+[exec]
+inherit-env-vars = true
+
+[exec.env-vars]
+PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${HOME}/.bin:${PATH}'
+
 [mode.main.binding]
 cmd-period = 'focus-monitor right'
 cmd-comma = 'focus-monitor left'
@@ -264,70 +317,30 @@ cmd-tab = 'workspace-back-and-forth'
 h = 'resize smart -50'
 l = 'resize smart +50'
 esc = 'mode main'
-#+end_src
 
-#+name: aerospace-config
-#+begin_src toml
-# https://nikitabobko.github.io/AeroSpace/guide
-# https://nikitabobko.github.io/AeroSpace/commands
+[[on-window-detected]]
+    if.app-name-regex-substring = '(Emacs|Alacritty)'
+    if.during-aerospace-startup = true
+    check-further-callbacks = true
+    run = ['move-node-to-workspace 1']
 
-after-login-command = []
-after-startup-command = []
-start-at-login = true
-enable-normalization-flatten-containers = true
-enable-normalization-opposite-orientation-for-nested-containers = true
-accordion-padding = 30
-default-root-container-layout = 'tiles'
-default-root-container-orientation = 'auto'
-key-mapping.preset = 'qwerty'
+[[on-window-detected]]
+    if.window-title-regex-substring = '(Firefox|Chrome)'
+    if.during-aerospace-startup = true
+    check-further-callbacks = true
+    run = ['move-node-to-workspace 2']
 
-# Mouse lazily follows focused monitor (default in i3)
-on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
-# Mouse lazily follows any focus (window or workspace)
-#on-focus-changed = ['move-mouse window-lazy-center']
+[[on-window-detected]]
+    if.app-name-regex-substring = 'zoom'
+    if.during-aerospace-startup = true
+    check-further-callbacks = true
+    run = ['move-node-to-workspace 3']
 
-[gaps]
-inner.horizontal = 0
-inner.vertical =   0
-outer.left =       0
-outer.bottom =     0
-outer.top =        0
-outer.right =      0
-
-[workspace-to-monitor-force-assignment]
-#  When a second monitor is connected, assign workspaces 1-5 to it,
-# regardless of whether it's set as the system's main or secondary
-# display. This ensures the external monitor effectively serves as the
-# main workspace without extra configuration. Additionally, by not
-# setting it as the "main" monitor in system settings, the top bar
-# remains hidden on the external display as I would like it to
-# be. Workspaces 1-5 on the external monitor provide main-monitor
-# functionality while keeping system UI elements on the primary
-# screen.
-1 = ['secondary', 'main', 'built-in']
-2 = ['secondary', 'main', 'built-in']
-3 = ['secondary', 'main', 'built-in']
-4 = ['secondary', 'main', 'built-in']
-5 = ['secondary', 'main', 'built-in']
-6 = ['built-in', 'secondary']
-7 = ['built-in', 'secondary']
-8 = ['built-in', 'secondary']
-9 = ['built-in', 'secondary']
-0 = ['built-in', 'secondary']
-
-# See https://nikitabobko.github.io/AeroSpace/guide#exec-env-vars
-[exec]
-inherit-env-vars = true
-
-[exec.env-vars]
-PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${HOME}/.bin:${PATH}'
-#+end_src
-
-Depending on your current keyboard configuration, tangle one of the following:
-
-#+begin_src toml :noweb yes :tangle (when-darwin "~/.aerospace.toml")
-«aerospace-config»
-«aerospace-mac-keyboard-bindings»
+[[on-window-detected]]
+    if.app-name-regex-substring = 'krita'
+    if.during-aerospace-startup = true
+    check-further-callbacks = true
+    run = ['move-node-to-workspace 4']
 #+end_src
 
 ** skhd
