@@ -575,7 +575,7 @@ cut it. I need to run those statements on every theme change.")
   "Holds the currently used font name.
 One of `im-fonts'.")
 
-(defconst im-font-height (im-when-on :linux 123 :darwin 150))
+(defconst im-font-height (im-when-on :linux 123 :darwin 160))
 
 (defun im-set-font ()
   "Set the first available font from the `im-fonts' list.
@@ -3714,23 +3714,8 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
        ;; re-parses. This means appts that are manually added using
        ;; `appt-add' are removed. I used to use `appt-add' but now I
        ;; use `tmr' which supports both HH:MM and relative timers.
-
-       ;; Do this async as it causes some lag on save on some of my
-       ;; org files that are > 2MB.
-       (async-start
-        `(lambda ()
-           ,(async-inject-variables "\\(org-agenda-files\\|load-path\\|org-todo-keywords\\)")
-           (require 'org)
-           (require 'org-agenda)
-           (org-agenda-to-appt 'refresh)
-           appt-time-msg-list)
-        (lambda (result)
-          (require 'appt)
-          ;; Clear the properties that comes with it. I'm not quite
-          ;; sure why is this needed but otherwise appt-check fails.
-          (setq appt-time-msg-list (--map (list (car it) (car (nth 1 it)) (nth 2 it)) result))
-          (message ">> appt updated")
-          (appt-check)))))
+       (org-agenda-to-appt 'refresh)
+       (appt-check)))
    nil t))
 
 (defun im-appt-notify (min-to-appt new-time appt-msg)
