@@ -272,7 +272,7 @@ be a function or a buffer object."
   (run-with-timer seconds nil #'im-notif-disable-dnd))
 
 (defun im-notif--set-gnome-dnd (x)
-  (when (executable-find "gsettings")
+  (when (and (eq system-type 'gnu/linux) (executable-find "gsettings"))
     (call-process "gsettings" nil nil nil
                   "set" "org.gnome.desktop.notifications" "show-banners" (if (eq x 'enabled)
                                                                              "false" "true"))))

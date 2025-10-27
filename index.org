@@ -777,6 +777,70 @@ option_as_alt = "Both"
 decorations = "Buttonless"
 # opacity = 0.8
 #+end_src
+** Toggle GlobalProtect VPN AppleScript
+To set up the script as an application, follow these steps:
+1. Open Script Editor.
+2. Paste the provided script into the editor.
+3. Save the script with the following options:
+  - Set the file format to "Application".
+  - Save under the /Applications directory.
+  - Name it something like "ToggleGlobalProtectVPN".
+
+After completing these steps:
+  - The application will now appear in your app launcher.
+  - You can toggle the VPN directly from there.
+
+Note:
+- The first time you run the application, you will be prompted to grant permission. Ensure you allow it.
+
+Modified from: https://gist.github.com/tmanternach/cbd4c213eab8569e38d6cd021b6255e5
+
+#+begin_src applescript
+tell application "System Events" to tell process "GlobalProtect"
+	click menu bar item 1 of menu bar 2
+	set statusText to name of static text 1 of window 1
+	if statusText is "Disconnected" then
+		# GlobalProtect is disconnected, so let's connect
+		click button "Connect" of window 1
+		set entireContents to entire contents of window 1
+		set resultStatus to "Connected"
+	else if statusText is "Connected" then
+		# GlobalProtect is connected, so let's disconnect
+		set windowText to entire contents of window 1
+		repeat with theItem in windowText
+			if (name of theItem contains "Disconnect") then
+				click theItem
+			end if
+		end repeat
+		set resultStatus to "Disconnected"
+	else
+		set resultStatus to statusText
+	end if
+	click menu bar item 1 of menu bar 2
+end tell
+return resultStatus
+#+end_src
+
+** Check if VPN is Open script
+
+#+begin_src sh :tangle :tangle ~/.local/bin/check-vpn
+#!/bin/sh
+# If all utun interfaces are UP, this means VPN is open.
+! ifconfig | grep -E 'utun[0-9]:' | grep -vq UP
+#+end_src
+
+This is an alternative script but takes more time and creates more visual clutter:
+
+#+begin_src applescript
+#!/usr/bin/osascript
+tell application "System Events" to tell process "GlobalProtect"
+	click menu bar item 1 of menu bar 2
+	set statusText to name of static text 1 of window 1
+	set resultStatus to statusText
+	click menu bar item 1 of menu bar 2
+end tell
+return resultStatus
+#+end_src
 * Linux
 ** systemd
 Journal files starts to take a lot of disk space. I put a simple limit to that here.
