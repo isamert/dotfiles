@@ -416,6 +416,12 @@ major-mode of that block.  Useful for language-aware functionality."
                 (-union (s-split ":" (getenv "PATH")) exec-path)))
         (message "Set environment variable: %s=%s" var value)))))
 
+(defmacro im-run-deferred (&rest body)
+  `(run-with-timer
+    0.1 nil
+    (lambda ()
+      ,@body)))
+
 ;;;; Windows & buffers
 
 (declare-function aw-select "ace-window")
