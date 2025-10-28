@@ -1598,7 +1598,7 @@ end
 * Tmux
 I use tmux for it's vi mode. Other than that I generally use my window manager for multiple terminals (which is rarely needed because I'm mostly in Emacs.)
 #+begin_src conf :tangle ~/.tmux.conf
-set -g default-shell $PREFIX/bin/fish
+set -g default-shell «which("fish")»
 set -g mouse on
 set -g base-index 1 # Window indexes starts from 1
 setw -g pane-base-index 1 # Pane indexes starts from 1
