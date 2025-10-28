@@ -3533,8 +3533,6 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   ;; I use this to separate my work and normal diary
   :hook ((diary-list-entries . diary-include-other-diary-files)
          (diary-list-entries . diary-sort-entries)
-         ;; Show week numbers on calendar
-         (after-init . im-calendar-week-number-mode)
          ;; Show sunrise/sunset when calendar opens
          ;; (Also use `gs' to manually show on current date)
          (calendar-today-visible . calendar-sunrise-sunset)
@@ -3544,13 +3542,13 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   :commands calendar
   :init
   (evil-define-key 'normal diary-fancy-display-mode-map "q" #'evil-delete-buffer)
-  (evil-define-key 'normal calendar-mode-map
-    (kbd "a") #'im-calendar-jump-org-agenda
-    (kbd "H") #'calendar-backward-month
-    (kbd "L") #'calendar-forward-month)
   :config
   (evil-collection-calendar-setup)
-
+  (defun im-setup-calendar-mode ()
+    (setq header-line-format
+          (substitute-command-keys
+           "  \\[calendar-cursor-holidays] Holidays at point (or \\[calendar-list-holidays] to list holidays in buffer) │ \\[calendar-goto-today] Go to today │ \\[im-calendar-jump-org-agenda] Agenda at point │ \\[calendar-backward-month] Backward month │ \\[calendar-forward-month] Forward month ")))
+  (add-hook 'calendar-mode-hook #'im-setup-calendar-mode)
   (calendar-set-date-style 'european)
 
   ;; Discard other holiday definitions and use these only
@@ -3565,7 +3563,17 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   ;; Start the week from Monday
   (setq calendar-week-start-day 1)
 
-  (setq calendar-mark-holidays-flag t)
+  ;; This looks cooler but breaks the alingment slightly:
+  ;; (copy-face font-lock-constant-face 'calendar-iso-week-face)
+  ;; (set-face-attribute 'calendar-iso-week-face nil :height 0.7 :line-height 1)
+  (setq
+   calendar-intermonth-text
+   '(propertize
+     (format "%2d "
+             (car
+              (calendar-iso-from-absolute
+               (calendar-absolute-from-gregorian (list month day year)))))
+     'font-lock-face 'font-lock-function-name-face))
 
   ;; lng and lat for my location, to get sunrise/sunset times on my
   ;; calendar (press `gs'). `calendar-sunrise-sunset' shows the
@@ -3585,7 +3593,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (setq diary-display-function #'diary-fancy-display)
   (setq diary-number-of-entries 7)
 
-  (general-def :keymaps 'calendar-mode-map :states '(normal motion)
+  (general-def :keymaps 'calendar-mode-map :states '(normal)
     "t"  #'calendar-goto-today
     "ii" #'diary-insert-entry
     "id" #'diary-insert-entry
@@ -3594,12 +3602,16 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
     "iy" #'diary-insert-yearly-entry
     "ia" #'diary-insert-anniversary-entry
     "ib" #'diary-insert-block-entry
+    "C-k" nil
+    "C-j" nil
+    "{" nil
+    "}" nil
+    "M-{" nil
+    "M-}" nil
+    "H" #'calendar-backward-month
+    "L" #'calendar-forward-month
     ;; Show agenda for selected date
-    "RET" #'(lambda ()
-              (interactive)
-              (org-agenda-list
-               nil
-               (calendar-absolute-from-gregorian (calendar-cursor-to-date)) 1)))
+    "RET" #'im-calendar-jump-org-agenda)
 
   ;; Show suntimes automatically when cursor moves
   (define-advice calendar-forward-day (:after (&rest _) show-suntimes)
@@ -3607,7 +3619,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
       (calendar-sunrise-sunset)))
 
   ;; Show calendar at the bottom
-  (im-shackle-window "Calendar" 0.3))
+  (im-shackle-window "Calendar" 0.4))
 
 (defun im-calendar-jump-org-agenda ()
   "Open the currently selected calendar date on `org-agenda'."
@@ -3615,20 +3627,6 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (let ((org-agenda-window-setup 'other-window)
         (org-agenda-span 1))
     (org-calendar-goto-agenda)))
-
-;; https://www.emacswiki.org/emacs/CalendarWeekNumbers
-(defun im-calendar-week-number-mode ()
-  "Show week numbers in M-x calendar."
-  (copy-face font-lock-constant-face 'calendar-iso-week-face)
-  (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
-  (setq
-   calendar-intermonth-text
-   '(propertize
-     (format "%2d"
-             (car
-              (calendar-iso-from-absolute
-               (calendar-absolute-from-gregorian (list month day year)))))
-     'font-lock-face 'calendar-iso-week-face)))
 
 ;;;;;; Automatically syncing with remote calendars
 
