@@ -325,7 +325,7 @@ esc = 'mode main'
     run = ['move-node-to-workspace 1']
 
 [[on-window-detected]]
-    if.window-title-regex-substring = '(Firefox|Chrome)'
+    if.app-name-regex-substring = '(Firefox|Chrome)'
     if.during-aerospace-startup = true
     check-further-callbacks = true
     run = ['move-node-to-workspace 2']
@@ -340,7 +340,7 @@ esc = 'mode main'
     if.app-name-regex-substring = 'krita'
     if.during-aerospace-startup = true
     check-further-callbacks = true
-    run = ['move-node-to-workspace 4']
+    run = ['move-node-to-workspace 5']
 #+end_src
 
 ** skhd

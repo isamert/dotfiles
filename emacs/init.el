@@ -5432,11 +5432,17 @@ SORT should be nil to disable sorting."
 
 (defun im-lsp-java-enable-lombok-support ()
   (interactive)
-  (if-let (lombok (im-lsp-java-find-lombok-jar))
-      (progn (add-to-list 'lsp-java-vmargs (concat "-javaagent:" (expand-file-name lombok)))
-             (when (bound-and-true-p lsp-mode)
-               (message ">> Restarting lsp workspace...")
-               (call-interactively #'lsp-workspace-restart)))
+  (if-let ((lombok (im-lsp-java-find-lombok-jar))
+           (lombok-arg (concat "-javaagent:" (expand-file-name lombok))))
+      (progn
+        (with-eval-after-load 'lsp-mode
+          (add-to-list 'lsp-java-vmargs lombok-arg))
+        (with-eval-after-load 'eglot-java
+          (add-to-list 'eglot-java-eclipse-jdt-args lombok-arg))
+        (when (bound-and-true-p lsp-mode)
+          (call-interactively #'lsp-workspace-restart))
+        (when (bound-and-true-p eglot-java-mode)
+          (call-interactively #'eglot-java-mode)))
     (message ">> Lombok jar not found.")))
 
 (use-package lsp-java
@@ -9745,9 +9751,9 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
              jiralib2-board-issues)
   :custom
   (jiralib2-url ty-jira-url)
-  (jiralib2-auth 'basic)
+  (jiralib2-auth 'token)
   (jiralib2-user-login-name ty-jira-login)
-  (jiralib2-token nil))
+  (jiralib2-token ty-jira-secret))
 
 ;;
 ;; My completing-read based JIRA utilities

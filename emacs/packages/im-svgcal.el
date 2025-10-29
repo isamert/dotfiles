@@ -149,7 +149,7 @@
         ;; Draw item text
         (svg-text
          svg (if large-enough?
-                 (s-truncate 30 (im-org-header-line-to-title (plist-get it :title)) "…")
+                 (s-truncate 27 (im-org-header-line-to-title (plist-get it :title)) "…")
                (s-truncate 20 (im-org-header-line-to-title (plist-get it :title)) "…"))
          :x (+ (* 3 left-gap) hour-text-width)
          :y (+ y-start im-svgcal--title-size)
