@@ -1091,15 +1091,18 @@ but sometimes projects gets dirty and this fixes that."
      :require-match? nil
      :do (dired (get-worktree it)))))
 
-(defun im-git-worktree-add ()
+(defun im-git-worktree-add (new-branch?)
   "Create a new worktree from a branch (or with a new branch).
 This creates every worktree under a common directory (see
 `im-git-worktrees-root') with a common
 pattern (project-name--branch-name).
 
+NEW-BRANCH? it create a new branch or not.
+
 Also copies some predefined list of untracked files/folders with
-COW (copy on write)."
-  (interactive)
+COW (copy on write).
+
+If worktree already exists, simply switches to it."
   (unless (= 0 (shell-command "git fetch --all"
                               " *im-git-worktree: git fetch stdout*"
                               " *im-git-worktree: git fetch stderr*"))
@@ -1113,36 +1116,54 @@ COW (copy on write)."
                   :cmd "git branch -a --format='%(refname:short)'"
                   :prompt "From (or enter new): "
                   :require-match? nil))
-         (branch-name (read-string "New branch name: "))
+         (new-branch-name (when new-branch?
+                            (read-string "New branch name: ")))
          (worktree-name
           (format "%s--%s"
                   (im-string-url-case (im-current-project-name))
-                  (im-string-url-case branch-name)))
-         (worktree (expand-file-name (f-join im-git-worktrees-root worktree-name))))
-    (unless (= 0 (shell-command (format "git worktree add -b '%s' '%s' '%s'" branch-name worktree source)
-                                " *im-git-worktree: git worktree add stdout*"
-                                " *im-git-worktree: git worktree add stderr*"))
-      (user-error "Can't create worktree, see buffer `*im-git-worktrees: git worktree add stderr*'"))
-    (message ">> Created the worktree...")
+                  (im-string-url-case (if new-branch? new-branch-name source))))
+         (worktree (expand-file-name (f-join im-git-worktrees-root worktree-name)))
+         (exists? (f-exists? worktree)))
+    (unless exists?
+      (unless (= 0 (shell-command (format "git worktree add %s '%s' '%s'"
+                                          (if new-branch?
+                                              (format "-b '%s'" new-branch-name)
+                                            "")
+                                          worktree
+                                          source)
+                                  " *im-git-worktree: git worktree add stdout*"
+                                  " *im-git-worktree: git worktree add stderr*"))
+        (user-error "Can't create worktree, see buffer `*im-git-worktrees: git worktree add stderr*'"))
+      (message ">> Created the worktree...")
 
-    ;; Copy node_modules with COW, if user wants it
-    ;; If I need anything else, I'll simply edit here.
+      ;; Copy node_modules with COW, if user wants it
+      ;; If I need anything else, I'll simply edit here.
 
-    (let ((src (f-join old-proj "node_modules"))
-          (dst (f-join worktree "node_modules")))
-      (when (and (file-directory-p src)
-                 (y-or-n-p "Copy node_modules from old-proj to current folder with COW? "))
-        (unless (= 0 (shell-command
-                      (concat (im-when-on
-                               :linux "cp -R --reflink=always"
-                               :darwin "cp -Rc")
-                              (expand-file-name src)
-                              (expand-file-name dst))
-                      " *im-git-worktree: cp stdout*"
-                      " *im-git-worktree: cp stderr*"))
-          (user-error "Can't copy files, see buffer `*im-git-worktrees: cp stderr*'"))))
+      (let ((src (f-join old-proj "node_modules"))
+            (dst (f-join worktree "node_modules")))
+        (when (and (file-directory-p src)
+                   (y-or-n-p "Copy node_modules from old-proj to current folder with COW? "))
+          (unless (= 0 (shell-command
+                        (concat (im-when-on
+                                 :linux "cp -R --reflink=always"
+                                 :darwin "cp -Rc")
+                                (expand-file-name src)
+                                (expand-file-name dst))
+                        " *im-git-worktree: cp stdout*"
+                        " *im-git-worktree: cp stderr*"))
+            (user-error "Can't copy files, see buffer `*im-git-worktrees: cp stderr*'")))))
     (dired worktree)
     (vc-refresh-state)))
+
+(defun im-git-worktree-add-new ()
+  "Create a new branch from an existing one and switch to in a worktree."
+  (interactive)
+  (im-git-worktree-add :new-branch))
+
+(defun im-git-worktree-add-existing ()
+  "Switch to an existing branch in a new worktree."
+  (interactive)
+  (im-git-worktree-add nil))
 
 (defun im-git-worktree-delete ()
   "Remove current worktree and close all buffers.

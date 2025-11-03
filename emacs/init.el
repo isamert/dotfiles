@@ -7283,7 +7283,8 @@ mails."
     ("e" "Show stashes" im-git-list-stash)
     ("T" "Show tags" im-git-list-tags)]
    ["Worktrees"
-    ("wa" "Add worktree" im-git-worktree-add)
+    ("wa" "Add worktree (existing)" im-git-worktree-add-existing)
+    ("wA" "Add worktree (new)" im-git-worktree-add-new)
     ("ws" "Switch worktree" im-git-worktree-switch)
     ("wd" "Remove worktree" im-git-worktree-delete)]
    ["Diff"
