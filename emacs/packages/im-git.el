@@ -848,7 +848,7 @@ Works only if the stash entry is at the beginning of the line."
           (with-current-buffer buffer-name
             (let ((inhibit-read-only t))
               (let ((lines (s-lines (s-trim (buffer-string))))
-                    (remote-tags (->> (s-lines (s-trim (im-tap output)))
+                    (remote-tags (->> (s-lines (s-trim output))
                                     (--map (-let (((hash tag) (s-split "\t" it)))
                                              (list (s-chop-prefix "refs/tags/" tag)
                                                    (substring hash 0 7))))

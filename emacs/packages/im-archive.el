@@ -79,7 +79,8 @@
 (defvar im-archive-chromium-path
   (if (eq system-type 'darwin)
       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-    "chromium-browser")
+    (or (executable-find "chromium")
+        (executable-find "chromium-browser")))
   "Chromium browser path for use with single-file.")
 
 ;;;; Main
