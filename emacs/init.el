@@ -9147,18 +9147,20 @@ total {rows,bytes} etc. and first 10 rows of the table."
    :object-type 'alist
    :array-type 'list))
 
-(defun im-big-query-get-all-tables (dataset-id)
+(defun im-big-query-get-all-tables (project-id dataset-id)
   (json-parse-string
    (shell-command-to-string
-    (format "bq ls --format=json --max_results 5000 '%s'" dataset-id))
+    (format "bq ls --project_id='%s' --format=json --max_results 5000 '%s'" project-id dataset-id))
    :object-type 'alist
    :array-type 'list))
 
 (defmemoizefile im-big-query-all-tables () "~/.emacs.d/big-query-table-cache"
-  (->>
-   (im-big-query-get-all-datasets im-big-query-project-id)
-   (--map (alist-get 'id it))
-   (--mapcat (ignore-errors (im-big-query-get-all-tables it)))))
+  (-mapcat
+   (lambda (project-id)
+     (->> (im-big-query-get-all-datasets project-id)
+        (--map (alist-get 'id it))
+        (--mapcat (ignore-errors (im-big-query-get-all-tables project-id it)))))
+   im-big-query-project-ids))
 
 (defun im-big-query-all-table-names ()
   (--map (alist-get 'id it) (im-big-query-all-tables)))
