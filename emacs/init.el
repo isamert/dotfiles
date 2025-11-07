@@ -7472,8 +7472,8 @@ the commit buffer."
    "J" #'pdf-view-next-page-command
    "K" #'pdf-view-previous-page-command
    "s" 'pdf-occur)
-  ;; :init
-  ;; (pdf-tools-install)
+  :init
+  (pdf-tools-install)
   :config
   (defun im-pdf-view-setup ()
     (hl-line-mode -1))
