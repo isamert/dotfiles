@@ -6596,9 +6596,9 @@ Fetches missing channels/users first."
   (define-key tmr-tabulated-mode-map "d" #'tmr-remove)
   (evil-set-initial-state 'tmr-tabulated-mode 'emacs)
 
-  ;; Show upcoming timers in global-mode-string
-  (setq global-mode-string (append global-mode-string '(im-tmr-upcoming-string)))
-  (run-with-timer 1 15 #'im-tmr-format-upcoming))
+  ;; See `im-update-global-mode-line'
+  (add-hook 'tmr-timer-finished-functions #'im-update-global-mode-line)
+  (add-hook 'tmr-timer-cancelled-functions #'im-update-global-mode-line))
 
 (defun im-tmr-notify (timer)
   (im-notif
@@ -6607,26 +6607,6 @@ Fetches missing channels/users first."
    ;; TMR events are high priority for me
    :severity 'urgent
    :labels '("tmr")))
-
-(defvar im-tmr-upcoming-string nil)
-(put 'im-tmr-upcoming-string 'risky-local-variable t) ;; This is required to make propertize work
-
-(defun im-tmr-format-upcoming ()
-  (setq
-   im-tmr-upcoming-string
-   (-some->>
-       tmr--timers
-     (--filter (and (not (tmr--timer-finishedp it))
-                    (let ((remaining (- (float-time (tmr--timer-end-date it))
-                                        (float-time))))
-                      (<= remaining 300))))
-     (--map (format "%s (%s)"
-                    (propertize (tmr--timer-description it) 'face 'underline)
-                    (propertize (tmr--format-remaining it) 'face 'italic)))
-     (s-join ", ")
-     (s-prepend " «")
-     (s-append "» ")))
-  (force-mode-line-update t))
 
 ;;;;; lab.el -- gitlab integration
 
@@ -12632,6 +12612,22 @@ Throw error otherwise."
              (list
               (all-the-icons-material "do_not_disturb_on")
               " · ")))
+       ,@(when-let* ((_ (bound-and-true-p tmr--timers))
+                     (upcoming (--filter (and (not (tmr--timer-finishedp it))
+                                              (let ((remaining (- (float-time (tmr--timer-end-date it))
+                                                                  (float-time))))
+                                                (<= remaining 300)))
+                                         tmr--timers)))
+           (list
+            (all-the-icons-octicon "flame")
+            (-some->> upcoming
+              (--map (format "%s (%s)"
+                             (propertize (tmr--timer-description it) 'face 'underline)
+                             (propertize (tmr--format-remaining it) 'face 'italic)))
+              (s-join ", ")
+              (s-prepend " «")
+              (s-append "»"))
+            " · "))
        ,@(when (bound-and-true-p appt-mode-string)
            (list
             (all-the-icons-faicon "calendar-check-o")
