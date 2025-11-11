@@ -105,6 +105,15 @@
                                       tags
                                       '(unread elfeed)))))))))
 
+(defun im-readeck-bookmark-highlights (id)
+  (im-request
+    (format "%s/api/bookmarks/%s/annotations" im-readeck-url id)
+    :-type "GET"
+    ;; :-async? t
+    ;; :-raw t
+    :-headers `(:Content-Type "application/json"
+                :Authorization ,(format "Bearer %s" im-readeck-token))))
+
 ;;;; Footer
 
 (provide 'im-readeck)
