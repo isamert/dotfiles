@@ -7044,7 +7044,7 @@ Fetches missing channels/users first."
 
 ;; Good time to set these values:
 (setq user-full-name "Isa Mert Gurbuz")
-(setq user-mail-address "isamertgurbuz@gmail.com")
+(setq user-mail-address im-primary-mail)
 
 (use-package notmuch
   :defer t
@@ -7056,8 +7056,8 @@ Fetches missing channels/users first."
   (notmuch-show-relative-dates t)
   (notmuch-show-part-button-default-action 'notmuch-show-view-part)
   (notmuch-saved-searches
-   '((:name "📥 inbox" :query "tag:inbox and not tag:deleted" :key "i")
-     (:name "💬 unread (inbox)" :query "tag:unread and tag:inbox" :key "u")
+   '((:name "📥 inbox" :query "tag:inbox and not tag:deleted and not tag:spam" :key "i")
+     (:name "💬 unread (inbox)" :query "tag:unread and tag:inbox and not tag:deleted and not tag:spam" :key "u")
      (:name "🏳️ flagged" :query "tag:flagged" :key "f")
      (:name "✍🏻 sent" :query "tag:sent" :key "t")
      (:name "📰 drafts" :query "tag:draft" :key "d")
@@ -7066,29 +7066,30 @@ Fetches missing channels/users first."
   (notmuch-always-prompt-for-sender t)
   ;; Automatically move sent mails to Sent folder of corresponding
   ;; account and add/remove relevant tags
-  (notmuch-fcc-dirs `(("isamertgurbuz@gmail.com" . "gmail/Sent +sent -new -inbox -unread")))
+  (notmuch-fcc-dirs `((,im-primary-mail . "gmail/Sent +sent -new -inbox -unread")
+                      (,im-secondary-mail . "proton/Sent +sent -new -inbox -unread")))
   :hook
   ;; Check if attachments are really attached before sending
   ;; Also see `notmuch-mua-attachment-regexp'
   (notmuch-mua-send . notmuch-mua-attachment-check)
   :general
-  (:keymaps 'notmuch-search-mode-map :states 'normal
-   ;; gr → Refresh view
-   ;; C → compose mail
-   "u" #'evil-collection-notmuch-search-toggle-unread
-   "gs" #'notmuch-search
-   "gS" #'notmuch-tree
-   "o" #'notmuch-search-show-thread
-   "d" #'im-notmuch-toggle-delete)
-  (:keymaps 'notmuch-show-mode-map :states 'normal
-   "o" #'notmuch-show-view-part
-   "O" #'notmuch-show-save-part)
   (im-leader
     "eN" #'im-notmuch-inbox
     "en" #'notmuch-hello)
   :config
   (setq-default notmuch-search-oldest-first nil)
   (evil-collection-notmuch-setup)
+  (general-def :keymaps 'notmuch-search-mode-map :states 'normal
+    ;; gr → Refresh view
+    ;; C → compose mail
+    "u" #'evil-collection-notmuch-search-toggle-unread
+    "gs" #'notmuch-search
+    "gS" #'notmuch-tree
+    "o" #'notmuch-search-show-thread
+    "d" #'im-notmuch-toggle-delete)
+  (general-def :keymaps 'notmuch-show-mode-map :states 'normal
+    "o" #'notmuch-show-view-part
+    "O" #'notmuch-show-save-part)
   ;; I use the s key for another thing
   (evil-collection-define-key 'normal 'notmuch-common-keymap
     "s" nil
@@ -7150,11 +7151,15 @@ mails."
             (message ">> Checking mail..."))
           (await (im-shell-command :command "mbsync --all --verbose" :async t))
           (await (im-shell-command :command "notmuch new" :async t))
-          (await (im-shell-command :command "notmuch tag +work -- not tag:work and folder:work/INBOX" :async t))
+          (await (im-shell-command :command "notmuch tag +proton -- 'not tag:proton and path:proton/**'" :async t))
+          (await (im-shell-command :command "notmuch tag +gmail -- 'not tag:gmail and path:gmail/**'" :async t))
+          (await (im-shell-command :command "notmuch tag +sent -inbox -- 'not tag:sent and folder:proton/Sent'" :async t))
+          (await (im-shell-command :command "notmuch tag +spam -- 'not tag:spam and folder:gmail/[Gmail]/Spam'" :async t))
+          (await (im-shell-command :command "notmuch tag +spam -- 'not tag:spam and folder:proton/Spam'" :async t))
           (setq
            count
            (string-to-number
-            (await (im-shell-command :command "notmuch count tag:inbox and tag:unread" :async t))))
+            (await (im-shell-command :command "notmuch count tag:inbox and tag:unread and not tag:spam" :async t))))
           (when interactive?
             (message "You have %s new mail." count))
           (when (and (> count 0) (not (eq im-unread-mail-count count)))
