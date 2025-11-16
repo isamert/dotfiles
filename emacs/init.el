@@ -12317,7 +12317,8 @@ Use C-n C-p to switch between translation directions."
      (call-interactively #'im-etymology-en)
      (current-buffer))))
 
-;; TODO: If org mode, show link's text as peek
+;; This also works in org mode as "K" keybinding because
+;; `evil-lookup-func' is set to this
 (defun im-peek-doc ()
   "Show documentation at point."
   (interactive)
@@ -12328,10 +12329,14 @@ Use C-n C-p to switch between translation directions."
     ((equal major-mode 'clojure-mode) #'im-peek-doc--clojure)
     ((equal major-mode 'org-mode)
      (cond
-      (jupyter-org-interaction-mode #'im-peek-doc--jupyter)
-      (t (lambda ()
-           (call-interactively #'wordnut-lookup-current-word)
-           (current-buffer)))))
+      (jupyter-org-interaction-mode
+       #'im-peek-doc--jupyter)
+      ((string= "id" (org-element-property :type (org-element-context)))
+       #'im-peek-doc--org-id-at-point)
+      (t
+       (lambda ()
+         (call-interactively #'wordnut-lookup-current-word)
+         (current-buffer)))))
     (eldoc-mode #'eldoc-doc-buffer))))
 
 ;; TODO: Add lsp mode etc.
@@ -12376,6 +12381,31 @@ Use C-n C-p to switch between translation directions."
   (save-window-excursion
     (jupyter-inspect-at-point)
     (get-buffer "*Help*")))
+
+(defun im-peek-doc--org-id-at-point ()
+  (interactive)
+  (if-let* ((link (org-element-context))
+            (id (when (string= "id" (org-element-property :type link))
+                  (org-element-property :path link)))
+            (marker (org-id-find id t)))
+      (if (and marker (marker-buffer marker)
+               (buffer-live-p (marker-buffer marker)))
+          (progn
+            (with-current-buffer (marker-buffer marker)
+              (org-with-wide-buffer
+               (goto-char marker)
+               (let* ((beg (point))
+                      (end (save-excursion
+                             (or (ignore-errors (outline-next-heading))
+                                 (goto-char (point-max)))
+                             (point)))
+                      (text (buffer-substring beg end)))
+                 (with-current-buffer (get-buffer-create " *im-org-ref*")
+                   (erase-buffer)
+                   (insert text)
+                   (current-buffer))))))
+        (message "Can't find marker for the ID."))
+    (message "Not a valid id at point.")))
 
 ;;;;; im-extract
 
