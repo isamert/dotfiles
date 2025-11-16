@@ -1312,6 +1312,88 @@ SUBCMD=$1
 shift
 $SUBCMD "$@"
 #+end_src
+** swayimg
+#+begin_src conf
+[list]
+# Default order (none/alpha/numeric/mtime/size/random)
+order = mtime
+reverse = yes
+recursive = no
+# Add files from the same directory as the first file (yes/no)
+all = yes
+
+[keys.viewer]
+F1 = help
+g = first_file
+Shift+g = last_file
+Shift+h = prev_file
+Shift+l = next_file
+Space = next_file
+s = mode slideshow
+n = animation
+f = fullscreen
+Return = mode gallery
+h = step_left 10
+l = step_right 10
+k = step_up 10
+j = step_down 10
+Equal = zoom +10
+Plus = zoom +10
+Minus = zoom -10
+w = zoom width
+Shift+w = zoom height
+z = zoom fit
+Shift+z = zoom fill
+0 = zoom real
+BackSpace = zoom optimal
+bracketleft = rotate_left
+bracketright = rotate_right
+m = flip_vertical
+Shift+m = flip_horizontal
+a = antialiasing
+r = reload
+i = info
+Shift+Delete = exec rm -f '%' && echo "File removed: %"; skip_file
+Escape = exit
+q = exit
+
+[keys.slideshow]
+F1 = help
+g = first_file
+Shift+g = last_file
+Shift+h = prev_file
+Shift+l = next_file
+Space = pause
+i = info
+f = fullscreen
+Return = mode
+Escape = exit
+q = exit
+
+[keys.gallery]
+F1 = help
+g = first_file
+Shift+g = last_file
+h = step_left
+l = step_right
+k = step_up
+j = step_down
+# Prior = page_up
+# Next = page_down
+# c = skip_file
+s = mode slideshow
+f = fullscreen
+Return = mode viewer
+a = antialiasing
+r = reload
+i = info
+Equal = thumb +20
+Plus = thumb +20
+Minus = thumb -20
+Shift+Delete = exec rm -f '%' && echo "File removed: %"; skip_file
+Escape = exit
+q = exit
+#+end_src
 * Mail
 ** Proton/Hydroixde bridge
 - Install hydroxide.
