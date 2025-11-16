@@ -1312,6 +1312,24 @@ SUBCMD=$1
 shift
 $SUBCMD "$@"
 #+end_src
+* Mail
+** Proton/Hydroixde bridge
+- Install hydroxide.
+- hydroxide auth <username>
+- Tangle the following and ~systemctl --user enable --now hydroxide-imap~
+#+begin_src conf :tangle ~/.config/systemd/user/hydroxide-imap.service
+[Unit]
+Description=Third party ProtonMail IMAP Bridge
+After=network.target
+
+[Service]
+Type=exec
+Restart=on-failure
+ExecStart=/usr/bin/hydroxide imap
+
+[Install]
+WantedBy=default.target
+#+end_src
 * Shell
 ** Fish
 #+begin_src fish :tangle ~/.config/fish/config.fish
