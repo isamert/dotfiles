@@ -7161,8 +7161,19 @@ mails."
             (setq im-unread-mail-count count)
             (alert (format "You have %s new mail!" count)
                    :title "New Mail!")))
-      (error (alert (format "Exit code: %s. See buffers *notmuch* and *mbsync*." reason)
-                    :title "Checking for mail failed!")))))
+      (error
+       ;; When mac sleeps, sometimes it wakes up to run background
+       ;; tasks and this sync function gets to run at that time (This
+       ;; was called powernap on intel macs and you were able to
+       ;; disable it but now it's on all the time on Apple silicon
+       ;; thing). In some cases, DavMail is not ready to take
+       ;; connections and mbsync fails with a timeout. I don't want to
+       ;; bombard myself with these alerts, so I only report the
+       ;; alerts if we are not idle right now.
+       (when (or (not (current-idle-time))
+                 (<= (time-to-seconds (current-idle-time)) 60))
+         (alert (format "Exit code: %s. See buffers *notmuch* and *mbsync*." reason)
+                :title "Checking for mail failed!"))))))
 
 (run-with-timer
  60
