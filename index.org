@@ -1723,8 +1723,7 @@ guile> (load ".config/associactions")
 (bind
  #:name 'empv
  #:pattern '("^video/" "^audio/")
- #:program (elisp (empv-play "%F"))
- #:on-error '(mpv %f))
+ #:program (elisp (empv--with-video-enabled (empv-play "%f"))))
 
 (bind
  #:pattern "inode/directory"
@@ -1749,12 +1748,11 @@ guile> (load ".config/associactions")
 
 (bind
  #:pattern "^https?://.+/.+\\.(jpg|png|gif)(\\?.+)?$"
- #:program `(imv %f))
+ #:program `(swayimg %f))
 
 (bind
  #:pattern "^image/.*"
- ;; Start with given image, and open the directory of given file
- #:program '(imv -n %f %d)
+ #:program '(swayimg %f)
  #:gallery 'nomacs)
 
 (bind
@@ -1770,10 +1768,10 @@ guile> (load ".config/associactions")
  #:name 'browser
  #:pattern '("^https?://.*" "^.*\\.html?(#[\\w_-]+)?")
  #:emacs (elisp (eww "%f"))
- #:program (elisp (eww "%f"))
+ ;; #:program (elisp (eww "%f"))
  ;; #:program '(qutebrowser %f)
  ;; #:test '(pgrep qutebrowser)
- #:on-fail '(firefox %f)
+ #:program '(firefox %f)
  #:edit 'editor)
 
 (bind
