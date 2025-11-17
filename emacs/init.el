@@ -1324,8 +1324,19 @@ side window the only window'"
   (setq im-calendar-files
         (when (file-exists-p im-org-calendar-directory)
           (directory-files im-org-calendar-directory 'full (rx ".org" eos))))
-  (setq org-agenda-files `(,inbox-org ,bullet-org ,projects-org ,work-org ,people-org ,readinglist-org ,watchlist-org ,life-org ,netherlands-org ,@im-calendar-files))
-
+  ;; Some files are not available in my work computer etc. Hence I
+  ;; filter for existing ones
+  (setq org-agenda-files (-filter #'file-exists-p
+                                  `(,inbox-org
+                                    ,bullet-org
+                                    ,projects-org
+                                    ,work-org
+                                    ,people-org
+                                    ,readinglist-org
+                                    ,watchlist-org
+                                    ,life-org
+                                    ,netherlands-org
+                                    ,@im-calendar-files)))
   ;; When I unfold an header if the contents are longer than remaining
   ;; window width then cursor recenters to the top of the window. I
   ;; disable with the following line.
