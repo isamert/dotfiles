@@ -6127,7 +6127,31 @@ this command is invoked from."
         ,reaction
         (slack-get-ts)))))
 
-(defvar im-slack--last-messages '())
+(defvar im-slack--last-messages '()
+  "Last slack messages.
+
+List of:
+
+  (:room room
+   :team team
+   :message message
+   :sender-name sender-name
+   :room-name room-name
+   :title title
+   :message-string msg-str)
+
+Example usage:
+
+  (s-join \"\n\n---\n\n\"
+          (--map
+           (let-plist it
+             (format \"Room: %s, Sender: %s, When: %s, Message: %s\"
+                     .room-name
+                     .sender-name
+                     (when .message
+                       (lab--time-ago (im-slack--message-ts it)))
+                     .message-string))
+           (-take 100 im-slack--last-messages))))")
 
 (defun im-slack-check ()
   (interactive)
