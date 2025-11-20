@@ -73,6 +73,16 @@ notification data."
   :group 'im-notif
   :type 'hooks)
 
+(defcustom im-notif-dnd-enabled-hooks '(im-notif--gnome-dnd-enable im-notif--macos-dnd-enable)
+  "Functions to run after enabling the DND mode."
+  :group 'im-notif
+  :type 'hooks)
+
+(defcustom im-notif-dnd-disabled-hooks '(im-notif--gnome-dnd-disable im-notif--macos-dnd-disable)
+  "Functions to run after disabling the DND mode."
+  :group 'im-notif
+  :type 'hooks)
+
 (defcustom im-notif-dnd-whitelist-regexp nil
   "Show matching notifications even if in DND."
   :group 'im-notif
@@ -267,8 +277,8 @@ be a function or a buffer object."
   (interactive (list (im-notif--read-duration)))
   (setq im-notif-dnd t)
   (message ">> Disabling notifications for %s seconds." seconds)
-  (im-notif--set-gnome-dnd 'enabled)
-  (im-notif--set-macos-dnd 'enabled)
+  (dolist (fn im-notif-dnd-enabled-hooks)
+    (funcall fn))
   (run-with-timer seconds nil #'im-notif-disable-dnd))
 
 (defun im-notif--set-gnome-dnd (x)
@@ -276,6 +286,12 @@ be a function or a buffer object."
     (call-process "gsettings" nil nil nil
                   "set" "org.gnome.desktop.notifications" "show-banners" (if (eq x 'enabled)
                                                                              "false" "true"))))
+
+(defun im-notif--gnome-dnd-enable ()
+  (im-notif--set-gnome-dnd 'enabled))
+
+(defun im-notif--gnome-dnd-disable ()
+  (im-notif--set-gnome-dnd 'disabled))
 
 (defun im-notif--set-macos-dnd (x)
   "Enable/disable MacOS Focus/DnD.
@@ -292,13 +308,20 @@ Source: https://mskelton.dev/bytes/20230927123410"
                            "shortcuts" nil 0 nil
                            "run" "Focus"))))
 
+(defun im-notif--macos-dnd-enable ()
+  (im-notif--set-macos-dnd 'enabled))
+
+(defun im-notif--macos-dnd-disable ()
+  (im-notif--set-macos-dnd 'disabled))
+
+;; TODO: When manually disabled, remove pending disable timers...
 ;;;###autoload
 (defun im-notif-disable-dnd ()
   "Disable DND mode."
   (interactive)
   (setq im-notif-dnd nil)
-  (im-notif--set-gnome-dnd 'disabled)
-  (im-notif--set-macos-dnd 'disabled)
+  (dolist (fn im-notif-dnd-disabled-hooks)
+    (funcall fn))
   (message ">> DND disabled!"))
 
 ;;;###autoload

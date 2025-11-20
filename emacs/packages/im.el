@@ -898,8 +898,8 @@ For async requests, simply provide a success handler:
                             (funcall reject data)))
                   :sync (and (not -on-success) (not -async?))
                   :data (cond
-                         ((and -data (json-alist-p -data)) (json-encode -data))
-                         ((and -data (json-plist-p -data)) (json-encode (im-plist-to-alist -data)))
+                         ((and -data (or (json-alist-p -data) (json-plist-p -data)))
+                          (json-encode -data))
                          ((stringp -data) -data)
                          (t nil))
                   :params (cl-remove
