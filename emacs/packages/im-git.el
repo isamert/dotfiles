@@ -119,6 +119,7 @@
   (goto-char (point-min)))
 
 (defvar im-git-status--old-window-conf nil)
+(defconst im-git-status-buffer "*im-git-diff*")
 
 (defun im-git-status-reload ()
   "Reload current git status window."
@@ -131,7 +132,7 @@
   (interactive)
   (let* ((default-directory (im-current-project-root))
          (diff (shell-command-to-string "git diff"))
-         (dbuff (im-get-reset-buffer "*im-git-diff*")))
+         (dbuff (im-get-reset-buffer im-git-status-buffer)))
     (setq im-git-status--old-window-conf (or window-conf (current-window-configuration)))
     (when (s-blank? diff)
       (if (s-blank? (shell-command-to-string "git diff --staged"))
@@ -156,9 +157,9 @@
 (defun im-git-status-cancel ()
   "Cancel."
   (interactive nil im-git-diff-mode)
-  (kill-buffer (current-buffer))
   (when (equal im-git-dif--context 'im-git-status)
-    (set-window-configuration im-git-status--old-window-conf)))
+    (set-window-configuration im-git-status--old-window-conf))
+  (kill-buffer im-git-status-buffer))
 
 (defun im-git-diff-at-file? ()
   "Return if cursor is on somewhere around the start of file diff."
