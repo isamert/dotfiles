@@ -168,8 +168,8 @@
     (save-excursion
       (goto-char fstart)
       (diff-hunk-next)
-      (and (< cursor (point))
-           (> cursor fstart)))))
+      (and (<= cursor (point))
+           (>= cursor fstart)))))
 
 (cl-defun im-git-diff-apply (diff &key reverse cached callback)
   "Stage the DIFF.
