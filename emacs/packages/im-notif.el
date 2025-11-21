@@ -124,6 +124,7 @@ overrides everything."
 
 (defvar im-notif-dnd nil)
 (defvar im-notif--active '())
+(defvar im-notif--dnd-timer nil)
 (defvar-local im-notif--notification-data nil)
 
 ;;;###autoload
@@ -276,10 +277,11 @@ be a function or a buffer object."
   "Enable DND mode for SECONDS."
   (interactive (list (im-notif--read-duration)))
   (setq im-notif-dnd t)
+  (setq im-notif--dnd-timer
+        (run-with-timer seconds nil #'im-notif-disable-dnd))
   (message ">> Disabling notifications for %s seconds." seconds)
   (dolist (fn im-notif-dnd-enabled-hooks)
-    (funcall fn))
-  (run-with-timer seconds nil #'im-notif-disable-dnd))
+    (funcall fn)))
 
 (defun im-notif--set-gnome-dnd (x)
   (when (and (eq system-type 'gnu/linux) (executable-find "gsettings"))
@@ -314,12 +316,15 @@ Source: https://mskelton.dev/bytes/20230927123410"
 (defun im-notif--macos-dnd-disable ()
   (im-notif--set-macos-dnd 'disabled))
 
-;; TODO: When manually disabled, remove pending disable timers...
 ;;;###autoload
 (defun im-notif-disable-dnd ()
   "Disable DND mode."
   (interactive)
   (setq im-notif-dnd nil)
+  ;; Cancel any pending timer if manually disabled
+  (when (timerp im-notif--dnd-timer)
+    (cancel-timer im-notif--dnd-timer)
+    (setq im-notif--dnd-timer nil))
   (dolist (fn im-notif-dnd-disabled-hooks)
     (funcall fn))
   (message ">> DND disabled!"))
