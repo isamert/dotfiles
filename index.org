@@ -1249,6 +1249,283 @@ exec --no-startup-id wacom.sh --monitor-and-remap
 #
 include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "/etc/sway/config.d/*.conf" "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/*.conf")'
 #+end_src
+** Niri
+#+begin_src kdl :tangle ~/.config/niri/config.kdl
+input {
+    touchpad {
+        // off
+        tap
+        natural-scroll
+    }
+
+    mouse {
+        // off
+    }
+
+    trackpoint {
+        // off
+    }
+}
+
+// * Niri stuff
+
+// https://github.com/YaLTeR/niri/wiki/Configuration:-Layout
+layout {
+    // Set gaps around windows in logical pixels.
+    gaps 8
+    // - "never", "always", "on-overflow"
+    center-focused-column "on-overflow"
+
+    // Mod+R → switch-preset-column-width toggles between these
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        proportion 0.8
+    }
+
+    // preset-window-heights { }
+    default-column-width { proportion 0.5; }
+
+    focus-ring {
+        off
+        width 4
+        active-color "#7fc8ff"
+        inactive-color "#505050"
+        active-gradient from="#80c8ff" to="#bbddff" angle=45
+    }
+
+    // You can also add a border. It's similar to the focus ring, but always visible.
+    border {
+        off
+        width 4
+        active-color "#ffc87f"
+        inactive-color "#505050"
+        urgent-color "#9b0000"
+        // active-gradient from="#ffbb66" to="#ffc880" angle=45 relative-to="workspace-view"
+        // inactive-gradient from="#505050" to="#808080" angle=45 relative-to="workspace-view"
+    }
+
+    // You can enable drop shadows for windows.
+    shadow {
+        on
+        softness 30
+        spread 5
+        offset x=0 y=5
+        color "#0007"
+    }
+
+    // You can think of them as a kind of outer gaps.
+    struts {
+        // left 64
+        // right 64
+        // top 64
+        // bottom 64
+    }
+    background-color "transparent"
+}
+
+// Make the wallpaper stationary, rather than moving with workspaces.
+layer-rule {
+    match namespace="^wallpaper$"
+    place-within-backdrop true
+}
+
+prefer-no-csd
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+// https://github.com/YaLTeR/niri/wiki/Configuration:-Animations
+animations {
+    // off
+    // slowdown 3.0
+}
+
+// * Displays
+
+// niri msg outputs
+// https://github.com/YaLTeR/niri/wiki/Configuration:-Outputs
+/-output "eDP-1" {
+    // off
+    mode "1920x1080@120.030"
+    scale 2
+    // normal, 90, 180, 270, flipped, flipped-90, flipped-180 and flipped-270.
+    transform "normal"
+    position x=1280 y=0
+}
+
+// * Window Rules
+
+// Open the Firefox picture-in-picture player as floating by default.
+window-rule {
+    // This app-id regular expression will work for both:
+    // - host Firefox (app-id is "firefox")
+    // - Flatpak Firefox (app-id is "org.mozilla.firefox")
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    open-floating true
+}
+
+window-rule {
+    geometry-corner-radius 8
+    clip-to-geometry true
+}
+
+window-rule {
+    match app-id=r#"copyq$"#
+    open-floating true
+}
+
+// * Bindings
+
+binds {
+    // Use `wev` to find key names.
+    // niri msg action do-something
+    // Mod+T { spawn "bash" "-c" "notify-send hello && exec alacritty"; }
+
+    Mod+Slash { show-hotkey-overlay; }
+
+    // Audio
+    Mod+Ctrl+Alt+Shift+0 allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1+"; }
+    Mod+Ctrl+Alt+Shift+9 allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1-"; }
+    XF86AudioMute        allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+
+    // Window manager
+    Mod+O repeat=false { toggle-overview; }
+    Mod+Q { close-window; }
+    Mod+BracketLeft  { consume-or-expel-window-left; }
+    Mod+BracketRight { consume-or-expel-window-right; }
+    Mod+Comma  { consume-window-into-column; }
+    Mod+Period { expel-window-from-column; }
+
+    Mod+H     { focus-column-left; }
+    Mod+J     { focus-window-down; }
+    Mod+K     { focus-window-up; }
+    Mod+L     { focus-column-right; }
+
+    Mod+Shift+H     { move-column-left; }
+    Mod+Shift+J     { move-window-down; }
+    Mod+Shift+K     { move-window-up; }
+    Mod+Shift+L     { move-column-right; }
+
+    // Mod+Home { focus-column-first; }
+    // Mod+End  { focus-column-last; }
+    // Mod+Ctrl+Home { move-column-to-first; }
+    // Mod+Ctrl+End  { move-column-to-last; }
+
+    // Mod+Shift+H     { focus-monitor-left; }
+    // Mod+Shift+J     { focus-monitor-down; }
+    // Mod+Shift+K     { focus-monitor-up; }
+    // Mod+Shift+L     { focus-monitor-right; }
+
+    Mod+Shift+Ctrl+H     { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+J     { move-column-to-monitor-down; }
+    Mod+Shift+Ctrl+K     { move-column-to-monitor-up; }
+    Mod+Shift+Ctrl+L     { move-column-to-monitor-right; }
+
+    Mod+U              { focus-workspace-down; }
+    Mod+I              { focus-workspace-up; }
+
+    Mod+Shift+Page_Down { move-workspace-down; }
+    Mod+Shift+Page_Up   { move-workspace-up; }
+    Mod+Shift+U         { move-workspace-down; }
+    Mod+Shift+I         { move-workspace-up; }
+
+    // To avoid scrolling through workspaces really fast, you can use
+    // the cooldown-ms property. The bind will be rate-limited to this value.
+    // You can set a cooldown on any bind, but it's most useful for the wheel.
+    Mod+WheelScrollDown      cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp        cooldown-ms=150 { focus-workspace-up; }
+    Mod+WheelScrollRight      { focus-column-right; }
+    Mod+WheelScrollLeft       { focus-column-left; }
+    Mod+TouchpadScrollDown { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.02+"; }
+    Mod+TouchpadScrollUp   { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.02-"; }
+
+    // Workspaces
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+    Mod+Shift+1 { move-column-to-workspace 1; }
+    Mod+Shift+2 { move-column-to-workspace 2; }
+    Mod+Shift+3 { move-column-to-workspace 3; }
+    Mod+Shift+4 { move-column-to-workspace 4; }
+    Mod+Shift+5 { move-column-to-workspace 5; }
+    Mod+Shift+6 { move-column-to-workspace 6; }
+    Mod+Shift+7 { move-column-to-workspace 7; }
+    Mod+Shift+8 { move-column-to-workspace 8; }
+    Mod+Shift+9 { move-column-to-workspace 9; }
+
+    Mod+Tab { focus-workspace-previous; }
+    Mod+R { switch-preset-column-width; }
+    Mod+Shift+R { switch-preset-window-height; }
+    Mod+Ctrl+R { reset-window-height; }
+    Mod+F { maximize-column; }
+    Mod+Shift+F { fullscreen-window; }
+
+    Mod+C { center-column; }
+    Mod+Shift+C { center-visible-columns; }
+    Mod+Ctrl+F { expand-column-to-available-width; } // Fill the rest
+
+    Mod+0     { set-column-width "-10%"; }
+    Mod+Minus { set-column-width "+10%"; }
+
+    Mod+P { set-window-height "-10%"; }
+    Mod+Backslash { set-window-height "+10%"; }
+
+    Mod+T       { toggle-window-floating; }
+    Mod+Space { switch-focus-between-floating-and-tiling; }
+
+    Mod+W { toggle-column-tabbed-display; }
+
+    // Applications such as remote-desktop clients and software KVM switches may
+    // request that niri stops processing the keyboard shortcuts defined here
+    // so they may, for example, forward the key presses as-is to a remote machine.
+    // It's a good idea to bind an escape hatch to toggle the inhibitor,
+    // so a buggy application can't hold your session hostage.
+    // The allow-inhibiting=false property can be applied to other binds as well,
+    // which ensures niri always processes them, even when an inhibitor is active.
+    Mod+F1 allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
+
+    // The quit action will show a confirmation dialog to avoid accidental exits.
+    Mod+Shift+E { quit; }
+    Mod+Ctrl+Alt+Shift+Q { quit; }
+    Mod+Shift+P { power-off-monitors; }
+
+    // Apps
+    Mod+Ctrl+Alt+Shift+C { spawn "vicinae" "vicinae://extensions/vicinae/clipboard/history"; }
+    Mod+Ctrl+Alt+Shift+S { screenshot; }
+    Mod+Ctrl+Alt+Shift+Return { spawn "foot"; }
+    Mod+Ctrl+Alt+Shift+A { spawn "vicinae" "open"; }
+    Mod+Ctrl+Alt+Shift+L { spawn "swaylock"; }
+    Mod+Ctrl+Alt+Shift+Y { spawn "makoctl" "dismiss" "--all"; }
+
+    // UTF-8 stuff
+    Mod5+d { spawn "wtype" "→"; }
+    Mod5+w { spawn "wtype" "←"; }
+    Mod5+a { spawn "wtype" "↑"; }
+    Mod5+s { spawn "wtype" "↓"; }
+
+    Mod5+1 { spawn "wtype" "«"; }
+    Mod5+2 { spawn "wtype" "»"; }
+    Mod5+t { spawn "wtype" "✓"; }
+    Mod5+x { spawn "wtype" "✗"; }
+    Mod5+b { spawn "wtype" "λ"; }
+    Mod5+v { spawn "wtype" "${}" "-P" "Left"; }
+    Mod5+r { spawn "fish" "-c" "printf '->' | wtype -"; }
+    Mod5+f { spawn "wtype" "=>"; }
+    Mod5+g { spawn "wtype" "⟹"; }
+}
+
+// * Startup
+
+// spawn-at-startup "waybar"
+spawn-at-startup "swaybg" "--image" "/home/isamert/.config/wallpaper.jpg"
+#+end_src
 ** dunst
 #+begin_src conf :tangle (when-linux "~/.config/dunst/dunstrc")
 [global]
