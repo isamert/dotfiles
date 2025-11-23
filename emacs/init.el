@@ -4293,8 +4293,8 @@ empty string."
 
 ;;;;; blamer -- git blame
 
-(use-package blamer
-  :commands (blamer-show-posframe-commit-info))
+(use-package blame-reveal
+  :straight (:host github :repo "LuciusChen/blame-reveal"))
 
 ;;;;; avy
 
@@ -7279,8 +7279,7 @@ mails."
 (transient-define-prefix im-git-transient ()
   [["Status"
     ("s" "Show status" im-git-status)
-    ("B" "Blame annotate" vc-annotate)
-    ("i" "Show blame at point" blamer-show-posframe-commit-info)
+    ("B" "Blame reveal mode" blame-reveal-mode)
     ("R" "Refresh state" im-update-git-state)]
    ["Commit/Branch"
     ("c" "Commit changes" im-git-commit)
