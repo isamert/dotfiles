@@ -1384,10 +1384,14 @@ binds {
     Mod+Slash { show-hotkey-overlay; }
 
     // Audio
-    Mod+Ctrl+Alt+Shift+0 allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1+"; }
-    Mod+Ctrl+Alt+Shift+9 allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1-"; }
-    XF86AudioMute        allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
-    XF86AudioMicMute     allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+    Mod+Ctrl+Alt+Shift+0 allow-when-locked=true { spawn "swayosd-client" "--output-volume" "raise"; }
+    Mod+Ctrl+Alt+Shift+9 allow-when-locked=true { spawn "swayosd-client" "--output-volume" "lower"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "swayosd-client" "--output-volume" "raise"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "swayosd-client" "--output-volume" "lower"; }
+    XF86AudioMute        allow-when-locked=true { spawn "swayosd-client" "--output-volume" "mute-toggle"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn "swayosd-client" "--input-volume" "mute-toggle"; }
+    XF86AudioPlay        allow-when-locked=true { spawn "swayosd-client" "--playerctl" "play-pause"; }
+    XF86AudioNext        allow-when-locked=true { spawn "swayosd-client" "--playerctl" "next"; }
 
     // Window manager
     Mod+O repeat=false { toggle-overview; }
@@ -1525,6 +1529,8 @@ binds {
 
 // spawn-at-startup "waybar"
 spawn-at-startup "swaybg" "--image" "/home/isamert/.config/wallpaper.jpg"
+spawn-sh-at-startup "vicinae server"
+spawn-at-startup "swayosd-server"
 #+end_src
 ** dunst
 #+begin_src conf :tangle (when-linux "~/.config/dunst/dunstrc")
@@ -2270,10 +2276,6 @@ no-keepaspect-window
 #+end_src
 *** Bindings configuration
 #+begin_src bash :tangle ~/.config/mpv/input.conf
-# Show youtube comments
-# This gets the video ID from filename, as mpv sets it this way.
-c run "term" "--float" "-e" "/bin/bash" "-c" "pipe-viewer --comments-order=top --comments='${path}' --page=1 --no-interactive"
-
 # Copy the filename
 y run "/bin/sh" "-c" "printf ${filename} | xcopy"; show-text "Filename copied: ${filename}"
 & run "/bin/sh" "-c" "jaro --program=browser '${path}'"; show-text "Opening ${path} in browser..."
@@ -2298,7 +2300,7 @@ K no-osd seek -5 exact
 f cycle fullscreen
 p cycle pause
 m cycle mute
-b cycle-values loop-file "inf" "no"
+c cycle-values loop-file "inf" "no"
 
 0 add volume 2
 9 add volume -2
