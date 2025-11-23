@@ -3729,12 +3729,26 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
    'after-save-hook
    (lambda ()
      (when (-contains? (org-agenda-files 'unrestricted) (buffer-file-name))
-       ;; When REFRESH is non-nil, it removes all appts and
-       ;; re-parses. This means appts that are manually added using
-       ;; `appt-add' are removed. I used to use `appt-add' but now I
-       ;; use `tmr' which supports both HH:MM and relative timers.
-       (org-agenda-to-appt 'refresh)
-       (appt-check)))
+       (async-start
+        `(lambda ()
+           ,(async-inject-variables "\\(org-agenda-files\\|load-path\\|org-todo-keywords\\)")
+           (require 'cl-lib)
+           (setq org-agenda-files
+                 (cl-remove-if (lambda (it) (string-match-p ".*ssh:.*" it)) org-agenda-files))
+           (require 'org)
+           (require 'org-agenda)
+           (org-agenda-to-appt 'refresh)
+           ;; Clear the text properties. Causes issues while passing
+           ;; down the result
+           (mapcar
+            (lambda (it) (list (nth 0 it) (substring-no-properties (nth 1 it))
+                          (nth 2 it)))
+            appt-time-msg-list))
+        (lambda (result)
+          (require 'appt)
+          (setq appt-time-msg-list result)
+          (message ">> appt updated")
+          (appt-check)))))
    nil t))
 
 (defun im-appt-notify (min-to-appt new-time appt-msg)
