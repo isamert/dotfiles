@@ -1633,6 +1633,8 @@ i = info
 Shift+Delete = exec rm -f '%' && echo "File removed: %"; skip_file
 Escape = exit
 q = exit
+c = exec wl-copy "%" && echo "Path copied: %"
+y = exec wl-copy "%" && echo "Path copied: %"
 
 [keys.slideshow]
 F1 = help
@@ -1657,7 +1659,6 @@ k = step_up
 j = step_down
 # Prior = page_up
 # Next = page_down
-# c = skip_file
 s = mode slideshow
 f = fullscreen
 Return = mode viewer
@@ -1670,6 +1671,8 @@ Minus = thumb -20
 Shift+Delete = exec rm -f '%' && echo "File removed: %"; skip_file
 Escape = exit
 q = exit
+c = exec wl-copy "%" && echo "Path copied: %"
+y = exec wl-copy "%" && echo "Path copied: %"
 #+end_src
 * Mail
 ** Proton/Hydroixde bridge
