@@ -271,10 +271,11 @@ Covers programming, math, text, currency, and box drawing symbols."
 
             ;; Misc
             ("Date: 📅 (calendar, date, event)" . "📅")
+            ("Trademark: ™" . "™")
             ("Date: 🕒 (clock, time, hour)" . "🕒")
-            ("Filter: ⊞ (filter, add, plus in box)" . "⊞")
-            ("Filter: ⊟ (filter, subtract, minus in box)" . "⊟")
-            ("Filter: ⊠ (filter, exclude, times in box)" . "⊠")
+            ("Filter: ⊞ (filter, add, plus in box, tickbox)" . "⊞")
+            ("Filter: ⊟ (filter, subtract, minus in box, tickbox)" . "⊟")
+            ("Filter: ⊠ (filter, exclude, times in box, tickbox)" . "⊠")
             ("Misc: ✿ (flower, decorative, pretty)" . "✿")
             ("Misc: ☠ (skull, danger, dead, critical)" . "☠")
             ("Misc: ♻ (recycle, refresh, circular)" . "♻")))
