@@ -2565,30 +2565,34 @@ Functions are called separately for each changed entry/header.")
   "Holds the previous state of the top-level headers.")
 
 (defun im-org-store-heading-state ()
-  "Store the state of the top-level headers for later comparison."
-  (when (derived-mode-p 'org-mode)
-    (let ((file (buffer-file-name)))
-      (when (and (file-exists-p file)
-                 (not (-contains? im-org-header-changed-hook-blacklist-files (f-filename file))))
-        (setq im--org-heading-prev-state
-              (with-temp-buffer
-                (insert-file-contents file)
-                (delay-mode-hooks (org-mode))
-                ;; Save only :body & :header because one line
-                ;; added/removed will invalidate all headers by
-                ;; changing :begin and :end
-                (--map (cons (plist-get it :header) (plist-get it :body)) (im-org-get-some-headers))))))))
+  "Store the current buffer state of headers."
+  (when (and (derived-mode-p 'org-mode)
+             (buffer-file-name)
+             (not (-contains? im-org-header-changed-hook-blacklist-files
+                              (f-filename (buffer-file-name)))))
+    (let* ((headers (im-org-get-some-headers))
+           (ht (make-hash-table :test 'equal :size (length headers))))
+      (--each headers
+        (puthash (plist-get it :accessor)
+                 (cons (plist-get it :body-length) (plist-get it :body))
+                 ht))
+      (setq im--org-heading-prev-state ht))))
 
 (defun im-org-compare-heading-state ()
-  "Compare current top-level headers with the stored state to detect changes."
+  "Compare current headers with stored state to detect changes."
   (when (and (derived-mode-p 'org-mode)
-             (not (-contains? im-org-header-changed-hook-blacklist-files (f-filename (buffer-file-name)))))
-    (-each (--remove
-            (member (cons (plist-get it :header) (plist-get it :body)) im--org-heading-prev-state)
-            (im-org-get-some-headers))
+             im--org-heading-prev-state
+             (not (-contains? im-org-header-changed-hook-blacklist-files
+                              (f-filename (buffer-file-name)))))
+    (-each (im-org-get-some-headers)
       (lambda (header-plist)
-        (--each im-org-header-changed-hook
-          (funcall it header-plist))))))
+        (let ((accessor (plist-get header-plist :accessor))
+              (body-length (plist-get header-plist :body-length))
+              (body (plist-get header-plist :body)))
+          (unless (and (eq body-length (car (gethash accessor im--org-heading-prev-state)))
+                       (equal body (cdr (gethash accessor im--org-heading-prev-state))))
+            (run-hook-with-args 'im-org-header-changed-hook header-plist)))))
+    (im-org-store-heading-state)))
 
 (defun im-org-get-some-headers ()
   "Extract top-level headers and their content from the current Org buffer."
@@ -2597,25 +2601,42 @@ Functions are called separately for each changed entry/header.")
       (widen)
       (org-map-entries
        (lambda ()
-         (let* ((header (org-get-heading t t t t))
-                (elem (org-element-at-point)))
+         (let* ((header (substring-no-properties (org-get-heading t t t t)))
+                (elem (org-element-at-point))
+                (body (when-let* ((start (org-element-property :contents-begin elem)))
+                        (buffer-substring-no-properties
+                         start
+                         (org-element-property :contents-end elem))))
+                (properties (org-entry-properties)))
            (push
             (list
+             :accessor (or (alist-get "ID" properties nil nil #'equal)
+                           (im-org-get-header-with-hierarchy))
              :begin (org-element-property :begin elem)
              :end (org-element-property :end elem)
              :level (org-element-property :level elem)
-             :properties (org-entry-properties)
+             :properties properties
              :header header
-             :body
-             (when-let* ((start (org-element-property :contents-begin elem)))
-               (buffer-substring-no-properties
-                start
-                (org-element-property :contents-end elem))))
+             :body body
+             :body-length (if body (length body) 0))
             headers)))
        "LEVEL<3"))
     headers))
 
-(add-hook 'before-save-hook 'im-org-store-heading-state)
+(defun im-org-get-header-with-hierarchy (&optional sep)
+  "Get the current Org header title along with all parent headings."
+  (when (derived-mode-p 'org-mode)
+    (org-with-wide-buffer
+     (let ((heading-hierarchy (list (substring-no-properties (org-get-heading t t t t)))))
+       (while (org-up-heading-safe)
+         (setq heading-hierarchy
+               (nconc (list (substring-no-properties (org-get-heading t t t t)))
+                      heading-hierarchy)))
+       (mapconcat 'identity heading-hierarchy (or sep " ⟹ "))))))
+
+;; Store initial state when file is opened
+(add-hook 'org-mode-hook 'im-org-store-heading-state)
+;; Compare and update state after save
 (add-hook 'after-save-hook 'im-org-compare-heading-state)
 
 ;;;;; Get effort of linked header
