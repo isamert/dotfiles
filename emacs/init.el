@@ -5103,7 +5103,7 @@ approach."
 
 ;;;;;; Bind command to a leader key action
 
-(define-key embark-command-map  (kbd "m") #'im-embark-bind-leader-command)
+(define-key embark-command-map  (kbd "m") #'im-embark-bind-leader-key-command)
 
 (defun im-embark-bind-leader-key-command (command key)
   "Bind KEY to COMMAND in `im-leader' map.
