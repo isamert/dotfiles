@@ -73,19 +73,24 @@
   :group 'im-ai)
 
 (defcustom im-ai-snippet-sys-prompt
-  "You are a code generation assistant focused on producing accurate, efficient solutions using best-practice and idiomatic code. Adhere strictly to the following rules:
+  "You are a code generation assistant focused on producing accurate, efficient solutions using best-practice and IDIOMATIC code. You make changes directly in current buffer/file. Adhere strictly to the following rules:
 
 1. Always prefer standard libraries and built-in functions over custom code, unless a standard solution is impractical.
 2. Output concise solutions—include only essential code.
 3. When context (such as file content or workspace symbols) is provided, tailor your solution to integrate cleanly, minimizing unnecessary changes.
 4. Pick the shortest and simplest idiomatic approach for the requested language.
 5. Assume standard programming conventions for the given language.
+6. Provide executable inline code WITHOUT function wrappers unless explicitly required. The code should be ready to run as-is in the target context.
 
 # Request format:
 
 <language>
 Programming Language
 </language>
+
+<file_name>
+The file name you are currently working on. Edits will happen in this file.
+</file_name>
 
 <user_query>
 The thing that user wants you to do/provide.
@@ -109,7 +114,7 @@ All workspace items, symbols etc. Optionally provided.
 
 # Response:
 
-Only respond with a file for the given language, starting with a succinct code comment explaining your reasoning (unless forbidden by user query)."
+Only respond with a file for the given language, starting with a succinct code comment at the beginning, explaining your reasoning (unless forbidden by user query)."
   "System prompt used in `im-ai-snippet'."
   :type 'string
   :group 'im-ai)
@@ -561,6 +566,28 @@ predefined prompts."
 (add-hook 'gptel-post-stream-hook #'im-ai--cleanup-stream)
 (add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
 
+;; im-cape-ai-commands
+(let ((ai-commands '(("@dumb" . "Use a simpler sys prompt, without much context.")
+                     ("@region" . "Refer to region, but don't change it")
+                     ("@file" . "Add file context (i.e. imenu items)")
+                     ("@noexp" . "Add instruction to remove any explanations")
+                     ("@fullfile" . "Add full file as context")
+                     ("@workspace" . "Add workspace context (i.e. imenu items)")
+                     ("@context" . "Add lines around point as context")
+                     ("@model=gpt-4.1" . "Switch to this model for this query")
+                     ("@model=gpt-5.1" . "Switch to this model for this query")
+                     ("@model=claude-sonnet-4-5-latest" . "Switch to this model for this query")
+                     ("@model=gpt-5-mini" . "Switch to this model for this query"))))
+  (im-cape
+   :name ai-commands
+   :completion ai-commands
+   :annotate (lambda (obj item)
+               (concat " " (alist-get item ai-commands nil nil #'equal)))
+   :extractor (lambda (it) (mapcar #'car it))
+   :bound filename
+   :kind (lambda (xs x) "" 'module)
+   :category symbol))
+
 (defun im-ai-snippet (prompt)
   "Ask for a snippet with PROMPT and get it directly inside your buffer.
 
@@ -571,8 +598,12 @@ changing the region, it will add the answer below the region.
 Use @file to include full file contents to the prompt and use
 @workspace to include all workspace symbols to the prompt."
   (interactive (list
-      (read-string
-       (format "Question (Use @region, @file, @workspace, @context, @dumb, @noexp, current model: %s): " im-ai-model))))
+      (minibuffer-with-setup-hook
+          (lambda ()
+            (setq-local completion-at-point-functions
+                        (list (cape-capf-prefix-length #'im-cape-ai-commands 1))))
+        (read-string
+         (format "Question (current model: %s): " im-ai-model)))))
   (let* ((gptel-org-convert-response nil)
          (dumb? (s-matches? (rx (or bos space) "@dumb" (or space eos)) prompt))
          (edit-region? (and (use-region-p)
@@ -588,7 +619,10 @@ Use @file to include full file contents to the prompt and use
                    (region-end)
                  (point)))
          (gptel-backend (im-ai--get-gptel-backend im-ai-service))
-         (gptel-model im-ai-model))
+         (prompt-model (when-let ((pat (s-match "@model=\\([^ ]+\\)" prompt)))
+                         (setq prompt (s-replace-regexp "@model=\\([^ ]+\\)" "" prompt))
+                         (nth 1 pat)))
+         (gptel-model (or prompt-model im-ai-model)))
     (if edit-region?
         (progn
           (setq
@@ -610,13 +644,22 @@ Use @file to include full file contents to the prompt and use
         (s-join
          "\n"
          `(,@(when (not dumb?)
-               (list
-                "<language>"
-                (im-ai--get-current-language)
-                "</language>"
-                "\n"))
+               (seq-concatenate
+                'list
+                (list
+                 "<language>"
+                 (im-ai--get-current-language)
+                 "</language>"
+                 "\n")
+                (when-let ((file-name (buffer-file-name)))
+                  (list
+                   "<file_name>"
+                   (file-name-nondirectory file-name)
+                   "</file_name>"
+                   "\n"))))
            "<user_query>"
            ,(s-replace-all `(("@file" . "")
+                             ("@fullfile" . "")
                              ("@context" . "")
                              ("@dumb" . "")
                              ("@workspace" . "")
@@ -631,13 +674,19 @@ Use @file to include full file contents to the prompt and use
                 (s-trim region)
                 "</context>"
                 "\n"))
-           ,@(when (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
+           ,@(when (s-matches? (rx (or bos space) "@fullfile" (or space eos)) prompt)
                (list
                 "<full_file_contents>"
                 (save-restriction
                   (widen)
                   (buffer-substring-no-properties (point-min) (point-max)))
                 "</full_file_contents>"
+                "\n"))
+           ,@(when (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
+               (list
+                "<file_context>"
+                (im-ai-file-context (im-current-project-root) (buffer-file-name))
+                "</file_context>"
                 "\n"))
            ,@(when (s-matches? (rx (or bos space) "@workspace" (or space eos)) prompt)
                (list
