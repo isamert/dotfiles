@@ -3387,6 +3387,7 @@ Return a (color color) list that can be used with :column-colors and
 
 (use-package im-notif
   :straight nil
+  :demand t
   :general
   (im-leader
     "y" #'im-notif-menu)
