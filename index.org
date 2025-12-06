@@ -341,6 +341,12 @@ esc = 'mode main'
     if.during-aerospace-startup = true
     check-further-callbacks = true
     run = ['move-node-to-workspace 5']
+
+[[on-window-detected]]
+    if.app-id = 'org.gnu.Emacs'
+    if.window-title-regex-substring = 'emacs-popup'
+    check-further-callbacks = true
+    run = ['layout floating']
 #+end_src
 
 ** skhd

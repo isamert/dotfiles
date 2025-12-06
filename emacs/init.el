@@ -3413,7 +3413,14 @@ Return a (color color) list that can be used with :column-colors and
 ;; plain keybinding but it's quite useful for the stuff that you
 ;; forget or use infrequently.
 
-(use-package hydra)
+(use-package hydra
+  :config
+  (setq hydra-hint-display-type 'posframe)
+  (setq hydra-posframe-show-params `(:poshandler posframe-poshandler-frame-center
+                                     :internal-border-width 2
+                                     :internal-border-color "#61AFEF"
+                                     :left-fringe 16
+                                     :right-fringe 16)))
 
 (use-package pretty-hydra
   :after hydra
@@ -7643,6 +7650,11 @@ the commit buffer."
   :if (eq system-type 'darwin)
   :demand t)
 
+;;;;; file-info
+
+(use-package file-info
+  :straight (:host github :repo "artawower/file-info.el"))
+
 ;;;; Editing
 
 ;;;;; Breaking long texts/comments into multiple lines
@@ -11191,13 +11203,6 @@ schedules them to today's date."
   "Check if given BUFFER is visible or not.  BUFFER is a string representing the buffer name."
   (or (eq buffer (window-buffer (selected-window))) (get-buffer-window buffer)))
 
-(defun im-display-buffer-other-frame ()
-  "Like `display-buffer-other-frame' but with some sensible defaults."
-  (interactive)
-  (let ((default-frame-alist '((tab-bar-lines . 0) (vertical-scroll-bars))))
-    (tab-line-mode -1)
-    (display-buffer-other-frame (current-buffer))))
-
 (defun im-display-buffer-in-side-window (buffer &optional width)
   "Just like `display-buffer-in-side-window` but only takes a BUFFER and rest of the parameters are for my taste."
   (set-window-dedicated-p
@@ -11409,7 +11414,8 @@ more than one header of a single org buffer."
     ("s" "Save buffer" save-buffer)
     ("r" "Rename file & buffer" im-rename-current-file-name-and-buffer)
     ("D" "Delete file" im-delete-current-file)
-    ("i" "Show file info" im-print-buffer-file-info)
+    ("i" "Show file info" file-info-show)
+    ("I" "Show file info" im-print-buffer-file-info)
     ("g" "Revert to disk" revert-buffer)
     ("F" "Open in another frame" im-display-buffer-other-frame)]
    ["Copy Path"
@@ -12324,7 +12330,7 @@ attribute for current buffers file or selected file."
 (defun im-peek-jump ()
   (interactive nil im-peek-mode)
   (im-peek-remove)
-  (switch-to-buffer-other-window im-peek--buffer))
+  (im-display-buffer-other-frame im-peek--buffer))
 
 (defun im-peek-mode-scroll-down (&optional lines)
   (interactive nil im-peek-mode)

@@ -480,19 +480,6 @@ When called interactively, CONTENT selected region or given string."
   (interactive)
   (im-open-region-in-temp-buffer (im-region-or 'string) "prog-mode"))
 
-(defun im-quit ()
-  "Quit current window or buffer.
-Inspired by `meow-quit' but I changed it in a way to make it work with
-side windows properly."
-  (interactive)
-  (if (or
-       (window-parameter (selected-window) 'window-side)
-       (> (seq-length (seq-filter (lambda (it) (not (window-parameter it 'window-side))) (window-list (selected-frame)))) 1))
-      (delete-window)
-    (if (window-prev-buffers)
-        (previous-buffer)
-      (user-error "Already at the last buffer"))))
-
 (defun im-split-window-below ()
   "Split window below and focus."
   (interactive)
@@ -530,6 +517,99 @@ Useful for adding something to Emacs' PATH without restarting it."
 If it exists, it's killed first and return a new buffer."
   (ignore-errors (kill-buffer buffer))
   (get-buffer-create buffer))
+
+(defvar im-popup-frame-name "emacs-popup"
+  "Name used for popup frames.")
+
+(defun im-popup-frame (text &rest args)
+  "Show TEXT in a small centered floating-like frame, editable and copyable.
+
+Optional named params (keywords in ARGS):
+  :width       Frame width in characters (default 120)
+  :height      Frame height in characters (default 30)
+  :buffer-name Name of buffer to show/edit TEXT in
+  :file-name   Visit FILE-NAME in buffer and insert TEXT
+  :tab-bar     If non-nil, show tab bar; if nil, hide (default nil)
+
+I have this in my Aerospace config so that the buffer becomes floating:
+
+  [[on-window-detected]]
+    if.app-id = \"org.gnu.Emacs\"
+    if.window-title-regex-substring = \"emacs-popup\"
+    check-further-callbacks = true
+    run = [\"layout floating\"]"
+  (interactive "sText: ")
+  (let* ((width      (or (plist-get args :width) 120))
+         (height     (or (plist-get args :height) 30))
+         (show-tab   (plist-get args :tab-bar))
+         ;; base frame to center on
+         (parent (selected-frame))
+         (px (frame-parameter parent 'left))
+         (py (frame-parameter parent 'top))
+         (pw (frame-pixel-width parent))
+         (ph (frame-pixel-height parent))
+         ;; estimate char size from current frame
+         (cw (max 1 (/ pw (frame-width parent))))
+         (ch (max 1 (/ ph (frame-height parent))))
+         (fw (* cw width))
+         (fh (* ch height))
+         ;; center in pixels
+         (left (+ px (/ (- pw fw) 2)))
+         (top  (+ py (/ (- ph fh) 2)))
+         (buf-name   (or (plist-get args :buffer-name)
+                         "*my-popup*"))
+         (buf-arg (plist-get args :buffer))
+         (buf (or buf-arg (get-buffer-create buf-name)))
+         (frame (make-frame
+                 `((name . "emacs-popup")
+                   (minibuffer . nil)
+                   (undecorated . t)
+                   (internal-border-width . 10)
+                   (width . ,width)
+                   (height . ,height)
+                   (left . ,left)
+                   (top . ,top)
+                   (menu-bar-lines . 0)
+                   (tool-bar-lines . 0)
+                   (vertical-scroll-bars . nil)
+                   (horizontal-scroll-bars . nil)
+                   (tab-bar-lines . ,(if show-tab 1 0))))))
+    (when (and text (not buf-arg))
+      (with-current-buffer buf
+        (erase-buffer)
+        (insert text)
+        (goto-char (point-min))
+        (text-mode)
+        (setq-local mode-line-format nil)))
+    (set-window-buffer (frame-selected-window frame) buf)
+    (select-frame-set-input-focus frame)))
+
+(defun im-quit ()
+  "Quit current window or buffer.
+If in a popup frame, delete the frame.  Otherwise:
+- delete window if it's a side window or if there is another
+  non-side window on this frame;
+- else switch to the previous buffer, or error when at the last one."
+  (interactive)
+  (if (equal (frame-parameter nil 'name) im-popup-frame-name)
+      (delete-frame)
+    (if (or
+         (window-parameter (selected-window) 'window-side)
+         (> (seq-length
+             (seq-filter
+              (lambda (it)
+                (not (window-parameter it 'window-side)))
+              (window-list (selected-frame))))
+            1))
+        (delete-window)
+      (if (window-prev-buffers)
+          (previous-buffer)
+        (user-error "Already at the last buffer")))))
+
+(defun im-display-buffer-other-frame (&optional buffer)
+  "Like `display-buffer-other-frame' but with some sensible defaults."
+  (interactive)
+  (im-popup-frame nil :buffer (or buffer (current-buffer))))
 
 ;;;; Clipboard functions
 
