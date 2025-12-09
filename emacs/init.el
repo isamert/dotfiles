@@ -10090,7 +10090,7 @@ If PROJECTS is nil, then `im-jira-projects' is used."
         :project-id (org-entry-get nil "PROJECT-ID")
         :type (org-entry-get nil "ISSUE-TYPE")
         :rest `((,(im-jira-get-issue-field-id-for "Sprint") .
-                 ,(alist-get 'id (im-jira-find-sprint (org-entry-get nil "SPRINT")))))))
+                 ,(alist-get 'id (im-jira-find-sprint (org-entry-get nil "PROJECT-ID") (org-entry-get nil "SPRINT")))))))
      :on-accept
      (lambda (description props)
        (setq description
@@ -10113,13 +10113,13 @@ If PROJECTS is nil, then `im-jira-projects' is used."
   (jiralib2-session-call "/rest/api/2/field"))
 
 ;; TODO support pagination
-(defun im-jira-get-sprints ()
-  (alist-get 'values (jiralib2-session-call (format "/rest/agile/1.0/board/%s/sprint" im-jira-board-id))))
+(defun im-jira-get-sprints (project)
+  (alist-get 'values (jiralib2-session-call (format "/rest/agile/1.0/board/%s/sprint" (alist-get project im-jira-board-ids nil nil #'equal)))))
 
-(defun im-jira-find-sprint (sprint)
+(defun im-jira-find-sprint (project sprint)
   "Find a sprint.
 SPRINT can be a full sprint name or one \"active\"|\"future\"."
-  (let ((sprints (im-jira-get-sprints)))
+  (let ((sprints (im-jira-get-sprints project)))
     (or
      (--find (string-equal sprint (alist-get 'name it)) sprints)
      (--find (string-equal sprint (alist-get 'state it)) sprints))))
@@ -10488,14 +10488,15 @@ story points they have released.  See the following figure:
 If ARG is non-nil, insert the issue number to current buffer
 instead of acting on issue."
   (interactive "P")
-  (let ((issue (jiralib2-create-issue
-                (im-jira--select-project)
-                (im-jira--select-issue-type)
-                (read-string "Issue summary: ")
-                "This is an automatically generated small issue."
-                (cons
-                 (im-jira-get-issue-field-id-for "Sprint")
-                 (alist-get 'id (im-jira-find-sprint "future"))))))
+  (let* ((project (im-jira--select-project))
+         (issue (jiralib2-create-issue
+                 project
+                 (im-jira--select-issue-type)
+                 (read-string "Issue summary: ")
+                 "This is an automatically generated small issue."
+                 (cons
+                  (im-jira-get-issue-field-id-for "Sprint")
+                  (alist-get 'id (im-jira-find-sprint project "future"))))))
     (let-alist issue
       (save-window-excursion
         (im-jira-view-ticket .key)
