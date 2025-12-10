@@ -178,7 +178,7 @@ Call CALLBACK when successful."
     (set-process-sentinel
      (apply
       #'start-process
-      "*im-stage-diff*" "*im-stage-diff*"
+      "*im-stage-diff*" (im-get-reset-buffer " *im-stage-diff*")
       "git" "apply" file "--verbose"
       (-non-nil
        (list
@@ -362,7 +362,7 @@ configuration, pass it as WINDOW-CONF."
      ;; `default-directory' is assumed to be the project root.
      (list :project default-directory :msg msg))
     (set-process-sentinel
-     (apply #'start-process "*im-git-commit*" "*im-git-commit*" "git" "commit" args)
+     (apply #'start-process "*im-git-commit*" (im-get-reset-buffer " *im-git-commit*") "git" "commit" args)
      (lambda (proc _event)
        (if (eq (process-exit-status proc) 0)
            (progn
@@ -370,7 +370,7 @@ configuration, pass it as WINDOW-CONF."
              (--each im-git-commit-finished-hook (funcall it msg))
              (when tag
                (set-process-sentinel
-                (start-process "*im-git-tag*" " *im-git-tag*" "git" "tag" tag)
+                (start-process "*im-git-tag*" (im-get-reset-buffer " *im-git-tag*") "git" "tag" tag)
                 (lambda (proc _event)
                   (if (eq (process-exit-status proc) 0)
                       (message ">> im-git-commit :: Tag created")
@@ -378,7 +378,7 @@ configuration, pass it as WINDOW-CONF."
              (when fixup
                (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
                  (set-process-sentinel
-                  (start-process "*im-git-fixup*" " *im-git-fixup*"
+                  (start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
                                  "git" "rebase" "--interactive" "--autosquash" (concat fixup "^"))
                   (lambda (proc _event)
                     (if (eq (process-exit-status proc) 0)
@@ -686,7 +686,7 @@ CALLBACK will be called with the selected commit ref."
   (im-git-select-commit
    (lambda (hash)
      (set-process-sentinel
-      (funcall #'start-process "*im-git-commit*" "*im-git-commit*" "git" "commit" "--fixup" hash)
+      (funcall #'start-process "*im-git-commit*" (im-get-reset-buffer "*im-git-commit*") "git" "commit" "--fixup" hash)
       (lambda (proc _event)
         (if (eq (process-exit-status proc) 0)
             (progn
@@ -694,7 +694,7 @@ CALLBACK will be called with the selected commit ref."
               (--each im-git-commit-finished-hook (funcall it nil))
               (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
                 (set-process-sentinel
-                 (start-process "*im-git-fixup*" " *im-git-fixup*"
+                 (start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
                                 "git" "rebase" "--interactive" "--autosquash" (concat hash "^"))
                  (lambda (proc _event)
                    (if (eq (process-exit-status proc) 0)
