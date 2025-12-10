@@ -361,30 +361,38 @@ configuration, pass it as WINDOW-CONF."
      ;; This command is supposed to run at project root, so the
      ;; `default-directory' is assumed to be the project root.
      (list :project default-directory :msg msg))
-    (set-process-sentinel
-     (apply #'start-process "*im-git-commit*" (im-get-reset-buffer " *im-git-commit*") "git" "commit" args)
-     (lambda (proc _event)
-       (if (eq (process-exit-status proc) 0)
-           (progn
-             (message "im-git-commit :: Committed")
-             (--each im-git-commit-finished-hook (funcall it msg))
-             (when tag
-               (set-process-sentinel
-                (start-process "*im-git-tag*" (im-get-reset-buffer " *im-git-tag*") "git" "tag" tag)
-                (lambda (proc _event)
-                  (if (eq (process-exit-status proc) 0)
-                      (message ">> im-git-commit :: Tag created")
-                    (message "!! Failed to tag. See *im-git-tag* buffer for further details.")))))
-             (when fixup
-               (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
-                 (set-process-sentinel
-                  (start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
-                                 "git" "rebase" "--interactive" "--autosquash" (concat fixup "^"))
-                  (lambda (proc _event)
-                    (if (eq (process-exit-status proc) 0)
-                        (message ">> im-git-fixup :: Commit %s fixed." fixup)
-                      (message "!! Failed to fixup. See *im-git-fixup* buffer for further details.")))))) )
-         (message "im-git-commit :: Failed. See buffer *im-git-commit*"))))
+    (let ((start-time (float-time))
+          (proj (im-current-project-name)))
+      (message "im-git-commit :: Started...")
+      (set-process-sentinel
+       (apply #'start-process "*im-git-commit*" (im-get-reset-buffer " *im-git-commit*") "git" "commit" args)
+       (lambda (proc _event)
+         (let ((notify? (> (- (float-time) start-time) 2)))
+           (if (eq (process-exit-status proc) 0)
+               (progn
+                 (message "im-git-commit :: Started...Done")
+                 (when notify?
+                   (im-notif :title "*git-commit*" :message (format "Commit finished for %s" proj) :duration 2))
+                 (--each im-git-commit-finished-hook (funcall it msg))
+                 (when tag
+                   (set-process-sentinel
+                    (start-process "*im-git-tag*" (im-get-reset-buffer " *im-git-tag*") "git" "tag" tag)
+                    (lambda (proc _event)
+                      (if (eq (process-exit-status proc) 0)
+                          (message ">> im-git-commit :: Tag created")
+                        (message "!! Failed to tag. See *im-git-tag* buffer for further details.")))))
+                 (when fixup
+                   (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
+                     (set-process-sentinel
+                      (start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
+                                     "git" "rebase" "--interactive" "--autosquash" (concat fixup "^"))
+                      (lambda (proc _event)
+                        (if (eq (process-exit-status proc) 0)
+                            (message ">> im-git-fixup :: Commit %s fixed." fixup)
+                          (message "!! Failed to fixup. See *im-git-fixup* buffer for further details.")))))) )
+             (message "im-git-commit :: Failed. See buffer *im-git-commit*")
+             (when notify?
+               (im-notif :title "*git-commit*" :message (format "Commit FAILED for %s" proj) :duration 2)))))))
     (im-git-commit-cancel)))
 
 (defun im-git-commit-cancel ()
