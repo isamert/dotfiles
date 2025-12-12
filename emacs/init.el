@@ -222,6 +222,10 @@ in my dotfiles repository.")
 (use-package llama
   :straight (:host github :repo "tarsius/llama"))
 
+(use-package posframe
+  :demand t)
+
+
 ;;;;;; emacs-async
 
 ;; To be able execute elisp asynchronously. Of course this has lot's
