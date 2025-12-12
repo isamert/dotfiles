@@ -9949,7 +9949,7 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
 (defvar im-git-main-branch "master"
   "Main branch name.")
 
-(defvar im-jira-projects '("AI" "SAT" "DISP" "LISTI")
+(defvar im-jira-projects '("PRA" "STA")
   "List of projects that I enrolled in JIRA.")
 
 (defvar im-jira-base-branch "origin/master"
@@ -10195,7 +10195,7 @@ SPRINT can be a full sprint name or one \"active\"|\"future\"."
 
 (defun im-jira--get-issue-template (issue-type)
   (pcase issue-type
-    ("Story" "** Motivation\n\n\n** Description\n\n\n** Acceptance Criteria\n\n\n** Projects\n\n\n** Has Automation Test?\n\n\n** Links (UI/UX, Analysis etc.)\n\n")
+    ("Story" "** Motivation & Description\n\n\n** Acceptance Criteria\n\n\n** Projects\n\n\n** Has Automation Test?\n\n\n** Links (UI/UX, Analysis etc.)\n\n")
     ("Sprint Development Bug" "** Description\n\n\n**Case\n\n\n** Projects\n\n")
     ("Production Bug" "** Description\n\n\n** Steps\n\n\n** Projects\n\n\n** Incident Excel\n\n\n** Links - SS - Video\n\n")))
 
