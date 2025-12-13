@@ -934,7 +934,7 @@ Also see this gnome extension and it's README for further information: https://g
 ** Switch monitor on keyboard change
 I have a usb splitter that switches between machines when clicked on a physical button. But this does not change my monitors input automatically. The following script is designed to run-according to the given UDEV rule-when a keyboard (my UHK keyboard) is attached or removed and switches to the right monitor input.
 
-#+begin_src conf /etc/udev/rules.d/70-keyboard-connection.rules
+#+begin_src conf :tangle /sudo::/etc/udev/rules.d/70-keyboard-connection.rules
 ACTION=="add", ATTRS{idVendor}=="37a8", ATTRS{idProduct}=="0003", RUN+="/opt/bin/switch-monitor-on-keyboard-change add"
 ACTION=="remove", ENV{PRODUCT}=="37a8/3/2", RUN+="/opt/bin/switch-monitor-on-keyboard-change remove"
 #+end_src
@@ -945,61 +945,41 @@ Reload the udev rules.
 sudo udevadm control --reload-rules
 #+end_src
 
-#+begin_src clojure :tangle /opt/bin/switch-monitor-on-keyboard-change.sh
-#!/usr/local/bin/bb
+#+begin_src bash :tangle /sudo::/opt/bin/switch-monitor-on-keyboard-change
+#!/usr/bin/env bash
 
-(require '[babashka.process :refer [shell process exec]]
-         '[babashka.fs :as fs])
+lock_file="/tmp/monitor.lock"
 
-;;; Lock file stuff
+if [ -f "$lock_file" ]; then
+    echo "Program is already running."
+    exit 0
+fi
+echo "locked" > "$lock_file"
 
-;; This is required because there are lot's of events generated when
-;; the keyboard is connected/disconnected at the same time. This
-;; prevents concurrent runs.
+action="$1"
+usbc="27"
+hdmi="17"
 
-(def lock-file "/tmp/switch-monitor-on-keyboard-change.lock")
-(when (fs/exists? lock-file)
-  (println "Program is already running.")
-  (System/exit 1))
-(spit lock-file "locked")
+output=$(ddcutil getvcp --terse 0x60 2>/dev/null | head -n1)
+hex_val=$(echo "$output" | grep -oE 'SNC\s+x[0-9a-fA-F]+' | awk '{print $2}')
 
-;;; Variables
+if [ -n "$hex_val" ]; then
+    current_monitor=$(( 16#${hex_val#x} ))
+    current_monitor=$(echo "$current_monitor" | tr -d '[:space:]')
+else
+    current_monitor=""
+fi
 
+if [[ "$action" == "add" && "$current_monitor" != "$hdmi" ]]; then
+    ddcutil setvcp 0x60 "$hdmi"
+elif [[ "$action" == "remove" && "$current_monitor" != "$usbc" ]]; then
+    ddcutil setvcp 0x60 "$usbc"
+else
+    echo "Doing nothing..."
+fi
 
-(try
-;;; Load state
-  (def state-file "/tmp/bb-device-state.edn")
-  (def state
-    (if (fs/exists? state-file)
-      (read-string (slurp state-file))
-      {}))
-  (def action (first *command-line-args*))
-
-;;; Act
-
-  (def usbc "27")
-  (def hdmi "17")
-
-  (cond
-    (and (= "add" action)
-         (= (:action state) "remove"))
-    (shell "ddcutil" "setvcp" "0x60" hdmi)
-
-    (and (= "remove" action)
-         (= (:action state) "add"))
-    (shell "ddcutil" "setvcp" "0x60" usbc)
-    (Thread/sleep 1000)
-    (shell {:dir "/home/isa/Workspace/projects/deno"}
-           "deno" "run" "--allow-all" "switch-uhk-layout.ts" "LNX")
-
-    :else (println "Doing nothing..."))
-
-;;; Persist state
-
-  (spit state-file (pr-str {:action action}))
-
-  (finally
-    (fs/delete lock-file)))
+sleep 10
+rm -f "$lock_file"
 #+end_src
 
 ** foot terminal emulator
