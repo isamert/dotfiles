@@ -1576,7 +1576,7 @@ shift
 $SUBCMD "$@"
 #+end_src
 ** swayimg
-#+begin_src conf
+#+begin_src conf :tangle ~/.config/swayimg/config
 [list]
 # Default order (none/alpha/numeric/mtime/size/random)
 order = mtime
@@ -1584,6 +1584,10 @@ reverse = yes
 recursive = no
 # Add files from the same directory as the first file (yes/no)
 all = yes
+
+[info]
+# Don't show on startup, toggle with i
+show = no
 
 [keys.viewer]
 F1 = help
@@ -1608,11 +1612,13 @@ Shift+w = zoom height
 z = zoom fit
 Shift+z = zoom fill
 0 = zoom real
-BackSpace = zoom optimal
+9 = zoom optimal
+
 bracketleft = rotate_left
 bracketright = rotate_right
-m = flip_vertical
-Shift+m = flip_horizontal
+backslash = flip_vertical
+BackSpace = flip_horizontal
+
 a = antialiasing
 r = reload
 i = info
