@@ -37,6 +37,7 @@
 (require 'alert)
 (require 'transient)
 (require 'log4e)
+(require 'ring)
 
 ;;;; Customization
 
@@ -118,6 +119,14 @@ overrides everything."
                 :value-type number)
   :group 'im-notif)
 
+(defcustom im-notif-backend 'knockknock
+  "\\='knockknock or \\'posframe.
+posframe one has more features like keeping notifications shown if Emacs
+is idle etc."
+  :type 'symbol
+  :group 'im-notif)
+
+
 ;;;; Main
 
 ;;;;; im-notif
@@ -125,6 +134,7 @@ overrides everything."
 (defvar im-notif-dnd nil)
 (defvar im-notif--active '())
 (defvar im-notif--dnd-timer nil)
+(defvar im-notif--last-notifications (make-ring 300))
 (defvar-local im-notif--notification-data nil)
 
 ;;;###autoload
@@ -152,8 +162,9 @@ SEVERITY -- (optional, default: \\='normal) notification severity.
 SOURCE -- (optional) origin or source of the notification.  This can
 be a function or a buffer object."
   (setq title (propertize title 'face '(:weight bold)))
-  (let* ((bname (format "*notif-%s*"
-                        (or id (format "%s-%s" (if title (im-string-url-case title) "") (random)))))
+  (let* ((id (format "*notif-%s*"
+                     (or id (format "%s-%s" (if title (im-string-url-case title) "") (random)))))
+         (bname id)
          (source-buffer (current-buffer))
          (duration (or duration
                        (cl-loop for label in labels
@@ -178,20 +189,28 @@ be a function or a buffer object."
                               (or (s-matches? im-notif-dnd-whitelist-regexp message)
                                   (s-matches? im-notif-dnd-whitelist-regexp title)))
                              (-intersection im-notif-dnd-whitelist-labels labels))))
-         (should-show? (or (not in-dnd?) dnd-whitelisted?)))
+         (should-show? (or (not in-dnd?) dnd-whitelisted?))
+         (notif-data (thread-first
+                       data
+                       (map-insert :id id)
+                       (map-insert :time (float-time))
+                       (map-insert :duration duration)
+                       (map-insert :source-buffer source-buffer))))
+    (ring-insert im-notif--last-notifications notif-data)
     (when (not blacklisted?)
-      (let* ((notif-buffer (with-current-buffer (get-buffer-create bname)
-                             (setq im-notif--notification-data
-                                   (thread-first
-                                     data
-                                     (map-insert :time (float-time))
-                                     (map-insert :source-buffer source-buffer)
-                                     (map-insert :id (substring-no-properties bname))))
-                             (current-buffer))))
-        (when should-show?
-          (when (frame-focus-state) ; Only show posframe if frame is focused
+      (when should-show?
+        (when (frame-focus-state) ; Only show posframe if frame is focused
+
+          (when (eq im-notif-backend 'knockknock)
+            (knockknock-notify :title title
+                               :message message
+                               :duration duration))
+
+          (when (eq im-notif-backend 'posframe)
             (posframe-show
-             notif-buffer
+             (with-current-buffer (get-buffer-create bname)
+               (setq im-notif--notification-data notif-data)
+               (current-buffer))
              :string
              (if margin
                  (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
@@ -217,28 +236,28 @@ be a function or a buffer object."
              :border-color (pcase severity
                              ((or 'high 'urgent) "red3")
                              ('normal "yellow3")
-                             (_ nil)))
-            (push bname im-notif--active)
+                             (_ nil))))
+          (push bname im-notif--active)
 
-            ;; Clear the notification after a certain time, if requested
-            (when duration
-              (run-with-timer
-               duration nil
-               (lambda ()
-                 ;; Only remove if Emacs is not idle
-                 (unless (and (current-idle-time)
-                              (>= (time-to-seconds (current-idle-time)) duration))
-                   (posframe-hide bname)
-                   (setq im-notif--active (delete bname im-notif--active)))))))
+          ;; Clear the notification after a certain time, if requested
+          (when duration
+            (run-with-timer
+             duration nil
+             (lambda ()
+               ;; Only remove if Emacs is not idle
+               (unless (and (current-idle-time)
+                            (>= (time-to-seconds (current-idle-time)) duration))
+                 (posframe-hide bname)
+                 (setq im-notif--active (delete bname im-notif--active)))))))
 
-          ;; Use native notifications if Emacs is not focused
-          (unless (frame-focus-state)
-            (let ((alert-default-style
-                   (im-when-on
-                    :linux 'libnotify
-                    :darwin 'osx-notifier)))
-              (ignore-errors
-                (alert message :title title :severity severity))))))
+        ;; Use native notifications if Emacs is not focused
+        (unless (frame-focus-state)
+          (let ((alert-default-style
+                 (im-when-on
+                  :linux 'libnotify
+                  :darwin 'osx-notifier)))
+            (ignore-errors
+              (alert message :title title :severity severity)))))
       (dolist (fn im-notif-post-notify-hooks)
         (funcall fn data)))))
 
@@ -247,12 +266,15 @@ be a function or a buffer object."
 ;;;###autoload
 (defun im-notif-clear-all (&optional delete?)
   (interactive "P")
-  (--each
-      (--filter (s-prefix? "*notif" (buffer-name it)) (buffer-list))
-    (if delete?
-        (posframe-delete it)
-      (posframe-hide it)))
-  (setq im-notif--active '()))
+  (when (eq im-notif-backend 'knockknock)
+    (knockknock-close))
+  (when (eq im-notif-backend 'posframe)
+    (--each
+        (--filter (s-prefix? "*notif" (buffer-name it)) (buffer-list))
+      (if delete?
+          (posframe-delete it)
+        (posframe-hide it)))
+    (setq im-notif--active '())))
 
 ;;;###autoload
 (defun im-dummy-notification ()
@@ -269,7 +291,9 @@ be a function or a buffer object."
       "Open" → (switch-to-buffer-other-window (plist-get notification :buffer-name))
       "Buffer (origin)" → (switch-to-buffer (plist-get notification :source-buffer))
       "Go to Source" → (im-notif-go-to-source notification)
-      "Delete" → (progn (posframe-delete (plist-get notification :buffer-name)) (message ">> Deleted."))
+      "Delete" → (progn
+                   (ignore-errors
+                     (posframe-delete (plist-get notification :id))) (message ">> Deleted."))
       "Snooze" → (im-notif-snooze notification (im-notif--read-duration)))))
 
 ;;;###autoload
@@ -479,12 +503,7 @@ otherwise, it is taken as a plain string regexp."
 (defun im-notif-notifications-list ()
   "Return notification datas in sorted order.
 First one is the latest one."
-  (thread-last
-    (buffer-list)
-    (--filter (string-prefix-p "*notif" (buffer-name it)))
-    (--map (with-current-buffer it (when-let* ((x im-notif--notification-data)) (map-insert x :buffer-name (buffer-name)))))
-    (--filter it)
-    (--sort (> (plist-get it :time) (plist-get other :time)))))
+  (ring-elements im-notif--last-notifications))
 
 (defun im-notif--format-notification (it)
   (format "%s │ ✍️ %s 📰 %s%s"
