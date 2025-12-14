@@ -2746,6 +2746,92 @@ open.")
 
 (add-to-list 'im-open-thing-at-point-alist `(,(apply-partially #'thing-at-point 'url) . browse-url))
 
+;;;;; im-org-convert-item-to-todo-and-refile
+
+(defun im-org-convert-item-to-todo-and-refile (&optional yank-only)
+  "Convert org item to todo header and refile.
+I take notes in the following format during the day via
+org-capture template:
+
+    - [2023-04-09 Sun 23:57] Some note
+
+At the end of the day, I convert these notes into tasks if
+applicable. This means rewriting them into a TODO header with
+CREATED_AT property and refiling into the appropriate
+header. This function automatizes that.
+
+If YANK-ONLY is non-nil (with prefix arg while calling
+interactively), only yank the result, do not refile.
+
+>> (with-temp-buffer
+    (insert \"- [2023-06-28 Wed 10:13] Test\\n\")
+    (beginning-of-buffer)
+    (im-org-convert-item-to-todo-and-refile t))
+=> \"** TODO [#B] Test
+:PROPERTIES:
+:CREATED_AT: [2023-06-28 Wed 10:13]
+:END:
+\"
+
+>> (with-temp-buffer
+    (insert \"- [2023-06-28 Wed 10:13] Test :: The body.\\n\")
+    (beginning-of-buffer)
+    (im-org-convert-item-to-todo-and-refile t))
+=> \"** TODO [#B] Test
+:PROPERTIES:
+:CREATED_AT: [2023-06-28 Wed 10:13]
+:END:
+The body.
+\"
+
+>> (with-temp-buffer
+    (insert \"- [2023-06-28 Wed 10:13] Test and a link [[here]] :: The body.\\n\")
+    (beginning-of-buffer)
+    (im-org-convert-item-to-todo-and-refile t))
+=> \"** TODO [#B] Test and a link [[here]]
+:PROPERTIES:
+:CREATED_AT: [2023-06-28 Wed 10:13]
+:END:
+The body.
+\"
+
+Version: 2023-07-31
+- Fixed not being able to parse headers with links.
+Version: 2023-06-28
+- Initial version."
+  (interactive "P")
+  (save-excursion
+    (beginning-of-line)
+    (let ((line (substring-no-properties (thing-at-point 'line)))
+          (timestamp nil)
+          (text nil))
+      (when-let (match (s-match "^- \\(\\[[ X-]] \\)?\\(\\[.*?]\\) \\(.*\\)" line))
+        (setq timestamp (nth 2 match))
+        (setq text (nth 3 match))
+        (let* ((buffer (current-buffer))
+               (data (s-split " :: " text))
+               (header (nth 0 data))
+               (body (nth 1 data))
+               result)
+          (with-temp-buffer
+            (insert
+             (concat "** TODO [#B] " header "\n"
+                     ":PROPERTIES:" "\n"
+                     ":CREATED_AT: " timestamp "\n"
+                     ":END:" "\n"
+                     (if body (concat body "\n") "")))
+            (setq result (buffer-string))
+            ;; To be able to refile
+            (org-mode)
+            (if yank-only
+                (im-kill result)
+              (let ((org-refile-targets nil))
+                (org-refile nil buffer))
+              ;; Remove the line after everything to prevent loss of data
+              (with-current-buffer buffer
+                (delete-region (line-beginning-position) (1+ (line-end-position))))
+              result)))))))
+
 ;;;; Other packages
 
 ;;;;; transient
