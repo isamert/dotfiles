@@ -119,6 +119,12 @@ overrides everything."
                 :value-type number)
   :group 'im-notif)
 
+(defcustom im-notif-default-duration 5
+  "Default notification duration in seconds.
+Also see `im-notif-label-default-durations'."
+  :type 'number
+  :group 'im-notif)
+
 ;;;; Main
 
 ;;;;; im-notif
@@ -162,7 +168,8 @@ be a function or a buffer object."
                        (cl-loop for label in labels
                                 for duration = (cdr (assoc label im-notif-label-default-durations))
                                 when duration
-                                return duration)))
+                                return duration)
+                       im-notif-default-duration))
          (blacklisted? (and im-notif-blacklist-regexp
                             (s-matches?
                              (if (stringp im-notif-blacklist-regexp)
@@ -249,13 +256,10 @@ be a function or a buffer object."
 ;;;;; Interactive functions
 
 ;;;###autoload
-(defun im-notif-clear-all (&optional delete?)
+(defun im-notif-clear-all ()
   (interactive "P")
-  (--each
-      (--filter (s-prefix? "*notif" (buffer-name it)) (buffer-list))
-    (if delete?
-        (posframe-delete it)
-      (posframe-hide it)))
+  (--each (--filter (s-prefix? "*notif" (buffer-name it)) (buffer-list))
+    (posframe-delete it))
   (setq im-notif--active '()))
 
 ;;;###autoload
@@ -456,8 +460,7 @@ otherwise, it is taken as a plain string regexp."
    "───"]
   [["Basic"
     ("l" "List" im-notif-notifications)
-    ("c" "Hide all" im-notif-clear-all)
-    ("C" "Clear all" (lambda () (interactive) (im-notif-clear-all :delete)))
+    ("c" "Clear all" im-notif-clear-all)
     ("L" "Logs" im-notif-logs)
     ("d" "Dummy notification" im-dummy-notification)]
    ["DND/Blacklist"
