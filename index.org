@@ -954,38 +954,40 @@ sudo udevadm control --reload-rules
 #+begin_src bash :tangle /sudo::/opt/bin/switch-monitor-on-keyboard-change
 #!/usr/bin/env bash
 
-lock_file="/tmp/monitor.lock"
-
-if [ -f "$lock_file" ]; then
-    echo "Program is already running."
-    exit 0
-fi
-echo "locked" > "$lock_file"
+state_file="/tmp/monitor.state"
+lock_file="/tmp/monitor.state.lock"
 
 action="$1"
 usbc="27"
 hdmi="17"
 
-output=$(ddcutil getvcp --terse 0x60 2>/dev/null | head -n1)
-hex_val=$(echo "$output" | grep -oE 'SNC\s+x[0-9a-fA-F]+' | awk '{print $2}')
-
-if [ -n "$hex_val" ]; then
-    current_monitor=$(( 16#${hex_val#x} ))
-    current_monitor=$(echo "$current_monitor" | tr -d '[:space:]')
+if [[ "$action" == "add" ]]; then
+    desired="$hdmi"
+elif [[ "$action" == "remove" ]]; then
+    desired="$usbc"
 else
-    current_monitor=""
+    echo "Invalid action"
+    exit 1
 fi
 
-if [[ "$action" == "add" && "$current_monitor" != "$hdmi" ]]; then
-    ddcutil setvcp 0x60 "$hdmi"
-elif [[ "$action" == "remove" && "$current_monitor" != "$usbc" ]]; then
-    ddcutil setvcp 0x60 "$usbc"
-else
-    echo "Doing nothing..."
-fi
+# Use flock to synchronize
+(
+    flock -n 9 || { echo "Another instance is running. Exiting."; exit 0; }
 
-sleep 10
-rm -f "$lock_file"
+    last_state=""
+    if [[ -f "$state_file" ]]; then
+        last_state=$(cat "$state_file")
+    fi
+
+    if [[ "$last_state" == "$desired" ]]; then
+        echo "State already set to $desired. Doing nothing..."
+        exit 0
+    fi
+
+    ddcutil setvcp 0x60 "$desired"
+    echo "$desired" > "$state_file"
+
+) 9>"$lock_file"
 #+end_src
 
 ** foot terminal emulator
