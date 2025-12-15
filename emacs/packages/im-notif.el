@@ -160,7 +160,7 @@ SEVERITY -- (optional, default: \\='normal) notification severity.
 SOURCE -- (optional) origin or source of the notification.  This can
 be a function or a buffer object."
   (setq title (propertize title 'face '(:weight bold)))
-  (let* ((id (format "*notif-%s*"
+  (let* ((id (format " *notif-%s*"
                      (or id (format "%s-%s" (if title (im-string-url-case title) "") (random)))))
          (bname id)
          (source-buffer (current-buffer))
@@ -257,8 +257,8 @@ be a function or a buffer object."
 
 ;;;###autoload
 (defun im-notif-clear-all ()
-  (interactive "P")
-  (--each (--filter (s-prefix? "*notif" (buffer-name it)) (buffer-list))
+  (interactive)
+  (--each (--filter (s-prefix? " *notif" (buffer-name it)) (buffer-list))
     (posframe-delete it))
   (setq im-notif--active '()))
 
