@@ -119,14 +119,6 @@ overrides everything."
                 :value-type number)
   :group 'im-notif)
 
-(defcustom im-notif-backend 'knockknock
-  "\\='knockknock or \\'posframe.
-posframe one has more features like keeping notifications shown if Emacs
-is idle etc."
-  :type 'symbol
-  :group 'im-notif)
-
-
 ;;;; Main
 
 ;;;;; im-notif
@@ -200,43 +192,36 @@ be a function or a buffer object."
     (when (not blacklisted?)
       (when should-show?
         (when (frame-focus-state) ; Only show posframe if frame is focused
-
-          (when (eq im-notif-backend 'knockknock)
-            (knockknock-notify :title title
-                               :message message
-                               :duration duration))
-
-          (when (eq im-notif-backend 'posframe)
-            (posframe-show
-             (with-current-buffer (get-buffer-create bname)
-               (setq im-notif--notification-data notif-data)
-               (current-buffer))
-             :string
-             (if margin
-                 (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
-               (format "%s\n%s" title message))
-             :poshandler
-             (lambda (info)
-               (let ((posy (* (line-pixel-height)
-                              (--reduce-from (+ acc
-                                                (with-current-buffer it
-                                                  (count-lines (point-min) (point-max))))
-                                             0
-                                             (remove bname im-notif--active)))))
-                 (cons (- (plist-get info :parent-frame-width)
-                          (plist-get info :posframe-width)
-                          20)
-                       (if (> posy 0)
-                           (+ posy (+ 3 3 15))
-                         30))))
-             :border-width 3
-             :max-height 10
-             :min-width 30
-             :max-width 80
-             :border-color (pcase severity
-                             ((or 'high 'urgent) "red3")
-                             ('normal "yellow3")
-                             (_ nil))))
+          (posframe-show
+           (with-current-buffer (get-buffer-create bname)
+             (setq im-notif--notification-data notif-data)
+             (current-buffer))
+           :string
+           (if margin
+               (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
+             (format "%s\n%s" title message))
+           :poshandler
+           (lambda (info)
+             (let ((posy (* (line-pixel-height)
+                            (--reduce-from (+ acc
+                                              (with-current-buffer it
+                                                (count-lines (point-min) (point-max))))
+                                           0
+                                           (remove bname im-notif--active)))))
+               (cons (- (plist-get info :parent-frame-width)
+                        (plist-get info :posframe-width)
+                        20)
+                     (if (> posy 0)
+                         (+ posy (+ 3 3 15))
+                       30))))
+           :border-width 3
+           :max-height 10
+           :min-width 30
+           :max-width 80
+           :border-color (pcase severity
+                           ((or 'high 'urgent) "red3")
+                           ('normal "yellow3")
+                           (_ nil)))
           (push bname im-notif--active)
 
           ;; Clear the notification after a certain time, if requested
@@ -247,7 +232,7 @@ be a function or a buffer object."
                ;; Only remove if Emacs is not idle
                (unless (and (current-idle-time)
                             (>= (time-to-seconds (current-idle-time)) duration))
-                 (posframe-hide bname)
+                 (posframe-delete bname)
                  (setq im-notif--active (delete bname im-notif--active)))))))
 
         ;; Use native notifications if Emacs is not focused
@@ -266,15 +251,12 @@ be a function or a buffer object."
 ;;;###autoload
 (defun im-notif-clear-all (&optional delete?)
   (interactive "P")
-  (when (eq im-notif-backend 'knockknock)
-    (knockknock-close))
-  (when (eq im-notif-backend 'posframe)
-    (--each
-        (--filter (s-prefix? "*notif" (buffer-name it)) (buffer-list))
-      (if delete?
-          (posframe-delete it)
-        (posframe-hide it)))
-    (setq im-notif--active '())))
+  (--each
+      (--filter (s-prefix? "*notif" (buffer-name it)) (buffer-list))
+    (if delete?
+        (posframe-delete it)
+      (posframe-hide it)))
+  (setq im-notif--active '()))
 
 ;;;###autoload
 (defun im-dummy-notification ()
