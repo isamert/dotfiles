@@ -1050,7 +1050,7 @@ but sometimes projects gets dirty and this fixes that."
                          (let ((default-directory (expand-file-name project)))
                            (call-interactively #'vc-git-stash))))
               (insert "\n"))
-            (when (not main?)
+            (when (and main-branch (not main?))
               (insert (format "- %s not on master!\n" project))
               (insert "  ")
               (insert-button
