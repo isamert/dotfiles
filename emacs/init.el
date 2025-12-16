@@ -7502,31 +7502,40 @@ the commit buffer."
         (default-directory (im-current-project-root)))
     (condition-case reason
         (progn
-          (when (s-matches? "^-;; Version: " diff)
-            (setq todo t)
-            (insert "- [ ] Version updated: Add tag with new version\n"))
-          (when (and (not (f-parent-of?
-                           im-git-work-root
-                           default-directory))
-                     (save-excursion (search-forward im-work-email nil t)))
-            (setq todo t)
-            (insert "- [ ] Wrong email: using work, should be personal\n"))
-          (let* ((new-files (s-split "\n" (await (lab--git "ls-files" "--others" "--exclude-standard")) t)))
+          (let* ((new-files
+                  (s-split "\n" (await (lab--git "ls-files" "--others" "--exclude-standard")) t))
+                 (has-tags?
+                  (not (s-blank? (s-trim (await (lab--git "tag" "--list"))))))
+                 (last-tag
+                  (when has-tags?
+                    (await (lab--git "describe" "--tags" "--abbrev=0"))))
+                 (last-tag-date
+                  (when has-tags?
+                    (await (lab--git "log" "-1" "--format=%ai" last-tag))))
+                 (commit-count-since-last-tag
+                  (when has-tags?
+                    (string-to-number (or (await (lab--git "rev-list" (format "%s..HEAD" last-tag) "--count")) 0)))))
+            (when (and diff (s-matches? "^-;; Version: " diff))
+              (setq todo t)
+              (insert "- [ ] Version updated: Add tag with new version\n"))
+            (when (and (not (f-parent-of?
+                             im-git-work-root
+                             default-directory))
+                       (save-excursion (search-forward im-work-email nil t)))
+              (setq todo t)
+              (insert "- [ ] Wrong email: using work, should be personal\n"))
             (when (length> new-files 0)
               (setq todo t)
               (goto-char (point-min))
-              (insert (format "- [ ] %s new file, stage or delete them\n" (length new-files)))))
-          (let* ((last-tag  (await (lab--git "describe" "--tags" "--abbrev=0")))
-                 (last-tag-date (await (lab--git "log" "-1" "--format=%ai" last-tag)))
-                 (commit-count-since-last-tag (string-to-number (or (await (lab--git "rev-list" (format "%s..HEAD" last-tag) "--count")) 0))))
-            (when (and (> commit-count-since-last-tag 0))
+              (insert (format "- [ ] %s new file, stage or delete them\n" (length new-files))))
+            (when (and commit-count-since-last-tag (> commit-count-since-last-tag 0))
               (setq todo t)
               (goto-char (point-min))
               (insert (format "- [ ] Check: commits since last tag is **%s**\n"
                               commit-count-since-last-tag)
                       (format "- [ ] Check: last tag date is *%s*\n"
                               last-tag-date)))))
-      (error (message "im-git :: warn: Failed to run all commit checkers: %s" reason)))
+      (error (message "im-git :: warn: Failed to run commit checkers: %s" reason)))
     (when todo
       (goto-char (point-min))
       (insert "\n# TODO\n"))))
