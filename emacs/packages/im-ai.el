@@ -105,7 +105,7 @@ Full file context. Optionally provided.
 </full_file_contents>
 
 <surrounding_context>
-The surrounding context.
+The surrounding context. You need to generate the code that fits the <GENERATE_HERE> placeholder.
 </surrounding_contents>
 
 <workspace_contents>
@@ -114,7 +114,7 @@ All workspace items, symbols etc. Optionally provided.
 
 # Response:
 
-Only respond with a file for the given language, starting with a succinct code comment at the beginning, explaining your reasoning (unless forbidden by user query)."
+Only respond with a file for the given language, starting with a succinct comment at the beginning, explaining your reasoning (unless forbidden by user query), do not include other explanations."
   "System prompt used in `im-ai-snippet'."
   :type 'string
   :group 'im-ai)
@@ -698,9 +698,14 @@ Use @file to include full file contents to the prompt and use
                (list
                 "<surrounding_context>"
                 "..."
-                (let* ((start (save-excursion (goto-char rbegin) (forward-line -10) (line-beginning-position)))
-                       (end (save-excursion (goto-char rend) (forward-line 10) (line-end-position))))
-                  (buffer-substring-no-properties start end))
+                (let* ((start
+                        (progn
+                          (insert "<GENERATE_HERE>")
+                          (save-excursion (goto-char rbegin) (forward-line -10) (line-beginning-position))))
+                       (end
+                        (save-excursion (goto-char rend) (forward-line 10) (line-end-position))))
+                  (prog1 (buffer-substring-no-properties start end)
+                    (delete-region (point) (- (point) (length "<GENERATE_HERE>")))))
                 "..."
                 "</surrounding_context>"
                 "\n"))))
