@@ -275,9 +275,8 @@ cmd-shift-comma = 'move-node-to-monitor left'
 cmd-r = 'mode resize'
 cmd-f = 'fullscreen'
 
-cmd-f1 = 'layout v_accordion'
-cmd-f2 = 'layout h_accordion'
-cmd-f3 = 'layout tiles horizontal vertical'
+cmd-e = 'layout v_accordion h_accordion'
+cmd-y = 'layout tiles horizontal vertical'
 cmd-t = 'layout floating tiling'
 
 cmd-h = 'focus --boundaries-action stop left'
