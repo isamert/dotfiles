@@ -50,7 +50,7 @@
   "Settings for `im-ai'."
   :group 'utils)
 
-(defcustom im-ai-model "Claude:claude-sonnet-4-5-latest"
+(defcustom im-ai-model "gpt-5.1"
   "AI model name."
   :type 'string
   :group 'im-ai)
@@ -65,9 +65,11 @@
                           "openai:gpt-4.1-nano"
                           "openai:gpt-5-chat-latest"
                           "openai:gpt-5-mini"
+                          "openai:gpt-5-1"
+                          "openai:gpt-5-2"
                           "deepseek:deepseek-chat"
                           "deepseek:deepseek-reasoner"
-                          "Claude:claude-sonnet-4-5-latest")
+                          "Claude:claude-sonnet-4-5")
   "AI service:model list."
   :type 'list
   :group 'im-ai)

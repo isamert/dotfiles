@@ -7216,7 +7216,6 @@ Fetches missing channels/users first."
 (setq user-mail-address im-primary-mail)
 
 (use-package notmuch
-  :defer t
   :custom
   (notmuch-show-logo nil)
   (notmuch-hello-auto-refresh t)
