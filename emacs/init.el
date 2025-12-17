@@ -7497,8 +7497,8 @@ mails."
   "Create an automated TODO list for my commit.
 This checks for some mistakes I repeadetly do and tries to warn me in
 the commit buffer."
-  (goto-char (point-min))
-  (let (todo
+  (goto-char (point-max))
+  (let (todos
         (default-directory (im-current-project-root)))
     (condition-case reason
         (progn
@@ -7516,29 +7516,25 @@ the commit buffer."
                   (when has-tags?
                     (string-to-number (or (await (lab--git "rev-list" (format "%s..HEAD" last-tag) "--count")) 0)))))
             (when (and diff (s-matches? "^-;; Version: " diff))
-              (setq todo t)
-              (insert "- [ ] Version updated: Add tag with new version\n"))
+              (setq todos (concat todos  "\n- [ ] Version updated: Add tag with new version")))
             (when (and (not (f-parent-of?
                              im-git-work-root
                              default-directory))
                        (save-excursion (search-forward im-work-email nil t)))
-              (setq todo t)
-              (insert "- [ ] Wrong email: using work, should be personal\n"))
+              (setq todos (concat todos "\n- [ ] Wrong email: using work, should be personal")))
             (when (length> new-files 0)
               (setq todo t)
-              (goto-char (point-min))
-              (insert (format "- [ ] %s new file, stage or delete them\n" (length new-files))))
+              (setq todos (concat todos (format "\n- [ ] %s new file, stage or delete them" (length new-files)))))
             (when (and commit-count-since-last-tag (> commit-count-since-last-tag 0))
-              (setq todo t)
-              (goto-char (point-min))
-              (insert (format "- [ ] Check: commits since last tag is **%s**\n"
-                              commit-count-since-last-tag)
-                      (format "- [ ] Check: last tag date is *%s*\n"
-                              last-tag-date)))))
+              (setq todos (concat todos (format "\n- [ ] Check: commits since last tag is **%s**" commit-count-since-last-tag)))
+              (setq todos (concat todos (format "\n- [ ] Check: last tag date is *%s*" last-tag-date))))))
       (error (message "im-git :: warn: Failed to run commit checkers: %s" reason)))
-    (when todo
-      (goto-char (point-min))
-      (insert "\n# TODO\n"))))
+    ;; TODO: Maybe add an after-message hook that checks if these checks are ticked?
+    (when todos
+      (let ((inhibit-read-only t))
+        (goto-char (point-min))
+        (search-forward "\n")
+        (insert "\n# Checks" todos)))))
 
 (defun im-update-git-state (&rest _)
   "Update all diff-hl overlays and vc state for current project."

@@ -888,12 +888,14 @@ called with the current state of the button."
    (lambda (button)
      (let ((start (button-start button))
            (end (button-end button))
-           (cursor (point)))
+           (cursor (point))
+           (inhibit-read-only t))
        (delete-region start end)
        (im-insert-toggle-button state2 state1 :help help :on-toggle on-toggle)
        (goto-char (if (< cursor (+ start (length state2))) cursor start))
        (when on-toggle
-         (funcall on-toggle state2))))
+         (let ((inhibit-read-only t))
+           (funcall on-toggle state2)))))
    'kbd-help help
    'follow-link t))
 

@@ -228,7 +228,16 @@ is called after the hunk is applied with no arguments."
          (goto-char pt)
          (diff-hunk-kill))
        (message ">> Hunk applied successfully!")
-       (when callback (funcall callback))))))
+       (when callback (funcall callback))
+       ;; Update the git commit message buffer, if open.  It is
+       ;; possible to display this diff in another frame and have git
+       ;; commit buffer open in another.
+       (when-let* ((commit-msg-buffer (get-buffer im-git-commit-message-buffer))
+                   (window (car (get-buffer-window-list commit-msg-buffer nil t))))
+         (with-selected-frame (window-frame window)
+           (save-window-excursion
+             (with-current-buffer commit-msg-buffer
+               (im-git-commit-reload)))))))))
 
 (defun im-git-unstage-hunk-or-file ()
   "Unstage the currently selected hunk or file."
@@ -285,7 +294,7 @@ Each function is called with DIFF, inside project root.")
 (defconst im-git-commit-message-buffer "*im-git-commit-message*")
 (defconst im-git-commit-diff-buffer "*im-git-diff-staged*")
 (defconst im-git-commit-config-prefix "⚙")
-(defconst im-git--status-filename-prefix "〉")
+(defconst im-git--status-filename-prefix "▶")
 (defvar im-git-commit--old-window-conf nil)
 (defvar im-git-commit-message-history (make-ring 100))
 (with-eval-after-load 'savehist
@@ -439,7 +448,7 @@ configuration, pass it as WINDOW-CONF."
 (define-derived-mode im-git-commit-mode markdown-mode "CM"
   "Commit message editing mode."
   (require 'whitespace)
-  (setq-local header-line-format "`C-c C-c' to commit, `C-c C-k' to discard.")
+  (setq-local header-line-format (substitute-command-keys "Commit :: \\[im-git-commit-finalize] → commit, \\[im-git-commit-cancel] → discard, \\[im-git-commit-reload] → reload buffer, \\[im-git-commit-prev-message] → prev, \\[im-git-commit-next-message] → next"))
   (setq-local whitespace-line-column 72)
   (setq-local whitespace-style '(face empty tabs lines-tail trailing))
   ;; FIXME: First line should not exceed 50 chars, how to indicate that?
@@ -448,97 +457,130 @@ configuration, pass it as WINDOW-CONF."
   (page-break-lines-mode)
   (insert "\n\n")
   (insert "\n\n\n")
-  (insert "# Status\n\n")
-  (insert "# Settings\n\n")
-  (insert im-git-commit-config-prefix " No Verify: ")
-  (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
-  (insert "\n")
-  (insert im-git-commit-config-prefix " Amend: ")
-  (im-insert-toggle-button
-   "no" "yes"
-   :help "RET: Toggle amend"
-   :on-toggle
-   (lambda (state)
-     (when (and (equal state "yes") (y-or-n-p "Use old commit message?"))
-       (im-git-commit--reset-message (s-trim (shell-command-to-string "git log -1 --pretty=%B"))))))
-  (insert "\n")
-  (insert im-git-commit-config-prefix " Author: AUTHOR_NAME <AUTHOR_MAIL>\n")
-  (insert im-git-commit-config-prefix " Tag: ")
-  (im-insert-toggle-button "no" (lambda () (read-string "Tag: ")) :help "RET: Toggle tagging")
-  (insert "\n")
-  (insert im-git-commit-config-prefix " Fixup: ")
-  (insert-text-button
-   "no"
-   'action (lambda (button)
-             (let ((start (button-start button))
-                   (end (button-end button))
-                   (action (button-get button 'action)))
-               (im-git-select-commit
-                (lambda (tag)
-                  (delete-region start end)
-                  (insert-text-button tag 'action action 'follow-link t)
-                  (im-git-commit--reset-message "<!-- No need to update the message -->")))))
-   'kbd-help "RET: Select commit to fixup"
-   'follow-link t)
-  ;; TODO: maybe also add this version so that I can also change the commit message if I want
-  ;; git commit --squash=<commit-hash> -m "New message you want"
-  ;; git rebase --autosquash --no-edit <commit-hash>^
-  (insert "\n")
+  (insert "# Status\n")
+  (insert "# Settings\n")
+  (insert "# Last commits\n")
   (goto-char (point-min))
   (im-help-at-point-mode)
   (im-git-commit--setup (current-buffer)))
 
 (async-defun im-git-commit--setup (buffer)
   "Fill the commit BUFFER without blocking."
-  (let ((name  (await (lab--git "config" "--get" "user.name")))
-        (email (await (lab--git "config" "--get" "user.email"))))
+  (let* ((start-time (float-time))
+         (namep  (lab--git "config" "--get" "user.name"))
+         (emailp (lab--git "config" "--get" "user.email"))
+         (commitsp (lab--git "log"
+                             "-10" "--color=always"
+                             "--graph" "--decorate" "--date=short"
+                             "--pretty=tformat:'%C(cyan)%d%C(reset)%C(yellow)%h%C(reset)..: %C(green)%an %C(blue)%ad%C(reset) %s'"
+                             "--abbrev-commit"))
+         (statusoutp (await (lab--git "-c" "color.status=always" "status" "--branch" "--short")))
+         (name (await namep))
+         (email (await emailp))
+         (commits (ansi-color-apply (await commitsp)))
+         (statusout (await statusoutp))
+         (inhibit-read-only t))
     (with-current-buffer buffer
       (goto-char (point-min))
+      (im-git-commit--change-header-contents "Last commits"
+        (let ((start (point)))
+          (insert "\n" commits)
+          (let ((overlay (make-overlay start (point))))
+            (overlay-put overlay 'keymap im-git-commit-log-map))))
+      (im-git-commit--change-header-contents "Settings"
+        (insert im-git-commit-config-prefix " No Verify: ")
+        (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
+        (insert "\n")
+        (insert im-git-commit-config-prefix " Amend: ")
+        (im-insert-toggle-button
+         "no" "yes"
+         :help "RET: Toggle amend"
+         :on-toggle
+         (lambda (state)
+           (when (and (equal state "yes") (y-or-n-p "Use old commit message?"))
+             (im-git-commit--reset-message (s-trim (shell-command-to-string "git log -1 --pretty=%B"))))))
+        (insert "\n")
+        (insert im-git-commit-config-prefix " Author: AUTHOR_NAME <AUTHOR_MAIL>\n")
+        (insert im-git-commit-config-prefix " Tag: ")
+        (im-insert-toggle-button "no" (lambda () (read-string "Tag: ")) :help "RET: Toggle tagging")
+        (insert "\n")
+        (insert im-git-commit-config-prefix " Fixup: ")
+        (insert-text-button
+         "no"
+         'action (lambda (button)
+                   (let ((start (button-start button))
+                         (end (button-end button))
+                         (action (button-get button 'action)))
+                     (im-git-select-commit
+                      (lambda (tag)
+                        (let ((inhibit-read-only t))
+                          (delete-region start end)
+                          (insert-text-button tag 'action action 'follow-link t)
+                          (im-git-commit--reset-message "<!-- You can't update the message -->"))))))
+         'kbd-help "RET: Select commit to fixup"
+         'follow-link t)
+        ;; TODO: maybe also add this version so that I can also change the commit message if I want
+        ;; git commit --squash=<commit-hash> -m "New message you want"
+        ;; git rebase --autosquash --no-edit <commit-hash>^
+        (insert "\n"))
       (when (re-search-forward "AUTHOR_NAME" nil t)
         (replace-match name t t))
       (when (re-search-forward "AUTHOR_MAIL" nil t)
         (replace-match email t t))
-      (await (im-git-commit--update-unstaged))
+      (im-git-commit--update-unstaged)
       (dolist (hook im-git-commit-pre-hook)
         (await (funcall hook im-git-commit--diff)))
-      (goto-char (point-min)))))
+      (goto-char (point-min)))
+    (message "Ready in %.2f seconds" (- (float-time) start-time))))
 
 (defmacro im-git-commit--change-header-contents (header &rest forms)
   (declare (indent 1))
   `(save-excursion
-     (goto-char (point-min))
-     (re-search-forward (format "\n# *%s" ,header))
-     (end-of-line)
-     (delete-region
-      (point)
-      (or
-       (progn (when (search-forward "\n# " nil t) (- (point) 3)))
-       (point-max)))
-     (backward-char 2)
-     (insert "\n")
-     ,@forms
-     (insert "\n")))
+     (let ((inhibit-read-only t)
+           start end)
+       (goto-char (point-min))
+       (re-search-forward (format "\n# %s" ,header))
+       (beginning-of-line)
+       (setq start (point))
+       (end-of-line)
+       (delete-region
+        (point)
+        (if (search-forward "\n# " nil t)
+            (prog1 (- (point) 3)
+              (backward-char 2))
+          (point-max)))
+       ,@forms
+       (insert "\n")
+       (setq end (point))
+       (add-text-properties start end '(read-only t)))))
+
+(defvar-keymap im-git-commit-status-map
+  "u" #'im-git-commit-unstage-at-point
+  "s" #'im-git-commit-stage-at-point
+  "x" #'im-git-commit-delete-at-point
+  "TAB" #'im-git-commit-diff-at-point
+  "RET" #'im-git-commit-diff-at-point-popup)
+
+(defvar-keymap im-git-commit-log-map
+  "RET" #'im-git-commit-log-diff-at-point)
 
 ;; TODO: Predictable sort order
-(async-defun im-git-commit--update-unstaged ()
+(async-defun im-git-commit--update-unstaged (&optional output)
   (im-git-commit--change-header-contents "Status"
     (--each-indexed (s-lines (ansi-color-apply
-                              (await (lab--git
-                                      "-c" "color.status=always"
-                                      "status" "--branch" "--short"))))
+                              (s-trim (or output (await (lab--git
+                                                         "-c" "color.status=always"
+                                                         "status" "--branch" "--short"))))))
       (if (= it-index 0)
           (insert (s-chop-prefix "## " it) "\n")
         (let* ((start (point))
                (overlay (progn
                           (insert (s-prepend (concat im-git--status-filename-prefix " ") it) "\n")
                           (make-overlay start (1- (point))))))
-          (overlay-put overlay 'keymap im-git-commit-status-map))))))
-
-(defvar-keymap im-git-commit-status-map
-  "u" #'im-git-commit-unstage-at-point
-  "s" #'im-git-commit-stage-at-point
-  "TAB" #'im-git-commit-diff-at-point
-  "RET" #'im-git-commit-diff-at-point)
+          (overlay-put overlay 'keymap im-git-commit-status-map)
+          (overlay-put overlay 'help-echo
+                       (lambda (_window _obj _pos)
+                         (substitute-command-keys "\\[im-git-commit-stage-at-point] → Stage file, \\[im-git-commit-unstage-at-point] → Unstage file, \\[im-git-commit-delete-at-point] → Delete file, \\[im-git-commit-diff-at-point] → Diff | You can select multiple files by selecting region."))))))))
 
 (defun im-git-commit--file-at-point (&optional line)
   (let ((line (or line (thing-at-point 'line t))))
@@ -558,7 +600,8 @@ configuration, pass it as WINDOW-CONF."
                     (s-lines)
                     (-map #'im-git-commit--file-at-point))
                  (list (im-git-commit--file-at-point)))))
-    (await (apply #'lab--git (append git-args files)))
+    (when git-args
+      (await (apply #'lab--git (append git-args files))))
     (await (im-git-commit--update-unstaged))
     (deactivate-mark)
     (goto-line line)
@@ -566,27 +609,42 @@ configuration, pass it as WINDOW-CONF."
       (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
       (other-window 1))))
 
-(async-defun im-git-commit-diff-at-point ()
-  (interactive)
+(async-defun im-git-commit-diff-at-point (&optional popup?)
+  (interactive nil im-git-commit-mode)
   (if (im-peek-open?)
       (im-peek-remove)
     (let* ((default-directory (im-current-project-root))
            (file (im-git-commit--file-at-point))
-           (diff (s-trim (await (lab--git "diff" file))))
+           (diff (await (lab--git "diff" file)))
            (result (if (s-blank? diff)
                        ;; TODO highlight file
                        (with-temp-buffer
                          (insert-file-contents file)
                          (buffer-string))
-                     (ansi-color-apply diff))))
-      (im-peek
-       (lambda ()
-         (with-current-buffer (im-get-reset-buffer "*im-commit-diff-at-point*")
-           (erase-buffer)
-           (insert result)
-           (im-git-diff-mode)
-           (setq im-git-dif--context 'im-git-commit)
-           (current-buffer)))))))
+                     (ansi-color-apply diff)))
+           (diff-buffer (with-current-buffer (im-get-reset-buffer " *im-commit-diff-at-point*")
+                          (erase-buffer)
+                          (insert result)
+                          (im-git-diff-mode)
+                          (setq im-git-dif--context 'im-git-commit)
+                          (font-lock-ensure)
+                          (current-buffer))))
+      (if popup?
+          (im-display-buffer-other-frame diff-buffer)
+        (im-peek (lambda () diff-buffer))))))
+
+(defun im-git-commit-diff-at-point-popup ()
+  (interactive nil im-git-commit-mode)
+  (im-git-commit-diff-at-point 'popup))
+
+(async-defun im-git-commit-delete-at-point ()
+  (interactive)
+  (im-peek-remove)
+  (when-let* ((file (im-git-commit--file-at-point)))
+    (when (and (file-exists-p file)
+               (y-or-n-p (format "Do you really want to delete this file: %s?" file)))
+      (delete-file file)))
+  (im-git-commit--run-command-on-file-at-point))
 
 (async-defun im-git-commit-stage-at-point ()
   (interactive)
@@ -609,6 +667,24 @@ Return old message."
     (delete-region s e)
     (goto-char (point-min))
     old))
+
+(defun im-git-commit-log-diff-at-point ()
+  (interactive nil im-git-commit-mode)
+  (save-excursion
+    (beginning-of-line)
+    (when (re-search-forward "\\b\\([0-9a-fA-F]+\\)\\." (line-end-position) t)
+      (let* ((sha (match-string 1))
+             (commit (concat sha "^.." sha))
+             (line (thing-at-point 'line)))
+        (let ((buf (im-get-reset-buffer " *im-commit-diff*")))
+          (with-current-buffer buf
+            (erase-buffer)
+            (diff-mode)
+            (setq header-line-format (format " Commit :: %s" (s-trim line)))
+            (call-process "git" nil buf t "diff" (concat sha "^") sha)
+            (goto-char (point-min))
+            (font-lock-ensure))
+          (pop-to-buffer buf))))))
 
 (defvar-keymap im-git-staged-diff-mode-map
   "x" #'im-git-reverse-hunk
