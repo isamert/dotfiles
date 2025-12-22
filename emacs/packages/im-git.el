@@ -349,6 +349,7 @@ configuration, pass it as WINDOW-CONF."
          (msg (->>
                (--take-while (not (equal "" it)) lines)
                (s-join "\n")
+               (replace-regexp-in-string "<!--\\(.\\|\n\\)*?-->" "")
                (s-trim)))
          (props (->>
                  lines
@@ -469,6 +470,7 @@ configuration, pass it as WINDOW-CONF."
   (let* ((start-time (float-time))
          (namep  (lab--git "config" "--get" "user.name"))
          (emailp (lab--git "config" "--get" "user.email"))
+         (hookspathp (lab--git "config" "--default" ".git/hooks" "--get" "core.hooksPath"))
          (commitsp (lab--git "log"
                              "-10" "--color=always"
                              "--graph" "--decorate" "--date=short"
@@ -477,6 +479,7 @@ configuration, pass it as WINDOW-CONF."
          (statusoutp (await (lab--git "-c" "color.status=always" "status" "--branch" "--short")))
          (name (await namep))
          (email (await emailp))
+         (hookspath (await hookspathp))
          (commits (ansi-color-apply (await commitsp)))
          (statusout (await statusoutp))
          (inhibit-read-only t))
@@ -530,6 +533,25 @@ configuration, pass it as WINDOW-CONF."
       (im-git-commit--update-unstaged)
       (dolist (hook im-git-commit-pre-hook)
         (await (funcall hook im-git-commit--diff)))
+      (goto-char (point-min))
+      ;; Insert prepared commit message by the git hooks
+      (when-let* ((prepare-commit-msg-hook (f-expand
+                                            (f-join
+                                             (or hookspath ".git/hooks")
+                                             "prepare-commit-msg")))
+                  (tmp-commit-msg-file "/tmp/im-git-commit-msg")
+                  (_ (f-exists? prepare-commit-msg-hook)))
+        (when (f-exists? tmp-commit-msg-file)
+          (delete-file tmp-commit-msg-file))
+        (call-process
+         prepare-commit-msg-hook nil nil nil tmp-commit-msg-file)
+        (when (f-exists? tmp-commit-msg-file)
+          (insert (with-temp-buffer
+                    (insert-file-contents tmp-commit-msg-file)
+                    (goto-char (point-min))
+                    (while (re-search-forward "^#\\(.*\\)$" nil t)
+                      (replace-match "<!--\\1 -->" t))
+                    (buffer-substring-no-properties (point-min) (point-max))))))
       (goto-char (point-min)))
     (message "Ready in %.2f seconds" (- (float-time) start-time))))
 
