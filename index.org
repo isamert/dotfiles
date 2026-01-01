@@ -1370,6 +1370,14 @@ binds {
 
     Mod+Slash { show-hotkey-overlay; }
 
+    // Apps
+    Mod+Ctrl+Alt+Shift+C { spawn "vicinae" "vicinae://extensions/vicinae/clipboard/history"; }
+    Mod+Ctrl+Alt+Shift+S { screenshot; }
+    Mod+Ctrl+Alt+Shift+Return { spawn "foot"; }
+    Mod+Ctrl+Alt+Shift+A { spawn "vicinae" "open"; }
+    Mod+Ctrl+Alt+Shift+B { spawn "swaylock" "-i" ".config/wallpaper.jpg" "--scaling" "fill"; }
+    Mod+Ctrl+Alt+Shift+Y { spawn "makoctl" "dismiss" "--all"; }
+
     // Audio
     Mod+Ctrl+Alt+Shift+0 allow-when-locked=true { spawn "swayosd-client" "--output-volume" "raise"; }
     Mod+Ctrl+Alt+Shift+9 allow-when-locked=true { spawn "swayosd-client" "--output-volume" "lower"; }
@@ -1486,14 +1494,6 @@ binds {
     Mod+Shift+E { quit; }
     Mod+Ctrl+Alt+Shift+Q { quit; }
     Mod+Shift+P { power-off-monitors; }
-
-    // Apps
-    Mod+Ctrl+Alt+Shift+C { spawn "vicinae" "vicinae://extensions/vicinae/clipboard/history"; }
-    Mod+Ctrl+Alt+Shift+S { screenshot; }
-    Mod+Ctrl+Alt+Shift+Return { spawn "foot"; }
-    Mod+Ctrl+Alt+Shift+A { spawn "vicinae" "open"; }
-    Mod+Ctrl+Alt+Shift+L { spawn "swaylock" "-i" "/home/isamert/.config/wallpaper.jpg" "--scaling" "fill"; }
-    Mod+Ctrl+Alt+Shift+Y { spawn "makoctl" "dismiss" "--all"; }
 }
 
 // * Startup
