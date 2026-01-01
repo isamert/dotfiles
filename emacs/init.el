@@ -9848,6 +9848,7 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   ;; window-size
   ;; "w<right>" #'shrink-window
   ;; "w<left>" #'enlarge-window
+  "w+" #'enlarge-window
   "w-" #'shrink-window
   "w>" #'enlarge-window-horizontally
   "w<" #'shrink-window-horizontally
