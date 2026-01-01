@@ -1042,16 +1042,16 @@ keymap:
 #+begin_src conf :tangle (when-linux "~/.config/systemd/user/xremap.service")
 [Unit]
 Description=XRemap (Keyboard remapper)
+PartOf=graphical-session.target
+After=graphical-session.target
+Requisite=graphical-session.target
 
 [Service]
 Type=simple
 Restart=always
 RestartSec=3
-ExecStart=xremap --watch %h/.config/xremap.yml
+ExecStart=«which("xremap")» --watch %h/.config/xremap.yml
 Nice=-20
-
-[Install]
-WantedBy=xdg-desktop-autostart.target
 #+end_src
 
 ** swaywm
@@ -1492,33 +1492,37 @@ binds {
     Mod+Ctrl+Alt+Shift+S { screenshot; }
     Mod+Ctrl+Alt+Shift+Return { spawn "foot"; }
     Mod+Ctrl+Alt+Shift+A { spawn "vicinae" "open"; }
-    Mod+Ctrl+Alt+Shift+L { spawn "swaylock"; }
+    Mod+Ctrl+Alt+Shift+L { spawn "swaylock" "-i" "/home/isamert/.config/wallpaper.jpg" "--scaling" "fill"; }
     Mod+Ctrl+Alt+Shift+Y { spawn "makoctl" "dismiss" "--all"; }
-
-    // UTF-8 stuff
-    Mod5+d { spawn "wtype" "→"; }
-    Mod5+w { spawn "wtype" "←"; }
-    Mod5+a { spawn "wtype" "↑"; }
-    Mod5+s { spawn "wtype" "↓"; }
-
-    Mod5+1 { spawn "wtype" "«"; }
-    Mod5+2 { spawn "wtype" "»"; }
-    Mod5+t { spawn "wtype" "✓"; }
-    Mod5+x { spawn "wtype" "✗"; }
-    Mod5+b { spawn "wtype" "λ"; }
-    Mod5+v { spawn "wtype" "${}" "-P" "Left"; }
-    Mod5+r { spawn "fish" "-c" "printf '->' | wtype -"; }
-    Mod5+f { spawn "wtype" "=>"; }
-    Mod5+g { spawn "wtype" "⟹"; }
 }
 
 // * Startup
 
 // spawn-at-startup "waybar"
 spawn-at-startup "swaybg" "--image" "/home/isamert/.config/wallpaper.jpg"
-spawn-sh-at-startup "vicinae server"
-spawn-at-startup "swayosd-server"
 #+end_src
+*** Startup programs
+- See: [[https://yalter.github.io/niri/Example-systemd-Setup.html][Example systemd Setup - niri]]
+#+begin_src sh
+systemctl --user add-wants niri.service xremap.service
+systemctl --user add-wants niri.service vicinae.service
+systemctl --user add-wants niri.service swayosd.service
+#+end_src
+
+#+begin_src conf :tangle (when-linux "~/.config/systemd/user/swayosd.service")
+[Unit]
+Description=Sway OSD
+PartOf=graphical-session.target
+After=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+ExecStart=«which("swayosd-server")»
+#+end_src
+
 ** dunst
 #+begin_src conf :tangle (when-linux "~/.config/dunst/dunstrc")
 [global]
