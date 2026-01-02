@@ -77,37 +77,43 @@
 ;;;###autoload
 (defun im-svgcal-run ()
   (interactive)
-  (when (and (buffer-narrowed-p) (equal "notes" (im-tab-bar-current-tab-name)))
-    (setq im-svgcal--last-entries
-          (->>
-           (org-map-entries
-            (lambda ()
-              (-map
-               (-lambda ((range start end))
-                 (list
-                  :title (org-entry-get nil "ITEM")
-                  :done? (equal (org-entry-get nil "TODO") "DONE")
-                  :range range
-                  :start start
-                  :end end))
-               (im-svgcal--org-entry-timestamps))))
-           (-flatten-n 1)
-           (--filter (plist-get it :end))))
-    (setq im-svgcal--last-entries
-          (append im-svgcal--last-entries (im-svgcal-diary-todays-entries)))
-    (im-svgcal-render-buffer)
+  (when (and (buffer-narrowed-p)
+             (equal "notes" (im-tab-bar-current-tab-name)))
+    (im-svgcal--set-entries)
     (unless (im-buffer-visible-p im-svgcal--buffer-name)
       (im-display-buffer-in-side-window (get-buffer im-svgcal--buffer-name) 35)
-      (set-window-dedicated-p (get-buffer-window im-svgcal--buffer-name) t))))
+      (set-window-dedicated-p (get-buffer-window im-svgcal--buffer-name) t))
+    (im-svgcal-render-buffer)))
+
+(defun im-svgcal--set-entries ()
+  (setq im-svgcal--last-entries
+        (->>
+         (org-map-entries
+          (lambda ()
+            (-map
+             (-lambda ((range start end))
+               (list
+                :title (org-entry-get nil "ITEM")
+                :done? (equal (org-entry-get nil "TODO") "DONE")
+                :range range
+                :start start
+                :end end))
+             (im-svgcal--org-entry-timestamps))))
+         (-flatten-n 1)
+         (--filter (plist-get it :end))))
+  (setq im-svgcal--last-entries
+        (append im-svgcal--last-entries (im-svgcal-diary-todays-entries))))
 
 (defun im-svgcal-render-buffer ()
   (when im-svgcal--last-entries
     (with-current-buffer (get-buffer-create im-svgcal--buffer-name)
       (erase-buffer)
       (insert "** svgcal **\n")
-      (svg-insert-image (im-svgcal-render im-svgcal--last-entries))
-      (insert "\n")
-      (goto-char (point-min)))))
+      (let ((svg (im-svgcal-render im-svgcal--last-entries)))
+        (svg-insert-image svg)
+        (insert "\n")
+        (goto-char (point-min))
+        svg))))
 
 (defun im-svgcal-render (tasks)
   "Return SVG for given TASKS."

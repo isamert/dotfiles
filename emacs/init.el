@@ -4971,7 +4971,8 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 (transient-define-prefix im-find-and-grep-transient ()
   "Finding and grepping."
   [["Find"
-    ("f" "Find file in current directory" im-find-file-in)
+    ("fd" "Find file in current directory" im-find-file-in)
+    ("fD" "Find file in given directory" im-find-file-in-given-dir)
     ("F" "Files (all projects)" im-select-any-project-file)]
    ["Marks"
     ("M" "Marks (current dir)" im-marks)
@@ -5015,6 +5016,10 @@ approach."
      :category 'file
      :map (s-chop-prefix "./" it)
      :do (find-file it))))
+
+(defun im-find-file-in-given-dir (dir)
+  (interactive "DSelect directory: ")
+  (im-find-file-in dir))
 
 (defun im-consult-git-grep-branch (branch)
   "Run interactive grep inside given BRANCH and display the result at that revision."
