@@ -1352,6 +1352,11 @@ window-rule {
 }
 
 window-rule {
+    match app-id=r#"emacs$"# title="^emacs-popup$"
+    open-floating true
+}
+
+window-rule {
     geometry-corner-radius 8
     clip-to-geometry true
 }
@@ -1372,6 +1377,7 @@ binds {
 
     // Apps
     Mod+Ctrl+Alt+Shift+C { spawn "vicinae" "vicinae://extensions/vicinae/clipboard/history"; }
+    Mod+Ctrl+Alt+Shift+W { spawn "vicinae" "vicinae://extensions/vicinae/wm/switch-windows"; }
     Mod+Ctrl+Alt+Shift+S { screenshot; }
     Mod+Ctrl+Alt+Shift+Return { spawn "foot"; }
     Mod+Ctrl+Alt+Shift+A { spawn "vicinae" "open"; }
