@@ -81,7 +81,7 @@
              (equal "notes" (im-tab-bar-current-tab-name)))
     (im-svgcal--set-entries)
     (unless (im-buffer-visible-p im-svgcal--buffer-name)
-      (im-display-buffer-in-side-window (get-buffer im-svgcal--buffer-name) 35)
+      (im-display-buffer-in-side-window (get-buffer-create im-svgcal--buffer-name) 35)
       (set-window-dedicated-p (get-buffer-window im-svgcal--buffer-name) t))
     (im-svgcal-render-buffer)))
 
