@@ -233,7 +233,9 @@ is called after the hunk is applied with no arguments."
        ;; possible to display this diff in another frame and have git
        ;; commit buffer open in another.
        (when-let* ((commit-msg-buffer (get-buffer im-git-commit-message-buffer))
-                   (window (car (get-buffer-window-list commit-msg-buffer nil t))))
+                   (window (car (get-buffer-window-list commit-msg-buffer nil t)))
+                   ;; If we are already in the staged diff, no need to do this
+                   (_ (not (equal (buffer-name) im-git-commit-diff-buffer))))
          (with-selected-frame (window-frame window)
            (save-window-excursion
              (with-current-buffer commit-msg-buffer
@@ -304,7 +306,7 @@ Each function is called with DIFF, inside project root.")
 (defvar-local im-git-commit--diff nil)
 
 ;;;###autoload
-(cl-defun im-git-commit (&key window-conf)
+(cl-defun im-git-commit (&key window-conf initial-message)
   "Commit staged changes.
 If commit is called from another command, and when commit
 finishes or discard you want to restore an older window
@@ -319,10 +321,11 @@ configuration, pass it as WINDOW-CONF."
     (setq im-git-commit--diff diff)
     (switch-to-buffer commit-buffer)
     (im-git-commit-mode)
+    (im-git-commit--setup (current-buffer) initial-message)
     (delete-other-windows)
     (select-window (split-window-right))
     (switch-to-buffer (im-git-commit--reload-diff-buffer diff))
-    (other-window 1)))
+    (select-window (get-buffer-window im-git-commit-message-buffer))))
 
 (defun im-git-commit--reload-diff-buffer (diff)
   (with-current-buffer (im-get-reset-buffer im-git-commit-diff-buffer)
@@ -336,8 +339,22 @@ configuration, pass it as WINDOW-CONF."
 (defun im-git-commit-reload ()
   "Reload the diff."
   (interactive nil im-git-commit-mode)
-  (im-git-commit :window-conf im-git-commit--old-window-conf)
+  (im-git-commit :window-conf im-git-commit--old-window-conf
+                 :initial-message (im-git-commit--parse-commit-message))
   (message ">> Reloaded."))
+
+(defun im-git-commit--parse-commit-message ()
+  (with-current-buffer im-git-commit-message-buffer
+    (s-trim
+     (replace-regexp-in-string
+      "<!--\\(.\\|\n\\)*?-->" ""
+      (buffer-substring-no-properties
+       (point-min)
+       (save-excursion
+         (goto-char (point-min))
+         (if (search-forward "" nil t)
+             (match-beginning 0)
+           (point-max))))))))
 
 (defun im-git-commit-finalize ()
   "Finalize the commit in progress."
@@ -346,11 +363,7 @@ configuration, pass it as WINDOW-CONF."
                  "\n"
                  (with-current-buffer im-git-commit-message-buffer
                    (buffer-substring-no-properties (point-min) (point-max)))))
-         (msg (->>
-               (--take-while (not (equal "" it)) lines)
-               (s-join "\n")
-               (replace-regexp-in-string "<!--\\(.\\|\n\\)*?-->" "")
-               (s-trim)))
+         (msg (im-git-commit--parse-commit-message))
          (props (->>
                  lines
                  (--filter (s-starts-with? im-git-commit-config-prefix it))
@@ -462,10 +475,9 @@ configuration, pass it as WINDOW-CONF."
   (insert "# Settings\n")
   (insert "# Last commits\n")
   (goto-char (point-min))
-  (im-help-at-point-mode)
-  (im-git-commit--setup (current-buffer)))
+  (im-help-at-point-mode))
 
-(async-defun im-git-commit--setup (buffer)
+(async-defun im-git-commit--setup (buffer &optional initial-message)
   "Fill the commit BUFFER without blocking."
   (let* ((start-time (float-time))
          (namep  (lab--git "config" "--get" "user.name"))
@@ -540,7 +552,8 @@ configuration, pass it as WINDOW-CONF."
                                              (or hookspath ".git/hooks")
                                              "prepare-commit-msg")))
                   (tmp-commit-msg-file "/tmp/im-git-commit-msg")
-                  (_ (f-exists? prepare-commit-msg-hook)))
+                  (_ (f-exists? prepare-commit-msg-hook))
+                  (_ (not initial-message)))
         (when (f-exists? tmp-commit-msg-file)
           (delete-file tmp-commit-msg-file))
         (call-process
@@ -552,6 +565,8 @@ configuration, pass it as WINDOW-CONF."
                     (while (re-search-forward "^#\\(.*\\)$" nil t)
                       (replace-match "<!--\\1 -->" t))
                     (buffer-substring-no-properties (point-min) (point-max))))))
+      (when initial-message
+        (insert initial-message))
       (goto-char (point-min)))
     (message "Ready in %.2f seconds" (- (float-time) start-time))))
 
@@ -637,7 +652,7 @@ configuration, pass it as WINDOW-CONF."
       (im-peek-remove)
     (let* ((default-directory (im-current-project-root))
            (file (im-git-commit--file-at-point))
-           (diff (await (lab--git "diff" file)))
+           (diff (concat (await (lab--git "diff" file)) "\n"))
            (result (if (s-blank? diff)
                        ;; TODO highlight file
                        (with-temp-buffer
