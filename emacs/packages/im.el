@@ -1068,15 +1068,12 @@ For async requests, simply provide a success handler:
   (or (s-match "^\\(https?\\|file\\)://\\|www." url)
       (s-match "\\.\\(org\\|net\\|com\\)$" url)))
 
-(defun im-check-internet-connection ()
+(defun im-check-internet-connection (&optional url)
   "Return t if there is an active internet connection.
-May return false on slow connections.  Checks blocking, max 150 ms (for
-Linux), 1 secs for Mac."
-  (im-when-on
-   :linux
-   (= 0 (call-process "nc" nil nil nil "-w" "1" "-z" "isamert.net" "80"))
-   :darwin
-   (= 0 (call-process "nc" nil nil nil  "-G" "1" "-z" "isamert.net" "80"))))
+If optional URL is provided, try to reach that host instead of the default.
+May return false on slow connections.  Checks block for at most 1 second."
+  ;; Just use GNU netcat
+  (= 0 (call-process "nc" nil nil nil "-w" "1" "-z" (or url "isamert.net") "80")))
 
 ;;;; File operations
 
