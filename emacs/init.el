@@ -5670,6 +5670,7 @@ SORT should be nil to disable sorting."
   ;; the screen size changes, some of the scrollback gets deleted etc.
   ;; [1]: https://github.com/akermu/emacs-libvterm/issues/179#issuecomment-1045331359
 
+  (setq vterm-max-scrollback 100000)
   (setq vterm-shell (executable-find "fish"))
   (setq vterm-kill-buffer-on-exit t))
 

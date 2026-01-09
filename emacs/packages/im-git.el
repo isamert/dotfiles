@@ -771,6 +771,8 @@ CALLBACK will be called with the selected commit ref."
   (interactive)
   (im-git-select-commit-mode -1)
   (let ((tag (log-view-current-tag (point)))
+
+
         (fn im-git-select-commit-finalize-callback))
     (kill-buffer)
     (funcall fn tag)))
