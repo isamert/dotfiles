@@ -711,7 +711,6 @@ Return old message."
     (beginning-of-line)
     (when (re-search-forward "\\b\\([0-9a-fA-F]+\\)\\." (line-end-position) t)
       (let* ((sha (match-string 1))
-             (commit (concat sha "^.." sha))
              (line (thing-at-point 'line)))
         (let ((buf (im-get-reset-buffer " *im-commit-diff*")))
           (with-current-buffer buf

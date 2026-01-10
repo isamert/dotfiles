@@ -6803,6 +6803,8 @@ Fetches missing channels/users first."
   :config
   ;; Automatically refresh projects list after cloning a project
   (add-hook 'lab-after-git-clone-functions #'im-load-projects-list)
+  ;; Same thing but for bulk cloning
+  (add-hook 'lab-after-clone-bulk-functions #'im-load-projects-list)
   ;; And jump to that project
   (add-hook 'lab-after-git-clone-functions (lambda () (dired default-directory)))
 
@@ -10509,10 +10511,12 @@ instead of acting on issue."
                  project
                  (im-jira--select-issue-type)
                  (read-string "Issue summary: ")
-                 "This is an automatically generated small issue."
+                 (concat
+                  "THIS IS AN AUTOMATICALLY GENERATED ISSUE. TO BE FILLED LATER. \n\n"
+                  (im-jira--get-issue-template "Story"))
                  (cons
                   (im-jira-get-issue-field-id-for "Sprint")
-                  (alist-get 'id (im-jira-find-sprint project "future"))))))
+                  (alist-get 'id (im-jira-find-sprint project (completing-read "Sprint: " '("active" "future"))))))))
     (let-alist issue
       (save-window-excursion
         (im-jira-view-ticket .key)
