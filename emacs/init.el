@@ -10524,6 +10524,61 @@ story points they have released.  See the following figure:
        (insert))))
     (org-table-align)))
 
+(defun im-jira-check-tracked-issue-groups ()
+  "Check the status of tracked issue groups and add them to INBOX if needed.
+I track some Jira tickets (or one) using jira dblock, which is like:
+
+    #+begin: jira :issues (XXX-111 YYY-222) :progress? t :target 100
+    - Progress :: 1/2 (50%)
+
+    | Assignee | Creator | Point | Status | Sprint | Issue |
+    |----------+---------+-------+--------+--------+-------|
+    | ...      | ...     |   3.0 | ...    | ...    | ...   |
+    | ...      | ...     |   3.0 | DONE   | ...    | ...   |
+    #+end:
+
+This function goes through all Jira blocks marked with :target, updates
+them, and checks if they meet their target.  If they do, it adds the
+block’s heading (its parent) to \\='inbox-org."
+  (when (not (im-check-internet-connection work-vpn-check-host)) ; only run if connected to vpn
+    (user-error "Not connected to the VPN"))
+  (let ((start (float-time)))
+    (with-current-buffer (find-file-noselect trendyol-org)
+      (org-map-dblocks
+       (lambda ()
+         (when-let* ((target (let ((start (progn
+                                            (beginning-of-line)
+                                            (re-search-forward "jira.*:target[ \t]+\\([0-9]+\\)" (line-end-position) t))))
+                               (when start
+                                 (string-to-number (match-string 1)))))
+                     (source-id (org-id-get-create))
+                     (source-header (org-get-heading t t t t)))
+           (org-dblock-update) ; puts us at the beginning of the block
+           (let ((percent "")
+                 (end (save-excursion (re-search-forward org-dblock-end-re nil t))))
+             (save-excursion
+               (when (re-search-forward "- Progress :: .*?([ \t]*\\([0-9]+\\)%[ \t]*)"
+                                        end t)
+                 (setq percent (string-to-number (match-string 1)))))
+             (when (and percent target (>= percent target))
+               (with-current-buffer (find-file-noselect inbox-org)
+                 ;; TODO: need to short circuit here
+                 (unless (-any
+                          #'identity
+                          (org-map-entries
+                           (lambda () (s-contains? (format "[[id:%s]" source-id)
+                                              (or (org-get-heading t t t t) "")))
+                           "LEVEL=1"))
+                   (let ((link (format "[[id:%s][%s]]" source-id source-header)))
+                     (goto-char (point-min))
+                     (re-search-forward org-heading-regexp nil t)
+                     (org-insert-heading-respect-content)
+                     (insert (format "TODO [#A] Target achieved: %s \nDEADLINE: " link))
+                     (org-insert-timestamp (current-time))
+                     (save-buffer)))))))))
+      (save-buffer))
+    (message ">> Took %.2f seconds..." (- (float-time) start))))
+
 ;;;;; people.org - Contact management
 
 ;; Please see
