@@ -86,9 +86,6 @@
 
 ;;;; im-git-status
 
-;; TODO: Arguments should persist (except amend?). When I toggle No
-;; Verify, it should stay toggled for the next im-git-commit call.
-
 (defvar-local im-git-dif--context nil
   "It can be either \\='im-git-status or \\='im-git-commit depending on where the diff is shown.")
 
@@ -809,7 +806,9 @@ CALLBACK will be called with the selected commit ref."
 
 ;;;###autoload
 (defun im-git-commit-fixup ()
-  "Interactively select a commit and fixup."
+  "Interactively select a commit and fixup.
+Stage your changes, interactively select a function and your changes
+will be added to selected commit."
   (interactive)
   (im-git-select-commit
    (lambda (hash)
