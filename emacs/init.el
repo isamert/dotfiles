@@ -9939,9 +9939,7 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   "eji" #'im-jira-list-issues
   "ejc" #'im-jira-create-ticket)
 
-;;
-;; Install required JIRA client
-;;
+;;;;;; Install deps
 
 (use-package jiralib2
   :autoload (jiralib2-assign-issue
@@ -9960,9 +9958,7 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   (jiralib2-user-login-name ty-jira-login)
   (jiralib2-token ty-jira-secret))
 
-;;
-;; My completing-read based JIRA utilities
-;;
+;;;;;; Variables
 
 (defvar im-git-main-branch "master"
   "Main branch name.")
@@ -9994,6 +9990,17 @@ something.")
   "Interested board ids.
 See `im-jira-list-issues'.")
 
+;;;;;; Open jira issue at point
+
+(defun im-jira-issue-at-point ()
+  (let ((sym (or (thing-at-point 'symbol) "")))
+    (when (s-matches? "[a-zA-Z]+-[0-9]+" sym)
+      sym)))
+
+(add-to-list 'im-open-thing-at-point-alist '(im-jira-issue-at-point . im-jira-open-issue))
+
+;;;;;; Interactive stuff
+
 (defun im-jira-open-issue (issue-number)
   "Open given Jira ISSUE-NUMBER."
   (interactive "sIssue: ")
@@ -10003,58 +10010,9 @@ See `im-jira-list-issues'.")
     (kill-new url)
     (browse-url url)))
 
-(defun im-jira-issue-at-point ()
-  (let ((sym (or (thing-at-point 'symbol) "")))
-    (when (s-matches? "[a-zA-Z]+-[0-9]+" sym)
-      sym)))
-
-(add-to-list 'im-open-thing-at-point-alist '(im-jira-issue-at-point . im-jira-open-issue))
-
-(defmemoize im-jira-get-my-issues ()
-  (jiralib2-jql-search im-jira-my-issues-query))
-
-(defun im-jira-get-kanban-issues ()
-  (jiralib2-jql-search im-jira-kanban-board-query))
-
-(defun im-jira-get-board-issues ()
-  (let ((board-id (if (= 1 (length im-jira-board-ids))
-                      (cdar im-jira-board-ids)
-                    (cdr (assoc (completing-read "Select board: " im-jira-board-ids) im-jira-board-ids)))))
-    (jiralib2-board-issues board-id nil)))
-
 (defun im-jira-jql (jql)
   (interactive (list (read-string "Enter JQL: " "text ~ \"...\" AND statusCategory = \"To Do|In Progress|Done\"")) "sEnter JQL: ")
   (jiralib2-jql-search jql))
-
-(defun im-jira-get-current-sprint-issues (&optional projects)
-  "Get current sprint issues for all PROJECTS.
-If PROJECTS is nil, then `im-jira-projects' is used."
-  (let ((issues '()))
-    (mapc
-     (lambda (project)
-       (setq
-        issues
-        (thread-last
-          (format "project = \"%s\" AND Sprint in openSprints()"
-                  project)
-          (jiralib2-jql-search)
-          (append issues))))
-     (or projects im-jira-projects))
-    issues))
-
-(defun im-jira-get-new-issues ()
-  (let ((issues '()))
-    (mapcar
-     (lambda (project)
-       (setq
-        issues
-        (thread-last
-          (format "project = \"%s\" AND created > -10d"
-                  project)
-          (jiralib2-jql-search)
-          (append issues))))
-     im-jira-projects)
-    issues))
 
 (defun im-jira-list-issues (&optional arg)
   (interactive "P")
@@ -10127,6 +10085,126 @@ If PROJECTS is nil, then `im-jira-projects' is used."
                   ,@(plist-get props :rest)))
          (im-jira-issue-actions))))))
 
+(defun im-jira-change-issue-status (key)
+  (interactive "sIssue number: ")
+  (->>
+   (im-completing-read
+    "Select status: "
+    (im-jira-get-issue-transitions key)
+    :formatter (lambda (it) (let-alist it (format "%s [%s]" .name .to.name))))
+   (alist-get 'id)
+   (im-jira-change-issue-status-to key)))
+
+(defun im-jira-issue-actions (issue)
+  (interactive
+   (list (jiralib2-get-issue (read-string "Jira issue: " (or (im-jira-issue-at-point) "")))))
+  (cl-loop
+   (let-alist issue
+     (let* ((action
+             (im-completing-read
+              (format "Act on %s: " (s-truncate 20 .fields.summary))
+              '("View" "Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Inspect" "[Cancel]")
+              :sort? nil)))
+       (pcase action
+         ("View"
+          (im-jira-view-ticket .key)
+          (cl-return))
+         ("Open"
+          (with-default-browser
+           (im-jira-open-issue .key))
+          (cl-return))
+         ("Update"
+          (im-jira-update-ticket .key .fields.summary .fields.description)
+          (cl-return))
+         ("To branch"
+          (im-jira-ticket-to-branch .key .fields.summary)
+          (cl-return))
+         ("To worktree"
+          (im-jira-ticket-to-worktree .key .fields.summary)
+          (cl-return))
+         ("Assign to..."
+          (jiralib2-assign-issue
+           .key
+           (alist-get 'name (im-jira--select-user))))
+         ("Change status"
+          (im-jira-change-issue-status .key))
+         ("Insert as task"
+          (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
+         ("Inspect"
+          (im-json-encode-and-show issue)
+          (cl-return))
+         ("[Cancel]"
+          (cl-return)))))))
+
+(defun im-jira-create-quick-issue (arg)
+  "Quickly create an issue and act on it.
+If ARG is non-nil, insert the issue number to current buffer
+instead of acting on issue."
+  (interactive "P")
+  (let* ((project (im-jira--select-project))
+         (issue (jiralib2-create-issue
+                 project
+                 (im-jira--select-issue-type)
+                 (read-string "Issue summary: ")
+                 (concat
+                  "THIS IS AN AUTOMATICALLY GENERATED ISSUE. TO BE FILLED LATER. \n\n"
+                  (im-jira--get-issue-template "Story"))
+                 (cons
+                  (im-jira-get-issue-field-id-for "Sprint")
+                  (alist-get 'id (im-jira-find-sprint project (completing-read "Sprint: " '("active" "future"))))))))
+    (let-alist issue
+      (save-window-excursion
+        (im-jira-view-ticket .key)
+        (message ">> Opened issue in a buffer."))
+      (im-kill .key)
+      (if arg
+          (insert .key " - ")
+        (im-jira-issue-actions issue)))))
+
+;;;;;; Internal
+
+(defmemoize im-jira-get-my-issues ()
+  (jiralib2-jql-search im-jira-my-issues-query))
+
+(defun im-jira-get-kanban-issues ()
+  (jiralib2-jql-search im-jira-kanban-board-query))
+
+(defun im-jira-get-board-issues ()
+  (let ((board-id (if (= 1 (length im-jira-board-ids))
+                      (cdar im-jira-board-ids)
+                    (cdr (assoc (completing-read "Select board: " im-jira-board-ids) im-jira-board-ids)))))
+    (jiralib2-board-issues board-id nil)))
+
+(defun im-jira-get-current-sprint-issues (&optional projects)
+  "Get current sprint issues for all PROJECTS.
+If PROJECTS is nil, then `im-jira-projects' is used."
+  (let ((issues '()))
+    (mapc
+     (lambda (project)
+       (setq
+        issues
+        (thread-last
+          (format "project = \"%s\" AND Sprint in openSprints()"
+                  project)
+          (jiralib2-jql-search)
+          (append issues))))
+     (or projects im-jira-projects))
+    issues))
+
+(defun im-jira-get-new-issues ()
+  (let ((issues '()))
+    (mapcar
+     (lambda (project)
+       (setq
+        issues
+        (thread-last
+          (format "project = \"%s\" AND created > -10d"
+                  project)
+          (jiralib2-jql-search)
+          (append issues))))
+     im-jira-projects)
+    issues))
+
 (defun im-jira-get-issue-fields ()
   (jiralib2-session-call "/rest/api/2/field"))
 
@@ -10161,16 +10239,6 @@ SPRINT can be a full sprint name or one \"active\"|\"future\"."
    :data (json-encode
           `((transition (id . ,status-id))))))
 
-(defun im-jira-change-issue-status (key)
-  (interactive "sIssue number: ")
-  (->>
-   (im-completing-read
-    "Select status: "
-    (im-jira-get-issue-transitions key)
-    :formatter (lambda (it) (let-alist it (format "%s [%s]" .name .to.name))))
-   (alist-get 'id)
-   (im-jira-change-issue-status-to key)))
-
 (defun im-jira-change-issue-status-to-status (issue-id status)
   "Same as `im-jira-change-issue-status-to' but uses the status name as shown in Jira UI instead of status id."
   (im-jira-change-issue-status-to
@@ -10180,10 +10248,6 @@ SPRINT can be a full sprint name or one \"active\"|\"future\"."
     (--find
      (string-equal (alist-get 'name it) status)
      (im-jira-get-issue-transitions issue-id)))))
-
-;;
-;; Utility
-;;
 
 (defmemoizefile im-jira-get-users () "~/.emacs.d/jira-user-cache"
   (mapcar
@@ -10243,47 +10307,6 @@ SPRINT can be a full sprint name or one \"active\"|\"future\"."
                  'face 'italic)
      .fields.summary)))
 
-(defun im-jira-issue-actions (issue)
-  (interactive
-   (list (jiralib2-get-issue (read-string "Jira issue: " (or (im-jira-issue-at-point) "")))))
-  (cl-loop
-   (let-alist issue
-     (let* ((action
-             (im-completing-read
-              (format "Act on %s: " (s-truncate 20 .fields.summary))
-              '("View" "Open" "Update" "To branch" "To worktree" "Assign to..." "Insert as task" "Change status" "Inspect" "[Cancel]")
-              :sort? nil)))
-       (pcase action
-         ("View"
-          (im-jira-view-ticket .key)
-          (cl-return))
-         ("Open"
-          (with-default-browser
-           (im-jira-open-issue .key))
-          (cl-return))
-         ("Update"
-          (im-jira-update-ticket .key .fields.summary .fields.description)
-          (cl-return))
-         ("To branch"
-          (im-jira-ticket-to-branch .key .fields.summary)
-          (cl-return))
-         ("To worktree"
-          (im-jira-ticket-to-worktree .key .fields.summary)
-          (cl-return))
-         ("Assign to..."
-          (jiralib2-assign-issue
-           .key
-           (alist-get 'name (im-jira--select-user))))
-         ("Change status"
-          (im-jira-change-issue-status .key))
-         ("Insert as task"
-          (insert (format "** TODO [#A] %s %s :work:" .key .fields.summary)))
-         ("Inspect"
-          (im-json-encode-and-show issue)
-          (cl-return))
-         ("[Cancel]"
-          (cl-return)))))))
-
 (defun im-convert-jira-markup-to-org-mode (jira-markup)
   "Convert given JIRA-MARKUP string to `org-mode' format."
   (with-temp-buffer
@@ -10332,9 +10355,7 @@ SPRINT can be a full sprint name or one \"active\"|\"future\"."
      (message ">> (im-jira-update-ticket \"%s\" \"%s\" \"%s\")" key summary description)
      (jiralib2-update-summary-description key summary description))))
 
-;;
-;; jira-view-mode
-;;
+;;;;;; jira-view-mode
 
 (defvar-local jira-view-mode-ticket nil
   "Currently viewed ticket object.")
@@ -10400,6 +10421,8 @@ SPRINT can be a full sprint name or one \"active\"|\"future\"."
       (org-set-property "ASSIGNEE" (or .fields.assignee.name "N/A"))
       (org-set-property "STORY_POINTS" (format "%s" (or (alist-get im-jira-story-points-field-name .fields) "N/A")))
       (org-fold-show-all))))
+
+;;;;;; org-mode integration
 
 (defun im-jira-list-current-sprint-assignee-swimlane ()
   "Draw a table for the current sprint that resembles assignee swimlanes of JIRA.
@@ -10500,31 +10523,6 @@ story points they have released.  See the following figure:
        (s-join "\n")
        (insert))))
     (org-table-align)))
-
-(defun im-jira-create-quick-issue (arg)
-  "Quickly create an issue and act on it.
-If ARG is non-nil, insert the issue number to current buffer
-instead of acting on issue."
-  (interactive "P")
-  (let* ((project (im-jira--select-project))
-         (issue (jiralib2-create-issue
-                 project
-                 (im-jira--select-issue-type)
-                 (read-string "Issue summary: ")
-                 (concat
-                  "THIS IS AN AUTOMATICALLY GENERATED ISSUE. TO BE FILLED LATER. \n\n"
-                  (im-jira--get-issue-template "Story"))
-                 (cons
-                  (im-jira-get-issue-field-id-for "Sprint")
-                  (alist-get 'id (im-jira-find-sprint project (completing-read "Sprint: " '("active" "future"))))))))
-    (let-alist issue
-      (save-window-excursion
-        (im-jira-view-ticket .key)
-        (message ">> Opened issue in a buffer."))
-      (im-kill .key)
-      (if arg
-          (insert .key " - ")
-        (im-jira-issue-actions issue)))))
 
 ;;;;; people.org - Contact management
 
