@@ -5676,7 +5676,7 @@ SORT should be nil to disable sorting."
 
 ;;;;;; Utility functions
 
-(defvar im-terminal-buffer-name-regexp "\\*?\\$?\\(e?shell\\|v?term\\|eat\\).*")
+(defvar im-terminal-buffer-name-regexp "\\*?\\$?\\(e?shell\\|v?term\\|eat\\|cursor-agent\\).*")
 
 (defun im-run-last-command-on-visible-term ()
   (interactive)
