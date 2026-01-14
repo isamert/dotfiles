@@ -10770,7 +10770,6 @@ the query beforehand."
     ("r" "Recurring" im-bullet-focus-recurring)
     ("R" "Recurring indirect" im-bullet-focus-recurring-indirect)
     ("w" "Work" im-bullet-focus-work)
-    ("W" "Work indirect" im-bullet-focus-work-indirect)
     ("l" "Life" im-bullet-focus-life)
     ("L" "Life indirect" im-bullet-focus-life-indirect)
     ("c" "Computer" im-bullet-focus-computer)
@@ -10924,14 +10923,7 @@ If it does not exists, create it."
 
 (defun im-bullet-focus-work ()
   (interactive)
-  (im-bullet-focus-heading "Work backlog"))
-
-(defun im-bullet-focus-work-indirect ()
-  "Like `im-bullet-focus-work' but in an indirect buffer."
-  (interactive)
-  (im-org-focused-tree-to-indirect-buffer
-   (im-bullet-org-ensure)
-   (im-bullet-focus-work)))
+  (find-file work-org))
 
 (defun im-bullet-focus-life ()
   (interactive)
