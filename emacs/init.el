@@ -1310,8 +1310,7 @@ side window the only window'"
   ;; ^ org-store-link creates an ID for header only if called interactively and if there is no custom id
   (org-log-states-order-reversed nil)
   ;; ^ add log entries from top the bottom, in chronological order
-  ;; TODO: note functions are fucking up the buffer restriction for some reason, disabled temporarily
-  (org-log-note-clock-out nil)
+  (org-log-note-clock-out t)
   ;; ^ Add notes to LOGBOOK while clocking out from a task
   (org-log-state-notes-insert-after-drawers t)
   ;; ^ Insert notes (added by `org-add-note') after the drawer
@@ -5097,8 +5096,8 @@ approach."
   (im-append! consult-buffer-sources 'im-consult-source-files)
 
   ;; Move bookmarks to the top of buffer sources
-  (delq 'consult--source-bookmark consult-buffer-sources)
-  (add-to-list 'consult-buffer-sources 'consult--source-bookmark))
+  (delq 'consult-source-bookmark consult-buffer-sources)
+  (add-to-list 'consult-buffer-sources 'consult-source-bookmark))
 
 ;; I also add a source for listing all of my projects:
 
