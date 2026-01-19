@@ -637,7 +637,32 @@ Also see `im-clipboard-contains-image-p' to check if there is one."
             ((locate-file "pngpaste" exec-path) "pngpaste -"))
            file)))
 
-;;;; User input
+;;;; im-get-input
+
+(defvar-local im-input-success-handler nil
+  "Buffer-local success handler for `im-input-mode'.")
+
+(defvar-local im-input-reject-handler nil
+  "Buffer-local reject handler for `im-input-mode'.")
+
+(defun im-input-success-command ()
+  (interactive nil im-input-mode)
+  (when (functionp im-input-success-handler)
+    (funcall im-input-success-handler)))
+
+(defun im-input-reject-command ()
+  (interactive nil im-input-mode)
+  (when (functionp im-input-reject-handler)
+    (funcall im-input-reject-handler)))
+
+(define-minor-mode im-input-mode
+  "Minor mode for `im-get-input' buffers."
+  :init-value nil
+  :lighter " imput"
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "C-c C-c") #'im-input-success-command)
+            (define-key map (kbd "C-c C-k") #'im-input-reject-command)
+            map))
 
 (cl-defun im-get-input (&key (mode #'org-mode)
                              (init "")
@@ -646,29 +671,35 @@ Also see `im-clipboard-contains-image-p' to check if there is one."
                              pre-process)
   "Display a buffer to user to enter some input."
   (let* ((buffer (get-buffer-create "*im-input*"))
-         (success-handler (lambda ()
-                            (interactive)
-                            (let ((pre-proc-result (when pre-process
-                                                     (with-current-buffer buffer
-                                                       (funcall pre-process))))
-                                  (result (substring-no-properties (buffer-string))))
-                              (kill-buffer buffer)
-                              (if pre-process
-                                  (funcall on-accept result pre-proc-result)
-                                (funcall on-accept result)))))
-         (reject-handler (lambda ()
-                           (interactive)
-                           (kill-buffer buffer)
-                           (when on-reject
-                             (funcall on-reject)))))
+         (success-handler
+          (lambda ()
+            (interactive)
+            (let ((pre-proc-result (when pre-process
+                                     (with-current-buffer buffer
+                                       (funcall pre-process))))
+                  (result (with-current-buffer buffer
+                            (substring-no-properties (buffer-string)))))
+              (kill-buffer buffer)
+              (if pre-process
+                  (funcall on-accept result pre-proc-result)
+                (funcall on-accept result)))))
+         (reject-handler
+          (lambda ()
+            (interactive)
+            (kill-buffer buffer)
+            (when on-reject
+              (funcall on-reject)))))
     (switch-to-buffer buffer)
     (with-current-buffer buffer
       (funcall mode)
-      (use-local-map (copy-keymap (current-local-map)))
-      (local-set-key (kbd "C-c C-c") success-handler)
-      (local-set-key (kbd "C-c C-k") reject-handler)
-      (setq header-line-format "Hit `C-c C-c' to save `C-c C-k' to reject.")
+      (setq-local im-input-success-handler success-handler)
+      (setq-local im-input-reject-handler reject-handler)
+      (im-input-mode 1)
+      (setq header-line-format (substitute-command-keys "Hit `\\[im-input-success-command]' to save `\\[im-input-reject-command]' to reject."))
+      (erase-buffer)
       (insert init))))
+
+;;;; Other user input functions
 
 (defun im-alist-completing-read (prompt alist &optional initial)
   "Like `completing-read' but returns value of the selected key in given ALIST."
