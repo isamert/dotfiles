@@ -586,12 +586,14 @@ I have this in my Aerospace config so that the buffer becomes floating:
 
 (defun im-quit ()
   "Quit current window or buffer.
-If in a popup frame, delete the frame.  Otherwise:
+If in a popup frame, delete the frame if there is only one window left.
+Otherwise:
 - delete window if it's a side window or if there is another
   non-side window on this frame;
 - else switch to the previous buffer, or error when at the last one."
   (interactive)
-  (if (equal (frame-parameter nil 'name) im-popup-frame-name)
+  (if (and (equal (frame-parameter nil 'name) im-popup-frame-name)
+           (= (length (window-list)) 1))
       (delete-frame)
     (if (or
          (window-parameter (selected-window) 'window-side)
