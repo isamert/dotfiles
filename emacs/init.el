@@ -5507,7 +5507,10 @@ SORT should be nil to disable sorting."
      :documentRangeFormattingProvider
      :documentOnTypeFormattingProvider
      ;; :colorProvider
-     :foldingRangeProvider)))
+     :foldingRangeProvider))
+  :config
+  (add-to-list 'eglot-server-programs
+               `((python-ts-mode python-mode) . ("pyrefly" "lsp"))))
 
 ;; This is needed so that go-to definition works for library files.
 (use-package eglot-java
