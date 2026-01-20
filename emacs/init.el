@@ -2149,7 +2149,7 @@ Also adds author and duration info to YouTube links."
   "Format given YouTube link as `org-mode' link.
 Length, author, title etc. are appended to the link."
   (let ((id (im-youtube-link-extract-id link)))
-    (let-alist (empv--request (format "%s/videos/%s" empv-invidious-instance id))
+    (let-alist (empv--invidious-request (format "videos/%s" id))
       (org-link-make-string
        link
        (format "%0.2f mins, by %s || %s" (/ .lengthSeconds 60.0) .author .title)))))
