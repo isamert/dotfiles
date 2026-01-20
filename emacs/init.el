@@ -10552,33 +10552,33 @@ block’s heading (its parent) to \\='inbox-org."
                                             (re-search-forward "jira.*:target[ \t]+\\([0-9]+\\)" (line-end-position) t))))
                                (when start
                                  (string-to-number (match-string 1)))))
-                     (done? (org-get-todo-state))
+                     (not-done? (not (equal "DONE" (org-get-todo-state))))
                      (source-id (org-id-get-create))
                      (source-header (org-get-heading t t t t)))
-           (unless done?
-             (org-dblock-update) ; puts us at the beginning of the block
-             (let ((percent "")
-                   (end (save-excursion (re-search-forward org-dblock-end-re nil t))))
-               (save-excursion
-                 (when (re-search-forward "- Progress :: .*?([ \t]*\\([0-9]+\\)%[ \t]*)"
-                                          end t)
-                   (setq percent (string-to-number (match-string 1)))))
-               (when (and percent target (>= percent target))
-                 (with-current-buffer (find-file-noselect inbox-org)
-                   ;; TODO: need to short circuit here
-                   (unless (-any
-                            #'identity
-                            (org-map-entries
-                             (lambda () (s-contains? (format "[[id:%s]" source-id)
-                                                (or (org-get-heading t t t t) "")))
-                             "LEVEL=1"))
-                     (let ((link (format "[[id:%s][%s]]" source-id source-header)))
-                       (goto-char (point-min))
-                       (re-search-forward org-heading-regexp nil t)
-                       (org-insert-heading-respect-content)
-                       (insert (format "TODO [#A] Target achieved: %s \nDEADLINE: " link))
-                       (org-insert-timestamp (current-time))
-                       (save-buffer))))))))))
+           (message "jira :: Processing %s..." source-header)
+           (org-dblock-update) ; puts us at the beginning of the block
+           (let ((percent "")
+                 (end (save-excursion (re-search-forward org-dblock-end-re nil t))))
+             (save-excursion
+               (when (re-search-forward "- Progress :: .*?([ \t]*\\([0-9]+\\)%[ \t]*)"
+                                        end t)
+                 (setq percent (string-to-number (match-string 1)))))
+             (when (and percent target (>= percent target))
+               (with-current-buffer (find-file-noselect inbox-org)
+                 ;; TODO: need to short circuit here
+                 (unless (-any
+                          #'identity
+                          (org-map-entries
+                           (lambda () (s-contains? (format "[[id:%s]" source-id)
+                                              (or (org-get-heading t t t t) "")))
+                           "LEVEL=1"))
+                   (let ((link (format "[[id:%s][%s]]" source-id source-header)))
+                     (goto-char (point-min))
+                     (re-search-forward org-heading-regexp nil t)
+                     (org-insert-heading-respect-content)
+                     (insert (format "TODO [#A] Target achieved: %s \nDEADLINE: " link))
+                     (org-insert-timestamp (current-time))
+                     (save-buffer)))))))))
       (save-buffer))
     (message ">> Took %.2f seconds..." (- (float-time) start))))
 
