@@ -3946,7 +3946,9 @@ properly."
 (setq browse-url-handlers
       `((".*jtracker.trendyol.*/browse/.*" . ,(im-purified-url-handler #'im-jira-view-ticket))
         (".*slack.com/archives/.*" . ,(im-purified-url-handler #'im-slack-open-link))
-        (,im-reddit-comment-url-regexp . ,(im-purified-url-handler #'reddigg-view-comments))
+        (,im-reddit-comment-url-regexp . ,(im-purified-url-handler #'(lambda (url)
+                                                                       (let* ((post (replace-regexp-in-string "^https?://\\(www\\.\\)?reddit\\.com/" "" url)))
+                                                                         (reddigg-view-comments post)))))
         (".*news.ycombinator.com/item\\?id=.*" . ,(im-purified-url-handler #'hnreader-comment))
         (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . ,(im-purified-url-handler #'im-open-stackexchange-link))
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . ,(im-purified-url-handler #'empv-play-or-enqueue))
