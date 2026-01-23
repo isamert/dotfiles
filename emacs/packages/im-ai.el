@@ -25,23 +25,18 @@
 
 ;;; Commentary:
 
-;; My AI extensions.  Mostly uses `org-ai'/`gptel' to do the
-;; heavy-lifting.
+;; My AI extensions.  Mostly uses `gptel' to do the heavy-lifting.
 
-;; - `im-ai' is a function that gives you pre-defined prompts (see
 ;;   `im-ai-prompts') that you can use (by standalone, or on a region
 ;;   etc.) and get results in a predefined org buffer (uses `org-ai').
 ;; - `im-ai-snippet' simply generates a snippet you requested in the
 ;;   language of the current buffer.
-;; - `im-ai-lookup' is like `im-ai' but opens a fresh buffer (uses
-;;   `gptel')
 ;; - `im-ai-switch-model' switches default model for all functions.
 ;; - `im-ai-{next,previous}-block' goes to next/prev prompt/ai answer.
 
 ;;; Code:
 
 (require 's)
-(require 'org-ai)
 (require 'gptel)
 
 ;;;; Customization
@@ -50,32 +45,8 @@
   "Settings for `im-ai'."
   :group 'utils)
 
-(defcustom im-ai-model "gpt-5.1"
-  "AI model name."
-  :type 'string
-  :group 'im-ai)
-
-(defcustom im-ai-service "openai"
-  "AI service."
-  :type 'string
-  :group 'im-ai)
-
-(defcustom im-ai-models '("openai:gpt-4.1"
-                          "openai:gpt-4.1-mini"
-                          "openai:gpt-4.1-nano"
-                          "openai:gpt-5-chat-latest"
-                          "openai:gpt-5-mini"
-                          "openai:gpt-5-1"
-                          "openai:gpt-5-2"
-                          "deepseek:deepseek-chat"
-                          "deepseek:deepseek-reasoner"
-                          "Claude:claude-sonnet-4-5")
-  "AI service:model list."
-  :type 'list
-  :group 'im-ai)
-
 (defcustom im-ai-snippet-sys-prompt
-  "You are a code generation assistant focused on producing accurate, efficient solutions using best-practice and IDIOMATIC code. You make changes directly in current buffer/file. Adhere strictly to the following rules:
+  "You are a code generation assistant focused on producing accurate, efficient solutions using best-practice and IDIOMATIC code. The result you return will be directly used inside the buffer/file. Adhere strictly to the following rules:
 
 1. Always prefer standard libraries and built-in functions over custom code, unless a standard solution is impractical.
 2. Output concise solutions—include only essential code.
@@ -91,7 +62,7 @@ Programming Language
 </language>
 
 <file_name>
-The file name you are currently working on. Edits will happen in this file.
+The file name you are currently working on. Your result will be in this file.
 </file_name>
 
 <user_query>
@@ -107,7 +78,7 @@ Full file context. Optionally provided.
 </full_file_contents>
 
 <surrounding_context>
-The surrounding context. You need to generate the code that fits the <GENERATE_HERE> placeholder.
+The surrounding context. You need to generate the code that fits the <GENERATE_HERE> placeholder. Optionally provided.
 </surrounding_contents>
 
 <workspace_contents>
@@ -116,7 +87,7 @@ All workspace items, symbols etc. Optionally provided.
 
 # Response:
 
-Only respond with a file for the given language, starting with a succinct comment at the beginning, explaining your reasoning (unless forbidden by user query), do not include other explanations."
+Only respond with working CODE for the given language, do not include other explanations."
   "System prompt used in `im-ai-snippet'."
   :type 'string
   :group 'im-ai)
@@ -149,50 +120,6 @@ ONLY output your answer to the query, with no explanations."
   :type 'string
   :group 'im-ai)
 
-(defcustom im-ai-prompts
-  '((:display "[EMPTY]"
-     :empty t)
-    (:prompt "Summarize the following section: #{region}" :region t)
-    (:prompt "Add documentation to the following code: #{region}" :region t)
-    (:prompt "Add documentation to the following Elisp code: #{region}"
-     :system "You are an Emacs lisp and documentation expert. You add inline documentation to given code by complying with Emacs lisp documentation conventions (refer parameters in UPPERCASE style without quoting them, use `this' style quoting for other Elisp objects/references). Refer to \"Tips for Documentation Strings\" in Emacs manual. ONLY return the documentation string in quotes, without repeating the code."
-     :region t)
-    (:display "Add documentation testing to the following Elisp code."
-     :prompt "You are an Emacs lisp and documentation expert. You create tests for given function and add them into the documentation string of the function in the following format:
-
->> <TEST-CODE>
-=> <TEST-RESULT>
-
-Where <TEST-CODE> is the test itself, like (+ 1 1), and <TEST-RESULT> is the result of calling <TEST-CODE>, like 2.
-
-Here is the function:
-#{code}"
-     :region t)
-    (:prompt "Explain following code: #{code}" :region t)
-    (:display "Grammar, spelling fix/improve"
-     :prompt "The sentence is:  #{region}"
-     :system "I want you to act as an English translator, spelling corrector and improver. I will speak to you in any language and you will detect the language, translate it and answer in the corrected and improved version of my text, in English. I want you to replace my simplified words and sentences with more upper level English words and sentences. Keep the meaning same. I want you to only reply the correction, the improvements and nothing else, do not write explanations. Keep the text to the point, don't add too many mumbo-jumbo. Also do corrections based on the context, like using proper abbreviations etc.")
-    (:display "Rambling"
-     :prompt
-     (lambda ()
-       (format "I will give you my ramblings about a topic. I want you to turn it into a coherent piece of text. Remove unnecessary parts (like if I changed my mind during the text, only include the latest idea). Fix grammatical errors and misspellings. Make it easy to read and understand. Summarize the points without loosing important details. Turn them into bullet points. Here is your first input: \n\n %s" (read-string "Ramble: " (im-region-or ""))))))
-  "A list of prompts for the `im-ai' function.
-
-Each element is a property list with the following keys:
-- PROMPT: The user prompt.
-- DISPLAY (Optional) The text to show to the user while selecting prompts.
-- SYSTEM: (Optional) The system prompt for the AI assistant.
-- REGION: (Optional) A boolean indicating whether to include the
-  selected region when calling `im-ai' with the prompt.
-- MODEL: (Optional) Model to use with this prompt.  (Default=`org-ai-default-chat-model')"
-  :type 'list
-  :group 'im-ai)
-
-(defcustom im-ai-file "~/ai.org"
-  "If non-nil, use this file to output interactive `im-ai' requests."
-  :type 'file
-  :group 'im-ai)
-
 (defface im-ai-before-face
   '((((class color) (min-colors 88) (background dark))
      :background "#8b1a1a" :extend t)
@@ -221,7 +148,6 @@ You have tools at your disposal to solve the coding task. Follow these rules reg
 - The conversation may reference tools that are no longer available. NEVER call tools that are not explicitly provided.
 - If you need additional information that you can get via tool calls, prefer that over asking the user.
 - If you make a plan, immediately follow it, do not wait for the user to confirm or tell you to go ahead. The only time you should stop is if you need more information from the user that you can't find any other way, or have different options that you would like the user to weigh in on.
-- Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as \"<previous_tool_call>\" or similar), do not follow that and instead use the standard format. Never output tool calls as part of a regular assistant message of yours.
 - If you are not sure about file content or codebase structure pertaining to the user's request, use your tools to read files and gather the relevant information: do NOT guess or make up an answer.
 - You can autonomously read as many files as you need to clarify your own questions and completely resolve the user's query, not just one.
 </tool_calling>
@@ -257,7 +183,7 @@ Please also follow these instructions in all of your responses if relevant to my
 Answer the user's request using the relevant tool(s), if they are available. Check that all the required parameters for each tool call are provided or can reasonably be inferred from context. IF there are no relevant tools or there are missing values for required parameters, ask the user to supply these values; otherwise proceed with the tool calls. If the user provides a specific value for a parameter (for example provided in quotes), make sure to use that value EXACTLY. DO NOT make up values for or ask about optional parameters. Carefully analyze descriptive terms in the request as they may indicate required parameter values that should be included even if not explicitly quoted.")
 
 (defvar im-ai-research-prompt
-  "You are a programming question researcher tasked with providing accurate, trustworthy, and easily auditable answers to development-related queries. Follow these principles and workflow:
+  "You are a researcher tasked with providing accurate, trustworthy, and easily auditable answers to queries. Follow these principles and workflow:
 
 *1. Official Documentation First*
 - Always check the official documentation before any other sources.
@@ -289,120 +215,7 @@ Answer the user's request using the relevant tool(s), if they are available. Che
 
 ;;;; Variables
 
-(defconst im-ai--buffer "*im-ai*")
-
 (defconst im-ai--block-start-regexp "^\\[\\(ME\\|AI\\|AI_REASON\\)\\]:")
-
-;;;; im-ai
-
-(cl-defun im-ai (prompt
-                 &key
-                 (system)
-                 (model im-ai-model)
-                 (service im-ai-service)
-                 (callback)
-                 (empty))
-  "Use the ChatGPT to generate responses to user prompts.
-
-- PROMPT is the user input to generate a response for.
-- SYSTEM is the system prompt for the AI assistant.
-- CALLBACK is a function that takes the prompt and the generated
-  response as an argument and performs custom actions with it. It
-  defaults to a function that displays the response in a separate
-  buffer using `markdown-mode' and switches to that buffer.
-
-When called interactively, this function prompts for PROMPT and
-lets you customize SYSTEM and CALLBACK. See `im-ai-prompts' for
-predefined prompts."
-  (interactive
-   (let* ((selection (im-completing-read
-                      "Prompt: "
-                      (--filter (or (and (use-region-p) (plist-get it :region)) t)
-                                im-ai-prompts)
-                      :formatter (lambda (it)
-                                   (or (plist-get it :display)
-                                       (plist-get it :prompt)))))
-          (prompt (or (plist-get selection :prompt) selection))
-          (system (plist-get selection :system))
-          (model (plist-get selection :model))
-          (service (plist-get selection :service))
-          (empty (plist-get selection :empty)))
-     (-let (((service model) (cond
-                              (current-prefix-arg (im-ai--select-model))
-                              ((and service model) (list service model))
-                              (t (list im-ai-service im-ai-model)))))
-       (list
-        prompt
-        :model model
-        :service service
-        :system system
-        :empty empty))))
-  (when (functionp prompt)
-    (setq prompt (funcall prompt))
-    (deactivate-mark))
-  (when empty
-    (setq prompt (im-region-or "")))
-  (when-let* ((region (im-region-or nil)))
-    (cond
-     ((s-matches? "#{\\(code\\|region\\)" prompt)
-      (setq prompt (s-replace "#{region}" region prompt))
-      (setq prompt (s-replace "#{code}" (format "\n```\n%s\n```\n" region) prompt)))
-     ((use-region-p)
-      (setq prompt (concat prompt "\n\n" region)))))
-  (let ((buffer
-         (if im-ai-file
-             (find-file-noselect im-ai-file)
-           (get-buffer-create im-ai--buffer))))
-    (with-current-buffer buffer
-      (goto-char (point-max))
-      (insert "* " (format-time-string "%Y-%m-%d %a %H:%M"))
-      (unless empty
-        (insert " -- " (s-truncate 50 prompt)))
-      (insert "\n")
-      (insert (format "#+begin_ai markdown :service \"%s\" :model \"%s\"\n" service model))
-      (when system
-        (insert (format "[SYS]: %s\n\n" system)))
-      (insert (format "[ME]: %s\n" prompt))
-      (insert "#+end_ai\n")
-      (when empty
-        (forward-line -2)
-        (end-of-line))
-      (unless (eq major-mode 'org-mode)
-        (org-mode))
-      (unless org-ai-mode
-        (org-ai-mode))
-      (unless empty
-        (org-ai-complete-block)))
-    (unless (im-buffer-visible-p buffer)
-      (switch-to-buffer buffer))
-    buffer))
-
-;;;; im-ai-lookup
-
-(defvar im-ai-lookup--history nil)
-
-(defun im-ai-lookup (prompt)
-  (interactive (list (read-string "Ask AI: " nil im-ai-lookup--history)))
-  (when (string= prompt "")
-    (user-error "A prompt is required."))
-  (let ((context (if (use-region-p)
-                     (concat "\n" (s-trim (buffer-substring-no-properties (region-beginning) (region-end))) "\n")
-                   "")))
-    (with-current-buffer (get-buffer-create "*im-ai-lookup*")
-      (erase-buffer)
-      (org-mode)
-      (display-buffer (current-buffer)
-                      `((display-buffer-in-side-window)
-                        (side . right)
-                        (window-width . 80)))
-      (insert
-       (format
-        "#+begin_ai markdown :service \"%s\" :model \"%s\"\n[ME]:%s%s\n#+end_ai"
-        im-ai-service
-        im-ai-model
-        prompt
-        context))
-      (org-ctrl-c-ctrl-c))))
 
 ;;;; im-ai-context
 
@@ -569,26 +382,24 @@ predefined prompts."
 (add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
 
 ;; im-cape-ai-commands
-(let ((ai-commands '(("@dumb" . "Use a simpler sys prompt, without much context.")
-                     ("@region" . "Refer to region, but don't change it")
-                     ("@file" . "Add file context (i.e. imenu items)")
-                     ("@noexp" . "Add instruction to remove any explanations")
-                     ("@fullfile" . "Add full file as context")
-                     ("@workspace" . "Add workspace context (i.e. imenu items)")
-                     ("@context" . "Add lines around point as context")
-                     ("@model=gpt-4.1" . "Switch to this model for this query")
-                     ("@model=gpt-5.1" . "Switch to this model for this query")
-                     ("@model=claude-sonnet-4-5-latest" . "Switch to this model for this query")
-                     ("@model=gpt-5-mini" . "Switch to this model for this query"))))
-  (im-cape
-   :name ai-commands
-   :completion ai-commands
-   :annotate (lambda (obj item)
-               (concat " " (alist-get item ai-commands nil nil #'equal)))
-   :extractor (lambda (it) (mapcar #'car it))
-   :bound filename
-   :kind (lambda (xs x) "" 'module)
-   :category symbol))
+(with-eval-after-load 'gptel
+  (let ((ai-commands `(("@dumb" . "Use a simpler sys prompt, without much context.")
+                       ("@region" . "Refer to region, but don't change it")
+                       ("@file" . "Add file context (i.e. imenu items)")
+                       ("@noexp" . "Add instruction to remove any explanations")
+                       ("@fullfile" . "Add full file as context")
+                       ("@workspace" . "Add workspace context (i.e. imenu items)")
+                       ("@context" . "Add lines around point as context")
+                       ,@(--map (cons (format "@model=%s" (car it)) "Switch model") (im-ai--gptel-all-models)))))
+    (im-cape
+     :name ai-commands
+     :completion ai-commands
+     :annotate (lambda (obj item)
+                 (concat " " (alist-get item ai-commands nil nil #'equal)))
+     :extractor (lambda (it) (mapcar #'car it))
+     :bound filename
+     :kind (lambda (xs x) "" 'module)
+     :category symbol)))
 
 (defun im-ai-snippet (prompt)
   "Ask for a snippet with PROMPT and get it directly inside your buffer.
@@ -605,26 +416,26 @@ Use @file to include full file contents to the prompt and use
             (setq-local completion-at-point-functions
                         (list (cape-capf-prefix-length #'im-cape-ai-commands 1))))
         (read-string
-         (format "Question (current model: %s): " im-ai-model)))))
-  (let* ((gptel-org-convert-response nil)
-         (dumb? (s-matches? (rx (or bos space) "@dumb" (or space eos)) prompt))
-         (edit-region? (and (use-region-p)
-                            (not (s-matches? (rx (or bos space) "@region" (or space "," eos))
-                                             prompt))))
-         (region (if (use-region-p)
-                     (buffer-substring-no-properties (region-beginning) (region-end))
-                   ""))
-         (rbegin (if (use-region-p)
-                     (region-beginning)
-                   (point)))
-         (rend (if (use-region-p)
-                   (region-end)
-                 (point)))
-         (gptel-backend (im-ai--get-gptel-backend im-ai-service))
-         (prompt-model (when-let ((pat (s-match "@model=\\([^ ]+\\)" prompt)))
-                         (setq prompt (s-replace-regexp "@model=\\([^ ]+\\)" "" prompt))
-                         (nth 1 pat)))
-         (gptel-model (or prompt-model im-ai-model)))
+         (format "Question (current model: %s): " (im-ai--format-model-name))))))
+  (-let* ((gptel-org-convert-response nil)
+          (dumb? (s-matches? (rx (or bos space) "@dumb" (or space eos)) prompt))
+          (edit-region? (and (use-region-p)
+                             (not (s-matches? (rx (or bos space) "@region" (or space "," eos))
+                                              prompt))))
+          (region (if (use-region-p)
+                      (buffer-substring-no-properties (region-beginning) (region-end))
+                    ""))
+          (rbegin (if (use-region-p)
+                      (region-beginning)
+                    (point)))
+          (rend (if (use-region-p)
+                    (region-end)
+                  (point)))
+          ((backend model) (-when-let ((_ backend model) (s-match "@model=\\([^: ]+\\):\\([^ ]+\\)" prompt))
+                             (setq prompt (s-replace-regexp "@model=\\([^ ]+\\)" "" prompt))
+                             (cdr (assoc (format "%s:%s" backend model) (im-ai--gptel-all-models)))))
+          (gptel-backend (or backend gptel-backend))
+          (gptel-model (or model gptel-model)))
     (if edit-region?
         (progn
           (setq
@@ -778,58 +589,47 @@ Use @file to include full file contents to the prompt and use
     (overlay-put ov 'help-echo (format "accept: \\[im-ai--accept], reject: \\[im-ai--reject]"))
     ov))
 
-;;;; org-ai extensions
-
-(defun im-ai-remove-answers (&optional beginning)
-  (interactive)
-  (save-excursion
-    (let ((start (progn
-                   (goto-char (or beginning (point-min)))
-                   (re-search-forward "^\\[AI_?\\w*\\]: ")
-                   (beginning-of-line)
-                   (point)))
-          (end (progn
-                 (or
-                  (when (re-search-forward "^#\\+end_ai" nil t)
-                    (beginning-of-line)
-                    (point))
-                  (point-max)))))
-      (when (and start end)
-        (delete-region start end)))))
-
-(defun im-ai-toggle-gpt-model-on-ai-block ()
-  "Toggle GPT model of current org-ai block.
-Also removes the answers, if user wants it."
-  (interactive)
-  (save-excursion
-    (when (re-search-backward
-           "#\\+begin_ai markdown :service \"\\([a-zA-Z0-9_-]+\\)\" :model \"\\([a-zA-Z0-9_\\.-]+\\)\""
-           nil t)
-      (-let* ((match-start (match-beginning 0))
-              (match-end (match-end 0))
-              (current-model (match-string 1))
-              (current-service (match-string 2))
-              ((service model) (im-ai--select-model)))
-        (replace-match
-         (format "#+begin_ai markdown :service \"%s\" :model \"%s\"" service model)
-         nil nil)
-        (when (y-or-n-p "Want to remove AI answers?")
-          (im-ai-remove-answers match-start))))))
-
 ;;;; Interactive utils
 
 (defun im-ai-switch-model ()
   "Switch to another model, changes default model for `org-ai' and `gptel' too."
   (interactive)
-  (-let (((service model) (im-ai--select-model)))
-    (setq im-ai-service service)
-    (setq im-ai-model model)
-    ;; GPTEL
-    (setq gptel-backend (im-ai--get-gptel-backend service))
-    (setq gptel-model (intern model))
-    ;; ORG-AI
-    (setq org-ai-default-chat-model model)
-    (message ">> Model is set to %s" model)))
+  (-let* ((models-alist (im-ai--gptel-all-models))
+          (completion-extra-properties
+           `(:annotation-function
+             ,(lambda (comp)
+                (let* ((model (nth 2 (assoc comp models-alist)))
+                       (desc (get model :description))
+                       (caps (get model :capabilities))
+                       (context (get model :context-window))
+                       (input-cost (get model :input-cost))
+                       (output-cost (get model :output-cost))
+                       (cutoff (get model :cutoff-date)))
+                  (when (or desc caps context input-cost output-cost cutoff)
+                    (concat
+                     (propertize " " 'display `(space :align-to 40))
+                     (when desc (truncate-string-to-width desc 70 nil ? t t))
+                     " " (propertize " " 'display `(space :align-to 112))
+                     (when caps (truncate-string-to-width (prin1-to-string caps) 21 nil ? t t))
+                     " " (propertize " " 'display `(space :align-to 134))
+                     (when context (format "%5dk" context))
+                     " " (propertize " " 'display `(space :align-to 142))
+                     (when input-cost (format "$%5.2f in" input-cost))
+                     (if (and input-cost output-cost) "," " ")
+                     " " (propertize " " 'display `(space :align-to 153))
+                     (when output-cost (format "$%6.2f out" output-cost))
+                     " " (propertize " " 'display `(space :align-to 166))
+                     cutoff))))))
+          ((backend model) (cdr (assoc (completing-read
+                                        (format "Select model (current=%s): "
+                                                (im-ai--format-model-name))
+                                        models-alist nil t nil nil)
+                                       models-alist))))
+    (setq-default gptel-backend backend)
+    (setq-default gptel-model model)
+    (setq gptel-backend backend)
+    (setq gptel-model model)
+    (message ">> Model is set to %s" (im-ai--format-model-name backend model))))
 
 (defun im-ai-next-block ()
   "Move cursor to the next prompt/response."
@@ -861,11 +661,6 @@ consideration."
                   (s-downcase backend-name))
    gptel--known-backends nil nil
    (lambda (x y) (equal (s-downcase x) (s-downcase y)))))
-
-(defun im-ai--select-model ()
-  (thread-last
-    (completing-read (format "Select a model (%s:%s): " im-ai-service im-ai-model) im-ai-models)
-    (s-split ":")))
 
 ;;;; GPTEL
 
@@ -996,6 +791,20 @@ buffer."
   (im-ai--gptel-update-bounds)
   (gptel-mode 1))
 
+;;;;; Utils
+
+(defun im-ai--format-model-name (&optional backend model)
+  (format "%s:%s" (gptel-backend-name (or backend gptel-backend)) (or model gptel-model)))
+
+(defun im-ai--gptel-all-models ()
+  "Return all models as string in Backend:Model-Name format."
+  (cl-loop
+   for (name . backend) in gptel--known-backends
+   nconc (cl-loop for model in (gptel-backend-models backend)
+                  collect (list (concat name ":" (gptel--model-name model))
+                                backend model))
+   into models-alist finally return models-alist))
+
 ;;;;; Tools
 
 (with-eval-after-load 'gptel
@@ -1008,18 +817,55 @@ buffer."
                  (let ((default-directory (im-current-project-root)))
                    (write-region contents nil fname)
                    (when-let* ((buff (find-buffer-visiting fname)))
-
                      (with-current-buffer buff
                        (revert-buffer)))
                    "File written successfully.")))
-   :description "Write given text to file."
+   :description "Write given text to file. Replaces whole file with given text if file already exists."
    :args '((:name "contents"
             :type string
             :description "Text contents to write into the file")
            (:name "file_path"
             :type string
             :description "Path to the file. Path is relative to the current project's root."))
-   :category "files")
+   :category "files_mutative")
+
+  (gptel-make-tool
+   :name "write_file_range"
+   :function (lambda (contents fname start &optional end)
+               (message "gptel :: write_file_range(%s, %d, %s)" fname start (if end (number-to-string end) "nil"))
+               (if (or (s-blank? contents) (s-blank? fname))
+                   "Operation failed: contents and/or file_path can't be empty."
+                 (let ((default-directory (im-current-project-root)))
+                   (when (file-exists-p fname)
+                     (with-current-buffer (find-file-noselect fname)
+                       (save-excursion
+                         (goto-char (point-min))
+                         (forward-line (1- start))
+                         (if end
+                             (delete-region
+                              (point)
+                              (progn
+                                (forward-line (- end start))
+                                (end-of-line)
+                                (point))))
+                         (insert contents)
+                         (save-buffer))))
+                   "File updated successfully.")))
+   :description "Replace a range of lines in a file or insert at a specific line if end is omitted. Prefer this instead of replacing whole files."
+   :args '((:name "contents"
+            :type string
+            :description "Text contents to write into the file")
+           (:name "file_path"
+            :type string
+            :description "Path to the file. Path is relative to the current project's root.")
+           (:name "start"
+            :type integer
+            :description "Starting line number.")
+           (:name "end"
+            :optional t
+            :type integer
+            :description "Ending line number (inclusive). If omitted, insert at start line."))
+   :category "files_mutative")
 
   (gptel-make-tool
    :name "mkdir"
@@ -1037,26 +883,7 @@ buffer."
    :args '((:name "directory"
             :type string
             :description "Relative path of the directory to create."))
-   :category "files")
-
-  (gptel-make-tool
-   :name "read_file"
-   :function (lambda (filepath)
-               (message "gptel :: read_file(%s)" filepath)
-               (if (s-blank? filepath)
-                   "Operation failed: file_path can't be empty."
-                 (let ((default-directory (im-current-project-root)))
-                   (with-temp-buffer
-                     (insert-file-contents filepath)
-                     (goto-char (point-min))
-                     (forward-line 500)
-                     (end-of-line)
-                     (buffer-substring-no-properties (point-min) (point))))))
-   :description "Return the contents of the file. This gives you at most 500 lines. Use read_file_lines for more control."
-   :args '((:name "file_path"
-            :type string
-            :description "Path to the file. Path is relative to the current project's root."))
-   :category "files")
+   :category "files_mutative")
 
   (gptel-make-tool
    :name "read_file_lines"
@@ -1071,18 +898,21 @@ buffer."
                    (with-temp-buffer
                      (insert-file-contents filepath)
                      (let ((start-pos (progn (goto-char (point-min)) (forward-line (1- start-line)) (point)))
-                           (end-pos (progn (goto-char (point-min)) (forward-line end-line) (point))))
-                       (buffer-substring-no-properties start-pos end-pos))))))
+                           (end-pos (progn (goto-char (point-min)) (forward-line (1- end-line)) (point))))
+                       (concat
+                        (format "<file_lines start_line=%s end_line=%s>\n" start-line end-line)
+                        (buffer-substring-no-properties start-pos end-pos)
+                        "\n</file_lines>"))))))
    :description "Return the contents of the file from start_line to end_line (inclusive)."
    :args '((:name "file_path"
             :type string
             :description "Path to the file. Path is relative to the current project's root.")
            (:name "start_line"
             :type integer
-            :description "Starting line number (1-based).")
+            :description "Starting line number.")
            (:name "end_line"
             :type integer
-            :description "Ending line number (1-based, >= start_line)."))
+            :description "Ending line number."))
    :category "files")
 
   (gptel-make-tool
@@ -1106,18 +936,45 @@ buffer."
                    (make-process
                     :name "*gptel-grep*"
                     :buffer buf
-                    :command `("rg" "--vimgrep" ,regexp)
+                    :command `("rg" "--vimgrep" "--no-column" ,regexp)
                     :sentinel (lambda (proc _)
                                 (when (eq (process-status proc) 'exit)
                                   (with-current-buffer buf
                                     (funcall callback (buffer-string)))
                                   (kill-buffer buf)))))))
-   :description "Run grep inside the project."
+   :description "Run grep inside the project. Every match includes file name and file line number."
    :async t
    :args '((:name "regexp"
             :type string
             :description "Regexp to search inside the project."))
    :category "files")
+
+  ;; (gptel-make-tool
+  ;;  :name "ast_grep_project"
+  ;;  :function (lambda (callback pattern lang)
+  ;;              (message "gptel :: ast_grep_project(%s, %s)" pattern lang)
+  ;;              (if (s-blank? pattern)
+  ;;                  "Operation failed: pattern can't be blank."
+  ;;                (let ((default-directory (im-current-project-root))
+  ;;                      (buf (generate-new-buffer "*gptel-ast-grep*")))
+  ;;                  (make-process
+  ;;                   :name "*gptel-grep*"
+  ;;                   :buffer buf
+  ;;                   :command `("ast-grep" "--lang" ,lang "--pattern" ,pattern)
+  ;;                   :sentinel (lambda (proc _)
+  ;;                               (when (eq (process-status proc) 'exit)
+  ;;                                 (with-current-buffer buf
+  ;;                                   (funcall callback (buffer-string)))
+  ;;                                 (kill-buffer buf)))))))
+  ;;  :description "Run ast-grep inside the project. whenever a search requires syntax-aware or structural matching, use this tool."
+  ;;  :async t
+  ;;  :args '((:name "pattern"
+  ;;           :type string
+  ;;           :description "ast-grep pattern, like $A && $A($B) for finding expressions like Array.isArray && Array.isArray(something)")
+  ;;          (:name "lang"
+  ;;           :type string
+  ;;           :description "Language like rust, typescript etc.") )
+  ;;  :category "files")
 
   (gptel-make-tool
    :name "get_webpage_contents"
@@ -1205,10 +1062,19 @@ buffer."
 ;;;;; Presets
 
 (with-eval-after-load 'gptel
+  (gptel-make-preset 'default
+    :system "You are a large language model living in Emacs and a helpful assistant. Respond concisely."
+    :backend "Claude"
+    :model 'claude-sonnet-4-5-20250929
+    :confirm-tool-calls t
+    :tools '("web" "elisp")
+    :use-tools t
+    :include-tool-results t)
+
   (gptel-make-preset 'research-agent
     :system im-ai-research-prompt
     :backend "ChatGPT"
-    :model 'gpt-4o-mini
+    :model 'gpt-5-mini
     :confirm-tool-calls nil
     :tools '("web")
     :use-tools t
@@ -1217,7 +1083,7 @@ buffer."
   (gptel-make-preset 'coding-helper-agent
     :system im-ai-programming-agent-prompt
     :backend "ChatGPT"
-    :model 'gpt-4.1
+    :model 'gpt-5.1
     :confirm-tool-calls nil
     :tools '("web")
     :use-tools t
@@ -1226,7 +1092,7 @@ buffer."
   (gptel-make-preset 'elisp-coding-helper-agent
     :system im-ai-programming-agent-prompt
     :backend "ChatGPT"
-    :model 'gpt-4.1
+    :model 'gpt-5.1
     :confirm-tool-calls nil
     :tools '("web" "elisp")
     :use-tools t
@@ -1235,18 +1101,18 @@ buffer."
   (gptel-make-preset 'coding-agent
     :system im-ai-programming-agent-prompt
     :backend "ChatGPT"
-    :model 'gpt-4.1
+    :model 'gpt-5.1
     :confirm-tool-calls nil
-    :tools '("web" "files")
+    :tools '("web" "files" "files_mutative")
     :use-tools t
     :include-tool-results t)
 
   (gptel-make-preset 'elisp-coding-agent
     :system im-ai-programming-agent-prompt
     :backend "ChatGPT"
-    :model 'gpt-4.1
+    :model 'gpt-5.1
     :confirm-tool-calls nil
-    :tools '("web" "files" "elisp")
+    :tools '("web" "files" "files_mutative" "elisp")
     :use-tools t
     :include-tool-results t))
 
