@@ -124,15 +124,20 @@
   (im-git-status :window-conf im-git-status--old-window-conf)
   (message ">> Reloaded."))
 
+(defun im-git--cmd-to-string (cmd &rest rest)
+  (with-temp-buffer
+    (apply #'call-process cmd nil t nil rest)
+    (buffer-string)))
+
 ;;;###autoload
 (cl-defun im-git-status (&key window-conf)
   (interactive)
+  (setq im-git-status--old-window-conf (or window-conf (current-window-configuration)))
   (let* ((default-directory (im-current-project-root))
-         (diff (shell-command-to-string "git diff"))
+         (diff (im-git--cmd-to-string "git" "diff"))
          (dbuff (im-get-reset-buffer im-git-status-buffer)))
-    (setq im-git-status--old-window-conf (or window-conf (current-window-configuration)))
     (when (s-blank? diff)
-      (if (s-blank? (shell-command-to-string "git diff --staged"))
+      (if (s-blank? (im-git--cmd-to-string "git" "diff" "--staged"))
           (message ">> Nothing changed")
         (when (y-or-n-p ">> All changes are staged.  Commit?")
           (im-git-commit :window-conf im-git-status--old-window-conf)))
@@ -141,6 +146,7 @@
       (erase-buffer)
       (insert diff)
       (im-git-diff-mode)
+      (setq header-line-format (concat "Git Status :: " (s-trim (im-git--cmd-to-string "git" "diff" "--shortstat"))))
       (switch-to-buffer dbuff)
       (delete-other-windows))))
 
@@ -310,7 +316,7 @@ finishes or discard you want to restore an older window
 configuration, pass it as WINDOW-CONF."
   (interactive)
   (let* ((default-directory (im-current-project-root))
-         (diff (shell-command-to-string "git diff --staged"))
+         (diff (im-git--cmd-to-string "git" "diff" "--staged"))
          (commit-buffer (im-get-reset-buffer im-git-commit-message-buffer)))
     (when (and (s-blank? diff) (not (y-or-n-p "> Nothing staged.  Still want to commit?")))
       (user-error ">> Commit aborted"))
@@ -331,6 +337,7 @@ configuration, pass it as WINDOW-CONF."
     (im-git-staged-diff-mode)
     (goto-char (point-min))
     (setq-local diff-vc-backend 'Git)
+    (setq header-line-format (concat "Staged :: " (s-trim (im-git--cmd-to-string "git" "diff" "--staged" "--shortstat"))))
     (current-buffer)))
 
 (defun im-git-commit-reload ()
@@ -510,7 +517,7 @@ configuration, pass it as WINDOW-CONF."
          :on-toggle
          (lambda (state)
            (when (and (equal state "yes") (y-or-n-p "Use old commit message?"))
-             (im-git-commit--reset-message (s-trim (shell-command-to-string "git log -1 --pretty=%B"))))))
+             (im-git-commit--reset-message (s-trim (im-git--cmd-to-string "git" "log" "-1" "--pretty=%B"))))))
         (insert "\n")
         (insert im-git-commit-config-prefix " Author: AUTHOR_NAME <AUTHOR_MAIL>\n")
         (insert im-git-commit-config-prefix " Tag: ")
@@ -791,7 +798,7 @@ CALLBACK will be called with the selected commit ref."
   (let ((buffer-name "*im-git-amend*")
         (message (read-string
                   "Message: "
-                  (s-trim (shell-command-to-string "git log -1 --pretty=%B")))))
+                  (s-trim (im-git--cmd-to-string "git" "log" "-1" "--pretty=%B")))))
     (im-shell-command
      :command "git"
      :args `("commit" "--amend" "-m" ,message)

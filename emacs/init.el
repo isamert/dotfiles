@@ -913,6 +913,11 @@ side window the only window'"
 (with-eval-after-load 'woman
   (evil-collection-woman-setup))
 
+(with-eval-after-load 'man
+  (when (eq system-type 'darwin)
+    (setq Man-sed-command "gsed"))
+  (evil-collection-man-setup))
+
 (with-eval-after-load 'custom
   (evil-collection-custom-setup))
 
@@ -5824,7 +5829,7 @@ this command is invoked from."
    (after-init . yas-global-mode)))
 
 (use-package yankpad
-  :straight (:host github :repo "isamert/yankpad")
+  :straight (:host github :repo "Kungsgeten/yankpad")
   :after (org yasnippet)
   :autoload (yankpad--categories yankpad--snippets)
   :general
