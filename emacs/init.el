@@ -3010,6 +3010,12 @@ Version: 2023-06-28
                      ("integration" "integration/*")
                      (:exclude ".dir-locals.el" "*-tests.el")))
   :autoload (eat-make)
+  :general
+  (im-leader-v
+    "tj" #'im-jump-to-visible-term
+    "tl" #'im-run-last-command-on-visible-term
+    "ty" #'im-send-selected-text-to-visible-term
+    "tr" #'im-run-command-on-visible-term-with-history)
   :config
   (setq eat-term-scrollback-size nil)
   (setq eat-enable-shell-prompt-annotation nil)
@@ -3020,8 +3026,65 @@ Version: 2023-06-28
   ;; While writing, eat buffers sometimes jump around for some unknown
   ;; reason. I realized that truncating lines helps with that.
   (add-hook 'eat-mode-hook #'toggle-truncate-lines)
-  (eat-eshell-mode)
-  (eat-eshell-visual-command-mode))
+  (eat-eshell-mode))
+
+;;;;;; Utility functions
+
+(defvar im-terminal-buffer-name-regexp "\\*?\\$?\\(e?shell\\|v?term\\|eat\\|cursor-agent\\).*")
+
+(defun im-run-last-command-on-visible-term ()
+  (interactive)
+  (save-buffer)
+  (im-with-visible-buffer im-terminal-buffer-name-regexp
+    (pcase major-mode
+      ('eshell-mode  (eshell-previous-matching-input "" 0)
+                     (eshell-send-input))
+      ('eat-mode (eat-self-input 1 (aref (kbd "<up>") 0))
+                 (eat-self-input 1 (aref (kbd "RET") 0)))
+      ('vterm-mode (vterm-send-up)
+                   (vterm-send-return)
+                   t))))
+
+(defun im-run-command-on-visible-term (cmd)
+  (im-with-visible-buffer im-terminal-buffer-name-regexp
+    (pcase major-mode
+      ('eshell-mode  (insert cmd)
+                     (eshell-send-input))
+      ('eat-mode
+       (eat--send-string (eat-term-parameter eat-terminal 'eat--process) cmd)
+       (eat-self-input 1 (aref (kbd "RET") 0)))
+      ('vterm-mode (vterm-send-string cmd)
+                   (vterm-send-return))))
+  cmd)
+
+(defun im-send-selected-text-to-visible-term (start end)
+  (interactive "r")
+  (if (use-region-p)
+      (im-run-command-on-visible-term (buffer-substring-no-properties start end))
+    (im-run-command-on-visible-term (s-trim (thing-at-point 'line t)))))
+
+(defvar im-term-run-history '())
+(defvar im-jump-to-term-last-window nil)
+
+(defun im-jump-to-visible-term ()
+  "Jump to the visible term window.
+When invoked in a term window, return back to last window that
+this command is invoked from."
+  (interactive)
+  (cond
+   ((string-match im-terminal-buffer-name-regexp (buffer-name (window-buffer (selected-window))))
+    (select-window im-jump-to-term-last-window))
+   (t
+    (setq im-jump-to-term-last-window (selected-window))
+    (im-select-window-with-buffer im-terminal-buffer-name-regexp))))
+
+(defun im-run-command-on-visible-term-with-history ()
+  (interactive)
+  (let ((cmd (im-run-command-on-visible-term
+              (completing-read "Run new command: " im-term-run-history))))
+    (when cmd
+      (setq im-term-run-history (cons cmd (delete cmd im-term-run-history))))))
+
 
 ;;;;;; Send a notification for long running commands
 
@@ -4845,9 +4908,9 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
     "eshell project" → (im-shell-for 'project nil nil "eshell")
     "eshell dir" → (im-shell-for 'dir nil nil "eshell")
     "eshell new" → (call-interactively #'im-eshell)
-    "vterm project" → (im-shell-for 'project nil #'im--new-vterm "vterm")
-    "vterm dir" → (im-shell-for 'dir nil #'im--new-vterm "vterm")
-    "vterm new" → (call-interactively #'im-vterm)))
+    "eat project" → (im-shell-for 'project nil #'im--new-eat "eat")
+    "eat dir" → (im-shell-for 'dir nil #'im--new-eat "eat")
+    "eat new" → (call-interactively #'im-eat)))
 
 (defun im--suggest-shell-name (type)
   (format "$%s: %s/%s" type (im-current-project-name)
@@ -4855,12 +4918,10 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
               (buffer-name)
             (symbol-name major-mode))))
 
-(defun im-vterm (name)
+(defun im-eat (name)
   "Like `im-eshell'."
-  (interactive (list (read-string "Buffer name: " (format "$vterm: %s/%s" (im-current-project-name) (buffer-name)))))
-  (require 'vterm)
-  (let* ((vterm-buffer-name name))
-    (vterm t)))
+  (interactive (list (read-string "Buffer name: " (im--suggest-shell-name "eat"))))
+  (switch-to-buffer (im--new-eat name)))
 
 (defun im-eshell (name)
   (interactive (list (read-string "Buffer name: " (generate-new-buffer-name (format "*$eshell: %s*" (im-current-project-name))))))
@@ -4868,11 +4929,11 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
     (rename-buffer name t)
     (current-buffer)))
 
-(defun im--new-vterm (name)
-  (require 'vterm)
+(defun im--new-eat (name)
+  (require 'eat)
   (save-window-excursion
-    (let ((vterm-buffer-name name))
-      (vterm t))))
+    (let ((eat-buffer-name name))
+      (eat))))
 
 (defun im-terminal-vertically ()
   (interactive)
@@ -4890,9 +4951,9 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 
 (im-leader "2" #'im-term)
 (bind-key "<f2>" (λ-interactive (im-shell-for "~" 'top nil "eshell")))
-(bind-key "S-<f2>" (λ-interactive (im-shell-for "~" 'top #'im--new-vterm)))
+(bind-key "S-<f2>" (λ-interactive (im-shell-for "~" 'top #'im--new-eat)))
 (bind-key "<f3>" (λ-interactive (im-shell-for 'project 'bottom nil "eshell")))
-(bind-key "S-<f3>" (λ-interactive (im-shell-for 'project 'bottom #'im--new-vterm)))
+(bind-key "S-<f3>" (λ-interactive (im-shell-for 'project 'bottom #'im--new-eat)))
 
 ;;;;; xref
 
@@ -5642,103 +5703,6 @@ SORT should be nil to disable sorting."
                   (val (nth 4 var)))
               (message ">> Setting %s → %s" key val)
               (setenv key val t)))))))
-
-;;;;; vterm
-
-;; Also check out =~/.zshrc= and =~/.config/zsh/emacs.sh=. These files
-;; contains some helpful commands that enriches ~vterm~ usage.
-
-;; Use =C-z= to go in/out (you can also use =jk= to go back into
-;; normal mode from emacs mode) emacs state so that you can make use
-;; of use vi-mode in zsh.
-
-(im-make-repeatable im-vterm-prompt
-  "[" vterm-previous-prompt
-  "]" vterm-next-prompt)
-
-(use-package vterm
-  :hook ((vterm-mode . im-disable-hl-line-mode-for-buffer))
-  :general
-  (im-leader-v
-    "tj" #'im-jump-to-visible-term
-    "tl" #'im-run-last-command-on-visible-term
-    "ty" #'im-send-selected-text-to-visible-term
-    "tr" #'im-run-command-on-visible-term-with-history)
-  (:keymaps 'vterm-mode-map :states 'insert
-   "C-r" #'vterm--self-insert
-   "M-\\" #'vterm--self-insert
-   "M--" #'vterm--self-insert
-   "C-c" #'vterm--self-insert
-   "C-x" #'vterm--self-insert)
-  :init
-  :config
-  (evil-collection-vterm-setup)
-
-  ;; Setting screen as the terminal fixes some of vterm's problems, as
-  ;; described here[1] but it creates some other problems like when
-  ;; the screen size changes, some of the scrollback gets deleted etc.
-  ;; [1]: https://github.com/akermu/emacs-libvterm/issues/179#issuecomment-1045331359
-
-  (setq vterm-max-scrollback 100000)
-  (setq vterm-shell (executable-find "fish"))
-  (setq vterm-kill-buffer-on-exit t))
-
-;;;;;; Utility functions
-
-(defvar im-terminal-buffer-name-regexp "\\*?\\$?\\(e?shell\\|v?term\\|eat\\|cursor-agent\\).*")
-
-(defun im-run-last-command-on-visible-term ()
-  (interactive)
-  (save-buffer)
-  (im-with-visible-buffer im-terminal-buffer-name-regexp
-    (pcase major-mode
-      ('eshell-mode  (eshell-previous-matching-input "" 0)
-                     (eshell-send-input))
-      ('eat-mode (eat-self-input 1 (aref (kbd "<up>") 0))
-                 (eat-self-input 1 (aref (kbd "RET") 0)))
-      ('vterm-mode (vterm-send-up)
-                   (vterm-send-return)
-                   t))))
-
-(defun im-run-command-on-visible-term (cmd)
-  (im-with-visible-buffer im-terminal-buffer-name-regexp
-    (pcase major-mode
-      ('eshell-mode  (insert cmd)
-                     (eshell-send-input))
-      ('eat-mode
-       (eat--send-string (eat-term-parameter eat-terminal 'eat--process) cmd)
-       (eat-self-input 1 (aref (kbd "RET") 0)))
-      ('vterm-mode (vterm-send-string cmd)
-                   (vterm-send-return))))
-  cmd)
-
-(defun im-send-selected-text-to-visible-term (start end)
-  (interactive "r")
-  (if (use-region-p)
-      (im-run-command-on-visible-term (buffer-substring-no-properties start end))
-    (im-run-command-on-visible-term (s-trim (thing-at-point 'line t)))))
-
-(defvar im-term-run-history '())
-(defvar im-jump-to-term-last-window nil)
-
-(defun im-jump-to-visible-term ()
-  "Jump to the visible term window.
-When invoked in a term window, return back to last window that
-this command is invoked from."
-  (interactive)
-  (cond
-   ((string-match im-terminal-buffer-name-regexp (buffer-name (window-buffer (selected-window))))
-    (select-window im-jump-to-term-last-window))
-   (t
-    (setq im-jump-to-term-last-window (selected-window))
-    (im-select-window-with-buffer im-terminal-buffer-name-regexp))))
-
-(defun im-run-command-on-visible-term-with-history ()
-  (interactive)
-  (let ((cmd (im-run-command-on-visible-term
-              (completing-read "Run new command: " im-term-run-history))))
-    (when cmd
-      (setq im-term-run-history (cons cmd (delete cmd im-term-run-history))))))
 
 ;;;;; simple-modeline
 
@@ -8766,12 +8730,13 @@ When called with prefix argument, REPLACE becomes non-nil."
 Please note that tab-completion for runtime dependencies *do not*
 work.  You need to enter full path while importing by yourself."
   (interactive)
+  (require 'eat)
   (let* ((default-directory (im-current-project-root))
-         (vterm-shell "mvn -q com.github.johnpoth:jshell-maven-plugin:1.3:run -DtestClasspath")
+         (eat-shell "mvn -q com.github.johnpoth:jshell-maven-plugin:1.3:run -DtestClasspath")
          ;; ^ This plugin makes it possible to import project's maven dependencies
          ;; another option is to use jshell directly.
-         (vterm-buffer-name "*vterm-jshell*"))
-    (vterm)))
+         (eat-buffer-name "*$eat: jshell*"))
+    (eat)))
 
 ;;;;; clojure
 

@@ -45,7 +45,6 @@
 (require 'dash)
 (require 'vtable)
 (require 'page-break-lines)
-(require 'vterm)
 
 (require 'im)
 
@@ -328,8 +327,8 @@
 
 (defun im-kube-pod--logs-follow (pod &optional container)
   (let ((container (or container (im-kube-pod--select-container pod))))
-    (with-current-buffer (vterm (format "$pod: %s" (plist-get pod :name)))
-      (vterm-insert
+    (with-current-buffer (im-eshell (format "$pod: %s" (plist-get pod :name)))
+      (insert
        (im-kill (format "kubectl logs %s -f %s --container='%s' --context='%s'"
                         (plist-get pod :name)
                         (plist-get pod :namespace)
@@ -350,8 +349,8 @@
 
 (defun im-kube-pod--exec-into-container (pod &optional container)
   (let ((container (or container (im-kube-pod--select-container pod))))
-    (with-current-buffer (im-vterm (format "$pod: %s" (plist-get pod :name)))
-      (vterm-insert
+    (with-current-buffer (im-eshell (format "$pod: %s" (plist-get pod :name)))
+      (insert
        (im-kill (format "kubectl exec %s --container='%s' -i -t '%s' --context='%s' -- bash"
                         (plist-get pod :namespace)
                         container
