@@ -217,6 +217,21 @@ Answer the user's request using the relevant tool(s), if they are available. Che
 
 (defconst im-ai--block-start-regexp "^\\[\\(ME\\|AI\\|AI_REASON\\)\\]:")
 
+;;;; gptel utils
+
+(defun im-ai--format-model-name (&optional backend model)
+  (format "%s:%s" (gptel-backend-name (or backend gptel-backend)) (or model gptel-model)))
+
+(defun im-ai--gptel-all-models ()
+  "Return all models as string in Backend:Model-Name format."
+  (cl-loop
+   for (name . backend) in gptel--known-backends
+   nconc (cl-loop for model in (gptel-backend-models backend)
+                  collect (list (concat name ":" (gptel--model-name model))
+                                backend model))
+   into models-alist finally return models-alist))
+
+
 ;;;; im-ai-context
 
 (defvar im-ai--typescript-treesit-typescript-toplevel-query
@@ -790,20 +805,6 @@ buffer."
   (gptel-mode -1)
   (im-ai--gptel-update-bounds)
   (gptel-mode 1))
-
-;;;;; Utils
-
-(defun im-ai--format-model-name (&optional backend model)
-  (format "%s:%s" (gptel-backend-name (or backend gptel-backend)) (or model gptel-model)))
-
-(defun im-ai--gptel-all-models ()
-  "Return all models as string in Backend:Model-Name format."
-  (cl-loop
-   for (name . backend) in gptel--known-backends
-   nconc (cl-loop for model in (gptel-backend-models backend)
-                  collect (list (concat name ":" (gptel--model-name model))
-                                backend model))
-   into models-alist finally return models-alist))
 
 ;;;;; Tools
 
