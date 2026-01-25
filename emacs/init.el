@@ -2543,22 +2543,6 @@ breaks and joining the lines together.  This function relies on
   "ok" #'im-org-new-todo
   "oK" #'im-org-new-heading)
 
-;;;;; org-transclusion
-
-;; My main use case for
-;; [[https://github.com/nobiot/org-transclusion][org-transclusion]] is
-;; that I sometimes create curated lists of other headings and instead
-;; of simply inserting standard links, I convert them into
-;; org-transclusion directives. This way I can directly view linked
-;; content on the spot. Especially useful for meeting notes.
-
-
-(use-package org-transclusion
-  :general
-  (im-leader :keymaps 'org-mode-map
-    "of" #'org-transclusion-add
-    "oF" #'org-transclusion-remove))
-
 ;;;;; Capture changed headings on save
 
 ;; Sometimes, I want to capture which headings are changed on save and
