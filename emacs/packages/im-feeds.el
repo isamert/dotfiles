@@ -13,19 +13,18 @@
 (defvar im-feeds
   `((,im-github-feed-link personal)
     (,im-reddit-feed-link personal)
-    ("https://mail.google.com/mail/feed/atom" personal)
-    ;; ^ This requires an app password set in ~/.netrc
 
-    ("https://t24.com.tr/rss/haber/gundem" news turkish)
-    ("https://t24.com.tr/rss/haber/politika" news turkish)
+    ;; News
+    ("https://t24.com.tr/rss/haber/gundem" news turkish noisy)
     ("https://t24.com.tr/rss/haber/dunya" news turkish)
-    ("https://t24.com.tr/rss/haber/ekonomi" news turkish)
+    ("https://www.sciencedaily.com/rss/most_popular.xml" news noisy sciencedaily)
+    ("https://www.sciencedaily.com/rss/health_medicine/alternative_medicine.xml" news health sciencedaily)
+    ("https://www.sciencedaily.com/rss/mind_brain/add_and_adhd.xml" news health sciencedaily)
+    ("https://www.sciencedaily.com/rss/mind_brain/intelligence.xml" news health sciencedaily)
+    ("https://www.upvote-rss.com/?platform=lemmy&instance=lemmy.world&community=Technology&averagePostsPerDay=5&showScore=&content=&summary=&comments=5&view=rss" upvote lemmy news tech) ;; Lemmy Technology
+    ("https://www.upvote-rss.com/?platform=lemmy&instance=lemmy.world&community=fuck_ai&score=10&showScore=&content=&summary=&comments=5&view=rss" upvote ai news tech)
 
-    ("https://hnrss.org/frontpage" news)
-
-    ("https://www.archlinux.org/feeds/news/" update linux)
-    ("https://blog.tecosaur.com/tmio/rss.xml" update emacs)
-
+    ;; Blogs
     ("https://karl-voit.at/feeds/lazyblorg-all.atom_1.0.links-only.xml" blog pim emacs)
     ("http://aecepoglu.com/posts/index.xml" blog dev turkish soostone)
     ("http://nullprogram.com/feed/" blog dev)
@@ -33,7 +32,6 @@
     ("https://karthinks.com/index.xml" blog dev emacs)
     ("https://eli.thegreenplace.net/feeds/all.atom.xml" blog dev)
     ("https://drewdevault.com/feed.xml" blog dev)
-    ;; DOWN: ("https://haskell-explained.gitlab.io/blog/feeds/rss.xml" blog dev haskell)
     ("http://www.haskellforall.com/feeds/posts/default" blog dev haskell)
     ("https://chrispenner.ca/atom.xml" blog dev haskell)
     ("https://emacsredux.com/atom.xml" blog emacs)
@@ -43,15 +41,12 @@
     ("http://xion.io/feeds/atom.xml" blog dev rust)
     ("https://ag91.github.io/rss.xml" blog dev emacs)
     ("https://chrisdone.com/rss.xml" blog dev haskell)
-    ;; DOWN: ("https://notes.srid.ca/blog.xml" blog dev haskell)
     ("https://two-wrongs.com/feed" blog dev)
     ("https://beepb00p.xyz/rss.xml" blog dev)
     ("https://www.rousette.org.uk/index.xml" blog dev emacs essay)
     ("https://jao.io/blog/rss.xml" blog dev emacs)
     ("https://www.matem.unam.mx/~omar/apropos-emacs.xml" blog emacs)
-    ;; DOWN: ("https://psachin.gitlab.io/index.xml" blog dev emacs lisp)
     ("https://fuco1.github.io/rss.xml" blog dev emacs lisp)
-    ;; DOWN: ("https://old.reddit.com/r/gwern/search.rss?q=flair:'Gwern'&sort=new&restrict_sr=on" blog essay) ;; Gwern
     ("https://www.lesswrong.com/feed.xml?view=curated-rss" blog essay)
     ("https://writings.stephenwolfram.com/feed/" blog essay)
     ("https://astralcodexten.substack.com/feed" blog essay) ;; Scott Alexander
@@ -59,10 +54,27 @@
     ("https://www.theinsight.org/feed" blog essay) ;; Zeynep Tufekci
     ("https://medium.com/feed/incerto" blog essay) ;; Nassim Nicholas Taleb
     ("https://www.cold-takes.com/rss" blog essay)
-    ;; ("https://jabberwocking.com/feed/" blog essay) ;; Kevin Drum
     ("https://fatmagulunyengesi.substack.com/feed" blog essay turkish)
     ("https://lukesmith.xyz/rss.xml" blog linux cli)
+    ("https://feeds.feedburner.com/GDBcode" blog dev) ;; google developer blog
 
+    ;; Discover
+    ("https://www.upvote-rss.com/?platform=lobsters&community=all&type=all&score=30&content=&view=rss" upvote news tech lobsters) ;; Lobsters > 30
+    ("https://www.upvote-rss.com/?platform=hacker-news&community=beststories&score=100&content=&summary=&comments=5&view=rss" upvote news tech hn) ;; HackerNews > 100
+    ("https://www.upvote-rss.com/?platform=github&language=elisp&score=10&showScore=&content=&summary=&view=rss" upvote  discover github emacs) ;; GitHub popular elisp
+    ("https://www.upvote-rss.com/?platform=github&averagePostsPerDay=3&showScore=&content=&summary=&view=rss" upvote discover github) ;; GitHub popular
+
+    ;; Reddit
+    ("emacs" reddit emacs)
+
+    ;; Music
+    ;; TODO: ...
+
+    ;; Movies
+    ("https://www.upvote-rss.com/?platform=lemmy&instance=lemmy.world&community=movies&score=100&showScore=&content=&summary=&comments=5&view=rss" upvote movies)
+    ("https://www.upvote-rss.com/?platform=lemmy&instance=lemmy.world&community=moviesuggestions&score=10&showScore=&content=&summary=&comments=5&view=rss" upvote movies)
+
+    ;; YouTube
     ("BlackMetalUpdates" youtube music metal black)
     ("XOdiumNostrumX" youtube music metal extreme)
     ("ForgottenChants" youtube music metal extreme folk)
@@ -70,13 +82,6 @@
     ("UCZQHDXu4JvsmptR86XDyaRQ" youtube music metal heavy classic) ;; Rare & Obsucre Metal Archives
     ("UCU7JpmRu-T0XdDseYb-JSTg" youtube music metal death) ;;UnknownMelodeath
     ("BangerTV" youtube music review)
-
-    ("commandline" reddit linux cli)
-    ("selfhosted" reddit linux cli)
-    ("orgmode" reddit emacs)
-    ("emacs" reddit emacs)
-    ("bspwm" reddit linux)
-
     ("UCyoQK-mZXr2ws4C0nXGCH1w" youtube philosophy) ;; Zero Books
     ("UCSkzHxIcfoEr69MWBdo0ppg" youtube philosophy) ;; Cuck philosophy
     ("thephilosophytube" youtube fun philosophy)
@@ -115,7 +120,9 @@
     ("UCB12vt2obajvkegtlpb_F8Q" youtube fun turkish) ;; Kalt
 
     ;; Software tracking
-    ("alphapapa/org-ql" gh-release app)))
+    ("alphapapa/org-ql" gh-release app)
+    ("https://www.archlinux.org/feeds/news/" update linux)
+    ("https://blog.tecosaur.com/tmio/rss.xml" update emacs)))
 
 ;; For easy updating:
 ;; (setq elfeed-feeds (mapcar #'im-elfeed--expand im-feeds))
