@@ -12949,13 +12949,16 @@ Throw error otherwise."
 (defun im-linux-select-audio-output ()
   (let ((sink
          (->>
-          (shell-command-to-string
-           "pactl list sinks | grep -E 'Name|device.description' | cut -d: -f2 | cut -d= -f2 | tr -d '\"'")
+          (shell-command-to-string "pactl list sinks")
           (s-trim)
           (s-split "\n")
           (mapcar #'s-trim)
+          (--filter (s-matches? "Name:\\|device.description = " it))
           (-partition 2)
           (mapcar #'nreverse)
+          (--map (-let (((description name) it))
+                   (list (s-trim (nth 1 (s-split-up-to "=" description 1)))
+                         (s-trim (nth 1 (s-split-up-to ":" name 1))))))
           (im-alist-completing-read "Select sink: ")
           car)))
     ;; Set default sink
