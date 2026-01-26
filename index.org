@@ -1962,6 +1962,12 @@ abbr -a -- kctxs-list 'kubectl config get-contexts --output=name'
 abbr -a -- kctx-use 'kubectl config use-context'
 #+end_src
 
+emacs-eat integration:
+
+#+begin_src fish :tangle ~/.config/fish/conf.d/eat.fish
+test -n "$EAT_SHELL_INTEGRATION_DIR" && source "$EAT_SHELL_INTEGRATION_DIR/fish"
+#+end_src
+
 ** Starship
 #+begin_src toml :tangle ~/.config/starship.toml
 [cmd_duration]
