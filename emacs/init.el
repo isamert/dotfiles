@@ -1426,6 +1426,8 @@ headers."
     "oh"  #'outline-show-only-headings
     "os"  #'org-schedule
     "od"  #'org-deadline
+    "of"  #'org-set-effort
+    "oF"  #'im-org-get-link-effort-at-point
     "ov"  #'org-babel-expand-src-block
     "oq"  #'im-org-tree-to-indirect-buffer
     "oQ"  #'im-org-link-to-indirect-buffer
