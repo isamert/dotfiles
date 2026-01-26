@@ -2464,7 +2464,10 @@ TODO state, prioritizing in-progress items."
   ;; Sort by creation time
   (org-sort-entries nil ?R nil nil "CREATED_AT")
   ;; Sort by Effort, the one with least effort is at top
-  (org-sort-entries nil ?R nil nil "Effort")
+  (org-sort-entries nil ?f (lambda ()
+                             (let* ((effort-str (org-entry-get nil "Effort"))
+                                    (effort-min (and effort-str (org-duration-to-minutes effort-str))))
+                               (or effort-min most-positive-fixnum))))
   ;; Sort by priority
   (org-sort-entries nil ?p)
   ;; Sort by TODO state, prioritizing in progress items.

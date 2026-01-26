@@ -57,6 +57,7 @@
     ("https://fatmagulunyengesi.substack.com/feed" blog essay turkish)
     ("https://lukesmith.xyz/rss.xml" blog linux cli)
     ("https://feeds.feedburner.com/GDBcode" blog dev) ;; google developer blog
+    ("https://www.seangoedecke.com/rss.xml" blog dev staff)
 
     ;; Discover
     ("https://www.upvote-rss.com/?platform=lobsters&community=all&type=all&score=30&content=&view=rss" upvote news tech lobsters) ;; Lobsters > 30
