@@ -5557,6 +5557,7 @@ SORT should be nil to disable sorting."
   (eglot-autoshutdown t)
   (eglot-events-buffer-size 0)
   (eglot-extend-to-xref nil)
+  (eglot-code-action-indicator "→")
   (eglot-ignored-server-capabilities
    '(:documentFormattingProvider
      :documentRangeFormattingProvider

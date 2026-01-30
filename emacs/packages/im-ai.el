@@ -852,7 +852,7 @@ buffer."
                          (insert contents)
                          (save-buffer))))
                    "File updated successfully.")))
-   :description "Replace a range of lines in a file or insert at a specific line if end is omitted. Prefer this instead of replacing whole files."
+   :description "Replace between START and END with CONTENTS. If END is omitted, then insert CONTENTS starting at START. Prefer this instead of writing whole files if possible."
    :args '((:name "contents"
             :type string
             :description "Text contents to write into the file")
