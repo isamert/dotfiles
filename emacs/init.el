@@ -655,7 +655,7 @@ Just a simple wrapper around `prettify-symbols-mode`"
   :hook (after-init . global-whitespace-mode)
   :config
   (setq whitespace-style '(face empty tabs trailing))
-  (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode eat-mode)))
+  (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode eat-mode agent-shell-mode)))
 
 (defun im-whitespace-mode-toggle ()
   "Toggle between more and less agressive whitespace modes.
@@ -6709,6 +6709,41 @@ Fetches missing channels/users first."
   "[" im-ai-previous-block
   "]" im-ai-next-block)
 
+;;;;; agent-shell
+
+
+;; cursor-cli and claude-code have external ACP implementations:
+;; cursor → npm install -g @blowmage/cursor-agent-acp
+;; claude-code → npm install -g @zed-industries/claude-code-acp
+
+;; Inside the agent-shell buffers:
+;; agent-shell-set-session-mode → Set the mode (plan, ask, agent etc.)
+;; agent-shell-set-session-model → The model; opus-4-5, sonnet-4-5, gpt-5.2 etc.
+
+(use-package agent-shell
+  :straight (:host github :repo "xenodium/agent-shell")
+  :custom (setq agent-shell-show-welcome-message nil)
+  :general
+  (im-leader
+    "tS" 'im-toggle-side-agent-buffer))
+
+(defun im-toggle-side-agent-buffer ()
+  (interactive)
+  (let* ((dir (im-current-project-root))
+         (buf (seq-find
+               (lambda (b)
+                 (when-let* ((f (with-current-buffer b default-directory)))
+                   (and (string-prefix-p dir (file-name-directory (expand-file-name f)))
+                        (string-match-p (regexp-quote "Agent @")
+                                        (buffer-name b)))))
+               (buffer-list))))
+    (if buf
+        (im-toggle-side-buffer-with-name buf)
+      (pcase (im-completing-read "Which agent?"
+                                 '("claude" "cursor"))
+        ("claude" (agent-shell-anthropic-start-claude-code))
+        ("cursor" (agent-shell-cursor-start-agent))))))
+
 ;;;;; tmr.el -- timers, reminders etc.
 
 ;; Pretty timers. I forget everything, so it's quite important for me
@@ -11246,12 +11281,14 @@ schedules them to today's date."
         (no-other-window . nil)))))
    nil))
 
-(defun im-remove-window-with-buffer (the-buffer-name)
-  "Remove window containing given THE-BUFFER-NAME."
-  (mapc (lambda (window)
-          (when (string-equal (buffer-name (window-buffer window)) the-buffer-name)
-            (delete-window window)))
-        (window-list (selected-frame))))
+(defun im-remove-window-with-buffer (buffer-or-name)
+  "Remove window containing given BUFFER-OR-NAME."
+  (let ((buf (get-buffer buffer-or-name)))
+    (when buf
+      (mapc (lambda (window)
+              (when (eq (window-buffer window) buf)
+                (delete-window window)))
+            (window-list (selected-frame))))))
 
 (defun im-toggle-side-buffer-with-file (file-path)
   "Toggle FILE-PATH in a side buffer.
