@@ -81,8 +81,10 @@
              (equal "notes" (im-tab-bar-current-tab-name)))
     (im-svgcal--set-entries)
     (unless (im-buffer-visible-p im-svgcal--buffer-name)
-      (im-display-buffer-in-side-window (get-buffer-create im-svgcal--buffer-name) 35)
-      (set-window-dedicated-p (get-buffer-window im-svgcal--buffer-name) t))
+      (let ((orig-win (selected-window)))
+        (im-display-buffer-in-side-window (get-buffer-create im-svgcal--buffer-name) 35)
+        (set-window-dedicated-p (get-buffer-window im-svgcal--buffer-name) t)
+        (select-window orig-win)))
     (im-svgcal-render-buffer)))
 
 (defun im-svgcal--set-entries ()
@@ -108,11 +110,12 @@
   (when im-svgcal--last-entries
     (with-current-buffer (get-buffer-create im-svgcal--buffer-name)
       (erase-buffer)
-      (insert "** svgcal **\n")
       (let ((svg (im-svgcal-render im-svgcal--last-entries)))
+        (setq-local cursor-type nil)
+        (when (boundp 'evil-normal-state-cursor)
+          (setq-local evil-normal-state-cursor '(nil)))
         (svg-insert-image svg)
-        (insert "\n")
-        (goto-char (point-min))
+        (goto-char (point-max))
         svg))))
 
 (defun im-svgcal-render (tasks)
