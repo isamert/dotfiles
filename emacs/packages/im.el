@@ -982,7 +982,11 @@ For async requests, simply provide a success handler:
     (im-request \"...\"
       :-on-success (cl-function
                   (lambda (&key data &allow-other-keys)
-                    ...use the parsed json DATA...)))"
+                    ...use the parsed json DATA...)))
+
+If you want to return a promise instead, make :-async? t. The result
+will be returned in a promise. :-on-success etc. has no use in this
+case."
   (declare (indent defun))
   (interactive (list (read-string "URL: ") :-raw t))
   (let (json)

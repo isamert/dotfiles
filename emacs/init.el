@@ -7587,6 +7587,17 @@ the commit buffer."
   (:states '(insert)
    "M-u" #'im-char-picker))
 
+;;;;; im-arr --- arr-stack functionality (radarr, sonarr etc.)
+
+;; Also see: orgmdb.el
+
+(use-package im-arr
+  :straight nil
+  :custom
+  (im-radarr-url im-homeserver-radarr-url)
+  (im-radarr-url im-homeserver-radarr-api-key))
+
+
 ;;;;; ereader --- ebook reader with org integration
 
 (use-package ereader
@@ -7654,7 +7665,7 @@ the commit buffer."
   :general
   (im-leader "mr" #'synosaurus-choose-and-replace)
   :custom
-  (setq synosaurus-choose-method nil))
+  (synosaurus-choose-method nil))
 
 (use-package wordnut
   :defer t)
