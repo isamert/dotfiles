@@ -17,12 +17,13 @@
     ;; News
     ("https://t24.com.tr/rss/haber/gundem" news turkish noisy)
     ("https://t24.com.tr/rss/haber/dunya" news turkish)
-    ("https://www.sciencedaily.com/rss/most_popular.xml" news noisy sciencedaily)
-    ("https://www.sciencedaily.com/rss/health_medicine/alternative_medicine.xml" news health sciencedaily)
-    ("https://www.sciencedaily.com/rss/mind_brain/add_and_adhd.xml" news health sciencedaily)
-    ("https://www.sciencedaily.com/rss/mind_brain/intelligence.xml" news health sciencedaily)
+    ("https://www.sciencedaily.com/rss/most_popular.xml" news noisy sciencedaily science)
+    ("https://www.sciencedaily.com/rss/health_medicine/alternative_medicine.xml" news health sciencedaily science)
+    ("https://www.sciencedaily.com/rss/mind_brain/add_and_adhd.xml" news health sciencedaily science)
+    ("https://www.sciencedaily.com/rss/mind_brain/intelligence.xml" news health sciencedaily science)
     ("https://www.upvote-rss.com/?platform=lemmy&instance=lemmy.world&community=Technology&averagePostsPerDay=5&showScore=&content=&summary=&comments=5&view=rss" upvote lemmy news tech) ;; Lemmy Technology
     ("https://www.upvote-rss.com/?platform=lemmy&instance=lemmy.world&community=fuck_ai&score=10&showScore=&content=&summary=&comments=5&view=rss" upvote ai news tech)
+    ("https://futurism.com/rss" futurism news tech science)
 
     ;; Blogs
     ("https://karl-voit.at/feeds/lazyblorg-all.atom_1.0.links-only.xml" blog pim emacs)

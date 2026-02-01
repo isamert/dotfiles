@@ -3458,7 +3458,7 @@ Return a (color color) list that can be used with :column-colors and
            (current-idle-time)
            (>= (time-to-seconds (current-idle-time)) 30))
       (im-ntfy-publish
-       "emacs" (plist-get data :message)
+       (concat "emacs-" (system-name)) (plist-get data :message)
        :title (or (plist-get data :title) "Emacs"))))
   (add-hook 'im-notif-post-notify-hooks #'im-notif--send-to-ntfy))
 
