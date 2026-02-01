@@ -3451,14 +3451,14 @@ Return a (color color) list that can be used with :column-colors and
     "y" #'im-notif-menu)
   :config
   (setq im-notif-dnd-whitelist-regexp "check slack")
-  (async-defun im-notif--send-to-ntfy (data)
+  (defun im-notif--send-to-ntfy (data)
     "Send notifications to ntfy after some idle time."
     (when (and
            (not im-notif-dnd)
            (current-idle-time)
            (>= (time-to-seconds (current-idle-time)) 30))
-      (im-ntfy
-       (plist-get data :message)
+      (im-ntfy-publish
+       "emacs" (plist-get data :message)
        :title (or (plist-get data :title) "Emacs"))))
   (add-hook 'im-notif-post-notify-hooks #'im-notif--send-to-ntfy))
 
@@ -7367,43 +7367,6 @@ mails."
 (use-package easysession
   :straight (:host github :repo "jamescherti/easysession.el"))
 
-;;;;; im-ntfy -- ntfy wrapper
-
-(cl-defun im-ntfy
-    (message
-     &rest options
-     &key
-     title
-     priority
-     (icon (concat im-server "/assets/emacs.png"))
-     (channel "emacs")
-     file
-     &allow-other-keys)
-  "Send a notification to my phone."
-  (interactive
-   (list
-    (im-read-string "Message: ")
-    :title (im-read-string "Title: ")
-    :file (when (y-or-n-p "Attach local file? ")
-            (expand-file-name (read-file-name "Attachment: ")))
-    :channel (completing-read "Channel: " '("phone" "emacs"))))
-  (set-process-sentinel
-   (apply
-    #'start-process
-    "ntfy" "*ntfy-out*"
-    `("ntfy"
-      "publish"
-      ,@(map-apply
-         (lambda (opt val) (format "--%s=%s" (s-chop-prefix ":" (symbol-name opt)) val))
-         (map-into ;; ← To remove the duplicates
-          (map-filter (lambda (opt val) (and val (not (-contains? '(:channel) opt)))) `(:icon ,icon ,@options))
-          'hash-table))
-      ,channel
-      ,message))
-   (lambda (proc text)
-     (unless (eq (process-exit-status proc) 0)
-       (error ">> [%s] Failed to send message through `ntfy'" (format-time-string "%Y-%m-%dT%H:%M:%S%z"))))))
-
 ;;;;; im-git -- my git workflow, magit alternative
 
 (use-package im-git
@@ -7597,6 +7560,15 @@ the commit buffer."
   (im-radarr-url im-homeserver-radarr-url)
   (im-radarr-url im-homeserver-radarr-api-key))
 
+;;;;; im-ntfy --- ntfy client
+
+(use-package im-ntfy
+  :straight nil
+  :custom
+  (im-ntfy-server im-homeserver-ntfy-server)
+  (im-ntfy-topics im-homeserver-ntfy-topics)
+  (im-ntfy-username im-homeserver-ntfy-username)
+  (im-ntfy-password im-homeserver-ntfy-password))
 
 ;;;;; ereader --- ebook reader with org integration
 
