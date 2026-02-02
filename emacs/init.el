@@ -6684,7 +6684,17 @@ Fetches missing channels/users first."
     :key gptel-api-key)
   (gptel-make-deepseek "DeepSeek"
     :stream t
-    :key gptel-api-key))
+    :key gptel-api-key)
+  (defun im-gptel-on-response-finished (&optional start end)
+    "Send a notification when response is finished and buffer is not visible."
+    (unless (get-buffer-window (current-buffer) (selected-frame))
+      (let ((bname (buffer-name))
+            (wc (count-words start end))
+            (lc (count-lines start end)))
+        (im-run-deferred ; don't know why needed...
+         (im-notif :title (format "AI Generated ⇒ %s" bname)
+                   :message (format "%s lines, %s words..." lc wc))))))
+  (add-to-list 'gptel-post-response-functions #'im-gptel-on-response-finished))
 
 (im-leader
   :keymaps '(gptel-mode-map org-ai-mode-map)
