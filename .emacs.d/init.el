@@ -12365,7 +12365,8 @@ attribute for current buffers file or selected file."
 (general-def
   :states 'normal
   :keymaps '(prog-mode-map)
-  "K" #'im-peek-doc)
+  "K" #'im-peek-doc
+  "M-RET" #'im-peek-jump)
 
 (with-eval-after-load 'evil
   (setq evil-lookup-func #'im-peek-doc))
