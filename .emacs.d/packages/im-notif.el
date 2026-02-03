@@ -423,7 +423,12 @@ otherwise, it is taken as a plain string regexp."
 (defun im-notif-go-to-source-last ()
   "Go to source of the last notification."
   (interactive)
-  (im-notif-go-to-source (car (im-notif-notifications-list))))
+  (when-let* ((last-with-source
+               (seq-find
+                (lambda (p)
+                  (plist-member p :source))
+                (im-notif-notifications-list))))
+    (im-notif-go-to-source last-with-source)))
 
 ;;;;; Logging
 

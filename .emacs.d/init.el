@@ -6695,8 +6695,9 @@ Fetches missing channels/users first."
             (wc (count-words start end))
             (lc (count-lines start end)))
         (im-run-deferred ; don't know why needed...
-         (im-notif :title (format "AI Generated ⇒ %s" bname)
-                   :message (format "%s lines, %s words..." lc wc))))))
+         (im-notif :title (format "AI Generated ⟹ %s" bname)
+                   :message (format "%s lines, %s words..." lc wc)
+                   :source (get-buffer bname))))))
   (add-to-list 'gptel-post-response-functions #'im-gptel-on-response-finished))
 
 (im-leader
@@ -7330,7 +7331,8 @@ mails."
   (interactive (list t))
   (when (im-check-internet-connection)
     (condition-case reason
-        (let (count)
+        (let (count
+              mails)
           (when interactive?
             (message ">> Checking mail..."))
           (await (im-shell-command :command "mbsync --all --verbose" :async t))
@@ -7341,15 +7343,23 @@ mails."
           (await (im-shell-command :command "notmuch tag +spam -- 'not tag:spam and folder:gmail/[Gmail]/Spam'" :async t))
           (await (im-shell-command :command "notmuch tag +spam -- 'not tag:spam and folder:proton/Spam'" :async t))
           (setq
-           count
-           (string-to-number
-            (await (im-shell-command :command "notmuch count tag:inbox and tag:unread and not tag:spam" :async t))))
-          (when interactive?
-            (message "You have %s new mail." count))
-          (when (and (> count 0) (not (eq im-unread-mail-count count)))
+           mails
+           (->> (im-shell-command :command "notmuch search tag:inbox and tag:unread and not tag:spam" :async t)
+              (await)
+              (s-trim)
+              (s-split "\n")
+              (--map (nth 1 (s-split-up-to " " it 1)))))
+          (setq count (length mails))
+          (when (or interactive?
+                    (and (> count 0) (not (eq im-unread-mail-count count))))
+            (when interactive?
+              (message ">> Checking mail...Done"))
             (setq im-unread-mail-count count)
-            (alert (format "You have %s new mail!" count)
-                   :title "New Mail!")))
+            (im-notif
+             :title (format "New mail (%s)!" count)
+             :message (s-join "\n" mails)
+             :source #'im-notmuch-inbox
+             :labels '("mail"))))
       (error
        ;; When mac sleeps, sometimes it wakes up to run background
        ;; tasks and this sync function gets to run at that time (This
