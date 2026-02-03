@@ -103,7 +103,10 @@ This can be controlled interactively by
 
 (defcustom im-notif-blacklist-regexp nil
   "Disable showing notifications that matches this regexp.
-This can be controlled intreactively by `im-notif-blacklist'."
+This can be controlled interactively by `im-notif-blacklist'.  If you
+change this variable via interactive commands in this package, it'll be
+automatically persisted by `customize-save-variable' into your custom
+file."
   :group 'im-notif
   :type 'string)
 
@@ -274,13 +277,23 @@ be a function or a buffer object."
   (interactive)
   (let ((notification (im-notif--select)))
     (empv--select-action "Act on notification"
-      "Open" → (switch-to-buffer-other-window (plist-get notification :buffer-name))
       "Buffer (origin)" → (switch-to-buffer (plist-get notification :source-buffer))
       "Go to Source" → (im-notif-go-to-source notification)
       "Delete" → (progn
                    (ignore-errors
-                     (posframe-delete (plist-get notification :id))) (message ">> Deleted."))
-      "Snooze" → (im-notif-snooze notification (im-notif--read-duration)))))
+                     (posframe-delete (plist-get notification :id)))
+                   (ring-remove
+                    im-notif--last-notifications
+                    (ring-member im-notif--last-notifications notification))
+                   (message ">> Deleted."))
+      "Snooze" → (im-notif-snooze notification (im-notif--read-duration))
+      "DND for labels" → (im-notif-enable-dnd-for-labels (plist-get notification :labels))
+      "Blacklist" → (progn
+                      (im-notif-blacklist
+                       (concat (or im-notif-blacklist-regexp "")
+                               (and im-notif-blacklist-regexp "\\|")
+                               (read-string "Regexp: "
+                                            (plist-get notification :title))))))))
 
 ;;;###autoload
 (defun im-notif-enable-dnd (seconds)
@@ -340,25 +353,24 @@ Source: https://mskelton.dev/bytes/20230927123410"
   (message ">> DND disabled!"))
 
 ;;;###autoload
-(defun im-notif-enable-dnd-for-labels ()
-  "Enable DND mode for selected labels for a given duration."
-  (interactive)
-  (let* ((labels (im-notif--get-all-labels))
-         (selected-labels (if labels
-                              (completing-read-multiple "Select labels for DND: " labels)
-                            (user-error "No labels found in current notifications")))
-         (seconds (im-notif--read-duration)))
-    (dolist (label selected-labels)
+(defun im-notif-enable-dnd-for-labels (labels)
+  "Enable DND mode for selected LABELS for a given duration."
+  (interactive (list
+      (if-let* ((all-labels (im-notif--get-all-labels)))
+          (completing-read-multiple "Select labels for DND: " all-labels)
+        (user-error "No labels found in current notifications"))))
+  (let* ((seconds (im-notif--read-duration)))
+    (dolist (label labels)
       (cl-pushnew label im-notif-dnd-labels :test #'equal))
     (message ">> DND enabled for labels: %s for %s seconds."
-             (s-join ", " selected-labels)
+             (s-join ", " labels)
              seconds)
     (run-with-timer seconds nil
                     (lambda (labels-to-remove)
                       (dolist (label labels-to-remove)
                         (setq im-notif-dnd-labels
                               (delete label im-notif-dnd-labels))))
-                    selected-labels)))
+                    labels)))
 
 ;;;###autoload
 (defun im-notif-disable-dnd-for-label (label)
@@ -372,7 +384,7 @@ Source: https://mskelton.dev/bytes/20230927123410"
   (message ">> DND disabled for label: %s" label))
 
 ;;;###autoload
-(defun im-notif-blacklist ()
+(defun im-notif-blacklist (blacklist-regexp)
   "Prompt the user to set or clear `im-notif-blacklist-regexp'.
 
 Interactively reads a new blacklist expression from the minibuffer,
@@ -382,19 +394,20 @@ input is blank, clears the blacklist by setting
 
 If the input starts with \"(rx\", it is read as a Lisp regexp form;
 otherwise, it is taken as a plain string regexp."
-  (interactive)
-  (let* ((pp-use-max-width t)
-         (result (read-string
-                  "Blacklist expr: "
-                  (if (stringp im-notif-blacklist-regexp)
-                      im-notif-blacklist-regexp
-                    (s-trim (pp-to-string im-notif-blacklist-regexp))))))
-    (setq im-notif-blacklist-regexp
-          (if (s-blank? result)
-              nil
-            (if (s-prefix? "(rx" result)
-                (car (read-from-string result))
-              result)))))
+  (interactive (list
+      (let* ((pp-use-max-width t)
+             (result (read-string
+                      "Blacklist expr: "
+                      (if (stringp im-notif-blacklist-regexp)
+                          im-notif-blacklist-regexp
+                        (s-trim (pp-to-string im-notif-blacklist-regexp))))))
+        (if (s-blank? result)
+            nil
+          (if (s-prefix? "(rx" result)
+              (car (read-from-string result))
+            result)))))
+  (setq im-notif-blacklist-regexp blacklist-regexp)
+  (customize-save-variable 'im-notif-blacklist-regexp im-notif-blacklist-regexp))
 
 (defun im-notif-go-to-source (notification)
   (let ((source (plist-get notification :source)))
