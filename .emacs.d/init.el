@@ -7930,10 +7930,11 @@ the commit buffer."
   :commands (elfeed im-elfeed-reload-and-open)
   :general
   (im-leader
-    "ee" #'im-elfeed-reload-and-open)
+    "ee" #'elfeed)
   (:keymaps 'elfeed-search-mode-map :states 'normal
    "o" #'elfeed-search-browse-url
-   "O" #'im-elfeed-search-browse-url-in-default-browser)
+   "O" #'im-elfeed-search-browse-url-in-default-browser
+   "q" #'im-elfeed-quit)
   :config
   (evil-collection-elfeed-setup)
 
@@ -8013,18 +8014,10 @@ the commit buffer."
       (cons (format "https://github.com/%s/releases.atom" url) tags))
      (listing))))
 
-(defun im-elfeed-reload-and-open ()
-  "Reload and open elfeed.
-Useful if .elfeed directory is freshly syncned."
-  (interactive)
-  (require 'elfeed)
-  (let* ((buffer (get-buffer "*elfeed-search*"))
-         (jump? (and buffer (y-or-n-p "Elfeed is already open, do you want to jump without reloading?"))))
-    (unless jump?
-      (elfeed-db-load))
-    (elfeed)
-    (unless jump?
-      (elfeed-search-update--force))))
+(defun im-elfeed-quit ()
+  (kill-buffer "*elfeed-search*") ; This saves db automatically
+  (quit-window)
+  (elfeed-db-unload))
 
 ;;;;; empv (music/media/radio/youtube management)
 
