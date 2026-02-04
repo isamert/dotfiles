@@ -561,6 +561,11 @@ cut it. I need to run those statements on every theme change.")
      ;; Nice dark theme with good contrast.
      doom-Iosvkem)))
 
+;; Add my custom themes to load path
+(add-to-list
+ 'custom-theme-load-path
+ (file-name-as-directory (expand-file-name "~/.emacs.d/packages/themes/")))
+
 ;;;;; Fonts
 
 (defconst im-fonts
