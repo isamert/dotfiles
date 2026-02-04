@@ -22,41 +22,7 @@ esac
 
 shopt -s nullglob
 
-mkdir -p "${EMACS_LOAD_DIR}"
-mkdir -p "${EMACS_PACKAGES_DIR}"
-
-echo "=> Remove broken symlinks..."
-find "${EMACS_PACKAGES_DIR}" -xtype l -exec unlink {} \;
-find "${EMACS_LOAD_DIR}" -xtype l -exec unlink {} \;
-
-echo "=> Cleaning old files..."
-rm -f ~/.emacs.d/init.el
-rm -f ~/.emacs.d/early-init.el
-for file in "${PWD}/emacs/packages"/*.{el,js}; do
-    echo "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
-    rm -f "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
-done
-for file in "${PWD}/emacs/load"/*.{el,js}; do
-    echo "${EMACS_LOAD_DIR}/$(basename "${file}")"
-    rm -f "${EMACS_LOAD_DIR}/$(basename "${file}")"
-done
-
-# Remove broken links
-find ${EMACS_PACKAGES_DIR} -xtype l  -exec rm -f {} \;
-find ${EMACS_LOAD_DIR} -xtype l  -exec rm -f {} \;
-
-echo "=> Installing Emacs configuration..."
-ln -s "${PWD}/emacs/init.el" ~/.emacs.d/init.el
-ln -s "${PWD}/emacs/early-init.el" ~/.emacs.d/early-init.el
-
-for file in "${PWD}/emacs/packages"/*.{el,js}; do
-    echo "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
-    ln -s "${file}" "${EMACS_PACKAGES_DIR}/$(basename "${file}")"
-done
-for file in "${PWD}/emacs/load"/*.{el,js}; do
-    echo "${EMACS_LOAD_DIR}/$(basename "${file}")"
-    ln -s "${file}" "${EMACS_LOAD_DIR}/$(basename "${file}")"
-done
+stow --target=$HOME/.emacs.d/ .emacs.d
 
 if [[ $FRESH != 1 ]]; then
     echo "If you want to install from scratch, run this script with --fresh parameter."
