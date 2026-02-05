@@ -8015,6 +8015,7 @@ the commit buffer."
      (listing))))
 
 (defun im-elfeed-quit ()
+  (interactive nil elfeed-search-mode)
   (kill-buffer "*elfeed-search*") ; This saves db automatically
   (quit-window)
   (elfeed-db-unload))
@@ -10535,6 +10536,7 @@ I track some Jira tickets (or one) using jira dblock, which is like:
 This function goes through all Jira blocks marked with :target, updates
 them, and checks if they meet their target.  If they do, it adds the
 block’s heading (its parent) to \\='inbox-org."
+  (interactive)
   (when (not (im-check-internet-connection work-vpn-check-host)) ; only run if connected to vpn
     (user-error "Not connected to the VPN"))
   (let ((start (float-time)))
@@ -10563,8 +10565,9 @@ block’s heading (its parent) to \\='inbox-org."
                  (unless (-any
                           #'identity
                           (org-map-entries
-                           (lambda () (s-contains? (format "[[id:%s]" source-id)
-                                              (or (org-get-heading t t t t) "")))
+                           (lambda ()
+                             (s-contains? (format "[[id:%s]" source-id)
+                                          (or (org-get-heading t t t t) "")))
                            "LEVEL=1"))
                    (let ((link (format "[[id:%s][%s]]" source-id source-header)))
                      (goto-char (point-min))
