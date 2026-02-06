@@ -135,7 +135,7 @@ Also see `im-notif-label-default-durations'."
 (defvar im-notif-dnd nil)
 (defvar im-notif--active '())
 (defvar im-notif--dnd-timer nil)
-(defvar im-notif--last-notifications (make-ring 300))
+(defvar im-notif--last-notifications (make-ring 500))
 (defvar-local im-notif--notification-data nil)
 
 ;;;###autoload

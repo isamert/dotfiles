@@ -7528,6 +7528,7 @@ the commit buffer."
   "Update all diff-hl overlays and vc state for current project."
   (interactive)
   (when-let* ((project (project-current nil))
+              ;; project-buffers may fail if there are buffers with default-directory = nil
               (buffers (project-buffers project)))
     (--each buffers
       (when (im-buffer-visible-p it)
@@ -8818,20 +8819,11 @@ work.  You need to enter full path while importing by yourself."
 ;; - =a>b>c= ~<a href=""><b><c></c></b></a>~
 ;; - =b*3= ~<b></b><b></b><b></b>~
 
-
 (use-package emmet-mode
   :hook (js-mode css-mode sgml-mode web-mode tsx-mode)
   :custom
   (emmet-expand-jsx-className? t)
   (emmet-self-closing-tag-style " /"))
-
-;;;;; R-lang
-
-(use-package ess
-  :mode "\\.r\\'")
-
-(setenv "R_LIBS" (expand-file-name "~/.rlibs"))
-(setenv "R_LIBS_USER" (expand-file-name "~/.rlibs"))
 
 ;;;;; kotlin
 
