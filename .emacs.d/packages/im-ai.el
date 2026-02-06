@@ -808,6 +808,50 @@ buffer."
 
 ;;;;; Tools
 
+;; taken from llm-tool-collection
+(defun im-gptel--edit-tool (buffer-or-file old-string new-string)
+  "Replace exactly one occurrence of OLD-STRING with NEW-STRING.
+BUFFER-OR-FILE is either a buffer object or a file path string."
+  (if (string= old-string "")
+      "ERROR: `old_string' cannot be empty"
+    (let* ((is-file? (not (bufferp buffer-or-file)))
+           (name (if is-file?
+                     (concat "file " buffer-or-file)
+                   (concat "buffer " (buffer-name buffer-or-file)))))
+      (with-current-buffer (if is-file?
+                               (let ((temp-buf (generate-new-buffer " *temp*")))
+                                 (with-current-buffer temp-buf
+                                   (insert-file-contents
+                                    (expand-file-name buffer-or-file)))
+                                 temp-buf)
+                             buffer-or-file)
+        (prog1
+            (let ((case-fold-search nil))
+              (save-excursion
+                (goto-char (point-min))
+                (let ((count 0)
+                      (first-match-pos nil))
+                  (while (search-forward old-string nil 'noerror)
+                    (setq count (1+ count))
+                    (unless first-match-pos
+                      (setq first-match-pos (match-beginning 0))))
+                  (cond
+                   ((= count 0)
+                    (error "Could not find text '%s' to replace in %s"
+                           old-string name))
+                   ((> count 1)
+                    (error "Found %d matches for '%s' in %s, need exactly one"
+                           count old-string name))
+                   (t
+                    (goto-char first-match-pos)
+                    (search-forward old-string nil 'noerror)
+                    (replace-match new-string 'fixedcase 'literal)
+                    (when is-file?
+                      (write-file (expand-file-name buffer-or-file)))
+                    (format "Successfully edited %s" name))))))
+          (when is-file?
+            (kill-buffer)))))))
+
 (with-eval-after-load 'gptel
   (gptel-make-tool
    :name "write_file"
@@ -828,44 +872,6 @@ buffer."
            (:name "file_path"
             :type string
             :description "Path to the file. Path is relative to the current project's root."))
-   :category "files_mutative")
-
-  (gptel-make-tool
-   :name "write_file_range"
-   :function (lambda (contents fname start &optional end)
-               (message "gptel :: write_file_range(%s, %d, %s)" fname start (if end (number-to-string end) "nil"))
-               (if (or (s-blank? contents) (s-blank? fname))
-                   "Operation failed: contents and/or file_path can't be empty."
-                 (let ((default-directory (im-current-project-root)))
-                   (when (file-exists-p fname)
-                     (with-current-buffer (find-file-noselect fname)
-                       (save-excursion
-                         (goto-char (point-min))
-                         (forward-line (1- start))
-                         (if end
-                             (delete-region
-                              (point)
-                              (progn
-                                (forward-line (- end start))
-                                (end-of-line)
-                                (point))))
-                         (insert contents)
-                         (save-buffer))))
-                   "File updated successfully.")))
-   :description "Replace between START and END with CONTENTS. If END is omitted, then insert CONTENTS starting at START. Prefer this instead of writing whole files if possible."
-   :args '((:name "contents"
-            :type string
-            :description "Text contents to write into the file")
-           (:name "file_path"
-            :type string
-            :description "Path to the file. Path is relative to the current project's root.")
-           (:name "start"
-            :type integer
-            :description "Starting line number.")
-           (:name "end"
-            :optional t
-            :type integer
-            :description "Ending line number (inclusive). If omitted, insert at start line."))
    :category "files_mutative")
 
   (gptel-make-tool
@@ -915,6 +921,80 @@ buffer."
             :type integer
             :description "Ending line number."))
    :category "files")
+
+  (gptel-make-tool
+   :name "list_buffers"
+   :function (lambda ()
+               (message "gptel :: list_buffers()")
+               (concat
+                "<buffers>\n"
+                (mapconcat
+                 (lambda (n) n)
+                 (cl-loop for b in (buffer-list)
+                          for n = (buffer-name b)
+                          when (and n (not (string-prefix-p " " n)))
+                          collect n)
+                 "\n")
+                "\n</buffers>"))
+   :description "List names of open buffers. Act directly on buffers if you know the name already, without listing."
+   :args '()
+   :confirm t
+   :category "buffers")
+
+  (gptel-make-tool
+   :name "edit_file"
+   :function
+   (lambda (file old_string new_string)
+     (message "gptel :: edit_file(%s)" file)
+     (im-gptel--edit-tool (expand-file-name file) old_string new_string))
+   :description "Edit a file by replacing exactly one occurrence of OLD_STRING with NEW_STRING in FILE. Errors if OLD_STRING is empty, not found, or found more than once."
+   :args (list '(:name "file"
+                 :type string
+                 :description "Path to the file to edit (absolute or relative).")
+               '(:name "old_string"
+                 :type string
+                 :description "Exact text to replace (must match exactly once).")
+               '(:name "new_string"
+                 :type string
+                 :description "Replacement text."))
+   :category "files")
+
+  (gptel-make-tool
+   :name "edit_buffer"
+   :function
+   (lambda (buffer old_string new_string)
+     (message "gptel :: edit_buffer(%s)" buffer)
+     (im-gptel--edit-tool buffer old_string new_string))
+   :description "Edit a buffer by replacing exactly one occurrence of OLD_STRING with NEW_STRING in BUFFER. Errors if OLD_STRING is empty, not found, or found more than once."
+   :args (list '(:name "buffer"
+                 :type string
+                 :description "Name of the buffer to edit.")
+               '(:name "old_string"
+                 :type string
+                 :description "Exact text to replace (must match exactly once).")
+               '(:name "new_string"
+                 :type string
+                 :description "Replacement text."))
+   :confirm t
+   :category "buffers")
+
+  (gptel-make-tool
+   :name "read_buffer"
+   :function (lambda (buffer-name)
+               (message "gptel :: read_buffer(%s)" buffer-name)
+               (if (or (s-blank? buffer-name) (not (get-buffer buffer-name)))
+                   "Operation failed: invalid input."
+                 (with-current-buffer buffer-name
+                   (concat
+                    (format "<buffer name=%S>\n" buffer-name)
+                    (buffer-substring-no-properties (point-min) (point-max))
+                    "\n</buffer>"))))
+   :description "Return the full contents of the buffer with the given name."
+   :args '((:name "buffer_name"
+            :type string
+            :description "Name of the buffer to read."))
+   :confirm t
+   :category "buffers")
 
   (gptel-make-tool
    :name "list_project_files"
