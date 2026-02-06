@@ -666,11 +666,15 @@ Also see `im-clipboard-contains-image-p' to check if there is one."
 
 (cl-defun im-get-input (&key (mode #'org-mode)
                              (init "")
+                             on-init
                              on-accept
                              on-reject
-                             pre-process)
+                             (switcher #'switch-to-buffer)
+                             pre-process
+                             restore)
   "Display a buffer to user to enter some input."
   (let* ((buffer (get-buffer-create "*im-input*"))
+         (winconf (when restore (current-window-configuration)))
          (success-handler
           (lambda ()
             (interactive)
@@ -680,6 +684,8 @@ Also see `im-clipboard-contains-image-p' to check if there is one."
                   (result (with-current-buffer buffer
                             (substring-no-properties (buffer-string)))))
               (kill-buffer buffer)
+              (when winconf
+                (set-window-configuration winconf))
               (if pre-process
                   (funcall on-accept result pre-proc-result)
                 (funcall on-accept result)))))
@@ -687,9 +693,11 @@ Also see `im-clipboard-contains-image-p' to check if there is one."
           (lambda ()
             (interactive)
             (kill-buffer buffer)
+            (when winconf
+              (set-window-configuration winconf))
             (when on-reject
               (funcall on-reject)))))
-    (switch-to-buffer buffer)
+    (funcall switcher buffer)
     (with-current-buffer buffer
       (funcall mode)
       (setq-local im-input-success-handler success-handler)
@@ -697,6 +705,8 @@ Also see `im-clipboard-contains-image-p' to check if there is one."
       (im-input-mode 1)
       (setq header-line-format (substitute-command-keys "Hit `\\[im-input-success-command]' to save `\\[im-input-reject-command]' to reject."))
       (erase-buffer)
+      (when on-init
+        (funcall on-init))
       (insert init))))
 
 ;;;; Other user input functions
