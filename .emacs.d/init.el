@@ -7411,6 +7411,36 @@ mails."
  :doc (lambda (xs x) (pp-to-string (nth 1 (map-elt xs x))))
  :annotate (lambda (xs x) (concat " -> " (nth 0 (map-elt xs x)))))
 
+(im-cape
+ :name buffer-names
+ :completion
+ (lambda ()
+   (mapcar
+    (lambda (b)
+      (let* ((name (buffer-name b))
+             (file (or (buffer-file-name b) ""))
+             (mode (with-current-buffer b (format "%s" major-mode ))))
+        (cons
+         name
+         (list
+          :ann (string-trim (concat (or mode "?") " "))
+          :doc (format "Buffer: %s\nFile: %s\nMode: %s\n\n%s"
+                       (buffer-name b)
+                       (or file "N/A")
+                       (or mode "N/A")
+                       (with-current-buffer b
+                         (buffer-substring-no-properties
+                          (point-min) (save-excursion (goto-char (point-min)) (forward-line 10) (point)))))))))
+    (seq-filter
+     (lambda (b) (not (string-prefix-p " " (buffer-name b))))
+     (buffer-list))))
+ :extractor (lambda (xs) (mapcar #'car xs))
+ :bound symbol
+ :category file
+ :key "M-o b"
+ :doc (lambda (xs x) (plist-get (map-elt xs x) :doc))
+ :annotate (lambda (xs x) (concat " → " (plist-get (map-elt xs x) :ann))))
+
 ;;;;; easysession.el -- session manager
 
 ;; Simple package to save/retrieve Emacs sessions. It works well with
@@ -9373,8 +9403,6 @@ total {rows,bytes} etc. and first 10 rows of the table."
 
   (add-to-list 'embark-keymap-alist '(im-big-query-table-name . im-big-query-table-name)))
 
-(bind-key "M-o B" #'im-big-query-select-table)
-
 (im-cape
  :name big-query-tables
  :completion #'im-big-query-all-table-names
@@ -9384,7 +9412,7 @@ total {rows,bytes} etc. and first 10 rows of the table."
  :bound filename
  :kind (lambda (xs x) "" 'module)
  :category symbol
- :key "M-o b")
+ :key "M-o B")
 
 ;;;;; jsonnet-mode
 
