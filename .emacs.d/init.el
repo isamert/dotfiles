@@ -8570,10 +8570,6 @@ This is used in my snippets."
   :straight nil
   :demand t)
 
-(use-package im-fnm
-  :straight nil
-  :demand t)
-
 ;;;;;; REPL interaction
 
 (defun im-treesit-find-parent-with-type (node wanted-type)

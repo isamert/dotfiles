@@ -809,15 +809,15 @@ This macro is intended to quicken up the process of running a
 shell command and doing a `completing-read' on it and then using
 the result in another context, possibly on another shell
 command."
-  `((lambda (it) ,do)
+  `((lambda (it) (ignore it) ,do)
     (im-completing-read
      ,prompt
      (append
       ,prepend
       (seq-filter
-       (lambda (it) ,filter)
+       (lambda (it) (ignore it) ,filter)
        (seq-map-indexed
-        (lambda (it idx) (ignore idx) ,map)
+        (lambda (it idx) (ignore it idx) ,map)
         (seq-drop
          (s-split
           ,split
@@ -825,7 +825,7 @@ command."
           t)
          ,drop)))
       ,append)
-     :formatter (lambda (it) ,formatter)
+     :formatter (lambda (it) (ignore it) ,formatter)
      :sort? ,(not keep-order)
      :initial ,initial
      :category ,category
