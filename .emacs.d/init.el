@@ -5674,26 +5674,6 @@ SORT should be nil to disable sorting."
                             "-J-Dmetals.icons=unicode"))
   :hook (scala-mode . lsp))
 
-(defun im-switch-java-version ()
-  "Switch Java version using coursier."
-  (interactive)
-  (im-output-select
-   :cmd "cs java --available | grep -Eo 'adoptium:\\d+\\.\\d+' | cut -d':' -f2 | sort -n | uniq"
-   :prompt "Select Java version: "
-   :do (im-shell-command
-        :command "cs"
-        :args (list "java" "--jvm" it "--env")
-        :switch t
-        :on-finish
-        (lambda (output &rest _)
-          (dolist (var (s-match-strings-all
-                        "\\(export\\|set -x\\) \\([a-zA-Z_-]+\\)\\(=\\| \\)\"?\\([^\"]*\\)\"?"
-                        output))
-            (let ((key (nth 2 var))
-                  (val (nth 4 var)))
-              (message ">> Setting %s → %s" key val)
-              (setenv key val t)))))))
-
 ;;;;; simple-modeline
 
 ;; Lightweight and nice modeline.
