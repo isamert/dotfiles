@@ -2177,19 +2177,21 @@ set-option -g destroy-unattached on
 * Utilities
 ** git
 #+begin_src conf :tangle ~/.gitconfig
-  [user]
-    name = «sh("git config --global --get user.name", "Isa Mert Gurbuz")»
-    email = «sh("git config --global --get user.email", "isamertgurbuz@gmail.com")»
-  [github]
-    user = isamert
-  [rebase]
-    autoStash = true
-  [pull]
-    rebase = true
-  [fetch]
-    prune = true
-  [status]
-    short = true
+[user]
+  name = «sh("git config --global --get user.name", "Isa Mert Gurbuz")»
+  email = «sh("git config --global --get user.email", "isamertgurbuz@gmail.com")»
+[github]
+  user = isamert
+[rebase]
+  autoStash = true
+[pull]
+  rebase = true
+[fetch]
+  prune = true
+[status]
+  short = true
+[push]
+  followTags = true
 #+end_src
 ** jaro
 *** Configuration
