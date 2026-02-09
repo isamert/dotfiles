@@ -9938,6 +9938,7 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
 
 (im-leader
   "eji" #'im-jira-list-issues
+  "ejq" #'im-jira-jql-interactive
   "ejc" #'im-jira-create-ticket)
 
 ;;;;;; Install deps
@@ -9991,6 +9992,10 @@ something.")
   "Interested board ids.
 See `im-jira-list-issues'.")
 
+(defconst im-jira-jql-example-query
+  (format "text ~ \"...\" labels IN (\"tech-debt\") AND statusCategory = \"To Do|In Progress|Done\" and project IN (%s) and created > startOfYear()"
+          (s-join ", " im-jira-projects)))
+
 ;;;;;; Open jira issue at point
 
 (defun im-jira-issue-at-point ()
@@ -10012,8 +10017,44 @@ See `im-jira-list-issues'.")
     (browse-url url)))
 
 (defun im-jira-jql (jql)
-  (interactive (list (read-string "Enter JQL: " "text ~ \"...\" AND statusCategory = \"To Do|In Progress|Done\"")) "sEnter JQL: ")
+  (interactive (list (read-string "Enter JQL: " im-jira-jql-example-query)))
   (jiralib2-jql-search jql))
+
+(defun im-jira-jql-interactive ()
+  (interactive)
+  (let ((search-jql (lambda (values)
+                      (let* ((inhibit-read-only t)
+                             (inhibit-modification-hooks t)
+                             (jql (nth 0 values))
+                             (issues (jiralib2-jql-search jql)))
+                        (delete-region (point) (point-max))
+                        (make-vtable
+                         :row-colors (tbp--vtable-pretty-colors)
+                         :column-colors (tbp--vtable-pretty-colors)
+                         :columns '((:name "Key" :width 10)
+                                    (:name "Status" :width 15)
+                                    (:name "Reporter" :width 18)
+                                    (:name "Assignee" :width 18)
+                                    "Summary")
+                         :use-header-line nil
+                         :objects issues
+                         :actions '("RET" im-jira-issue-actions
+                                    "i" tbp--inspect)
+                         :getter (lambda (object column vtable)
+                                   (let-alist object
+                                     (pcase (vtable-column vtable column)
+                                       ("Key" .key)
+                                       ("Status" .fields.status.name)
+                                       ("Reporter" (or .fields.reporter.name "N/A"))
+                                       ("Assignee" (or .fields.assignee.name "N/A"))
+                                       ("Summary" .fields.summary)))))))))
+    (im-query-buffer
+     :name "*jira-jql-search*"
+     :inputs `((:name "JQL Query"
+                :value ,im-jira-jql-example-query
+                :on ,(lambda (input values)
+                       (funcall search-jql values))))
+     :on search-jql)))
 
 (defun im-jira-list-issues (&optional arg)
   (interactive "P")
@@ -10413,7 +10454,11 @@ SPRINT can be a full sprint name or one \"active\"|\"future\"."
         .fields.summary
         "\n"
         (im-convert-jira-markup-to-org-mode .fields.description)))
+      (insert "\n\n-----\n\n* Comments\n")
       (jira-view-mode)
+      (dolist (comment .fields.comment.comments)
+        (let-alist comment
+          (insert (format "** %s (%s)\n%s\n\n" .author.displayName .created .body))))
       (setq header-line-format "Hit `&' to open in browser, `ge' to edit, `gr' to reload, `ga' to see actions.")
       (setq-local jira-view-mode-ticket ticket)
       (goto-char (point-min))
