@@ -2474,7 +2474,7 @@ Alt+5 set window-scale 2
 CTRL+l script-message osc-playlist
 #+end_src
 
-*** sponsorblock-minimal-plugin
+*** sponsorblock-minimal-plugin :plugin:
 Use ~b~ key to disable/enable it. It's on by default.
 
 #+begin_src sh
@@ -2484,7 +2484,7 @@ curl https://codeberg.org/jouni/mpv_sponsorblock_minimal/raw/branch/master/spons
 sed -Ei 's/([ \t]+)categories =.*/\1categories = '"'"'"sponsor","selfpromo","interaction","intro","outro"'"'"'/' ~/.config/mpv/scripts/sponsorblock_minimal.lua
 #+end_src
 
-*** uosc
+*** uosc :plugin:
 UI for mpv. Pretty looking and very functional. Has a menu that is searchable. Also allows you to switch stream quality on YouTube videos etc. Spectacular.
 
 Installation:
@@ -2492,7 +2492,7 @@ Installation:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/tomasklaen/uosc/HEAD/installers/unix.sh)"
 #+end_src
 
-*** thumbfast
+*** thumbfast :plugin:
 Thumbnail plugin. Works with uosc.
 
 Installation:
@@ -2500,6 +2500,15 @@ Installation:
 curl https://raw.githubusercontent.com/po5/thumbfast/master/thumbfast.lua -o ~/.config/mpv/scripts/thumbfast.lua
 #+end_src
 
+*** ytdl-preload :plugin:
+- https://github.com/bitingsock/ytdl-preload
+- Preload next youtube videos in your playlist.
+#+begin_src sh
+curl https://raw.githubusercontent.com/bitingsock/ytdl-preload/refs/heads/main/ytdl-preload.lua -o ~/.config/mpv/scripts/ytdl-preload.lua
+curl https://github.com/bitingsock/ytdl-preload/blob/main/ytdl_preload.conf -o ~/.config/mpv/script-opts/ytdl_preload.conf
+#+end_src
+*** mpv-mpris :plugin:
+Just install the mpv-mpris package from your distros package manager. This integrates mpv with system media keys and system media player.
 * Editors
 ** Neovim
 I had a fat neovim configuration at past but I don't use vim anymore. This is just the minimal configuration I've started maintaining
