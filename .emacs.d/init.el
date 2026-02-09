@@ -5155,13 +5155,16 @@ approach."
     ,@(directory-files im-packages-path t "\\.el$")))
 
 (with-eval-after-load 'consult
-  (im-append! consult-buffer-sources 'im-consult-source-files)
-
-  ;; Move bookmarks to the top of buffer sources
-  (delq 'consult-source-bookmark consult-buffer-sources)
-  (add-to-list 'consult-buffer-sources 'consult-source-bookmark))
+  (im-append! consult-buffer-sources 'im-consult-source-files))
 
 ;; I also add a source for listing all of my projects:
+
+(defvar im-projects-history nil
+  "History of projects.
+This helps persisting projects I switched to.")
+
+(with-eval-after-load 'savehist
+  (add-to-list 'savehist-additional-variables 'im-projects-history))
 
 (defvar im-consult-source-projects
   (list
@@ -5169,6 +5172,7 @@ approach."
    :narrow   ?a
    :hidden   nil
    :category 'file
+   :history 'im-projects-history
    :action  (lambda (it &rest _) (project-switch-project it))
    :items   (lambda () (mapcar #'car project--list)))
   "Projects source for `consult-buffer'.")
