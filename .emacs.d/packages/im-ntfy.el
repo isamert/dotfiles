@@ -421,7 +421,7 @@ Returns a list of message alists."
     (let ((topic im-ntfy--current-topic))
       ;; Clear cache and refetch
       (remhash topic im-ntfy--message-cache)
-      (let ((messages (im-ntfy-fetch-messages topic "24h")))
+      (let ((messages (im-ntfy-fetch-messages topic "all")))
         (puthash topic messages im-ntfy--message-cache))
       ;; Rebuild buffer
       (im-ntfy--setup-topic-buffer topic)
