@@ -404,7 +404,7 @@ configuration, pass it as WINDOW-CONF."
                  (--each im-git-commit-finished-hook (funcall it msg))
                  (when tag
                    (set-process-sentinel
-                    (start-process "*im-git-tag*" (im-get-reset-buffer " *im-git-tag*") "git" "tag" tag)
+                    (start-process "*im-git-tag*" (im-get-reset-buffer " *im-git-tag*") "git" "tag" "-a" tag "-m" "")
                     (lambda (proc _event)
                       (if (eq (process-exit-status proc) 0)
                           (message ">> im-git-commit :: Tag created")
@@ -481,6 +481,27 @@ configuration, pass it as WINDOW-CONF."
   (goto-char (point-min))
   (im-help-at-point-mode))
 
+(defmacro im-git-commit--change-header-contents (header &rest forms)
+  (declare (indent 1))
+  `(save-excursion
+     (let ((inhibit-read-only t)
+           start end)
+       (goto-char (point-min))
+       (re-search-forward (format "\n# %s" ,header))
+       (beginning-of-line)
+       (setq start (point))
+       (end-of-line)
+       (delete-region
+        (point)
+        (if (search-forward "\n# " nil t)
+            (prog1 (- (point) 3)
+              (backward-char 2))
+          (point-max)))
+       ,@forms
+       (insert "\n")
+       (setq end (point))
+       (add-text-properties start end '(read-only t)))))
+
 (async-defun im-git-commit--setup (buffer &optional initial-message)
   "Fill the commit BUFFER without blocking."
   (let* ((start-time (float-time))
@@ -492,12 +513,10 @@ configuration, pass it as WINDOW-CONF."
                              "--graph" "--decorate" "--date=short"
                              "--pretty=tformat:'%C(cyan)%d%C(reset)%C(yellow)%h%C(reset)..: %C(green)%an %C(blue)%ad%C(reset) %s'"
                              "--abbrev-commit"))
-         (statusoutp (await (lab--git "-c" "color.status=always" "status" "--branch" "--short")))
          (name (await namep))
          (email (await emailp))
          (hookspath (await hookspathp))
          (commits (ansi-color-apply (await commitsp)))
-         (statusout (await statusoutp))
          (inhibit-read-only t))
     (with-current-buffer buffer
       (goto-char (point-min))
@@ -573,27 +592,6 @@ configuration, pass it as WINDOW-CONF."
         (insert initial-message))
       (goto-char (point-min)))
     (message "Ready in %.2f seconds" (- (float-time) start-time))))
-
-(defmacro im-git-commit--change-header-contents (header &rest forms)
-  (declare (indent 1))
-  `(save-excursion
-     (let ((inhibit-read-only t)
-           start end)
-       (goto-char (point-min))
-       (re-search-forward (format "\n# %s" ,header))
-       (beginning-of-line)
-       (setq start (point))
-       (end-of-line)
-       (delete-region
-        (point)
-        (if (search-forward "\n# " nil t)
-            (prog1 (- (point) 3)
-              (backward-char 2))
-          (point-max)))
-       ,@forms
-       (insert "\n")
-       (setq end (point))
-       (add-text-properties start end '(read-only t)))))
 
 (defvar-keymap im-git-commit-status-map
   "u" #'im-git-commit-unstage-at-point
