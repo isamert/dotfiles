@@ -176,7 +176,8 @@ Called with one argument BUF (a live buffer object)."
       (im-cursor-gen-watch-mode 1)
       (when (featurep 'evil)
         (evil-insert-state)
-        (evil-normalize-keymaps)))))
+        (evil-normalize-keymaps)
+        (setq-local evil-insert-state-cursor '(nil))))))
 
 (defun im-cursor-agent-insert-prompt ()
   "Ask for a prompt in a temp buffer; on C-c C-c insert it into current buffer."

@@ -6558,7 +6558,8 @@ Fetches missing channels/users first."
   (:states 'normal
    "gm" #'separedit)
   (:keymaps 'minibuffer-mode-map
-   "M-r" #'separedit)
+   "M-r" #'separedit
+   "M-i" #'separedit)
   :config
   (setq separedit-default-mode 'markdown-mode)
   (setq separedit-continue-fill-column t)
