@@ -807,6 +807,7 @@ buffer."
   (gptel-mode 1))
 
 ;;;;; Tools
+;;;;;; file/folder tools
 
 ;; taken from llm-tool-collection
 (defun im-gptel--edit-tool (buffer-or-file old-string new-string)
@@ -923,6 +924,27 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
    :category "files")
 
   (gptel-make-tool
+   :name "edit_file"
+   :function
+   (lambda (file old_string new_string)
+     (message "gptel :: edit_file(%s)" file)
+     (im-gptel--edit-tool (expand-file-name file) old_string new_string))
+   :description "Edit a file by replacing exactly one occurrence of OLD_STRING with NEW_STRING in FILE. Errors if OLD_STRING is empty, not found, or found more than once."
+   :args (list '(:name "file"
+                 :type string
+                 :description "Path to the file to edit (absolute or relative).")
+               '(:name "old_string"
+                 :type string
+                 :description "Exact text to replace (must match exactly once).")
+               '(:name "new_string"
+                 :type string
+                 :description "Replacement text."))
+   :category "files"))
+
+;;;;;; buffer tools
+
+(with-eval-after-load 'gptel
+  (gptel-make-tool
    :name "list_buffers"
    :function (lambda ()
                (message "gptel :: list_buffers()")
@@ -942,22 +964,50 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
    :category "buffers")
 
   (gptel-make-tool
-   :name "edit_file"
-   :function
-   (lambda (file old_string new_string)
-     (message "gptel :: edit_file(%s)" file)
-     (im-gptel--edit-tool (expand-file-name file) old_string new_string))
-   :description "Edit a file by replacing exactly one occurrence of OLD_STRING with NEW_STRING in FILE. Errors if OLD_STRING is empty, not found, or found more than once."
-   :args (list '(:name "file"
-                 :type string
-                 :description "Path to the file to edit (absolute or relative).")
-               '(:name "old_string"
-                 :type string
-                 :description "Exact text to replace (must match exactly once).")
-               '(:name "new_string"
-                 :type string
-                 :description "Replacement text."))
-   :category "files")
+   :name "read_buffer_lines"
+   :function (lambda (buffer-name &optional start-line end-line)
+               (message "gptel :: read_buffer_lines(%s, %s, %s)" buffer-name start-line end-line)
+               (if (or (s-blank? buffer-name) (not (get-buffer buffer-name)))
+                   "Operation failed: invalid input."
+                 (with-current-buffer buffer-name
+                   (let* ((start-pos (if start-line
+                                         (save-excursion
+                                           (goto-char (point-min))
+                                           (forward-line (1- start-line))
+                                           (point))
+                                       (point-min)))
+                          (end-pos (if end-line
+                                       (save-excursion
+                                         (goto-char (point-min))
+                                         (forward-line end-line)
+                                         (point))
+                                     (point-max)))
+                          (content (buffer-substring-no-properties start-pos end-pos))
+                          (lines (split-string content "\n"))
+                          (limited-lines (seq-take lines 100))
+                          (truncated (> (length lines) 100)))
+                     (concat
+                      (format "<buffer name=%S%s%s>\n"
+                              buffer-name
+                              (if start-line (format " start-line=%d" start-line) "")
+                              (if end-line (format " end-line=%d" end-line) ""))
+                      (string-join limited-lines "\n")
+                      (if truncated "\n[... truncated, showing first 100 lines ...]" "")
+                      "\n</buffer>")))))
+   :description "Return the contents of the buffer with the given name (max 100 lines). Optionally specify a line range."
+   :args '((:name "buffer_name"
+            :type string
+            :description "Name of the buffer to read.")
+           (:name "start_line"
+            :type integer
+            :optional t
+            :description "Starting line number (1-indexed). Optional.")
+           (:name "end_line"
+            :type integer
+            :optional t
+            :description "Ending line number (1-indexed). Optional."))
+   :confirm t
+   :category "buffers")
 
   (gptel-make-tool
    :name "edit_buffer"
@@ -976,26 +1026,11 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
                  :type string
                  :description "Replacement text."))
    :confirm t
-   :category "buffers")
+   :category "buffers"))
 
-  (gptel-make-tool
-   :name "read_buffer"
-   :function (lambda (buffer-name)
-               (message "gptel :: read_buffer(%s)" buffer-name)
-               (if (or (s-blank? buffer-name) (not (get-buffer buffer-name)))
-                   "Operation failed: invalid input."
-                 (with-current-buffer buffer-name
-                   (concat
-                    (format "<buffer name=%S>\n" buffer-name)
-                    (buffer-substring-no-properties (point-min) (point-max))
-                    "\n</buffer>"))))
-   :description "Return the full contents of the buffer with the given name."
-   :args '((:name "buffer_name"
-            :type string
-            :description "Name of the buffer to read."))
-   :confirm t
-   :category "buffers")
+;;;;;; project tools
 
+(with-eval-after-load 'gptel
   (gptel-make-tool
    :name "list_project_files"
    :function (lambda ()
@@ -1056,7 +1091,11 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
   ;;           :type string
   ;;           :description "Language like rust, typescript etc.") )
   ;;  :category "files")
+  )
 
+;;;;;; web tools
+
+(with-eval-after-load 'gptel
   (gptel-make-tool
    :name "get_webpage_contents"
    :function (lambda (callback url)
@@ -1096,20 +1135,6 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
    :category "web")
 
   (gptel-make-tool
-   :name "get_elisp_symbol_info"
-   :function (lambda (symbol-name)
-               (message "gptel :: get_elisp_symbol_info(%s)" symbol-name)
-               (save-window-excursion
-                 (let ((help-xref-following t))
-                   (helpful-symbol (intern symbol-name))
-                   (buffer-substring-no-properties (point-min) (point-max)))))
-   :description "Get detailed information (docs, implementation etc.) about given elisp symbol/function etc."
-   :args '((:name "symbol_name"
-            :type string
-            :description "Name of the Elisp symbol."))
-   :category "elisp")
-
-  (gptel-make-tool
    :name "web_search"
    :function (lambda (callback query)
                (im-kagi-search
@@ -1139,6 +1164,193 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
       :type string
       :description "The search query."))
    :category "web"))
+
+;;;;;; elisp tools
+
+(with-eval-after-load 'gptel
+  (gptel-make-tool
+   :name "get_elisp_symbol_info"
+   :function (lambda (symbol-name)
+               (message "gptel :: get_elisp_symbol_info(%s)" symbol-name)
+               (save-window-excursion
+                 (let ((help-xref-following t))
+                   (helpful-symbol (intern symbol-name))
+                   (buffer-substring-no-properties (point-min) (point-max)))))
+   :description "Get detailed information (docs, implementation etc.) about given elisp symbol/function etc."
+   :args '((:name "symbol_name"
+            :type string
+            :description "Name of the Elisp symbol."))
+   :category "elisp")
+
+  (gptel-make-tool
+   :name "run_elisp"
+   :function (lambda (code)
+               (message "gptel :: run_elisp(%s)" code)
+               (condition-case err
+                   (let* ((output (with-output-to-string
+                                    (setq result (eval (read code)))))
+                          (result-str (format "%S" result)))
+                     (if (string-empty-p output)
+                         result-str
+                       (format "Output:\n%s\nResult: %s" output result-str)))
+                 (error (format "Error: %S" err))))
+   :confirm t
+   :description "Evaluate Elisp code and return the result. Also captures any printed output. Provide only one form, no comments. You can always wrap multiple forms with let/progn/prog1 etc."
+   :args '((:name "code"
+            :type string
+            :description "Elisp code to evaluate. It'll be evaluated in the current Emacs environment."))
+   :category "elisp")
+
+  (gptel-make-tool
+   :name "search_elisp_functions"
+   :function (lambda (pattern search-in)
+               (message "gptel :: search_elisp_functions(%s, %s)" pattern search-in)
+               (let ((matches '())
+                     (search-docs (equal search-in "docs"))
+                     (max-results 50))
+                 (mapatoms
+                  (lambda (sym)
+                    (when (and (fboundp sym)
+                               (< (length matches) max-results)
+                               (if search-docs
+                                   (let ((doc (documentation sym t)))
+                                     (and doc (string-match-p pattern doc)))
+                                 (string-match-p pattern (symbol-name sym))))
+                      (push (cons (symbol-name sym)
+                                  (let ((doc (documentation sym t)))
+                                    (when doc
+                                      (car (split-string doc "\n")))))
+                            matches))))
+                 (if matches
+                     (format "Found %d functions matching \"%s\" (in %s):\n%s"
+                             (length matches)
+                             pattern
+                             (if search-docs "docstrings" "names")
+                             (mapconcat
+                              (lambda (m)
+                                (if (cdr m)
+                                    (format "• %s: %s" (car m) (cdr m))
+                                  (format "• %s" (car m))))
+                              (sort matches (lambda (a b) (string< (car a) (car b))))
+                              "\n"))
+                   (format "No functions found matching \"%s\"" pattern))))
+   :description "Search for Emacs functions by name or docstring. Returns function names with first line of their documentation. Returns max 50 results. We have a lot of ready to use libraries/functions available in this environment."
+   :args '((:name "pattern"
+            :type string
+            :description "Regex pattern to search for.")
+           (:name "search_in"
+            :type string
+            :description "Where to search: 'name' (default) or 'docs' for docstrings."))
+   :category "elisp"))
+
+;;;;;; jira tools
+
+(with-eval-after-load 'gptel
+  (gptel-make-tool
+   :name "jira_create_issue"
+   :function (lambda (project issue-type summary description sprint labels)
+               (message "gptel :: jira_create_issue(%s, %s, %s, ...)" project issue-type summary)
+               (condition-case err
+                   (let* ((sprint-field (cons (im-jira-get-issue-field-id-for "Sprint")
+                                              (alist-get 'id (im-jira-find-sprint project sprint))))
+                          (extra-fields (list sprint-field))
+                          (result (apply #'jiralib2-create-issue
+                                         project
+                                         issue-type
+                                         summary
+                                         description
+                                         (if (and labels (not (equal labels [])))
+                                             (cons (cons 'labels (append labels nil)) extra-fields)
+                                           extra-fields))))
+                     (format "Issue created successfully: %s" (alist-get 'key result)))
+                 (error (format "Failed to create issue: %s" (error-message-string err)))))
+   :description "Create a Jira issue in the specified project with summary, description, sprint, and optional labels."
+   :confirm t
+   :args '((:name "project"
+            :type string
+            :description "Project key (e.g., 'MYPROJ').")
+           (:name "issue_type"
+            :type string
+            :description "Issue type (e.g., 'Story', 'Bug', 'Task').")
+           (:name "summary"
+            :type string
+            :description "Issue summary/title.")
+           (:name "description"
+            :type string
+            :description "Issue description body.")
+           (:name "sprint"
+            :type string
+            :description "Sprint identifier: 'active', 'future', or full sprint name.")
+           (:name "labels"
+            :type array
+            :items (:type string)
+            :description "Optional list of labels to add to the issue."
+            :optional t))
+   :category "jira")
+
+  (gptel-make-tool
+   :name "jira_get_issue"
+   :function (lambda (issue-key)
+               (message "gptel :: jira_get_issue(%s)" issue-key)
+               (condition-case err
+                   (let ((issue (jiralib2-get-issue issue-key)))
+                     (let-alist issue
+                       (let-alist .fields
+                         (format "Issue: %s
+Summary: %s
+Type: %s
+Status: %s
+Priority: %s
+Resolution: %s
+Assignee: %s
+Reporter: %s
+Created: %s
+Updated: %s
+Labels: %s
+Epic: %s
+Sprint: %s
+Story Points: %s
+Project: %s
+
+Description:
+%s
+
+Comments (%d):
+%s"
+                                 (alist-get 'key issue)
+                                 .summary
+                                 .issuetype.name
+                                 .status.name
+                                 .priority.name
+                                 (or .resolution.name "Unresolved")
+                                 (or .assignee.displayName "Unassigned")
+                                 .reporter.displayName
+                                 .created
+                                 .updated
+                                 (if .labels (string-join .labels ", ") "None")
+                                 (or .customfield_10005 "None")  ;; Epic link
+                                 (if .customfield_10004
+                                     (car .customfield_10004)
+                                   "None")
+                                 (or .customfield_10002 "None")  ;; Story points
+                                 .project.name
+                                 (or .description "No description")
+                                 (length (alist-get 'comments .comment))
+                                 (mapconcat
+                                  (lambda (c)
+                                    (let-alist c
+                                      (format "- [%s] %s: %s"
+                                              .created
+                                              .author.displayName
+                                              (truncate-string-to-width .body 200 nil nil "..."))))
+                                  (alist-get 'comments .comment)
+                                  "\n")))))
+                 (error (format "Failed to get issue: %s" (error-message-string err)))))
+   :description "Get a Jira issue by its key and return a formatted summary with key fields."
+   :args '((:name "issue_key"
+            :type string
+            :description "The Jira issue key (e.g., 'PRA-333', 'PROJ-123')."))
+   :category "jira"))
 
 ;;;;; Presets
 
