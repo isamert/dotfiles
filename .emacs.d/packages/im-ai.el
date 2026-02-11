@@ -1014,7 +1014,9 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
    :function
    (lambda (buffer old_string new_string)
      (message "gptel :: edit_buffer(%s)" buffer)
-     (im-gptel--edit-tool buffer old_string new_string))
+     (if-let ((buf (get-buffer buffer)))
+         (im-gptel--edit-tool buf old_string new_string)
+       "Buffer not found"))
    :description "Edit a buffer by replacing exactly one occurrence of OLD_STRING with NEW_STRING in BUFFER. Errors if OLD_STRING is empty, not found, or found more than once."
    :args (list '(:name "buffer"
                  :type string
@@ -1039,7 +1041,7 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
                 (im-directory-files-recursively (im-current-project-root))
                 (s-join "\n")))
    :description "List all file names in the current project, relative to the project dir."
-   :category "files")
+   :category "project")
 
   (gptel-make-tool
    :name "grep_project"
@@ -1063,7 +1065,7 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
    :args '((:name "regexp"
             :type string
             :description "Regexp to search inside the project."))
-   :category "files")
+   :category "project")
 
   ;; (gptel-make-tool
   ;;  :name "ast_grep_project"
