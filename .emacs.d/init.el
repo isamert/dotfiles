@@ -6735,6 +6735,11 @@ Fetches missing channels/users first."
         ("claude" (agent-shell-anthropic-start-claude-code))
         ("cursor" (agent-shell-cursor-start-agent))))))
 
+;;;;; im-cursor
+
+(use-package im-cursor
+  :straight nil)
+
 ;;;;; tmr.el -- timers, reminders etc.
 
 ;; Pretty timers. I forget everything, so it's quite important for me
