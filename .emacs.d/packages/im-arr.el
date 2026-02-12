@@ -244,16 +244,11 @@ Return selected root folder path."
     (user-error "%s not found for: %s" thing query)))
 
 (defun im-arr--select-result (prompt results formatter)
-  "Select one entry from RESULTS.
-PROMPT is passed to `completing-read' and FORMATTER formats each row."
-  (let* ((choices (cl-loop for result in results
-                           for idx from 1
-                           collect (cons (format "%d. %s"
-                                                 idx
-                                                 (funcall formatter result))
-                                         result)))
-         (selected (completing-read prompt (mapcar #'car choices) nil t)))
-    (cdr (assoc selected choices))))
+  "Select one entry from RESULTS."
+  (im-completing-read prompt results
+                      :formatter formatter
+                      :require-match? t
+                      :sort? nil))
 
 (defun im-arr--ensure-added-id (service item-type result)
   "Ensure RESULT has an ID after adding ITEM-TYPE in SERVICE."

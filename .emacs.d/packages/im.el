@@ -1028,7 +1028,7 @@ case."
                   :sync (and (not -on-success) (not -async?))
                   :data (cond
                          ((and -data (or (json-alist-p -data) (json-plist-p -data)))
-                          (json-encode -data))
+                          (json-serialize -data))
                          ((stringp -data) -data)
                          (t nil))
                   :params (cl-remove
@@ -1037,7 +1037,7 @@ case."
                             ((and -params (json-alist-p -params)) -params)
                             ((and -params (json-plist-p params)) (im-plist-to-alist -params))
                             (t (im-plist-to-alist params)))
-                           :key #'cdr )))))
+                           :key #'cdr)))))
       (cond
        (-async? (promise-new fn))
        ((or -on-success -on-error)
