@@ -958,6 +958,57 @@ COLOR can be a face or string (which is interpreted as background color.)"
 ;; alists (but you can still use alists if you want or need to). I use
 ;; this to quickly prototype stuff in elisp.
 
+(defvar im-request-debug nil
+  "When non-nil, log all requests to `im-request-debug-buffer'.")
+
+(defconst im-request-debug-buffer " *im-request-debug*"
+  "Buffer name for request debugging logs.")
+
+(defun im-request--log (format-string &rest args)
+  "Log FORMAT-STRING with ARGS to `im-request-debug-buffer' if debugging is enabled."
+  (when im-request-debug
+    (with-current-buffer (get-buffer-create im-request-debug-buffer)
+      (goto-char (point-max))
+      (insert (apply #'format format-string args)))))
+
+(defun im-request--log-request (type endpoint headers data computed-data params)
+  "Log the outgoing request details."
+  (when im-request-debug
+    (im-request--log "\n%s\n" (make-string 72 ?=))
+    (im-request--log "→ %s %s\n" type endpoint)
+    (im-request--log "  Time: %s\n" (format-time-string "%Y-%m-%d %H:%M:%S"))
+    (when params
+      (im-request--log "  Params: %s\n" params))
+    (when headers
+      (im-request--log "  Headers:\n")
+      (dolist (h (if (json-plist-p headers) (im-plist-to-alist headers) headers))
+        (im-request--log "    %s: %s\n" (car h) (cdr h))))
+    (when data
+      (im-request--log "  Data (raw): %s\n" (pp-to-string data))
+      (when (or (json-alist-p data) (json-plist-p data))
+        (im-request--log "  Data (JSON): %s\n"
+                         computed-data)))))
+
+(defun im-request--log-response (response data error-p)
+  "Log the incoming RESPONSE details."
+  (when im-request-debug
+    (let ((status-code (request-response-status-code response))
+          (headers (request-response-headers response))
+          (url (request-response-url response)))
+      (im-request--log "\n← %s %s\n"
+                       (if error-p "ERROR" "OK")
+                       (or status-code "?"))
+      (im-request--log "  URL: %s\n" (or url "?"))
+      (when headers
+        (im-request--log "  Response Headers:\n")
+        (dolist (h headers)
+          (im-request--log "    %s: %s\n" (car h) (cdr h))))
+      (im-request--log "  Response Data: %s\n"
+                       (if (stringp data)
+                           data
+                         (pp-to-string data)))
+      (im-request--log "%s\n" (make-string 72 ?=)))))
+
 (cl-defun im-request
     (endpoint
      &rest params
@@ -1001,43 +1052,50 @@ case."
   (interactive (list (read-string "URL: ") :-raw t))
   (let (json)
     ;; Remove request related items from params list
-    (dolist (key '(:-type :-headers :-data :-params :-async? :-on-success :-raw :-on-error))
+    (dolist (key '(:-type :-headers :-data :-params :-async? :-on-success :-raw :-on-error :-timeout))
       (cl-remf params key))
 
-    (let ((fn (lambda (resolve reject)
-                (request
-                  endpoint
-                  :type -type
-                  :timeout -timeout
-                  :headers (cond
-                            ((and -headers (json-alist-p -headers)) -headers)
-                            ((and -headers (json-plist-p -headers)) (im-plist-to-alist -headers))
-                            (t nil))
-                  :parser (cond
-                           ((and -raw (functionp -raw)) -raw)
-                           (-raw #'buffer-string)
-                           (t (apply-partially #'json-parse-buffer :object-type 'alist :array-type 'list :null-object nil)))
-                  :success (cl-function
-                            (lambda (&key data &allow-other-keys)
-                              (funcall resolve data)))
-                  :error (cl-function
-                          (lambda (&key data status error-thrown &allow-other-keys)
-                            (unless -on-error
-                              (message "im-request :: failed status=%s, error-thrown=%s, data=%s" status error-thrown data))
-                            (funcall reject data)))
-                  :sync (and (not -on-success) (not -async?))
-                  :data (cond
-                         ((and -data (or (json-alist-p -data) (json-plist-p -data)))
-                          (json-serialize -data))
-                         ((stringp -data) -data)
-                         (t nil))
-                  :params (cl-remove
-                           nil
-                           (cond
-                            ((and -params (json-alist-p -params)) -params)
-                            ((and -params (json-plist-p params)) (im-plist-to-alist -params))
-                            (t (im-plist-to-alist params)))
-                           :key #'cdr)))))
+    (let* ((computed-params (cl-remove
+                             nil
+                             (cond
+                              ((and -params (json-alist-p -params)) -params)
+                              ((and -params (json-plist-p params)) (im-plist-to-alist -params))
+                              (t (im-plist-to-alist params)))
+                             :key #'cdr))
+           (computed-headers (cond
+                              ((and -headers (json-alist-p -headers)) -headers)
+                              ((and -headers (json-plist-p -headers)) (im-plist-to-alist -headers))
+                              (t nil)))
+           (computed-data (cond
+                           ((and -data (or (json-alist-p -data) (json-plist-p -data)))
+                            (json-encode -data))
+                           ((stringp -data) -data)
+                           (t nil)))
+           (fn (lambda (resolve reject)
+                 ;; Log the request
+                 (im-request--log-request -type endpoint -headers -data computed-data computed-params)
+                 (request
+                   endpoint
+                   :type -type
+                   :timeout -timeout
+                   :headers computed-headers
+                   :parser (cond
+                            ((and -raw (functionp -raw)) -raw)
+                            (-raw #'buffer-string)
+                            (t (apply-partially #'json-parse-buffer :object-type 'alist :array-type 'list :null-object nil)))
+                   :success (cl-function
+                             (lambda (&key data response &allow-other-keys)
+                               (im-request--log-response response data nil)
+                               (funcall resolve data)))
+                   :error (cl-function
+                           (lambda (&key data status error-thrown response &allow-other-keys)
+                             (im-request--log-response response data t)
+                             (unless -on-error
+                               (message "im-request :: failed status=%s, error-thrown=%s, data=%s" status error-thrown data))
+                             (funcall reject data)))
+                   :sync (and (not -on-success) (not -async?))
+                   :data computed-data
+                   :params computed-params))))
       (cond
        (-async? (promise-new fn))
        ((or -on-success -on-error)
