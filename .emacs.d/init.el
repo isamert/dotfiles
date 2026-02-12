@@ -7642,7 +7642,9 @@ the commit buffer."
   :straight nil
   :custom
   (im-radarr-url im-homeserver-radarr-url)
-  (im-radarr-api-key im-homeserver-radarr-api-key))
+  (im-radarr-api-key im-homeserver-radarr-api-key)
+  (im-sonarr-url im-homeserver-sonarr-url)
+  (im-sonarr-api-key im-homeserver-sonarr-api-key))
 
 ;;;;; im-ntfy --- ntfy client
 
