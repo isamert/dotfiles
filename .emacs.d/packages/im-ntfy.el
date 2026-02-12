@@ -121,7 +121,7 @@ Uses TOKEN if provided, otherwise USERNAME and PASSWORD."
 (defun im-ntfy--parse-json-line (line)
   "Parse a JSON LINE into an alist."
   (condition-case nil
-      (json-read-from-string line)
+      (json-parse-string line :object-type 'alist :array-type 'list :null-object nil :false-object nil)
     (error nil)))
 
 (defun im-ntfy--handle-message (topic message)
@@ -493,17 +493,38 @@ Returns a list of message alists."
         (message "Active subscriptions:\n%s" (string-join (nreverse subs) "\n"))
       (message "No active subscriptions"))))
 
+(defun im-ntfy-listen (topic)
+  "Recive notifications from TOPIC directly in Emacs."
+  (im-ntfy-subscribe
+   topic
+   (lambda (msg _cb)
+     (let-alist msg
+       (im-notif
+        :title (or .title (format "*ntfy-%s*" topic))
+        :message .message
+        :duration 7
+        :source (lambda ()
+                  (im-ntfy-open-topic topic))
+        :severity (pcase .priority
+                    (5 'urgent)
+                    (4 'high)
+                    (3 'moderate)
+                    (2 'normal)
+                    (1 'low)
+                    (_ 'trivial))
+        :labels `("ntfy" ,topic ,@.tags))))))
+
 ;;; Cleanup
 
 (defun im-ntfy-unsubscribe-all ()
   "Unsubscribe from all topics."
   (interactive)
-  (maphash (lambda (topic _)
-             (im-ntfy-unsubscribe topic))
-           im-ntfy--subscriptions)
-  (clrhash im-ntfy--subscriptions)
-  (message "Unsubscribed from all topics"))
+  (let ((count (hash-table-count im-ntfy--subscriptions)))
+    (maphash (lambda (topic _)
+               (im-ntfy-unsubscribe topic))
+             im-ntfy--subscriptions)
+    (clrhash im-ntfy--subscriptions)
+    (message "im-ntfy :: Unsubscribed from %d topics" count)))
 
 (provide 'im-ntfy)
-
 ;;; im-ntfy.el ends here
