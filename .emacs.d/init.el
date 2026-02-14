@@ -3468,7 +3468,8 @@ Return a (color color) list that can be used with :column-colors and
     (when (and
            (not im-notif-dnd)
            (current-idle-time)
-           (>= (time-to-seconds (current-idle-time)) 30))
+           (>= (time-to-seconds (current-idle-time)) 30)
+           (not (seq-contains-p (plist-get data :labels) "ntfy")))
       (im-ntfy-publish
        (concat "emacs-" (system-name)) (plist-get data :message)
        :title (or (plist-get data :title) "Emacs"))))
