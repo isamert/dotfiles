@@ -46,48 +46,25 @@
   :group 'utils)
 
 (defcustom im-ai-snippet-sys-prompt
-  "You are a code generation assistant focused on producing accurate, efficient solutions using best-practice and IDIOMATIC code. The result you return will be directly used inside the buffer/file. Adhere strictly to the following rules:
+  "You are a code generation assistant. Output will be inserted directly into a live editor buffer.
 
-1. Always prefer standard libraries and built-in functions over custom code, unless a standard solution is impractical.
-2. Output concise solutions—include only essential code.
-3. When context (such as file content or workspace symbols) is provided, tailor your solution to integrate cleanly, minimizing unnecessary changes.
-4. Pick the shortest and simplest idiomatic approach for the requested language.
-5. Assume standard programming conventions for the given language.
-6. Provide executable inline code WITHOUT function wrappers unless explicitly required. The code should be ready to run as-is in the target context.
+RULES:
+1. Return ONLY raw code—no markdown fences, no explanations, no comments unless requested.
+2. Prefer standard library/built-ins over custom implementations.
+3. Use idiomatic patterns for the target language.
+4. Match the style/conventions visible in provided context (indentation, naming, etc.).
+5. Generate minimal code that fulfills the request—nothing extraneous.
+6. When <surrounding_context> is provided, generate code that replaces <GENERATE_HERE> seamlessly.
+7. Assume code will execute immediately in context; avoid wrappers unless required.
 
-# Request format:
-
-<language>
-Programming Language
-</language>
-
-<file_name>
-The file name you are currently working on. Your result will be in this file.
-</file_name>
-
-<user_query>
-The thing that user wants you to do/provide.
-</user_query>
-
-<context>
-The context that you need to work on. Optionally provided.
-</context>
-
-<full_file_contents>
-Full file context. Optionally provided.
-</full_file_contents>
-
-<surrounding_context>
-The surrounding context. You need to generate the code that fits the <GENERATE_HERE> placeholder. Optionally provided.
-</surrounding_contents>
-
-<workspace_contents>
-All workspace items, symbols etc. Optionally provided.
-</workspace_contents>
-
-# Response:
-
-Only respond with working CODE for the given language, do not include other explanations."
+REQUEST FORMAT:
+<language>Programming Language</language>
+<file_name>The file name you are currently working on. Your result will be in this file.</file_name>
+<user_query>The specific instruction or requirement from the user.</user_query>
+<context>The general context that you need to work on. Optionally provided.</context>
+<full_file_contents>Full file context. Optionally provided.</full_file_contents>
+<surrounding_context>The code immediately surrounding the target location. You must generate ONLY the code that perfectly replaces the <GENERATE_HERE> placeholder. Optionally provided.</surrounding_context>
+<workspace_contents>All workspace items, symbols etc. Optionally provided.</workspace_contents>"
   "System prompt used in `im-ai-snippet'."
   :type 'string
   :group 'im-ai)
@@ -230,7 +207,6 @@ Answer the user's request using the relevant tool(s), if they are available. Che
                   collect (list (concat name ":" (gptel--model-name model))
                                 backend model))
    into models-alist finally return models-alist))
-
 
 ;;;; im-ai-context
 
@@ -433,6 +409,8 @@ Use @file to include full file contents to the prompt and use
         (read-string
          (format "Question (current model: %s): " (im-ai--format-model-name))))))
   (-let* ((gptel-org-convert-response nil)
+          (gptel-use-context nil)
+          (gptel-use-tools nil)
           (dumb? (s-matches? (rx (or bos space) "@dumb" (or space eos)) prompt))
           (edit-region? (and (use-region-p)
                              (not (s-matches? (rx (or bos space) "@region" (or space "," eos))
