@@ -546,20 +546,16 @@ cut it. I need to run those statements on every theme change.")
   :custom
   (im-adaptive-theme-detect-geolocation-automatically t)
   (im-adaptive-theme-day-themes
-   '(;; Pinkish white theme, really nice to look at.
-     ef-summer
-     acme))
+   '(ef-summer
+     im-ef-acme
+     im-ef-solstice
+     im-ef-blossom))
   (im-adaptive-theme-night-themes
-   '(;; Grayish theme with great colors.
-     doom-one
-     ;; A regular black theme with nice amount of contrast.
-     modus-vivendi
-     ;; Like solarized but much nicer colors.
-     ef-melissa-dark
-     ;; Cool
-     doom-nord
-     ;; Nice dark theme with good contrast.
-     doom-Iosvkem)))
+   '(doom-one
+     im-ef-acme-dark
+     im-ef-solstice-dark
+     im-ef-solstice-soft-dark
+     doom-bluloco-dark)))
 
 ;; Add my custom themes to load path
 (add-to-list
@@ -11339,10 +11335,13 @@ schedules them to today's date."
 
 (defun im-display-buffer-in-side-window (buffer &optional width)
   "Just like `display-buffer-in-side-window` but only takes a BUFFER and rest of the parameters are for my taste."
+  (when-let ((existing-window (window-with-parameter 'window-side 'right)))
+    (delete-window existing-window))
   (set-window-dedicated-p
-   ;; ^ Setting this to nil so that `pop-to-buffer-same-window' calls works in this window
-   ;;   otherwise it'll set `window-dedicated-p' to `side' and this will cause `pop-to-buffer-same-window'
-   ;;   to open stuff in another window.
+   ;; ^ Setting this to nil so that `pop-to-buffer-same-window' calls
+   ;; works in this window otherwise it'll set `window-dedicated-p' to
+   ;; `side' and this will cause `pop-to-buffer-same-window' to open
+   ;; stuff in another window.
    (select-window
     (display-buffer-in-side-window
      buffer
