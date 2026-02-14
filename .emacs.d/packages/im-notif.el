@@ -38,6 +38,7 @@
 (require 'transient)
 (require 'log4e)
 (require 'ring)
+(require 'svg)
 
 ;;;; Customization
 
@@ -139,7 +140,10 @@ Also see `im-notif-label-default-durations'."
 (defvar-local im-notif--notification-data nil)
 
 ;;;###autoload
-(async-cl-defun im-notif (&rest data &key id title message duration (margin t) (severity 'normal) labels source &allow-other-keys)
+(cl-defun im-notif
+    (&rest data
+           &key id title message (duration 7) (severity 'normal) labels source
+           &allow-other-keys)
   "Displays a notification message.
 
 DATA -- a property list of keyword arguments:
@@ -197,43 +201,26 @@ be a function or a buffer object."
                        (map-insert :id id)
                        (map-insert :time (float-time))
                        (map-insert :duration duration)
-                       (map-insert :source-buffer source-buffer))))
+                       (map-insert :source-buffer source-buffer)))
+         (image (im-notif--create-svg title message severity))
+         ;; (image (svg-image svg :scale 1.0))
+         )
     (ring-insert im-notif--last-notifications notif-data)
     (when (not blacklisted?)
       (when should-show?
         (when (frame-focus-state) ; Only show posframe if frame is focused
           (posframe-show
            (with-current-buffer (get-buffer-create bname)
+             (setq-local max-image-size 10000)
              (setq im-notif--notification-data notif-data)
+             (insert-image image)
              (current-buffer))
-           :string
-           (if margin
-               (format "\n  %s  \n  %s  \n\n" title (s-trim (s-join "  \n" (--map (concat "  " it) (s-lines message)))))
-             (format "%s\n%s" title message))
-           :poshandler
-           (lambda (info)
-             (let ((posy (* (line-pixel-height)
-                            (--reduce-from (+ acc
-                                              (with-current-buffer it
-                                                (count-lines (point-min) (point-max))))
-                                           0
-                                           (remove bname im-notif--active)))))
-               (cons (- (plist-get info :parent-frame-width)
-                        (plist-get info :posframe-width)
-                        20)
-                     (if (> posy 0)
-                         (+ posy (+ 3 3 15))
-                       30))))
-           :border-width 3
-           :max-height 10
-           :min-width 30
-           :max-width 80
-           :border-color (pcase severity
-                           ((or 'high 'urgent) "red3")
-                           ('normal "yellow3")
-                           (_ nil)))
+           :poshandler #'im-notif--poshandler
+           :background-color nil
+           :left-fringe 1
+           :right-fringe 1
+           :internal-border-width 0)
           (push bname im-notif--active)
-
           ;; Clear the notification after a certain time, if requested
           (when duration
             (run-with-timer
@@ -244,7 +231,6 @@ be a function or a buffer object."
                             (>= (time-to-seconds (current-idle-time)) duration))
                  (posframe-delete bname)
                  (setq im-notif--active (delete bname im-notif--active)))))))
-
         ;; Use native notifications if Emacs is not focused
         (unless (frame-focus-state)
           (let ((alert-default-style
@@ -255,6 +241,124 @@ be a function or a buffer object."
               (alert message :title title :severity severity)))))
       (dolist (fn im-notif-post-notify-hooks)
         (funcall fn data)))))
+
+(defun im-notif--poshandler (info)
+  (let ((posy (* 170 (length im-notif--active))))
+    (cons (- (plist-get info :parent-frame-width)
+             (plist-get info :posframe-width)
+             20)
+          (if (> posy 0)
+              (+ posy (+ 3 3 15))
+            30))))
+
+(defun im-notif--create-svg (title message severity)
+  "Generate an SVG notification image.
+- TITLE: Notification title (bold).
+- MESSAGE: Notification body text (will be wrapped).
+- SEVERITY: Symbol (urgent, high, moderate, normal, low, trivial)."
+  (let* (;; --- Configuration ---
+         ;; Change these values to adjust the look
+         (width 450)
+         (font-family (car im-fonts))
+         (font-size 14)
+         (title-font-size 20)
+         (line-height 20)
+         (padding 20)
+         (border-radius 5)
+         (strip-border-radius 5)
+         (strip-width 5)
+
+         ;; --- Color Utilities ---
+         ;; Safely gets face color, falling back to a default hex value if unspecified
+         (get-color (lambda (face default)
+                      (let ((c (face-attribute face :foreground nil t)))
+                        (if (and c (not (member c '(nil "unspecified"))))
+                            c default))))
+
+         ;; Base colors derived from theme
+         (bg (face-background 'default))
+         (bg-color (if (eq (frame-parameter nil 'background-mode) 'dark)
+                       (im-color-brighten bg 10)
+                     (im-color-lighten bg -3)))
+         (fg-color (face-foreground 'default))
+         (title-fg-color (face-foreground 'bold))
+
+         ;; --- Severity Colors ---
+         ;; Maps severity levels to theme faces for the accent strip color
+         (accent-color
+          (pcase severity
+            ('urgent    (funcall get-color 'error    "#ff5555"))
+            ('high      (funcall get-color 'warning  "#ffcc00"))
+            ('moderate  (funcall get-color 'success  "#50fa7b"))
+            ('normal    (funcall get-color 'font-lock-function-name-face "#8be9fd"))
+            ('low       (funcall get-color 'shadow   "#6272a4"))
+            ('trivial   (funcall get-color 'shadow   "#44475a"))
+            (_          "#6272a4")))
+
+         ;; --- Text Wrapping Logic ---
+         ;; Calculate char width approx for wrapping (width / (font-size * 0.6))
+         (fill-column (floor (/ width (* font-size 0.6))))
+         (body-lines (with-temp-buffer
+                       (insert message)
+                       (let ((fill-column fill-column)) ; Dynamic wrapping
+                         (fill-region (point-min) (point-max)))
+                       (split-string (buffer-string) "\n")))
+
+         ;; --- Layout Calculations ---
+         ;; Content width (minus padding and strip)
+         (content-width (- width (* padding 2) strip-width))
+
+         ;; Calculate Total Height
+         ;; = Padding(bottom) + (Title Line) + (Gap) + (Body Lines * lineHeight) + Padding(top)
+         ;; Note: SVG text y-coordinates are baselines.
+         (text-block-height (* line-height (length body-lines)))
+         (total-height (+ (* padding 2)         ; Top + Bottom padding
+                          line-height          ; Title height
+                          line-height          ; Gap between title and body
+                          (- text-block-height line-height) ; Adjust for height vs actual lines
+                          ))
+
+         ;; --- SVG Generation ---
+         (svg (svg-create width total-height)))
+
+    ;; 1. Draw Background (Rounded Card)
+    (svg-rectangle svg 0 0 width total-height
+                   :fill bg-color
+                   :rx border-radius)
+
+    ;; 2. Draw Accent Strip (Left border)
+    ;; We clip it slightly to ensure it fits nicely within the rounded background visually
+    ;; by starting slightly below 0 or just letting it overlay. Simple overlay is fine here.
+    (svg-rectangle svg 0 0 strip-width total-height
+                   :fill accent-color
+                   :rx strip-border-radius) ;; Round the strip corners if border-radius is large
+
+    ;; --- Render Text ---
+    (let ((x-start (+ strip-width padding)) ;; Start x after strip + padding
+          (y-cursor (+ padding line-height))) ;; Start y: padding + line-height (baseline)
+
+      ;; 3. Draw Title
+      (svg-text svg title
+                :font-family font-family
+                :font-weight "bold"
+                :font-size title-font-size
+                :fill title-fg-color
+                :x x-start
+                :y y-cursor)
+
+      ;; 4. Draw Content Lines
+      ;; Move cursor down for body text (add gap)
+      (setq y-cursor (+ y-cursor line-height))
+
+      (dolist (line body-lines)
+        (svg-text svg (or line "") ; Handle empty lines just in case
+                  :font-family font-family
+                  :font-size font-size
+                  :fill fg-color
+                  :x x-start
+                  :y y-cursor)
+        (setq y-cursor (+ y-cursor line-height))))
+    (svg-image svg :scale 1.0)))
 
 ;;;;; Interactive functions
 
@@ -268,8 +372,10 @@ be a function or a buffer object."
 ;;;###autoload
 (defun im-dummy-notification ()
   (interactive)
-  (im-notif :title (format "%s" (random))
-            :message (with-temp-buffer (spook) (buffer-string))))
+  (im-notif
+   :title "*dummy notification*"
+   :message (with-temp-buffer (spook) (buffer-string))
+   :labels '("dummy")))
 
 ;;;###autoload
 (defun im-notif-notifications ()
@@ -293,7 +399,10 @@ be a function or a buffer object."
                        (concat (or im-notif-blacklist-regexp "")
                                (and im-notif-blacklist-regexp "\\|")
                                (read-string "Regexp: "
-                                            (plist-get notification :title))))))))
+                                            (plist-get notification :title)))))
+      "Copy message" → (message "Message copied: %s" (im-kill (plist-get notification :message)))
+      "Copy title" → (message "Title copied: %s" (im-kill (plist-get notification :title)))
+      "Inspect" → (im-inspect notification))))
 
 ;;;###autoload
 (defun im-notif-enable-dnd (seconds)
@@ -443,6 +552,11 @@ otherwise, it is taken as a plain string regexp."
                 (im-notif-notifications-list))))
     (im-notif-go-to-source last-with-source)))
 
+(defun im-notif-kill-last ()
+  "Copy/kill last notification message."
+  (interactive)
+  (message "Message copied: %s" (im-kill (plist-get (car (im-notif-notifications-list)) :message))))
+
 ;;;;; Logging
 
 ;; See `im-notif-log-level' variable.
@@ -489,7 +603,8 @@ otherwise, it is taken as a plain string regexp."
     ("z" "Edit blacklist" im-notif-blacklist)]
    ["Other"
     ("s" "Snooze last" im-notif-snooze-last)
-    ("g" "Go to source last" im-notif-go-to-source-last)]])
+    ("g" "Go to source last" im-notif-go-to-source-last)
+    ("k" "Copy/kill last message" im-notif-kill-last)]])
 
 ;;;;; Utility
 
@@ -509,13 +624,21 @@ First one is the latest one."
   (ring-elements im-notif--last-notifications))
 
 (defun im-notif--format-notification (it)
-  (format "%s │ ✍️ %s 📰 %s%s"
-          (format-time-string "%Y-%m-%d %H:%M" (plist-get it :time))
-          (plist-get it :title)
-          (plist-get it :message)
-          (if-let* ((labels (plist-get it :labels)))
-              (concat " #️⃣ " (s-join " " (--map (format "#%s" it) labels)))
-            "")))
+  (let* ((time (propertize (format-time-string "%Y-%m-%d %H:%M" (plist-get it :time))
+                           'face 'font-lock-comment-face))
+         (title (propertize (plist-get it :title)
+                            'face 'font-lock-keyword-face))
+         (message (s-trim (s-truncate 120 (plist-get it :message))))
+         (labels (when-let* ((lbls (plist-get it :labels)))
+                   (propertize (s-join " " (--map (format "#%s" it) lbls))
+                               'face 'font-lock-constant-face))))
+    (concat time
+            (propertize " │ " 'face 'font-lock-comment-delimiter-face)
+            title
+            (propertize " → " 'face 'font-lock-comment-delimiter-face)
+            message
+            (when labels (concat "  " labels)))))
+
 
 (defun im-notif--select ()
   (im-completing-read

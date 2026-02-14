@@ -37,6 +37,7 @@
 (require 'seq)
 (require 'json)
 (require 'dom)
+(require 'color)
 (eval-when-compile (require 'subr-x))
 
 ;;;; Variables
@@ -1330,6 +1331,24 @@ the header line."
                  results))))
     :-on-success success
     :-on-error error))
+
+;;;; Colors
+
+(defun im-color-lighten (color percent)
+  "Lighten COLOR by PERCENT using HSL lightness adjustment.
+Negative PERCENT values darken the color."
+  (apply #'color-rgb-to-hex
+         (append (color-name-to-rgb
+                  (color-lighten-name color percent)) '(2))))
+
+
+(defun im-color-brighten (color percent)
+  "Brighten COLOR by PERCENT, pushing RGB values toward white.
+Negative PERCENT values push toward black (darken)."
+  (let* ((rgb (color-name-to-rgb color))
+         (factor (/ percent 100.0))
+         (lightened (mapcar (lambda (c) (+ c (* (- 1 c) factor))) rgb)))
+    (apply #'color-rgb-to-hex (append lightened '(2)))))
 
 ;;;; Footer
 

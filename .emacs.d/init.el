@@ -569,15 +569,17 @@ cut it. I need to run those statements on every theme change.")
 ;;;;; Fonts
 
 (defconst im-fonts
-  '("Cascadia Code NF"
-    "CaskaydiaCove Nerd Font"
-    "FiraCode Nerd Font"
-    "Iosevka Nerd Font"
-    "IBM Plex Mono"
-    "Iosevka Comfy Motion"
-    "Iosevka Comfy"
-    "Liberation Mono"
-    "Noto Sans Mono")
+  (seq-filter
+   #'im-font-exists-p
+   '("Cascadia Code NF"
+     "CaskaydiaCove Nerd Font"
+     "FiraCode Nerd Font"
+     "Iosevka Nerd Font"
+     "IBM Plex Mono"
+     "Iosevka Comfy Motion"
+     "Iosevka Comfy"
+     "Liberation Mono"
+     "Noto Sans Mono"))
   "Fonts that I use.")
 
 (defvar im-current-font nil
@@ -590,13 +592,12 @@ One of `im-fonts'.")
   "Set the first available font from the `im-fonts' list.
 If NEXT is non-nil, then use the next font."
   (interactive)
-  (and-let* ((fonts (-filter #'im-font-exists-p im-fonts))
-             (font (if (called-interactively-p 'interactive)
+  (and-let* ((font (if (called-interactively-p 'interactive)
                        (let* ((display-fonts (mapcar (lambda (f)
                                                        (propertize f 'face `(:family ,f)))
-                                                     fonts)))
+                                                     im-fonts)))
                          (completing-read "Font: " display-fonts nil t))
-                     (car fonts))))
+                     (car im-fonts))))
     (set-face-attribute 'default nil
                         :font font
                         :weight 'normal
@@ -6142,7 +6143,7 @@ Example usage:
            (title (format "%s - %s" room-name sender-name))
            (msg-str (im-slack--stringify-message
                      (list :message message :team team)))
-           (msg-str-short (s-truncate 80 (s-replace "\n" "─" msg-str)))
+           (msg-str-short (s-truncate 80 (s-replace "\n" "↩" msg-str)))
            (message-data (list :room room
                                :team team
                                :message message
@@ -6166,7 +6167,7 @@ Example usage:
         (when (slack-message-notify-p message room team)
           (ignore-errors
             (im-notif
-             :message msg-str-short
+             :message msg-str
              :title title
              :source (lambda ()
                        (im-slack--open-message-or-thread message-data))
