@@ -383,7 +383,7 @@ be a function or a buffer object."
   (interactive)
   (let ((notification (im-notif--select)))
     (empv--select-action "Act on notification"
-      "Buffer (origin)" → (switch-to-buffer (plist-get notification :source-buffer))
+      "Buffer (origin)" → (im-switch-to-buffer-in-tab (plist-get notification :source-buffer))
       "Go to Source" → (im-notif-go-to-source notification)
       "Delete" → (progn
                    (ignore-errors
@@ -522,7 +522,7 @@ otherwise, it is taken as a plain string regexp."
   (let ((source (plist-get notification :source)))
     (cond
      ((functionp source) (funcall source))
-     ((bufferp source) (switch-to-buffer (plist-get notification :source)))
+     ((bufferp source) (im-switch-to-buffer-in-tab source))
      (t (message "Can't open: %s" source)))))
 
 ;; TODO Add ack, like tmr? Maybe add ack option to im-notif

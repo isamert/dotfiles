@@ -614,6 +614,21 @@ Otherwise:
   (interactive)
   (im-popup-frame nil :buffer (or buffer (current-buffer))))
 
+(defun im-switch-to-buffer-in-tab (buffer &optional switch-fn)
+  "Switch to BUFFER, checking tabs first if `tab-bar-mode' is enabled.
+If BUFFER is visible in a tab, switch to that tab and select the window.
+Otherwise, use SWITCH-FN (defaults to `switch-to-buffer') to display BUFFER."
+  (let ((switch-fn (or switch-fn #'switch-to-buffer))
+        (buffer (get-buffer buffer)))
+    (if (and (bound-and-true-p tab-bar-mode)
+             (when-let* ((tab (tab-bar-get-buffer-tab buffer)))
+               (tab-bar-switch-to-tab (alist-get 'name tab))
+               (when-let* ((window (get-buffer-window buffer)))
+                 (select-window window))
+               t))
+        buffer
+      (funcall switch-fn buffer))))
+
 ;;;; Clipboard functions
 
 (defun im-clipboard-contains-image-p ()
