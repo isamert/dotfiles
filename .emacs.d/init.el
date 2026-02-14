@@ -2088,13 +2088,17 @@ Otherwise call `org-store-link'."
 ;; which shows the destination of links in the echo area (and maybe
 ;; displays other helpful stuff).
 
-(defun im-help-at-point-mode ()
+(define-minor-mode im-help-at-point-mode
   "Show tooltips in the echo area automatically for current buffer."
-  (interactive)
-  (setq-local help-at-pt-display-when-idle t)
-  (setq-local help-at-pt-timer-delay 0)
-  (help-at-pt-cancel-timer)
-  (help-at-pt-set-timer))
+  :lighter " HelpPt"
+  (if im-help-at-point-mode
+      (progn
+        (setq-local help-at-pt-display-when-idle t)
+        (setq-local help-at-pt-timer-delay 0)
+        (help-at-pt-cancel-timer)
+        (help-at-pt-set-timer))
+    (setq-local help-at-pt-display-when-idle nil)
+    (help-at-pt-cancel-timer)))
 
 (with-eval-after-load 'org
   (add-hook 'org-mode-hook #'im-help-at-point-mode))

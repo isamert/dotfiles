@@ -367,8 +367,10 @@ Answer the user's request using the relevant tool(s), if they are available. Che
 (defvar-local im-ai--last-processed-point nil)
 (defvar-local im-ai--before-overlay nil)
 (defvar-local im-ai--after-overlay nil)
+(defvar-local im-ai--history nil)
 (defvar-local im-ai-reenable-aggressive-indent nil
   "Aggressive indent may fuck things up while the AI is streaming.")
+(defvar-local im-ai-disable-help-at-pt-mode nil)
 (add-hook 'gptel-post-stream-hook #'im-ai--cleanup-stream)
 (add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
 
@@ -392,7 +394,7 @@ Answer the user's request using the relevant tool(s), if they are available. Che
      :kind (lambda (xs x) "" 'module)
      :category symbol)))
 
-(defun im-ai-snippet (prompt)
+(defun im-ai-snippet (prompt &optional history)
   "Ask for a snippet with PROMPT and get it directly inside your buffer.
 
 If you select some region and prompt, then this will change the
@@ -428,7 +430,63 @@ Use @file to include full file contents to the prompt and use
                              (setq prompt (s-replace-regexp "@model=\\([^ ]+\\)" "" prompt))
                              (cdr (assoc (format "%s:%s" backend model) (im-ai--gptel-all-models)))))
           (gptel-backend (or backend gptel-backend))
-          (gptel-model (or model gptel-model)))
+          (gptel-model (or model gptel-model))
+          (formatted-prompt
+           (s-join
+            "\n"
+            `(,@(when (not dumb?)
+                  (seq-concatenate
+                   'list
+                   (list
+                    "<language>"
+                    (im-ai--get-current-language)
+                    "</language>")
+                   (when-let ((file-name (buffer-file-name)))
+                     (list
+                      "<file_name>"
+                      (file-name-nondirectory file-name)
+                      "</file_name>"))))
+              "<user_query>"
+              ,(s-replace-all `(("@file" . "")
+                                ("@fullfile" . "")
+                                ("@context" . "")
+                                ("@dumb" . "")
+                                ("@workspace" . "")
+                                ("@noexp" . ". Do not include any explanations, only output the solution.")
+                                ("@region" . ,(concat "<region>" (s-trim region) "</region>")))
+                              prompt)
+              "</user_query>"
+              ,@(when edit-region?
+                  (list
+                   "<context>" (s-trim region) "</context>"))
+              ,@(when (s-matches? (rx (or bos space) "@fullfile" (or space eos)) prompt)
+                  (list
+                   "<full_file_contents>"
+                   (save-restriction
+                     (widen)
+                     (buffer-substring-no-properties (point-min) (point-max)))
+                   "</full_file_contents>"))
+              ,@(when (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
+                  (list
+                   "<file_context>"
+                   (im-ai-file-context (im-current-project-root) (buffer-file-name))
+                   "</file_context>"))
+              ,@(when (s-matches? (rx (or bos space) "@workspace" (or space eos)) prompt)
+                  (list "<workspace_contents>" (im-ai-workspace-context) "</workspace_contents>"))
+              ,@(when (s-matches? (rx (or bos space) "@context" (or space eos)) prompt)
+                  (list
+                   "<surrounding_context>"
+                   "..."
+                   (let* ((start
+                           (progn
+                             (insert "<GENERATE_HERE>")
+                             (save-excursion (goto-char rbegin) (forward-line -10) (line-beginning-position))))
+                          (end
+                           (save-excursion (goto-char rend) (forward-line 10) (line-end-position))))
+                     (prog1 (buffer-substring-no-properties start end)
+                       (delete-region (point) (- (point) (length "<GENERATE_HERE>")))))
+                   "..."
+                   "</surrounding_context>"))))))
     (if edit-region?
         (progn
           (setq
@@ -446,75 +504,10 @@ Use @file to include full file contents to the prompt and use
     (when (bound-and-true-p aggressive-indent-mode)
       (setq im-ai-reenable-aggressive-indent t)
       (aggressive-indent-mode -1))
-    (gptel-request
-        (s-join
-         "\n"
-         `(,@(when (not dumb?)
-               (seq-concatenate
-                'list
-                (list
-                 "<language>"
-                 (im-ai--get-current-language)
-                 "</language>"
-                 "\n")
-                (when-let ((file-name (buffer-file-name)))
-                  (list
-                   "<file_name>"
-                   (file-name-nondirectory file-name)
-                   "</file_name>"
-                   "\n"))))
-           "<user_query>"
-           ,(s-replace-all `(("@file" . "")
-                             ("@fullfile" . "")
-                             ("@context" . "")
-                             ("@dumb" . "")
-                             ("@workspace" . "")
-                             ("@noexp" . ". Do not include any explanations, only output the solution.")
-                             ("@region" . ,(concat "<region>\n" (s-trim region) "\n</region>")))
-                           prompt)
-           "</user_query>"
-           "\n"
-           ,@(when edit-region?
-               (list
-                "<context>"
-                (s-trim region)
-                "</context>"
-                "\n"))
-           ,@(when (s-matches? (rx (or bos space) "@fullfile" (or space eos)) prompt)
-               (list
-                "<full_file_contents>"
-                (save-restriction
-                  (widen)
-                  (buffer-substring-no-properties (point-min) (point-max)))
-                "</full_file_contents>"
-                "\n"))
-           ,@(when (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
-               (list
-                "<file_context>"
-                (im-ai-file-context (im-current-project-root) (buffer-file-name))
-                "</file_context>"
-                "\n"))
-           ,@(when (s-matches? (rx (or bos space) "@workspace" (or space eos)) prompt)
-               (list
-                "<workspace_contents>"
-                (im-ai-workspace-context)
-                "</workspace_contents>"
-                "\n"))
-           ,@(when (s-matches? (rx (or bos space) "@context" (or space eos)) prompt)
-               (list
-                "<surrounding_context>"
-                "..."
-                (let* ((start
-                        (progn
-                          (insert "<GENERATE_HERE>")
-                          (save-excursion (goto-char rbegin) (forward-line -10) (line-beginning-position))))
-                       (end
-                        (save-excursion (goto-char rend) (forward-line 10) (line-end-position))))
-                  (prog1 (buffer-substring-no-properties start end)
-                    (delete-region (point) (- (point) (length "<GENERATE_HERE>")))))
-                "..."
-                "</surrounding_context>"
-                "\n"))))
+    (setq im-ai--history (if history
+                             (append history (list prompt))
+                           (list formatted-prompt)))
+    (gptel-request im-ai--history
       :stream t
       :system (if dumb? im-ai-snippet-dumb-prompt im-ai-snippet-sys-prompt)
       :fsm (gptel-make-fsm :handlers gptel-send--handlers))))
@@ -544,15 +537,19 @@ Use @file to include full file contents to the prompt and use
               (buffer-substring-no-properties beg end))))
         (delete-region beg end)
         (goto-char beg)
-        (insert contents))
+        (insert (s-trim contents) "\n"))
+      (setq im-ai--history (append im-ai--history (list (buffer-substring-no-properties beg (point)))))
       ;; Indent the code to match the buffer indentation if it's messed up.
-      (indent-region beg end)
+      (indent-region beg (point))
       (pulse-momentary-highlight-region beg (point))
       (setq im-ai--after-overlay
             (im-ai--draw-snippet-overlay beg (1+ (line-end-position)) 'im-ai-after-face))
       (when im-ai-reenable-aggressive-indent
         (aggressive-indent-mode +1)
-        (setq im-ai-reenable-aggressive-indent nil)))))
+        (setq im-ai-reenable-aggressive-indent nil))
+      (unless (bound-and-true-p im-help-at-point-mode)
+        (setq im-ai-disable-help-at-pt-mode t)
+        (im-help-at-point-mode +1)))))
 
 (defun im-ai--accept ()
   (interactive)
@@ -560,26 +557,40 @@ Use @file to include full file contents to the prompt and use
     (delete-region
      (overlay-start im-ai--before-overlay)
      (overlay-end im-ai--before-overlay)))
-  (remove-overlays (point-min) (point-max) 'im-ai t))
+  (remove-overlays (point-min) (point-max) 'im-ai t)
+  (when im-ai-disable-help-at-pt-mode
+    (im-help-at-point-mode -1)))
 
 (defun im-ai--reject ()
   (interactive)
   (delete-region
    (overlay-start im-ai--after-overlay)
    (overlay-end im-ai--after-overlay))
-  (remove-overlays (point-min) (point-max) 'im-ai t))
+  (remove-overlays (point-min) (point-max) 'im-ai t)
+  (when im-ai-disable-help-at-pt-mode
+    (im-help-at-point-mode -1)))
+
+(defun im-ai--iterate ()
+  (interactive)
+  (let ((prompt (read-string "Iterate: ")))
+    (delete-region
+     (overlay-start im-ai--after-overlay)
+     (overlay-end im-ai--after-overlay))
+    (delete-overlay im-ai--after-overlay)
+    (im-ai-snippet prompt im-ai--history)))
 
 (defvar-keymap im-ai-snippet-rewrite-map
   :doc "Keymap for ai rewrite actions at point."
   "C-c C-c" #'im-ai--accept
-  "C-c C-k" #'im-ai--reject)
+  "C-c C-k" #'im-ai--reject
+  "C-c C-i" #'im-ai--iterate)
 
 (defun im-ai--draw-snippet-overlay (beg end face)
   (let ((ov (make-overlay beg end)))
     (overlay-put ov 'face face)
     (overlay-put ov 'keymap im-ai-snippet-rewrite-map)
     (overlay-put ov 'im-ai t)
-    (overlay-put ov 'help-echo (format "accept: \\[im-ai--accept], reject: \\[im-ai--reject]"))
+    (overlay-put ov 'help-echo (format "accept: \\[im-ai--accept], reject: \\[im-ai--reject], iterate: \\[im-ai--iterate]"))
     ov))
 
 ;;;; Interactive utils
