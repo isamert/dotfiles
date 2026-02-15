@@ -949,7 +949,6 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
                 "\n</buffers>"))
    :description "List names of open buffers. Act directly on buffers if you know the name already, without listing."
    :args '()
-   :confirm t
    :category "buffers")
 
   (gptel-make-tool
@@ -995,7 +994,53 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
             :type integer
             :optional t
             :description "Ending line number (1-indexed). Optional."))
-   :confirm t
+   :category "buffers")
+
+  (gptel-make-tool
+   :name "search_buffer"
+   :function (lambda (buffer-name pattern &optional regexp case-sensitive)
+               (message "gptel :: search_buffer(%s, %s, %s, %s)" buffer-name pattern regexp case-sensitive)
+               (if (or (s-blank? buffer-name) (not (get-buffer buffer-name)))
+                   "Operation failed: invalid buffer name."
+                 (if (s-blank? pattern)
+                     "Operation failed: search pattern is empty."
+                   (with-current-buffer buffer-name
+                     (let ((case-fold-search (not case-sensitive))
+                           (search-fn (if regexp #'re-search-forward #'search-forward))
+                           (matches '())
+                           (max-matches 50))
+                       (save-excursion
+                         (goto-char (point-min))
+                         (while (and (< (length matches) max-matches)
+                                     (funcall search-fn pattern nil t))
+                           (let* ((line-num (line-number-at-pos (match-beginning 0)))
+                                  (line-content (buffer-substring-no-properties
+                                                 (line-beginning-position)
+                                                 (line-end-position))))
+                             (push (format "%d: %s" line-num line-content) matches))))
+                       (if matches
+                           (concat
+                            (format "<search_results buffer=%S pattern=%S matches=%d%s>\n"
+                                    buffer-name pattern (length matches)
+                                    (if (= (length matches) max-matches) " truncated=true" ""))
+                            (string-join (nreverse matches) "\n")
+                            "\n</search_results>")
+                         (format "No matches found for %S in buffer %S." pattern buffer-name)))))))
+   :description "Search for a pattern in a buffer and return matching lines with line numbers (max 50 matches)."
+   :args '((:name "buffer_name"
+            :type string
+            :description "Name of the buffer to search in.")
+           (:name "pattern"
+            :type string
+            :description "The search pattern to look for.")
+           (:name "regexp"
+            :type boolean
+            :optional t
+            :description "If true, treat pattern as a regular expression. Default is false.")
+           (:name "case_insensitive"
+            :type boolean
+            :optional t
+            :description "If true, search is case-insensitive. By default does a case insensitive search.."))
    :category "buffers")
 
   (gptel-make-tool
