@@ -6687,9 +6687,21 @@ Fetches missing channels/users first."
             (wc (count-words start end))
             (lc (count-lines start end)))
         (im-run-deferred ; don't know why needed...
-         (im-notif :title (format "AI Generated ⟹ %s" bname)
+         (im-notif :title (format "%s ⟹ FINISHED" bname)
                    :message (format "%s lines, %s words..." lc wc)
-                   :source (get-buffer bname))))))
+                   :source (get-buffer bname)
+                   :labels '("ai"))))))
+
+  (define-advice gptel--display-tool-calls (:before (&rest args) advice-name)
+    "Show notification"
+    (unless (get-buffer-window (current-buffer) (selected-frame))
+      (let ((bname (buffer-name)))
+        (im-run-deferred
+         (im-notif :title (format "%s ⟹ ACTION REQUIRED" bname)
+                   :message "Tool called..."
+                   :source (get-buffer bname)
+                   :labels '("ai"))))))
+
   (add-to-list 'gptel-post-response-functions #'im-gptel-on-response-finished))
 
 (im-leader
