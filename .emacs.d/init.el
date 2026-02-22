@@ -6754,6 +6754,13 @@ Fetches missing channels/users first."
 (use-package im-cursor
   :straight nil)
 
+;;;;; im-kagi-assistant
+
+(use-package im-kagi-assistant
+  :straight nil
+  :custom
+  (im-kagi-assistant-cookie im-kagi-cookie))
+
 ;;;;; tmr.el -- timers, reminders etc.
 
 ;; Pretty timers. I forget everything, so it's quite important for me
