@@ -4196,6 +4196,22 @@ ssh "$@" -t "sh -c 'if which fish >/dev/null ; then exec fish -li; else exec \$S
 complete -c fissh -w ssh
 #+end_src
 
+** set-timezone
+#+begin_src bash :tangle ~/.bin/set-timezone
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+TIMEZONE=$(curl -s --fail ipinfo.io | jq -r '.timezone // empty')
+
+if [[ -z "$TIMEZONE" ]]; then
+    echo "Error: Could not determine timezone" >&2
+    exit 1
+fi
+
+sudo timedatectl set-timezone "$TIMEZONE"
+echo "Timezone set to: $TIMEZONE"
+#+end_src
 * Tools
 - =dconf-editor= :: List and explore gnome/gshell/app settings.
 - =d-feet= :: List and explore running dbus instances.
