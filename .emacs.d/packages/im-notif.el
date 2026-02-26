@@ -276,10 +276,7 @@ be a function or a buffer object."
                             c default))))
 
          ;; Base colors derived from theme
-         (bg (face-background 'default))
-         (bg-color (if (eq (frame-parameter nil 'background-mode) 'dark)
-                       (im-color-brighten bg 10)
-                     (im-color-lighten bg -3)))
+         (bg-color (im-alternative-bg-color))
          (fg-color (face-foreground 'default))
          (title-fg-color (face-foreground 'bold))
 

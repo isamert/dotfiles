@@ -3409,8 +3409,7 @@ that is read verbatim (meaning that no '$*' is appended):
   "Return alternating colors for vtable rows.
 Return a (color color) list that can be used with :column-colors and
 :row-colors.  Makes the tables more readable."
-  ;; Mini-frame dependency is not cool bot ok.  Rest of the config is still look like hell.
-  `(,(alist-get 'background-color (frame-parameters)) ,(mini-frame-get-background-color)))
+  `(,(alist-get 'background-color (frame-parameters)) ,(im-alternative-bg-color)))
 
 ;;;;; Alert & im-notif
 

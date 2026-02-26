@@ -1356,14 +1356,14 @@ Negative PERCENT values darken the color."
          (append (color-name-to-rgb
                   (color-lighten-name color percent)) '(2))))
 
-
-(defun im-color-brighten (color percent)
-  "Brighten COLOR by PERCENT, pushing RGB values toward white.
-Negative PERCENT values push toward black (darken)."
-  (let* ((rgb (color-name-to-rgb color))
-         (factor (/ percent 100.0))
-         (lightened (mapcar (lambda (c) (+ c (* (- 1 c) factor))) rgb)))
-    (apply #'color-rgb-to-hex (append lightened '(2)))))
+(defun im-alternative-bg-color ()
+  "Return a slightly contrasting background color for visual separation.
+This is useful for highlighting regions, alternating rows, or creating
+subtle visual distinction from the main background."
+  (let ((bg (face-background 'default)))
+    (if (eq (frame-parameter nil 'background-mode) 'dark)
+        (im-color-lighten bg 40)
+      (im-color-lighten bg -3))))
 
 ;;;; Footer
 
