@@ -1268,6 +1268,14 @@ hotkey-overlay {
     skip-at-startup
 }
 
+input {
+    tablet {
+        map-to-output "HDMI-A-2"
+        left-handed
+        // calibration-matrix 1.0 0.0 0.0 0.0 1.0 0.0
+    }
+}
+
 layout {
     preset-column-widths {
         proportion 0.25
@@ -1448,6 +1456,17 @@ binds {
         spawn "dms" "ipc" "call" "dankdash" "wallpaper";
     }
     Mod+N hotkey-overlay-title="Notification Center" { spawn "dms" "ipc" "call" "notifications" "toggle"; }
+
+    // === Stuff ===
+    Mod+Ctrl+Alt+Shift+I hotkey-overlay-title="Emacs Snippet" {
+      spawn "emacsclient" "--eval" "(im-globally (im-select-any-snippet))";
+    }
+    Mod+Ctrl+Alt+Shift+O hotkey-overlay-title="Emacs People" {
+      spawn "emacsclient" "--eval" "(im-globally (im-people))";
+    }
+    Mod+Ctrl+Alt+Shift+V hotkey-overlay-title="Emacs Video Toggle" {
+      spawn "emacsclient" "--eval" "(empv-toggle-video)";
+    }
 
     // === Security ===
     Mod+Ctrl+Alt+Shift+E { quit; }
