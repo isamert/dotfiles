@@ -446,16 +446,6 @@ Use @file to include full file contents to the prompt and use
                       "<file_name>"
                       (file-name-nondirectory file-name)
                       "</file_name>"))))
-              "<user_query>"
-              ,(s-replace-all `(("@file" . "")
-                                ("@fullfile" . "")
-                                ("@context" . "")
-                                ("@dumb" . "")
-                                ("@workspace" . "")
-                                ("@noexp" . ". Do not include any explanations, only output the solution.")
-                                ("@region" . ,(concat "<region>" (s-trim region) "</region>")))
-                              prompt)
-              "</user_query>"
               ,@(when edit-region?
                   (list
                    "<context>" (s-trim region) "</context>"))
@@ -486,7 +476,17 @@ Use @file to include full file contents to the prompt and use
                      (prog1 (buffer-substring-no-properties start end)
                        (delete-region (point) (- (point) (length "<GENERATE_HERE>")))))
                    "..."
-                   "</surrounding_context>"))))))
+                   "</surrounding_context>"))
+              "<user_query>"
+              ,(s-replace-all `(("@file" . "")
+                                ("@fullfile" . "")
+                                ("@context" . "")
+                                ("@dumb" . "")
+                                ("@workspace" . "")
+                                ("@noexp" . ". Do not include any explanations, only output the solution.")
+                                ("@region" . ,(concat "<region>" (s-trim region) "</region>")))
+                              prompt)
+              "</user_query>"))))
     (if edit-region?
         (progn
           (setq
