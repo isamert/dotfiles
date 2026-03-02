@@ -1361,16 +1361,16 @@ side window the only window'"
   (org-babel-lob-ingest (concat org-directory "/utils.org"))
 
   (defun im--maybe-enable-dnd ()
-    (when (and (not (bound-and-true-p im-notif-dnd))
-               (y-or-n-p "Enable Do Not Disturb? "))
-      (call-interactively #'im-notif-enable-dnd)))
+    (if-let* ((duration (im-org-heading-current-time-length)))
+        (im-notif-enable-dnd (* duration 60))
+      (when (and (not (bound-and-true-p im-notif-dnd))
+                 (y-or-n-p "Enable Do Not Disturb? "))
+        (call-interactively #'im-notif-enable-dnd))))
 
   (add-hook 'org-clock-in-hook #'im--maybe-enable-dnd 90)
 
   (defun im--maybe-disable-dnd ()
-    (when (and (bound-and-true-p im-notif-dnd)
-               (y-or-n-p "Disable Do Not Disturb? "))
-      (im-notif-disable-dnd)))
+    (im-notif-disable-dnd))
 
   (add-hook 'org-clock-out-hook #'im--maybe-disable-dnd 90))
 
@@ -2553,6 +2553,45 @@ breaks and joining the lines together.  This function relies on
 (im-leader :keymaps 'org-mode-map
   "ok" #'im-org-new-todo
   "oK" #'im-org-new-heading)
+
+;;;;; im-org-heading-current-time-length
+
+(defun im-org-heading-current-time-length ()
+  "Get time length in minutes for the current/closest timestamp in heading."
+  (interactive)
+  (save-excursion
+    (org-back-to-heading t)
+    (let ((end (save-excursion (org-end-of-subtree t) (point)))
+          (time-range-re "<\\([0-9]+-[0-9]+-[0-9]+\\) [A-Za-z]+ \\([0-9]+:[0-9]+\\)-\\([0-9]+:[0-9]+\\)>")
+          (now (current-time))
+          slots)
+      ;; Collect all time slots
+      (while (re-search-forward time-range-re end t)
+        (let* ((date-str (match-string 1))
+               (start-time (match-string 2))
+               (end-time (match-string 3))
+               (start-mins (+ (* 60 (string-to-number (car (split-string start-time ":"))))
+                              (string-to-number (cadr (split-string start-time ":")))))
+               (end-mins (+ (* 60 (string-to-number (car (split-string end-time ":"))))
+                            (string-to-number (cadr (split-string end-time ":")))))
+               (ts-start (org-read-date nil t (concat date-str " " start-time)))
+               (ts-end (org-read-date nil t (concat date-str " " end-time))))
+          (push (list :start ts-start
+                      :end ts-end
+                      :length (- end-mins start-mins))
+                slots)))
+      (when slots
+        (let ((current (--find (and (time-less-p (plist-get it :start) now)
+                                    (time-less-p now (plist-get it :end)))
+                               slots)))
+          (if current
+              (plist-get current :length)
+            ;; Find closest slot
+            (plist-get
+             (car (--sort (< (abs (float-time (time-subtract (plist-get it :start) now)))
+                             (abs (float-time (time-subtract (plist-get other :start) now))))
+                          slots))
+             :length)))))))
 
 ;;;;; Capture changed headings on save
 
@@ -12239,6 +12278,63 @@ an indirect buffer."
                     (nth 2 zoom))))
     (message ">> Running %s" cmd)
     (shell-command cmd)))
+
+(defun im-join-current-zoom-meeting ()
+  "Join the most appropriate meeting via Zoom link."
+  (interactive)
+  (with-current-buffer (find-buffer-visiting bullet-org)
+    (save-window-excursion
+      (save-excursion
+        (save-restriction
+          (im-bullet-focus-today)
+          (let* ((now (current-time))
+                 (meetings
+                  (->> (org-map-entries
+                      (lambda ()
+                        (when-let* ((sched (org-entry-get nil "SCHEDULED"))
+                                    (_ (string-match "<\\([0-9-]+\\) [A-Za-z]+ \\([0-9:]+\\)-\\([0-9:]+\\)>" sched))
+                                    (date (match-string 1 sched))
+                                    (start (date-to-time (format "%s %s" date (match-string 2 sched))))
+                                    (end (date-to-time (format "%s %s" date (match-string 3 sched))))
+                                    (until-start (float-time (time-subtract start now))))
+                          (list :marker (point-marker)
+                                :heading (org-get-heading t t t t)
+                                :zoom (org-entry-get nil "ZOOM")
+                                :until-start until-start
+                                :in-progress (and (time-less-p start now) (time-less-p now end))
+                                :starting-soon (and (> until-start 0) (<= until-start 300))
+                                :well-past (> (float-time (time-subtract now start)) 600))))
+                      "meeting" 'agenda)
+                     (-non-nil)))
+                 (best (->> meetings
+                          (--filter (or (plist-get it :in-progress) (plist-get it :starting-soon)))
+                          (--sort (cond
+                                   ((and (plist-get it :starting-soon)
+                                         (plist-get other :in-progress)
+                                         (plist-get other :well-past)) t)
+                                   ((and (plist-get other :starting-soon)
+                                         (plist-get it :in-progress)
+                                         (plist-get it :well-past)) nil)
+                                   (t (< (plist-get it :until-start) (plist-get other :until-start)))))
+                          (-first-item))))
+            (cond
+             (best
+              (when (org-clocking-p)
+                (let ((org-log-note-clock-out nil))
+                  (org-clock-out)))
+              (goto-char (plist-get best :marker))
+              (let ((zoom (or (plist-get best :zoom)
+                              (when-let* ((choice (completing-read
+                                                   (format "No ZOOM for '%s'. Select link: "
+                                                           (plist-get best :heading))
+                                                   (cons "Cancel" (-map #'car im-zoom-links))
+                                                   nil t))
+                                          (_ (not (equal choice "Cancel"))))
+                                (alist-get choice im-zoom-links nil nil #'equal)))))
+                (when zoom
+                  (message "Joining: %s" (plist-get best :heading))
+                  (browse-url zoom))))
+             (t (message "No meeting in progress or starting within 5 minutes")))))))))
 
 ;;;;; macOS calendar functions
 
