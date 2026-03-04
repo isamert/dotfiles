@@ -5600,6 +5600,8 @@ SORT should be nil to disable sorting."
   :general
   (:states '(normal) :keymaps '(eglot-mode-map)
    "ga" #'eglot-code-actions
+   "gi" #'eglot-find-implementation
+   "gt" #'eglot-find-typeDefinition
    "gd" #'xref-find-definitions
    "gr" #'xref-find-references)
   :custom
@@ -9726,16 +9728,6 @@ SELECT * FROM _ LIMIT 1;
   ;; does not mangle things up between different tabs which is just
   ;; great.
   (tab-bar-history-mode)
-
-  ;; Evil has a default binding for switching between tabs with ~gt~ and
-  ;; ~gT~, switching forward and backward respectively. I just make them
-  ;; repeatable so that after first ~gt~ (~gT~) I can hammer down ~t~
-  ;; (or ~T~) to switch next/prev tab quickly instead of doing ~gt~ (or
-  ;; ~gT~) again and again.
-  (im-make-repeatable tab-bar-switch
-    "t" evil-tab-next
-    "t" tab-bar-switch-to-next-tab
-    "T" tab-bar-switch-to-prev-tab)
 
   (defun im-fix-tab-bar-faces (&rest _)
     "Most of the themes I use does not support tab-bar, this mostly fixes it."
