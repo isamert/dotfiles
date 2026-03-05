@@ -10574,7 +10574,7 @@ story points they have released.  See the following figure:
         (insert
          (format "- Progress :: %s/%s (%s%%)\n\n" done total (/ (* 100 done) total)))))
     (if group-by-assignee?
-        (insert "| Assignee | Total | Done |  Sub-total | Status | Creator  | Issue |\n|-\n")
+        (insert "| Assignee | Total | Done |  Sub-total | Creator | Status  | Issue |\n|-\n")
       (insert "| Assignee | Creator | Point | Status | Sprint | Issue |\n|-\n"))
     (cond
      (group-by-assignee?
