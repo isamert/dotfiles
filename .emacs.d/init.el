@@ -9379,9 +9379,11 @@ This is the format that `bq' tool expects."
   "Get status for given job id."
   (interactive
    (list (read-string "Job ID: " (im-region-or 'symbol))))
-  (let ((buf (get-buffer-create (format "*im-bigquery: %s*" job-id))))
-    (switch-to-buffer buf)
-    (insert (shell-command-to-string (format "bq show %s -j '%s'" (if current-prefix-arg "--format=prettyjson" "") job-id)))))
+  (im-shell-command
+   :command "bq"
+   :args (-non-nil (list "show" (when current-prefix-arg "--format=prettyjson") "-j" job-id))
+   :switch t
+   :buffer-name (format "*bq-job-status: %s" job-id)))
 
 (defun im-big-query-cancel-job (job-id)
   "Get status for given job id."
