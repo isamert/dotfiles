@@ -9383,6 +9383,7 @@ This is the format that `bq' tool expects."
    :command "bq"
    :args (-non-nil (list "show" (when current-prefix-arg "--format=prettyjson") "-j" job-id))
    :switch t
+   :legend t
    :buffer-name (format "*bq-job-status: %s" job-id)))
 
 (defun im-big-query-cancel-job (job-id)
@@ -11951,6 +11952,7 @@ Version 2017-01-11"
      env
      async
      switch
+     (legend t)
      (buffer-name (concat "*" command "*"))
      (on-start (lambda (&rest _)))
      (on-finish (lambda (&rest _)))
@@ -11999,6 +12001,7 @@ Returns process buffer."
           (when (not (frame-focus-state))
             (alert msg)))))))
   (let* ((process-environment (append env process-environment))
+         (start-time (current-time))
          (proc
           (if eat
               (progn
@@ -12018,7 +12021,13 @@ Returns process buffer."
                  proc
                  (lambda (p e)
                    (with-current-buffer (get-buffer-create buffer-name)
-                     (read-only-mode -1))
+                     (read-only-mode -1)
+                     (when legend
+                       (let ((exit-code (process-exit-status p)))
+                         (im-shell-command--update-header-line
+                          (if (= 0 exit-code) 'finished 'failed)
+                          start-time
+                          p))))
                    (let ((exit-code (process-exit-status p)))
                      (if (= 0 exit-code)
                          (funcall resolve proc-out)
@@ -12031,6 +12040,7 @@ Returns process buffer."
            proc
            (lambda (proc str)
              (with-current-buffer buffer-name
+               (im-shell-command--update-header-line 'running start-time proc)
                (setq proc-out (concat proc-out str))
                (let ((inhibit-read-only t))
                  (save-excursion
@@ -12046,14 +12056,79 @@ Returns process buffer."
            (list
             :command command
             :args args
+            :eat eat
+            :env env
+            :async async
+            :switch switch
+            :legend legend
             :buffer-name buffer-name
             :on-start on-start
             :on-finish on-finish
             :on-fail on-fail))
+          (when legend
+            (im-shell-command--update-header-line 'running start-time proc))
           (funcall on-start))
         (when switch
           (switch-to-buffer buffer-name))
         (get-buffer buffer-name)))))
+
+(defun im-shell-command--update-header-line (status &optional start-time proc)
+  "Update header line to show STATUS and keybindings.
+STATUS should be one of `running', `finished', or `failed'.
+START-TIME is the time when the command started.
+PROC is the process object."
+  (setq header-line-format
+        (list
+         ;; Status indicator
+         (propertize
+          (pcase status
+            ('running  " ● Running ")
+            ('finished " ✓ Finished ")
+            ('failed   " ✗ Failed "))
+          'face (pcase status
+                  ('running  '(:foreground "orange" :weight bold))
+                  ('finished '(:foreground "PaleGreen4" :weight bold))
+                  ('failed   '(:foreground "red" :weight bold))))
+         ;; Elapsed time
+         (when start-time
+           (let ((elapsed (float-time (time-subtract (current-time) start-time))))
+             (propertize
+              (format " [%s] " (im-shell-command--format-duration elapsed))
+              'face 'font-lock-comment-face)))
+         ;; Exit code (when finished/failed)
+         (when (and proc (memq status '(finished failed)))
+           (propertize
+            (format "exit: %d " (process-exit-status proc))
+            'face (if (eq status 'failed)
+                      '(:foreground "red")
+                    'font-lock-comment-face)))
+         ;; PID (when running)
+         (when (and proc (eq status 'running))
+           (propertize
+            (format "pid: %d " (process-id proc))
+            'face 'font-lock-comment-face))
+         ;; Working directory
+         (propertize
+          (format "in: %s " (abbreviate-file-name default-directory))
+          'face 'font-lock-doc-face)
+         " | "
+         ;; Keybindings
+         (propertize "gr" 'face 'help-key-binding) ": rerun "
+         ;; (propertize "q" 'face 'help-key-binding) ": quit "
+         ;; (when (eq status 'running)
+         ;;   (concat (propertize "C-c C-c" 'face 'help-key-binding) ":kill "))
+         )))
+
+(defun im-shell-command--format-duration (seconds)
+  "Format SECONDS as human-readable duration."
+  (cond
+   ((< seconds 60) (format "%.1fs" seconds))
+   ((< seconds 3600) (format "%dm%ds" (/ (floor seconds) 60) (mod (floor seconds) 60)))
+   (t (format "%dh%dm%ds"
+              (/ (floor seconds) 3600)
+              (mod (/ (floor seconds) 60) 60)
+              (mod (floor seconds) 60)))))
+
 
 ;;;;; Password manager
 
