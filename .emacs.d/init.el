@@ -2717,6 +2717,42 @@ I generally bind this to a key while using by
       (end-of-line)
       (insert (format " → %s" effort)))))
 
+;;;;; Set note to note at point
+
+(defun im-org-set-note-at-point ()
+  "Set a NOTE property on the heading at point or the target of a link at point."
+  (interactive)
+  (let* ((link-target
+          (when-let* ((elem (org-element-context))
+                      (_ (eq (org-element-type elem) 'link))
+                      (type (org-element-property :type elem))
+                      (path (org-element-property :path elem)))
+            (cond
+             ((and (string= type "file")
+                   (string-match "\\(.*\\)::\\*\\(.*\\)" path))
+              (when-let* ((buf (find-file-noselect (match-string 1 path)))
+                          (pos (org-find-exact-headline-in-buffer
+                                (match-string 2 path) buf)))
+                (set-marker (make-marker) pos buf)))
+             ((string= type "fuzzy")
+              (when-let ((pos (org-find-exact-headline-in-buffer
+                               path (current-buffer))))
+                (set-marker (make-marker) pos (current-buffer))))
+             ((string= type "id")
+              (when-let* ((loc (org-id-find path))
+                          (file (car loc))
+                          (pos (cdr loc)))
+                (set-marker (make-marker) pos (find-file-noselect file)))))))
+         (marker (or link-target
+                     (save-excursion (org-back-to-heading t) (point-marker))))
+         (current-note (with-current-buffer (marker-buffer marker)
+                         (org-entry-get marker "NOTE")))
+         (note (read-string "Note: " current-note)))
+    (with-current-buffer (marker-buffer marker)
+      (if (string-empty-p note)
+          (org-entry-delete marker "NOTE")
+        (org-entry-put marker "NOTE" note)))))
+
 ;;;;; corg.el --- Org Mode block header completion
 
 ;; Completion at point for dynamic block headers, source block headers
