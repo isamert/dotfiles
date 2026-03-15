@@ -12723,6 +12723,23 @@ Use C-n C-p to switch between translation directions."
         (message "Can't find marker for the ID."))
     (message "Not a valid id at point.")))
 
+;;;;;; im-peek-ielm
+
+(general-def :states 'normal
+  "M-e" #'im-peek-ielm)
+
+(defun im-peek-ielm ()
+  "Open IELM in another frame with the current buffer as the working buffer.
+This allows evaluating expressions in the context of the current buffer
+while viewing results in a separate frame."
+  (interactive)
+  (let ((buf (current-buffer)))
+    (save-window-excursion
+      (ielm))
+    (with-current-buffer "*ielm*"
+      (setq ielm-working-buffer buf))
+    (im-display-buffer-other-frame "*ielm*")))
+
 ;;;;; im-extract
 
 (cl-defun im-extract (files)
