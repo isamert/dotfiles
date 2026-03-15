@@ -12706,20 +12706,18 @@ Use C-n C-p to switch between translation directions."
             (marker (org-id-find id t)))
       (if (and marker (marker-buffer marker)
                (buffer-live-p (marker-buffer marker)))
-          (progn
-            (with-current-buffer (marker-buffer marker)
-              (org-with-wide-buffer
-               (goto-char marker)
-               (let* ((beg (point))
-                      (end (save-excursion
-                             (or (ignore-errors (outline-next-heading))
-                                 (goto-char (point-max)))
-                             (point)))
-                      (text (buffer-substring beg end)))
-                 (with-current-buffer (get-buffer-create " *im-org-ref*")
-                   (erase-buffer)
-                   (insert text)
-                   (current-buffer))))))
+          (org-with-point-at marker
+            (let ((text (buffer-substring
+                         (point)
+                         (save-excursion (org-end-of-subtree t t) (point))
+                         ;; Use this to get context only until next heading instead of whole subtree.
+                         ;; (or (save-excursion (ignore-errors (outline-next-heading)))
+                         ;;     (point-max))
+                         )))
+              (with-current-buffer (get-buffer-create " *im-org-ref*")
+                (erase-buffer)
+                (insert text)
+                (current-buffer))))
         (message "Can't find marker for the ID."))
     (message "Not a valid id at point.")))
 
