@@ -6707,8 +6707,8 @@ Fetches missing channels/users first."
 (im-leader
   :keymaps '(gptel-mode-map org-ai-mode-map)
   :states '(normal motion)
-  "<left>" #'im-ai-previous-block
-  "<right>" #'im-ai-next-block)
+  "[" #'im-ai-previous-block
+  "]" #'im-ai-next-block)
 
 (im-make-repeatable im-ai
   "[" im-ai-previous-block
