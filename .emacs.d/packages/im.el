@@ -1084,7 +1084,7 @@ case."
                               (t nil)))
            (computed-data (cond
                            ((and -data (or (json-alist-p -data) (json-plist-p -data)))
-                            (json-encode -data))
+                            (json-serialize -data :false-object nil))
                            ((stringp -data) -data)
                            (t nil)))
            (fn (lambda (resolve reject)

@@ -516,7 +516,6 @@ Returns the folder path."
     (tvdbId . ,(alist-get 'tvdbId series-info))
     (titleSlug . ,(alist-get 'titleSlug series-info))
     (images . ,(im-arr--as-vector (alist-get 'images series-info)))
-    (seasons . ,(im-arr--as-vector (alist-get 'seasons series-info)))
     (rootFolderPath . ,root-folder-path)
     (seasonFolder . ,im-sonarr-season-folder)
     (monitored . ,im-sonarr-default-monitored)
