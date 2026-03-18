@@ -172,6 +172,7 @@ Calls all registered callbacks and caches the message."
     (when (memq (process-status proc) '(exit signal))
       (remhash topic im-ntfy--subscriptions))))
 
+;;;###autoload
 (defun im-ntfy-subscribe (topic callback &optional server username password token)
   "Subscribe to TOPIC and call CALLBACK for each message.
 CALLBACK receives a single argument: the message as an alist.
@@ -230,6 +231,16 @@ If no callbacks remain, close the connection."
         (when (process-live-p proc)
           (delete-process proc)))
       (remhash topic im-ntfy--subscriptions))))
+
+;;;###autoload
+(defun im-ntfy-subscribe-all ()
+  "Subscribe all topics in `im-ntfy-topics'.
+If already subscribed, do nothing."
+  (interactive)
+  (dolist (topic im-ntfy-topics)
+    (unless (gethash topic im-ntfy--subscriptions)
+      (im-ntfy-listen topic)
+      (message ">> Subscribed to %s" topic))))
 
 ;;; Publishing messages
 
@@ -358,15 +369,16 @@ Returns a list of message alists."
         (insert (format "Server: %s\n" im-ntfy-server))
         (insert "")
         (insert "\n")
-        ;; Insert cached messages
-        (let ((cached (gethash topic im-ntfy--message-cache)))
-          (when cached
-            (im-ntfy--insert-messages cached)))
+        ;; ;; Insert cached messages
+        ;; (let ((cached (gethash topic im-ntfy--message-cache)))
+        ;;   (when cached
+        ;;     (im-ntfy--insert-messages cached)))
         ;; Fetch recent messages if cache is empty
-        (unless (gethash topic im-ntfy--message-cache)
-          (let ((messages (im-ntfy-fetch-messages topic "48h")))
-            (puthash topic messages im-ntfy--message-cache)
-            (im-ntfy--insert-messages messages)))
+        ;; (unless (gethash topic im-ntfy--message-cache)
+        (let ((messages (im-ntfy-fetch-messages topic "48h")))
+          (puthash topic messages im-ntfy--message-cache)
+          (im-ntfy--insert-messages messages))
+        ;; )
         ;; Add input area
         (goto-char (point-max))
         (insert "\n")
@@ -478,20 +490,87 @@ Returns a list of message alists."
 
 ;;; List active subscriptions
 
-(defun im-ntfy-list-subscriptions ()
-  "List all active subscriptions."
-  (interactive)
+(require 'vtable)
+
+(defvar im-ntfy-subscriptions-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'im-ntfy-subscriptions-open-topic)
+    (define-key map (kbd "g") #'im-ntfy-subscriptions-refresh)
+    (define-key map (kbd "x") #'im-ntfy-subscriptions-unsubscribe)
+    (define-key map (kbd "u") #'im-ntfy-subscriptions-unsubscribe)
+    (define-key map (kbd "q") #'quit-window)
+    map)
+  "Keymap for `im-ntfy-subscriptions-mode'.")
+
+(define-derived-mode im-ntfy-subscriptions-mode text-mode "ntfy-subs"
+  "Major mode for viewing ntfy subscriptions."
+  (setq-local buffer-read-only t)
+  (setq-local truncate-lines t))
+
+(defun im-ntfy--get-subscriptions-data ()
+  "Return list of subscription data for vtable."
   (let ((subs '()))
     (maphash (lambda (topic data)
-               (when (process-live-p (plist-get data :process))
-                 (push (format "• %s (%d callbacks)"
-                               topic
-                               (length (plist-get data :callbacks)))
+               (let ((proc (plist-get data :process)))
+                 (push (list :topic topic
+                             :callbacks (length (plist-get data :callbacks))
+                             :status (if (process-live-p proc) "active" "dead")
+                             :messages (length (gethash topic im-ntfy--message-cache)))
                        subs)))
              im-ntfy--subscriptions)
-    (if subs
-        (message "Active subscriptions:\n%s" (string-join (nreverse subs) "\n"))
-      (message "No active subscriptions"))))
+    (nreverse subs)))
+
+(defun im-ntfy--subscriptions-insert-vtable ()
+  "Insert the vtable into the current buffer."
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (make-vtable
+     :columns '((:name "Topic" :width 30)
+                (:name "Status" :width 10)
+                (:name "Callbacks" :width 10)
+                (:name "Messages" :width 10))
+     :objects (im-ntfy--get-subscriptions-data)
+     :getter (lambda (object column vtable)
+               (pcase (vtable-column vtable column)
+                 ("Topic" (plist-get object :topic))
+                 ("Status" (plist-get object :status))
+                 ("Callbacks" (number-to-string (plist-get object :callbacks)))
+                 ("Messages" (number-to-string (plist-get object :messages)))))
+     :keymap im-ntfy-subscriptions-mode-map)
+    (goto-char (point-min))))
+
+(defun im-ntfy-subscriptions-refresh ()
+  "Refresh the subscriptions list."
+  (interactive nil im-ntfy-subscriptions-mode)
+  (im-ntfy--subscriptions-insert-vtable)
+  (message "Subscriptions refreshed"))
+
+(defun im-ntfy-subscriptions-open-topic ()
+  "Open the topic at point."
+  (interactive nil im-ntfy-subscriptions-mode)
+  (when-let* ((object (vtable-current-object))
+              (topic (plist-get object :topic)))
+    (im-ntfy-open-topic topic)))
+
+(defun im-ntfy-subscriptions-unsubscribe ()
+  "Unsubscribe from the topic at point."
+  (interactive nil im-ntfy-subscriptions-mode)
+  (when-let* ((object (vtable-current-object))
+              (topic (plist-get object :topic)))
+    (when (y-or-n-p (format "Unsubscribe from '%s'? " topic))
+      (im-ntfy-unsubscribe topic)
+      (im-ntfy-subscriptions-refresh)
+      (message "Unsubscribed from '%s'" topic))))
+
+;;;###autoload
+(defun im-ntfy-list-subscriptions ()
+  "List all active subscriptions in a vtable buffer."
+  (interactive)
+  (let ((buf (get-buffer-create "*ntfy subscriptions*")))
+    (with-current-buffer buf
+      (im-ntfy-subscriptions-mode)
+      (im-ntfy--subscriptions-insert-vtable))
+    (pop-to-buffer buf)))
 
 (defun im-ntfy-listen (topic)
   "Recive notifications from TOPIC directly in Emacs."

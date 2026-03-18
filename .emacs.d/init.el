@@ -7755,8 +7755,7 @@ the commit buffer."
   (im-ntfy-username im-homeserver-ntfy-username)
   (im-ntfy-password im-homeserver-ntfy-password)
   :config
-  (dolist (topic im-ntfy-topics)
-    (im-ntfy-listen topic)))
+  (im-ntfy-subscribe-all))
 
 ;;;;; ereader --- ebook reader with org integration
 
