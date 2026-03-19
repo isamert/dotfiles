@@ -372,9 +372,24 @@ introducing an intermediate let-form."
   thing)
 
 (defmacro im-append! (lst item)
-  "Append ITEM to end of the LST.
-Modifies LST.  Only meant to be used in configuration."
-  `(setq ,lst (append ,lst (list ,item))))
+  "Append ITEM to end of the LST, removing it first if already present.
+Modifies LST.  Only meant to be used in configuration.
+Uses `equal' for comparison."
+  `(progn
+     (setq ,lst (remove ,item ,lst))
+     (setq ,lst (append ,lst (list ,item)))))
+
+(defmacro im-insert-at! (lst n item)
+  "Insert ITEM at position N in LST, removing it first if already present.
+Modifies LST.  Only meant to be used in configuration.
+Uses `equal' for comparison."
+  `(progn
+     (setq ,lst (remove ,item ,lst))
+     (let ((pos (min ,n (length ,lst))))
+       (setq ,lst (append (seq-take ,lst pos)
+                          (list ,item)
+                          (seq-drop ,lst pos))))))
+
 
 (defun im-elisp-find-file-prefix ()
   "Extract prefix from defgroup statement in current buffer.

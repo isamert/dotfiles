@@ -5090,6 +5090,8 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
    'consult-buffer-filter
    "\\`\\*\\(Help\\|Backtrace\\|Messages\\|Buffer List\\|Flycheck.*\\|scratch.*\\)\\'")
 
+  (im-insert-at! consult-buffer-sources 1 'consult-source-bookmark)
+
   (with-eval-after-load 'savehist
     (add-to-list 'savehist-additional-variables 'consult--buffer-history))
 
@@ -8469,6 +8471,7 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
      major-mode-remap-alist
      '((yaml . yaml-ts-mode)
        (toml . toml-ts-mode)
+       (typescript-mode . typescript-ts-mode)
        (rust . rust-ts-mode)
        (ruby . ruby-ts-mode)
        (python-mode . python-ts-mode)
