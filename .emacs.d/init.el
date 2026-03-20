@@ -11635,6 +11635,8 @@ more than one header of a single org buffer."
 (im-leader-v
   "f" #'im-file-transient)
 
+(general-def :states 'normal "M-f" #'dirvish-side)
+
 (transient-define-prefix im-file-transient ()
   [["File Operations"
     ("s" "Save buffer" save-buffer)
