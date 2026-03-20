@@ -382,6 +382,7 @@ be a function or a buffer object."
     (empv--select-action "Act on notification"
       "Buffer (origin)" → (im-switch-to-buffer-in-tab (plist-get notification :source-buffer))
       "Go to Source" → (im-notif-go-to-source notification)
+      "View" → (im-notif-view notification)
       "Delete" → (progn
                    (ignore-errors
                      (posframe-delete (plist-get notification :id)))
@@ -521,6 +522,32 @@ otherwise, it is taken as a plain string regexp."
      ((functionp source) (funcall source))
      ((bufferp source) (im-switch-to-buffer-in-tab source))
      (t (message "Can't open: %s" source)))))
+
+(defun im-notif-view (notif)
+  (let* ((title (plist-get notif :title))
+         (message (plist-get notif :message))
+         (id (plist-get notif :id))
+         (duration (plist-get notif :duration))
+         (time (plist-get notif :time))
+         (severity (plist-get notif :severity))
+         (labels (plist-get notif :labels))
+         (source-buffer (plist-get notif :source-buffer))
+         (buf (get-buffer-create "*Notification View*")))
+    (with-current-buffer buf
+      (erase-buffer)
+      (org-mode)
+      (insert (format "* %s\n" title))
+      (insert ":PROPERTIES:\n")
+      (when id (insert (format ":ID: %s\n" (string-trim id))))
+      (when duration (insert (format ":DURATION: %s\n" duration)))
+      (when time (insert (format ":TIME: %s\n" (format-time-string "%Y-%m-%d %H:%M:%S" time))))
+      (when severity (insert (format ":SEVERITY: %s\n" severity)))
+      (when labels (insert (format ":LABELS: %s\n" (string-join labels ", "))))
+      (when source-buffer (insert (format ":SOURCE_BUFFER: %s\n" (buffer-name source-buffer))))
+      (insert ":END:\n\n")
+      (insert message)
+      (goto-char (point-min)))
+    (pop-to-buffer buf)))
 
 ;; TODO Add ack, like tmr? Maybe add ack option to im-notif
 ;; itself and call with ack within this function
