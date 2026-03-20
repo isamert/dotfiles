@@ -724,10 +724,10 @@ consideration."
 (define-advice gptel-mode (:after (&rest _) highlight-prompts)
   "Highlight prompt prefixes."
   (if gptel-mode
-      (font-lock-add-keywords nil '(("^\\[ME\\]: " . font-lock-warning-face)
-                                    ("^\\[AI\\]: " . font-lock-function-name-face)) t)
-    (font-lock-remove-keywords nil '(("^\\[ME\\]: " . font-lock-warning-face)
-                                     ("^\\[AI\\]: " . font-lock-function-name-face)))))
+      (font-lock-add-keywords nil '(("^\\[ME\\]:" . font-lock-warning-face)
+                                    ("^\\[AI\\]:" . font-lock-function-name-face)) t)
+    (font-lock-remove-keywords nil '(("^\\[ME\\]:" . font-lock-warning-face)
+                                     ("^\\[AI\\]:" . font-lock-function-name-face)))))
 
 ;;;;; Recomputing bounds before sending the request
 
@@ -1049,7 +1049,8 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
    (lambda (buffer old_string new_string)
      (message "gptel :: edit_buffer(%s)" buffer)
      (if-let ((buf (get-buffer buffer)))
-         (im-gptel--edit-tool buf old_string new_string)
+         (progn (im-gptel--edit-tool buf old_string new_string)
+                (with-current-buffer buf (save-buffer)))
        "Buffer not found"))
    :description "Edit a buffer by replacing exactly one occurrence of OLD_STRING with NEW_STRING in BUFFER. Errors if OLD_STRING is empty, not found, or found more than once."
    :args (list '(:name "buffer"
