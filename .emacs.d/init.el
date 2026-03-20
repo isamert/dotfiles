@@ -2722,36 +2722,62 @@ I generally bind this to a key while using by
 (defun im-org-set-note-at-point ()
   "Set a NOTE property on the heading at point or the target of a link at point."
   (interactive)
-  (let* ((link-target
-          (when-let* ((elem (org-element-context))
-                      (_ (eq (org-element-type elem) 'link))
-                      (type (org-element-property :type elem))
-                      (path (org-element-property :path elem)))
-            (cond
-             ((and (string= type "file")
-                   (string-match "\\(.*\\)::\\*\\(.*\\)" path))
-              (when-let* ((buf (find-file-noselect (match-string 1 path)))
-                          (pos (org-find-exact-headline-in-buffer
-                                (match-string 2 path) buf)))
-                (set-marker (make-marker) pos buf)))
-             ((string= type "fuzzy")
-              (when-let ((pos (org-find-exact-headline-in-buffer
-                               path (current-buffer))))
-                (set-marker (make-marker) pos (current-buffer))))
-             ((string= type "id")
-              (when-let* ((loc (org-id-find path))
-                          (file (car loc))
-                          (pos (cdr loc)))
-                (set-marker (make-marker) pos (find-file-noselect file)))))))
-         (marker (or link-target
+  (let* ((marker (or (im-org--link-target-at-point)
                      (save-excursion (org-back-to-heading t) (point-marker))))
-         (current-note (with-current-buffer (marker-buffer marker)
-                         (org-entry-get marker "NOTE")))
+         (current-note (org-with-point-at marker
+                         (org-entry-get nil "NOTE")))
          (note (read-string "Note: " current-note)))
-    (with-current-buffer (marker-buffer marker)
+    (org-with-point-at marker
+      ;; Archive existing note to LOGBOOK if present and different
+      (when (and current-note
+                 (not (string-empty-p current-note))
+                 (not (string= current-note note)))
+        (im-org--add-log-note
+         (format "Previous note: %s" current-note)))
+      ;; Set or delete the NOTE property
       (if (string-empty-p note)
-          (org-entry-delete marker "NOTE")
-        (org-entry-put marker "NOTE" note)))))
+          (org-entry-delete nil "NOTE")
+        (org-entry-put nil "NOTE" note)))))
+
+(defun im-org--link-target-at-point ()
+  "Return a marker to the heading targeted by link at point, or nil."
+  (when-let* ((elem (org-element-context))
+              (_ (eq (org-element-type elem) 'link))
+              (type (org-element-property :type elem))
+              (path (org-element-property :path elem)))
+    (pcase type
+      ((and "file" (guard (string-match "\\(.*\\)::\\*\\(.*\\)" path)))
+       (when-let* ((buf (find-file-noselect (match-string 1 path)))
+                   (pos (org-find-exact-headline-in-buffer (match-string 2 path) buf)))
+         (set-marker (make-marker) pos buf)))
+      ("fuzzy"
+       (when-let ((pos (org-find-exact-headline-in-buffer path (current-buffer))))
+         (set-marker (make-marker) pos (current-buffer))))
+      ("id"
+       (when-let* ((loc (org-id-find path))
+                   (buf (find-file-noselect (car loc))))
+         (set-marker (make-marker) (cdr loc) buf))))))
+
+(defun im-org--add-log-note (note)
+  "Insert NOTE into the LOGBOOK drawer at current heading."
+  (org-fold-core-ignore-modifications
+    (org-with-wide-buffer
+     (goto-char (org-log-beginning t))
+     (unless (bolp) (insert-and-inherit "\n"))
+     (when (looking-at "[ \t]*\\S-") (save-excursion (insert-and-inherit "\n")))
+     (let ((itemp (org-in-item-p)))
+       (indent-line-to
+        (if itemp
+            (let ((struct (save-excursion (goto-char itemp) (org-list-struct))))
+              (org-list-get-ind (org-list-get-top-point struct) struct))
+          (org-indent-line)
+          (current-indentation))))
+     (insert-and-inherit
+      (org-list-bullet-string "-")
+      note " \\\\\n")
+     (indent-line-to (org-list-item-body-column (line-beginning-position 0)))
+     (insert-and-inherit
+      (format-time-string (org-time-stamp-format 'long 'inactive))))))
 
 ;;;;; corg.el --- Org Mode block header completion
 
@@ -12904,26 +12930,16 @@ Use C-n C-p to switch between translation directions."
 
 (defun im-peek-doc--org-id-at-point ()
   (interactive)
-  (if-let* ((link (org-element-context))
-            (id (when (string= "id" (org-element-property :type link))
-                  (org-element-property :path link)))
-            (marker (org-id-find id t)))
-      (if (and marker (marker-buffer marker)
-               (buffer-live-p (marker-buffer marker)))
-          (org-with-point-at marker
-            (let ((text (buffer-substring
-                         (point)
-                         (save-excursion (org-end-of-subtree t t) (point))
-                         ;; Use this to get context only until next heading instead of whole subtree.
-                         ;; (or (save-excursion (ignore-errors (outline-next-heading)))
-                         ;;     (point-max))
-                         )))
-              (with-current-buffer (get-buffer-create " *im-org-ref*")
-                (erase-buffer)
-                (insert text)
-                (current-buffer))))
-        (message "Can't find marker for the ID."))
-    (message "Not a valid id at point.")))
+  (if-let* ((marker (im-org--link-target-at-point)))
+      (org-with-point-at marker
+        (let ((text (buffer-substring
+                     (point)
+                     (save-excursion (org-end-of-subtree t t) (point)))))
+          (with-current-buffer (get-buffer-create " *im-org-ref*")
+            (erase-buffer)
+            (insert text)
+            (current-buffer))))
+    (message "Not a valid org link at point.")))
 
 ;;;;;; im-peek-ielm
 
