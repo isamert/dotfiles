@@ -391,7 +391,8 @@ This function returns a promise."
             (lat . ,lat)
             (lng . ,lng)
             (category . ,category)
-            (comment . ,comment)))))
+            ;; There is a 500 char limit
+            (comment . ,(s-truncate 495 comment))))))
 
 ;;;###autoload
 (async-defun im-nextcloud-maps-remove-all-favorites ()
