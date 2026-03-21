@@ -3504,14 +3504,6 @@ that is read verbatim (meaning that no '$*' is appended):
     "H" #'vtable-previous-column
     "L" #'vtable-next-column))
 
-;;;;;; Helper functions
-
-(defun im-vtable--pretty-colors ()
-  "Return alternating colors for vtable rows.
-Return a (color color) list that can be used with :column-colors and
-:row-colors.  Makes the tables more readable."
-  `(,(alist-get 'background-color (frame-parameters)) ,(im-alternative-bg-color)))
-
 ;;;;; Alert & im-notif
 
 ;; Several packages are using this package to show system-level

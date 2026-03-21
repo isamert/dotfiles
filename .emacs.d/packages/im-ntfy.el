@@ -2,7 +2,7 @@
 
 ;; Author: Your Name
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Requires: ((emacs "27.1") (s))
 ;; Keywords: comm, notifications
 ;; URL: https://github.com/yourname/im-ntfy
 
@@ -36,6 +36,11 @@
 (require 'json)
 (require 'url)
 (require 'url-http)
+(require 'cl-lib)
+(require 's)
+(require 'im-notif)
+(require 'page-break-lines)
+(require 'markdown-mode)
 
 ;;; Customization
 
@@ -79,6 +84,28 @@ Each element can be a string (topic name) or a plist with
   :type 'integer
   :group 'im-ntfy)
 
+(defcustom im-ntfy-reconnect-attempts nil
+  "Number of reconnection attempts before giving up.
+If nil, attempt indefinitely."
+  :type '(choice (const nil) integer)
+  :group 'im-ntfy)
+
+(defcustom im-ntfy-reconnect-delay 5
+  "Initial delay in seconds before first reconnection attempt."
+  :type 'number
+  :group 'im-ntfy)
+
+(defcustom im-ntfy-reconnect-max-delay 300
+  "Maximum delay in seconds between reconnection attempts."
+  :type 'number
+  :group 'im-ntfy)
+
+(defcustom im-ntfy-reconnect-backoff-factor 1.5
+  "Multiplier applied to delay after each failed attempt.
+Delay = min(max-delay, delay * backoff-factor)."
+  :type 'number
+  :group 'im-ntfy)
+
 ;;; Constants
 
 (defconst im-ntfy--prompt "> ")
@@ -87,7 +114,8 @@ Each element can be a string (topic name) or a plist with
 
 (defvar im-ntfy--subscriptions (make-hash-table :test 'equal)
   "Hash table mapping topic names to subscription data.
-Each entry contains: (:process PROC :callbacks (FN1 FN2 ...) :buffer BUF)")
+Each entry contains: (:process PROC :callbacks (FN1 FN2 ...) :buffer BUF
+:reconnect-count COUNT :reconnect-timer TIMER)")
 
 (defvar im-ntfy--message-cache (make-hash-table :test 'equal)
   "Hash table mapping topic names to list of cached messages.")
@@ -164,32 +192,136 @@ Calls all registered callbacks and caches the message."
   "Process sentinel for subscription PROC with EVENT."
   (let ((topic (process-get proc 'im-ntfy-topic)))
     (message "im-ntfy: subscription to '%s' ended: %s" topic (string-trim event))
-    ;; Clean up
+    ;; Clean up dead process and buffer
     (when-let ((buf (process-buffer proc)))
       (when (buffer-live-p buf)
         (kill-buffer buf)))
-    ;; Remove from subscriptions if process died unexpectedly
-    (when (memq (process-status proc) '(exit signal))
-      (remhash topic im-ntfy--subscriptions))))
+    (let ((sub (gethash topic im-ntfy--subscriptions)))
+      (cond
+       ;; Subscription still exists and we have callbacks => try to reconnect
+       ((and sub (plist-get sub :callbacks))
+        ;; Remove dead process and buffer from subscription
+        (setq sub (plist-put sub :process nil))
+        (setq sub (plist-put sub :buffer nil))
+        (puthash topic sub im-ntfy--subscriptions)
+        (im-ntfy--schedule-reconnect topic sub))
+       ;; Otherwise, remove from subscriptions
+       (t
+        (when sub
+          ;; Cancel any pending reconnect timer
+          (when-let ((timer (plist-get sub :reconnect-timer)))
+            (cancel-timer timer))
+          (remhash topic im-ntfy--subscriptions)))))))
+
+(defun im-ntfy--compute-reconnect-delay (attempt)
+  "Compute delay in seconds for ATTEMPT (starting from 1)."
+  (let ((delay (* im-ntfy-reconnect-delay
+                  (expt im-ntfy-reconnect-backoff-factor (1- attempt)))))
+    (min im-ntfy-reconnect-max-delay delay)))
+
+(defun im-ntfy--schedule-reconnect (topic sub)
+  "Schedule a reconnection attempt for TOPIC with subscription SUB."
+  ;; Cancel any existing timer
+  (when-let ((timer (plist-get sub :reconnect-timer)))
+    (cancel-timer timer))
+  (let* ((count (1+ (or (plist-get sub :reconnect-count) 0)))
+         (max-attempts im-ntfy-reconnect-attempts)
+         (delay (im-ntfy--compute-reconnect-delay count)))
+    (if (and max-attempts (>= count max-attempts))
+        ;; Give up
+        (progn
+          (message "im-ntfy: giving up reconnecting to '%s' after %d attempts"
+                   topic count)
+          (remhash topic im-ntfy--subscriptions))
+      ;; Schedule timer
+      (message "im-ntfy: scheduling reconnect to '%s' in %.1f seconds (attempt %d)"
+               topic delay count)
+      (let ((timer (run-at-time delay nil #'im-ntfy--do-reconnect topic sub)))
+        (setq sub (plist-put sub :reconnect-count count))
+        (setq sub (plist-put sub :reconnect-timer timer))
+        (puthash topic sub im-ntfy--subscriptions)))))
+
+(defun im-ntfy--do-reconnect (topic sub)
+  "Attempt to reconnect to TOPIC with subscription SUB."
+  (cl-block im-ntfy--do-reconnect
+    ;; Ensure subscription still exists (may have been removed or updated)
+    (let ((current (gethash topic im-ntfy--subscriptions)))
+      (unless current
+        (message "im-ntfy: subscription removed, cancelling reconnect for '%s'" topic)
+        (cl-return-from im-ntfy--do-reconnect nil))
+      (setq sub current))
+    (message "im-ntfy: attempting to reconnect to '%s'" topic)
+    ;; Cancel any existing timer
+    (when-let ((timer (plist-get sub :reconnect-timer)))
+      (cancel-timer timer)
+      (setq sub (plist-put sub :reconnect-timer nil)))
+    ;; Try to establish a new connection
+    (condition-case err
+        (let* ((url (im-ntfy--make-url topic (plist-get sub :server) "json"))
+               (auth (im-ntfy--auth-header (plist-get sub :username)
+                                           (plist-get sub :password)
+                                           (plist-get sub :token)))
+               (buf (generate-new-buffer (format " *im-ntfy-%s*" topic)))
+               (args (list "curl" "-L" "-sN"))
+               proc)
+          (when auth
+            (setq args (append args (list "-H" (concat "Authorization: " auth)))))
+          (setq args (append args (list url)))
+          (setq proc (apply #'start-process
+                            (format "im-ntfy-%s" topic)
+                            buf
+                            args))
+          (process-put proc 'im-ntfy-topic topic)
+          (set-process-filter proc #'im-ntfy--process-filter)
+          (set-process-sentinel proc #'im-ntfy--process-sentinel)
+          (set-process-query-on-exit-flag proc nil)
+          ;; Update subscription with new process and buffer, reset reconnect state
+          (setq sub (plist-put sub :process proc))
+          (setq sub (plist-put sub :buffer buf))
+          (setq sub (plist-put sub :reconnect-count 0))
+          (setq sub (plist-put sub :reconnect-timer nil))
+          (puthash topic sub im-ntfy--subscriptions)
+          (message "im-ntfy: reconnected to '%s'" topic))
+      (error
+       (message "im-ntfy: reconnection to '%s' failed: %s" topic (error-message-string err))
+       ;; Schedule another attempt
+       (im-ntfy--schedule-reconnect topic sub)))))
 
 ;;;###autoload
 (defun im-ntfy-subscribe (topic callback &optional server username password token)
   "Subscribe to TOPIC and call CALLBACK for each message.
 CALLBACK receives a single argument: the message as an alist.
 Optional SERVER, USERNAME, PASSWORD, or TOKEN override defaults.
-Returns the subscription process."
+Returns the subscription process (or nil if process dead)."
   (let* ((url (im-ntfy--make-url topic server "json"))
          (auth (im-ntfy--auth-header username password token))
          (buf-name (format " *im-ntfy-%s*" topic))
          (existing (gethash topic im-ntfy--subscriptions))
          proc)
-    ;; If already subscribed, just add the callback
-    (if (and existing (process-live-p (plist-get existing :process)))
-        (progn
-          (plist-put existing :callbacks
-                     (cons callback (plist-get existing :callbacks)))
-          (plist-get existing :process))
-      ;; Create new subscription
+    (cond
+     ;; Existing subscription with live process: add callback
+     ((and existing (process-live-p (plist-get existing :process)))
+      (unless (member callback (plist-get existing :callbacks))
+        (plist-put existing :callbacks (cons callback (plist-get existing :callbacks))))
+      (plist-get existing :process))
+     ;; Existing subscription but dead process: add callback, ensure reconnect scheduled
+     (existing
+      ;; Cancel any pending reconnect timer (we will maybe reschedule)
+      (when-let ((timer (plist-get existing :reconnect-timer)))
+        (cancel-timer timer)
+        (plist-put existing :reconnect-timer nil))
+      ;; Add callback if not already present
+      (unless (member callback (plist-get existing :callbacks))
+        (plist-put existing :callbacks (cons callback (plist-get existing :callbacks))))
+      ;; If there is no reconnect timer and process dead, schedule a reconnect now
+      (unless (or (plist-get existing :reconnect-timer)
+                  (plist-get existing :process))
+        (im-ntfy--schedule-reconnect topic existing))
+      ;; Update stored subscription (in case we modified it)
+      (puthash topic existing im-ntfy--subscriptions)
+      nil)
+     ;; No existing subscription: create new
+     (t
       (let ((buf (generate-new-buffer buf-name))
             (args (list "curl" "-L" "-sN")))
         ;; Add auth header if needed
@@ -207,15 +339,21 @@ Returns the subscription process."
         (set-process-query-on-exit-flag proc nil)
         ;; Store subscription
         (puthash topic
-                 (list :process proc :callbacks (list callback) :buffer buf)
+                 (list :process proc :callbacks (list callback) :buffer buf
+                       :server server :username username :password password :token token
+                       :reconnect-count 0 :reconnect-timer nil)
                  im-ntfy--subscriptions)
-        proc))))
+        proc)))))
 
 (defun im-ntfy-unsubscribe (topic &optional callback)
   "Unsubscribe from TOPIC.
 If CALLBACK is provided, only remove that callback.
 If no callbacks remain, close the connection."
   (when-let ((sub (gethash topic im-ntfy--subscriptions)))
+    ;; Cancel any pending reconnect timer
+    (when-let ((timer (plist-get sub :reconnect-timer)))
+      (cancel-timer timer)
+      (setq sub (plist-put sub :reconnect-timer nil)))
     (if callback
         ;; Remove specific callback
         (let ((callbacks (delete callback (plist-get sub :callbacks))))
@@ -234,7 +372,7 @@ If no callbacks remain, close the connection."
 
 ;;;###autoload
 (defun im-ntfy-subscribe-all ()
-  "Subscribe all topics in `im-ntfy-topics'.
+  "Subscribe all topics in variable `im-ntfy-topics'.
 If already subscribed, do nothing."
   (interactive)
   (dolist (topic im-ntfy-topics)
@@ -281,6 +419,7 @@ Optional ON-SUCCESS and ON-ERROR callbacks for async notification."
 (defun im-ntfy-fetch-messages (topic &optional since server username password token)
   "Fetch cached messages from TOPIC.
 SINCE can be a duration (e.g. \"10m\"), timestamp, message ID, or \"all\".
+SERVER, USERNAME, PASSWORD, and TOKEN are optional authentication parameters.
 Returns a list of message alists."
   (let* ((url (concat (im-ntfy--make-url topic server "json")
                       "?poll=1"
@@ -444,8 +583,8 @@ Returns a list of message alists."
   "Open an interactive buffer for TOPIC."
   (interactive
    (list (completing-read "Topic: "
-                          (mapcar (lambda (t)
-                                    (if (stringp t) t (plist-get t :name)))
+                          (mapcar (lambda (item)
+                                    (if (stringp item) item (plist-get item :name)))
                                   im-ntfy-topics)
                           nil nil)))
   (let ((buf (im-ntfy--setup-topic-buffer topic)))
@@ -456,11 +595,11 @@ Returns a list of message alists."
 
 ;;;###autoload
 (defun im-ntfy-topics ()
-  "Select and open a topic from `im-ntfy-topics'."
+  "Select and open a topic from variable `im-ntfy-topics'."
   (interactive)
   (if im-ntfy-topics
-      (let* ((topic-names (mapcar (lambda (t)
-                                    (if (stringp t) t (plist-get t :name)))
+      (let* ((topic-names (mapcar (lambda (item)
+                                    (if (stringp item) item (plist-get item :name)))
                                   im-ntfy-topics))
              (topic (completing-read "Select topic: " topic-names nil t)))
         (im-ntfy-open-topic topic))
@@ -471,8 +610,8 @@ Returns a list of message alists."
   "Interactively send MESSAGE to TOPIC with optional TITLE."
   (interactive
    (let* ((topic (completing-read "Topic: "
-                                  (mapcar (lambda (t)
-                                            (if (stringp t) t (plist-get t :name)))
+                                  (mapcar (lambda (item)
+                                            (if (stringp item) item (plist-get item :name)))
                                           im-ntfy-topics)))
           (title (read-string "Title (optional): "))
           (message (read-string "Message: "))
@@ -495,9 +634,11 @@ Returns a list of message alists."
 (defvar im-ntfy-subscriptions-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'im-ntfy-subscriptions-open-topic)
+    (define-key map (kbd "r") #'im-ntfy-subscriptions-refresh)
     (define-key map (kbd "g") #'im-ntfy-subscriptions-refresh)
     (define-key map (kbd "x") #'im-ntfy-subscriptions-unsubscribe)
     (define-key map (kbd "u") #'im-ntfy-subscriptions-unsubscribe)
+    (define-key map (kbd "c") #'im-ntfy-subscriptions-clear-cache)
     (define-key map (kbd "q") #'quit-window)
     map)
   "Keymap for `im-ntfy-subscriptions-mode'.")
@@ -505,7 +646,10 @@ Returns a list of message alists."
 (define-derived-mode im-ntfy-subscriptions-mode text-mode "ntfy-subs"
   "Major mode for viewing ntfy subscriptions."
   (setq-local buffer-read-only t)
-  (setq-local truncate-lines t))
+  (setq-local truncate-lines t)
+  ;; Make the mode keymap override Evil bindings
+  (when (featurep 'evil)
+    (evil-make-overriding-map im-ntfy-subscriptions-mode-map 'normal)))
 
 (defun im-ntfy--get-subscriptions-data ()
   "Return list of subscription data for vtable."
@@ -515,7 +659,9 @@ Returns a list of message alists."
                  (push (list :topic topic
                              :callbacks (length (plist-get data :callbacks))
                              :status (if (process-live-p proc) "active" "dead")
-                             :messages (length (gethash topic im-ntfy--message-cache)))
+                             :messages (length (gethash topic im-ntfy--message-cache))
+                             :reconnect-count (or (plist-get data :reconnect-count) 0)
+                             :reconnect-scheduled (if (plist-get data :reconnect-timer) "yes" "no"))
                        subs)))
              im-ntfy--subscriptions)
     (nreverse subs)))
@@ -528,14 +674,20 @@ Returns a list of message alists."
      :columns '((:name "Topic" :width 30)
                 (:name "Status" :width 10)
                 (:name "Callbacks" :width 10)
-                (:name "Messages" :width 10))
+                (:name "Messages" :width 10)
+                (:name "Reconnect count" :width 15)
+                (:name "Reconnect scheduled?" :width 15))
      :objects (im-ntfy--get-subscriptions-data)
      :getter (lambda (object column vtable)
                (pcase (vtable-column vtable column)
                  ("Topic" (plist-get object :topic))
                  ("Status" (plist-get object :status))
                  ("Callbacks" (number-to-string (plist-get object :callbacks)))
-                 ("Messages" (number-to-string (plist-get object :messages)))))
+                 ("Messages" (number-to-string (plist-get object :messages)))
+                 ("Reconnect count" (number-to-string (plist-get object :reconnect-count)))
+                 ("Reconnect scheduled?" (plist-get object :reconnect-scheduled))))
+     :row-colors (im-vtable-pretty-colors)
+     :column-colors (im-vtable-pretty-colors)
      :keymap im-ntfy-subscriptions-mode-map)
     (goto-char (point-min))))
 
@@ -561,6 +713,16 @@ Returns a list of message alists."
       (im-ntfy-unsubscribe topic)
       (im-ntfy-subscriptions-refresh)
       (message "Unsubscribed from '%s'" topic))))
+
+(defun im-ntfy-subscriptions-clear-cache ()
+  "Clear the message cache for the topic at point."
+  (interactive nil im-ntfy-subscriptions-mode)
+  (when-let* ((object (vtable-current-object))
+              (topic (plist-get object :topic)))
+    (when (y-or-n-p (format "Clear message cache for '%s'? " topic))
+      (remhash topic im-ntfy--message-cache)
+      (im-ntfy-subscriptions-refresh)
+      (message "Cleared cache for '%s'" topic))))
 
 ;;;###autoload
 (defun im-ntfy-list-subscriptions ()

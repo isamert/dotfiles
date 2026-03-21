@@ -137,8 +137,8 @@ If you are using app passwords, then you need to do the following:
            (im-nextcloud-talk-room-list-mode)
            (erase-buffer)
            (make-vtable
-            :row-colors (im-vtable--pretty-colors)
-            :column-colors (im-vtable--pretty-colors)
+            :row-colors (im-vtable-pretty-colors)
+            :column-colors (im-vtable-pretty-colors)
             :columns '("Name" "Last Message" "Token")
             :objects (--sort
                       (> (let-alist it .lastMessage.timestamp)

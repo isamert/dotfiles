@@ -1380,6 +1380,14 @@ subtle visual distinction from the main background."
         (im-color-lighten bg 40)
       (im-color-lighten bg -3))))
 
+;;;; vtable
+
+(defun im-vtable-pretty-colors ()
+  "Return alternating colors for vtable rows.
+Return a (color color) list that can be used with :column-colors and
+:row-colors.  Makes the tables more readable."
+  `(,(alist-get 'background-color (frame-parameters)) ,(im-alternative-bg-color)))
+
 ;;;; Footer
 
 (provide 'im)

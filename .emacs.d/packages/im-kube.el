@@ -122,8 +122,8 @@
       (insert "\n\n")
       (page-break-lines-mode)
       (make-vtable
-       :row-colors (im-vtable--pretty-colors)
-       :column-colors (im-vtable--pretty-colors)
+       :row-colors (im-vtable-pretty-colors)
+       :column-colors (im-vtable-pretty-colors)
        :columns
        `(,@(when all-namespaces? '("Namespace"))
          "Name"
