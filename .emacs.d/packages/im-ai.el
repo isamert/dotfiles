@@ -1062,7 +1062,7 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
                '(:name "new_string"
                  :type string
                  :description "Replacement text."))
-   :confirm t
+   :confirm nil
    :category "buffers"))
 
 ;;;;;; project tools
@@ -1398,8 +1398,7 @@ Comments (%d):
     :model 'claude-sonnet-4-5-20250929
     :confirm-tool-calls t
     :tools '("web" "elisp")
-    :use-tools t
-    :include-tool-results t)
+    :use-tools t)
 
   (gptel-make-preset 'research-agent
     :system im-ai-research-prompt
@@ -1407,8 +1406,7 @@ Comments (%d):
     :model 'gpt-5-mini
     :confirm-tool-calls nil
     :tools '("web")
-    :use-tools t
-    :include-tool-results t)
+    :use-tools t)
 
   (gptel-make-preset 'coding-helper-agent
     :system im-ai-programming-agent-prompt
@@ -1416,8 +1414,7 @@ Comments (%d):
     :model 'gpt-5.1
     :confirm-tool-calls nil
     :tools '("web")
-    :use-tools t
-    :include-tool-results t)
+    :use-tools t)
 
   (gptel-make-preset 'elisp-coding-helper-agent
     :system im-ai-programming-agent-prompt
@@ -1425,26 +1422,24 @@ Comments (%d):
     :model 'gpt-5.1
     :confirm-tool-calls nil
     :tools '("web" "elisp")
-    :use-tools t
-    :include-tool-results t)
+    :use-tools t)
 
   (gptel-make-preset 'coding-agent
     :system im-ai-programming-agent-prompt
     :backend "ChatGPT"
     :model 'gpt-5.1
     :confirm-tool-calls nil
-    :tools '("web" "files" "files_mutative")
-    :use-tools t
-    :include-tool-results t)
+    :tools '("web" "files" "files_mutative" "project")
+    :use-tools t)
 
   (gptel-make-preset 'elisp-coding-agent
-    :system im-ai-programming-agent-prompt
+    :system (concat im-ai-programming-agent-prompt
+                    "\nIf you are unsure about a variable or a functions usage, look it up before using.")
     :backend "ChatGPT"
     :model 'gpt-5.1
     :confirm-tool-calls nil
-    :tools '("web" "files" "files_mutative" "elisp")
-    :use-tools t
-    :include-tool-results t))
+    :tools '("web" "files" "files_mutative" "elisp" "buffers" "project")
+    :use-tools t))
 
 ;;;; Footer
 
