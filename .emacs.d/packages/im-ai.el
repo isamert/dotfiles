@@ -1207,17 +1207,28 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
 (with-eval-after-load 'gptel
   (gptel-make-tool
    :name "get_elisp_symbol_info"
-   :function (lambda (symbol-name)
-               (message "gptel :: get_elisp_symbol_info(%s)" symbol-name)
+   :function (lambda (symbol-name symbol-type)
+               (message "gptel :: get_elisp_symbol_info(%s, %s)" symbol-name symbol-type)
                (save-window-excursion
                  (let ((help-xref-following t))
-                   (helpful-symbol (intern symbol-name))
+                   (cond
+                    ((string= symbol-type "function")
+                     (helpful-function (intern symbol-name)))
+                    ((string= symbol-type "variable")
+                     (helpful-variable (intern symbol-name)))
+                    (t
+                     (helpful-symbol (intern symbol-name))))
                    (buffer-substring-no-properties (point-min) (point-max)))))
-   :description "Get detailed information (docs, implementation etc.) about given elisp symbol/function etc."
+   :description "Get detailed information (docs, implementation, current value etc.) about given elisp symbol/function etc. If you are unsure about specifics of function/variable, use this tool. This makes your edits less error prone."
    :args '((:name "symbol_name"
             :type string
-            :description "Name of the Elisp symbol."))
+            :description "Name of the Elisp symbol.")
+           (:name "symbol_type"
+            :type string
+            :description "Type of symbol: 'function', 'variable', or 'any'."
+            :enum '("function" "variable" "any")))
    :category "elisp")
+
 
   (gptel-make-tool
    :name "run_elisp"
@@ -1434,7 +1445,7 @@ Comments (%d):
 
   (gptel-make-preset 'elisp-coding-agent
     :system (concat im-ai-programming-agent-prompt
-                    "\nIf you are unsure about a variable or a functions usage, look it up before using.")
+                    "\nIf you are unsure about a variable or a functions usage, look it up before using.\nPrefer existing tool calls to running arbitrary elisp, if possible.")
     :backend "ChatGPT"
     :model 'gpt-5.1
     :confirm-tool-calls nil
