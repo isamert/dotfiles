@@ -6,10 +6,15 @@
 ;; Keywords: ai, tools
 
 ;;; Commentary:
-
+ 
 ;; Simple interface to Kagi Assistant from Emacs.
 ;;
 ;; Do M-x `im-kagi-assistant' to start a new conversation.
+;;
+;; Features:
+;; - Streaming responses (text appears incrementally)
+;; - Supports thinking display and search sources
+;; - Multiple model selection
 ;;
 ;; Limitations:
 ;; - Can't change earlier prompts right now
@@ -21,6 +26,8 @@
 
 (require 'plz)
 (require 'json)
+(require 'cl-lib)
+(require 'subr-x)
 
 ;;;; Customization
 
@@ -68,6 +75,24 @@ Set this to your Kagi session cookie."
 (defvar-local im-kagi-assistant--last-message-id nil
   "Last message ID in the conversation.")
 
+(defvar-local im-kagi-assistant--stream-accumulator ""
+  "Accumulator for incomplete stream lines.")
+
+(defvar-local im-kagi-assistant--stream-start nil
+  "Marker where the assistant response starts.")
+
+(defvar-local im-kagi-assistant--stream-end nil
+  "Marker where the assistant response ends.")
+
+(defvar-local im-kagi-assistant--current-md nil
+  "Current markdown content from the stream.")
+
+(defvar-local im-kagi-assistant--current-thinking nil
+  "Current thinking content from the stream.")
+
+(defvar-local im-kagi-assistant--current-sources nil
+  "Current sources list from the stream.")
+
 (defconst im-kagi-assistant--url "https://kagi.com/assistant/prompt"
   "Kagi Assistant API endpoint.")
 
@@ -85,6 +110,57 @@ Set this to your Kagi session cookie."
 
 (defconst im-kagi-assistant--thinking-marker-end "\n</thinking>\n\n"
   "Marker for reasoning/thinking blocks.")
+
+(defun im-kagi-assistant--update-display ()
+  "Redraw the assistant response region with current state."
+  (when (and im-kagi-assistant--stream-start im-kagi-assistant--stream-end)
+    (let ((inhibit-read-only t))
+      (delete-region im-kagi-assistant--stream-start im-kagi-assistant--stream-end)
+      (goto-char im-kagi-assistant--stream-start)
+      ;; Insert thinking if available
+      (when im-kagi-assistant--current-thinking
+        (insert im-kagi-assistant--thinking-marker-begin)
+        (insert im-kagi-assistant--current-thinking)
+        (insert im-kagi-assistant--thinking-marker-end))
+      ;; Insert the markdown response
+      (when im-kagi-assistant--current-md
+        (let ((md (replace-regexp-in-string
+                   "<details><summary>[^<]*</summary>\\(?:.\\|\n\\)*?</details>\\s-*"
+                   "" im-kagi-assistant--current-md)))
+          (setq md (string-trim md))
+          (unless (string-empty-p md)
+            (insert "\n" md))))
+      ;; Insert sources if available
+      (when (and im-kagi-assistant-show-sources im-kagi-assistant--current-sources)
+        (insert (im-kagi-assistant--format-sources im-kagi-assistant--current-sources)))
+      (set-marker im-kagi-assistant--stream-end (point)))))
+
+(defun im-kagi-assistant--process-stream-line (line)
+  "Process a single LINE from the stream and update state."
+  (when (and line (not (string-empty-p line)))
+    (when-let ((parsed (im-kagi-assistant--parse-stream-line line)))
+      (let ((type (car parsed))
+            (data (cdr parsed)))
+        (pcase type
+          ("thread.json"
+           (im-kagi-assistant--update-thread-info data type))
+          ("messages.json"
+           (im-kagi-assistant--update-thread-info data type))
+          ("new_message.json"
+           (when-let ((result (im-kagi-assistant--update-thread-info data type)))
+             (setq im-kagi-assistant--current-md (plist-get result :md))
+             (setq im-kagi-assistant--current-sources (plist-get result :sources))
+             (setq im-kagi-assistant--current-thinking (plist-get result :thinking))
+             (im-kagi-assistant--update-display)))
+          ("tokens.json"
+           (let ((extracted (im-kagi-assistant--extract-md-and-sources data)))
+             (when (plist-get extracted :md)
+               (setq im-kagi-assistant--current-md (plist-get extracted :md)))
+             (when (plist-get extracted :sources)
+               (setq im-kagi-assistant--current-sources (plist-get extracted :sources)))
+             (when (plist-get extracted :thinking)
+               (setq im-kagi-assistant--current-thinking (plist-get extracted :thinking)))
+             (im-kagi-assistant--update-display))))))))
 
 ;;;; Utility
 
@@ -339,20 +415,56 @@ Set this to your Kagi session cookie."
     ;; Add assistant marker
     (goto-char (point-max))
     (insert im-kagi-assistant--assistant-marker)
-    ;; Make request
-    (plz 'post im-kagi-assistant--url
-      :headers (im-kagi-assistant--build-headers)
-      :body (im-kagi-assistant--build-payload prompt)
-      :as 'string
-      :then (lambda (response)
-              (im-kagi-assistant--process-response buffer response)
-              (with-current-buffer buffer
-                (goto-char (point-max))
-                (insert im-kagi-assistant--user-marker)))
-      :else (lambda (err)
-              (with-current-buffer buffer
-                (goto-char (point-max))
-                (insert (format "\n[ERROR]: %s" err)))))))
+    ;; Initialize streaming state
+    (setq im-kagi-assistant--stream-accumulator "")
+    (setq im-kagi-assistant--current-md nil)
+    (setq im-kagi-assistant--current-thinking nil)
+    (setq im-kagi-assistant--current-sources nil)
+    (setq im-kagi-assistant--stream-start (set-marker (make-marker) (point)))
+    (setq im-kagi-assistant--stream-end (set-marker (make-marker) (point)))
+    ;; Define filter
+    (let ((filter (lambda (process chunk)
+                    ;; Insert chunk into process buffer for plz to parse HTTP response
+                    (when (buffer-live-p (process-buffer process))
+                      (with-current-buffer (process-buffer process)
+                        (insert chunk)))
+                    ;; Process chunk for streaming display
+                    (when (buffer-live-p buffer)
+                      (with-current-buffer buffer
+                        (let ((accum (concat im-kagi-assistant--stream-accumulator chunk)))
+                          (if (string-suffix-p "\n" chunk)
+                              ;; Chunk ends with newline, all lines are complete
+                              (progn
+                                (setq im-kagi-assistant--stream-accumulator "")
+                                (dolist (line (split-string accum "\n"))
+                                  (unless (string-empty-p line)
+                                    (im-kagi-assistant--process-stream-line line))))
+                            ;; Chunk does not end with newline, keep last line as incomplete
+                            (let ((lines (split-string accum "\n")))
+                              (setq im-kagi-assistant--stream-accumulator (car (last lines)))
+                              (dolist (line (butlast lines))
+                                (unless (string-empty-p line)
+                                  (im-kagi-assistant--process-stream-line line)))))))))))
+      ;; Make request with streaming
+      (plz 'post im-kagi-assistant--url
+        :headers (im-kagi-assistant--build-headers)
+        :body (im-kagi-assistant--build-payload prompt)
+        :as 'string
+        :filter filter
+        :then (lambda (_)
+                (when (buffer-live-p buffer)
+                  (with-current-buffer buffer
+                    ;; Process any remaining accumulator content
+                    (unless (string-empty-p im-kagi-assistant--stream-accumulator)
+                      (im-kagi-assistant--process-stream-line im-kagi-assistant--stream-accumulator)
+                      (setq im-kagi-assistant--stream-accumulator ""))
+                    (goto-char (point-max))
+                    (insert im-kagi-assistant--user-marker))))
+        :else (lambda (err)
+                (when (buffer-live-p buffer)
+                  (with-current-buffer buffer
+                    (goto-char (point-max))
+                    (insert (format "\n[ERROR]: %s" err)))))))))
 
 (defun im-kagi-assistant-new-input ()
   "Start a new user input block."
@@ -366,6 +478,12 @@ Set this to your Kagi session cookie."
   (interactive nil im-kagi-assistant-mode)
   (setq im-kagi-assistant--thread-id nil)
   (setq im-kagi-assistant--last-message-id nil)
+  (setq im-kagi-assistant--stream-accumulator "")
+  (setq im-kagi-assistant--current-md nil)
+  (setq im-kagi-assistant--current-thinking nil)
+  (setq im-kagi-assistant--current-sources nil)
+  (setq im-kagi-assistant--stream-start nil)
+  (setq im-kagi-assistant--stream-end nil)
   (erase-buffer)
   (insert "# Kagi Assistant")
   (insert im-kagi-assistant--user-marker))
@@ -385,7 +503,13 @@ Set this to your Kagi session cookie."
   :keymap im-kagi-assistant-mode-map
   (when im-kagi-assistant-mode
     (setq-local im-kagi-assistant--thread-id nil)
-    (setq-local im-kagi-assistant--last-message-id nil)))
+    (setq-local im-kagi-assistant--last-message-id nil)
+    (setq-local im-kagi-assistant--stream-accumulator "")
+    (setq-local im-kagi-assistant--current-md nil)
+    (setq-local im-kagi-assistant--current-thinking nil)
+    (setq-local im-kagi-assistant--current-sources nil)
+    (setq-local im-kagi-assistant--stream-start nil)
+    (setq-local im-kagi-assistant--stream-end nil)))
 
 (defun im-kagi-assistant-change-model ()
   "Change the Kagi Assistant model via completing-read."
