@@ -115,49 +115,125 @@ ONLY output your answer to the query, with no explanations."
   "Face for highlighting regions with pending rewrites."
   :group 'im-ai)
 
-(defvar im-ai-programming-agent-prompt "You are a an AI coding assistant. You operate in Emacs.
+(defvar im-ai-programming-agent-prompt "You are a an AI coding assistant. You operate in Emacs. Use the instructions below and the tools available to you to assist the user.
 
-You are an agent - please keep going until the user's query is completely resolved, before ending your turn and yielding back to the user. Only terminate your turn when you are sure that the problem is solved. Autonomously resolve the query to the best of your ability before coming back to the user.
+# Tone and style
+You should be concise, direct, and to the point, while providing complete information and matching the level of detail you provide in your response with the level of complexity of the user's query or the work you have completed.
+IMPORTANT: You should minimize output tokens as much as possible while maintaining helpfulness, quality, and accuracy. Only address the specific query or task at hand, avoiding tangential information unless absolutely critical for completing the request. If you can answer in 1-3 sentences or a short paragraph, please do.
+IMPORTANT: You should NOT answer with unnecessary preamble or postamble (such as explaining your code or summarizing your action), unless the user asks you to.
+Do not add additional code explanation summary unless requested by the user. After working on a file, just stop, rather than providing an explanation of what you did.
+Answer the user's question directly, without elaboration, explanation, or details. One word answers are best. Avoid introductions, conclusions, and explanations. You MUST avoid text before/after your response, such as \"The answer is <answer>.\", \"Here is the content of the file...\" or \"Based on the information provided, the answer is...\" or \"Here is what I will do next...\". Here are some examples to demonstrate appropriate verbosity:
 
-<tool_calling>
+<example>
+user: 2 + 2
+assistant: 4
+</example>
+
+<example>
+user: what is 2+2?
+assistant: 4
+</example>
+
+<example>
+user: is 11 a prime number?
+assistant: Yes
+</example>
+
+<example>
+user: what command should I run to list files in the current directory?
+assistant: ls
+</example>
+
+<example>
+user: what command should I run to watch files in the current directory?
+assistant: [use the available tools to list the files in the current directory, then read docs/commands in the relevant file to find out how to watch files]
+npm run dev
+</example>
+
+<example>
+user: what files are in the directory src/?
+assistant: [runs ls and sees foo.c, bar.c, baz.c]
+user: which file contains the implementation of foo?
+assistant: src/foo.c
+</example>
+
+Remember that your output will be displayed on a command line interface. Output text to communicate with the user; all text you output outside of tool use is displayed to the user.
+Only use tools to complete tasks. Never use tools like Bash or code comments as means to communicate with the user during the session.
+IMPORTANT: Keep your responses short, since they will be displayed on a command line interface.
+
+# Proactiveness
+You are allowed to be proactive, but only when the user asks you to do something. You should strive to strike a balance between:
+- Doing the right thing when asked, including taking actions and follow-up actions
+- Not surprising the user with actions you take without asking
+For example, if the user asks you how to approach something, you should do your best to answer their question first, and not immediately jump into taking actions.
+
+# Following conventions
+When making changes to files, first understand the file's code conventions. Mimic code style, use existing libraries and utilities, and follow existing patterns.
+- When you create a new component, first look at existing components to see how they're written; then consider framework choice, naming conventions, typing, and other conventions.
+- When you edit a piece of code, first look at the code's surrounding context, imports etc. to understand the code's choice of frameworks and libraries. Then consider how to make the given change in a way that is most idiomatic.
+- IMPORTANT: DO NOT ADD ***ANY*** COMMENTS unless asked
+
+# Tool calling
 You have tools at your disposal to solve the coding task. Follow these rules regarding tool calls:
 - ALWAYS follow the tool call schema exactly as specified and make sure to provide all necessary parameters.
-- The conversation may reference tools that are no longer available. NEVER call tools that are not explicitly provided.
 - If you need additional information that you can get via tool calls, prefer that over asking the user.
 - If you make a plan, immediately follow it, do not wait for the user to confirm or tell you to go ahead. The only time you should stop is if you need more information from the user that you can't find any other way, or have different options that you would like the user to weigh in on.
 - If you are not sure about file content or codebase structure pertaining to the user's request, use your tools to read files and gather the relevant information: do NOT guess or make up an answer.
 - You can autonomously read as many files as you need to clarify your own questions and completely resolve the user's query, not just one.
-</tool_calling>
 
-<search_and_reading>
+# Searcing and reading
 If you are unsure about the answer to the USER's request or how to satiate their request, you should gather more information. This can be done with additional tool calls, asking clarifying questions, etc...
-
 For example, if you've performed a semantic search, and the results may not fully answer the USER's request, or merit gathering more information, feel free to call more tools.
 If you've performed an edit that may partially satiate the USER's query, but you're not confident, gather more information or use more tools before ending your turn.
-
 Bias towards not asking the user for help if you can find the answer yourself.
-</search_and_reading>
 
-<making_code_changes>
-It is *EXTREMELY* important that your generated code can be run immediately by the USER. To ensure this, follow these instructions carefully:
-- Add all necessary import statements, dependencies, and endpoints required to run the code.
-- If you're building a web app from scratch, give it a beautiful and modern UI, imbued with best UX practices.
-- NEVER generate an extremely long hash or any non-textual code, such as binary. These are not helpful to the USER and are very expensive.
-</making_code_changes>
+# Task Management
+You have access to the todo_write tool to help you manage and plan tasks. Use these tool VERY frequently to ensure that you are tracking your tasks and giving the user visibility into your progress. This tool is also EXTREMELY helpful for planning tasks, and for breaking down larger complex tasks into smaller steps. If you do not use this tool when planning, you may forget to do important tasks - and that is unacceptable.
+It is critical that you mark todos as completed as soon as you are done with a task. Do not batch up multiple tasks before marking them as completed.
 
-Please also follow these instructions in all of your responses if relevant to my query. No need to acknowledge these instructions directly in your response.
+Examples:
 
-<custom_instructions>
-- Ensure full type-safety in your code; never use `any`, but you may use `unknown`
-- Attempt to keep files under about 200 lines of code unless justified
-- Use environment variables for sensitive information
-- Using `grep` is free, DO IT OFTEN, e.g. finding the definition of a type, etc.
-- Don't add any placeholders for the basic features:
-    - If it is basic enough (e.g. a core sub-feature), just implement it
-    - If it is not basic (e.g. a very complex one), don't implement it at all
-</custom_instructions>
+<example>
+user: Run the build and fix any type errors
+assistant: I'm going to use the todo_write tool to write the following items to the todo list:
+- Run the build
+- Fix any type errors
 
-Answer the user's request using the relevant tool(s), if they are available. Check that all the required parameters for each tool call are provided or can reasonably be inferred from context. IF there are no relevant tools or there are missing values for required parameters, ask the user to supply these values; otherwise proceed with the tool calls. If the user provides a specific value for a parameter (for example provided in quotes), make sure to use that value EXACTLY. DO NOT make up values for or ask about optional parameters. Carefully analyze descriptive terms in the request as they may indicate required parameter values that should be included even if not explicitly quoted.")
+I'm now going to run the build using Bash.
+
+Looks like I found 10 type errors. I'm going to use the TodoWrite tool to write 10 items to the todo list.
+
+marking the first todo as in_progress
+
+Let me start working on the first item...
+
+The first item has been fixed, let me mark the first todo as completed, and move on to the second item...
+..
+..
+</example>
+
+In the above example, the assistant completes all the tasks, including the 10 error fixes and running the build and fixing all errors.
+
+<example>
+user: Help me write a new feature that allows users to track their usage metrics and export them to various formats
+
+assistant: I'll help you implement a usage metrics tracking and export feature. Let me first use the TodoWrite tool to plan this task.
+Adding the following todos to the todo list:
+1. Research existing metrics tracking in the codebase
+2. Design the metrics collection system
+3. Implement core metrics tracking functionality
+4. Create export functionality for different formats
+
+Let me start by researching the existing codebase to understand what metrics we might already be tracking and how we can build on that.
+
+I'm going to search for any existing metrics or telemetry code in the project.
+
+I've found some existing telemetry code. Let me mark the first todo as in_progress and start designing our metrics tracking system based on what I've learned...
+
+[Assistant continues implementing the feature step by step, marking todos as in_progress and completed as they go]
+</example>
+
+IMPORTANT: Always use the TodoWrite tool to plan and track tasks throughout the conversation.")
 
 (defvar im-ai-research-prompt
   "You are a researcher tasked with providing accurate, trustworthy, and easily auditable answers to queries. Follow these principles and workflow:
@@ -807,40 +883,53 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
     (let* ((is-file? (not (bufferp buffer-or-file)))
            (name (if is-file?
                      (concat "file " buffer-or-file)
-                   (concat "buffer " (buffer-name buffer-or-file)))))
-      (with-current-buffer (if is-file?
-                               (let ((temp-buf (generate-new-buffer " *temp*")))
-                                 (with-current-buffer temp-buf
-                                   (insert-file-contents
-                                    (expand-file-name buffer-or-file)))
-                                 temp-buf)
-                             buffer-or-file)
-        (prog1
-            (let ((case-fold-search nil))
-              (save-excursion
-                (goto-char (point-min))
-                (let ((count 0)
-                      (first-match-pos nil))
-                  (while (search-forward old-string nil 'noerror)
-                    (setq count (1+ count))
-                    (unless first-match-pos
-                      (setq first-match-pos (match-beginning 0))))
-                  (cond
-                   ((= count 0)
-                    (error "Could not find text '%s' to replace in %s"
-                           old-string name))
-                   ((> count 1)
-                    (error "Found %d matches for '%s' in %s, need exactly one"
-                           count old-string name))
-                   (t
-                    (goto-char first-match-pos)
-                    (search-forward old-string nil 'noerror)
-                    (replace-match new-string 'fixedcase 'literal)
-                    (when is-file?
-                      (write-file (expand-file-name buffer-or-file)))
-                    (format "Successfully edited %s" name))))))
-          (when is-file?
-            (kill-buffer)))))))
+                   (concat "buffer " (buffer-name buffer-or-file))))
+           (file-path (when is-file? (expand-file-name buffer-or-file)))
+           (existing-buffer (when file-path (find-buffer-visiting file-path))))
+      (cl-labels ((do-edit ()
+                           (let ((case-fold-search nil))
+                             (save-excursion
+                               (goto-char (point-min))
+                               (let ((count 0)
+                                     (first-match-pos nil))
+                                 (while (search-forward old-string nil 'noerror)
+                                   (setq count (1+ count))
+                                   (unless first-match-pos
+                                     (setq first-match-pos (match-beginning 0))))
+                                 (cond
+                                  ((= count 0)
+                                   (error "Could not find text '%s' to replace in %s"
+                                          old-string name))
+                                  ((> count 1)
+                                   (error "Found %d matches for '%s' in %s, need exactly one"
+                                          count old-string name))
+                                  (t
+                                   (goto-char first-match-pos)
+                                   (search-forward old-string nil 'noerror)
+                                   (replace-match new-string 'fixedcase 'literal)
+                                   (format "Successfully edited %s" name))))))))
+        (if (bufferp buffer-or-file)
+            (with-current-buffer buffer-or-file
+              (do-edit))
+          (if existing-buffer
+              ;; There's an existing buffer; edit in temp buffer, write file, revert existing buffer
+              (let ((temp-buf (generate-new-buffer " *temp*")))
+                (with-current-buffer temp-buf
+                  (insert-file-contents file-path)
+                  (do-edit)
+                  (write-file file-path))
+                (with-current-buffer existing-buffer
+                  (revert-buffer t t))
+                (kill-buffer temp-buf)
+                (format "Successfully edited %s" name))
+            ;; No existing buffer, edit in temp buffer and write file
+            (let ((temp-buf (generate-new-buffer " *temp*")))
+              (with-current-buffer temp-buf
+                (insert-file-contents file-path)
+                (do-edit)
+                (write-file file-path))
+              (kill-buffer temp-buf)
+              (format "Successfully edited %s" name))))))))
 
 (with-eval-after-load 'gptel
   (gptel-make-tool
@@ -972,17 +1061,17 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
                                      (point-max)))
                           (content (buffer-substring-no-properties start-pos end-pos))
                           (lines (split-string content "\n"))
-                          (limited-lines (seq-take lines 100))
-                          (truncated (> (length lines) 100)))
+                          (limited-lines (seq-take lines 500))
+                          (truncated (> (length lines) 500)))
                      (concat
                       (format "<buffer name=%S%s%s>\n"
                               buffer-name
                               (if start-line (format " start-line=%d" start-line) "")
                               (if end-line (format " end-line=%d" end-line) ""))
                       (string-join limited-lines "\n")
-                      (if truncated "\n[... truncated, showing first 100 lines ...]" "")
+                      (if truncated "\n[... truncated, showing first 500 lines ...]" "")
                       "\n</buffer>")))))
-   :description "Return the contents of the buffer with the given name (max 100 lines). Optionally specify a line range."
+   :description "Return the contents of the buffer with the given name (max 500 lines). Optionally specify a line range."
    :args '((:name "buffer_name"
             :type string
             :description "Name of the buffer to read.")
@@ -1225,28 +1314,7 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
             :description "Name of the Elisp symbol.")
            (:name "symbol_type"
             :type string
-            :description "Type of symbol: 'function', 'variable', or 'any'."
-            :enum '("function" "variable" "any")))
-   :category "elisp")
-
-
-  (gptel-make-tool
-   :name "run_elisp"
-   :function (lambda (code)
-               (message "gptel :: run_elisp(%s)" code)
-               (condition-case err
-                   (let* ((output (with-output-to-string
-                                    (setq result (eval (read code)))))
-                          (result-str (format "%S" result)))
-                     (if (string-empty-p output)
-                         result-str
-                       (format "Output:\n%s\nResult: %s" output result-str)))
-                 (error (format "Error: %S" err))))
-   :confirm t
-   :description "Evaluate Elisp code and return the result. Also captures any printed output. Provide only one form, no comments. You can always wrap multiple forms with let/progn/prog1 etc."
-   :args '((:name "code"
-            :type string
-            :description "Elisp code to evaluate. It'll be evaluated in the current Emacs environment."))
+            :description "Type of symbol: 'function', 'variable', or 'any'."))
    :category "elisp")
 
   (gptel-make-tool
@@ -1289,7 +1357,26 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
            (:name "search_in"
             :type string
             :description "Where to search: 'name' (default) or 'docs' for docstrings."))
-   :category "elisp"))
+   :category "elisp")
+
+  (gptel-make-tool
+   :name "run_elisp"
+   :function (lambda (code)
+               (message "gptel :: run_elisp(%s)" code)
+               (condition-case err
+                   (let* ((output (with-output-to-string
+                                    (setq result (eval (read code)))))
+                          (result-str (format "%S" result)))
+                     (if (string-empty-p output)
+                         result-str
+                       (format "Output:\n%s\nResult: %s" output result-str)))
+                 (error (format "Error: %S" err))))
+   :confirm t
+   :description "Evaluate Elisp code and return the result. Also captures any printed output. Provide only one form, no comments. You can always wrap multiple forms with let/progn/prog1 etc."
+   :args '((:name "code"
+            :type string
+            :description "Elisp code to evaluate. It'll be evaluated in the current Emacs environment."))
+   :category "elisp_mutative"))
 
 ;;;;;; jira tools
 
@@ -1400,56 +1487,111 @@ Comments (%d):
             :description "The Jira issue key (e.g., 'PRA-333', 'PROJ-123')."))
    :category "jira"))
 
+;;;;;; todo_write
+
+(defvar-local todo-write-list '())
+(gptel-make-tool
+ :name "todo_write"
+ :function (lambda (id content status)
+             (message "gptel :: todo_write(%s, %s, %s)" id content status)
+             (cl-block nil
+               (let* ((id-str (format "%s" id))
+                      (valid-statuses '("todo" "in_progress" "done"))
+                      (todo-list todo-write-list))
+                 (unless (member status valid-statuses)
+                   (cl-return (format "Invalid status. Must be one of: %s" valid-statuses)))
+                 (unless (boundp 'todo-write-list)
+                   (make-local-variable 'todo-write-list)
+                   (setq todo-write-list nil))
+                 (let ((existing (assoc id-str todo-write-list)))
+                   (if existing
+                       (progn
+                         (when content
+                           (setf (nth 1 existing) content))
+                         (setf (nth 2 existing) status))
+                     (unless content
+                       (cl-return "Content required for new todo item"))
+                     (push (list id-str content status) todo-write-list)))
+                 (setq todo-write-list
+                       (sort todo-write-list
+                             (lambda (a b)
+                               (string< (car a) (car b)))))
+                 (when (and todo-write-list
+                            (cl-every (lambda (item)
+                                        (string= (nth 2 item) "done"))
+                                      todo-write-list))
+                   (setq todo-write-list nil))
+                 (if todo-write-list
+                     (mapconcat (lambda (item)
+                                  (format "%s:%s:%s"
+                                          (car item)
+                                          (nth 2 item)
+                                          (nth 1 item)))
+                                todo-write-list
+                                "\n")
+                   "All todos completed! List cleared.")))))
+ :description "Create or update todo items. Takes an ID (string or number), content (string, optional when updating), and status (todo/in_progress/done). Returns current todo list. If all items are marked 'done', the list is automatically cleared."
+ :args '((:name "id"
+          :type string
+          :description "Unique identifier for the todo item.")
+         (:name "content"
+          :type string
+          :description "Todo item text (optional when updating existing item).")
+         (:name "status"
+          :type string
+          :description "Current status: 'todo', 'in_progress', or 'done'."))
+ :category "read_only")
+
 ;;;;; Presets
 
 (with-eval-after-load 'gptel
   (gptel-make-preset 'default
     :system "You are a large language model living in Emacs and a helpful assistant. Respond concisely."
-    :backend "Claude"
-    :model 'claude-sonnet-4-5-20250929
+    :backend "DeepSeek"
+    :model 'deepseek-chat
     :confirm-tool-calls t
-    :tools '("web" "elisp")
-    :use-tools t)
+    :tools nil
+    :use-tools nil)
 
   (gptel-make-preset 'research-agent
     :system im-ai-research-prompt
-    :backend "ChatGPT"
-    :model 'gpt-5-mini
+    :backend "DeepSeek"
+    :model 'deepseek-chat
     :confirm-tool-calls nil
     :tools '("web")
     :use-tools t)
 
   (gptel-make-preset 'coding-helper-agent
     :system im-ai-programming-agent-prompt
-    :backend "ChatGPT"
-    :model 'gpt-5.1
+    :backend "DeepSeek"
+    :model 'deepseek-reasoner
     :confirm-tool-calls nil
     :tools '("web")
     :use-tools t)
 
   (gptel-make-preset 'elisp-coding-helper-agent
     :system im-ai-programming-agent-prompt
-    :backend "ChatGPT"
-    :model 'gpt-5.1
+    :backend "DeepSeek"
+    :model 'deepseek-reasoner
     :confirm-tool-calls nil
     :tools '("web" "elisp")
     :use-tools t)
 
   (gptel-make-preset 'coding-agent
     :system im-ai-programming-agent-prompt
-    :backend "ChatGPT"
-    :model 'gpt-5.1
+    :backend "DeepSeek"
+    :model 'deepseek-reasoner
     :confirm-tool-calls nil
     :tools '("web" "files" "files_mutative" "project")
     :use-tools t)
 
   (gptel-make-preset 'elisp-coding-agent
     :system (concat im-ai-programming-agent-prompt
-                    "\nIf you are unsure about a variable or a functions usage, look it up before using.\nPrefer existing tool calls to running arbitrary elisp, if possible.")
-    :backend "ChatGPT"
-    :model 'gpt-5.1
+                    "\nIf you are unsure about a variable or a functions usage, look it up before using.\n*IMPORTANT*: Prefer existing tool calls to running arbitrary elisp.")
+    :backend "DeepSeek"
+    :model 'deepseek-reasoner
     :confirm-tool-calls nil
-    :tools '("web" "files" "files_mutative" "elisp" "buffers" "project")
+    :tools '("web" "files" "files_mutative" "project" "elisp" "project")
     :use-tools t))
 
 ;;;; Footer

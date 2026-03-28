@@ -1223,7 +1223,7 @@ Uses `fd' so that it automatically respects .gitignore etc."
   (let ((default-directory dir))
     (->>
      (format
-      "fd '%s' '%s' --type file --maxdepth %s %s"
+      "fd '%s' '%s' --hidden --type file --maxdepth %s %s"
       regexp
       (if absolute-path
           (expand-file-name dir)

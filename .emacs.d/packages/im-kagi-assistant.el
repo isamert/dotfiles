@@ -6,7 +6,7 @@
 ;; Keywords: ai, tools
 
 ;;; Commentary:
- 
+
 ;; Simple interface to Kagi Assistant from Emacs.
 ;;
 ;; Do M-x `im-kagi-assistant' to start a new conversation.
