@@ -615,8 +615,20 @@ Returns a list of message alists."
                                           im-ntfy-topics)))
           (title (read-string "Title (optional): "))
           (message (read-string "Message: "))
-          (file (when (y-or-n-p "Attach local file? ")
-                  (expand-file-name (read-file-name "Attachment: ")))) )
+          (file (let ((choice
+                       (read-multiple-choice
+                        "Attachment? "
+                        (append
+                         (when (im-clipboard-contains-image-p)
+                           '((?c "clipboard image" "Use the image from clipboard")))
+                         '((?f "file" "Attach another file")
+                           (?n "none" "No attachment"))))))
+                  (pcase (car choice)
+                    (?c (let ((file (make-temp-file "im-ntfy-attachment-" nil ".png")))
+                          (im-save-clipboard-image-to-file file)
+                          file))
+                    (?f (expand-file-name (read-file-name "Attachment: ")))
+                    (?n nil)))))
      (list topic message
            (unless (string-empty-p title) title)
            file)))
