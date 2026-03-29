@@ -70,7 +70,7 @@
   (interactive (list
       (read-string "URL: ")
       :title (read-string "Title (leave empty to fill auto): ")
-      :labels (mapcar #'s-trim (s-split "," (read-string "Tags (comma separated): ")))))
+      :labels (-filter (-compose #'not #'s-blank?) (mapcar #'s-trim (s-split "," (read-string "Tags (comma separated): "))))))
   (await (im-request
            (format "%s/api/bookmarks" im-readeck-url)
            :-type "POST"

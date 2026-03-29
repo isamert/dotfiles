@@ -1013,11 +1013,11 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
                  :description "Path to the file to edit (absolute or relative).")
                '(:name "old_string"
                  :type string
-                 :description "Exact text to replace (must match exactly once).")
+                 :description "Exact text to replace (must match exactly once), can span multiple lines.")
                '(:name "new_string"
                  :type string
                  :description "Replacement text."))
-   :category "files"))
+   :category "files_mutative"))
 
 ;;;;;; buffer tools
 
