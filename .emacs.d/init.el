@@ -3361,6 +3361,7 @@ that is read verbatim (meaning that no '$*' is appended):
 ;; eshell-directory-change-hook is not get triggered when eshell is opened, hence:
 (add-hook 'eshell-mode-hook #'im-eshell-handle-dir-change)
 
+(defalias 'im-show-directory-notes #'im-org-jump-to-project-documentation)
 (defun im-org-jump-to-project-documentation ()
   "Jump to *my* documentation for current project."
   (interactive)
