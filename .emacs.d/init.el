@@ -5122,8 +5122,8 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 ;; Some functionality for project management. I do some fine-tuning for =find= and =ripgrep= commands that consult uses.
 
 (with-eval-after-load 'consult
-  (setq consult-find-command "fd  --hidden --full-path ARG OPTS")
-  (setq consult-ripgrep-command "rg  --hidden --null --line-buffered --color=always --max-columns=500 --no-heading --smart-case --line-number . -e ARG OPTS")
+  (setq consult-ripgrep-args "rg --hidden --null --line-buffered --color=never --max-columns=1000 --path-separator /\
+   --smart-case --no-heading --with-filename --line-number --search-zip")
   (setq consult-project-root-function #'im-current-project-root))
 
 (transient-define-prefix im-find-and-grep-transient ()
