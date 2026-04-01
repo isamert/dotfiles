@@ -1016,8 +1016,8 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
                  :description "Exact text to replace (must match exactly once), can span multiple lines.")
                '(:name "new_string"
                  :type string
-                 :description "Replacement text."))
-   :category "files_mutative"))
+                 :category "files_mutative"
+                 :description "Replacement text."))))
 
 ;;;;;; buffer tools
 
@@ -1489,58 +1489,60 @@ Comments (%d):
 
 ;;;;;; todo_write
 
-(defvar-local todo-write-list '())
-(gptel-make-tool
- :name "todo_write"
- :function (lambda (id content status)
-             (message "gptel :: todo_write(%s, %s, %s)" id content status)
-             (cl-block nil
-               (let* ((id-str (format "%s" id))
-                      (valid-statuses '("todo" "in_progress" "done"))
-                      (todo-list todo-write-list))
-                 (unless (member status valid-statuses)
-                   (cl-return (format "Invalid status. Must be one of: %s" valid-statuses)))
-                 (unless (boundp 'todo-write-list)
-                   (make-local-variable 'todo-write-list)
-                   (setq todo-write-list nil))
-                 (let ((existing (assoc id-str todo-write-list)))
-                   (if existing
-                       (progn
-                         (when content
-                           (setf (nth 1 existing) content))
-                         (setf (nth 2 existing) status))
-                     (unless content
-                       (cl-return "Content required for new todo item"))
-                     (push (list id-str content status) todo-write-list)))
-                 (setq todo-write-list
-                       (sort todo-write-list
-                             (lambda (a b)
-                               (string< (car a) (car b)))))
-                 (when (and todo-write-list
-                            (cl-every (lambda (item)
-                                        (string= (nth 2 item) "done"))
-                                      todo-write-list))
-                   (setq todo-write-list nil))
-                 (if todo-write-list
-                     (mapconcat (lambda (item)
-                                  (format "%s:%s:%s"
-                                          (car item)
-                                          (nth 2 item)
-                                          (nth 1 item)))
-                                todo-write-list
-                                "\n")
-                   "All todos completed! List cleared.")))))
- :description "Create or update todo items. Takes an ID (string or number), content (string, optional when updating), and status (todo/in_progress/done). Returns current todo list. If all items are marked 'done', the list is automatically cleared."
- :args '((:name "id"
-          :type string
-          :description "Unique identifier for the todo item.")
-         (:name "content"
-          :type string
-          :description "Todo item text (optional when updating existing item).")
-         (:name "status"
-          :type string
-          :description "Current status: 'todo', 'in_progress', or 'done'."))
- :category "read_only")
+(with-eval-after-load 'gptel
+  (defvar-local todo-write-list '())
+  (gptel-make-tool
+   :name "todo_write"
+   :function (lambda (id content status)
+               (message "gptel :: todo_write(%s, %s, %s)" id content status)
+               (cl-block nil
+                 (let* ((id-str (format "%s" id))
+                        (valid-statuses '("todo" "in_progress" "done"))
+                        (todo-list todo-write-list))
+                   (unless (member status valid-statuses)
+                     (cl-return (format "Invalid status. Must be one of: %s" valid-statuses)))
+                   (unless (boundp 'todo-write-list)
+                     (make-local-variable 'todo-write-list)
+                     (setq todo-write-list nil))
+                   (let ((existing (assoc id-str todo-write-list)))
+                     (if existing
+                         (progn
+                           (when content
+                             (setf (nth 1 existing) content))
+                           (setf (nth 2 existing) status))
+                       (unless content
+                         (cl-return "Content required for new todo item"))
+                       (push (list id-str content status) todo-write-list)))
+                   (setq todo-write-list
+                         (sort todo-write-list
+                               (lambda (a b)
+                                 (string< (car a) (car b)))))
+                   (when (and todo-write-list
+                              (cl-every (lambda (item)
+                                          (string= (nth 2 item) "done"))
+                                        todo-write-list))
+                     (setq todo-write-list nil))
+                   (if todo-write-list
+                       (mapconcat (lambda (item)
+                                    (format "%s:%s:%s"
+                                            (car item)
+                                            (nth 2 item)
+                                            (nth 1 item)))
+                                  todo-write-list
+                                  "\n")
+                     "All todos completed! List cleared."))))
+
+   :description "Create or update todo items. Takes an ID (string or number), content (string, optional when updating), and status (todo/in_progress/done). Returns current todo list. If all items are marked 'done', the list is automatically cleared."
+   :args '((:name "id"
+            :type string
+            :description "Unique identifier for the todo item.")
+           (:name "content"
+            :type string
+            :description "Todo item text (optional when updating existing item).")
+           (:name "status"
+            :type string
+            :description "Current status: 'todo', 'in_progress', or 'done'."))
+   :category "meta"))
 
 ;;;;; Presets
 
