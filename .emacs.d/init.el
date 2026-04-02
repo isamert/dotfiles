@@ -11686,8 +11686,9 @@ more than one header of a single org buffer."
     ("g" "Revert to disk" revert-buffer)
     ("F" "Open in another frame" im-display-buffer-other-frame)]
    ["Copy Path"
-    ("c" "Copy path (pretty)" im-copy-current-filename)
-    ("C" "Copy path (raw)" (lambda () (interactive) (im-copy-current-filename :pretty nil)))]
+    ("cc" "Copy path (pretty)" im-copy-current-filename)
+    ("cC" "Copy path (raw)" (lambda () (interactive) (im-copy-current-filename :pretty nil)))
+    ("cl" "Copy path (with context)" (lambda () (interactive) (im-copy-current-filename :pretty t :line t)))]
    ["Navigate"
     ("o" "Open file" find-file)
     ("d" "Open directory" consult-dir)
@@ -11743,9 +11744,10 @@ more than one header of a single org buffer."
       (kill-buffer (current-buffer)))))
 
 (defalias 'im-copy-current-file-path 'im-copy-current-filename)
-(cl-defun im-copy-current-filename (&key uri pretty)
+(cl-defun im-copy-current-filename (&key uri pretty line)
   "Copy the current buffer file name to the clipboard.
-If the URI is non-nil, then add file:// in front of the file-path."
+If the URI is non-nil, then add file:// in front of the file-path.
+If LINE is non-nil, append the current line number in grep format."
   (interactive
    (list :pretty t))
   (let* ((fname (if (equal major-mode 'dired-mode)
@@ -11757,7 +11759,10 @@ If the URI is non-nil, then add file:// in front of the file-path."
                     ((and fname pretty)
                      (string-replace (expand-file-name "~") "~" fname))
                     (fname fname)
-                    (t (buffer-name)))))
+                    (t (buffer-name))))
+         (filename (if (and line fname (not (equal major-mode 'dired-mode)))
+                       (format "%s:%d" filename (line-number-at-pos))
+                     filename)))
     (message ">> Copied: '%s'" (im-kill filename))))
 
 (defun im-print-buffer-file-info (&optional kill-file-path)
