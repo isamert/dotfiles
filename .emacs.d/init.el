@@ -4130,6 +4130,7 @@ properly."
         ("https://github.com/\\([^/]+\\)/\\([^/]+\\)/blob/\\([^/]+\\)/\\(.+\\)" . ,(im-purified-url-handler #'lab-github-view-repo-file))
         (".*github.com/[A-Za-z0-9\\. _-]+/[A-Za-z0-9\\. _-]+\\(\\?tab=readme-ov-file.*\\)?$" . ,(im-purified-url-handler #'lab-github-view-repo-readme))
         (".*zoom.us/j/.*" . ,(im-purified-url-handler #'im-open-zoom-meeting-dwim))
+        (".*trendyol.*/merge_requests/.*" . ,(im-purified-url-handler #'lab-open-merge-request-diff))
         (".*\\(trendyol\\|gitlab\\|slack\\|docs.google\\).*" . browse-url-firefox)
         ("." . (lambda (link &rest _) (im-eww link)))))
 

@@ -202,9 +202,7 @@ be a function or a buffer object."
                        (map-insert :time (float-time))
                        (map-insert :duration duration)
                        (map-insert :source-buffer source-buffer)))
-         (image (im-notif--create-svg title message severity))
-         ;; (image (svg-image svg :scale 1.0))
-         )
+         (image (im-notif--create-svg title message severity)))
     (ring-insert im-notif--last-notifications notif-data)
     (when (not blacklisted?)
       (when should-show?
