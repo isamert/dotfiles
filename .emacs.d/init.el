@@ -5394,6 +5394,23 @@ This helps persisting projects I switched to.")
   ;; Replace describe-symbol with helpful-symbol
   (define-key embark-symbol-map "h" #'helpful-symbol))
 
+;;;;;; different copy actions
+
+(define-key embark-region-map "c" nil)
+(define-key embark-region-map "cf" #'im-copy-region-as-markdown-fenced-block)
+
+(defun im-copy-region-as-markdown-fenced-block (beg end)
+  "Copy the region between BEG and END wrapped in a markdown fenced code block."
+  (interactive "r")
+  (let ((text (buffer-substring-no-properties beg end))
+        (lang (or (and (derived-mode-p 'prog-mode)
+                       (replace-regexp-in-string "-mode\\'" ""
+                                                 (symbol-name major-mode)))
+                  "")))
+    (im-kill (concat "```" lang "\n" (string-trim-right text) "\n```"))
+    (deactivate-mark)
+    (message "Copied region as markdown fenced code block.")))
+
 ;;;;;; sudo-file-edit action
 
 ;; Nice little embark action that let's you open files with sudo.
@@ -5417,7 +5434,6 @@ This helps persisting projects I switched to.")
 ;;;;;; search actions
 
 (define-key embark-general-map (kbd "G") #'im-google-this)
-(define-key embark-general-map (kbd "C") #'im-ai-lookup)
 
 ;;;;;; URI-encode/hexify action
 

@@ -1388,6 +1388,45 @@ Return a (color color) list that can be used with :column-colors and
 :row-colors.  Makes the tables more readable."
   `(,(alist-get 'background-color (frame-parameters)) ,(im-alternative-bg-color)))
 
+;;;; im-spinner-mode
+
+;; I use this to indicate progress. Just enable the mode and disable
+;; it when the thing finishes.
+
+(defvar im-spinner-frames '("🌑" "🌒" "🌓" "🌔" "🌕" "🌖" "🌗" "🌘")
+  "List of frames for the spinner animation.")
+
+;; (setq im-spinner-frames '("◐" "◓" "◑" "◒"))
+;; (setq im-spinner-frames '("⣾" "⣽" "⣻" "⢿" "⡿" "⣟" "⣯" "⣷"))
+;; (setq im-spinner-frames '("←" "↖" "↑" "↗" "→" "↘" "↓" "↙"))
+;; (setq im-spinner-frames '("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏"))
+;; (setq im-spinner-frames '("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█" "▇" "▆" "▅" "▄" "▃" "▂"))
+;; (setq im-spinner-frames '("🕐" "🕑" "🕒" "🕓" "🕔" "🕕" "🕖" "🕗" "🕘" "🕙" "🕚" "🕛"))
+;; (setq im-spinner-frames '("▉" "▊" "▋" "▌" "▍" "▎" "▏" "▎" "▍" "▌" "▋" "▊" "▉"))
+;; (setq im-spinner-frames '("🌍" "🌎" "🌏"))
+
+(defvar im-spinner--index 0)
+(defvar im-spinner--timer nil)
+
+(defun im-spinner--tick ()
+  (setq im-spinner--index (mod (1+ im-spinner--index) (length im-spinner-frames)))
+  (force-mode-line-update t))
+
+(defun im-spinner--modeline ()
+  (concat " " (nth im-spinner--index im-spinner-frames)))
+
+(define-minor-mode im-spinner-mode
+  "Display a spinning indicator in the mode line."
+  :global t
+  :lighter (:eval (im-spinner--modeline))
+  :group 'im
+  (if im-spinner-mode
+      (progn
+        (setq im-spinner--index 0)
+        (when im-spinner--timer (cancel-timer im-spinner--timer))
+        (setq im-spinner--timer (run-with-timer 0 0.3 #'im-spinner--tick)))
+    (when im-spinner--timer (cancel-timer im-spinner--timer) (setq im-spinner--timer nil))))
+
 ;;;; Footer
 
 (provide 'im)
