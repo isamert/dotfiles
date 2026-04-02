@@ -11557,7 +11557,7 @@ The created buffer is an indirect buffer.  So the narrowing of the
 original buffer is not changed.  This let's you simultaneously work on
 more than one header of a single org buffer."
   (interactive)
-  (if (org-clocking-p)
+  (if (org-clock-is-active)
       (progn
         (im-toggle-side-buffer-with-name
          (save-window-excursion
@@ -12474,7 +12474,7 @@ an indirect buffer."
                           (-first-item))))
             (cond
              (best
-              (when (org-clocking-p)
+              (when (org-clock-is-active)
                 (let ((org-log-note-clock-out nil))
                   (org-clock-out)))
               (goto-char (plist-get best :marker))
@@ -13258,7 +13258,7 @@ Throw error otherwise."
             " "
             (propertize appt-mode-string 'face '(:underline t))
             "· "))
-       ,@(when (and (functionp #'org-clocking-p) (org-clocking-p))
+       ,@(when (and (functionp #'org-clock-is-active) (org-clock-is-active))
            (list
             (all-the-icons-fileicon "org")
             " "
