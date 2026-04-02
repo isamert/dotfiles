@@ -135,7 +135,7 @@
 ;; line. Either pass ~:diminish t~ to use-package while installing or
 ;; just call ~(diminish 'x-mode)~.
 
-;; (use-package diminish)
+(use-package diminish)
 
 ;; Currently I use [[mini-modeline]] as my modeline and it already
 ;; hides minor mode indicators from the modeline. So this package is
@@ -494,6 +494,8 @@ With argument, do this that many times."
 (add-hook 'TeX-mode-hook #'visual-line-mode)
 (add-hook 'text-mode-hook #'visual-line-mode)
 
+(diminish 'visual-line-mode)
+
 ;; Highlight current line
 (global-hl-line-mode t)
 
@@ -654,6 +656,7 @@ Just a simple wrapper around `prettify-symbols-mode`"
 ;; space before save]]
 
 (use-package whitespace
+  :diminish
   :hook (after-init . global-whitespace-mode)
   :config
   (setq whitespace-style '(face empty tabs trailing))
@@ -883,6 +886,7 @@ side window the only window'"
 
 (use-package evil-collection
   :after evil
+  :diminish evil-collection-unimpaired-mode
   :custom
   (evil-collection-want-unimpaired-p t)
   (evil-collection-unimpaired-want-repeat-mode-integration t))
@@ -988,6 +992,7 @@ side window the only window'"
 
 (use-package evil-mc
   :after evil
+  :diminish evil-mc-mode
   :general
   (:states '(normal visual) :keymaps 'evil-mc-key-map
    ;; Clear default evil-mc bindings
@@ -1067,6 +1072,7 @@ side window the only window'"
 
 (use-package evil-goggles
   :after evil
+  :diminish
   :config
   (setq evil-goggles-duration 0.20
         evil-goggles-pulse nil
@@ -1396,6 +1402,7 @@ headers."
 ;;;;; Keybindings
 
 (use-package evil-org
+  :diminish evil-org-mode
   :after (org org-agenda)
   :general
   (:keymaps 'org-mode-map :states 'normal
@@ -2095,6 +2102,8 @@ Otherwise call `org-store-link'."
         (help-at-pt-set-timer))
     (setq-local help-at-pt-display-when-idle nil)
     (help-at-pt-cancel-timer)))
+
+(diminish 'im-help-at-point-mode)
 
 (with-eval-after-load 'org
   (add-hook 'org-mode-hook #'im-help-at-point-mode))
@@ -2960,6 +2969,7 @@ Version: 2023-06-28
 ;;;;; which-key
 
 (use-package which-key
+  :diminish
   :config
   ;; Disabling this because I use `embark-prefix-help-command' as the `prefix-help-command'
   (setq which-key-use-C-h-commands nil)
@@ -2988,6 +2998,7 @@ Version: 2023-06-28
 
 (use-package eldoc
   :straight (:type built-in)
+  :diminish eldoc-mode
   :custom
   ;; I have a `im-peek-doc' function that displays the documentation
   ;; inline, which eleminates the need for multiline doc in minibuffer
@@ -3017,6 +3028,7 @@ Version: 2023-06-28
 
 (use-package outline-mode
   :straight (:type built-in)
+  :diminish outline-minor-mode
   :general
   (:states 'normal :keymaps 'outline-mode-map
    "[[" #'outline-previous-heading
@@ -3026,6 +3038,9 @@ Version: 2023-06-28
    ("[" . outline-previous-heading)
    ("]" . outline-next-heading)))
 
+(with-eval-after-load 'outline
+  (diminish 'outline-minor-mode))
+
 ;;;;; debugger-mode
 
 (evil-set-initial-state 'debugger-mode 'normal)
@@ -3033,6 +3048,7 @@ Version: 2023-06-28
 ;;;;; hideshow -- hs-minor mode for code folding
 
 (use-package hideshow
+  :diminish hs-minor-mode
   :straight (:type built-in)
   :general
   (:states 'normal :keymaps 'hs-minor-mode-map
@@ -5445,6 +5461,7 @@ KEY should not contain the leader key."
 
 (use-package flymake-popon
   :straight (:host codeberg  :repo "akib/emacs-flymake-popon")
+  :diminish flymake-popon-mode
   :hook
   (flymake-mode . flymake-popon-mode)
   ;; Disable showing diagnostics in eldoc (in echo area) as we already
@@ -5793,12 +5810,10 @@ SORT should be nil to disable sorting."
            '((simple-modeline-segment-modified
               simple-modeline-segment-buffer-name
               simple-modeline-segment-position)
-             (simple-modeline-segment-input-method
-              simple-modeline-segment-eol
-              simple-modeline-segment-encoding
-              simple-modeline-segment-vc
+             (simple-modeline-segment-vc
               simple-modeline-segment-misc-info
               simple-modeline-segment-process
+              simple-modeline-segment-minor-modes
               simple-modeline-segment-major-mode))))
 
 ;;;;; howdoyou
@@ -5865,6 +5880,7 @@ SORT should be nil to disable sorting."
 ;;;;; yasnippet & yankpad: template manager
 
 (use-package yasnippet
+  :diminish 'yas-minor-mode
   :hook
   ((minibuffer-setup . yas-minor-mode)
    ;; ^ Enable expanding in mini-buffer.
@@ -6715,6 +6731,7 @@ Fetches missing channels/users first."
 (use-package org-ai
   :straight (:host github :repo "rksm/org-ai")
   :hook (org-mode . org-ai-mode)
+  :diminish " AI"
   :custom
   (org-ai-default-chat-model "gpt-4o")
   (org-ai-default-max-tokens 2000)
@@ -7258,6 +7275,7 @@ Fetches missing channels/users first."
 (use-package outli
   :straight (:host github :repo "jdtsmith/outli")
   :hook (prog-mode . outli-mode)
+  :diminish outli-mode
   :general
   ;; You can jump between /pages/ by using ~C-x [~ and ~C-x ]~. See
   ;; [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Pages.html][this]]
@@ -7891,6 +7909,7 @@ the commit buffer."
 (use-package jinx
   :hook (emacs-startup . global-jinx-mode)
   :custom (jinx-languages "en_US tr_TR")
+  :diminish jinx-mode
   :general
   (:keymaps 'evil-normal-state-map
    "z=" #'jinx-correct-word
@@ -7907,6 +7926,7 @@ the commit buffer."
 ;; Using `electric-pair-mode' to automatically pair parenthesis.
 
 (add-hook 'after-init-hook #'electric-pair-mode)
+(diminish 'electric-pair-mode)
 
 ;; `puni' provides structral editing for a lot of languages using some
 ;; Emacs built-ins.  It's pretty good most of the time and I really
@@ -8356,6 +8376,7 @@ the commit buffer."
 
 (use-package apheleia
   :hook (after-init . apheleia-global-mode)
+  :diminish 'apheleia-mode
   :init
   (defalias 'im-toggle-auto-code-formatter #'apheleia-mode)
 
