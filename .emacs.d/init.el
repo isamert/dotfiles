@@ -5476,6 +5476,7 @@ KEY should not contain the leader key."
 
 (use-package flymake
   :straight (:type built-in)
+  :custom (flymake-mode-line-lighter "")
   :hook ((prog-mode . flymake-mode)))
 
 (use-package flymake-popon
@@ -7603,7 +7604,10 @@ mails."
 ;; buffers are persisted and restored.
 
 (use-package easysession
-  :straight (:host github :repo "jamescherti/easysession.el"))
+  :straight (:host github :repo "jamescherti/easysession.el")
+  :custom
+  (easysession-mode-line-misc-info t)
+  (easysession-mode-line-misc-info-prefix " ["))
 
 ;;;;; im-git -- my git workflow, magit alternative
 
