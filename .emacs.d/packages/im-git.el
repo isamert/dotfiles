@@ -545,7 +545,10 @@ configuration, pass it as WINDOW-CONF."
         (let ((start (point)))
           (insert "\n" commits)
           (let ((overlay (make-overlay start (point))))
-            (overlay-put overlay 'keymap im-git-commit-log-map))))
+            (overlay-put overlay 'keymap im-git-commit-log-map)
+            (overlay-put overlay 'help-echo
+                         (lambda (_window _obj _pos)
+                           (substitute-command-keys "\\[im-git-commit-log-diff-at-point] → Show diff for this commit, \\[im-git-commit-log-fixup-at-point] → Fixup"))))))
       (im-git-commit--change-header-contents "Settings"
         (insert im-git-commit-config-prefix " No Verify: ")
         (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
@@ -615,6 +618,7 @@ configuration, pass it as WINDOW-CONF."
     (message "Ready in %.2f seconds" (- (float-time) start-time))))
 
 (defvar-keymap im-git-commit-status-map
+  :doc "Keymap for commit status entries."
   "u" #'im-git-commit-unstage-at-point
   "s" #'im-git-commit-stage-at-point
   "x" #'im-git-commit-delete-at-point
@@ -622,7 +626,9 @@ configuration, pass it as WINDOW-CONF."
   "RET" #'im-git-commit-diff-at-point-popup)
 
 (defvar-keymap im-git-commit-log-map
-  "RET" #'im-git-commit-log-diff-at-point)
+  :doc "Keymap for commit log entries."
+  "RET" #'im-git-commit-log-diff-at-point
+  "f" #'im-git-commit-log-fixup-at-point)
 
 ;; TODO: Predictable sort order
 (async-defun im-git-commit--update-unstaged (&optional output)
@@ -747,6 +753,18 @@ Return old message."
             (font-lock-ensure))
           (pop-to-buffer buf))))))
 
+(defun im-git-commit-log-fixup-at-point ()
+  "Fixup the commit at point.
+Ask for confirmation first, then stage changes and create a fixup commit."
+  (interactive nil im-git-commit-mode)
+  (save-excursion
+    (beginning-of-line)
+    (when (re-search-forward "\\b\\([0-9a-fA-F]+\\)\\." (line-end-position) t)
+      (let ((hash (match-string 1)))
+        (when (yes-or-no-p (format "Fixup commit %s? " hash))
+          (im-git--perform-fixup hash)
+          hash)))))
+
 (defvar-keymap im-git-staged-diff-mode-map
   "x" #'im-git-reverse-hunk
   "u" #'im-git-unstage-hunk-or-file
@@ -832,30 +850,33 @@ CALLBACK will be called with the selected commit ref."
 
 ;;;; im-git-commit-fixup
 
+(defun im-git--perform-fixup (hash)
+  "Perform fixup operation for commit HASH.
+Creates a fixup commit and initiates an interactive rebase with autosquash."
+  (set-process-sentinel
+   (funcall #'start-process "*im-git-commit*" (im-get-reset-buffer "*im-git-commit*") "git" "commit" "--fixup" hash)
+   (lambda (proc _event)
+     (if (eq (process-exit-status proc) 0)
+         (progn
+           (message "im-git-commit :: Committed")
+           (--each im-git-commit-finished-hook (funcall it nil))
+           (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
+             (set-process-sentinel
+              (start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
+                             "git" "rebase" "--interactive" "--autosquash" (concat hash "^"))
+              (lambda (proc _event)
+                (if (eq (process-exit-status proc) 0)
+                    (message ">> im-git-fixup :: Commit %s fixed." hash)
+                  (message "!! Failed to fixup. See *im-git-fixup* buffer for further details."))))) )
+       (message "im-git-commit :: Failed. See buffer *im-git-commit*")))))
+
 ;;;###autoload
 (defun im-git-commit-fixup ()
   "Interactively select a commit and fixup.
 Stage your changes, interactively select a function and your changes
 will be added to selected commit."
   (interactive)
-  (im-git-select-commit
-   (lambda (hash)
-     (set-process-sentinel
-      (funcall #'start-process "*im-git-commit*" (im-get-reset-buffer "*im-git-commit*") "git" "commit" "--fixup" hash)
-      (lambda (proc _event)
-        (if (eq (process-exit-status proc) 0)
-            (progn
-              (message "im-git-commit :: Committed")
-              (--each im-git-commit-finished-hook (funcall it nil))
-              (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
-                (set-process-sentinel
-                 (start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
-                                "git" "rebase" "--interactive" "--autosquash" (concat hash "^"))
-                 (lambda (proc _event)
-                   (if (eq (process-exit-status proc) 0)
-                       (message ">> im-git-fixup :: Commit %s fixed." hash)
-                     (message "!! Failed to fixup. See *im-git-fixup* buffer for further details."))))) )
-          (message "im-git-commit :: Failed. See buffer *im-git-commit*")))))))
+  (im-git-select-commit #'im-git--perform-fixup)))
 
 ;;;; im-git-stash
 
