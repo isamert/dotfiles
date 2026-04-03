@@ -998,6 +998,13 @@ resize-by-cells = no
 [csd]
 preferred = none
 #+end_src
+** Prefer ipv4 over ipv6 records while resolving DNS
+This helps to mitigate some issues I encountered while browsing the web through Emacs. Not quite sure why I have these issues (probably related to my ISP?) but nonetheless:
+
+#+begin_src conf :tangle /etc/gai.conf
+# Add this to the end of the file:
+precedence ::ffff:0:0/96  100
+#+end_src
 * X/Wayland related
 ** xremap
 I'm probably going to fully replace KMonad with xremap on Linux (and maybe replace KMonad with Karabiner on Mac). KMonad is a bit brittle and having to define full keyboard map is just not scalable.
