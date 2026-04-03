@@ -886,10 +886,12 @@ side window the only window'"
 
 (use-package evil-collection
   :after evil
-  :diminish evil-collection-unimpaired-mode
   :custom
   (evil-collection-want-unimpaired-p t)
   (evil-collection-unimpaired-want-repeat-mode-integration t))
+
+(with-eval-after-load 'evil-collection-unimpaired
+  (diminish 'evil-collection-unimpaired-mode))
 
 (with-eval-after-load 'grep
   (evil-collection-grep-setup))
