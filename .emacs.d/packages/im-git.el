@@ -146,9 +146,17 @@
       (erase-buffer)
       (insert diff)
       (im-git-diff-mode)
-      (setq header-line-format (concat "Git Status :: " (s-trim (im-git--cmd-to-string "git" "diff" "--shortstat"))))
+      (im-git-status--update-header-line)
       (switch-to-buffer dbuff)
       (delete-other-windows))))
+
+(defun im-git-status--update-header-line ()
+  "Update the header line of the git status buffer with the current shortstat."
+  (when-let* ((buf (get-buffer im-git-status-buffer)))
+    (with-current-buffer buf
+      (let ((stat (s-trim (im-git--cmd-to-string "git" "diff" "--shortstat"))))
+        (setq header-line-format
+              (concat "Git Status :: " (if (s-blank? stat) "nothing unstaged" stat)))))))
 
 (defun im-git-status-commit ()
   "Like `im-git-commit' but restore the right window cfg when commit finishes."
@@ -210,6 +218,7 @@ is called after the hunk is applied with no arguments."
        (lambda ()
          (diff-file-kill)
          (message ">> File %sstaged successfully!" (if reverse "un" ""))
+         (im-git-status--update-header-line)
          (when callback (funcall callback)))))
     (cl-return-from im-git-stage-hunk-or-file))
   (-let* (((hstart hend) (diff-bounds-of-hunk))
@@ -231,6 +240,7 @@ is called after the hunk is applied with no arguments."
          (goto-char pt)
          (diff-hunk-kill))
        (message ">> Hunk applied successfully!")
+       (im-git-status--update-header-line)
        (when callback (funcall callback))
        ;; Update the git commit message buffer, if open.  It is
        ;; possible to display this diff in another frame and have git
@@ -247,7 +257,8 @@ is called after the hunk is applied with no arguments."
 (defun im-git-unstage-hunk-or-file ()
   "Unstage the currently selected hunk or file."
   (interactive nil im-git-staged-diff-mode)
-  (im-git-stage-hunk-or-file :reverse))
+  (im-git-stage-hunk-or-file :reverse)
+  (im-git-commit--update-header-line))
 
 ;; FIXME(1OKAkW): It does not work in im-git-staged-diff-mode because
 ;; we need to unstage it first and then reverse (or reverse and stage
@@ -265,6 +276,7 @@ is called after the hunk is applied with no arguments."
        :callback
        (lambda ()
          (diff-file-kill)
+         (im-git-status--update-header-line)
          (message ">> Reverted: %s" file))))
     (cl-return-from im-git-reverse-hunk))
   (pcase-let ((`(,buf ,_line-offset ,_pos ,_src ,_dst ,_switched)
@@ -284,6 +296,7 @@ is called after the hunk is applied with no arguments."
           (diff-apply-hunk :reverse)
           (with-current-buffer buf
             (save-buffer))))
+      (im-git-status--update-header-line)
       (diff-hunk-kill))))
 
 ;;;; im-git-commit
@@ -330,6 +343,14 @@ configuration, pass it as WINDOW-CONF."
     (switch-to-buffer (im-git-commit--reload-diff-buffer diff))
     (select-window (get-buffer-window im-git-commit-message-buffer))))
 
+(defun im-git-commit--update-header-line ()
+  "Setup header line format for staged diff buffer."
+  (with-current-buffer im-git-commit-diff-buffer
+    (setq header-line-format
+          (concat "Staged :: "
+                  (let ((stat (s-trim (im-git--cmd-to-string "git" "diff" "--staged" "--shortstat"))))
+                    (if (s-blank? stat) "nothing staged" stat))))))
+
 (defun im-git-commit--reload-diff-buffer (diff)
   (with-current-buffer (im-get-reset-buffer im-git-commit-diff-buffer)
     (insert diff)
@@ -337,7 +358,7 @@ configuration, pass it as WINDOW-CONF."
     (im-git-staged-diff-mode)
     (goto-char (point-min))
     (setq-local diff-vc-backend 'Git)
-    (setq header-line-format (concat "Staged :: " (s-trim (im-git--cmd-to-string "git" "diff" "--staged" "--shortstat"))))
+    (im-git-commit--update-header-line)
     (current-buffer)))
 
 (defun im-git-commit-reload ()
@@ -688,11 +709,13 @@ configuration, pass it as WINDOW-CONF."
 (async-defun im-git-commit-stage-at-point ()
   (interactive)
   (im-peek-remove)
+  (im-git-commit--update-header-line)
   (im-git-commit--run-command-on-file-at-point "add"))
 
 (async-defun im-git-commit-unstage-at-point ()
   (interactive)
   (im-peek-remove)
+  (im-git-commit--update-header-line)
   (im-git-commit--run-command-on-file-at-point "restore" "--staged"))
 
 (defun im-git-commit--reset-message (str)
