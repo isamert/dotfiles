@@ -27,8 +27,6 @@
 
 ;; My AI extensions.  Mostly uses `gptel' to do the heavy-lifting.
 
-;;   `im-ai-prompts') that you can use (by standalone, or on a region
-;;   etc.) and get results in a predefined org buffer (uses `org-ai').
 ;; - `im-ai-snippet' simply generates a snippet you requested in the
 ;;   language of the current buffer.
 ;; - `im-ai-switch-model' switches default model for all functions.
@@ -48,23 +46,26 @@
 (defcustom im-ai-snippet-sys-prompt
   "You are a code generation assistant. Your output will be inserted directly into a live editor buffer WITHOUT ANY POST-PROCESSING.
 
-RULES:
-1. Return ONLY raw code—no markdown fences, no explanations, no comments unless requested.
-2. Prefer standard library/built-ins over custom implementations.
-3. Use idiomatic patterns for the target language.
-4. Match the style/conventions visible in provided context (indentation, naming, etc.).
-5. Generate minimal code that fulfills the request—nothing extraneous.
-6. When <surrounding_context> is provided, generate code that replaces <GENERATE_HERE> seamlessly.
-7. Assume code will execute immediately in context; avoid wrappers unless required.
+# REQUEST FORMAT
 
-REQUEST FORMAT:
 <language>Programming Language</language>
 <file_name>The file name you are currently working on. Your result will be in this file.</file_name>
 <user_query>The specific instruction or requirement from the user.</user_query>
-<context>The general context that you need to work on. Optionally provided.</context>
+<target>Your output replaces this region verbatim. Emit only the replacement content — no preamble, no surrounding context, no commentary.</target>
 <full_file_contents>Full file context. Optionally provided.</full_file_contents>
-<surrounding_context>The code immediately surrounding the target location. You must output ONLY the code that perfectly replaces the <GENERATE_HERE> placeholder. Optionally provided.</surrounding_context>
-<workspace_contents>All workspace items, symbols etc. Optionally provided.</workspace_contents>"
+<lines_before>Surrounding code BEFORE the target, for reference only. Optionally provided.</lines_before>
+<lines_after>Surrounding code AFTER the target, for reference only. Optionally provided.</lines_after>
+<workspace_contents>All workspace items, symbols etc. Optionally provided.</workspace_contents>
+
+# RULES
+
+- Return ONLY raw code—no markdown fences, no explanations, no comments unless requested.
+- Prefer standard library/built-ins over custom implementations.
+- Use idiomatic patterns for the target language.
+- Match the style/conventions visible in provided context (indentation, naming, etc.).
+- Generate minimal code that fulfills the request—nothing extraneous.
+- Assume code will execute immediately in context; avoid wrappers unless required.
+- When a <target> block is present, your entire response must be solely the replacement for <target>. No explanations, no code fences, no preamble, no commentary."
   "System prompt used in `im-ai-snippet'."
   :type 'string
   :group 'im-ai)
@@ -79,9 +80,9 @@ REQUEST FORMAT:
 The thing that user wants you to do/provide.
 </user_query>
 
-<context>
+<target>
 The context that you need to work on. Optionally provided.
-</context>
+</target>
 
 <full_file_contents>
 Full file context. Optionally provided.
@@ -499,9 +500,8 @@ Use @file to include full file contents to the prompt and use
           (rend (if (use-region-p)
                     (region-end)
                   (point)))
-          (edit-region? (and (use-region-p)
-                             (not (s-matches? (rx (or bos space) "@region" (or space "," eos))
-                                              prompt))))
+          (refer? (s-matches? (rx (or bos space) "@region" (or space "," eos)) prompt))
+          (edit-region? (and (use-region-p) (not refer?)))
           ;; prompt overrides
           ((backend model) (-when-let ((_ backend model) (s-match "@model=\\([^: ]+\\):\\([^ ]+\\)" prompt))
                              (setq prompt (s-replace-regexp "@model=\\([^ ]+\\)" "" prompt))
@@ -511,9 +511,13 @@ Use @file to include full file contents to the prompt and use
           (gptel-use-context nil)
           (gptel-temperature 0.0)
           (gptel-use-tools (if agentic? t nil))
+          (gptel-confirm-tool-calls nil)
           (gptel-tools (list
                         (alist-get
                          "read_buffer_lines"
+                         (alist-get "buffers" gptel--known-tools nil nil #'equal) nil nil #'equal)
+                        (alist-get
+                         "search_buffer"
                          (alist-get "buffers" gptel--known-tools nil nil #'equal) nil nil #'equal)
                         (alist-get
                          "edit_buffer"
@@ -551,9 +555,12 @@ Use @file to include full file contents to the prompt and use
                       "<current_line>"
                       (number-to-string (line-number-at-pos))
                       "</current_line>"))))
-              ,@(when edit-region?
+              ,@(when (and edit-region? (not refer?))
                   (list
-                   "<context>" (s-trim region) "</context>"))
+                   "<target>" (s-trim region) "</target>"))
+              ,@(when (and refer? (not edit-region?))
+                  (list
+                   "<region>" (s-trim region) "</region>"))
               ,@(when (s-matches? (rx (or bos space) "@fullfile" (or space eos)) prompt)
                   (list
                    "<full_file_contents>"
@@ -561,20 +568,6 @@ Use @file to include full file contents to the prompt and use
                      (widen)
                      (buffer-substring-no-properties (point-min) (point-max))
                      "</full_file_contents>")))
-              ;; When @agent is given, insert full file with line numbers:
-              ,@(when (s-matches? (rx (or bos space) (or "@agent") (or space eos)) prompt)
-                  (list
-                   "<full_file_contents_with_line_numbers>"
-                   (save-restriction
-                     (widen)
-                     (let ((lines (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n"))
-                           (line-num 1))
-                       (mapconcat (lambda (line)
-                                    (prog1 (format "%d: %s" line-num line)
-                                      (setq line-num (1+ line-num))))
-                                  lines
-                                  "\n")))
-                   "</full_file_contents_with_line_numbers>"))
               ,@(when (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
                   (list
                    "<file_context>"
@@ -585,27 +578,23 @@ Use @file to include full file contents to the prompt and use
               ,@(when (s-matches? (rx (or bos space) (or "@context" "@fullfile") (or space eos)) prompt)
                   ;; NOTE: Need to give context when @fullfile is present
                   (list
-                   "<surrounding_context>"
-                   "..."
-                   (let* ((start
-                           (progn
-                             (insert "<GENERATE_HERE>")
-                             (save-excursion (goto-char rbegin) (forward-line -10) (line-beginning-position))))
-                          (end
-                           (save-excursion (goto-char rend) (forward-line 10) (line-end-position))))
-                     (prog1 (buffer-substring-no-properties start end)
-                       (delete-region (point) (- (point) (length "<GENERATE_HERE>")))))
-                   "..."
-                   "</surrounding_context>"))
+                   "<lines_before>"
+                   (let ((start (save-excursion (goto-char rbegin) (forward-line -50) (line-beginning-position))))
+                     (buffer-substring-no-properties start rbegin))
+                   "</lines_before>"
+                   "<lines_after>"
+                   (let ((end (save-excursion (goto-char rend) (forward-line 50) (line-end-position))))
+                     (buffer-substring-no-properties rend end))
+                   "</lines_after>"))
               "<user_query>"
               ,(s-replace-all `(("@file" . "")
                                 ("@fullfile" . "")
                                 ("@context" . "")
-                                ("@agent" . "\nFull file context with line numbers is also included, you can depend on it for your changes. Do not output anything else.\n")
+                                ("@agent" . "\nUse the tools provided to make edits in the current buffer. Do not output anything else.\n")
                                 ("@dumb" . "")
                                 ("@workspace" . "")
                                 ("@noexp" . "\nDo not include any explanations, only output the solution.\n")
-                                ("@region" . ,(concat "<region>" (s-trim region) "</region>")))
+                                ("@region" . ""))
                               prompt)
               "</user_query>"))))
     (if (and edit-region? (not agentic?))
@@ -1369,21 +1358,74 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
 
 ;;;;;; elisp tools
 
+(defun im-ai-tool--get-elisp-symbol-info (symbol-name symbol-type)
+  "Get detailed information about an Elisp symbol.
+SYMBOL-NAME is the name of the symbol.
+SYMBOL-TYPE is 'function', 'variable', or 'any'."
+  (message "gptel :: get_elisp_symbol_info(%s, %s)" symbol-name symbol-type)
+  (save-window-excursion
+    (let ((help-xref-following t))
+      (cond
+       ((string= symbol-type "function")
+        (helpful-function (intern symbol-name)))
+       ((string= symbol-type "variable")
+        (helpful-variable (intern symbol-name)))
+       (t
+        (helpful-symbol (intern symbol-name))))
+      (buffer-substring-no-properties (point-min) (point-max)))))
+
+(defun im-ai-tool--search-elisp-functions (pattern search-in)
+  "Search for Emacs functions by name or docstring.
+PATTERN is a regex pattern to search for.
+SEARCH-IN is 'name' or 'docs' for docstrings."
+  (message "gptel :: search_elisp_functions(%s, %s)" pattern search-in)
+  (let ((matches '())
+        (search-docs (equal search-in "docs"))
+        (max-results 50))
+    (mapatoms
+     (lambda (sym)
+       (when (and (fboundp sym)
+                  (< (length matches) max-results)
+                  (if search-docs
+                      (let ((doc (documentation sym t)))
+                        (and doc (string-match-p pattern doc)))
+                    (string-match-p pattern (symbol-name sym))))
+         (push (cons (symbol-name sym)
+                     (let ((doc (documentation sym t)))
+                       (when doc
+                         (car (split-string doc "\n")))))
+               matches))))
+    (if matches
+        (format "Found %d functions matching \"%s\" (in %s):\n%s"
+                (length matches)
+                pattern
+                (if search-docs "docstrings" "names")
+                (mapconcat
+                 (lambda (m)
+                   (if (cdr m)
+                       (format "• %s: %s" (car m) (cdr m))
+                     (format "• %s" (car m))))
+                 (sort matches (lambda (a b) (string< (car a) (car b))))
+                 "\n"))
+      (format "No functions found matching \"%s\"" pattern))))
+
+(defun im-ai-tool--run-elisp (code)
+  "Evaluate Elisp code and return the result.
+CODE is the Elisp code to evaluate."
+  (message "gptel :: run_elisp(%s)" code)
+  (condition-case err
+      (let* ((output (with-output-to-string
+                       (setq result (eval (read code)))))
+             (result-str (format "%S" result)))
+        (if (string-empty-p output)
+            result-str
+          (format "Output:\n%s\nResult: %s" output result-str)))
+    (error (format "Error: %S" err))))
+
 (with-eval-after-load 'gptel
   (gptel-make-tool
    :name "get_elisp_symbol_info"
-   :function (lambda (symbol-name symbol-type)
-               (message "gptel :: get_elisp_symbol_info(%s, %s)" symbol-name symbol-type)
-               (save-window-excursion
-                 (let ((help-xref-following t))
-                   (cond
-                    ((string= symbol-type "function")
-                     (helpful-function (intern symbol-name)))
-                    ((string= symbol-type "variable")
-                     (helpful-variable (intern symbol-name)))
-                    (t
-                     (helpful-symbol (intern symbol-name))))
-                   (buffer-substring-no-properties (point-min) (point-max)))))
+   :function #'im-ai-tool--get-elisp-symbol-info
    :description "Get detailed information (docs, implementation, current value etc.) about given elisp symbol/function etc. If you are unsure about specifics of function/variable, use this tool. This makes your edits less error prone."
    :args '((:name "symbol_name"
             :type string
@@ -1395,37 +1437,7 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
 
   (gptel-make-tool
    :name "search_elisp_functions"
-   :function (lambda (pattern search-in)
-               (message "gptel :: search_elisp_functions(%s, %s)" pattern search-in)
-               (let ((matches '())
-                     (search-docs (equal search-in "docs"))
-                     (max-results 50))
-                 (mapatoms
-                  (lambda (sym)
-                    (when (and (fboundp sym)
-                               (< (length matches) max-results)
-                               (if search-docs
-                                   (let ((doc (documentation sym t)))
-                                     (and doc (string-match-p pattern doc)))
-                                 (string-match-p pattern (symbol-name sym))))
-                      (push (cons (symbol-name sym)
-                                  (let ((doc (documentation sym t)))
-                                    (when doc
-                                      (car (split-string doc "\n")))))
-                            matches))))
-                 (if matches
-                     (format "Found %d functions matching \"%s\" (in %s):\n%s"
-                             (length matches)
-                             pattern
-                             (if search-docs "docstrings" "names")
-                             (mapconcat
-                              (lambda (m)
-                                (if (cdr m)
-                                    (format "• %s: %s" (car m) (cdr m))
-                                  (format "• %s" (car m))))
-                              (sort matches (lambda (a b) (string< (car a) (car b))))
-                              "\n"))
-                   (format "No functions found matching \"%s\"" pattern))))
+   :function #'im-ai-tool--search-elisp-functions
    :description "Search for Emacs functions by name or docstring. Returns function names with first line of their documentation. Returns max 50 results. We have a lot of ready to use libraries/functions available in this environment."
    :args '((:name "pattern"
             :type string
@@ -1437,16 +1449,7 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
 
   (gptel-make-tool
    :name "run_elisp"
-   :function (lambda (code)
-               (message "gptel :: run_elisp(%s)" code)
-               (condition-case err
-                   (let* ((output (with-output-to-string
-                                    (setq result (eval (read code)))))
-                          (result-str (format "%S" result)))
-                     (if (string-empty-p output)
-                         result-str
-                       (format "Output:\n%s\nResult: %s" output result-str)))
-                 (error (format "Error: %S" err))))
+   :function #'im-ai-tool--run-elisp
    :confirm t
    :description "Evaluate Elisp code and return the result. Also captures any printed output. Provide only one form, no comments. You can always wrap multiple forms with let/progn/prog1 etc."
    :args '((:name "code"
@@ -1456,25 +1459,86 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
 
 ;;;;;; jira tools
 
+(defun im-ai-tool--jira-create-issue (project issue-type summary description sprint labels)
+  "Create a Jira issue in the specified project with summary, description, sprint, and optional labels."
+  (message "gptel :: jira_create_issue(%s, %s, %s, ...)" project issue-type summary)
+  (condition-case err
+      (let* ((sprint-field (cons (im-jira-get-issue-field-id-for "Sprint")
+                                 (alist-get 'id (im-jira-find-sprint project sprint))))
+             (extra-fields (list sprint-field))
+             (result (apply #'jiralib2-create-issue
+                            project
+                            issue-type
+                            summary
+                            description
+                            (if (and labels (not (equal labels [])))
+                                (cons (cons 'labels (append labels nil)) extra-fields)
+                              extra-fields))))
+        (format "Issue created successfully: %s" (alist-get 'key result)))
+    (error (format "Failed to create issue: %s" (error-message-string err)))))
+
+(defun im-ai-tool--jira-get-issue (issue-key)
+  "Get a Jira issue by its key and return a formatted summary with key fields."
+  (message "gptel :: jira_get_issue(%s)" issue-key)
+  (condition-case err
+      (let ((issue (jiralib2-get-issue issue-key)))
+        (let-alist issue
+          (let-alist .fields
+            (format "Issue: %s
+Summary: %s
+Type: %s
+Status: %s
+Priority: %s
+Resolution: %s
+Assignee: %s
+Reporter: %s
+Created: %s
+Updated: %s
+Labels: %s
+Epic: %s
+Sprint: %s
+Story Points: %s
+Project: %s
+
+Description:
+%s
+
+Comments (%d):
+%s"
+                    (alist-get 'key issue)
+                    .summary
+                    .issuetype.name
+                    .status.name
+                    .priority.name
+                    (or .resolution.name "Unresolved")
+                    (or .assignee.displayName "Unassigned")
+                    .reporter.displayName
+                    .created
+                    .updated
+                    (if .labels (string-join .labels ", ") "None")
+                    (or .customfield_10005 "None")  ;; Epic link
+                    (if .customfield_10004
+                        (car .customfield_10004)
+                      "None")
+                    (or .customfield_10002 "None")  ;; Story points
+                    .project.name
+                    (or .description "No description")
+                    (length (alist-get 'comments .comment))
+                    (mapconcat
+                     (lambda (c)
+                       (let-alist c
+                         (format "- [%s] %s: %s"
+                                 .created
+                                 .author.displayName
+                                 (truncate-string-to-width .body 200 nil nil "..."))))
+                     (alist-get 'comments .comment)
+                     "\n")))))
+    (error (format "Failed to get issue: %s" (error-message-string err)))))
+
 (with-eval-after-load 'gptel
   (gptel-make-tool
    :name "jira_create_issue"
-   :function (lambda (project issue-type summary description sprint labels)
-               (message "gptel :: jira_create_issue(%s, %s, %s, ...)" project issue-type summary)
-               (condition-case err
-                   (let* ((sprint-field (cons (im-jira-get-issue-field-id-for "Sprint")
-                                              (alist-get 'id (im-jira-find-sprint project sprint))))
-                          (extra-fields (list sprint-field))
-                          (result (apply #'jiralib2-create-issue
-                                         project
-                                         issue-type
-                                         summary
-                                         description
-                                         (if (and labels (not (equal labels [])))
-                                             (cons (cons 'labels (append labels nil)) extra-fields)
-                                           extra-fields))))
-                     (format "Issue created successfully: %s" (alist-get 'key result)))
-                 (error (format "Failed to create issue: %s" (error-message-string err)))))
+   :function #'im-ai-tool--jira-create-issue
    :description "Create a Jira issue in the specified project with summary, description, sprint, and optional labels."
    :confirm t
    :args '((:name "project"
@@ -1501,62 +1565,7 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
 
   (gptel-make-tool
    :name "jira_get_issue"
-   :function (lambda (issue-key)
-               (message "gptel :: jira_get_issue(%s)" issue-key)
-               (condition-case err
-                   (let ((issue (jiralib2-get-issue issue-key)))
-                     (let-alist issue
-                       (let-alist .fields
-                         (format "Issue: %s
-Summary: %s
-Type: %s
-Status: %s
-Priority: %s
-Resolution: %s
-Assignee: %s
-Reporter: %s
-Created: %s
-Updated: %s
-Labels: %s
-Epic: %s
-Sprint: %s
-Story Points: %s
-Project: %s
-
-Description:
-%s
-
-Comments (%d):
-%s"
-                                 (alist-get 'key issue)
-                                 .summary
-                                 .issuetype.name
-                                 .status.name
-                                 .priority.name
-                                 (or .resolution.name "Unresolved")
-                                 (or .assignee.displayName "Unassigned")
-                                 .reporter.displayName
-                                 .created
-                                 .updated
-                                 (if .labels (string-join .labels ", ") "None")
-                                 (or .customfield_10005 "None")  ;; Epic link
-                                 (if .customfield_10004
-                                     (car .customfield_10004)
-                                   "None")
-                                 (or .customfield_10002 "None")  ;; Story points
-                                 .project.name
-                                 (or .description "No description")
-                                 (length (alist-get 'comments .comment))
-                                 (mapconcat
-                                  (lambda (c)
-                                    (let-alist c
-                                      (format "- [%s] %s: %s"
-                                              .created
-                                              .author.displayName
-                                              (truncate-string-to-width .body 200 nil nil "..."))))
-                                  (alist-get 'comments .comment)
-                                  "\n")))))
-                 (error (format "Failed to get issue: %s" (error-message-string err)))))
+   :function #'im-ai-tool--jira-get-issue
    :description "Get a Jira issue by its key and return a formatted summary with key fields."
    :args '((:name "issue_key"
             :type string
@@ -1565,49 +1574,58 @@ Comments (%d):
 
 ;;;;;; todo_write
 
+(defvar-local todo-write-list '())
+
+(defun im-ai-tool--todo-write (id content status)
+  "Create or update a todo item.
+
+ID is a string or number uniquely identifying the item.  CONTENT is
+the item text (optional when updating an existing item).  STATUS must
+be one of \"todo\", \"in_progress\", or \"done\".
+
+Returns the current todo list as a formatted string.  If all items are
+marked \"done\", the list is automatically cleared."
+  (cl-block nil
+    (let* ((id-str (format "%s" id))
+           (valid-statuses '("todo" "in_progress" "done"))
+           (todo-list todo-write-list))
+      (unless (member status valid-statuses)
+        (cl-return (format "Invalid status. Must be one of: %s" valid-statuses)))
+      (unless (boundp 'todo-write-list)
+        (make-local-variable 'todo-write-list)
+        (setq todo-write-list nil))
+      (let ((existing (assoc id-str todo-write-list)))
+        (if existing
+            (progn
+              (when content
+                (setf (nth 1 existing) content))
+              (setf (nth 2 existing) status))
+          (unless content
+            (cl-return "Content required for new todo item"))
+          (push (list id-str content status) todo-write-list)))
+      (setq todo-write-list
+            (sort todo-write-list
+                  (lambda (a b)
+                    (string< (car a) (car b)))))
+      (when (and todo-write-list
+                 (cl-every (lambda (item)
+                             (string= (nth 2 item) "done"))
+                           todo-write-list))
+        (setq todo-write-list nil))
+      (if todo-write-list
+          (mapconcat (lambda (item)
+                       (format "%s:%s:%s"
+                               (car item)
+                               (nth 2 item)
+                               (nth 1 item)))
+                     todo-write-list
+                     "\n")
+        "All todos completed! List cleared."))))
+
 (with-eval-after-load 'gptel
-  (defvar-local todo-write-list '())
   (gptel-make-tool
    :name "todo_write"
-   :function (lambda (id content status)
-               (message "gptel :: todo_write(%s, %s, %s)" id content status)
-               (cl-block nil
-                 (let* ((id-str (format "%s" id))
-                        (valid-statuses '("todo" "in_progress" "done"))
-                        (todo-list todo-write-list))
-                   (unless (member status valid-statuses)
-                     (cl-return (format "Invalid status. Must be one of: %s" valid-statuses)))
-                   (unless (boundp 'todo-write-list)
-                     (make-local-variable 'todo-write-list)
-                     (setq todo-write-list nil))
-                   (let ((existing (assoc id-str todo-write-list)))
-                     (if existing
-                         (progn
-                           (when content
-                             (setf (nth 1 existing) content))
-                           (setf (nth 2 existing) status))
-                       (unless content
-                         (cl-return "Content required for new todo item"))
-                       (push (list id-str content status) todo-write-list)))
-                   (setq todo-write-list
-                         (sort todo-write-list
-                               (lambda (a b)
-                                 (string< (car a) (car b)))))
-                   (when (and todo-write-list
-                              (cl-every (lambda (item)
-                                          (string= (nth 2 item) "done"))
-                                        todo-write-list))
-                     (setq todo-write-list nil))
-                   (if todo-write-list
-                       (mapconcat (lambda (item)
-                                    (format "%s:%s:%s"
-                                            (car item)
-                                            (nth 2 item)
-                                            (nth 1 item)))
-                                  todo-write-list
-                                  "\n")
-                     "All todos completed! List cleared."))))
-
+   :function #'im-ai-tool--todo-write
    :description "Create or update todo items. Takes an ID (string or number), content (string, optional when updating), and status (todo/in_progress/done). Returns current todo list. If all items are marked 'done', the list is automatically cleared."
    :args '((:name "id"
             :type string
