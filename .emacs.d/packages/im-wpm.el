@@ -47,7 +47,8 @@
 ;;;; Customization
 
 (defgroup im-wpm nil
-  "Settings for `im-wpm'.")
+  "Settings for `im-wpm'."
+  :group 'im)
 
 (defcustom im-wpm-window-seconds 15
   "Number of seconds to look back for WPM calculation."

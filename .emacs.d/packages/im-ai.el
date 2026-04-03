@@ -724,9 +724,10 @@ If TYPE is nil, return any im-ai overlay."
   (interactive)
   (let ((prompt (read-string "Iterate: "))
         (ov (im-ai--overlay-at-point 'after)))
-    (delete-region
-     (overlay-start ov)
-     (overlay-end ov))
+    (ignore-errors
+      (delete-region
+       (overlay-start ov)
+       (overlay-end ov)))
     (im-ai--clear-overlays)
     (im-ai-snippet prompt im-ai--history)))
 
