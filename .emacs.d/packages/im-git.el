@@ -548,7 +548,7 @@ configuration, pass it as WINDOW-CONF."
             (overlay-put overlay 'keymap im-git-commit-log-map)
             (overlay-put overlay 'help-echo
                          (lambda (_window _obj _pos)
-                           (substitute-command-keys "\\[im-git-commit-log-diff-at-point] → Show diff for this commit, \\[im-git-commit-log-fixup-at-point] → Fixup"))))))
+                           (substitute-command-keys "\\[im-git-commit-log-diff-at-point] → Show diff for this commit, \\[im-git-commit-log-amend-at-point] → Amend"))))))
       (im-git-commit--change-header-contents "Settings"
         (insert im-git-commit-config-prefix " No Verify: ")
         (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
@@ -628,7 +628,7 @@ configuration, pass it as WINDOW-CONF."
 (defvar-keymap im-git-commit-log-map
   :doc "Keymap for commit log entries."
   "RET" #'im-git-commit-log-diff-at-point
-  "f" #'im-git-commit-log-fixup-at-point)
+  "f" #'im-git-commit-log-amend-at-point)
 
 ;; TODO: Predictable sort order
 (async-defun im-git-commit--update-unstaged (&optional output)
@@ -753,7 +753,7 @@ Return old message."
             (font-lock-ensure))
           (pop-to-buffer buf))))))
 
-(defun im-git-commit-log-fixup-at-point ()
+(defun im-git-commit-log-amend-at-point ()
   "Fixup the commit at point.
 Ask for confirmation first, then stage changes and create a fixup commit."
   (interactive nil im-git-commit-mode)
@@ -761,9 +761,8 @@ Ask for confirmation first, then stage changes and create a fixup commit."
     (beginning-of-line)
     (when (re-search-forward "\\b\\([0-9a-fA-F]+\\)\\." (line-end-position) t)
       (let ((hash (match-string 1)))
-        (when (yes-or-no-p (format "Fixup commit %s? " hash))
-          (im-git--perform-fixup hash)
-          hash)))))
+        (when (y-or-n-p (format "Fixup commit %s? " hash))
+          (im-git--perform-amend hash))))))
 
 (defvar-keymap im-git-staged-diff-mode-map
   "x" #'im-git-reverse-hunk
@@ -828,10 +827,10 @@ CALLBACK will be called with the selected commit ref."
   (setq header-line-format
         (substitute-command-keys "Move to a commit and do \\[im-git-select-commit-finalize] to select it.")))
 
-;;;; im-git-commit-amend
+;;;; im-git-amend-last-commit
 
 ;;;###autoload
-(defun im-git-commit-amend ()
+(defun im-git-amend-last-commit ()
   "Asks you a message and does `git commit --amend -m ...'."
   (interactive)
   (let ((buffer-name "*im-git-amend*")
@@ -848,35 +847,60 @@ CALLBACK will be called with the selected commit ref."
                 (message ">> Amend failed!")
                 (switch-to-buffer buffer-name)))))
 
-;;;; im-git-commit-fixup
-
-(defun im-git--perform-fixup (hash)
-  "Perform fixup operation for commit HASH.
-Creates a fixup commit and initiates an interactive rebase with autosquash."
-  (set-process-sentinel
-   (funcall #'start-process "*im-git-commit*" (im-get-reset-buffer "*im-git-commit*") "git" "commit" "--fixup" hash)
-   (lambda (proc _event)
-     (if (eq (process-exit-status proc) 0)
-         (progn
-           (message "im-git-commit :: Committed")
-           (--each im-git-commit-finished-hook (funcall it nil))
-           (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
-             (set-process-sentinel
-              (start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
-                             "git" "rebase" "--interactive" "--autosquash" (concat hash "^"))
-              (lambda (proc _event)
-                (if (eq (process-exit-status proc) 0)
-                    (message ">> im-git-fixup :: Commit %s fixed." hash)
-                  (message "!! Failed to fixup. See *im-git-fixup* buffer for further details."))))) )
-       (message "im-git-commit :: Failed. See buffer *im-git-commit*")))))
+;;;; im-git-amend-commit
 
 ;;;###autoload
-(defun im-git-commit-fixup ()
+(defun im-git-amend-commit ()
   "Interactively select a commit and fixup.
 Stage your changes, interactively select a function and your changes
 will be added to selected commit."
   (interactive)
-  (im-git-select-commit #'im-git--perform-fixup)))
+  (im-git-select-commit #'im-git--perform-amend))
+
+(defun im-git--perform-amend (hash &optional new-message)
+  "Amend an arbitrary commit identified by HASH.
+
+This function can:
+- Absorb staged changes into the commit (fixup).
+- Change the commit message (rename).
+- Do both at once.
+
+The operation is determined automatically:
+- If there are staged changes and NEW-MESSAGE is nil, only fixup.
+- If there are no staged changes and NEW-MESSAGE is non-nil, only rename.
+- If there are staged changes and NEW-MESSAGE is non-nil, fixup and rename.
+- If there are no staged changes and NEW-MESSAGE is nil, do nothing.
+
+Internally, this creates an appropriate amend/fixup commit and
+then performs an autosquash interactive rebase to fold it into
+HASH.  The rebase is fully automated (no editor interaction)."
+  (let* ((fixup? (im-git--has-staged-changes-p))
+         (commit-args
+          (cond
+           (new-message `(,@(unless fixup? '("--allow-empty"))
+                          "-m" ,(format "amend! %s" hash)
+                          "-m" ,new-message))
+           (fixup? `("--fixup" ,hash))
+           (t (user-error "im-git-amend :: Nothing to do (no staged changes and no new message)")))))
+    (set-process-sentinel
+     (apply #'start-process "*im-git-commit*" (im-get-reset-buffer "*im-git-commit*")
+            "git" "commit" commit-args)
+     (lambda (proc _)
+       (if (eq (process-exit-status proc) 0)
+           (set-process-sentinel
+            (start-process "*im-git-rebase*" (im-get-reset-buffer " *im-git-rebase*")
+                           "git" "rebase" "--autosquash" (concat hash "^"))
+            (lambda (proc _)
+              (if (eq (process-exit-status proc) 0)
+                  (progn
+                    (message ">> im-git-amend :: Commit %s updated." hash)
+                    (--each im-git-commit-finished-hook (funcall it nil)))
+                (error "!! Failed.  See *im-git-amend* buffer for details."))))
+         (error "im-git-commit :: Failed.  See buffer *im-git-commit*"))))))
+
+(defun im-git--has-staged-changes-p ()
+  "Return non-nil if there are staged changes."
+  (not (zerop (process-file "git" nil nil nil "diff" "--cached" "--quiet"))))
 
 ;;;; im-git-stash
 
