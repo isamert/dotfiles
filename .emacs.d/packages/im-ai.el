@@ -609,7 +609,7 @@ Use @file to include full file contents to the prompt and use
           (deactivate-mark)
           (goto-char end))))
     (setq im-ai--last-processed-point (point))
-    (when (bound-and-true-p aggressive-indent-mode)
+    (when (and (not agentic?) (bound-and-true-p aggressive-indent-mode))
       (setq im-ai-reenable-aggressive-indent t)
       (aggressive-indent-mode -1))
     (let ((history (setq im-ai--history (if history
