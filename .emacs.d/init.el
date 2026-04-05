@@ -7607,7 +7607,7 @@ mails."
   :straight (:host github :repo "jamescherti/easysession.el")
   :custom
   (easysession-mode-line-misc-info t)
-  (easysession-mode-line-misc-info-prefix " ["))
+  (easysession-mode-line-misc-info-prefix " Session:["))
 
 ;;;;; im-git -- my git workflow, magit alternative
 

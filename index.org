@@ -2531,9 +2531,24 @@ curl https://raw.githubusercontent.com/po5/thumbfast/master/thumbfast.lua -o ~/.
 - https://github.com/bitingsock/ytdl-preload
 - Preload next youtube videos in your playlist.
 #+begin_src sh
-curl https://raw.githubusercontent.com/bitingsock/ytdl-preload/refs/heads/main/ytdl-preload.lua -o ~/.config/mpv/scripts/ytdl-preload.lua
+curl https://raw.githubusercontent.com/bitingsock/ytdl-preload/refs/heads/main/ytdl_preload.lua -o ~/.config/mpv/scripts/ytdl_preload.lua
+#+end_src
+
+For first time:
+
+#+begin_src sh
 curl https://github.com/bitingsock/ytdl-preload/blob/main/ytdl_preload.conf -o ~/.config/mpv/script-opts/ytdl_preload.conf
 #+end_src
+
+#+begin_src conf :tangle ~/.config/mpv/script-opts/ytdl_preload.conf
+#format=bestaudio+bestvideo
+subLangs=en
+ytdl_opt1=--extractor-args youtube:player_client=android,web
+ytdl_opt2=--throttled-rate 1M
+ytdl_opt3=-N 5
+#ytdl_opt4=
+#+end_src
+
 *** mpv-mpris :plugin:
 Just install the mpv-mpris package from your distros package manager. This integrates mpv with system media keys and system media player.
 * Editors
