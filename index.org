@@ -1441,10 +1441,13 @@ binds {
     Mod+O repeat=false { toggle-overview; }
     Mod+Tab repeat=false { toggle-overview; }
     Mod+Shift+Slash { show-hotkey-overlay; }
+    Mod+Ctrl+Alt+Shift+Y {
+        spawn "emacsclient" "--eval" "(im-notif-clear-all)";
+    }
 
     // === Application Launchers ===
     Mod+Ctrl+Alt+Shift+A { spawn "vicinae" "open"; }
-    Mod+Ctrl+Alt+Shift+Return { spawn "foot"; }
+    Mod+Ctrl+Alt+Shift+Return { spawn "footclient"; }
     Mod+A hotkey-overlay-title="Application Launcher" {
         spawn "dms" "ipc" "call" "spotlight" "toggle";
     }
@@ -1678,21 +1681,6 @@ include "dms/cursor.kdl"
 #+begin_src sh
 systemctl --user add-wants niri.service xremap.service
 systemctl --user add-wants niri.service vicinae.service
-systemctl --user add-wants niri.service swayosd.service
-#+end_src
-
-#+begin_src conf :tangle (when-linux "~/.config/systemd/user/swayosd.service")
-[Unit]
-Description=Sway OSD
-PartOf=graphical-session.target
-After=graphical-session.target
-Requisite=graphical-session.target
-
-[Service]
-Type=simple
-Restart=always
-RestartSec=1
-ExecStart=«which("swayosd-server")»
 #+end_src
 
 ** dunst
@@ -3374,6 +3362,7 @@ autofocus = true
 
 [external]
 history-file = "~/.local/share/chawan/history.uri"
+copy-cmd = "wl-copy"
 
 [display]
 color-mode = "true-color"
@@ -3381,8 +3370,14 @@ color-mode = "true-color"
 [page]
 'H' = "cmd.pager.prevBuffer"
 'L' = "cmd.pager.nextBuffer"
-# 'M-y' = cmd.pager.copyURL
-# 'yu' = cmd.pager.copyCursorLink
+'O' = "cmd.pager.load"
+'o' = "cmd.pager.loadCursor"
+'s' = '() => pager.load("ddg:")'
+'yy' = "cmd.pager.copyURL"
+# yu @copyCursorLink @Copy the link under the cursor to the system clipboard.
+'gp' = "cmd.pager.gotoClipboardURL"
+# M-b @openBookmarks @Open the bookmark file.
+# M-a @addBookmark @Add the current page to your bookmarks.
 
 [[siteconf]]
 url = 'https://isamert\.net/.*'
