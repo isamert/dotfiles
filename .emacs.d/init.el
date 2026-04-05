@@ -7624,8 +7624,8 @@ mails."
     ("R" "Refresh state" im-update-git-state)]
    ["Commit/Branch"
     ("c" "Commit changes" im-git-commit)
-    ("a" "Amend last commit" im-git-commit-amend)
-    ("A" "Fixup commit" im-git-commit-fixup)
+    ("a" "Amend last commit" im-git-amend-last-commit)
+    ("A" "Amend to any commit" im-git-amend-commit)
     ("bc" "New branch" vc-create-branch)
     ("bs" "Switch branch" vc-switch-branch)
     ("P" "Push" vc-push)
