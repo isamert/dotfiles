@@ -4492,7 +4492,7 @@ empty string."
   ;; hunk based dumb highlighting without the context.
   (setq diff-font-lock-syntax 'hunk-also)
   (setq diff-font-lock-prettify t)
-  (setq diff-switches '("--color=never"))
+  (setq diff-switches '("-u" "--color=never"))
 
   (general-def
     :keymaps 'diff-mode-map

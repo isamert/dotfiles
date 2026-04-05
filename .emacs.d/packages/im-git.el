@@ -74,6 +74,12 @@
 (require 'im)
 (require 'lab)
 
+;;;; Customization:
+
+(defcustom im-git-diff-switches '("-u" "--histogram")
+  "Switches for git diff command."
+  :group 'im-git)
+
 ;;;; diff-mode improvements
 
 (with-eval-after-load 'diff-mode
@@ -94,6 +100,7 @@
   "x" #'im-git-reverse-hunk
   "c" #'im-git-commit
   "r" #'im-git-status-reload
+  "w" #'im-git-diff-toggle-whitespace
   "q" #'im-git-status-cancel
   "C-c C-k" #'im-git-status-cancel)
 
@@ -105,6 +112,7 @@
   "x" #'im-git-reverse-hunk
   "c" #'im-git-status-commit
   "r" #'im-git-status-reload
+  "w" #'im-git-diff-toggle-whitespace
   "q" #'im-git-status-cancel)
 
 (define-derived-mode im-git-diff-mode diff-mode "DS"
@@ -117,6 +125,18 @@
 
 (defvar im-git-status--old-window-conf nil)
 (defconst im-git-status-buffer "*im-git-diff*")
+
+(async-defun im-git-diff-toggle-whitespace ()
+  (interactive nil im-git-diff-mode im-git-staged-diff-mode)
+  (if (member "-w" im-git-diff-switches)
+      (setq im-git-diff-switches (delete "-w" im-git-diff-switches))
+    (setq im-git-diff-switches (cons "-w" im-git-diff-switches)))
+  (cl-case major-mode
+    (im-git-diff-mode
+     (im-git-status-reload))
+    (im-git-staged-diff-mode
+     (let ((diff (await (apply #'lab--git "diff" "--no-color" "--staged" im-git-diff-switches))))
+       (switch-to-buffer (im-git-commit--reload-diff-buffer diff))))))
 
 (defun im-git-status-reload ()
   "Reload current git status window."
@@ -134,7 +154,7 @@
   (interactive)
   (setq im-git-status--old-window-conf (or window-conf (current-window-configuration)))
   (let* ((default-directory (im-current-project-root))
-         (diff (im-git--cmd-to-string "git" "diff"))
+         (diff (apply #'im-git--cmd-to-string "git" "diff" im-git-diff-switches))
          (dbuff (im-get-reset-buffer im-git-status-buffer)))
     (when (s-blank? diff)
       (if (s-blank? (im-git--cmd-to-string "git" "diff" "--staged"))
@@ -152,11 +172,7 @@
 
 (defun im-git-status--update-header-line ()
   "Update the header line of the git status buffer with the current shortstat."
-  (when-let* ((buf (get-buffer im-git-status-buffer)))
-    (with-current-buffer buf
-      (let ((stat (s-trim (im-git--cmd-to-string "git" "diff" "--shortstat"))))
-        (setq header-line-format
-              (concat "Git Status :: " (if (s-blank? stat) "nothing unstaged" stat)))))))
+  (im-git--update-header-line im-git-status-buffer "Git Status" nil))
 
 (defun im-git-status-commit ()
   "Like `im-git-commit' but restore the right window cfg when commit finishes."
@@ -329,7 +345,7 @@ finishes or discard you want to restore an older window
 configuration, pass it as WINDOW-CONF."
   (interactive)
   (let* ((default-directory (im-current-project-root))
-         (diff (im-git--cmd-to-string "git" "diff" "--staged"))
+         (diff (apply #'im-git--cmd-to-string "git" "diff" "--staged" im-git-diff-switches))
          (commit-buffer (im-get-reset-buffer im-git-commit-message-buffer)))
     (when (and (s-blank? diff) (not (y-or-n-p "> Nothing staged.  Still want to commit?")))
       (user-error ">> Commit aborted"))
@@ -343,13 +359,25 @@ configuration, pass it as WINDOW-CONF."
     (switch-to-buffer (im-git-commit--reload-diff-buffer diff))
     (select-window (get-buffer-window im-git-commit-message-buffer))))
 
+(defun im-git--update-header-line (buffer label git-args)
+  "Update header line of BUFFER with LABEL and shortstat from GIT-ARGS.
+Also display `im-git-diff-switches' right-aligned."
+  (when-let* ((buf (get-buffer buffer)))
+    (with-current-buffer buf
+      (let* ((stat (s-trim (apply #'im-git--cmd-to-string "git" "diff" "--shortstat" git-args)))
+             (left (concat label " :: " (if (s-blank? stat) "nothing" stat)))
+             (right-str (s-join " " im-git-diff-switches))
+             (right (concat "diff " (propertize right-str 'face 'bold))))
+        (setq header-line-format
+              (list left
+                    (propertize
+                     " "
+                     'display `(space :align-to (- right-fringe ,(+ 5 (length right-str)))))
+                    right))))))
+
 (defun im-git-commit--update-header-line ()
   "Setup header line format for staged diff buffer."
-  (with-current-buffer im-git-commit-diff-buffer
-    (setq header-line-format
-          (concat "Staged :: "
-                  (let ((stat (s-trim (im-git--cmd-to-string "git" "diff" "--staged" "--shortstat"))))
-                    (if (s-blank? stat) "nothing staged" stat))))))
+  (im-git--update-header-line im-git-commit-diff-buffer "Staged" '("--staged")))
 
 (defun im-git-commit--reload-diff-buffer (diff)
   (with-current-buffer (im-get-reset-buffer im-git-commit-diff-buffer)
@@ -671,7 +699,7 @@ configuration, pass it as WINDOW-CONF."
     (await (im-git-commit--update-unstaged))
     (deactivate-mark)
     (goto-line line)
-    (let ((diff (await (lab--git "diff" "--no-color" "--staged"))))
+    (let ((diff (await (apply #'lab--git "diff" "--no-color" "--staged" im-git-diff-switches))))
       (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
       (other-window 1))))
 
@@ -681,7 +709,7 @@ configuration, pass it as WINDOW-CONF."
       (im-peek-remove)
     (let* ((default-directory (im-current-project-root))
            (file (im-git-commit--file-at-point))
-           (diff (concat (await (lab--git "diff" file)) "\n"))
+           (diff (concat (await (apply #'lab--git "diff" `(,im-git-diff-switches ,file))) "\n"))
            (result (if (s-blank? diff)
                        ;; TODO highlight file
                        (with-temp-buffer
@@ -748,7 +776,7 @@ Return old message."
             (erase-buffer)
             (diff-mode)
             (setq header-line-format (format " Commit :: %s" (s-trim line)))
-            (call-process "git" nil buf t "diff" (concat sha "^") sha)
+            (apply #'call-process `("git" nil ,buf t "diff" ,im-git-diff-switches ,(concat sha "^") ,sha))
             (goto-char (point-min))
             (font-lock-ensure))
           (pop-to-buffer buf))))))
@@ -765,11 +793,12 @@ Ask for confirmation first, then stage changes and create a fixup commit."
           (im-git--perform-amend hash))))))
 
 (defvar-keymap im-git-staged-diff-mode-map
-  "x" #'im-git-reverse-hunk
+  ;; "x" #'im-git-reverse-hunk
   "u" #'im-git-unstage-hunk-or-file
   "C-c C-c" #'im-git-commit-finalize
   "C-c C-k" #'im-git-commit-cancel
   "-" #'diff-split-hunk
+  "w" #'im-git-diff-toggle-whitespace
   "1" (λ-interactive (outline-hide-sublevels 1))
   "2" (λ-interactive
        (outline-show-all)
@@ -785,6 +814,8 @@ Ask for confirmation first, then stage changes and create a fixup commit."
   "u" #'im-git-unstage-hunk-or-file
   ;; FIXME: see 1OKAkW
   ;; "x" #'im-git-reverse-hunk
+  "-" #'diff-split-hunk
+  "w" #'im-git-diff-toggle-whitespace
   "1" (λ-interactive (outline-hide-sublevels 1))
   "2" (λ-interactive
        (outline-show-all)
