@@ -1449,7 +1449,8 @@ binds {
         spawn "dms" "ipc" "call" "spotlight" "toggle";
     }
     Mod+Ctrl+Alt+Shift+C hotkey-overlay-title="Clipboard Manager" {
-        spawn "dms" "ipc" "call" "clipboard" "toggle";
+        // spawn "dms" "ipc" "call" "clipboard" "toggle";
+        spawn "vicinae" "vicinae://extensions/vicinae/clipboard/history"
     }
     Mod+Ctrl+Alt+Shift+T hotkey-overlay-title="Task Manager" {
         spawn "dms" "ipc" "call" "processlist" "focusOrToggle";
