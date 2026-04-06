@@ -6744,21 +6744,6 @@ Fetches missing channels/users first."
 
 ;;;;; im-ai & org-ai & gptel -- interactions with LLMs
 
-;; There are bunch of Emacs-ChatGPT integrations and org-ai seems to
-;; be best as it fits my workflow quite well. Besides being useful in
-;; org-mode, it also has org-mode independent features.
-
-(use-package org-ai
-  :straight (:host github :repo "rksm/org-ai")
-  :hook (org-mode . org-ai-mode)
-  :diminish " AI"
-  :custom
-  (org-ai-default-chat-model "gpt-4o")
-  (org-ai-default-max-tokens 2000)
-  (org-ai-default-chat-system-prompt "You're an helpful assistant designed to provide helpful, accurate, and concise responses. Your primary focus should be on delivering quick and clear solutions, especially for programming-related queries. Focus on providing quick, clear solutions. When appropriate, offer additional insights, alternative approaches (such as using standard functions over ad-hoc implementations), or different perspectives to enhance user understanding or outcomes along with the original solution. Keep replies relevant, to the point, and free from unnecessary explanations or obvious/elementary information.")
-  :config
-  (add-to-list 'org-ai-chat-models "gpt-4o-mini"))
-
 (use-package im-ai
   :straight nil
   :custom
@@ -6767,7 +6752,7 @@ Fetches missing channels/users first."
   (im-leader-v
     "eg" #'im-ai
     "sl" #'im-ai-lookup
-    "sa" #'im-ai-snippet
+    "sa" #'im-ai-at-point
     "sg" #'im-ai-gptel-dwim
     "sG" (λ-interactive (im-ai-gptel-dwim 'new))
     "ta" #'im-ai-gptel-toggle-side-buffer

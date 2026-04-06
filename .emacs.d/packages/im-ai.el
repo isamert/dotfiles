@@ -34,87 +34,19 @@
 
 ;;; Code:
 
+(require 'im)
 (require 's)
+(require 'dash)
 (require 'gptel)
+(require 'treesit)
+(require 'f)
+(require 'org)
 
 ;;;; Customization
 
 (defgroup im-ai nil
   "Settings for `im-ai'."
   :group 'utils)
-
-(defcustom im-ai-snippet-sys-prompt
-  "You are a code generation assistant. Your output will be inserted directly into a live editor buffer WITHOUT ANY POST-PROCESSING.
-
-# REQUEST FORMAT
-
-<language>Programming Language</language>
-<file_name>The file name you are currently working on. Your result will be in this file.</file_name>
-<user_query>The specific instruction or requirement from the user.</user_query>
-<target>Your output replaces this region verbatim. Emit only the replacement content — no preamble, no surrounding context, no commentary.</target>
-<full_file_contents>Full file context. Optionally provided.</full_file_contents>
-<lines_before>Surrounding code BEFORE the target, for reference only. Optionally provided.</lines_before>
-<lines_after>Surrounding code AFTER the target, for reference only. Optionally provided.</lines_after>
-<workspace_contents>All workspace items, symbols etc. Optionally provided.</workspace_contents>
-
-# RULES
-
-- Return ONLY raw code—no markdown fences, no explanations, no comments unless requested.
-- Prefer standard library/built-ins over custom implementations.
-- Use idiomatic patterns for the target language.
-- Match the style/conventions visible in provided context (indentation, naming, etc.).
-- Generate minimal code that fulfills the request—nothing extraneous.
-- Assume code will execute immediately in context; avoid wrappers unless required.
-- When a <target> block is present, your entire response must be solely the replacement for <target>. No explanations, no code fences, no preamble, no commentary."
-  "System prompt used in `im-ai-snippet'."
-  :type 'string
-  :group 'im-ai)
-
-(defcustom im-ai-snippet-dumb-prompt
-  "You are an helpful assistant. You will get a requirement from user and handle that as simple as possible.
-
-**Request Format:**
-
-```
-<user_query>
-The thing that user wants you to do/provide.
-</user_query>
-
-<target>
-The context that you need to work on. Optionally provided.
-</target>
-
-<full_file_contents>
-Full file context. Optionally provided.
-</full_file_contents>
-
-<workspace_contents>
-All workspace items, symbols etc. Optionally provided.
-</workspace_contents>
-```
-
-ONLY output your answer to the query, with no explanations."
-  "System prompt used in `im-ai-snippet'."
-  :type 'string
-  :group 'im-ai)
-
-(defface im-ai-before-face
-  '((((class color) (min-colors 88) (background dark))
-     :background "#8b1a1a" :extend t)
-    (((class color) (min-colors 88) (background light))
-     :background "#ffdddd" :extend t)
-    (t :inherit secondary-selection))
-  "Face for highlighting regions with pending rewrites."
-  :group 'im-ai)
-
-(defface im-ai-after-face
-  '((((class color) (min-colors 88) (background dark))
-     :background "#29422d" :extend t)
-    (((class color) (min-colors 88) (background light))
-     :background "#ddffdd" :extend t)
-    (t :inherit primary-selection))
-  "Face for highlighting regions with pending rewrites."
-  :group 'im-ai)
 
 (defvar im-ai-programming-agent-prompt "You are a an AI coding assistant. You operate in Emacs. Use the instructions below and the tools available to you to assist the user.
 
@@ -438,301 +370,6 @@ IMPORTANT: Always use the TodoWrite tool to plan and track tasks throughout the 
             (dolist (method (plist-get class :methods))
               (insert "        - " method "\n"))))))
     (buffer-string)))
-
-;;;; im-ai-snippet*
-
-(defvar-local im-ai--last-processed-point nil)
-(defvar-local im-ai--history nil)
-(defvar-local im-ai--agentic? nil)
-(defvar-local im-ai-reenable-aggressive-indent nil
-  "Aggressive indent may fuck things up while the AI is streaming.")
-(defvar-local im-ai-disable-help-at-pt-mode nil)
-(add-hook 'gptel-post-stream-hook #'im-ai--cleanup-stream)
-(add-hook 'gptel-post-response-functions #'im-ai--cleanup-after)
-
-;; im-cape-ai-commands
-(with-eval-after-load 'gptel
-  (let ((ai-commands `(("@dumb" . "Use a simpler sys prompt, without much context.")
-                       ("@region" . "Refer to region, but don't change it")
-                       ("@file" . "Add file context (i.e. imenu items)")
-                       ("@noexp" . "Add instruction to remove any explanations")
-                       ("@fullfile" . "Add full file as context. Implies @context")
-                       ("@agent" . "Can operate on full file, implies @fullfile.")
-                       ("@workspace" . "Add workspace context (i.e. imenu items)")
-                       ("@context" . "Add lines around point as context")
-                       ,@(--map (cons (format "@model=%s" (car it)) "Switch model") (im-ai--gptel-all-models)))))
-    (im-cape
-     :name ai-commands
-     :completion ai-commands
-     :annotate (lambda (obj item)
-                 (concat " " (alist-get item ai-commands nil nil #'equal)))
-     :extractor (lambda (it) (mapcar #'car it))
-     :bound filename
-     :kind (lambda (xs x) "" 'module)
-     :category symbol)))
-
-(defun im-ai-snippet (prompt &optional history)
-  "Ask for a snippet with PROMPT and get it directly inside your buffer.
-
-If you select some region and prompt, then this will change the
-region but if you refer the region as @region, instead of
-changing the region, it will add the answer below the region.
-
-Use @file to include full file contents to the prompt and use
-@workspace to include all workspace symbols to the prompt."
-  (interactive (list
-      (minibuffer-with-setup-hook
-          (lambda ()
-            (setq-local completion-at-point-functions
-                        (list (cape-capf-prefix-length #'im-cape-ai-commands 1))))
-        (read-string
-         (format "Question (current model: %s): " (im-ai--format-model-name))))))
-  (-let* (;; capabilities
-          (dumb? (s-matches? (rx (or bos space) "@dumb" (or space eos)) prompt))
-          (agentic? (s-matches? (rx (or bos space) "@agent" (or space eos)) prompt))
-          ;; region
-          (region (if (use-region-p)
-                      (buffer-substring-no-properties (region-beginning) (region-end))
-                    ""))
-          (rbegin (if (use-region-p)
-                      (region-beginning)
-                    (point)))
-          (rend (if (use-region-p)
-                    (region-end)
-                  (point)))
-          (refer? (s-matches? (rx (or bos space) "@region" (or space "," eos)) prompt))
-          (edit-region? (and (use-region-p) (not refer?)))
-          ;; prompt overrides
-          ((backend model) (-when-let ((_ backend model) (s-match "@model=\\([^: ]+\\):\\([^ ]+\\)" prompt))
-                             (setq prompt (s-replace-regexp "@model=\\([^ ]+\\)" "" prompt))
-                             (cdr (assoc (format "%s:%s" backend model) (im-ai--gptel-all-models)))))
-          ;; gptel stuff
-          (gptel-org-convert-response nil)
-          (gptel-use-context nil)
-          (gptel-temperature 0.0)
-          (gptel-use-tools (if agentic? t nil))
-          (gptel-confirm-tool-calls nil)
-          (gptel-tools (list
-                        (alist-get
-                         "read_buffer_lines"
-                         (alist-get "buffers" gptel--known-tools nil nil #'equal) nil nil #'equal)
-                        (alist-get
-                         "search_buffer"
-                         (alist-get "buffers" gptel--known-tools nil nil #'equal) nil nil #'equal)
-                        (alist-get
-                         "edit_buffer"
-                         (alist-get "buffers" gptel--known-tools nil nil #'equal) nil nil #'equal) ))
-          (gptel-backend (or backend gptel-backend))
-          (gptel-model (or model gptel-model))
-          ;; prompt
-          (formatted-prompt
-           (s-join
-            "\n"
-            `(,@(when (not dumb?)
-                  (seq-concatenate
-                   'list
-                   (list
-                    "<language>"
-                    (im-ai--get-current-language)
-                    "</language>")
-                   (when-let ((file-name (buffer-file-name)))
-                     (list
-                      "<file_name>"
-                      (file-name-nondirectory file-name)
-                      "</file_name>"))
-                   (list
-                    "<buffer_name>"
-                    (buffer-name)
-                    "</buffer_name>")
-                   (if edit-region?
-                       (list
-                        "<current_range>"
-                        (format "%d-%d"
-                                (line-number-at-pos (region-beginning))
-                                (line-number-at-pos (region-end)))
-                        "</current_range>")
-                     (list
-                      "<current_line>"
-                      (number-to-string (line-number-at-pos))
-                      "</current_line>"))))
-              ,@(when (and edit-region? (not refer?))
-                  (list
-                   "<target>" (s-trim region) "</target>"))
-              ,@(when (and refer? (not edit-region?))
-                  (list
-                   "<region>" (s-trim region) "</region>"))
-              ,@(when (s-matches? (rx (or bos space) "@fullfile" (or space eos)) prompt)
-                  (list
-                   "<full_file_contents>"
-                   (save-restriction
-                     (widen)
-                     (buffer-substring-no-properties (point-min) (point-max))
-                     "</full_file_contents>")))
-              ,@(when (s-matches? (rx (or bos space) "@file" (or space eos)) prompt)
-                  (list
-                   "<file_context>"
-                   (im-ai-file-context (im-current-project-root) (buffer-file-name))
-                   "</file_context>"))
-              ,@(when (s-matches? (rx (or bos space) "@workspace" (or space eos)) prompt)
-                  (list "<workspace_contents>" (im-ai-workspace-context) "</workspace_contents>"))
-              ,@(when (s-matches? (rx (or bos space) (or "@context" "@fullfile") (or space eos)) prompt)
-                  ;; NOTE: Need to give context when @fullfile is present
-                  (list
-                   "<lines_before>"
-                   (let ((start (save-excursion (goto-char rbegin) (forward-line -50) (line-beginning-position))))
-                     (buffer-substring-no-properties start rbegin))
-                   "</lines_before>"
-                   "<lines_after>"
-                   (let ((end (save-excursion (goto-char rend) (forward-line 50) (line-end-position))))
-                     (buffer-substring-no-properties rend end))
-                   "</lines_after>"))
-              "<user_query>"
-              ,(s-replace-all `(("@file" . "")
-                                ("@fullfile" . "")
-                                ("@context" . "")
-                                ("@agent" . "\nUse the tools provided to make edits in the current buffer. Do not output anything else.\n")
-                                ("@dumb" . "")
-                                ("@workspace" . "")
-                                ("@noexp" . "\nDo not include any explanations, only output the solution.\n")
-                                ("@region" . ""))
-                              prompt)
-              "</user_query>"))))
-    (if (and edit-region? (not agentic?))
-        (progn
-          (im-ai--draw-snippet-overlay (region-beginning) (region-end) 'im-ai-before-face)
-          (goto-char (region-end))
-          (deactivate-mark)
-          (insert "\n")
-          (backward-char))
-      (when (use-region-p)
-        (let ((end (region-end)))
-          (deactivate-mark)
-          (goto-char end))))
-    (setq im-ai--last-processed-point (point))
-    (when (and (not agentic?) (bound-and-true-p aggressive-indent-mode))
-      (setq im-ai-reenable-aggressive-indent t)
-      (aggressive-indent-mode -1))
-    (let ((history (setq im-ai--history (if history
-                                            (append history (list prompt))
-                                          (list formatted-prompt))))
-          (response-buffer
-           (if agentic?
-               (get-buffer-create (format "*im-ai-response: %s*" (buffer-name)))
-             (current-buffer))))
-      (im-spinner-mode)
-      (when agentic?
-        (with-current-buffer response-buffer
-          (goto-char (point-max))
-          (insert "\n\n---------------------------------------------\n\n")))
-      (with-current-buffer response-buffer
-        (setq im-ai--agentic? agentic?)
-        (gptel-request history
-          :stream t
-          :system (if dumb? im-ai-snippet-dumb-prompt im-ai-snippet-sys-prompt)
-          :fsm (gptel-make-fsm :handlers gptel-send--handlers)
-          :buffer response-buffer)))))
-
-(cl-defun im-ai--cleanup-stream ()
-  (when (or gptel-mode im-ai--agentic?)
-    (cl-return-from im-ai--cleanup-stream))
-  (save-excursion
-    (when (> (- (line-number-at-pos (point)) (line-number-at-pos im-ai--last-processed-point)) 2)
-      (let ((contents
-             (replace-regexp-in-string
-              "^[\n ]*```.*[\n ]*$" "" (buffer-substring-no-properties im-ai--last-processed-point (point)))))
-        (delete-region im-ai--last-processed-point (point))
-        (goto-char im-ai--last-processed-point)
-        (insert contents)
-        ;; (indent-region im-ai--last-processed-point (point))
-        (setq im-ai--last-processed-point (point))))))
-
-(cl-defun im-ai--cleanup-after (beg end)
-  (when im-spinner-mode
-    (im-spinner-mode -1))
-  (when (or gptel-mode im-ai--agentic?)
-    (cl-return-from im-ai--cleanup-after))
-  (when (and beg end)
-    (save-excursion
-      (let ((contents
-             (replace-regexp-in-string
-              "^[\n ]*```.*[\n ]*$" ""
-              (buffer-substring-no-properties beg end))))
-        (delete-region beg end)
-        (goto-char beg)
-        (insert (s-trim contents) "\n"))
-      (setq im-ai--history (append im-ai--history (list (buffer-substring-no-properties beg (point)))))
-      ;; Indent the code to match the buffer indentation if it's messed up.
-      (indent-region beg (point))
-      (pulse-momentary-highlight-region beg (point))
-      (im-ai--draw-snippet-overlay beg (1+ (line-end-position)) 'im-ai-after-face)
-      (when im-ai-reenable-aggressive-indent
-        (aggressive-indent-mode +1)
-        (setq im-ai-reenable-aggressive-indent nil))
-      (unless (bound-and-true-p im-help-at-point-mode)
-        (setq im-ai-disable-help-at-pt-mode t)
-        (im-help-at-point-mode +1)))))
-
-(defun im-ai--clear-overlays ()
-  "Remove all im-ai overlays and disable help-at-point mode if needed."
-  (remove-overlays (point-min) (point-max) 'im-ai t)
-  (when im-ai-disable-help-at-pt-mode
-    (im-help-at-point-mode -1)))
-
-(defun im-ai--accept ()
-  (interactive)
-  (when-let ((ov (im-ai--overlay-at-point 'before)))
-    (ignore-errors (delete-region (overlay-start ov) (overlay-end ov))))
-  (im-ai--clear-overlays))
-
-(defun im-ai--reject ()
-  (interactive)
-  (let ((ov (im-ai--overlay-at-point 'after)))
-    (delete-region (overlay-start ov) (overlay-end ov)))
-  (im-ai--clear-overlays) )
-
-(defun im-ai--overlay-at-point (&optional type)
-  "Return the im-ai overlay at or before point, if any.
-TYPE can be `before' or `after' to find a specific overlay.
-If TYPE is `after', find the overlay with face `im-ai-after-face'.
-If TYPE is `before', find the overlay with face `im-ai-before-face'.
-If TYPE is nil, return any im-ai overlay."
-  (let ((predicate (lambda (o)
-                     (and (overlay-get o 'im-ai)
-                          (pcase type
-                            ('after (eq (overlay-get o 'face) 'im-ai-after-face))
-                            ('before (eq (overlay-get o 'face) 'im-ai-before-face))
-                            (_ t))))))
-    (or (seq-find predicate (overlays-at (point)))
-        (let ((pos (point)) result)
-          (while (and (not result) (> pos (point-min)))
-            (setq pos (previous-overlay-change pos))
-            (setq result (seq-find predicate (overlays-at pos))))
-          result))))
-
-(defun im-ai--iterate ()
-  (interactive)
-  (let ((prompt (read-string "Iterate: "))
-        (ov (im-ai--overlay-at-point 'after)))
-    (ignore-errors
-      (delete-region
-       (overlay-start ov)
-       (overlay-end ov)))
-    (im-ai--clear-overlays)
-    (im-ai-snippet prompt im-ai--history)))
-
-(defvar-keymap im-ai-snippet-rewrite-map
-  :doc "Keymap for ai rewrite actions at point."
-  "C-c C-c" #'im-ai--accept
-  "C-c C-k" #'im-ai--reject
-  "C-c C-i" #'im-ai--iterate)
-
-(defun im-ai--draw-snippet-overlay (beg end face)
-  (let ((ov (make-overlay beg end)))
-    (overlay-put ov 'face face)
-    (overlay-put ov 'keymap im-ai-snippet-rewrite-map)
-    (overlay-put ov 'im-ai t)
-    (overlay-put ov 'help-echo (format "accept: \\[im-ai--accept], reject: \\[im-ai--reject], iterate: \\[im-ai--iterate]"))
-    ov))
 
 ;;;; Interactive utils
 
@@ -1217,7 +854,26 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
                  :type string
                  :description "Replacement text."))
    :confirm nil
-   :category "buffers"))
+   :category "buffers")
+
+  (gptel-make-tool
+   :name "get_file_issues"
+   :function (lambda ()
+               (message "gptel :: get_file_issues()")
+               (let ((issues (flymake-diagnostics)))
+                 (if issues
+                     (mapconcat
+                      (lambda (diag)
+                        (format "%d-%d:%s: %s"
+                                (line-number-at-pos (flymake-diagnostic-beg diag))
+                                (line-number-at-pos (flymake-diagnostic-end diag))
+                                (flymake-diagnostic-type diag)
+                                (flymake-diagnostic-text diag)))
+                      issues
+                      "\n")
+                   "No flymake issues found.")))
+   :description "List all current flymake diagnostics for current buffer with line-range:type:message."
+   :category "buffer"))
 
 ;;;;;; project tools
 
