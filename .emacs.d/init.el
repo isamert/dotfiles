@@ -979,36 +979,26 @@ side window the only window'"
 
 ;;;;; evil-mc (multiple cursors)
 
-;; Multiple cursors for evil.
-
-;; - Basics
-;;   - =C-n= / =C-p= are used for creating cursors
-;;   - =M-n= / =M-p= are used for moving between cursors
-;;   - =A= and =I= creates cursors in visual selection mode as you may expect.
-;;   - =gkk= to clear all cursors.
+;; - Select words with Ctrl-N (like Ctrl-d in Sublime Text/VS Code)
+;; - Create cursors vertically with Ctrl-Down/Ctrl-Up
+;; - Select one character at a time with Shift-Arrows
+;; - Press n/N to get next/previous occurrence
+;; - Press [/] to select next/previous cursor
+;; - Press q to skip current and get next occurrence
+;; - Press Q to remove current cursor/selection
+;; - Start insert mode with i,a,I,A
 ;;
-;; - To be able to create cursors at arbitrary positions:
-;;   - =gkp= to pause all cursors. (Your main cursors moves freely while mc cursors stays still)
-;;   - =gkr= to resume paused cursors.
-;;   - =gkh= create a cursor at the point of main cursor. (Use after =gkp=).
+;; Two main modes:
+;;
+;; - in cursor mode commands work as they would in normal mode
+;; - in extend mode commands work as they would in visual mode
+;; - press Tab to switch between cursor and extend mode
 
-(use-package evil-mc
+(use-package evim
+  :straight (:host github :repo "Prgebish/evim")
   :after evil
-  :diminish evil-mc-mode
-  :general
-  (:states '(normal visual) :keymaps 'evil-mc-key-map
-   ;; Clear default evil-mc bindings
-   "gr" nil
-   ;; Add my bindings using "gc"
-   "gcc" #'evil-mc-undo-all-cursors
-   "gcp" #'evil-mc-pause-cursors
-   "gcr" #'evil-mc-resume-cursors
-   "gch" #'evil-mc-make-cursor-here)
-  (:states 'visual
-   "A" #'evil-mc-make-cursor-in-visual-selection-end
-   "I" #'evil-mc-make-cursor-in-visual-selection-beg)
-  :hook
-  (after-init . global-evil-mc-mode))
+  :config
+  (evim-setup-global-keys))
 
 ;;;;; evil-surround
 
