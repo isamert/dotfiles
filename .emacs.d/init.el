@@ -977,7 +977,7 @@ side window the only window'"
       (when (s-blank? (s-trim (thing-at-point 'line t)))
         (kill-line)))))
 
-;;;;; evil-mc (multiple cursors)
+;;;;; evim (multiple cursors)
 
 ;; - Select words with Ctrl-N (like Ctrl-d in Sublime Text/VS Code)
 ;; - Create cursors vertically with Ctrl-Down/Ctrl-Up
@@ -7837,6 +7837,14 @@ the commit buffer."
 
 (use-package file-info
   :straight (:host github :repo "artawower/file-info.el"))
+
+;;;;; im-occur
+
+(use-package im-occur
+  :straight nil
+  :hook (occur-mode-hook . im-occur-mode)
+  :config
+  (add-hook 'occur-mode-hook 'im-occur-mode))
 
 ;;;; Editing
 
