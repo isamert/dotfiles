@@ -78,7 +78,8 @@
 
 (defcustom im-git-diff-switches '("-u" "--histogram")
   "Switches for git diff command."
-  :group 'im-git)
+  :group 'im-git
+  :type '(list string))
 
 ;;;; diff-mode improvements
 
@@ -93,7 +94,7 @@
 ;;;; im-git-status
 
 (defvar-local im-git-dif--context nil
-  "It can be either \\='im-git-status or \\='im-git-commit depending on where the diff is shown.")
+  "Either \\='im-git-status or \\='im-git-commit depending on where the diff is shown.")
 
 (defvar-keymap im-git-diff-mode-map
   "s" #'im-git-stage-hunk-or-file
@@ -211,7 +212,7 @@ Call CALLBACK when successful."
        (list
         (when reverse "--reverse")
         (when cached "--cached"))))
-     (lambda (proc _event)
+     (lambda (proc _)
        (if (eq (process-exit-status proc) 0)
            (when callback (funcall callback))
          (user-error ">> Failed to apply the diff! exitCode=%s"
@@ -222,7 +223,7 @@ Call CALLBACK when successful."
 If REVERSE is non-nil, than reverse it instead of staging it.  CALLBACK
 is called after the hunk is applied with no arguments."
   (interactive nil im-git-diff-mode)
-  (-when-let* ((_ (im-git-diff-at-file?))
+  (-when-let* ((has-diff? (im-git-diff-at-file?))
                ((file) (diff-find-source-location))
                ((fstart fend) (diff-bounds-of-file)))
     (when (y-or-n-p (format "%sStage whole file: %s?" (if reverse "Un" "") file))
@@ -282,7 +283,7 @@ is called after the hunk is applied with no arguments."
 (cl-defun im-git-reverse-hunk ()
   "Reverse hunk at point."
   (interactive nil im-git-diff-mode)
-  (-when-let* ((_ (im-git-diff-at-file?))
+  (-when-let* ((has-diff? (im-git-diff-at-file?))
                ((file) (diff-find-source-location))
                ((fstart fend) (diff-bounds-of-file)))
     (when (y-or-n-p (format "Revert whole file: %s?" file))
@@ -443,7 +444,7 @@ Also display `im-git-diff-switches' right-aligned."
       (message "im-git-commit :: Started...")
       (set-process-sentinel
        (apply #'start-process "*im-git-commit*" (im-get-reset-buffer " *im-git-commit*") "git" "commit" args)
-       (lambda (proc _event)
+       (lambda (proc _)
          (let ((notify? (> (- (float-time) start-time) 2)))
            (if (eq (process-exit-status proc) 0)
                (progn
@@ -454,7 +455,7 @@ Also display `im-git-diff-switches' right-aligned."
                  (when tag
                    (set-process-sentinel
                     (start-process "*im-git-tag*" (im-get-reset-buffer " *im-git-tag*") "git" "tag" "-a" tag "-m" "")
-                    (lambda (proc _event)
+                    (lambda (proc _)
                       (if (eq (process-exit-status proc) 0)
                           (message ">> im-git-commit :: Tag created")
                         (message "!! Failed to tag. See *im-git-tag* buffer for further details.")))))
@@ -463,7 +464,7 @@ Also display `im-git-diff-switches' right-aligned."
                      (set-process-sentinel
                       (start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
                                      "git" "rebase" "--interactive" "--autosquash" (concat fixup "^"))
-                      (lambda (proc _event)
+                      (lambda (proc _)
                         (if (eq (process-exit-status proc) 0)
                             (message ">> im-git-fixup :: Commit %s fixed." fixup)
                           (message "!! Failed to fixup. See *im-git-fixup* buffer for further details.")))))) )
@@ -950,7 +951,7 @@ HASH.  The rebase is fully automated (no editor interaction)."
      :switch t
      :buffer-name buffer-name
      :on-finish
-     (lambda (output &rest _)
+     (lambda (_output &rest _)
        (read-only-mode)
        (text-mode)
        (im-git-stash-list-mode))
@@ -1004,12 +1005,12 @@ HASH.  The rebase is fully automated (no editor interaction)."
      :switch nil
      :buffer-name " *im-git-stash-drop*"
      :on-finish
-     (lambda (output &rest _)
+     (lambda (_output &rest _)
        (with-current-buffer im-git--stash-list-buffer-name
          (im-git-list-stash)))
      :on-fail
-     (lambda (output &rest _)
-       (message ">> `git stash drop' failed with: " output)
+     (lambda (_output &rest _)
+       (message ">> `git stash drop' failed with: " _output)
        (switch-to-buffer buffer-name)))))
 
 (defun im-git-pop-stash ()
@@ -1025,13 +1026,13 @@ HASH.  The rebase is fully automated (no editor interaction)."
      :switch nil
      :buffer-name " *im-git-stash-pop*"
      :on-finish
-     (lambda (output &rest _)
+     (lambda (_output &rest _)
        (with-current-buffer im-git--stash-list-buffer-name
          (im-git-list-stash)
          (message ">> Successfully popped!")))
      :on-fail
-     (lambda (output &rest _)
-       (message ">> `git stash pop' failed with: " output)
+     (lambda (_output &rest _)
+       (message ">> `git stash pop' failed with: " _output)
        (switch-to-buffer buffer-name)))))
 
 (define-minor-mode im-git-stash-list-mode
@@ -1076,15 +1077,15 @@ Works only if the stash entry is at the beginning of the line."
         :command "git"
         :args `("ls-remote" "--tags" "origin")
         :on-finish
-        (lambda (output &rest _)
+        (lambda (_output &rest _)
           (with-current-buffer buffer-name
             (let ((inhibit-read-only t))
               (let ((lines (s-lines (s-trim (buffer-string))))
                     (remote-tags (->> (s-lines (s-trim output))
-                                    (--map (-let (((hash tag) (s-split "\t" it)))
-                                             (list (s-chop-prefix "refs/tags/" tag)
-                                                   (substring hash 0 7))))
-                                    (delete-dups)))
+                                      (--map (-let (((hash tag) (s-split "\t" it)))
+                                               (list (s-chop-prefix "refs/tags/" tag)
+                                                     (substring hash 0 7))))
+                                      (delete-dups)))
                     (local-tags '()))
                 (goto-char (point-min))
                 (while (< (point) (point-max))
@@ -1142,8 +1143,8 @@ Works only if the stash entry is at the beginning of the line."
                   (with-current-buffer im-git--tag-list-buffer-name
                     (im-git-list-tags)))
                 :on-fail
-                (lambda (output &rest _)
-                  (message ">> Failed to remove from remote: %s" output)
+                (lambda (_output &rest _)
+                  (message ">> Failed to remove from remote: %s" _output)
                   (switch-to-buffer " *im-git-tag-remove-remote*")))))
       (if (and (plist-get tag-info :remote?)
                (not (plist-get tag-info :local?)))
@@ -1162,8 +1163,8 @@ Works only if the stash entry is at the beginning of the line."
              (with-current-buffer im-git--tag-list-buffer-name
                (im-git-list-tags))))
          :on-fail
-         (lambda (output &rest _)
-           (message ">> `git tag -d' failed with: " output)
+         (lambda (_output &rest _)
+           (message ">> `git tag -d' failed with: " _output)
            (switch-to-buffer " *im-git-tag-remove*")))))))
 
 (defun im-git-open-file-at-tag ()
