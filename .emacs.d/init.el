@@ -7582,7 +7582,7 @@ mails."
   :straight (:host github :repo "jamescherti/easysession.el")
   :custom
   (easysession-mode-line-misc-info t)
-  (easysession-mode-line-misc-info-prefix " Session:["))
+  (easysession-mode-line-misc-info-prefix " S:["))
 
 ;;;;; im-git -- my git workflow, magit alternative
 
@@ -7791,6 +7791,13 @@ the commit buffer."
   (im-ntfy-password im-homeserver-ntfy-password)
   :config
   (im-ntfy-subscribe-all))
+
+;;;;; im-wpm --- display WPM on insert mode
+
+(use-package im-wpm
+  :straight nil
+  :config
+  (im-wpm-mode))
 
 ;;;;; ereader --- ebook reader with org integration
 
