@@ -2147,6 +2147,8 @@ end
 * Tmux
 I use tmux for it's vi mode. Other than that I generally use my window manager for multiple terminals (which is rarely needed because I'm mostly in Emacs.)
 #+begin_src conf :tangle ~/.tmux.conf
+# * General
+
 set -g default-shell «which("fish")»
 set -g mouse on
 set -g base-index 1 # Window indexes starts from 1
@@ -2154,6 +2156,11 @@ setw -g pane-base-index 1 # Pane indexes starts from 1
 set -s escape-time 0 # Remove the delay after hitting <ESC>
 set-option -g set-titles off
 set-option -g allow-rename off
+set -g set-titles on
+# Do `set destroy-unattached off` to disable this for a particular session
+set-option -g destroy-unattached on
+
+# * Bindings
 
 # Open copy mode
 bind -n M-y copy-mode
@@ -2184,10 +2191,53 @@ bind-key -T copy-mode-vi v send-keys -X begin-selection
 bind-key -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel
 bind-key -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "wl-copy"
 
-set -g set-titles on
+# New session (s shows sessions, C-s creates new one)
+bind C-s new-session
 
-# Do `set destroy-unattached off` to disable this for a particular session
-set-option -g destroy-unattached on
+# * Menu
+
+bind-key Space display-menu -T "Command Palette" \
+    "Persist (on)"        p "set destroy-unattached off; refresh-client" \
+    "Persist (off)"       P "set destroy-unattached on; refresh-client" \
+    "Rename Window"       w "command-prompt 'rename-window %%'" \
+    "Rename Session"      s "command-prompt 'rename-session %%'" \
+    "" \
+    "Horizontal Split"    h "split-window -h" \
+    "Vertical Split"      v "split-window -v" \
+    "New Window"          n "new-window" \
+    "Kill Pane"           x "kill-pane" \
+    "Sync Panes"          s "setw synchronize-panes" \
+    "" \
+    "Reload Config"       R "source-file ~/.tmux.conf; display 'Reloaded'"
+
+# * Colors - Solstice Soft Dark
+
+set -g status-style "bg=#241f26,fg=#e7d9e6"
+
+# Left side: session name
+set -g status-left-length 30
+set -g status-left "#[fg=#1f1a21,bg=#f08cff,bold] #S #[fg=#f08cff,bg=#241f26,nobold]"
+
+# Right side: date and time
+set -g status-right-length 80
+set -g status-right "#[fg=#3a313f]#[fg=#e7d9e6,bg=#3a313f] #{?#{==:#{destroy-unattached},on},#[fg=#ff6b6b]⏻,#[fg=#50fa7b]⏻} #[fg=#3a313f]│#[fg=#e7d9e6] %a %b %d #[fg=#f08cff]#[fg=#1f1a21,bg=#f08cff,bold] %H:%M "
+
+# Window tabs
+set -g window-status-format "#[fg=#bfaebd] #I:#W "
+set -g window-status-current-format "#[fg=#f08cff,bold] #I:#W "
+
+# Remove window status separator
+set -g window-status-separator ""
+
+# Center window list
+set -g status-justify left
+
+# Pane borders
+set -g pane-border-style "fg=#463b4a"
+set -g pane-active-border-style "fg=#f08cff"
+
+# Message styling
+set -g message-style "bg=#241f26,fg=#e7d9e6"
 #+end_src
 * Utilities
 ** git
