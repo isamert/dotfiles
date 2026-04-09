@@ -6745,13 +6745,17 @@ Fetches missing channels/users first."
   (im-leader-v
     "eg" #'im-ai
     "sl" #'im-ai-lookup
-    "sa" #'im-ai-at-point
     "sg" #'im-ai-gptel-dwim
     "sG" (λ-interactive (im-ai-gptel-dwim 'new))
     "ta" #'im-ai-gptel-toggle-side-buffer
     "tA" (λ-interactive (im-ai-gptel-toggle-side-buffer 'new)))
   :config
   (add-hook 'gptel-mode-hook #'tab-line-mode))
+
+(use-package im-ai-at-point
+  :straight nil
+  :general
+  (im-leader-v "sa" #'im-ai-at-point))
 
 ;; gptel seems more capable than org-ai. Probably going to replace
 ;; org-ai with this in the long run or they might just simply
@@ -9950,8 +9954,7 @@ where these special buffers may be duplicated."
 ;;;;; ace-window
 
 (use-package ace-window
-  :defer t
-  :autoload (aw-select)
+  :demand t
   :custom
   (aw-background t)
   (aw-ignore-current t)
