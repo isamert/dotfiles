@@ -10650,7 +10650,9 @@ story points they have released.  See the following figure:
     (switch-to-buffer (current-buffer))))
 
 (defun org-dblock-write:jira (params)
-  "Dynamic block version of `im-jira-list-current-sprint-assignee-swimlane'."
+  "Dynamic block version of `im-jira-list-current-sprint-assignee-swimlane'.
+Not mentioned in this function but using :target XXX will make these
+blocks trackable by `im-jira-check-tracked-issue-groups`."
   (let* ((projects (plist-get params :projects))
          (issues (plist-get params :issues))
          (progress? (plist-get params :progress?))
