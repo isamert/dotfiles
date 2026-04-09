@@ -4764,12 +4764,12 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 
   ;; '(command display-type... (buffer-local-variable . value))
   ;; vertico README explains this very well
-  (setq vertico-multiform-commands
-        '((consult-org-heading
-           buffer
-           (vertico-buffer-display-action . (display-buffer-in-side-window
-                                             (side . right)
-                                             (window-width . 0.4))))))
+  (let ((show-at-top '(vertico-buffer-display-action . (display-buffer-in-side-window
+                                                        (side . top)
+                                                        (window-height . 0.6)))))
+    (setq vertico-multiform-commands
+          `((consult-org-heading buffer ,show-at-top)
+            (im-imenu buffer ,show-at-top))))
   (vertico-multiform-mode))
 
 ;; Enable displaying candidates in a grid.
@@ -5073,11 +5073,16 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 ;; - Also don't forget to utilize =M-a= (=embark-act=) in consult windows.
 ;; - Use =M-n= (future-history) to insert current symbol after running a consult command. Normally you would use =M-{p,n}= to cycle between history items but when you open minibuffer, typing =M-n= directly tries to guess what the user input would be.
 
+(defun im-imenu ()
+  (interactive)
+  (condition-case nil
+      (consult-imenu)
+    (error (consult-outline))))
+
 (use-package consult
   :general
   (im-leader
     "oj" #'consult-org-agenda
-    "cr" #'consult-history
     "RET" #'consult-buffer)
   (:keymaps 'minibuffer-mode-map
    "C-r" #'consult-history)
@@ -5087,9 +5092,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
   (:states 'insert :keymaps 'eshell-mode-map
    "C-r" #'consult-history)
   (:states 'normal
-   "M-i" (λ-interactive (condition-case nil
-                            (consult-imenu)
-                          (error (consult-outline)))))
+   "M-i" 'im-imenu)
   (:keymaps 'consult-narrow-map
    ;; Shows all narrowing possibilities when you hit "?"
    ;; If no narrowing is available, simply inserts "?"
