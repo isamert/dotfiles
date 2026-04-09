@@ -109,17 +109,18 @@ Called with one argument BUF (a live buffer object)."
 (defun im-cursor-gen-watch--tick (buf)
   "Update generation state for BUF and notify when generation finishes."
   (when (buffer-live-p buf)
-    (with-current-buffer buf
-      (let ((now (im-cursor-gen-watch--generating-p))
-            (user-interaction? (save-excursion
-                                 (goto-char (point-max))
-                                 (re-search-backward im-cursor-gen-user-interaction-regexp nil t))))
-        (when (and im-cursor-gen-watch--was-generating (not now)
-                   ;; don't notify if both Emacs and the buffer are visible now
-                   (not (and (im-cursor-gen-watch--emacs-visible-now-p)
-                             (im-cursor-gen-watch--buffer-visible-now-p buf))))
-          (funcall im-cursor-gen-watch-finished-notify-function user-interaction?))
-        (setq im-cursor-gen-watch--was-generating now)))))
+    (condition-case nil
+        (with-current-buffer buf
+          (let ((now (im-cursor-gen-watch--generating-p))
+                (user-interaction? (save-excursion
+                                     (goto-char (point-max))
+                                     (re-search-backward im-cursor-gen-user-interaction-regexp nil t))))
+            (when (and im-cursor-gen-watch--was-generating (not now)
+                       (not (and (im-cursor-gen-watch--emacs-visible-now-p)
+                                 (im-cursor-gen-watch--buffer-visible-now-p buf))))
+              (funcall im-cursor-gen-watch-finished-notify-function user-interaction?))
+            (setq im-cursor-gen-watch--was-generating now)))
+      (args-out-of-range nil))))
 
 (defun im-cursor-gen-watch--cleanup ()
   (when (timerp im-cursor-gen-watch--timer)
