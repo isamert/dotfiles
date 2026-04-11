@@ -1077,15 +1077,15 @@ Works only if the stash entry is at the beginning of the line."
         :command "git"
         :args `("ls-remote" "--tags" "origin")
         :on-finish
-        (lambda (_output &rest _)
+        (lambda (output &rest _)
           (with-current-buffer buffer-name
             (let ((inhibit-read-only t))
               (let ((lines (s-lines (s-trim (buffer-string))))
                     (remote-tags (->> (s-lines (s-trim output))
-                                      (--map (-let (((hash tag) (s-split "\t" it)))
-                                               (list (s-chop-prefix "refs/tags/" tag)
-                                                     (substring hash 0 7))))
-                                      (delete-dups)))
+                                    (--map (-let (((hash tag) (s-split "\t" it)))
+                                             (list (s-chop-prefix "refs/tags/" tag)
+                                                   (substring hash 0 7))))
+                                    (delete-dups)))
                     (local-tags '()))
                 (goto-char (point-min))
                 (while (< (point) (point-max))
@@ -1143,8 +1143,8 @@ Works only if the stash entry is at the beginning of the line."
                   (with-current-buffer im-git--tag-list-buffer-name
                     (im-git-list-tags)))
                 :on-fail
-                (lambda (_output &rest _)
-                  (message ">> Failed to remove from remote: %s" _output)
+                (lambda (output &rest _)
+                  (message ">> Failed to remove from remote: %s" output)
                   (switch-to-buffer " *im-git-tag-remove-remote*")))))
       (if (and (plist-get tag-info :remote?)
                (not (plist-get tag-info :local?)))
@@ -1206,7 +1206,8 @@ Works only if the stash entry is at the beginning of the line."
   (evil-define-minor-mode-key 'normal 'im-git-tag-list-mode
     (kbd "gr") #'im-git-list-tags
     (kbd "o") #'im-git-open-file-at-tag
-    (kbd "x") #'im-git-remove-tag))
+    (kbd "x") #'im-git-remove-tag
+    (kbd "RET") #'im-git-show-tag-message))
 
 (defun im-git--parse-tag-at-point ()
   "Return (TAG HASH) at point."
@@ -1217,6 +1218,28 @@ Works only if the stash entry is at the beginning of the line."
 
 (defun im-git--tag-info-at-point ()
   (get-text-property (point) 'tag-info))
+
+(defun im-git-show-tag-message ()
+  (interactive nil im-git-tag-list-mode)
+  (when-let* ((tag-info (im-git--tag-info-at-point))
+              (tag (plist-get tag-info :name))
+              (default-directory (im-current-project-root))
+              (buffer-name (format "*im-git-tag-message: %s*" tag)))
+    (when-let* ((buffer (get-buffer buffer-name)))
+      (kill-buffer buffer))
+    (im-shell-command
+     :command "git"
+     :args `("--no-pager" "tag" "-n99" "--list" ,tag)
+     :switch nil
+     :buffer-name buffer-name
+     :on-finish
+     (lambda (_output &rest _)
+       (with-current-buffer buffer-name
+         (setq header-line-format (format "Tag message: %s" tag))
+         (switch-to-buffer (current-buffer))))
+     :on-fail
+     (lambda (&rest _)
+       (message ">> Failed to show tag message for %s" tag)))))
 
 ;;;; im-git-search-history
 
