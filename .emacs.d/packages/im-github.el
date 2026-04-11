@@ -141,6 +141,7 @@
   (lab-github-project-select-and-act-on
    (lab-github-request "users/#{user}/repos?per_page=100")))
 
+;;;###autoload
 (defalias 'lab-github-list-my-projects #'lab-github-list-all-owned-projects)
 
 ;;;###autoload

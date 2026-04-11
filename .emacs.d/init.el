@@ -6686,6 +6686,7 @@ Fetches missing channels/users first."
   (:states 'normal
    "gm" #'separedit)
   (:keymaps 'minibuffer-mode-map
+   "C-i" #'separedit
    "M-r" #'separedit
    "M-i" #'separedit)
   :config
@@ -6981,16 +6982,7 @@ Fetches missing channels/users first."
 
 (use-package im-github
   :straight nil
-  :commands (lab-github-url-to-raw
-             lab-github-act-on-project
-             lab-github-list-all-owned-projects
-             lab-github-list-project-pull-requests
-             lab-github-issue-view
-             lab-github-view-repo-readme
-             lab-github-list-all-open-issues
-             org-dblock-write:github-issues
-             lab-github-issue-at-point
-             lab-github-open-issue)
+  :demand t
   :custom
   (lab-github-user "isamert")
   (lab-github-token im-github-token)
