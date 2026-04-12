@@ -28,6 +28,7 @@
 ;; TODOs:
 ;; - Offer alternative positions for alert to show up, like top-left,
 ;;   top-right, top-center, center, bottom-left, bottom...
+;; - Render notifications in markdown, if :markdown t is given?
 
 ;;; Code:
 
