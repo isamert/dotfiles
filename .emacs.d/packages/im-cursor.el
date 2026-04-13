@@ -8,9 +8,9 @@
 ;; Run the `cursor-agent` CLI inside an `eat` terminal buffer, with a small UX layer:
 ;;
 ;; - `im-cursor-agent': open a per-project *cursor-agent* buffer, enable helper modes.
-;; - `im-cursor-gen-watch-mode': poll for “generating” output and notify when it finishes
-;;   (suppressed when Emacs + the buffer are currently visible); detects when the agent is
-;;   waiting for user confirmation.
+;; - `im-cursor-gen-watch-mode': poll the terminal title to detect agent status and
+;;   notify when generation finishes or user confirmation is needed (suppressed when
+;;   Emacs + the buffer are currently visible).
 ;; - `im-cursor-agent-insert-prompt': edit a Markdown prompt in a temp buffer (with `gptel')
 ;;   and send it to the terminal, remembering the last prompt.
 ;;
@@ -23,11 +23,12 @@
 ;; - `im-cursor-agent-mode': keybindings for the agent buffer (notably
 ;;   `C-i' to compose a prompt in a temporary Markdown buffer and send
 ;;   it to the running agent).
-;; - `im-cursor-gen-watch-mode': periodically checks the terminal output to
-;;   detect “generating” state and sends a one-shot notification when generation
-;;   finishes (optionally highlighting when user interaction is required).  To
-;;   avoid noisy notifications, it suppresses them when both Emacs and the agent
-;;   buffer are currently visible.
+;; - `im-cursor-gen-watch-mode': periodically checks the terminal
+;;   title to detect agent status (working/waiting/ready) and sends a
+;;   one-shot notification when the agent finishes or needs user
+;;   interaction.  To avoid noisy notifications, it suppresses them
+;;   when both Emacs and the agent buffer are currently
+;;   visible.  /status-indicators needs to be enabled on cursor CLI.
 
 ;; DISCLAIMER: Of course, mostly AI generated.  I know about
 ;; agent-shell but it's not fully working with cursor-cli (maybe it's
@@ -51,20 +52,6 @@
   :type 'number
   :group 'im-cursor)
 
-(defcustom im-cursor-gen-watch-regexp (rx line-start (* blank)
-                                          (or "⬢" "⬡")
-                                          (*? any) "ing" (* any)
-                                          "\n"
-                                          line-start (+ blank) "┌──")
-  "Regexp that indicates the buffer is currently generating."
-  :type 'regexp
-  :group 'im-cursor)
-
-(defcustom im-cursor-gen-user-interaction-regexp (rx (or "Run this command?" "Run (once)"))
-  "Regexp that indicates the buffer is currently generating."
-  :type 'regexp
-  :group 'im-cursor)
-
 (defcustom im-cursor-gen-watch-finished-notify-function
   (lambda (user-interaction?)
     (im-notif
@@ -74,9 +61,9 @@
                  "FINISHED!")
      :source (current-buffer)
      :labels '("agent" "cursor")))
-  "Function called when BUF transitions from generating to not generating.
+  "Function called when agent transitions from working to not working.
 
-Called with one argument BUF (a live buffer object)."
+Called with one argument: non-nil if user interaction is required."
   :type 'function
   :group 'im-cursor)
 
@@ -89,11 +76,18 @@ Called with one argument BUF (a live buffer object)."
 (defvar-local im-cursor-gen-watch--timer nil)
 (defvar-local im-cursor-gen-watch--was-generating nil)
 
-(defun im-cursor-gen-watch--generating-p ()
-  "Non-nil if current buffer look like it's generating."
-  (save-excursion
-    (goto-char (point-max))
-    (re-search-backward im-cursor-gen-watch-regexp nil t)))
+(defun im-cursor-gen-watch--parse-title-status ()
+  "Parse the terminal title and return the agent status as a symbol.
+Returns `working', `waiting', `ready', or nil if unparseable."
+  (when (and (boundp 'eat-terminal) eat-terminal)
+    (let ((title (eat-term-title eat-terminal)))
+      (when (and title (string-match " - \\(.+\\)" title))
+        (let ((status-part (match-string 1 title)))
+          (cond
+           ((string-match "⏳" status-part) 'working)
+           ((string-match "🔐" status-part) 'waiting)
+           ((string-match "✅" status-part) 'ready)
+           (t nil)))))))
 
 ;;;; im-cursor-gen-watch-mode
 
@@ -111,16 +105,15 @@ Called with one argument BUF (a live buffer object)."
   (when (buffer-live-p buf)
     (condition-case nil
         (with-current-buffer buf
-          (let ((now (im-cursor-gen-watch--generating-p))
-                (user-interaction? (save-excursion
-                                     (goto-char (point-max))
-                                     (re-search-backward im-cursor-gen-user-interaction-regexp nil t))))
+          (let* ((status (im-cursor-gen-watch--parse-title-status))
+                 (now (eq status 'working))
+                 (user-interaction? (eq status 'waiting)))
             (when (and im-cursor-gen-watch--was-generating (not now)
                        (not (and (im-cursor-gen-watch--emacs-visible-now-p)
                                  (im-cursor-gen-watch--buffer-visible-now-p buf))))
               (funcall im-cursor-gen-watch-finished-notify-function user-interaction?))
             (setq im-cursor-gen-watch--was-generating now)))
-      (args-out-of-range nil))))
+      (error nil))))
 
 (defun im-cursor-gen-watch--cleanup ()
   (when (timerp im-cursor-gen-watch--timer)
@@ -130,11 +123,11 @@ Called with one argument BUF (a live buffer object)."
 
 (define-minor-mode im-cursor-gen-watch-mode
   "Watch current buffer and notify when generation finishes (once per run)."
-  :lighter " GenWatch"
+  :lighter (:eval (if im-cursor-gen-watch--was-generating " GenWatch…" " GenWatch"))
   (if im-cursor-gen-watch-mode
       (progn
-        (setq im-cursor-gen-watch--was-generating
-              (im-cursor-gen-watch--generating-p))
+        (let ((status (im-cursor-gen-watch--parse-title-status)))
+          (setq im-cursor-gen-watch--was-generating (eq status 'working)))
         (setq im-cursor-gen-watch--timer
               (run-with-timer 0 im-cursor-gen-watch-interval
                               #'im-cursor-gen-watch--tick
