@@ -873,7 +873,7 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
                       "\n")
                    "No flymake issues found.")))
    :description "List all current flymake diagnostics for current buffer with line-range:type:message."
-   :category "buffer"))
+   :category "buffers"))
 
 ;;;;;; project tools
 
@@ -1303,7 +1303,7 @@ marked \"done\", the list is automatically cleared."
     :model 'deepseek-chat
     :confirm-tool-calls t
     :tools nil
-    :use-tools nil)
+    :use-tools t)
 
   (gptel-make-preset 'research-agent
     :system im-ai-research-prompt
@@ -1315,33 +1315,33 @@ marked \"done\", the list is automatically cleared."
 
   (gptel-make-preset 'coding-helper-agent
     :system im-ai-programming-agent-prompt
-    :backend "DeepSeek"
-    :model 'deepseek-reasoner
     :confirm-tool-calls nil
     :tools '("web")
     :use-tools t)
 
   (gptel-make-preset 'elisp-coding-helper-agent
     :system im-ai-programming-agent-prompt
-    :backend "DeepSeek"
-    :model 'deepseek-reasoner
     :confirm-tool-calls nil
     :tools '("web" "elisp")
     :use-tools t)
 
   (gptel-make-preset 'coding-agent
     :system im-ai-programming-agent-prompt
-    :backend "DeepSeek"
-    :model 'deepseek-reasoner
     :confirm-tool-calls nil
     :tools '("web" "files" "files_mutative" "project")
+    :use-tools t)
+
+  ;; Useful for making edits in single buffer. Just give the buffer
+  ;; name to the agent.
+  (gptel-make-preset 'buffer-agent
+    :system im-ai-programming-agent-prompt
+    :confirm-tool-calls nil
+    :tools '("web" "search_buffer" "edit_buffer" "read_buffer_lines" "get_file_issues")
     :use-tools t)
 
   (gptel-make-preset 'elisp-coding-agent
     :system (concat im-ai-programming-agent-prompt
                     "\nIf you are unsure about a variable or a functions usage, look it up before using.\n*IMPORTANT*: Prefer existing tool calls to running arbitrary elisp.")
-    :backend "DeepSeek"
-    :model 'deepseek-reasoner
     :confirm-tool-calls nil
     :tools '("web" "files" "files_mutative" "project" "elisp" "project")
     :use-tools t))
