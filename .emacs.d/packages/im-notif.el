@@ -374,32 +374,42 @@ be a function or a buffer object."
    :labels '("dummy")))
 
 ;;;###autoload
+(defun im-notif-act-on (notification)
+  "Display actions for the given NOTIFICATION; open, delete or snooze."
+  (interactive (list (im-notif--select)))
+  (empv--select-action "Act on notification"
+    "Buffer (origin)" → (im-switch-to-buffer-in-tab (plist-get notification :source-buffer))
+    "Go to Source" → (im-notif-go-to-source notification)
+    "View" → (im-notif-view notification)
+    "Delete" → (progn
+                 (ignore-errors
+                   (posframe-delete (plist-get notification :id)))
+                 (ring-remove
+                  im-notif--last-notifications
+                  (ring-member im-notif--last-notifications notification))
+                 (message ">> Deleted."))
+    "Snooze" → (im-notif-snooze notification (im-notif--read-duration))
+    "DND for labels" → (im-notif-enable-dnd-for-labels (plist-get notification :labels))
+    "Blacklist" → (progn
+                    (im-notif-blacklist
+                     (concat (or im-notif-blacklist-regexp "")
+                             (and im-notif-blacklist-regexp "\\|")
+                             (read-string "Regexp: "
+                                          (plist-get notification :title)))))
+    "Copy message" → (message "Message copied: %s" (im-kill (plist-get notification :message)))
+    "Copy title" → (message "Title copied: %s" (im-kill (plist-get notification :title)))
+    "Inspect" → (im-inspect notification)))
+
+;;;###autoload
 (defun im-notif-notifications ()
-  "Display actions for the selected notification; open, delete or snooze."
+  "Select a notification and display actions for it; open, delete or snooze."
   (interactive)
-  (let ((notification (im-notif--select)))
-    (empv--select-action "Act on notification"
-      "Buffer (origin)" → (im-switch-to-buffer-in-tab (plist-get notification :source-buffer))
-      "Go to Source" → (im-notif-go-to-source notification)
-      "View" → (im-notif-view notification)
-      "Delete" → (progn
-                   (ignore-errors
-                     (posframe-delete (plist-get notification :id)))
-                   (ring-remove
-                    im-notif--last-notifications
-                    (ring-member im-notif--last-notifications notification))
-                   (message ">> Deleted."))
-      "Snooze" → (im-notif-snooze notification (im-notif--read-duration))
-      "DND for labels" → (im-notif-enable-dnd-for-labels (plist-get notification :labels))
-      "Blacklist" → (progn
-                      (im-notif-blacklist
-                       (concat (or im-notif-blacklist-regexp "")
-                               (and im-notif-blacklist-regexp "\\|")
-                               (read-string "Regexp: "
-                                            (plist-get notification :title)))))
-      "Copy message" → (message "Message copied: %s" (im-kill (plist-get notification :message)))
-      "Copy title" → (message "Title copied: %s" (im-kill (plist-get notification :title)))
-      "Inspect" → (im-inspect notification))))
+  (im-notif-act-on (im-notif--select)))
+
+(defun im-notif-act-on-last ()
+  "Act on last notification."
+  (interactive)
+  (im-notif-act-on (car (im-notif-notifications-list))))
 
 ;;;###autoload
 (defun im-notif-enable-dnd (seconds)
@@ -615,8 +625,9 @@ otherwise, it is taken as a plain string regexp."
    "───"]
   [["Basic"
     ("l" "List" im-notif-notifications)
+    ("L" "Last" im-notif-act-on-last)
     ("c" "Clear all" im-notif-clear-all)
-    ("L" "Logs" im-notif-logs)
+    ("o" "Logs" im-notif-logs)
     ("d" "Dummy notification" im-dummy-notification)]
    ["DND/Blacklist"
     ("e" "Enable DND" im-notif-enable-dnd)
