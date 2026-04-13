@@ -1698,7 +1698,7 @@ that is provided by ob-http."
           (setq url (concat url "&" qs))
         (setq url (concat url "?" qs))))
     (insert
-     (s-trim (im-s-interpolated "#{request} #{url}\n#{(s-join \"\\n\" headers)}\n\n#{(or data \"\")}")))))
+     (s-trim (im-s-interpolated "#{request} #{url}\n#{(s-join \"\\n\" headers)}\n\n#{(or data \"\")}\n")))))
 
 (defun im-cmdargs-tokenize (input)
   (with-temp-buffer
