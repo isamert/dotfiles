@@ -7579,6 +7579,7 @@ mails."
 
 (use-package easysession
   :straight (:host github :repo "jamescherti/easysession.el")
+  :demand t
   :custom
   (easysession-mode-line-misc-info t)
   (easysession-mode-line-misc-info-prefix " S:["))
@@ -12692,7 +12693,7 @@ attribute for current buffers file or selected file."
 ;; the "peek window".
 
 (use-package quick-peek
-  :straight (:host github :repo "cpitclaudel/quick-peek"))
+  :straight (:host github :repo "isamert/quick-peek"))
 
 ;;;;;; Bindings
 
