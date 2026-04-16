@@ -6185,7 +6185,6 @@ SORT should be nil to disable sorting."
    :mark-as-read-immediately t)
   (slack-start)
   (slack-change-current-team)
-  (run-at-time nil 3600 #'im-slack-check)
   (setq slack-extra-subscribed-channels ty-slack-channels))
 
 (defun im-slack--enable-completion-at-point ()
@@ -6251,17 +6250,6 @@ Example usage:
                        (lab--time-ago (im-slack--message-ts it)))
                      .message-string))
            (-take 100 im-slack--last-messages))))")
-
-(defun im-slack-check ()
-  (interactive)
-  (let* ((one-hour-ago (- (string-to-number (format-time-string "%s")) 3600))
-         (msg-count (->>
-                     (im-slack-last-messages-per-room)
-                     (--filter (> (im-slack--message-ts it) one-hour-ago))
-                     (length))))
-    (when (> msg-count 0)
-      (message ">> Check slack. %s messages in last hour."
-               (propertize (number-to-string msg-count) 'face '(:weight bold))))))
 
 (async-defun im-slack-notify (message room team)
   (unless (slack-room-muted-p room team)
