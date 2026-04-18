@@ -80,10 +80,11 @@ same tab.  Configurations are saved per tab."
     (message ">> Configuration saved as %s" cfg)))
 
 ;;;###autoload
-(defun im-tab-configuration-restore-current ()
+(defun im-tab-configuration-restore-current (&optional key sticky?)
   "Save window configuration for current key."
   (interactive)
-  (let* ((current-tab (alist-get 'current-tab (funcall tab-bar-tabs-function)))
+  (let* ((cb (current-buffer))
+         (current-tab (alist-get 'current-tab (funcall tab-bar-tabs-function)))
          (name (alist-get 'name current-tab))
          (explicit-name? (alist-get 'explicit-name current-tab))
          (cfg (concat name (char-to-string last-input-event))))
@@ -93,7 +94,15 @@ same tab.  Configurations are saved per tab."
      (map-elt
       im-tab-configuration
       cfg))
+    (when (and sticky? cb)
+      (switch-to-buffer cb))
     (message ">> Restored configuration %s" cfg)))
+
+;;;###autoload
+(defun im-tab-configuration-restore-current-sticky ()
+  "Save window configuration for current key."
+  (interactive)
+  (im-tab-configuration-restore-current t))
 
 ;;;; Footer
 

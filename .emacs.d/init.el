@@ -7711,7 +7711,12 @@ the commit buffer."
     "w2" #'im-tab-configuration-restore-current
     "w3" #'im-tab-configuration-restore-current
     "w4" #'im-tab-configuration-restore-current
-    "w5" #'im-tab-configuration-restore-current))
+    "w5" #'im-tab-configuration-restore-current
+    ;; Restore a saved configuration but keep the current buffer
+    "W2" #'im-tab-configuration-restore-current-sticky
+    "W3" #'im-tab-configuration-restore-current-sticky
+    "W4" #'im-tab-configuration-restore-current-sticky
+    "W5" #'im-tab-configuration-restore-current-sticky))
 
 ;;;;; im-filebrowser -- Filebrowser integration
 
@@ -8951,6 +8956,7 @@ work.  You need to enter full path while importing by yourself."
   ;; `compojure' indent
   (define-clojure-indent
     (defroutes 'defun)
+    (execute-one! 1)
     (GET 2)
     (POST 2)
     (PUT 2)
@@ -10007,7 +10013,6 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   "w," #'enlarge-window-horizontally
   "w." #'shrink-window-horizontally
   ;; workspace (tab-bar-mode)
-  "W" #'tab-bar-switch-to-tab
   "wu" #'tab-bar-history-back ;; undo
   "wr" #'tab-bar-history-forward ;; redo
   "wt" #'im-tab-bar-new-tab ;; tab
