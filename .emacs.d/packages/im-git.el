@@ -777,7 +777,7 @@ Return old message."
             (erase-buffer)
             (diff-mode)
             (setq header-line-format (format " Commit :: %s" (s-trim line)))
-            (apply #'call-process `("git" nil ,buf t "diff" ,im-git-diff-switches ,(concat sha "^") ,sha))
+            (apply #'call-process `("git" nil ,buf t "diff" ,@im-git-diff-switches ,(concat sha "^") ,sha))
             (goto-char (point-min))
             (font-lock-ensure))
           (pop-to-buffer buf))))))
