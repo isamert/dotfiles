@@ -8956,6 +8956,7 @@ work.  You need to enter full path while importing by yourself."
   ;; `compojure' indent
   (define-clojure-indent
     (defroutes 'defun)
+    (execute! 1)
     (execute-one! 1)
     (GET 2)
     (POST 2)
