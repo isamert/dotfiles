@@ -1859,7 +1859,7 @@ WantedBy=default.target
 ** Fish
 #+begin_src fish :tangle ~/.config/fish/config.fish
 if status is-interactive
-    starship init fish | source
+    «which("starship")» init fish | source
 
     if test -f ~/.extrarc
         source ~/.extrarc
@@ -1869,7 +1869,7 @@ if status is-interactive
     # when it encounters a very long command. fzf handles it much
     # better, with preview.
     function fzf_fish_history
-        commandline --replace $(history --null | fzf --read0 --reverse --style full --height 30 --preview "echo {} | fish_indent --ansi")
+        commandline --replace $(history --null | fzf --read0 --reverse --height 30 --preview "echo {} | fish_indent --ansi")
     end
 
     bind \cr fzf_fish_history
@@ -1934,6 +1934,10 @@ abbr -a -- open jaro
 # * File/folder stuff
 
 abbr -a -- mkx 'chmod +x'
+function mkcd
+    mkdir -p "$argv[1]"
+    cd "$argv[1]"
+end
 
 abbr -a -- tree 'lsd --tree'
 
@@ -1975,6 +1979,10 @@ abbr -a :q exit
 abbr -a -- kctx 'kubectl config current-context'
 abbr -a -- kctxs-list 'kubectl config get-contexts --output=name'
 abbr -a -- kctx-use 'kubectl config use-context'
+
+# * Project management
+
+alias cdproj='eval cd $(gitfind ~/Workspace/projects/ | fzf)'
 #+end_src
 
 emacs-eat integration:
