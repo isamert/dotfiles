@@ -6857,7 +6857,10 @@ Fetches missing channels/users first."
 ;;;;; im-cursor
 
 (use-package im-cursor
-  :straight nil)
+  :straight nil
+  :config
+  (with-eval-after-load 'im-notif
+    (add-to-list 'im-notif-dnd-whitelist-labels "agent")))
 
 ;;;;; im-kagi-assistant
 
