@@ -6832,27 +6832,113 @@ Fetches missing channels/users first."
 
 (use-package agent-shell
   :straight (:host github :repo "xenodium/agent-shell")
-  :custom (setq agent-shell-show-welcome-message nil)
+  :custom
+  (agent-shell-show-welcome-message nil)
+  (agent-shell-highlight-blocks t)
+  :bind (:map agent-shell-mode-map
+         ("RET" . newline)
+         ("C-c C-c" . shell-maker-submit)
+         ("C-c C-k" . agent-shell-interrupt))
   :general
   (im-leader
     "tS" 'im-toggle-side-agent-buffer))
 
 (defun im-toggle-side-agent-buffer ()
   (interactive)
-  (let* ((dir (im-current-project-root))
-         (buf (seq-find
-               (lambda (b)
-                 (when-let* ((f (with-current-buffer b default-directory)))
-                   (and (string-prefix-p dir (file-name-directory (expand-file-name f)))
-                        (string-match-p (regexp-quote "Agent @")
-                                        (buffer-name b)))))
-               (buffer-list))))
-    (if buf
-        (im-toggle-side-buffer-with-name buf)
-      (pcase (im-completing-read "Which agent?"
-                                 '("claude" "cursor"))
-        ("claude" (agent-shell-anthropic-start-claude-code))
-        ("cursor" (agent-shell-cursor-start-agent))))))
+  (cond
+   ((string-match-p (regexp-quote "Agent @") (buffer-name))
+    (agent-shell-help-menu))
+   ((use-region-p)
+    (agent-shell-help-menu))
+   (t
+    (let* ((dir (im-current-project-root))
+           (buf (seq-find
+                 (lambda (b)
+                   (when-let* ((f (with-current-buffer b default-directory)))
+                     (and (string-prefix-p dir (file-name-directory (expand-file-name f)))
+                          (string-match-p (regexp-quote "Agent @")
+                                          (buffer-name b)))))
+                 (buffer-list))))
+      (if buf
+          (im-toggle-side-buffer-with-name buf)
+        (pcase (im-completing-read "Which agent?" '("claude" "cursor" "opencode"))
+          ("claude" (agent-shell-anthropic-start-claude-code))
+          ("cursor" (agent-shell-cursor-start-agent))
+          ("opencode" (agent-shell-opencode-start-agent))))))))
+
+(defvar im-agent-shell-notif--subscriptions nil
+  "Alist mapping shell buffers to their subscription tokens.")
+
+(defun im-agent-shell-notif--on-permission-request (event)
+  "Handle a permission-request EVENT with a notification."
+  (unless (im-buffer-visible-p (current-buffer))
+    (im-notif
+     :id (buffer-name (current-buffer))
+     :title (concat "agent-shell → " (capitalize (or (map-nested-elt event '(:data :tool-call :kind)) "")))
+     :message (im-agent-shell-notif--format-permission-message
+               (map-nested-elt event '(:data :tool-call)))
+     :duration 5
+     :severity 'normal
+     :labels '("agent" "agent-shell")
+     :source (current-buffer))))
+
+(defun im-agent-shell-notif--on-turn-complete (event)
+  "Handle a turn-complete EVENT with a notification."
+  (unless (im-buffer-visible-p (current-buffer))
+    (im-notif
+     :id (buffer-name (current-buffer))
+     :title "agent-shell → finished"
+     :message (if (equal (map-nested-elt event '(:data :stop-reason))
+                         "end_turn")
+                  "Success"
+                "Failed")
+     :severity (if (equal (map-nested-elt event '(:data :stop-reason))
+                          "end_turn")
+                   'normal
+                 'critical)
+     :duration 5
+     :severity 'normal
+     :labels '("agent" "agent-shell")
+     :source (current-buffer))))
+
+(defun im-agent-shell-notif-subscribe (&optional shell-buffer)
+  "Subscribe to agent-shell events in SHELL-BUFFER.
+If SHELL-BUFFER is nil, use the current buffer."
+  (let ((buf (or shell-buffer (current-buffer))))
+    (when (map-elt im-agent-shell-notif--subscriptions buf)
+      (im-agent-shell-notif-unsubscribe buf))
+    (setf (map-elt im-agent-shell-notif--subscriptions buf)
+          (list
+           (agent-shell-subscribe-to
+            :shell-buffer buf
+            :event 'permission-request
+            :on-event #'im-agent-shell-notif--on-permission-request)
+           (agent-shell-subscribe-to
+            :shell-buffer buf
+            :event 'turn-complete
+            :on-event #'im-agent-shell-notif--on-turn-complete)))))
+
+(defun im-agent-shell-notif-unsubscribe (&optional shell-buffer)
+  "Unsubscribe from agent-shell events in SHELL-BUFFER.
+If SHELL-BUFFER is nil, use the current buffer."
+  (let ((buf (or shell-buffer (current-buffer))))
+    (dolist (token (map-elt im-agent-shell-notif--subscriptions buf))
+      (agent-shell-unsubscribe :subscription token))
+    (setq im-agent-shell-notif--subscriptions
+          (map-delete im-agent-shell-notif--subscriptions buf))))
+
+(define-minor-mode im-agent-shell-notif-mode
+  "Toggle notifications for the current agent-shell buffer."
+  :lighter " notif"
+  (if im-agent-shell-notif-mode
+      (im-agent-shell-notif-subscribe (current-buffer))
+    (im-agent-shell-notif-unsubscribe (current-buffer))))
+
+(defun im-agent-shell-notif-mode-enable ()
+  "Enable `im-agent-shell-notif-mode'."
+  (im-agent-shell-notif-mode 1))
+
+(add-hook 'agent-shell-mode-hook #'im-agent-shell-notif-mode-enable)
 
 ;;;;; im-cursor
 
