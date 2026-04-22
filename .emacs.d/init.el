@@ -11785,7 +11785,8 @@ more than one header of a single org buffer."
    ["Copy Path"
     ("cc" "Copy path (pretty)" im-copy-current-filename)
     ("cC" "Copy path (raw)" (lambda () (interactive) (im-copy-current-filename :pretty nil)))
-    ("cl" "Copy path (with context)" (lambda () (interactive) (im-copy-current-filename :pretty t :line t)))]
+    ("cl" "Copy path (with context)" (lambda () (interactive) (im-copy-current-filename :pretty t :line t)))
+    ("cd" "Copy directory" (lambda () (interactive) (im-copy-current-filename :fname default-directory :pretty t)))]
    ["Navigate"
     ("o" "Open file" find-file)
     ("d" "Open directory" consult-dir)
@@ -11841,7 +11842,7 @@ more than one header of a single org buffer."
       (kill-buffer (current-buffer)))))
 
 (defalias 'im-copy-current-file-path 'im-copy-current-filename)
-(cl-defun im-copy-current-filename (&key uri pretty line)
+(cl-defun im-copy-current-filename (&key fname uri pretty line)
   "Copy the current buffer file name to the clipboard.
 If the URI is non-nil, then add file:// in front of the file-path.
 If LINE is non-nil, append the current line number in grep format."
@@ -11849,7 +11850,7 @@ If LINE is non-nil, append the current line number in grep format."
    (list :pretty t))
   (let* ((fname (if (equal major-mode 'dired-mode)
                     default-directory
-                  (buffer-file-name)))
+                  (or fname (buffer-file-name))))
          (filename (cond
                     ((and fname uri)
                      (concat "file://" fname))
