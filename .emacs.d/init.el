@@ -6861,10 +6861,7 @@ Fetches missing channels/users first."
                  (buffer-list))))
       (if buf
           (im-toggle-side-buffer-with-name buf)
-        (pcase (im-completing-read "Which agent?" '("claude" "cursor" "opencode"))
-          ("claude" (agent-shell-anthropic-start-claude-code))
-          ("cursor" (agent-shell-cursor-start-agent))
-          ("opencode" (agent-shell-opencode-start-agent))))))))
+        (agent-shell-new-shell))))))
 
 (defvar im-agent-shell-notif--subscriptions nil
   "Alist mapping shell buffers to their subscription tokens.")
