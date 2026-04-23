@@ -913,6 +913,39 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
             :description "Regexp to search inside the project."))
    :category "project")
 
+  (gptel-make-tool
+   :name "run_shell_command"
+   :function (lambda (callback command)
+               (message "gptel :: run_shell_command(%s)" command)
+               (let* ((default-directory (im-current-project-root))
+                      (process-connection-type nil)
+                      (buf (generate-new-buffer " *gptel-shell*"))
+                      (proc (start-process-shell-command
+                             "gptel-shell" buf command)))
+                 (process-send-eof proc)
+                 (let ((timer (run-at-time 60 nil
+                                           (lambda ()
+                                             (when (process-live-p proc)
+                                               (kill-process proc))))))
+                   (set-process-sentinel
+                    proc
+                    (lambda (process _event)
+                      (when (memq (process-status process) '(exit signal))
+                        (cancel-timer timer)
+                        (let ((output (with-current-buffer (process-buffer process)
+                                        (buffer-string)))
+                              (exit-code (process-exit-status process)))
+                          (kill-buffer (process-buffer process))
+                          (funcall callback
+                                   (format "Exit code: %d\n%s" exit-code output)))))))))
+   :async t
+   :confirm t
+   :description "Run a shell command and return its output (stdout and stderr combined). The command is run via the system shell and the default directory is the root of the current project. The command has no stdin (EOF immediately) and is killed after 60 seconds if still running."
+   :args '((:name "command"
+            :type string
+            :description "The shell command to run."))
+   :category "shell")
+
   ;; (gptel-make-tool
   ;;  :name "ast_grep_project"
   ;;  :function (lambda (callback pattern lang)
@@ -1329,7 +1362,7 @@ marked \"done\", the list is automatically cleared."
   (gptel-make-preset 'coding-agent
     :system im-ai-programming-agent-prompt
     :confirm-tool-calls nil
-    :tools '("web" "files" "files_mutative" "project")
+    :tools '("web" "files" "files_mutative" "project" "meta" "shell")
     :use-tools t)
 
   ;; Useful for making edits in single buffer. Just give the buffer
@@ -1344,7 +1377,7 @@ marked \"done\", the list is automatically cleared."
     :system (concat im-ai-programming-agent-prompt
                     "\nIf you are unsure about a variable or a functions usage, look it up before using.\n*IMPORTANT*: Prefer existing tool calls to running arbitrary elisp.")
     :confirm-tool-calls nil
-    :tools '("web" "files" "files_mutative" "project" "elisp" "project")
+    :tools '("web" "files" "files_mutative" "project" "elisp" "meta")
     :use-tools t))
 
 ;;;; Footer
