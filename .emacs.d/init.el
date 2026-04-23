@@ -652,7 +652,7 @@ Just a simple wrapper around `prettify-symbols-mode`"
   :hook (after-init . global-whitespace-mode)
   :config
   (setq whitespace-style '(face empty tabs trailing))
-  (setq whitespace-global-modes '(not org-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode eat-mode agent-shell-mode)))
+  (setq whitespace-global-modes '(not org-mode md-ts-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode eat-mode agent-shell-mode)))
 
 (defun im-whitespace-mode-toggle ()
   "Toggle between more and less agressive whitespace modes.
@@ -3024,6 +3024,34 @@ Version: 2023-06-28
 
 (with-eval-after-load 'outline
   (diminish 'outline-minor-mode))
+
+(defun im-outline-narrow-to-subtree ()
+  "Narrow buffer to the current outline subtree."
+  (interactive)
+  (let ((beg) (end))
+    (save-excursion
+      ;; Move to the heading if we're not already on one
+      (unless (outline-on-heading-p t)
+        (outline-previous-heading))
+      (setq beg (point))
+      ;; Find the end of the subtree
+      (outline-end-of-subtree)
+      (setq end (point)))
+    (narrow-to-region beg end)))
+
+(defun im-outline-end-of-subtree ()
+  "Move to the end of the current subtree."
+  (outline-back-to-heading)
+  (let ((level (funcall outline-level))
+        (found nil))
+    (forward-line 1)
+    (while (and (not (eobp)) (not found))
+      (if (and (outline-on-heading-p t)
+               (<= (funcall outline-level) level))
+          (setq found t)
+        (forward-line 1)))
+    (unless found
+      (goto-char (point-max)))))
 
 ;;;;; debugger-mode
 
@@ -6664,7 +6692,7 @@ Fetches missing channels/users first."
    "M-r" #'separedit
    "M-i" #'separedit)
   :config
-  (setq separedit-default-mode 'markdown-mode)
+  (setq separedit-default-mode 'md-ts-mode)
   (setq separedit-continue-fill-column t)
   (advice-add
    'separedit--select-mode
@@ -8608,28 +8636,17 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
 
 ;;;;; markdown
 
-(use-package markdown-mode
-  :mode
-  (("README\\.md\\'" . gfm-mode)
-   ("\\.md\\'" . gfm-mode)
-   ("\\.markdown\\'" . gfm-mode)
-   ("\\.txt\\'" . gfm-mode)
-   ("qutebrowser-editor-" . gfm-mode))
+(use-package md-ts-mode
+  :straight (:host github :repo "dnouri/md-ts-mode")
   :general
-  (:keymaps 'markdown-mode-map :states 'normal
-   "<RET>" #'markdown-follow-thing-at-point
-   "TAB" #'markdown-cycle
-   "]]" #'markdown-outline-next
-   "[[" #'markdown-outline-previous)
-  (im-leader :keymaps 'markdown-mode-map
-    "oi" #'markdown-toggle-inline-images)
+  (:states 'normal :keymaps 'md-ts-mode-map
+   "TAB" #'outline-cycle
+   "<backtab>" #'outline-cycle-buffer)
   :config
-  (setq markdown-command "multimarkdown")
-  (setq markdown-fontify-code-blocks-natively t)
-  (setq markdown-display-remote-images t))
+  (md-ts-mode-enable-global))
 
 (use-package edit-indirect
-  :after markdown-mode)
+  :after md-ts-mode)
 
 ;;;;; haskell
 
@@ -11680,7 +11697,7 @@ more than one header of a single org buffer."
                        (java-ts-mode . ".java")
                        (emacs-lisp-mode . ".el")
                        (org-mode . ".org")
-                       (markdown-mode . ".md")
+                       (md-ts-mode . ".md")
                        (go-ts-mode . ".go")
                        (bash-ts-mode . ".sh")))
          (mode-symbol (intern mode))
@@ -12429,17 +12446,10 @@ list them as seperate entries."
   (cond
    ((use-region-p) (narrow-to-region (region-beginning) (region-end)))
    ((eq major-mode 'org-mode) (org-narrow-to-subtree))
-   ((eq major-mode 'markdown-mode) (markdown-narrow-to-subtree))
    ((derived-mode-p 'diff-mode) (diff-restrict-view))
-   ((eq major-mode 'emacs-lisp-mode)
-    (cond
-     ((which-function) (narrow-to-defun))
-     (t (outli-toggle-narrow-to-subtree))))
-   ((s-contains? "-ts-" (symbol-name major-mode))
-    (when-let* ((def (treesit-defun-at-point)))
-      (narrow-to-region (treesit-node-start def)
-                        (treesit-node-end def))))
-   (outli-mode (outli-toggle-narrow-to-subtree))))
+   ((and (derived-mode-p 'prog-mode) (which-function)) (narrow-to-defun))
+   (outli-mode (outli-toggle-narrow-to-subtree))
+   (outline-minor-mode (im-outline-narrow-to-subtree))))
 
 (defun im-narrow-indirect-dwim ()
   "Smart indirect narrowing.
@@ -13266,7 +13276,7 @@ Throw error otherwise."
 ;; I have a simple shopping list that I sync with my phone. This is a
 ;; simple mode for easier editing on that file.
 
-(define-derived-mode alisveris-mode markdown-mode "AlisverisMode"
+(define-derived-mode alisveris-mode md-ts-mode "AlisverisMode"
   "Mode for my shopping list."
   (setq-local header-line-format (substitute-command-keys "Bindings :: \\[im-alisveris-add-to-market] → Market")))
 
