@@ -559,7 +559,7 @@ buffer."
      (when (org-at-heading-p)
        (org-open-line 1)))
 
-    (when-let ((bounds (im-ai--gptel-recompute-bounds)))
+    (when-let* ((bounds (im-ai--gptel-recompute-bounds)))
       (beginning-of-buffer)
       (org-set-property "GPTEL_BOUNDS" bounds)
 
@@ -839,7 +839,7 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
    :function
    (lambda (buffer old_string new_string)
      (message "gptel :: edit_buffer(%s)" buffer)
-     (if-let ((buf (get-buffer buffer)))
+     (if-let* ((buf (get-buffer buffer)))
          (progn (im-gptel--edit-tool buf old_string new_string)
                 (with-current-buffer buf (save-buffer)))
        "Buffer not found"))

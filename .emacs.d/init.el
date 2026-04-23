@@ -182,14 +182,6 @@ in my dotfiles repository.")
 ;; 'fn-name) to restore the original function.
 (use-package memoize)
 
-;; Web server stuff.  `elnode-make-webserver' is very useful for
-;; starting a webserver in given directory.  Use `elnode-server-list'
-;; to list active webservers.
-(use-package elnode
-  :defer t
-  :custom
-  (elnode-error-log-to-messages nil))
-
 ;; JS-like async/await. Simply return a promise from a function with
 ;;
 ;; #+begin_src elisp
@@ -2752,7 +2744,7 @@ I generally bind this to a key while using by
                    (pos (org-find-exact-headline-in-buffer (match-string 2 path) buf)))
          (set-marker (make-marker) pos buf)))
       ("fuzzy"
-       (when-let ((pos (org-find-exact-headline-in-buffer path (current-buffer))))
+       (when-let* ((pos (org-find-exact-headline-in-buffer path (current-buffer))))
          (set-marker (make-marker) pos (current-buffer))))
       ("id"
        (when-let* ((loc (org-id-find path))
@@ -2921,7 +2913,7 @@ Version: 2023-06-28
     (let ((line (substring-no-properties (thing-at-point 'line)))
           (timestamp nil)
           (text nil))
-      (when-let (match (s-match "^- \\(\\[[ X-]] \\)?\\(\\[.*?]\\) \\(.*\\)" line))
+      (when-let* ((match (s-match "^- \\(\\[[ X-]] \\)?\\(\\[.*?]\\) \\(.*\\)" line)))
         (setq timestamp (nth 2 match))
         (setq text (nth 3 match))
         (let* ((buffer (current-buffer))
@@ -4579,13 +4571,7 @@ empty string."
   (diff-hl-disable-on-remote t)
   ;; Performance optiomization for diffs.
   (vc-git-diff-switches '("--histogram"))
-  ;; Async update breaks my emacs for some reason. It's not on by
-  ;; default but wanted to keep it here to note this. This happens
-  ;; probably due to make-thread calls. Possibly only happens on OSX.
-  ;; UPDATE: After updating Emacs to 29.4, the crashing problem
-  ;; disappeared but setting it to t makes diff-hl even more slow.
   (diff-hl-update-async nil)
-  (diff-hl-flydiff-delay 0.5)
   (diff-hl-show-staged-changes nil)
   (diff-hl-draw-borders nil)
   :general
@@ -6778,6 +6764,7 @@ Fetches missing channels/users first."
   (setq gptel-track-media t)
   (setq gptel-prompt-prefix-alist '((org-mode . "-----\n[ME]: ")))
   (setq gptel-response-prefix-alist '((org-mode . "-----\n[AI]: ")))
+  (setq gptel-expert-commands t)
   ;; As usual, my key is in netrc file.
   (gptel-make-anthropic "Claude"
     :stream t
@@ -6835,6 +6822,7 @@ Fetches missing channels/users first."
   :custom
   (agent-shell-show-welcome-message nil)
   (agent-shell-highlight-blocks t)
+  (agent-shell-header-style 'text)
   :bind (:map agent-shell-mode-map
          ("RET" . newline)
          ("C-c C-c" . shell-maker-submit)
@@ -7654,9 +7642,9 @@ mails."
 (use-package easysession
   :straight (:host github :repo "jamescherti/easysession.el")
   :demand t
-  :custom
-  (easysession-mode-line-misc-info t)
-  (easysession-mode-line-misc-info-prefix " S:["))
+  :config
+  (setq easysession-mode-line-misc-info t)
+  (setq easysession-mode-line-misc-info-prefix " S:["))
 
 ;;;;; im-git -- my git workflow, magit alternative
 
@@ -11336,7 +11324,7 @@ If it does not exists, create it."
                       (--filter (= (plist-get it :level) 2))
                       (--map (plist-get it :clock))
                       (-sum)
-                      (org-minutes-to-clocksum-string)))
+                      (org-duration-from-minutes)))
          (routines (--filter (s-equals? (plist-get it :parent) "Routines") items))
          (work (--filter (-contains? (plist-get it :tags) "work") items))
          (others (--filter (not (or
@@ -11559,7 +11547,7 @@ schedules them to today's date."
 
 (defun im-display-buffer-in-side-window (buffer &optional width)
   "Just like `display-buffer-in-side-window` but only takes a BUFFER and rest of the parameters are for my taste."
-  (when-let ((existing-window (window-with-parameter 'window-side 'right)))
+  (when-let* ((existing-window (window-with-parameter 'window-side 'right)))
     (delete-window existing-window))
   (set-window-dedicated-p
    ;; ^ Setting this to nil so that `pop-to-buffer-same-window' calls
