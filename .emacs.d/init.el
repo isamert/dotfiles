@@ -6868,13 +6868,20 @@ Fetches missing channels/users first."
     (agent-shell-help-menu))
    (t
     (let* ((dir (im-current-project-root))
-           (buf (seq-find
-                 (lambda (b)
-                   (when-let* ((f (with-current-buffer b default-directory)))
-                     (and (string-prefix-p dir (file-name-directory (expand-file-name f)))
-                          (string-match-p (regexp-quote "Agent @")
-                                          (buffer-name b)))))
-                 (buffer-list))))
+           (bufs (seq-filter
+                  (lambda (b)
+                    (when-let* ((f (with-current-buffer b default-directory)))
+                      (and (string-prefix-p dir (file-name-directory (expand-file-name f)))
+                           (string-match-p (regexp-quote "Agent @")
+                                           (buffer-name b)))))
+                  (buffer-list)))
+           (buf (cond
+                 ((null bufs) nil)
+                 ((= (length bufs) 1) (car bufs))
+                 (t (get-buffer
+                     (completing-read "Select agent buffer: "
+                                      (mapcar #'buffer-name bufs)
+                                      nil t))))))
       (if buf
           (im-toggle-side-buffer-with-name buf)
         (agent-shell-new-shell))))))
