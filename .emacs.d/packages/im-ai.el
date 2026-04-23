@@ -705,11 +705,12 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
 
   (gptel-make-tool
    :name "edit_file"
+   :category "files_mutative"
    :function
    (lambda (file old_string new_string)
      (message "gptel :: edit_file(%s)" file)
      (im-gptel--edit-tool (expand-file-name file) old_string new_string))
-   :description "Edit a file by replacing exactly one occurrence of OLD_STRING with NEW_STRING in FILE. Errors if OLD_STRING is empty, not found, or found more than once."
+   :description "Edit a file by replacing exactly one occurrence of OLD_STRING with NEW_STRING in FILE. Errors if OLD_STRING is empty, not found, or found more than once. Use this tool if you want to edit/patch/change files."
    :args (list '(:name "file"
                  :type string
                  :description "Path to the file to edit (absolute or relative).")
