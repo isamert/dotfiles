@@ -8641,7 +8641,7 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
        (c-mode . c-ts-mode)
        (bash-mode . bash-ts-mode)))))
 
-;;;;; markdown
+;;;;; markdown (md-ts-mode)
 
 (use-package md-ts-mode
   :straight (:host github :repo "dnouri/md-ts-mode")
@@ -8650,7 +8650,8 @@ Only for built-in modes.  Others are registered through `use-package's :mode key
    "TAB" #'outline-cycle
    "<backtab>" #'outline-cycle-buffer)
   :config
-  (md-ts-mode-enable-global))
+  (md-ts-mode-enable-global)
+  (add-hook 'md-ts-mode-hook #'outline-minor-mode))
 
 (use-package edit-indirect
   :after md-ts-mode)
