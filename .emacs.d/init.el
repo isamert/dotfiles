@@ -4073,7 +4073,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
    (s-match "\\([0-9]+:[0-9]+-[0-9]+:[0-9]+\\) \\(.*\\)" it)
    (format
     "** TODO [#A] %s :work:\nSCHEDULED: <%s %s>\n%s"
-    (if-let ((link (ignore-errors (im-diary-entry-meeting-link))))
+    (if-let* ((link (ignore-errors (im-diary-entry-meeting-link))))
         (format "[[%s][%s]]" link (nth 2 it))
       (nth 2 it))
     (im-today)
@@ -5794,8 +5794,8 @@ SORT should be nil to disable sorting."
 
 (defun im-lsp-java-enable-lombok-support ()
   (interactive)
-  (if-let ((lombok (im-lsp-java-find-lombok-jar))
-           (lombok-arg (concat "-javaagent:" (expand-file-name lombok))))
+  (if-let* ((lombok (im-lsp-java-find-lombok-jar))
+            (lombok-arg (concat "-javaagent:" (expand-file-name lombok))))
       (progn
         (with-eval-after-load 'lsp-mode
           (add-to-list 'lsp-java-vmargs lombok-arg))

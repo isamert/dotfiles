@@ -185,7 +185,7 @@ Calls all registered callbacks and caches the message."
             (delete-region line-start line-end)
             (goto-char (point-min))
             (unless (string-empty-p (string-trim line))
-              (when-let ((msg (im-ntfy--parse-json-line line)))
+              (when-let* ((msg (im-ntfy--parse-json-line line)))
                 (im-ntfy--handle-message topic msg)))))))))
 
 (defun im-ntfy--process-sentinel (proc event)
@@ -193,7 +193,7 @@ Calls all registered callbacks and caches the message."
   (let ((topic (process-get proc 'im-ntfy-topic)))
     (message "im-ntfy: subscription to '%s' ended: %s" topic (string-trim event))
     ;; Clean up dead process and buffer
-    (when-let ((buf (process-buffer proc)))
+    (when-let* ((buf (process-buffer proc)))
       (when (buffer-live-p buf)
         (kill-buffer buf)))
     (let ((sub (gethash topic im-ntfy--subscriptions)))
@@ -209,7 +209,7 @@ Calls all registered callbacks and caches the message."
        (t
         (when sub
           ;; Cancel any pending reconnect timer
-          (when-let ((timer (plist-get sub :reconnect-timer)))
+          (when-let* ((timer (plist-get sub :reconnect-timer)))
             (cancel-timer timer))
           (remhash topic im-ntfy--subscriptions)))))))
 
@@ -222,7 +222,7 @@ Calls all registered callbacks and caches the message."
 (defun im-ntfy--schedule-reconnect (topic sub)
   "Schedule a reconnection attempt for TOPIC with subscription SUB."
   ;; Cancel any existing timer
-  (when-let ((timer (plist-get sub :reconnect-timer)))
+  (when-let* ((timer (plist-get sub :reconnect-timer)))
     (cancel-timer timer))
   (let* ((count (1+ (or (plist-get sub :reconnect-count) 0)))
          (max-attempts im-ntfy-reconnect-attempts)
@@ -252,7 +252,7 @@ Calls all registered callbacks and caches the message."
       (setq sub current))
     (message "im-ntfy: attempting to reconnect to '%s'" topic)
     ;; Cancel any existing timer
-    (when-let ((timer (plist-get sub :reconnect-timer)))
+    (when-let* ((timer (plist-get sub :reconnect-timer)))
       (cancel-timer timer)
       (setq sub (plist-put sub :reconnect-timer nil)))
     ;; Try to establish a new connection
@@ -307,7 +307,7 @@ Returns the subscription process (or nil if process dead)."
      ;; Existing subscription but dead process: add callback, ensure reconnect scheduled
      (existing
       ;; Cancel any pending reconnect timer (we will maybe reschedule)
-      (when-let ((timer (plist-get existing :reconnect-timer)))
+      (when-let* ((timer (plist-get existing :reconnect-timer)))
         (cancel-timer timer)
         (plist-put existing :reconnect-timer nil))
       ;; Add callback if not already present
@@ -349,9 +349,9 @@ Returns the subscription process (or nil if process dead)."
   "Unsubscribe from TOPIC.
 If CALLBACK is provided, only remove that callback.
 If no callbacks remain, close the connection."
-  (when-let ((sub (gethash topic im-ntfy--subscriptions)))
+  (when-let* ((sub (gethash topic im-ntfy--subscriptions)))
     ;; Cancel any pending reconnect timer
-    (when-let ((timer (plist-get sub :reconnect-timer)))
+    (when-let* ((timer (plist-get sub :reconnect-timer)))
       (cancel-timer timer)
       (setq sub (plist-put sub :reconnect-timer nil)))
     (if callback
@@ -360,12 +360,12 @@ If no callbacks remain, close the connection."
           (if callbacks
               (plist-put sub :callbacks callbacks)
             ;; No callbacks left, kill the connection
-            (when-let ((proc (plist-get sub :process)))
+            (when-let* ((proc (plist-get sub :process)))
               (when (process-live-p proc)
                 (delete-process proc)))
             (remhash topic im-ntfy--subscriptions)))
       ;; Remove all callbacks and close
-      (when-let ((proc (plist-get sub :process)))
+      (when-let* ((proc (plist-get sub :process)))
         (when (process-live-p proc)
           (delete-process proc)))
       (remhash topic im-ntfy--subscriptions))))
@@ -437,7 +437,7 @@ Returns a list of message alists."
           (let ((line (buffer-substring-no-properties
                        (line-beginning-position) (line-end-position))))
             (unless (string-empty-p (string-trim line))
-              (when-let ((msg (im-ntfy--parse-json-line line)))
+              (when-let* ((msg (im-ntfy--parse-json-line line)))
                 (when (equal (alist-get 'event msg) "message")
                   (push msg messages)))))
           (forward-line 1))

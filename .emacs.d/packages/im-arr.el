@@ -253,7 +253,7 @@ Return selected root folder path."
 (defun im-arr--ensure-added-id (service item-type result)
   "Ensure RESULT has an ID after adding ITEM-TYPE in SERVICE."
   (unless (alist-get 'id result)
-    (if-let ((error-msg (alist-get 'message result)))
+    (if-let* ((error-msg (alist-get 'message result)))
         (user-error "%s failed to add %s: %s"
                     (im-arr--service-display-name service)
                     item-type

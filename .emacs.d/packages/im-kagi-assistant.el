@@ -359,7 +359,7 @@ Set this to your Kagi session cookie."
               ("messages.json"
                (im-kagi-assistant--update-thread-info data type))
               ("new_message.json"
-               (when-let ((result (im-kagi-assistant--update-thread-info data type)))
+               (when-let* ((result (im-kagi-assistant--update-thread-info data type)))
                  (setq final-result result)))
               ("tokens.json"
                (let ((extracted (im-kagi-assistant--extract-md-and-sources data)))
