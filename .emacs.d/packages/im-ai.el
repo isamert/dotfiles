@@ -1330,6 +1330,18 @@ marked \"done\", the list is automatically cleared."
 
 ;;;;; Presets
 
+(defun im-ai-coding-agent-prompt (&rest _)
+  (let* ((default-directory (im-current-project-root))
+         (agents-md (when (file-exists-p "AGENTS.md")
+                      (with-temp-buffer
+                        (insert-file-contents "AGENTS.md")
+                        (buffer-string)))))
+    (concat im-ai-programming-agent-prompt
+            (if agents-md
+                (concat "\n\n<project_specific_instructions>\n" agents-md
+                        "\n</project_specific_instructions>")
+              ""))))
+
 (with-eval-after-load 'gptel
   (gptel-make-preset 'default
     :system "You are a large language model living in Emacs and a helpful assistant. Respond concisely."
@@ -1348,7 +1360,7 @@ marked \"done\", the list is automatically cleared."
     :use-tools t)
 
   (gptel-make-preset 'coding-helper-agent
-    :system im-ai-programming-agent-prompt
+    :system #'im-ai-coding-agent-prompt
     :confirm-tool-calls nil
     :tools '("web")
     :use-tools t)
@@ -1360,7 +1372,7 @@ marked \"done\", the list is automatically cleared."
     :use-tools t)
 
   (gptel-make-preset 'coding-agent
-    :system im-ai-programming-agent-prompt
+    :system #'im-ai-coding-agent-prompt
     :confirm-tool-calls nil
     :tools '("web" "files" "files_mutative" "project" "meta" "shell")
     :use-tools t)
