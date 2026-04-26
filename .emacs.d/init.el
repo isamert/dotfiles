@@ -8050,7 +8050,7 @@ the commit buffer."
 (use-package puni
   :straight (:host github :repo "AmaiKinono/puni")
   :general
-  (:keymaps 'prog-mode-map :states '(insert)
+  (:keymaps '(prog-mode-map inferior-emacs-lisp-mode-map) :states '(insert)
    "M-[" #'puni-barf-forward
    "M-]" #'puni-slurp-forward
    "M-d" #'puni-splice

@@ -1264,7 +1264,7 @@ Comments (%d):
 
 ;;;;;; todo_write
 
-(defvar-local todo-write-list '())
+(defvar-local im-ai-todo-write-list '())
 
 (defun im-ai-tool--todo-write (id content status)
   "Create or update a todo item.
@@ -1278,13 +1278,13 @@ marked \"done\", the list is automatically cleared."
   (cl-block nil
     (let* ((id-str (format "%s" id))
            (valid-statuses '("todo" "in_progress" "done"))
-           (todo-list todo-write-list))
+           (todo-list im-ai-todo-write-list))
       (unless (member status valid-statuses)
         (cl-return (format "Invalid status. Must be one of: %s" valid-statuses)))
-      (unless (boundp 'todo-write-list)
-        (make-local-variable 'todo-write-list)
-        (setq todo-write-list nil))
-      (let ((existing (assoc id-str todo-write-list)))
+      (unless (boundp 'im-ai-todo-write-list)
+        (make-local-variable 'im-ai-todo-write-list)
+        (setq im-ai-todo-write-list nil))
+      (let ((existing (assoc id-str im-ai-todo-write-list)))
         (if existing
             (progn
               (when content
@@ -1292,25 +1292,46 @@ marked \"done\", the list is automatically cleared."
               (setf (nth 2 existing) status))
           (unless content
             (cl-return "Content required for new todo item"))
-          (push (list id-str content status) todo-write-list)))
-      (setq todo-write-list
-            (sort todo-write-list
+          (push (list id-str content status) im-ai-todo-write-list)))
+      (setq im-ai-todo-write-list
+            (sort im-ai-todo-write-list
                   (lambda (a b)
                     (string< (car a) (car b)))))
-      (when (and todo-write-list
+      (when (and im-ai-todo-write-list
                  (cl-every (lambda (item)
                              (string= (nth 2 item) "done"))
-                           todo-write-list))
-        (setq todo-write-list nil))
-      (if todo-write-list
+                           im-ai-todo-write-list))
+        (setq im-ai-todo-write-list nil))
+      (if im-ai-todo-write-list
           (mapconcat (lambda (item)
                        (format "%s:%s:%s"
                                (car item)
                                (nth 2 item)
                                (nth 1 item)))
-                     todo-write-list
+                     im-ai-todo-write-list
                      "\n")
         "All todos completed! List cleared."))))
+
+(defun im-ai-todo-progress ()
+  "Return todo progress as \"completed/total\" string."
+  (format
+   "%d/%d"
+   (cl-count-if (lambda (i) (string= (nth 2 i) "done")) im-ai-todo-write-list)
+   (length im-ai-todo-write-list)))
+
+(defun im-ai-todo-format ()
+  "Return formatted todo list with checkboxes."
+  (mapconcat
+   (lambda (item)
+     (let ((status (nth 2 item))
+           (desc (nth 1 item))
+           (mark (pcase status
+                   ("done" "X")
+                   ("in_progress" "-")
+                   (_ " "))))
+       (format "- [%s] %s" mark desc)))
+   im-ai-todo-write-list
+   "\n"))
 
 (with-eval-after-load 'gptel
   (gptel-make-tool
