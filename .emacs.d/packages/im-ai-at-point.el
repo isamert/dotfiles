@@ -592,6 +592,7 @@ If TYPE is nil, return any im-ai overlay."
               (sys-prompt       (plist-get info :sys-prompt))
               (gptel-vars       (plist-get info :gptel-vars))
               (gptel-include-reasoning nil)
+              (gptel-tools             nil)
               (formatted     (im-ai-at-point--build-formatted-prompt info))
               (response-buffer
                (if agentic?
