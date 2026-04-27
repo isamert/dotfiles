@@ -330,15 +330,17 @@ This function is taken from `mm-decode.el' and modified."
   (kill-new x replace)
   x)
 
-(defun im-force-focus-emacs ()
-  "Focus Emacs frame if not focused already."
-  (unless (frame-focus-state)
+(defun im-force-focus-emacs (&optional force)
+  "Focus Emacs frame if not focused already.
+If FORCE is non-nil, then try to focus even if already focused."
+  (when (or force (not (frame-focus-state)))
     (im-when-on
      :darwin
-     (shell-command-to-string
-      "osascript -e 'tell application \"System Events\" to click UI element \"Emacs\" of list 1 of application process \"Dock\"'")
+      (start-process
+       "osascript" nil "osascript" "-e"
+       "tell application \"System Events\" to click UI element \"Emacs\" of list 1 of application process \"Dock\"")
      :linux
-     (user-error "Implement this: im-force-focus-emacs"))))
+     (message "Implement this: im-force-focus-emacs"))))
 
 (defun im-line-count-below-cursor ()
   "Return the number of lines displayed below the cursor in the current window."
@@ -610,7 +612,9 @@ Otherwise:
   (interactive)
   (if (and (equal (frame-parameter nil 'name) im-popup-frame-name)
            (= (length (window-list)) 1))
-      (delete-frame)
+      (progn
+        (delete-frame)
+        (im-force-focus-emacs 'force))
     (if (or
          (window-parameter (selected-window) 'window-side)
          (> (seq-length
