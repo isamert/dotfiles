@@ -1982,7 +1982,23 @@ abbr -a -- kctx-use 'kubectl config use-context'
 
 # * Project management
 
-alias cdproj='eval cd $(gitfind ~/Workspace/projects/ | fzf)'
+function cdp --description 'Switch to a project, fast'
+    set -l selected (gitfind ~/Workspace/projects/ | fzf --tiebreak=index --height=15 --reverse)
+    if test -n "$selected"
+        gitfind --record $selected
+        eval cd $selected
+    end
+end
+
+function fgp --description 'Pick a background job and bring to foreground'
+    jobs -q; or begin; echo "No jobs"; return 1; end
+
+    set -l job (jobs | fzf --reverse --height=10 --header="Foreground which job?")
+    or return
+
+    set -l jid (echo $job | cut -f2)
+    fg %$jid
+end
 #+end_src
 
 emacs-eat integration:
