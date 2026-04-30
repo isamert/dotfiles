@@ -1408,8 +1408,10 @@ If worktree already exists, simply switches to it."
           (unless (= 0 (shell-command
                         (concat (im-when-on
                                  :linux "cp -R --reflink=always"
-                                 :darwin "cp -Rc")
+                                 :darwin "/opt/homebrew/opt/coreutils/libexec/gnubin/cp -R --reflink=always")
+                                " "
                                 (expand-file-name src)
+                                " "
                                 (expand-file-name dst))
                         " *im-git-worktree: cp stdout*"
                         " *im-git-worktree: cp stderr*"))
