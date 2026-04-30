@@ -12570,8 +12570,12 @@ an indirect buffer."
                                    ((and (plist-get other :starting-soon)
                                          (plist-get it :in-progress)
                                          (plist-get it :well-past)) nil)
-                                   (t (< (plist-get it :until-start) (plist-get other :until-start)))))
-                          (-first-item))))
+                                   (t (< (plist-get it :until-start) (plist-get other :until-start)))))))
+                 (best (if (length= best 1)
+                           (car best)
+                         (im-completing-read
+                          "Which? " best
+                          :formatter (lambda (x) (plist-get x :heading))))))
             (cond
              (best
               (when (org-clock-is-active)
