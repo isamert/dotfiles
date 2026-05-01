@@ -366,7 +366,7 @@ hyper - i : emacsclient --eval "(im-globally (im-select-any-snippet))"
 hyper - o : emacsclient --eval "(im-globally (im-people))"
 hyper - g : emacsclient --eval "(im-globally (im-gitlab-select-project))"
 hyper - v : emacsclient --eval "(empv-toggle-video)"
-hyper - return : alacritty $HOME
+hyper - return : open -a Ghostty
 
 # Define a mode name shortcuts
 :: shortcuts @
@@ -736,51 +736,14 @@ defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 3
 #+end_src
 
 - [[https://github.com/dwarvesf/hidden][Hidden Bar]] → This lets you selectively hide some items so that only the things you want stay visible.
-** Alacritty
-#+begin_src toml :tangle ~/.config/alacritty.toml
-live_config_reload = false
-
-[colors]
-draw_bold_text_with_bright_colors = true
-
-[colors.bright]
-black = "#928374"
-blue = "#83a598"
-cyan = "#8ec07c"
-green = "#b8bb26"
-magenta = "#d3869b"
-red = "#fb4934"
-white = "#ebdbb2"
-yellow = "#fabd2f"
-
-[colors.normal]
-black = "#282828"
-blue = "#458588"
-cyan = "#689d6a"
-green = "#98971a"
-magenta = "#b16286"
-red = "#cc241d"
-white = "#a89984"
-yellow = "#d79921"
-
-[colors.primary]
-background = "#282828"
-foreground = "#ebdbb2"
-
-[font]
-size = 14
-
-[font.normal]
-family = "FiraCode Nerd Font"
-
-[shell]
-program = "/opt/homebrew/bin/tmux"
-
-[window]
-dynamic_title = true
-option_as_alt = "Both"
-decorations = "Buttonless"
-# opacity = 0.8
+** Ghostty
+#+begin_src conf :tangle ~/.config/ghostty/config
+# window-decoration = false
+command = /opt/homebrew/bin/tmux
+macos-titlebar-style = hidden
+macos-option-as-alt = left
+background-opacity = 1.00
+confirm-close-surface = false
 #+end_src
 ** Toggle GlobalProtect VPN AppleScript
 To set up the script as an application, follow these steps:
@@ -2178,11 +2141,14 @@ set -g mouse on
 set -g base-index 1 # Window indexes starts from 1
 setw -g pane-base-index 1 # Pane indexes starts from 1
 set -s escape-time 0 # Remove the delay after hitting <ESC>
-set-option -g set-titles off
-set-option -g allow-rename off
 set -g set-titles on
 # Do `set destroy-unattached off` to disable this for a particular session
 set-option -g destroy-unattached on
+
+set -g set-titles on
+set -g extended-keys on
+set -g extended-keys-format csi-u
+set -g focus-events on
 
 # * Bindings
 
@@ -2234,21 +2200,21 @@ bind-key Space display-menu -T "Command Palette" \
     "" \
     "Reload Config"       R "source-file ~/.tmux.conf; display 'Reloaded'"
 
-# * Colors - Solstice Soft Dark
+# * Theming (uses terminal colors)
 
-set -g status-style "bg=#241f26,fg=#e7d9e6"
+set -g status-style "bg=terminal,fg=terminal"
 
 # Left side: session name
 set -g status-left-length 30
-set -g status-left "#[fg=#1f1a21,bg=#f08cff,bold] #S #[fg=#f08cff,bg=#241f26,nobold]"
+set -g status-left "#[fg=colour0,bg=colour5,bold] #S #[fg=colour5,bg=terminal,nobold]"
 
 # Right side: date and time
 set -g status-right-length 80
-set -g status-right "#[fg=#3a313f]#[fg=#e7d9e6,bg=#3a313f] #{?#{==:#{destroy-unattached},on},#[fg=#ff6b6b]⏻,#[fg=#50fa7b]⏻} #[fg=#3a313f]│#[fg=#e7d9e6] %a %b %d #[fg=#f08cff]#[fg=#1f1a21,bg=#f08cff,bold] %H:%M "
+set -g status-right "#[fg=colour8]#[fg=colour7,bg=colour8] #{?#{==:#{destroy-unattached},on},#[fg=colour1]⏻,#[fg=colour2]⏻} #[fg=colour8]│#[fg=colour7] %a %b %d #[fg=colour5]#[fg=colour0,bg=colour5,bold] %H:%M "
 
 # Window tabs
-set -g window-status-format "#[fg=#bfaebd] #I:#W "
-set -g window-status-current-format "#[fg=#f08cff,bold] #I:#W "
+set -g window-status-format "#[fg=colour7] #I:#W "
+set -g window-status-current-format "#[fg=colour5,bold] #I:#W "
 
 # Remove window status separator
 set -g window-status-separator ""
@@ -2257,11 +2223,11 @@ set -g window-status-separator ""
 set -g status-justify left
 
 # Pane borders
-set -g pane-border-style "fg=#463b4a"
-set -g pane-active-border-style "fg=#f08cff"
+set -g pane-border-style "fg=colour8"
+set -g pane-active-border-style "fg=colour5"
 
 # Message styling
-set -g message-style "bg=#241f26,fg=#e7d9e6"
+set -g message-style "bg=terminal,fg=terminal"
 #+end_src
 * Utilities
 ** git
