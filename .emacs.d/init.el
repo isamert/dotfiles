@@ -10835,48 +10835,62 @@ I track some Jira tickets (or one) using jira dblock, which is like:
 
 This function goes through all Jira blocks marked with :target, updates
 them, and checks if they meet their target.  If they do, it adds the
-block’s heading (its parent) to \\='inbox-org."
+block's heading (its parent) to \\='inbox-org."
   (interactive)
-  (when (not (im-check-internet-connection work-vpn-check-host)) ; only run if connected to vpn
+  (when (not (im-check-internet-connection work-vpn-check-host))
     (user-error "Not connected to the VPN"))
   (let ((start (float-time)))
     (with-current-buffer (find-file-noselect trendyol-org)
-      (org-map-dblocks
-       (lambda ()
-         (when-let* ((target (let ((start (progn
-                                            (beginning-of-line)
-                                            (re-search-forward "jira.*:target[ \t]+\\([0-9]+\\)" (line-end-position) t))))
-                               (when start
-                                 (string-to-number (match-string 1)))))
-                     (not-done? (not (equal "DONE" (org-get-todo-state))))
-                     (source-id (org-id-get-create))
-                     (source-header (org-get-heading t t t t)))
-           (message "jira :: Processing %s..." source-header)
-           (org-dblock-update) ; puts us at the beginning of the block
-           (let ((percent "")
-                 (end (save-excursion (re-search-forward org-dblock-end-re nil t))))
-             (save-excursion
-               (when (re-search-forward "- Progress :: .*?([ \t]*\\([0-9]+\\)%[ \t]*)"
-                                        end t)
-                 (setq percent (string-to-number (match-string 1)))))
-             (when (and percent target (>= percent target))
-               (with-current-buffer (find-file-noselect inbox-org)
-                 ;; TODO: need to short circuit here
-                 (unless (-any
-                          #'identity
-                          (org-map-entries
-                           (lambda ()
-                             (s-contains? (format "[[id:%s]" source-id)
-                                          (or (org-get-heading t t t t) "")))
-                           "LEVEL=1"))
-                   (let ((link (format "[[id:%s][%s]]" source-id source-header)))
-                     (goto-char (point-min))
-                     (re-search-forward org-heading-regexp nil t)
-                     (org-insert-heading-respect-content)
-                     (insert (format "TODO [#A] Target achieved: %s \nDEADLINE: " link))
-                     (org-insert-timestamp (current-time))
-                     (save-buffer)))))))))
-      (save-buffer))
+      ;; Collect positions of all relevant dblocks first
+      (let ((block-positions '()))
+        (org-map-dblocks
+         (lambda ()
+           (when (save-excursion
+                   (beginning-of-line)
+                   (re-search-forward "jira.*:target[ \t]+\\([0-9]+\\)"
+                                      (line-end-position) t))
+             (push (point-marker) block-positions))))
+        ;; Process in reverse order (bottom to top) so updates don't
+        ;; shift positions of not-yet-processed blocks above
+        (dolist (marker block-positions)
+          (goto-char marker)
+          (when-let* ((target (save-excursion
+                                (beginning-of-line)
+                                (when (re-search-forward
+                                       "jira.*:target[ \t]+\\([0-9]+\\)"
+                                       (line-end-position) t)
+                                  (string-to-number (match-string 1)))))
+                      (not-done? (not (equal "DONE" (org-get-todo-state))))
+                      (source-id (org-id-get-create))
+                      (source-header (org-get-heading t t t t)))
+            (message "jira :: Processing %s..." source-header)
+            (org-dblock-update)
+            (let ((percent "")
+                  (end (save-excursion
+                         (re-search-forward org-dblock-end-re nil t))))
+              (save-excursion
+                (when (re-search-forward
+                       "- Progress :: .*?([ \t]*\\([0-9]+\\)%[ \t]*)"
+                       end t)
+                  (setq percent (string-to-number (match-string 1)))))
+              (when (and percent target (>= percent target))
+                (with-current-buffer (find-file-noselect inbox-org)
+                  (unless (-any
+                           #'identity
+                           (org-map-entries
+                            (lambda ()
+                              (s-contains? (format "[[id:%s]" source-id)
+                                           (or (org-get-heading t t t t) "")))
+                            "LEVEL=1"))
+                    (let ((link (format "[[id:%s][%s]]" source-id source-header)))
+                      (goto-char (point-min))
+                      (re-search-forward org-heading-regexp nil t)
+                      (org-insert-heading-respect-content)
+                      (insert (format "TODO [#A] Target achieved: %s \nDEADLINE: " link))
+                      (org-insert-timestamp (current-time))
+                      (save-buffer)))))))
+          (set-marker marker nil))))
+    (save-buffer)
     (message ">> Took %.2f seconds..." (- (float-time) start))))
 
 ;;;;; people.org - Contact management
