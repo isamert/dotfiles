@@ -214,6 +214,7 @@ be a function or a buffer object."
              (setq im-notif--notification-data notif-data)
              (insert-image image)
              (current-buffer))
+           :position 1 ;; helps with intermittent errors regarding to getting font size etc.
            :poshandler #'im-notif--poshandler
            :background-color nil
            :left-fringe 1
