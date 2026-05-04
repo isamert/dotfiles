@@ -4593,8 +4593,7 @@ empty string."
 (use-package diff-hl
   :straight (:host github :repo "dgutov/diff-hl")
   :hook
-  ((prog-mode . diff-hl-mode)
-   (diff-hl-mode . diff-hl-flydiff-mode))
+  ((prog-mode . diff-hl-mode))
   :custom
   (diff-hl-disable-on-remote t)
   ;; Performance optiomization for diffs.
@@ -4607,6 +4606,9 @@ empty string."
    (kbd "[g") #'diff-hl-previous-hunk
    (kbd "]g") #'diff-hl-next-hunk)
   :config
+  ;; https://github.com/doomemacs/doomemacs/issues/8554
+  (unless (eq system-type 'darwin)
+    (remove-hook 'diff-hl-mode-hook #'diff-hl-flydiff-mode))
   (define-advice diff-hl-previous-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))
   (define-advice diff-hl-next-hunk (:after (&rest _) reveal) (reveal-post-command) (recenter))
   (define-advice diff-hl-show-hunk-previous (:after (&rest _) reveal) (reveal-post-command) (recenter))
