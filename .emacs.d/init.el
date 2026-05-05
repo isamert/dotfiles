@@ -12791,13 +12791,14 @@ attribute for current buffers file or selected file."
   "me" #'im-peek-etimoloji
   "mE" #'im-peek-etymology
   "md" #'im-peek-doc
+  "mD" #'im-popup-doc
   "mc" #'im-peek-source)
 
 (general-def
   :states 'normal
   :keymaps '(prog-mode-map)
   "K" #'im-peek-doc
-  "M-RET" #'im-peek-jump)
+  "M-RET" #'im-popup-doc)
 
 (with-eval-after-load 'evil
   (setq evil-lookup-func #'im-peek-doc))
@@ -12891,13 +12892,17 @@ attribute for current buffers file or selected file."
         (goto-char pt)
         (hs-toggle-hiding)))))
 
+(defvar im-peek-use-popup nil
+  "Instead of showing peek in `quick-peek' overlay, show it in a popup frame.")
+
 ;; TODO support fn returning a string instead of a buffer. Create a
 ;; temp buffer when jump is called
-(defun im-peek (fn)
+(defun im-peek (fn &optional popup)
   "Display a nice little small window below current line.
 FN should take no args and return a buffer with the intended
 contents."
-  (let ((buffer (save-window-excursion (funcall fn))))
+  (let ((buffer (save-window-excursion (funcall fn)))
+        (popup? im-peek-use-popup))
     (setq im-peek--buffer buffer)
     ;; `run-at-time' function is useful for forcing the following code
     ;; to run in main event loop. This helps when `im-peek' is called
@@ -12909,14 +12914,16 @@ contents."
                         (with-current-buffer buffer
                           (font-lock-ensure)
                           (buffer-string)))))
-         ;; Center the current point if the remaining line count is low
-         (when (and
-                (< (im-line-count-below-cursor) (length (s-lines str)))
-                (< (im-line-count-below-cursor) (- (window-height) 10)))
-           (recenter 10))
-         (quick-peek-show str nil nil im-peek--line-count)
-         (im-unfold-if-folded (save-excursion (end-of-line) (1+ (point)))))
-       (im-peek-mode +1)))))
+         (if popup?
+             (im-peek-jump)
+           ;; Center the current point if the remaining line count is low
+           (when (and
+                  (< (im-line-count-below-cursor) (length (s-lines str)))
+                  (< (im-line-count-below-cursor) (- (window-height) 10)))
+             (recenter 10))
+           (quick-peek-show str nil nil im-peek--line-count)
+           (im-unfold-if-folded (save-excursion (end-of-line) (1+ (point))))
+           (im-peek-mode +1)))))))
 
 (defun im-peek-open? ()
   "Return t if >=1 peek window is open."
@@ -13005,6 +13012,12 @@ Use C-n C-p to switch between translation directions."
          (current-buffer)))))
     (eldoc-mode #'eldoc-doc-buffer))))
 
+(defun im-popup-doc ()
+  "Same as `im-peek-doc' but open in a popuup frame."
+  (interactive)
+  (let ((im-peek-use-popup t))
+    (im-peek-doc)))
+
 ;; TODO: Add lsp mode etc.
 (defun im-peek-source ()
   "Show source at point."
@@ -13064,9 +13077,9 @@ Use C-n C-p to switch between translation directions."
 ;;;;;; im-peek-ielm
 
 (general-def :states 'normal
-  "M-e" #'im-peek-ielm)
+  "M-e" #'im-popup-ielm)
 
-(defun im-peek-ielm ()
+(defun im-popup-ielm ()
   "Open IELM in another frame with the current buffer as the working buffer.
 This allows evaluating expressions in the context of the current buffer
 while viewing results in a separate frame."
