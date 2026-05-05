@@ -3841,6 +3841,13 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 (use-package im-holidays
   :straight nil)
 
+(use-package diary-lib
+  :straight (:type built-in)
+  :config
+  (setq diary-comment-start "{ ")
+  (setq diary-comment-end   " }")
+  (add-hook 'diary-mode-hook #'outli-mode))
+
 (use-package calendar
   :straight (:type built-in)
   ;; Enable including other diary entries using the #include "..." syntax
