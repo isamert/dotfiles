@@ -80,7 +80,7 @@ same tab.  Configurations are saved per tab."
     (message ">> Configuration saved as %s" cfg)))
 
 ;;;###autoload
-(defun im-tab-configuration-restore-current (&optional key sticky?)
+(defun im-tab-configuration-restore-current (&optional sticky?)
   "Save window configuration for current key."
   (interactive)
   (let* ((cb (current-buffer))
