@@ -1408,7 +1408,7 @@ If worktree already exists, simply switches to it."
           (unless (= 0 (shell-command
                         (concat (im-when-on
                                  :linux "cp -R --reflink=always"
-                                 :darwin "/opt/homebrew/opt/coreutils/libexec/gnubin/cp -R --reflink=always")
+                                 :darwin "/bin/cp -Rc")
                                 " "
                                 (expand-file-name src)
                                 " "
