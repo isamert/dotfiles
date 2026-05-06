@@ -460,29 +460,31 @@ Returns a list of message alists."
 
 (defun im-ntfy--format-message (msg)
   "Format MSG for display in the topic buffer."
-  (let* ((time (alist-get 'time msg))
-         (title (alist-get 'title msg))
-         (message (alist-get 'message msg))
-         (priority (alist-get 'priority msg))
-         (tags (alist-get 'tags msg))
-         (time-str (format-time-string "%Y-%m-%d %H:%M:%S" (seconds-to-time time)))
-         (priority-str (pcase priority
-                         (5 "🔴")
-                         (4 "🟠")
-                         (3 "")
-                         (2 "🟢")
-                         (1 "⚪")
-                         (_ "")))
-         (tags-str (if tags
-                       (concat "[" (mapconcat #'identity (append tags nil) ", ") "] ")
-                     "")))
-    (concat
-     "# " (concat time-str " ") priority-str
-     (when (not (string-empty-p priority-str)) " ")
-     tags-str
-     (when title (concat "→ " title ": "))
-     "\n"
-     message)))
+  (let-alist msg
+    (let* ((time-str (format-time-string "%Y-%m-%d %H:%M:%S" (seconds-to-time .time)))
+           (priority-str (pcase .priority
+                           (5 "🔴")
+                           (4 "🟠")
+                           (3 "")
+                           (2 "🟢")
+                           (1 "⚪")
+                           (_ "")))
+           (tags-str (if .tags
+                         (concat "[" (mapconcat #'identity (append .tags nil) ", ") "] ")
+                       "")))
+      (concat
+       "# " (concat time-str " ") priority-str
+       (when (not (string-empty-p priority-str)) " ")
+       tags-str
+       (when .title (concat "→ " .title ": "))
+       "\n"
+       .message
+       (when .attachment
+         (format
+          "\n--\n[%s - %s, %s](%s)"
+          .attachment.name
+          .attachment.type
+          (format "%.2f" (/ .attachment.size 1048576.0)) .attachment.url))))))
 
 (defun im-ntfy--insert-messages (messages)
   "Insert MESSAGES into current buffer."
