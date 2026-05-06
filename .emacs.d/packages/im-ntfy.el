@@ -197,21 +197,21 @@ Calls all registered callbacks and caches the message."
       (when (buffer-live-p buf)
         (kill-buffer buf)))
     (let ((sub (gethash topic im-ntfy--subscriptions)))
-      (cond
-       ;; Subscription still exists and we have callbacks => try to reconnect
-       ((and sub (plist-get sub :callbacks))
-        ;; Remove dead process and buffer from subscription
-        (setq sub (plist-put sub :process nil))
-        (setq sub (plist-put sub :buffer nil))
-        (puthash topic sub im-ntfy--subscriptions)
-        (im-ntfy--schedule-reconnect topic sub))
-       ;; Otherwise, remove from subscriptions
-       (t
+      (if (and sub
+               (plist-get sub :callbacks)
+               ;; if killed, do nothing
+               (not (string-prefix-p "killed" event)))
+          ;; Subscription still exists and we have callbacks => try to reconnect
+          (progn
+            (setq sub (plist-put sub :process nil))
+            (setq sub (plist-put sub :buffer nil))
+            (puthash topic sub im-ntfy--subscriptions)
+            (im-ntfy--schedule-reconnect topic sub))
+        ;; Otherwise, remove from subscriptions
         (when sub
-          ;; Cancel any pending reconnect timer
           (when-let* ((timer (plist-get sub :reconnect-timer)))
             (cancel-timer timer))
-          (remhash topic im-ntfy--subscriptions)))))))
+          (remhash topic im-ntfy--subscriptions))))))
 
 (defun im-ntfy--compute-reconnect-delay (attempt)
   "Compute delay in seconds for ATTEMPT (starting from 1)."
