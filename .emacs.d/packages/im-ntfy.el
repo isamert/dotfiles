@@ -456,6 +456,8 @@ Returns a list of message alists."
   "Major mode for viewing ntfy topic messages."
   (setq-local buffer-read-only nil)
   (setq-local truncate-lines t)
+  (setq-local markdown-hide-urls t)
+  (setq-local markdown-hide-markup t)
   (page-break-lines-mode))
 
 (defun im-ntfy--format-message (msg)
