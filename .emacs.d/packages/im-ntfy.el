@@ -1,10 +1,10 @@
 ;;; im-ntfy.el --- Simple ntfy client for Emacs -*- lexical-binding: t; -*-
 
-;; Author: Your Name
+;; Author: Isa Mert Gurbuz
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "27.1") (s))
 ;; Keywords: comm, notifications
-;; URL: https://github.com/yourname/im-ntfy
+;; URL: https://github.com/isamert/dotfiles
 
 ;;; Commentary:
 
@@ -14,6 +14,8 @@
 ;; - Subscribe to topics and receive messages via callbacks
 ;; - Interactive topic browser with message history
 ;; - Send messages to topics
+;; - Show attachments as links
+;; - Retry automatically to subscriptions if connection is lost
 ;; - Basic authentication support
 ;;
 ;; Usage:
@@ -21,6 +23,7 @@
 ;;   (setq im-ntfy-server "https://ntfy.sh")
 ;;   (setq im-ntfy-username "myuser")  ; optional
 ;;   (setq im-ntfy-password "mypass")  ; optional
+;;   (setq im-ntfy-topics '("list" "of" "topics"))
 ;;
 ;;   ;; Subscribe to a topic with a callback
 ;;   (im-ntfy-subscribe "mytopic"
@@ -29,7 +32,13 @@
 ;;   ;; Open interactive topic browser
 ;;   (im-ntfy-topics)
 ;;
-;; Mostly AI-generated.
+;;   ;; Subscribe all topics in im-ntfy-topics
+;;   (im-ntfy-subscribe-all)
+;;
+;;   ;; Show all active connections in a table and act upon them
+;;   (im-ntfy-list-subscriptions)
+;;
+;; Mostly LLM-generated.
 
 ;;; Code:
 
