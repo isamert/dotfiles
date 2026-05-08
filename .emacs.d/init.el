@@ -7942,6 +7942,8 @@ the commit buffer."
   (defun im-pdf-view-setup ()
     (hl-line-mode -1))
   (evil-collection-pdf-setup)
+  (evil-collection-define-key 'visual 'pdf-view-mode-map
+    "y" 'evil-collection-pdf-yank)
   (add-hook 'pdf-view-mode #'im-pdf-view-setup))
 
 ;;;;; im-macos -- my macos extensions
