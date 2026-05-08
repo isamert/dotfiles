@@ -1112,7 +1112,9 @@ side window the only window'"
   :after evil
   :config
   (setq evil-visualstar/persistent t)
-  (global-evil-visualstar-mode 1))
+  (evil-define-key* 'visual 'global
+    "*" #'evil-visualstar/begin-search-forward
+    "#" #'evil-visualstar/begin-search-backward))
 
 ;;;;; evil-numbers
 
