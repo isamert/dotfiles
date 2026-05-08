@@ -12971,7 +12971,13 @@ Use C-n C-p to switch between translation directions."
        (lambda ()
          (call-interactively #'wordnut-lookup-current-word)
          (current-buffer)))))
-    (eldoc-mode #'eldoc-doc-buffer))))
+    (eldoc-mode (lambda ()
+                  (let ((doc-buf (eldoc-doc-buffer))
+                        (new-buf (get-buffer-create "*eldoc-copy*")))
+                    (with-current-buffer new-buf
+                      (erase-buffer)
+                      (insert (with-current-buffer doc-buf (buffer-string))))
+                    new-buf))))))
 
 (defun im-popup-doc ()
   "Same as `im-peek-doc' but open in a popuup frame."
