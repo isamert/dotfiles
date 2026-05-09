@@ -46,12 +46,20 @@
 
 ;;; Customization
 
-(defvar lab-github-user nil)
+(defcustom lab-github-user nil
+  "GitHub username."
+  :type 'string
+  :group 'lab-github)
 
-(defvar lab-github-token nil)
+(defcustom lab-github-token nil
+  "GitHub personal access token."
+  :type 'string
+  :group 'lab-github)
 
-(defvar lab-github-open-issues-projects-blacklist '()
-  "Projects that you want to filter out when you use `lab-github-list-all-open-issues'.")
+(defcustom lab-github-open-issues-projects-blacklist '()
+  "Projects that you want to filter out when you use `lab-github-list-all-open-issues'."
+  :type '(repeat string)
+  :group 'lab-github)
 
 ;;; Core
 

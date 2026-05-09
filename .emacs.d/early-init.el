@@ -14,7 +14,6 @@
 
 ;;;; Performance related stuff
 
-
 ;; If you don't use RTL ever, this could improve perf
 (setq-default bidi-display-reordering 'left-to-right)
 (setq-default bidi-paragraph-direction 'left-to-right)
@@ -23,7 +22,7 @@
 ;; Some stuff are taken from:
 ;; https://github.com/emacs-lsp/lsp-mode#performance
 
-(setq gc-cons-threshold (* 40 1024 1024)) ;; 40 mb
+(setq gc-cons-threshold (* 50 1024 1024)) ;; 50 mb
 (setq read-process-output-max (* 2 1024 1024)) ;; 2 mb
 (setq process-adaptive-read-buffering nil) ;; Not sure if there is any gains from this.
 (setq fast-but-imprecise-scrolling t)
