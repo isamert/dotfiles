@@ -7522,6 +7522,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 (defun im-notmuch-inbox ()
   "Open Inbox directly."
   (interactive)
+  (require 'notmuch)
   (let ((unread-query (plist-get (nth 1 notmuch-saved-searches) :query)))
     (notmuch-search unread-query)))
 
