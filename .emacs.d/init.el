@@ -215,6 +215,10 @@ in my dotfiles repository.")
 (use-package posframe
   :defer t)
 
+(use-package hide-mode-line
+  :straight (:host github :repo "hlissner/emacs-hide-mode-line")
+  :defer t)
+
 ;;;;;; emacs-async
 
 ;; To be able execute elisp asynchronously. Of course this has lot's

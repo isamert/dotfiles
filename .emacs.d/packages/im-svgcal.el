@@ -8,6 +8,7 @@
 (require 'dash)
 (require 'org)
 (require 's)
+(require 'hide-mode-line)
 
 ;; TODO Generate from {agenda,current buffer,current restriction} etc.
 ;; TODO Make weekly view
@@ -116,6 +117,7 @@
           (setq-local evil-normal-state-cursor '(nil)))
         (svg-insert-image svg)
         (goto-char (point-max))
+        (hide-mode-line-mode)
         svg))))
 
 (defun im-svgcal-render (tasks)
