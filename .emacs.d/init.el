@@ -7706,9 +7706,11 @@ mails."
 (use-package easysession
   :straight (:host github :repo "jamescherti/easysession.el")
   :hook (after-init . easysession-save-mode)
+  :diminish easysession-save-mode
   :custom
   (easysession-mode-line-misc-info t)
-  (easysession-mode-line-misc-info-prefix " S:["))
+  :config
+  (setq easysession-mode-line-misc-info-prefix " S:["))
 
 ;;;;; im-git -- my git workflow, magit alternative
 
@@ -7834,6 +7836,7 @@ the commit buffer."
   :defer t
   :init
   (with-eval-after-load 'elfeed
+    (require 'im-readeck)
     (im-readeck-enable-elfeed-support)))
 
 ;;;;; im-tab --- my tab related extensions
@@ -10021,7 +10024,8 @@ where these special buffers may be duplicated."
   (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
   :config
   (set-face-attribute 'aw-leading-char-face nil :height 4.5 :weight 'bold :foreground "deep sky blue")
-  (ace-window-posframe-mode))
+  (when (display-graphic-p)
+    (ace-window-posframe-mode)))
 
 (defun im-find-file-ace-window (filename &optional wildcards)
   "Edit file FILENAME, in selected window.
