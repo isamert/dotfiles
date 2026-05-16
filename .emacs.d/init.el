@@ -537,7 +537,8 @@ cut it. I need to run those statements on every theme change.")
 
 (use-package im-adaptive-theme
   :straight `(:local-repo ,im-packages-path :files ("im-adaptive-theme.el"))
-  :hook (after-init . im-adaptive-theme-enable)
+  :if (not (eq system-type 'android))
+  :hook (after-init . im-adaptive-theme)
   :custom
   (im-adaptive-theme-detect-geolocation-automatically t)
   (im-adaptive-theme-day-themes
