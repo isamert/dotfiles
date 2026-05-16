@@ -1,9 +1,9 @@
-;;; im-tab.el --- my tab-bar extensions  -*- lexical-binding: t; -*-
+;;; tabku.el --- Save and restore ad-hoc window layouts  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 Isa Mert Gurbuz
+;; Copyright (C) 2026 Isa Mert Gurbuz
 
 ;; Author: Isa Mert Gurbuz <isamertgurbuz@gmail.com>
-;; URL: https://github.com/isamert/im-tab.el
+;; URL: https://github.com/isamert/tabku.el
 ;; Version: 0.0.1
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: tabs, utility
@@ -44,14 +44,14 @@
 ;;
 ;; * Usage
 ;;
-;; `im-tab-configuration-save-current' function saves the window
+;; `tabku-configuration-save-current' function saves the window
 ;; configuration using `last-input-event'.  It is advised to bind this
 ;; function to a key chords like
 ;;
 ;;   C-c w w {1,2,3,4...}
 ;;
 ;; so that you can retrieve with same number keys later.  Assuming you
-;; bind `im-tab-configuration-restore-current' to:
+;; bind `tabku-configuration-restore-current' to:
 ;;
 ;;   C-c w {1,2,3,4...}
 ;;
@@ -92,7 +92,7 @@
 ;; want to keep the currently focused buffer (the one with the cursor
 ;; from layout 2) in your "main area", the window with the cursor from
 ;; the layout 1. To do so, bind
-;; `im-tab-configuration-restore-current-sticky' to a key like:
+;; `tabku-configuration-restore-current-sticky' to a key like:
 ;;
 ;;   C-c W {1,2,3,4...}
 ;;
@@ -105,11 +105,11 @@
 ;;
 ;;   (dolist (n (number-sequence 1 5))
 ;;     ;; Save current tab window configuration to a key
-;;     (define-key global-map (kbd (format "C-c w w %s" n)) #'im-tab-configuration-save-current)
+;;     (define-key global-map (kbd (format "C-c w w %s" n)) #'tabku-configuration-save-current)
 ;;     ;; Restore a saved configuration with a key
-;;     (define-key global-map (kbd (format "C-c w %s" n))   #'im-tab-configuration-restore-current)
+;;     (define-key global-map (kbd (format "C-c w %s" n))   #'tabku-configuration-restore-current)
 ;;     ;; Restore sticky (keep current buffer in main area)
-;;     (define-key global-map (kbd (format "C-c W %s" n)) #'im-tab-configuration-restore-current-sticky))
+;;     (define-key global-map (kbd (format "C-c W %s" n)) #'tabku-configuration-restore-current-sticky))
 ;;
 ;; ** general.el examples:
 ;;
@@ -118,11 +118,11 @@
 ;;   (dolist (n (number-sequence 1 5))
 ;;     (<your-leader>
 ;;       ;; Save current tab window configuration to a key
-;;       (format "ww%s" n) #'im-tab-configuration-save-current
+;;       (format "ww%s" n) #'tabku-configuration-save-current
 ;;       ;; Restore a saved configuration with a key
-;;       (format "w%s" n) #'im-tab-configuration-restore-current
+;;       (format "w%s" n) #'tabku-configuration-restore-current
 ;;       ;; Restore a saved configuration but keep the current buffer
-;;       (format "W%s" n) #'im-tab-configuration-restore-current-sticky))
+;;       (format "W%s" n) #'tabku-configuration-restore-current-sticky))
 
 ;;; Code:
 
@@ -131,45 +131,45 @@
 
 ;;;; Customization
 
-(defgroup im-tab nil
+(defgroup tabku nil
   "Save window configurations to a predefined keybindings ephemerally."
   :group 'utility)
 
-(defcustom im-tab-warn-on-unnamed-tabs t
+(defcustom tabku-warn-on-unnamed-tabs t
   "Warn if currently saved window configuration is on an unnamed tab.
 If the current tab is not explicitly named, then the configurations are
 saved depending on the tab's position which is fragile.  If you don't
 want this warning to appear, set this to nil."
-  :group 'im-tab)
+  :group 'tabku)
 
 ;;;; Save window configurations to a predefined keybinding ephemerally
 
-(defvar im-tab-configuration (make-hash-table :test 'equal :size 20))
+(defvar tabku-configuration (make-hash-table :test 'equal :size 20))
 
 ;;;###autoload
-(defun im-tab-configuration-save-current ()
+(defun tabku-configuration-save-current ()
   "Save current window configuration to last pressed key."
   (interactive)
   (let* ((tabs (funcall tab-bar-tabs-function))
          (current-tab (alist-get 'current-tab tabs))
          (name (alist-get 'name current-tab))
-         (tab-pos (im-tab--seq-find-index (lambda (it) (equal name (alist-get 'name it))) tabs))
+         (tab-pos (tabku--seq-find-index (lambda (it) (equal name (alist-get 'name it))) tabs))
          (explicit-name? (alist-get 'explicit-name current-tab))
          (_ (unless explicit-name?
               (setq name (format "<tab:%s>-" tab-pos))))
          (cfg (concat "<tab:" name ">" "-" (char-to-string last-input-event))))
     (map-put!
-     im-tab-configuration
+     tabku-configuration
      cfg
      (current-window-configuration))
     (message ">> Configuration saved as %s" cfg)))
 
-(defun im-tab--seq-find-index (fn seq)
+(defun tabku--seq-find-index (fn seq)
   "Return the first index in SEQ for which FN evaluate to non-nil."
   (seq-position seq 'dummy-item (lambda (it _) (funcall fn it))))
 
 ;;;###autoload
-(defun im-tab-configuration-restore-current (&optional sticky?)
+(defun tabku-configuration-restore-current (&optional sticky?)
   "Save window configuration for current key.
 If STICKY? is non-nil, move the currently focused buffer to restored
 layout's main area."
@@ -178,29 +178,29 @@ layout's main area."
          (tabs (funcall tab-bar-tabs-function))
          (current-tab (alist-get 'current-tab tabs))
          (name (alist-get 'name current-tab))
-         (tab-pos (im-tab--seq-find-index (lambda (it) (equal name (alist-get 'name it))) tabs))
+         (tab-pos (tabku--seq-find-index (lambda (it) (equal name (alist-get 'name it))) tabs))
          (explicit-name? (alist-get 'explicit-name current-tab))
          (_ (unless explicit-name?
               (setq name (format "<tab:%s>" tab-pos))))
          (concat "<tab:" name ">" "-" (char-to-string last-input-event)))
-    (when (and (not explicit-name?) im-tab-warn-on-unnamed-tabs)
+    (when (and (not explicit-name?) tabku-warn-on-unnamed-tabs)
       (warn  "Use explicit names on tabs to avoid surprises."))
     (set-window-configuration
      (map-elt
-      im-tab-configuration
+      tabku-configuration
       cfg))
     (when (and sticky? cb)
       (switch-to-buffer cb))
     (message ">> Restored configuration %s" cfg)))
 
 ;;;###autoload
-(defun im-tab-configuration-restore-current-sticky ()
+(defun tabku-configuration-restore-current-sticky ()
   "Save window configuration for current key."
   (interactive)
-  (im-tab-configuration-restore-current t))
+  (tabku-configuration-restore-current t))
 
 ;;;; Footer
 
-(provide 'im-tab)
+(provide 'tabku)
 
-;;; im-tab.el ends here
+;;; tabku.el ends here

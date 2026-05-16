@@ -30,7 +30,7 @@
 ;;
 ;; Usage:
 ;;
-;;   (add-hook \\='after-init-hook #\\='im-adaptive-theme-enable)
+;;   (add-hook \\='after-init-hook #\\='im-adaptive-theme-mode)
 
 ;;; Code:
 
@@ -88,25 +88,39 @@ issues with theme change hours.  This is a little hack to prevent it."
 (defvar im-adaptive-theme--day-timer nil)
 (defvar im-adaptive-theme--night-timer nil)
 
-;;;; Main
+;;;; Minor mode
 
 ;;;###autoload
-(defun im-adaptive-theme-enable (&optional only-enable)
-  "Enable theme switching at day and night.
-If ONLY-ENABLE is non-nil, then only set the timers and don't change the
-theme right now."
-  (interactive)
+(define-minor-mode im-adaptive-theme-mode
+  "Toggle automatic day/night theme switching."
+  :global t
+  :group 'im-adaptive-theme
+  (if im-adaptive-theme-mode
+      (im-adaptive-theme--start)
+    (im-adaptive-theme--cancel-timers)))
+
+;;;; Main
+
+(defun im-adaptive-theme--cancel-timers ()
   (when im-adaptive-theme--next-timer
-    (cancel-timer im-adaptive-theme--next-timer))
+    (cancel-timer im-adaptive-theme--next-timer)
+    (setq im-adaptive-theme--next-timer nil))
   (when im-adaptive-theme--day-timer
-    (cancel-timer im-adaptive-theme--day-timer))
-  (when im-adaptive-theme--day-timer
-    (cancel-timer im-adaptive-theme--night-timer))
+    (cancel-timer im-adaptive-theme--day-timer)
+    (setq im-adaptive-theme--day-timer nil))
+  (when im-adaptive-theme--night-timer
+    (cancel-timer im-adaptive-theme--night-timer)
+    (setq im-adaptive-theme--night-timer nil)))
+
+(defun im-adaptive-theme--start (&optional only-timers)
+  "Set up timers and optionally apply the current theme immediately.
+If ONLY-TIMERS is non-nil, only set the timers without changing the theme."
+  (im-adaptive-theme--cancel-timers)
   (if im-adaptive-theme-detect-geolocation-automatically
       (im-adaptive-theme-detect-geolocation
        (lambda (_success?)
-         (im-adaptive-theme--enable only-enable)))
-    (im-adaptive-theme--enable only-enable)))
+         (im-adaptive-theme--enable only-timers)))
+    (im-adaptive-theme--enable only-timers)))
 
 ;;;###autoload
 (defun im-adaptive-theme-reload ()
@@ -130,13 +144,13 @@ theme right now."
       (message ">> im-adaptive-theme-detect-geolocation failed")
       (funcall on-finished nil))))
 
-(defun im-adaptive-theme--enable (only-enable)
+(defun im-adaptive-theme--enable (only-timers)
   (when im-adaptive-theme-refresh-timezone
     (set-time-zone-rule nil))
   (setq im-adaptive-theme--next-timer
         (run-at-time
          "24:10" nil
-         (lambda () (im-adaptive-theme-enable :only-enable))))
+         (lambda () (im-adaptive-theme--start :only-timers))))
   (cl-flet ((pick-and-load-theme-from
              (lst)
              (let ((theme (if (listp lst)
@@ -147,10 +161,12 @@ theme right now."
                (load-theme theme :no-confirm)
                (message ">> Loading %s theme...Done" theme))))
     (-let* ((((sunrise) (sunset) _daylight) (solar-sunrise-sunset (im-adaptive-theme--current-date)))
+            (_ (unless (and sunrise sunset)
+                 (user-error "im-adaptive-theme: could not determine sunrise/sunset; set `calendar-latitude' and `calendar-longitude'")))
             (switch-to-day-hour (+ im-adaptive-theme-sunrise-offset sunrise))
             (switch-to-night-hour (+ im-adaptive-theme-sunset-offset sunset))
             (current-hour (string-to-number (format-time-string "%H"))))
-      (unless only-enable
+      (unless only-timers
         (if (and (> current-hour switch-to-day-hour)
                  (< current-hour switch-to-night-hour))
             (pick-and-load-theme-from im-adaptive-theme-day-themes)
@@ -162,7 +178,7 @@ theme right now."
           (im-adaptive-theme--hour-number-to-hour-string switch-to-day-hour)
           nil
           (lambda () (pick-and-load-theme-from im-adaptive-theme-day-themes)))))
-      (when (< current-hour switch-to-day-hour)
+      (when (< current-hour switch-to-night-hour)
         (setq
          im-adaptive-theme--night-timer
          (run-at-time
