@@ -1992,7 +1992,10 @@ This way you can insert new entry right after other non-TODO
   (add-hook 'org-agenda-finalize #'org-modern-agenda)
   ;; 99 is important or otherwise org-jupyter-client fails to
   ;; highlight ansi escape codes for some reason.
-  (add-hook 'org-mode-hook #'org-modern-mode 99))
+  (add-hook 'org-mode-hook #'org-modern-mode 99)
+  (im-when-on
+   :android
+   (setq org-modern-checkbox '((88 . "☑") (45 . "□") (32 . "□")))))
 
 ;;;;; org-rainbow-tags
 

@@ -102,10 +102,11 @@ It simply checks for folders with `.git' under them."
    (-filter #'identity)
    (-remove-item "*")))
 
-(cl-defmacro im-when-on (&key linux darwin)
+(cl-defmacro im-when-on (&key linux darwin android)
   (pcase system-type
     ('darwin darwin)
-    ((or 'gnu/linux 'linux) linux)))
+    ((or 'gnu/linux 'linux) linux)
+    ('android android)))
 
 (defun im-port-in-use? (port)
   "Check if PORT is in use."
