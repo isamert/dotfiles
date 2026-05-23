@@ -4676,7 +4676,7 @@ empty string."
    (kbd "S") #'avy-goto-subword-1
    (kbd "s") #'avy-goto-word-1))
 
-;;;;; vertico & marginalia & orderless & mini-frame
+;;;;; vertico & marginalia & orderless
 
 ;; A nice, fast minibuffer narrowing framework. It works well with quite a lot of package.
 ;; - =marginalia.el= brings annotations to completing-read, ie. it adds current keybinding of a command, summary of command to M-x.
@@ -4808,7 +4808,6 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
   :after vertico
   :config
   ;; Toggle grid mode by hitting M-g while in vertico
-  ;; Toggling grid mode does not work well with mini-frame.
   (define-key vertico-map "\M-g" #'vertico-multiform-grid)
 
   ;; '(command display-type... (buffer-local-variable . value))
@@ -9911,7 +9910,6 @@ SELECT * FROM _ LIMIT 1;
   (interactive)
   (tab-bar-new-tab)
   (let ((vertico-multiform-commands '((consult-buffer buffer (vertico-buffer-display-action . (display-buffer-same-window)))))
-        (mini-frame-ignore-commands `(,@mini-frame-ignore-commands consult-buffer))
         (this-command 'consult-buffer))
     (consult-buffer)))
 
