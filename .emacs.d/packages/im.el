@@ -102,11 +102,29 @@ It simply checks for folders with `.git' under them."
    (-filter #'identity)
    (-remove-item "*")))
 
-(cl-defmacro im-when-on (&key linux darwin android)
-  (pcase system-type
-    ('darwin darwin)
-    ((or 'gnu/linux 'linux) linux)
-    ('android android)))
+(defmacro im-when-on (&rest args)
+  "Conditionally expand based on the current operating system.
+ARGS is a plist with the following optional keys:
+
+  :linux   Form to use on GNU/Linux.
+  :darwin  Form to use on macOS/Darwin.
+  :android Form to use on Android.
+  :rest    Fallback form when no matching key is provided.
+
+If a platform key is explicitly provided, its value is used even
+if nil.  If the platform key is absent, falls back to :rest."
+  (let* ((has-linux   (plist-member args :linux))
+         (has-darwin  (plist-member args :darwin))
+         (has-android (plist-member args :android))
+         (linux-val   (plist-get args :linux))
+         (darwin-val  (plist-get args :darwin))
+         (android-val (plist-get args :android))
+         (rest-val    (plist-get args :rest)))
+    (pcase system-type
+      ('darwin                (if has-darwin  darwin-val  rest-val))
+      ((or 'gnu/linux 'linux) (if has-linux   linux-val   rest-val))
+      ('android               (if has-android android-val rest-val))
+      (_                      rest-val))))
 
 (defun im-port-in-use? (port)
   "Check if PORT is in use."

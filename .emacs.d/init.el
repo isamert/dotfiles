@@ -3625,7 +3625,9 @@ that is read verbatim (meaning that no '$*' is appended):
 (use-package hydra
   :defer t
   :config
-  (setq hydra-hint-display-type 'posframe)
+  (setq hydra-hint-display-type (im-when-on
+                                 :android 'lv
+                                 :rest 'posframe))
   (setq hydra-posframe-show-params `(:poshandler posframe-poshandler-frame-center
                                      :internal-border-width 2
                                      :internal-border-color "#61AFEF"

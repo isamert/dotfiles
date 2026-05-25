@@ -2132,7 +2132,15 @@ end
 #+end_src
 
 * Tmux
-I use tmux for it's vi mode. Other than that I generally use my window manager for multiple terminals (which is rarely needed because I'm mostly in Emacs.)
+I use tmux for it's vi mode. Other than that I generally use my window manager for multiple terminals (which is rarely needed because I'm mostly in Emacs.) I also use it on Android (via Termux) as a WM.
+** TPM -- Termux Plugin Manager
+Install this first, configuration is embedded in the next section.
+#+begin_src sh
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+#+end_src
+
+To install newly added plugins, do ~prefix I~.
+** Configuration
 #+begin_src conf :tangle ~/.tmux.conf
 # * General
 
@@ -2228,6 +2236,15 @@ set -g pane-active-border-style "fg=colour5"
 
 # Message styling
 set -g message-style "bg=terminal,fg=terminal"
+
+# * TPM
+
+# List of plugins
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+
+# Initialize TMUX plugin manager (keep this line at the very bottom of tmux.conf)
+run '~/.tmux/plugins/tpm/tpm'
 #+end_src
 * Utilities
 ** git
