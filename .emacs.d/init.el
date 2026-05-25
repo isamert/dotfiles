@@ -5382,20 +5382,24 @@ This helps persisting projects I switched to.")
 (use-package embark
   :commands (embark embark-act-all embark-prefix-help-command)
   :defer t
-  :config
+  :custom
+  ;; This directly shows the actions in a completing read window.
+  ;; By default, it is set to `embark-keymap-prompter' and you need to
+  ;; hit `C-h' to bring this menu up.
+  (embark-prompter #'embark-completing-read-prompter)
+  ;; I removed embark-mixed-indicator from the list because I'm
+  ;; using embark-completing-read-prompter by default which already
+  ;; provides same functionality
+  (embark-indicators '(embark-highlight-indicator embark-isearch-highlight-indicator))
+  (embark-quit-after-action '((kill-buffer . nil)
+                              (t . t)))
+  :init
   (bind-key (kbd "M-a") #'embark-act)
   (bind-key (kbd "M-A") #'embark-act-all)
   ;; If you want to clear selections, then do: `embark-act-all' → `embark-select'
   (bind-key (kbd "M-c") #'embark-select)
-  (setq embark-prompter #'embark-completing-read-prompter)
-  ;; ^ This directly shows the actions in a completing read window.
-  ;; By default, it is set to `embark-keymap-prompter' and you need to
-  ;; hit `C-h' to bring this menu up.
-  (setq embark-indicators '(embark-highlight-indicator embark-isearch-highlight-indicator))
-  ;; ^ I removed embark-mixed-indicator from the list because I'm
-  ;; using embark-completing-read-prompter by default which already
-  ;; provides same functionality
-
+  ;; Replace describe-symbol with helpful-symbol
+  (define-key embark-symbol-map "h" #'helpful-symbol)
   ;; Hitting C-h after any prefix command will open a completing-read
   ;; interface to select a command that prefix has. Complements
   ;; which-key.
@@ -5407,13 +5411,7 @@ This helps persisting projects I switched to.")
      ;; this, I'm setting it here manually.
      (setq which-key--prefix-help-cmd-backup #'embark-prefix-help-command)
      (setq prefix-help-command #'embark-prefix-help-command)) 99)
-  (add-to-list 'vertico-multiform-categories '(embark-keybinding grid))
-
-  (setq embark-quit-after-action '((kill-buffer . nil)
-                                   (t . t)))
-
-  ;; Replace describe-symbol with helpful-symbol
-  (define-key embark-symbol-map "h" #'helpful-symbol))
+  (add-to-list 'vertico-multiform-categories '(embark-keybinding grid)))
 
 ;;;;;; different copy actions
 
