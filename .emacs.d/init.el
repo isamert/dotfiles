@@ -490,7 +490,9 @@ With argument, do this that many times."
 (diminish 'visual-line-mode)
 
 ;; Highlight current line
-(global-hl-line-mode t)
+(use-package hl-line
+  :if (not (eq system-type 'android))
+  :hook (after-init . global-hl-line-mode))
 
 (defun im-disable-hl-line-mode-for-buffer ()
   "Disable `global-hl-line-mode' for current buffer only.
