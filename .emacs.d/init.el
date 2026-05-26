@@ -1237,6 +1237,7 @@ side window the only window'"
 (defconst readinglist-org "~/Documents/notes/readinglist.org")
 (defconst courses-org "~/Documents/notes/courses.org")
 (defconst bullet-org "~/Documents/notes/bullet.org")
+(defconst info-org "~/Documents/notes/info.org")
 (defconst directory-notes-org "~/Documents/notes/directory-notes.org")
 (defconst life-org "~/Documents/notes/life.org")
 (defconst reality-org "~/Documents/notes/reality.org")
@@ -1835,14 +1836,6 @@ that is provided by ob-http."
 
 ;; Some functions that I utilize for capture templates:
 
-(defun im-org-capture--find-daily-last-entry ()
-  (im-bullet-focus-today)
-  (goto-char (point-max)))
-
-(defun im-org-capture--find-daily-summary ()
-  (im-bullet-focus-today)
-  (re-search-forward "^** Summary" nil t))
-
 (defun im-org-capture--find-first-top-level-todo-entry ()
   "Find first top-level TODO entry in current buffer.
 This way you can insert new entry right after other non-TODO
@@ -1896,56 +1889,24 @@ This way you can insert new entry right after other non-TODO
       "- %U %?"
       :prepend t)
 
-     ("I" "Work Inbox" item
-      (file+headline work-org "Inbox")
+     ("I" "Info" item
+      (file info-org)
       "- %U %?"
       :prepend t)
 
      ("n" "Meeting/clock note" item
       (clock))
 
-     ("t" "Study/investigate later" item
-      (file+olp bullet-org "Life backlog" "Investigate")
-      "- [ ] %U %(im-org-make-link-string (read-string \"URL: \"))"
-      :prepend t)
+     ("w" "Work")
 
-     ("l" "Life todo" plain
-      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Life backlog"))
-      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n")
-
-     ("w" "Work todo" plain
-      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Work backlog"))
-      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n" :prepend t)
-
-     ("c" "Computer todo" plain
-      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Computer backlog"))
-      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n" :prepend t)
-
-     ("f" "Free time backlog" item
-      (file+headline bullet-org "Free time backlog")
-      "- %U %?" :prepend t)
-
-     ("T" "Daily TODO" plain
-      (file+function bullet-org im-org-capture--find-daily-last-entry)
-      "** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n")
-
-     ("S" "Daily summary" item
-      (file+function bullet-org im-org-capture--find-daily-summary)
-      "- %U %?")
-
-     ("a" "Shopping" plain
-      (file+function bullet-org ,(im-org-capture--find-first-top-level-todo-entry-within-header "Alisveris"))
-      "*** TODO [#B] %?\n:PROPERTIES:\n:CREATED_AT: %U\n:END:\n"
+     ("wi" "Work Inbox" item
+      (file+headline work-org "Inbox")
+      "- %U %?"
       :prepend t)
 
      ("m" "Watchlist item" plain
       (file+function watchlist-org im-org-capture--find-first-top-level-todo-entry)
       "* TODO %?\n:PROPERTIES:\n:CREATED_AT: %U\n:WHY: FILLME!\n:END:\n\n")
-
-     ("D" "Diary" entry
-      (file diary-org)
-      "* %u\n"
-      :prepend t)
 
      ("s" "Snippets")
 
