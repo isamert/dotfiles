@@ -5363,8 +5363,6 @@ This helps persisting projects I switched to.")
   (bind-key (kbd "M-A") #'embark-act-all)
   ;; If you want to clear selections, then do: `embark-act-all' → `embark-select'
   (bind-key (kbd "M-c") #'embark-select)
-  ;; Replace describe-symbol with helpful-symbol
-  (define-key embark-symbol-map "h" #'helpful-symbol)
   ;; Hitting C-h after any prefix command will open a completing-read
   ;; interface to select a command that prefix has. Complements
   ;; which-key.
@@ -5376,7 +5374,10 @@ This helps persisting projects I switched to.")
      ;; this, I'm setting it here manually.
      (setq which-key--prefix-help-cmd-backup #'embark-prefix-help-command)
      (setq prefix-help-command #'embark-prefix-help-command)) 99)
-  (add-to-list 'vertico-multiform-categories '(embark-keybinding grid)))
+  (add-to-list 'vertico-multiform-categories '(embark-keybinding grid))
+  :config
+  ;; Replace describe-symbol with helpful-symbol
+  (define-key embark-symbol-map "h" #'helpful-symbol))
 
 ;;;;;; different copy actions
 
