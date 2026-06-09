@@ -76,10 +76,63 @@
 
 ;;;; Customization:
 
+(defcustom im-git-path "git"
+  "Path to the git binary."
+  :group 'im-git
+  :type 'string)
+
 (defcustom im-git-diff-switches '("-u" "--histogram")
   "Switches for git diff command."
   :group 'im-git
   :type '(list string))
+
+(defun im-git--cmd-to-string (&rest args)
+  "Run `im-git-path' with ARGS and return output as string."
+  (with-temp-buffer
+    (apply #'call-process im-git-path nil t nil args)
+    (buffer-string)))
+
+(defun im-git--start-process (name buffer &rest args)
+  "Start `im-git-path' with ARGS in a subprocess."
+  (apply #'start-process name buffer im-git-path args))
+
+(defun im-git--call-process (&rest args)
+  "Run `im-git-path' with ARGS synchronously, return exit code."
+  (apply #'call-process im-git-path nil nil nil args))
+
+(defun im-git--call-process-in-buffer (buffer &rest args)
+  "Run `im-git-path' with ARGS, writing stdout to BUFFER."
+  (apply #'call-process im-git-path nil buffer t args))
+
+(defun im-git--process-file (&rest args)
+  "Run `im-git-path' with ARGS via `process-file'."
+  (apply #'process-file im-git-path nil nil nil args))
+
+(defun im-git--shell-cmd (&rest args)
+  "Build a shell command line for `im-git-path' and ARGS."
+  (mapconcat #'shell-quote-argument (cons im-git-path args) " "))
+
+(defun im-git--async (&rest args)
+  "Run `im-git-path' with ARGS asynchronously, returning a promise."
+  (promise-new
+   (lambda (resolve reject)
+     (let* ((pname "*im-git-*")
+            (proc (start-process-shell-command
+                   pname nil
+                   (mapconcat #'shell-quote-argument
+                              (append (list im-git-path "--no-pager") args)
+                              " ")))
+            (output ""))
+       (set-process-filter
+        proc
+        (lambda (_process out)
+          (setq output (concat output out))))
+       (set-process-sentinel
+        proc
+        (lambda (p _e)
+          (if (= 0 (process-exit-status p))
+              (funcall resolve (string-trim output))
+            (funcall reject (string-trim output)))))))))
 
 ;;;; diff-mode improvements
 
@@ -136,7 +189,7 @@
     (im-git-diff-mode
      (im-git-status-reload))
     (im-git-staged-diff-mode
-     (let ((diff (await (apply #'lab--git "diff" "--no-color" "--staged" im-git-diff-switches))))
+     (let ((diff (await (apply #'im-git--async "diff" "--no-color" "--staged" im-git-diff-switches))))
        (switch-to-buffer (im-git-commit--reload-diff-buffer diff))))))
 
 (defun im-git-status-reload ()
@@ -145,20 +198,15 @@
   (im-git-status :window-conf im-git-status--old-window-conf)
   (message ">> Reloaded."))
 
-(defun im-git--cmd-to-string (cmd &rest rest)
-  (with-temp-buffer
-    (apply #'call-process cmd nil t nil rest)
-    (buffer-string)))
-
 ;;;###autoload
 (cl-defun im-git-status (&key window-conf)
   (interactive)
   (setq im-git-status--old-window-conf (or window-conf (current-window-configuration)))
   (let* ((default-directory (im-current-project-root))
-         (diff (apply #'im-git--cmd-to-string "git" "diff" im-git-diff-switches))
+         (diff (apply #'im-git--cmd-to-string "diff" im-git-diff-switches))
          (dbuff (im-get-reset-buffer im-git-status-buffer)))
     (when (s-blank? diff)
-      (if (s-blank? (im-git--cmd-to-string "git" "diff" "--staged"))
+      (if (s-blank? (im-git--cmd-to-string "diff" "--staged"))
           (message ">> Nothing changed")
         (when (y-or-n-p ">> All changes are staged.  Commit?")
           (im-git-commit :window-conf im-git-status--old-window-conf)))
@@ -205,9 +253,9 @@ Call CALLBACK when successful."
   (-let* ((file (make-temp-file "diff_" nil  ".patch" diff)))
     (set-process-sentinel
      (apply
-      #'start-process
+      #'im-git--start-process
       "*im-stage-diff*" (im-get-reset-buffer " *im-stage-diff*")
-      "git" "apply" file "--verbose"
+      "apply" file "--verbose"
       (-non-nil
        (list
         (when reverse "--reverse")
@@ -346,7 +394,7 @@ finishes or discard you want to restore an older window
 configuration, pass it as WINDOW-CONF."
   (interactive)
   (let* ((default-directory (im-current-project-root))
-         (diff (apply #'im-git--cmd-to-string "git" "diff" "--staged" im-git-diff-switches))
+         (diff (apply #'im-git--cmd-to-string "diff" "--staged" im-git-diff-switches))
          (commit-buffer (im-get-reset-buffer im-git-commit-message-buffer)))
     (when (and (s-blank? diff) (not (y-or-n-p "> Nothing staged.  Still want to commit?")))
       (user-error ">> Commit aborted"))
@@ -365,7 +413,7 @@ configuration, pass it as WINDOW-CONF."
 Also display `im-git-diff-switches' right-aligned."
   (when-let* ((buf (get-buffer buffer)))
     (with-current-buffer buf
-      (let* ((stat (s-trim (apply #'im-git--cmd-to-string "git" "diff" "--shortstat" git-args)))
+      (let* ((stat (s-trim (apply #'im-git--cmd-to-string "diff" "--shortstat" git-args)))
              (left (concat label " :: " (if (s-blank? stat) "nothing" stat)))
              (right-str (s-join " " im-git-diff-switches))
              (right (concat "diff " (propertize right-str 'face 'bold))))
@@ -443,7 +491,7 @@ Also display `im-git-diff-switches' right-aligned."
           (proj (im-current-project-name)))
       (message "im-git-commit :: Started...")
       (set-process-sentinel
-       (apply #'start-process "*im-git-commit*" (im-get-reset-buffer " *im-git-commit*") "git" "commit" args)
+       (apply #'im-git--start-process "*im-git-commit*" (im-get-reset-buffer " *im-git-commit*") "commit" args)
        (lambda (proc _)
          (let ((notify? (> (- (float-time) start-time) 2)))
            (if (eq (process-exit-status proc) 0)
@@ -454,7 +502,7 @@ Also display `im-git-diff-switches' right-aligned."
                  (--each im-git-commit-finished-hook (funcall it msg))
                  (when tag
                    (set-process-sentinel
-                    (start-process "*im-git-tag*" (im-get-reset-buffer " *im-git-tag*") "git" "tag" "-a" tag "-m" "")
+                    (im-git--start-process "*im-git-tag*" (im-get-reset-buffer " *im-git-tag*") "tag" "-a" tag "-m" "")
                     (lambda (proc _)
                       (if (eq (process-exit-status proc) 0)
                           (message ">> im-git-commit :: Tag created")
@@ -462,8 +510,8 @@ Also display `im-git-diff-switches' right-aligned."
                  (when fixup
                    (let ((process-environment `("GIT_SEQUENCE_EDITOR=true" ,@process-environment)))
                      (set-process-sentinel
-                      (start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
-                                     "git" "rebase" "--interactive" "--autosquash" (concat fixup "^"))
+                      (im-git--start-process "*im-git-fixup*" (im-get-reset-buffer " *im-git-fixup*")
+                                             "rebase" "--interactive" "--autosquash" (concat fixup "^"))
                       (lambda (proc _)
                         (if (eq (process-exit-status proc) 0)
                             (message ">> im-git-fixup :: Commit %s fixed." fixup)
@@ -555,14 +603,14 @@ Also display `im-git-diff-switches' right-aligned."
 (async-defun im-git-commit--setup (buffer &optional initial-message)
   "Fill the commit BUFFER without blocking."
   (let* ((start-time (float-time))
-         (namep  (lab--git "config" "--get" "user.name"))
-         (emailp (lab--git "config" "--get" "user.email"))
-         (hookspathp (lab--git "config" "--default" ".git/hooks" "--get" "core.hooksPath"))
-         (commitsp (lab--git "log"
-                             "-10" "--color=always"
-                             "--graph" "--decorate" "--date=short"
-                             "--pretty=tformat:'%C(cyan)%d%C(reset)%C(yellow)%h%C(reset)..: %C(green)%an %C(blue)%ad%C(reset) %s'"
-                             "--abbrev-commit"))
+         (namep  (im-git--async "config" "--get" "user.name"))
+         (emailp (im-git--async "config" "--get" "user.email"))
+         (hookspathp (im-git--async "config" "--default" ".git/hooks" "--get" "core.hooksPath"))
+         (commitsp (im-git--async "log"
+                                  "-10" "--color=always"
+                                  "--graph" "--decorate" "--date=short"
+                                  "--pretty=tformat:'%C(cyan)%d%C(reset)%C(yellow)%h%C(reset)..: %C(green)%an %C(blue)%ad%C(reset) %s'"
+                                  "--abbrev-commit"))
          (name (await namep))
          (email (await emailp))
          (hookspath (await hookspathp))
@@ -589,7 +637,7 @@ Also display `im-git-diff-switches' right-aligned."
          :on-toggle
          (lambda (state)
            (when (and (equal state "yes") (y-or-n-p "Use old commit message?"))
-             (im-git-commit--reset-message (s-trim (im-git--cmd-to-string "git" "log" "-1" "--pretty=%B"))))))
+             (im-git-commit--reset-message (s-trim (im-git--cmd-to-string "log" "-1" "--pretty=%B"))))))
         (insert "\n")
         (insert im-git-commit-config-prefix " Author: AUTHOR_NAME <AUTHOR_MAIL>\n")
         (insert im-git-commit-config-prefix " Tag: ")
@@ -663,7 +711,7 @@ Also display `im-git-diff-switches' right-aligned."
 (async-defun im-git-commit--update-unstaged (&optional output)
   (im-git-commit--change-header-contents "Status"
     (--each-indexed (s-lines (ansi-color-apply
-                              (s-trim (or output (await (lab--git
+                              (s-trim (or output (await (im-git--async
                                                          "-c" "color.status=always"
                                                          "status" "--branch" "--short"))))))
       (if (= it-index 0)
@@ -696,11 +744,11 @@ Also display `im-git-diff-switches' right-aligned."
                     (-map #'im-git-commit--file-at-point))
                  (list (im-git-commit--file-at-point)))))
     (when git-args
-      (await (apply #'lab--git (append git-args files))))
+      (await (apply #'im-git--async (append git-args files))))
     (await (im-git-commit--update-unstaged))
     (deactivate-mark)
     (goto-line line)
-    (let ((diff (await (apply #'lab--git "diff" "--no-color" "--staged" im-git-diff-switches))))
+    (let ((diff (await (apply #'im-git--async "diff" "--no-color" "--staged" im-git-diff-switches))))
       (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
       (other-window 1))))
 
@@ -710,7 +758,7 @@ Also display `im-git-diff-switches' right-aligned."
       (im-peek-remove)
     (let* ((default-directory (im-current-project-root))
            (file (im-git-commit--file-at-point))
-           (diff (concat (await (apply #'lab--git "diff" `(,im-git-diff-switches ,file))) "\n"))
+           (diff (concat (await (apply #'im-git--async "diff" `(,im-git-diff-switches ,file))) "\n"))
            (result (if (s-blank? diff)
                        ;; TODO highlight file
                        (with-temp-buffer
@@ -777,7 +825,9 @@ Return old message."
             (erase-buffer)
             (diff-mode)
             (setq header-line-format (format " Commit :: %s" (s-trim line)))
-            (apply #'call-process `("git" nil ,buf t "diff" ,@im-git-diff-switches ,(concat sha "^") ,sha))
+            (apply #'im-git--call-process-in-buffer
+                   buf "diff"
+                   (append im-git-diff-switches (list (concat sha "^") sha)))
             (goto-char (point-min))
             (font-lock-ensure))
           (pop-to-buffer buf))))))
@@ -868,9 +918,9 @@ CALLBACK will be called with the selected commit ref."
   (let ((buffer-name "*im-git-amend*")
         (message (read-string
                   "Message: "
-                  (s-trim (im-git--cmd-to-string "git" "log" "-1" "--pretty=%B")))))
+                  (s-trim (im-git--cmd-to-string "log" "-1" "--pretty=%B")))))
     (im-shell-command
-     :command "git"
+     :command im-git-path
      :args `("commit" "--amend" "-m" ,message)
      :switch nil
      :buffer-name buffer-name
@@ -915,13 +965,13 @@ HASH.  The rebase is fully automated (no editor interaction)."
            (fixup? `("--fixup" ,hash))
            (t (user-error "im-git-amend :: Nothing to do (no staged changes and no new message)")))))
     (set-process-sentinel
-     (apply #'start-process "*im-git-commit*" (im-get-reset-buffer "*im-git-commit*")
-            "git" "commit" commit-args)
+     (apply #'im-git--start-process "*im-git-commit*" (im-get-reset-buffer "*im-git-commit*")
+            "commit" commit-args)
      (lambda (proc _)
        (if (eq (process-exit-status proc) 0)
            (set-process-sentinel
-            (start-process "*im-git-rebase*" (im-get-reset-buffer " *im-git-rebase*")
-                           "git" "rebase" "--autosquash" (concat hash "^"))
+            (im-git--start-process "*im-git-rebase*" (im-get-reset-buffer " *im-git-rebase*")
+                                   "rebase" "--autosquash" (concat hash "^"))
             (lambda (proc _)
               (if (eq (process-exit-status proc) 0)
                   (progn
@@ -932,7 +982,7 @@ HASH.  The rebase is fully automated (no editor interaction)."
 
 (defun im-git--has-staged-changes-p ()
   "Return non-nil if there are staged changes."
-  (not (zerop (process-file "git" nil nil nil "diff" "--cached" "--quiet"))))
+  (not (zerop (im-git--process-file "diff" "--cached" "--quiet"))))
 
 ;;;; im-git-stash
 
@@ -946,7 +996,7 @@ HASH.  The rebase is fully automated (no editor interaction)."
   (let ((default-directory (im-current-project-root))
         (buffer-name im-git--stash-list-buffer-name))
     (im-shell-command
-     :command "git"
+     :command im-git-path
      :args `("--no-pager" "stash" "list")
      :switch t
      :buffer-name buffer-name
@@ -973,7 +1023,7 @@ HASH.  The rebase is fully automated (no editor interaction)."
         (let ((inhibit-read-only t))
           (erase-buffer))))
     (im-shell-command
-     :command "git"
+     :command im-git-path
      :args (-non-nil `("--no-pager" "stash" "show" "-p" ,stash-entry))
      :switch nil
      :buffer-name buffer-name
@@ -1000,7 +1050,7 @@ HASH.  The rebase is fully automated (no editor interaction)."
     (let ((inhibit-read-only t))
       (add-text-properties begin end '(face (:strike-through t))))
     (im-shell-command
-     :command "git"
+     :command im-git-path
      :args `("--no-pager" "stash" "drop" ,stash-entry)
      :switch nil
      :buffer-name " *im-git-stash-drop*"
@@ -1021,7 +1071,7 @@ HASH.  The rebase is fully automated (no editor interaction)."
     (let ((inhibit-read-only t))
       (add-text-properties begin end '(face (:strike-through t))))
     (im-shell-command
-     :command "git"
+     :command im-git-path
      :args `("--no-pager" "stash" "pop" ,stash-entry)
      :switch nil
      :buffer-name " *im-git-stash-pop*"
@@ -1067,14 +1117,14 @@ Works only if the stash entry is at the beginning of the line."
   (let ((default-directory (im-current-project-root))
         (buffer-name im-git--tag-list-buffer-name))
     (im-shell-command
-     :command "git"
+     :command im-git-path
      :args `("for-each-ref" "--sort=-creatordate" "--format" "%(refname:short) • %(objectname:short) • %(creatordate:short) • %(subject)" "refs/tags")
      :switch t
      :buffer-name buffer-name
      :on-finish
      (lambda (_output &rest _)
        (im-shell-command
-        :command "git"
+        :command im-git-path
         :args `("ls-remote" "--tags" "origin")
         :on-finish
         (lambda (output &rest _)
@@ -1133,7 +1183,7 @@ Works only if the stash entry is at the beginning of the line."
     (cl-flet ((remove-remote-tag
                (tag-info)
                (im-shell-command
-                :command "git"
+                :command im-git-path
                 :args `("push" "origin" "--delete" ,(plist-get tag-info :name))
                 :switch nil
                 :buffer-name " *im-git-tag-remove-remote*"
@@ -1150,7 +1200,7 @@ Works only if the stash entry is at the beginning of the line."
                (not (plist-get tag-info :local?)))
           (remove-remote-tag tag-info)
         (im-shell-command
-         :command "git"
+         :command im-git-path
          :args `("tag" "-d" ,(plist-get tag-info :name))
          :switch nil
          :buffer-name " *im-git-tag-remove*"
@@ -1173,14 +1223,14 @@ Works only if the stash entry is at the beginning of the line."
               (tag-info (im-git--tag-info-at-point))
               (tag (plist-get tag-info :name))
               (file (im-output-select
-                     :cmd (concat "git ls-tree --name-only -r " tag)
+                     :cmd (im-git--shell-cmd "ls-tree" "--name-only" "-r" tag)
                      :prompt (format "File at %s: " tag)
                      :require-match? t))
               (buffer-name (format "*im-git-file-at: %s:%s*" tag file)))
     (when-let* ((buffer (get-buffer buffer-name)))
       (kill-buffer buffer))
     (im-shell-command
-     :command "git"
+     :command im-git-path
      :args `("--no-pager" "show" ,(format "%s:%s" tag file))
      :switch nil
      :buffer-name buffer-name
@@ -1228,7 +1278,7 @@ Works only if the stash entry is at the beginning of the line."
     (when-let* ((buffer (get-buffer buffer-name)))
       (kill-buffer buffer))
     (im-shell-command
-     :command "git"
+     :command im-git-path
      :args `("--no-pager" "tag" "-n99" "--list" ,tag)
      :switch nil
      :buffer-name buffer-name
@@ -1257,7 +1307,7 @@ REGEXP."
     (when (get-buffer buffer-name)
       (kill-buffer buffer-name))
     (im-shell-command
-     :command "git"
+     :command im-git-path
      :args `("--no-pager" "log" "-G" ,regexp ,@(when all-branches? '("--branches" "--all")) "-p")
      :switch t
      :eat t
@@ -1275,8 +1325,8 @@ but sometimes projects gets dirty and this fixes that."
     (switch-to-buffer buff)
     (dolist (project (im-all-project-roots))
       (let* ((default-directory (expand-file-name project))
-             (branches (split-string (await (lab--git "branch" "--list")) "\n" t "[ \\*\t]+"))
-             (current-branch (await (lab--git "branch" "--show-current")))
+             (branches (split-string (await (im-git--async "branch" "--list")) "\n" t "[ \\*\t]+"))
+             (current-branch (await (im-git--async "branch" "--show-current")))
              (main-branch (seq-find
                            (lambda (branch)
                              (string-match (regexp-opt (lab--listify lab-main-branch-name) t) (or branch "NULL")))
@@ -1306,7 +1356,7 @@ but sometimes projects gets dirty and this fixes that."
                'face custom-button
                'action (lambda (_button)
                          (let ((default-directory (expand-file-name project)))
-                           (if (eq 0 (call-process "git" nil nil nil "checkout" main-branch))
+                           (if (eq 0 (im-git--call-process "checkout" main-branch))
                                (message ">> Switched! isDirty=%s" (im-git-dirty?))
                              (message "!! Failed to switch!")))))
               (insert "\n"))
@@ -1341,7 +1391,7 @@ but sometimes projects gets dirty and this fixes that."
              (it)
              (nth 1 (s-split-up-to " " (nth 0 (s-split "\n" it t)) 1 t))))
     (im-output-select
-     :cmd "git worktree list --porcelain"
+     :cmd (im-git--shell-cmd "worktree" "list" "--porcelain")
      :prompt "Select a worktree: "
      :formatter
      (format "%s"
@@ -1365,17 +1415,17 @@ Also copies some predefined list of untracked files/folders with
 COW (copy on write).
 
 If worktree already exists, simply switches to it."
-  (unless (= 0 (shell-command "git fetch --all"
+  (unless (= 0 (shell-command (im-git--shell-cmd "fetch" "--all")
                               " *im-git-worktree: git fetch stdout*"
                               " *im-git-worktree: git fetch stderr*"))
     (user-error "Cannot git fetch --all"))
-  (unless (= 0 (shell-command "git worktree prune"
+  (unless (= 0 (shell-command (im-git--shell-cmd "worktree" "prune")
                               " *im-git-worktree: git worktree prune stdout*"
                               " *im-git-worktree: git worktree prune stderr*"))
     (user-error "Cannot git worktree prune"))
   (let* ((old-proj (im-current-project-root))
          (source (im-output-select
-                  :cmd "git branch -a --format='%(refname:short)'"
+                  :cmd (im-git--shell-cmd "branch" "-a" "--format=%(refname:short)")
                   :prompt "From (or enter new): "
                   :require-match? nil))
          (new-branch-name (when new-branch?
@@ -1387,14 +1437,14 @@ If worktree already exists, simply switches to it."
          (worktree (expand-file-name (f-join im-git-worktrees-root worktree-name)))
          (exists? (f-exists? worktree)))
     (unless exists?
-      (unless (= 0 (shell-command (format "git worktree add %s '%s' '%s'"
-                                          (if new-branch?
-                                              (format "-b '%s'" new-branch-name)
-                                            "")
-                                          worktree
-                                          source)
-                                  " *im-git-worktree: git worktree add stdout*"
-                                  " *im-git-worktree: git worktree add stderr*"))
+      (unless (= 0 (shell-command
+                    (apply #'im-git--shell-cmd
+                           (-flatten
+                            (list "worktree" "add"
+                                  (when new-branch? (list "-b" new-branch-name))
+                                  worktree source)))
+                    " *im-git-worktree: git worktree add stdout*"
+                    " *im-git-worktree: git worktree add stderr*"))
         (user-error "Can't create worktree, see buffer `*im-git-worktrees: git worktree add stderr*'"))
       (message ">> Created the worktree...")
 
@@ -1442,9 +1492,14 @@ If worktree is dirty, asks user if they want to force delete it."
                       (user-error "Aborted by user"))
                   "")))
       (project-kill-buffers)
-      (if (= 0 (shell-command (format "git worktree remove %s '%s'" args proj)
-                              " *im-git-worktree: git worktree remove stdout*"
-                              " *im-git-worktree: git worktree remove stderr*"))
+      (if (= 0 (shell-command
+                (apply #'im-git--shell-cmd
+                       (-flatten
+                        (list "worktree" "remove"
+                              (when (not (string-empty-p args)) args)
+                              proj)))
+                " *im-git-worktree: git worktree remove stdout*"
+                " *im-git-worktree: git worktree remove stderr*"))
           (message ">> Removed")
         (user-error "Can't remove worktree, see  *im-git-worktree: git worktree remove stderr*")))))
 
@@ -1452,7 +1507,7 @@ If worktree is dirty, asks user if they want to force delete it."
 
 (defun im-git-dirty? ()
   "Return t if there are uncommitted changes in the working tree."
-  (eq 1 (call-process "git" nil nil nil "diff-index" "--quiet" "HEAD" "--")))
+  (eq 1 (im-git--call-process "diff-index" "--quiet" "HEAD" "--")))
 
 (provide 'im-git)
 ;;; im-git.el ends here

@@ -7695,6 +7695,8 @@ mails."
   :general
   (im-leader-v "g" #'im-git-transient)
   :config
+  (im-when-on
+   :darwin (setopt im-git-path "/opt/homebrew/bin/git"))
   (transient-define-prefix im-git-transient ()
     [["Status"
       ("s" "Show status" im-git-status)
