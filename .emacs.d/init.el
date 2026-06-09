@@ -2363,7 +2363,7 @@ searches for TODO/FIXME items in given folder."
 ;;;;; Archiving URLS
 
 (use-package im-archive
-  :straight `(:local-repo ,im-packages-path :files ("im-archive"))
+  :straight `(:local-repo ,im-packages-path :files ("im-archive.el"))
   :defer t)
 
 (defvar im-org-archive-url-path "~/Documents/notes/data/archvive/")
@@ -3558,7 +3558,7 @@ that is read verbatim (meaning that no '$*' is appended):
     (add-to-list 'im-notif-dnd-whitelist-labels "org")))
 
 (use-package im-notif
-  :straight `(:local-repo ,im-packages-path :files ("im-notif"))
+  :straight `(:local-repo ,im-packages-path :files ("im-notif.el"))
   :defer t
   :general
   (im-leader
@@ -3827,7 +3827,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 
 
 (use-package im-holidays
-  :straight `(:local-repo ,im-packages-path :files ("im-holidays")))
+  :straight `(:local-repo ,im-packages-path :files ("im-holidays.el")))
 
 (use-package diary-lib
   :straight (:type built-in)
@@ -6729,7 +6729,7 @@ Fetches missing channels/users first."
 ;;;;; im-ai & org-ai & gptel -- interactions with LLMs
 
 (use-package im-ai
-  :straight `(:local-repo ,im-packages-path :files ("im-ai"))
+  :straight `(:local-repo ,im-packages-path :files ("im-ai.el"))
   :custom
   (im-ai-file "~/Documents/notes/extra/gpt.org")
   :general
@@ -6744,7 +6744,7 @@ Fetches missing channels/users first."
   (add-hook 'gptel-mode-hook #'tab-line-mode))
 
 (use-package im-ai-at-point
-  :straight `(:local-repo ,im-packages-path :files ("im-ai-at-point"))
+  :straight `(:local-repo ,im-packages-path :files ("im-ai-at-point.el"))
   :general
   (im-leader-v "sa" #'im-ai-at-point))
 
@@ -6953,7 +6953,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;;;;; im-cursor
 
 (use-package im-cursor
-  :straight `(:local-repo ,im-packages-path :files ("im-cursor"))
+  :straight `(:local-repo ,im-packages-path :files ("im-cursor.el"))
   :defer t
   :config
   (with-eval-after-load 'im-notif
@@ -6962,7 +6962,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;;;;; im-kagi-assistant
 
 (use-package im-kagi-assistant
-  :straight `(:local-repo ,im-packages-path :files ("im-kagi-assistant"))
+  :straight `(:local-repo ,im-packages-path :files ("im-kagi-assistant.el"))
   :defer t
   :custom
   (im-kagi-assistant-cookie im-kagi-cookie))
@@ -7687,7 +7687,7 @@ mails."
 ;;;;; im-git -- my git workflow, magit alternative
 
 (use-package im-git
-  :straight `(:local-repo ,im-packages-path :files ("im-git"))
+  :straight `(:local-repo ,im-packages-path :files ("im-git.el"))
   :defer t
   :init
   (add-hook 'im-git-commit-finished-hook #'im-update-git-state)
@@ -7800,7 +7800,7 @@ the commit buffer."
 ;;;;; im-readeck -- Readeck bookmark manager integration
 
 (use-package im-readeck
-  :straight `(:local-repo ,im-packages-path :files ("im-readeck"))
+  :straight `(:local-repo ,im-packages-path :files ("im-readeck.el"))
   :custom
   (im-readeck-url im-homeserver-readeck-url)
   (im-readeck-token im-homeserver-readeck-token)
@@ -7814,7 +7814,7 @@ the commit buffer."
 ;;;;; im-tab --- my tab related extensions
 
 (use-package im-tab
-  :straight `(:local-repo ,im-packages-path :files ("im-tab"))
+  :straight `(:local-repo ,im-packages-path :files ("im-tab.el"))
   :defer t
   :general
   (im-leader
@@ -7837,7 +7837,7 @@ the commit buffer."
 ;;;;; im-filebrowser -- Filebrowser integration
 
 (use-package im-filebrowser
-  :straight `(:local-repo ,im-packages-path :files ("im-filebrowser"))
+  :straight `(:local-repo ,im-packages-path :files ("im-filebrowser.el"))
   :defer t
   :custom
   (im-filebrowser-url im-homeserver-filebrowser-url)
@@ -7848,13 +7848,13 @@ the commit buffer."
 ;;;;; im-kube --- my kubernetes interface
 
 (use-package im-kube
-  :straight `(:local-repo ,im-packages-path :files ("im-kube"))
+  :straight `(:local-repo ,im-packages-path :files ("im-kube.el"))
   :defer t)
 
 ;;;;; im-nextcloud --- my nextcloud integration
 
 (use-package im-nextcloud
-  :straight `(:local-repo ,im-packages-path :files ("im-nextcloud"))
+  :straight `(:local-repo ,im-packages-path :files ("im-nextcloud.el"))
   :defer t
   :custom
   (im-nextcloud-url im-secrets-nextcloud-url)
@@ -7864,7 +7864,7 @@ the commit buffer."
 ;;;;; im-char-picker --- insert utf8 chars easily
 
 (use-package im-char-picker
-  :straight `(:local-repo ,im-packages-path :files ("im-char-picker"))
+  :straight `(:local-repo ,im-packages-path :files ("im-char-picker.el"))
   :general
   (im-leader "ic" #'im-char-picker)
   (:states '(insert)
@@ -7875,7 +7875,7 @@ the commit buffer."
 ;; Also see: orgmdb.el
 
 (use-package im-arr
-  :straight `(:local-repo ,im-packages-path :files ("im-arr"))
+  :straight `(:local-repo ,im-packages-path :files ("im-arr.el"))
   :defer t
   :custom
   (im-radarr-url im-homeserver-radarr-url)
@@ -7886,7 +7886,7 @@ the commit buffer."
 ;;;;; im-ntfy --- ntfy client
 
 (use-package im-ntfy
-  :straight `(:local-repo ,im-packages-path :files ("im-ntfy"))
+  :straight `(:local-repo ,im-packages-path :files ("im-ntfy.el"))
   :defer 60
   :custom
   (im-ntfy-server im-homeserver-ntfy-server)
@@ -7942,7 +7942,7 @@ the commit buffer."
 ;;;;; im-macos -- my macos extensions
 
 (use-package im-macos
-  :straight `(:local-repo ,im-packages-path :files ("im-macos"))
+  :straight `(:local-repo ,im-packages-path :files ("im-macos.el"))
   :if (eq system-type 'darwin)
   :demand t)
 
@@ -7955,7 +7955,7 @@ the commit buffer."
 ;;;;; im-occur
 
 (use-package im-occur
-  :straight `(:local-repo ,im-packages-path :files ("im-occur"))
+  :straight `(:local-repo ,im-packages-path :files ("im-occur.el"))
   :hook (occur-mode-hook . im-occur-mode)
   :config
   (add-hook 'occur-mode-hook 'im-occur-mode))
@@ -8549,7 +8549,7 @@ the commit buffer."
 ;;;;;; REPLs
 
 (use-package im-repl
-  :straight `(:local-repo ,im-packages-path :files ("im-repl"))
+  :straight `(:local-repo ,im-packages-path :files ("im-repl.el"))
   :defer t
   :general
   (im-leader-v
@@ -8755,7 +8755,7 @@ This is used in my snippets."
 (add-hook 'tsx-ts-mode-hook #'hs-minor-mode)
 
 (use-package im-deno
-  :straight `(:local-repo ,im-packages-path :files ("im-deno"))
+  :straight `(:local-repo ,im-packages-path :files ("im-deno.el"))
   :demand t)
 
 ;;;;;; REPL interaction
@@ -9378,7 +9378,7 @@ Lisp function does not specify a special indentation."
 ;;;;; Couchbase
 
 (use-package im-couchbase
-  :straight `(:local-repo ,im-packages-path :files ("im-couchbase"))
+  :straight `(:local-repo ,im-packages-path :files ("im-couchbase.el"))
   :defer t)
 
 ;;;;; BigQuery
