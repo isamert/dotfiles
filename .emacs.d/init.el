@@ -1948,8 +1948,11 @@ This way you can insert new entry right after other non-TODO
      (?* . "•")
      (?+ . "‣")))
   (org-modern-todo-faces
-   '(("PROG" :background "purple" :foreground "plum1")
-     ("WAIT" :background "goldenrod3" :foreground "yellow2")))
+   '(("TODO" :background "deep pink" :foreground "white")
+     ("PROG" :background "purple" :foreground "white")
+     ("WAIT" :background "goldenrod3" :foreground "white")
+     ("NEXT" :background "dark cyan" :foreground "white")
+     ("DEAD" :background "sienna" :foreground "white")))
   (org-modern-priority-faces
    '((?A :background "forest green" :foreground "beige")
      (?B :background "goldenrod" :foreground "beige")
