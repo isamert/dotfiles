@@ -5148,6 +5148,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
    ["Grep"
     ("G" "Ripgrep (all projects)" im-consult-ripgrep-all-projects)
     ("d" "Deadgrep" deadgrep)
+    ("D" "Deadgrep" deadgrep-directory)
     ("gb" "Grep selected branch" im-consult-git-grep-branch)
     ("gd" "Ripgrep in current directory" im-consult-ripgrep-current-directory)
     ("gD" "Ripgrep in given directory" im-consult-ripgrep-in-given-directory)
@@ -7232,6 +7233,9 @@ If SHELL-BUFFER is nil, use the current buffer."
   ;; and if I'm using deadgrep than this means shit got serious and I
   ;; need the advanced stuff.
   (deadgrep-extra-arguments '("--no-config" "--multiline"))
+  (deadgrep-project-root-function (lambda ()
+                                    (or (im-current-project-root)
+                                        default-directory)))
   :general
   (:keymaps 'deadgrep-mode-map :states 'normal
    "RET" #'deadgrep-visit-result
