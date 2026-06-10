@@ -2451,8 +2451,10 @@ TODO state, prioritizing in-progress items."
                                (cond
                                 ((string= todo-state "PROG") 1)
                                 ((string= todo-state "WAIT") 2)
-                                ((string= todo-state "TODO") 3)
-                                ((string= todo-state "DONE") 4)
+                                ((string= todo-state "NEXT") 3)
+                                ((string= todo-state "TODO") 4)
+                                ((string= todo-state "DONE") 5)
+                                ((string= todo-state "DEAD") 6)
                                 (t 0)))))
   ;; Move non-TODO headers to top
   (org-sort-entries nil ?F (lambda ()
