@@ -1320,49 +1320,73 @@ REGEXP."
 I keep projects clean in my local and do developments inside worktrees
 but sometimes projects gets dirty and this fixes that."
   (interactive)
-  (let ((buff (im-get-reset-buffer "*im-dirty-projects*")))
-    (message "im-git-list-dirty-projects :: started.")
+  (let* ((buff (im-get-reset-buffer "*im-dirty-projects*"))
+         (projects (im-all-project-roots))
+         (total (length projects))
+         (current 0)
+         (dirty-count 0)
+         (not-main-count 0))
     (switch-to-buffer buff)
-    (dolist (project (im-all-project-roots))
-      (let* ((default-directory (expand-file-name project))
-             (branches (split-string (await (im-git--async "branch" "--list")) "\n" t "[ \\*\t]+"))
-             (current-branch (await (im-git--async "branch" "--show-current")))
-             (main-branch (seq-find
-                           (lambda (branch)
-                             (string-match (regexp-opt (lab--listify lab-main-branch-name) t) (or branch "NULL")))
-                           branches))
-             (main? (string= current-branch main-branch))
-             (dirty? (im-git-dirty?)))
-        (with-current-buffer buff
-          (save-excursion
-            (goto-char (point-max))
-            (when dirty?
-              (insert (format "- %s is dirty!\n" project))
-              (insert "  ")
-              (insert-button
-               "Stash"
-               'follow-link t
-               'face custom-button
-               'action (lambda (_button)
-                         (let ((default-directory (expand-file-name project)))
-                           (call-interactively #'vc-git-stash))))
-              (insert "\n"))
-            (when (and main-branch (not main?))
-              (insert (format "- %s not on master!\n" project))
-              (insert "  ")
-              (insert-button
-               "Switch to MAIN"
-               'follow-link t
-               'face custom-button
-               'action (lambda (_button)
-                         (let ((default-directory (expand-file-name project)))
-                           (if (eq 0 (im-git--call-process "checkout" main-branch))
-                               (message ">> Switched! isDirty=%s" (im-git-dirty?))
-                             (message "!! Failed to switch!")))))
-              (insert "\n"))
-            (when (or dirty? (not main?))
-              (redisplay t)))))))
-  (message "im-git-list-dirty-projects :: finished."))
+    (with-current-buffer buff
+      (setq-local header-line-format
+                  (format " Scanning %d projects..." total)))
+    (dolist (project projects)
+      (cl-incf current)
+      (with-current-buffer buff
+        (setq-local header-line-format
+                    (format " [%d/%d] Dirty: %d | Not on main: %d | Scanning: %s"
+                            current total dirty-count not-main-count
+                            (abbreviate-file-name project))))
+      (condition-case reason
+          (let* ((default-directory (expand-file-name project))
+                 (branches (split-string (await (im-git--async "branch" "--list")) "\n" t "[ \\*\t]+"))
+                 (current-branch (await (im-git--async "branch" "--show-current")))
+                 (main-branch (seq-find
+                               (lambda (branch)
+                                 (string-match (regexp-opt (lab--listify lab-main-branch-name) t) (or branch "NULL")))
+                               branches))
+                 (main? (string= current-branch main-branch))
+                 (dirty? (im-git-dirty?)))
+            (when dirty? (cl-incf dirty-count))
+            (when (and main-branch (not main?)) (cl-incf not-main-count))
+            (with-current-buffer buff
+              (save-excursion
+                (goto-char (point-max))
+                (when dirty?
+                  (insert (format "- %s is dirty!\n" project))
+                  (insert "  ")
+                  (insert-button
+                   "Stash"
+                   'follow-link t
+                   'face custom-button
+                   'action (lambda (_button)
+                             (let ((default-directory (expand-file-name project)))
+                               (call-interactively #'vc-git-stash))))
+                  (insert "\n"))
+                (when (and main-branch (not main?))
+                  (insert (format "- %s not on master!\n" project))
+                  (insert "  ")
+                  (insert-button
+                   "Switch to MAIN"
+                   'follow-link t
+                   'face custom-button
+                   'action (lambda (_button)
+                             (let ((default-directory (expand-file-name project)))
+                               (if (eq 0 (im-git--call-process "checkout" main-branch))
+                                   (message ">> Switched! isDirty=%s" (im-git-dirty?))
+                                 (message "!! Failed to switch!")))))
+                  (insert "\n"))
+                (when (or dirty? (not main?))
+                  (redisplay t)))))
+        (error (with-current-buffer buff
+                 (save-excursion
+                   (goto-char (point-max))
+                   (insert (format "- ERROR: %s ─ %s !\n" project reason)))))))
+    (with-current-buffer buff
+      (setq-local header-line-format
+                  (format " ✓ Done. Scanned %d projects | Dirty: %d | Not on main: %d"
+                          total dirty-count not-main-count))
+      (force-mode-line-update))))
 
 ;;;; git worktrees
 
