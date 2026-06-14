@@ -7866,7 +7866,8 @@ the commit buffer."
 
 (use-package im-nextcloud
   :straight `(:local-repo ,im-packages-path :files ("im-nextcloud.el"))
-  :defer t
+  ;; For automatic Maps & Contacts integration
+  :after (org)
   :custom
   (im-nextcloud-url im-secrets-nextcloud-url)
   (im-nextcloud-user im-secrets-nextcloud-user)
