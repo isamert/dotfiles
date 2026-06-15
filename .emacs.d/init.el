@@ -11074,6 +11074,10 @@ the query beforehand."
   "Get week number."
   (string-to-number (format-time-string "%V")))
 
+(defun im-Y ()
+  "Get year."
+  (string-to-number (format-time-string "%Y")))
+
 (defun im-date (date &optional str)
   "Display the time described by DATE.
 DATE can be 'now', 'yesterday', 'two days ago' etc."
