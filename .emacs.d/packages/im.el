@@ -258,23 +258,16 @@ not found with WHAT, then it is requested from the user."
 This way, when Emacs is opened freshly, it'll continue using the memoize
 cache."
   (declare (indent 3) (doc-string 4))
-  (let ((origfn (intern (concat (symbol-name name) "---defmemoizefile-origfn")))
-        (memoizemap (intern (concat (symbol-name name) "---defmemoizefile-memoizemap"))))
-    `(progn
-       (setq ,memoizemap (make-hash-table :test 'equal))
-       (when (file-exists-p (expand-file-name ,file))
-         (setq ,memoizemap (im-deserialize-from-file ,file)))
-
-       (defun ,origfn ,arglist
-         ,@body)
-
-       (defun ,name (&rest ___args)
-         (if-let ((memoizedresult (gethash ___args ,memoizemap)))
-             memoizedresult
-           (let ((___result (apply #',origfn ___args)))
-             (map-put! ,memoizemap ___args ___result)
-             (im-serialize-into-file ,file ,memoizemap)
-             ___result))))))
+  `(let ((cache (if (file-exists-p (expand-file-name ,file))
+                    (im-deserialize-from-file ,file)
+                  (make-hash-table :test 'equal))))
+     (defun ,name ,arglist
+       (let ((key (list ,@(seq-remove
+                           (lambda (x) (memq x '(&optional &rest)))
+                           arglist))))
+         (with-memoization (gethash key cache)
+           (prog1 (progn ,@body)
+             (im-serialize-into-file ,file cache)))))))
 
 (defun im-sync-async-command-to-string (command &rest args)
   "Run async command and wait until it's finished.
