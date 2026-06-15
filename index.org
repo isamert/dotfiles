@@ -384,8 +384,13 @@ shortcuts < m : skhd -k "f13";  emacsclient --eval "(im-toggle-mic)"
 
 #+begin_src conf :tangle (when-darwin "~/.config/skhd/skhdrc")
   ctrl - l [
-    # F6 key
-    "Firefox" : skhd -k "0x61"
+    "Firefox" : skhd -k "f6"
+    "LibreWolf" : skhd -k "f6"
+    * ~
+  ]
+  ctrl - f [
+    "Firefox" : skhd -k "f3"
+    "LibreWolf" : skhd -k "f3"
     * ~
   ]
 #+end_src
