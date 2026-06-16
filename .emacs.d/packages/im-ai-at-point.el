@@ -155,13 +155,13 @@ ONLY output your answer to the query, with no explanations."
       ;; Indent the code to match the buffer indentation if it's messed up.
       (indent-region beg (point))
       (pulse-momentary-highlight-region beg (point))
-      (im-ai-at-point--draw-snippet-overlay beg (1+ (line-end-position)) 'im-ai-at-point-after-face)
-      (when im-ai-reenable-aggressive-indent
-        (aggressive-indent-mode +1)
-        (setq im-ai-reenable-aggressive-indent nil))
-      (unless (bound-and-true-p im-help-at-point-mode)
-        (setq im-ai-disable-help-at-pt-mode t)
-        (im-help-at-point-mode +1)))))
+      (im-ai-at-point--draw-snippet-overlay beg (1+ (line-end-position)) 'im-ai-at-point-after-face)))
+  (when im-ai-reenable-aggressive-indent
+    (aggressive-indent-mode +1)
+    (setq im-ai-reenable-aggressive-indent nil))
+  (unless (bound-and-true-p im-help-at-point-mode)
+    (setq im-ai-disable-help-at-pt-mode t)
+    (im-help-at-point-mode +1)))
 
 ;;;; Directive System
 
@@ -612,7 +612,7 @@ If TYPE is nil, return any im-ai overlay."
              (deactivate-mark)))
          (setq im-ai-at-point--last-processed-point (point))
          (when (and (not agentic?) (bound-and-true-p aggressive-indent-mode))
-           (setq im-ai-at-point--reenable-aggressive-indent t)
+           (setq im-ai-reenable-aggressive-indent t)
            (aggressive-indent-mode -1))
          (let ((history (setq im-ai-at-point--history
                               (if history
