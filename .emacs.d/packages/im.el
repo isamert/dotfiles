@@ -1409,17 +1409,8 @@ Return a (color color) list that can be used with :column-colors and
 ;; I use this to indicate progress. Just enable the mode and disable
 ;; it when the thing finishes.
 
-(defvar im-spinner-frames '("🌑" "🌒" "🌓" "🌔" "🌕" "🌖" "🌗" "🌘")
+(defvar im-spinner-frames '("▖" "▘" "▝" "▗")
   "List of frames for the spinner animation.")
-
-;; (setq im-spinner-frames '("◐" "◓" "◑" "◒"))
-;; (setq im-spinner-frames '("⣾" "⣽" "⣻" "⢿" "⡿" "⣟" "⣯" "⣷"))
-;; (setq im-spinner-frames '("←" "↖" "↑" "↗" "→" "↘" "↓" "↙"))
-;; (setq im-spinner-frames '("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏"))
-;; (setq im-spinner-frames '("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█" "▇" "▆" "▅" "▄" "▃" "▂"))
-;; (setq im-spinner-frames '("🕐" "🕑" "🕒" "🕓" "🕔" "🕕" "🕖" "🕗" "🕘" "🕙" "🕚" "🕛"))
-;; (setq im-spinner-frames '("▉" "▊" "▋" "▌" "▍" "▎" "▏" "▎" "▍" "▌" "▋" "▊" "▉"))
-;; (setq im-spinner-frames '("🌍" "🌎" "🌏"))
 
 (defvar im-spinner--index 0)
 (defvar im-spinner--timer nil)
