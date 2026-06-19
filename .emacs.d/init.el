@@ -7824,26 +7824,26 @@ the commit buffer."
 
 ;;;;; im-tab --- my tab related extensions
 
-(use-package im-tab
-  :straight `(:local-repo ,im-packages-path :files ("im-tab.el"))
+(use-package tabku
+  :straight (:host github :repo "isamert/tabku.el")
   :defer t
   :general
   (im-leader
     ;; Save current tab window configuration to a key
-    "ww2" #'im-tab-configuration-save-current
-    "ww3" #'im-tab-configuration-save-current
-    "ww4" #'im-tab-configuration-save-current
-    "ww5" #'im-tab-configuration-save-current
+    "ww2" #'tabku-configuration-save-current
+    "ww3" #'tabku-configuration-save-current
+    "ww4" #'tabku-configuration-save-current
+    "ww5" #'tabku-configuration-save-current
     ;; Restore a saved configuration with a key
-    "w2" #'im-tab-configuration-restore-current
-    "w3" #'im-tab-configuration-restore-current
-    "w4" #'im-tab-configuration-restore-current
-    "w5" #'im-tab-configuration-restore-current
+    "w2" #'tabku-configuration-restore-current
+    "w3" #'tabku-configuration-restore-current
+    "w4" #'tabku-configuration-restore-current
+    "w5" #'tabku-configuration-restore-current
     ;; Restore a saved configuration but keep the current buffer
-    "W2" #'im-tab-configuration-restore-current-sticky
-    "W3" #'im-tab-configuration-restore-current-sticky
-    "W4" #'im-tab-configuration-restore-current-sticky
-    "W5" #'im-tab-configuration-restore-current-sticky))
+    "W2" #'tabku-configuration-restore-current-sticky
+    "W3" #'tabku-configuration-restore-current-sticky
+    "W4" #'tabku-configuration-restore-current-sticky
+    "W5" #'tabku-configuration-restore-current-sticky))
 
 ;;;;; im-filebrowser -- Filebrowser integration
 
