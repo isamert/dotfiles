@@ -5097,7 +5097,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
    ["Grep"
     ("G" "Ripgrep (all projects)" im-consult-ripgrep-all-projects)
     ("d" "Deadgrep" deadgrep)
-    ("D" "Deadgrep" deadgrep-directory)
+    ("D" "Deadgrep" im-deadgrep-directory)
     ("gb" "Grep selected branch" im-consult-git-grep-branch)
     ("gd" "Ripgrep in current directory" im-consult-ripgrep-current-directory)
     ("gD" "Ripgrep in given directory" im-consult-ripgrep-in-given-directory)
@@ -7199,6 +7199,12 @@ If SHELL-BUFFER is nil, use the current buffer."
    "r" #'deadgrep-restart
    "I" #'deadgrep-incremental
    "i" #'deadgrep-edit-mode))
+
+(defun im-deadgrep-directory (dir term)
+  (interactive (list
+      (read-directory-name "Dir: ")
+      (read-string "Search term")))
+  (deadgrep term dir))
 
 ;;;;; consult-gh (GitHub interface for consult)
 
