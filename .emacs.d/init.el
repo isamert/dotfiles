@@ -574,10 +574,19 @@ cut it. I need to run those statements on every theme change.")
      "FiraCode Nerd Font"
      "Iosevka Nerd Font"
      "IBM Plex Mono"
+     "Blex Mono Nerd Font"
      "Iosevka Comfy Motion"
      "Iosevka Comfy"
+     "Noto Sans Mono"
      "Liberation Mono"
-     "Noto Sans Mono"))
+     "UbuntuMono Nerd Font"
+     "JetBrainsMono Nerd Font"
+     "Terminess Nerd Font"
+     "RobotoMono Nerd Font"
+     "SauceCodePro Nerd Font"
+     "Hack Nerd Font"
+     "Inconsolata Nerd Font"
+     "VictorMono Nerd Font"))
   "Fonts that I use.")
 
 (defvar im-current-font nil
