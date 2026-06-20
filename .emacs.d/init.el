@@ -4997,7 +4997,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
     "ghostel project" → (ghostel-project)
     "ghostel new" → (ghostel 'new)))
 
-(im-leader "2" nil)
+(im-leader "2" #'im-term)
 
 ;;;;; xref
 
