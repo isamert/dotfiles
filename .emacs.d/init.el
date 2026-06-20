@@ -4968,74 +4968,11 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 
 ;; Others
 
-(defvar im-project-shell-last-height 20)
-(defvar im-project-shell-last-window nil)
-
-(defun im-shell-for (&optional type placement shell-fn shell-name)
-  (interactive)
-  (unless shell-fn
-    (setq shell-fn
-          (lambda (name)
-            (require 'eshell)
-            (save-window-excursion
-              (let ((eshell-buffer-name name))
-                (eshell t))))))
-  (setq type (or type 'project))
-  (let* ((proj-dir (or (ignore-errors
-                         (project-root (project-current)))
-                       default-directory))
-         (default-directory (cl-case type
-                              (project proj-dir)
-                              (dir default-directory)
-                              (t (expand-file-name type))))
-         (proj-name (f-base default-directory))
-         (name (format "*$%s: %s*" (or shell-name "shell") proj-name)))
-    (if-let* (placement
-              (window (--find (s-prefix? (format "\*\$%s: " (or shell-name "shell")) (buffer-name (window-buffer it))) (window-list)))
-              (focused? (equal window (selected-window))))
-        (progn
-          (when (-contains? '(top bottom) placement)
-            (setq im-project-shell-last-height (window-height window)))
-          (delete-window window)
-          (when im-project-shell-last-window
-            (select-window im-project-shell-last-window)))
-      (let* ((term (or (get-buffer name)
-                       (funcall shell-fn name))))
-        (with-current-buffer term
-          (tab-line-mode -1))
-        (setq im-project-shell-last-window (get-buffer-window))
-        (if (not placement)
-            (switch-to-buffer term)
-          (progn
-            (display-buffer-in-side-window
-             term
-             (append
-              `((window-height . ,im-project-shell-last-height)
-                (side . ,placement)
-                (slot . 1))))
-            (select-window (get-buffer-window term))))))))
-
-(defun im-term ()
-  "Select a term and open."
-  (interactive)
-  (empv--select-action "Term: "
-    "eshell project" → (im-shell-for 'project nil nil "eshell")
-    "eshell dir" → (im-shell-for 'dir nil nil "eshell")
-    "eshell new" → (call-interactively #'im-eshell)
-    "eat project" → (im-shell-for 'project nil #'im--new-eat "eat")
-    "eat dir" → (im-shell-for 'dir nil #'im--new-eat "eat")
-    "eat new" → (call-interactively #'im-eat)))
-
 (defun im--suggest-shell-name (type)
   (format "$%s: %s/%s" type (im-current-project-name)
           (if (buffer-file-name (current-buffer))
               (buffer-name)
             (symbol-name major-mode))))
-
-(defun im-eat (name)
-  "Like `im-eshell'."
-  (interactive (list (read-string "Buffer name: " (im--suggest-shell-name "eat"))))
-  (switch-to-buffer (im--new-eat name)))
 
 (defun im-eshell (name)
   (interactive (list (read-string "Buffer name: " (generate-new-buffer-name (format "*$eshell: %s*" (im-current-project-name))))))
@@ -5043,31 +4980,24 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
     (rename-buffer name t)
     (current-buffer)))
 
-(defun im--new-eat (name)
-  (require 'eat)
-  (save-window-excursion
-    (let ((eat-buffer-name name))
-      (eat))))
-
-(defun im-terminal-vertically ()
+(defun im-eshell-project ()
   (interactive)
-  (select-window (split-window-vertically))
-  (call-interactively #'im-eshell))
+  (let* ((default-directory (project-root (project-current t)))
+         (bname (format "*$eshell: %s*" (im-current-project-name))))
+    (if-let* ((existing (get-buffer bname)))
+        (switch-to-buffer existing)
+      (im-eshell bname))))
 
-(defun im-terminal-horizontally ()
+(defun im-term ()
+  "Select a term and open."
   (interactive)
-  (select-window (split-window-horizontally))
-  (call-interactively #'im-eshell))
+  (empv--select-action "Term: "
+    "eshell project" → (im-eshell-project)
+    "eshell new" → (call-interactively #'im-eshell)
+    "ghostel project" → (ghostel-project)
+    "ghostel new" → (ghostel 'new)))
 
-(general-def :states 'normal
-  "M-_" #'im-terminal-vertically
-  "M-|" #'im-terminal-horizontally)
-
-(im-leader "2" #'im-term)
-(bind-key "<f2>" (λ-interactive (im-shell-for "~" 'top nil "eshell")))
-(bind-key "S-<f2>" (λ-interactive (im-shell-for "~" 'top #'im--new-eat)))
-(bind-key "<f3>" (λ-interactive (im-shell-for 'project 'bottom nil "eshell")))
-(bind-key "S-<f3>" (λ-interactive (im-shell-for 'project 'bottom #'im--new-eat)))
+(im-leader "2" nil)
 
 ;;;;; xref
 
