@@ -110,6 +110,13 @@ You can find this in Sonarr under Settings -> General -> Security."
   :type 'boolean
   :group 'im-sonarr)
 
+(defcustom im-sonarr-tmdb-bearer-token nil
+  "Bearer token for TheMovieDB API v3.
+Used to look up TVDB ID by IMDB ID when adding series.
+Get one at https://www.themoviedb.org/settings/api"
+  :type 'string
+  :group 'im-sonarr)
+
 ;;;; Internal variables
 
 (defvar im-radarr--quality-profiles-cache nil
@@ -509,6 +516,26 @@ Returns the folder path."
         (substring first-aired 0 4))
       "?"))
 
+(defun im-sonarr--tmdb-find-tvdb-by-imdb (imdb-id)
+  "Find TVDB ID by IMDB-ID via themoviedb.org API."
+  (unless im-sonarr-tmdb-bearer-token
+    (user-error "Please set `im-sonarr-tmdb-bearer-token'"))
+  (let* ((auth-headers `(:Authorization ,(concat "Bearer " im-sonarr-tmdb-bearer-token)))
+         (find-url (format "https://api.themoviedb.org/3/find/%s" imdb-id))
+         (find-result (im-request find-url
+                        :-headers auth-headers
+                        :-params '((external_source . "imdb_id"))))
+         (tv-results (alist-get 'tv_results find-result)))
+    (if (not tv-results)
+        (user-error "No TV results found for IMDB ID: %s" imdb-id)
+      (let* ((tmdb-tv-id (alist-get 'id (car tv-results)))
+             (external-url (format "https://api.themoviedb.org/3/tv/%s/external_ids" tmdb-tv-id))
+             (external-result (im-request external-url :-headers auth-headers))
+             (tvdb-id (alist-get 'tvdb_id external-result)))
+        (unless tvdb-id
+          (user-error "No TVDB ID found for TMDB ID: %s" tmdb-tv-id))
+        (number-to-string tvdb-id)))))
+
 (defun im-sonarr--build-series-payload (series-info quality-profile-id root-folder-path)
   "Build the payload for adding SERIES-INFO."
   `((title . ,(alist-get 'title series-info))
@@ -536,13 +563,17 @@ Returns the folder path."
 
 ;;;###autoload
 (defun im-sonarr-add-series (tvdb-id)
-  "Add a series to Sonarr by TVDB-ID.
+  "Add a series to Sonarr by TVDB-ID or IMDB-ID.
 Interactively prompts for quality profile and root folder."
   (interactive
    (list
     (or (im-arr--extract-org-id '("TVDB" "TVDB-ID") "\\([0-9]+\\)")
-        (read-string "TVDB ID (e.g., 121361): "))))
-  (let ((normalized-tvdb-id (im-sonarr--normalize-tvdb-id tvdb-id)))
+        (im-arr--extract-org-id '("IMDB" "IMDB-ID") "\\(tt[0-9]+\\)")
+        (read-string "TVDB or IMDB ID (e.g., 121361 or tt1234567): "))))
+  (let ((normalized-tvdb-id
+         (if (string-match "\\`tt[0-9]+\\'" tvdb-id)
+             (im-sonarr--tmdb-find-tvdb-by-imdb tvdb-id)
+           (im-sonarr--normalize-tvdb-id tvdb-id))))
     (message "Looking up series...")
     (im-sonarr--add-series-from-info
      (im-sonarr-lookup-series (format "tvdb:%s" normalized-tvdb-id)))))
