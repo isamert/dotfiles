@@ -27,7 +27,7 @@
 ;; - `im-radarr-{search-and-add-movie,list-movies,clear-cache}'
 ;; - `im-sonarr-{search-and-add-series,list-series,clear-cache}'
 ;;
-;; This is 95% AI generated but I reviewed it, kind of.
+;; This is 95% LLM generated but I reviewed it, kind of.
 
 ;;; Code:
 
@@ -633,6 +633,24 @@ Interactively prompts for quality profile and root folder."
      "*Sonarr Series*"
      (format "Sonarr Library (%d series)" (length series-list))
      lines)))
+
+;;;###autoload
+(defun im-arr-add-thing-at-point ()
+  "Add movie or series at point based on org heading tag.
+If heading has :movie: tag, dispatches to `im-radarr-add-movie'.
+If heading has :series: tag, dispatches to `im-sonarr-add-series'."
+  (interactive)
+  (let ((tags (when (derived-mode-p 'org-mode) (org-get-tags))))
+    (cond
+     ((member "movie" tags)
+      (call-interactively #'im-radarr-add-movie))
+     ((member "series" tags)
+      (call-interactively #'im-sonarr-add-series))
+     (t
+      (user-error "No :movie: or :series: tag found on current heading")))))
+
+;;;###autoload
+(defalias 'im-arr-add-movie-or-series-at-point #'im-arr-add-thing-at-point)
 
 (provide 'im-arr)
 ;;; im-arr.el ends here
