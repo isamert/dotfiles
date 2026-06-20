@@ -3335,76 +3335,137 @@ Enabling uBlock [[https://github.com/gorhill/uBlock/wiki/Cloud-storage][cloud st
 #+end_src
 ** QuteBrowser
 #+begin_src python :tangle (when-on :darwin "~/.qutebrowser/config.py" :linux "~/.config/qutebrowser/config.py")
-  c.content.blocking.adblock.lists = ['https://easylist.to/easylist/easylist.txt', 'https://easylist.to/easylist/easyprivacy.txt']
-  c.content.blocking.method = 'both'
-  c.content.blocking.enabled = True
-  c.content.pdfjs = True
-  c.fonts.default_family = ['Iosevka Nerd Font']
-  c.fonts.default_size = '14pt'
-  c.hints.chars = 'asdfghjklqweuio'
-  c.fonts.hints = 'normal 16pt Helvetica'
-  c.hints.uppercase = True
-  c.input.insert_mode.auto_load = True
-  c.input.mouse.rocker_gestures = True
-  c.statusbar.position = 'top'
-  c.statusbar.show = 'never'
-  c.completion.shrink = True
-  c.url.default_page = 'https://start.duckduckgo.com/'
-  c.url.searchengines = {
-      'DEFAULT': 'https://google.com/search?q={}',
-      'g': 'https://google.com/search?q={}',
-      'd': 'https://duckduckgo.com/?q={}',
-      'yt': 'https://www.youtube.com/results?search_query={}',
-      'r': 'https://reddit.com/r/{}',
-      'a': 'https://web.archive.org/web/{}',
-      'nix': 'https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query={}',
-  }
-  c.url.yank_ignored_parameters = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
-  c.editor.command = ['emacsclient', '-c', '{}']
-  c.fonts.hints = 'normal 16pt Helvetica'
-  c.window.hide_decoration = True
+# * Notes
 
-  config.bind('t', 'cmd-set-text -s :open -t')
-  config.bind('T', 'cmd-set-text :open -t -r {url:pretty}')
-  config.bind('O', 'cmd-set-text :open {url:pretty}')
+# Sb → bookmarks page
+# Sh → history page
+# f C-r → rapid hinting
 
-  config.bind('b', 'cmd-set-text -sr :tab-focus')
-  config.bind('B', 'cmd-set-text -s :quickmark-load -t')
+# * Configs
 
-  config.bind('j', 'scroll-px 0 200')
-  config.bind('k', 'scroll-px 0 -200')
-  config.bind('J', 'tab-next')
-  config.bind('K', 'tab-prev')
-  config.bind('<Alt-J>', 'tab-move -')
-  config.bind('<Alt-K>', 'tab-move +')
+# ** Adblock & content
 
-  config.bind('<Alt-x>', 'cmd-set-text :')
+c.content.blocking.adblock.lists = ['https://easylist.to/easylist/easylist.txt', 'https://easylist.to/easylist/easyprivacy.txt']
+c.content.blocking.method = 'both'
+c.content.blocking.enabled = True
+c.content.pdfjs = True
 
-  config.bind(',m', 'spawn mpv {url}')
-  config.bind(',M', 'hint links spawn mpv {hint-url}')
+# ** Appearance & fonts
 
-  config.bind(';i', 'hint images tab')
-  config.bind(';I', 'hint images yank')
+c.fonts.default_family = ['Cascadia Code NF']
+c.fonts.default_size = '16pt'
+c.fonts.hints = 'normal 16pt Helvetica'
+c.window.hide_decoration = True
+c.window.title_format = "qutebrowser"
 
-  # Ctrl-E is the go-to EOL binding and I don't want qutebrowser to
-  # override it
-  config.unbind('<Ctrl-E>', mode='insert')
-  config.bind('<Alt-A>', 'edit-text', mode='insert')
-  config.bind('<Alt-E>', 'edit-text', mode='insert')
+# ** Tabs
 
-  c.content.blocking.whitelist = ['https://*.trendyol.com']
+c.tabs.padding = {"bottom": 7, "left": 5, "right": 5, "top": 7}
+c.tabs.position = 'right'
+c.tabs.show = 'switching'
+c.tabs.show_switching_delay = 1000
 
-  config.bind('P', 'spawn --userscript org-pass')
+# ** Hints
 
-  c.aliases = {
-      'w': 'session-save',
-      'q': 'close',
-      'qa': 'quit',
-      'wq': 'quit --save',
-      'wqa': 'quit --save',
-  }
+c.hints.chars = 'asdfghjklqweuio'
+c.hints.uppercase = True
 
-  config.load_autoconfig(False)
+# ** Input & mouse
+
+c.input.insert_mode.auto_load = True
+c.input.mouse.rocker_gestures = True
+
+# ** Status bar & completion
+
+c.statusbar.position = 'bottom'
+c.statusbar.show = 'always'
+c.completion.shrink = False
+c.completion.height = '30%'
+c.completion.use_best_match = True
+
+# ** URLs, search engines, editor
+
+c.url.default_page = 'https://start.duckduckgo.com/'
+c.url.yank_ignored_parameters = ['ref', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+c.url.searchengines = {
+    'DEFAULT': 'https://kagi.com/search?q={}',
+    'k': 'https://kagi.com/search?q={}',
+    'g': 'https://google.com/search?q={}',
+    'd': 'https://duckduckgo.com/?q={}',
+    'yt': 'https://www.youtube.com/results?search_query={}',
+    'r': 'https://reddit.com/r/{}',
+    'a': 'https://web.archive.org/web/{}',
+    'nix': 'https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query={}',
+}
+c.editor.command = ['/opt/homebrew/bin/emacsclient', '-c', '{}']
+
+# * Bindings
+
+# ** Navigation & scrolling
+
+config.bind('j', 'scroll-px 0 200')
+config.bind('k', 'scroll-px 0 -200')
+config.bind('J', 'tab-next')
+config.bind('K', 'tab-prev')
+config.bind('<Alt-J>', 'tab-move +')
+config.bind('<Alt-K>', 'tab-move -')
+
+# ** Tab management
+
+config.bind('b', 'cmd-set-text -sr :tab-focus')
+config.bind('B', 'cmd-set-text -s :quickmark-load -t')
+config.bind('t', 'cmd-set-text -s :open -t')
+config.bind('T', 'cmd-set-text :open -t -r {url:pretty}')
+config.bind('O', 'cmd-set-text :open {url:pretty}')
+config.bind('x', 'tab-close')
+config.bind('d', 'scroll-page 0 0.5')
+
+# ** Hints
+
+config.bind('yf', 'hint links yank')
+config.bind(';i', 'hint images tab')
+config.bind(';I', 'hint images yank')
+config.bind(',M', 'hint links spawn mpv {hint-url}')
+
+# ** Media & external
+
+config.bind(',m', 'spawn mpv {url}')
+
+# ** Command mode & misc
+
+config.bind('<F1>', 'config-cycle tabs.show always switching')
+config.bind('<Alt-x>', 'cmd-set-text :')
+
+# ** Insert mode overrides
+
+config.bind('<Ctrl+g>', 'fake-key <Escape>', mode='insert')
+config.unbind('<Ctrl-E>', mode='insert')
+config.bind('<Alt-A>', 'edit-text', mode='insert')
+config.bind('<Alt-E>', 'edit-text', mode='insert')
+
+# ** User scripts
+
+config.bind('P', 'spawn --userscript org-pass')
+
+# ** Aliases
+
+c.aliases = {
+    'w': 'session-save',
+    'q': 'close',
+    'qa': 'quit',
+    'wq': 'quit --save',
+    'wqa': 'quit --save',
+    'tbp-get-cookie': "jseval ...",
+    'tbp-set-cookie': "jseval ...",
+}
+
+# ** Whitelist
+
+c.content.blocking.whitelist = ['https://*.trendyol.com']
+
+# * Load
+
+config.load_autoconfig(False)
 #+end_src
 ** chawan
 cha is kind of w3m on steroids.
@@ -3420,29 +3481,46 @@ visual-home = "https://lite.duckduckgo.com/"
 [buffer]
 images = true
 autofocus = true
+cookie = "save"
 # scripting = true # Enable per site
+
+[search]
+wrap = false
 
 [external]
 history-file = "~/.local/share/chawan/history.uri"
-copy-cmd = "wl-copy"
+«when-on(darwin="copy-cmd = 'pbcopy'")»
 
 [display]
 color-mode = "true-color"
 
+[omnirule.kagi]
+match = '^kagi:'
+substitute-url = '(x) => "https://kagi.com/html/search?q=" + encodeURIComponent(x.split(":").slice(1).join(":"))'
+
 [page]
 'H' = "cmd.pager.prevBuffer"
 'L' = "cmd.pager.nextBuffer"
+
+# 'o' = "cmd.pager.webSearch"
+'o' = '() => pager.load("kagi:")'
 'O' = "cmd.pager.load"
-'o' = "cmd.pager.loadCursor"
-'s' = '() => pager.load("ddg:")'
+
 'yy' = "cmd.pager.copyURL"
-# yu @copyCursorLink @Copy the link under the cursor to the system clipboard.
-'gp' = "cmd.pager.gotoClipboardURL"
-# M-b @openBookmarks @Open the bookmark file.
-# M-a @addBookmark @Add the current page to your bookmarks.
+
+# 'M-y' = cmd.pager.copyURL
+# 'yu' = cmd.pager.copyCursorLink
 
 [[siteconf]]
 url = 'https://isamert\.net/.*'
+scripting = true
+
+[[siteconf]]
+url = 'https://kagi\.com/.*'
+scripting = true
+
+[[siteconf]]
+url = 'https://github\.com/.*'
 scripting = true
 #+end_src
 * Some desktop files
