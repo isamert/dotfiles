@@ -647,9 +647,11 @@ issues for given `:account'."
   (delete-char 1)
   (org-table-align))
 
+;;;###autoload
 (defun lab-github-view-repo-file (url)
   "Display GitHub file at URL in Emacs.
 Supposed to be used within `browse-url-handlers'."
+  (interactive "sURL:")
   (let* ((raw-url (lab-github-url-to-raw url))
          (temp-file (make-temp-file "github-raw-")))
     (url-copy-file raw-url temp-file t)
