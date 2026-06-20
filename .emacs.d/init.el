@@ -3058,7 +3058,7 @@ Version: 2023-06-28
   ;; good.
   (hs-hide-comments-when-hiding-all nil))
 
-;;;;; eat & eshell
+;;;;; eat & eshell & ghostel
 
 (use-package eshell
   :straight (:type built-in)
@@ -3138,6 +3138,25 @@ Version: 2023-06-28
   (add-hook 'eat-mode-hook #'toggle-truncate-lines)
   (with-eval-after-load 'eshell
     (eat-eshell-mode)))
+
+(use-package ghostel
+  :straight (:host github :repo "dakra/ghostel"
+             :files (:defaults
+                     "etc"
+                     "src"
+                     "vendor"
+                     "build.zig"
+                     "build.zig.zon"
+                     "symbols.map"
+                     "ghostel-pkg.el"
+                     "lisp/*.el"
+                     "extensions/*/*.el"
+                     "extensions/*.el")))
+
+(use-package evil-ghostel
+  :straight nil
+  :after (ghostel evil)
+  :hook (ghostel-mode . evil-ghostel-mode))
 
 ;;;;;; Utility functions
 
@@ -4904,8 +4923,8 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
     [["Core"
       :setup-children im-project-transient--wrapper
       ("RET" "Dired" im-dired-dwim)
-      ("e" "Eshell" im-shell-for)
-      ("t" "terminal" im-term)
+      ("e" "Eshell" im-eshell-project)
+      ("E" "Ghostel" ghostel-project)
       ("!" "Run shell command" im-shell-command)
       ("k" "Kill buffers" project-kill-buffers)
       ("n" "Project notes" im-org-jump-to-project-documentation)]
