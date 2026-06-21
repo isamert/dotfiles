@@ -3169,7 +3169,7 @@ Version: 2023-06-28
 
 ;;;;;; Utility functions
 
-(defvar im-terminal-buffer-name-regexp "\\*?\\$?\\(e?shell\\|v?term\\|eat\\|cursor-agent\\).*")
+(defvar im-terminal-buffer-name-regexp "\\*?\\$?\\(e?shell\\|v?term\\|eat\\|cursor-agent\\|ghostel\\).*")
 
 (defun im-run-last-command-on-visible-term ()
   (interactive)
@@ -3178,6 +3178,8 @@ Version: 2023-06-28
     (pcase major-mode
       ('eshell-mode  (eshell-previous-matching-input "" 0)
                      (eshell-send-input))
+      ('ghostel-mode  (ghostel-send-key "up")
+                      (ghostel-send-key "return"))
       ('eat-mode (eat-self-input 1 (aref (kbd "<up>") 0))
                  (eat-self-input 1 (aref (kbd "RET") 0)))
       ('vterm-mode (vterm-send-up)
@@ -3189,6 +3191,8 @@ Version: 2023-06-28
     (pcase major-mode
       ('eshell-mode  (insert cmd)
                      (eshell-send-input))
+      ('ghostel-mode  (ghostel-send-string cmd)
+                      (ghostel-send-key "return"))
       ('eat-mode
        (eat--send-string (eat-term-parameter eat-terminal 'eat--process) cmd)
        (eat-self-input 1 (aref (kbd "RET") 0)))
@@ -3204,6 +3208,7 @@ Version: 2023-06-28
 
 (defvar im-term-run-history '())
 (defvar im-jump-to-term-last-window nil)
+(add-to-list 'savehist-additional-variables 'im-term-run-history)
 
 (defun im-jump-to-visible-term ()
   "Jump to the visible term window.
