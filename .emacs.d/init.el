@@ -2007,6 +2007,10 @@ This way you can insert new entry right after other non-TODO
   (string< (or (org-element-property prop y) "")
            (or (org-element-property prop x) "")))
 
+(use-package im-org-grabbability
+  :straight `(:local-repo ,im-packages-path :files ("im-org-grabbability.el"))
+  :after (org-ql))
+
 ;; You have to use ~:sort (lambda ...)~ syntax in org-ql dynamic
 ;; blocks if you want to supply a function for the ~:sort~
 ;; parameter. You can't use a function that returns a lambda, hence
