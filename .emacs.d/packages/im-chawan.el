@@ -54,6 +54,11 @@ With prefix argument, `im-chawan' always creates a fresh buffer."
   "How many lines from the end of the Chawan buffer to check for text input."
   :type 'integer)
 
+(defcustom im-chawan-search-engine "kagi:"
+  "Search engine URL used for non-URL-like input.
+The string %s is replaced with the URL-encoded query."
+  :type 'string)
+
 (defvar-local im-chawan--url nil
   "URL associated with the current Chawan buffer.")
 
@@ -73,7 +78,11 @@ Return nil for empty strings."
   (when url
     (setq url (string-trim url))
     (unless (string-empty-p url)
-      url)))
+      (if (or (and (not (string-match-p "[[:space:]]" url))
+                   (string-match-p "\\." url))
+              (string-prefix-p im-chawan-search-engine url))
+          url
+        (concat im-chawan-search-engine url)))))
 
 (defun im-chawan--url-host (url)
   "Return a display name for URL."
@@ -231,7 +240,7 @@ From Lisp:
      (read-string "URL, search, or path for Chawan: "))
     current-prefix-arg))
   (let ((buffer (im-chawan--get-buffer url fresh)))
-    (pop-to-buffer buffer)
+    (switch-to-buffer buffer)
     (unless (im-chawan--running-p buffer)
       (im-chawan--start-in-buffer buffer url))
     (im-chawan--defer-evil-emacs-state buffer)
@@ -287,7 +296,7 @@ This function is suitable for `browse-url-browser-function'."
          (names (mapcar #'buffer-name buffers)))
     (unless buffers
       (user-error "No Chawan buffers"))
-    (pop-to-buffer
+    (switch-to-buffer
      (get-buffer
       (completing-read "Switch to Chawan buffer: " names nil t)))))
 
@@ -324,7 +333,7 @@ With prefix argument, prompt for a new URL."
         (buffer (current-buffer)))
     (im-chawan--stop-process buffer)
     (im-chawan--start-in-buffer buffer url)
-    (pop-to-buffer buffer)))
+    (switch-to-buffer buffer)))
 
 ;;;###autoload
 (defun im-chawan-open-url (url)
@@ -366,12 +375,21 @@ If the current buffer is not a Chawan buffer, open URL using
   ;; These are more useful for controlling Emacs than for controlling Chawan.
   (define-key im-chawan-mode-map (kbd "SPC") #'im-chawan-space)
   (define-key im-chawan-mode-map (kbd "C-w") evil-window-map)
+  (define-key im-chawan-mode-map (kbd "Q") #'im-quit)
+  (define-key im-chawan-mode-map (kbd "q") #'im-quit)
+  (define-key im-chawan-mode-map (kbd "x") #'im-chawan-kill)
+  (define-key im-chawan-mode-map (kbd "&")   #'im-chawan-open-in-emacs)
   (define-key im-chawan-mode-map (kbd "C-^") #'evil-switch-to-windows-last-buffer)
   (define-key im-chawan-mode-map (kbd "C-6") #'evil-switch-to-windows-last-buffer)
   (define-key im-chawan-mode-map (kbd "C-o") #'evil-execute-in-normal-state))
 
 (with-eval-after-load 'evil
   (im-chawan--evil-setup))
+
+(defun im-chawan-open-in-emacs ()
+  (interactive nil im-chawan-mode)
+  (ghostel-send-key "y")
+  (browse-url (car kill-ring)))
 
 ;;;; SPC handling
 

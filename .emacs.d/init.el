@@ -3212,7 +3212,8 @@ Version: 2023-06-28
 
 (defvar im-term-run-history '())
 (defvar im-jump-to-term-last-window nil)
-(add-to-list 'savehist-additional-variables 'im-term-run-history)
+(with-eval-after-load 'savehist
+    (add-to-list 'savehist-additional-variables 'im-term-run-history))
 
 (defun im-jump-to-visible-term ()
   "Jump to the visible term window.
@@ -5015,7 +5016,10 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
     "ghostel project" → (ghostel-project)
     "ghostel new" → (ghostel 'new)))
 
-(im-leader "2" #'im-term)
+(im-leader
+  "2" #'im-term
+  "wf" (λ-interactive (im-split-window-below) (ghostel 'new))
+  "wg" (λ-interactive (im-split-window-right) (ghostel 'new)))
 
 ;;;;; xref
 
