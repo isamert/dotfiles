@@ -857,24 +857,31 @@ BUFFER-OR-FILE is either a buffer object or a file path string."
    :confirm nil
    :category "buffers")
 
+
   (gptel-make-tool
-   :name "get_file_issues"
-   :function (lambda ()
-               (message "gptel :: get_file_issues()")
-               (let ((issues (flymake-diagnostics)))
-                 (if issues
-                     (mapconcat
-                      (lambda (diag)
-                        (format "%d-%d:%s: %s"
-                                (line-number-at-pos (flymake-diagnostic-beg diag))
-                                (line-number-at-pos (flymake-diagnostic-end diag))
-                                (flymake-diagnostic-type diag)
-                                (flymake-diagnostic-text diag)))
-                      issues
-                      "\n")
-                   "No flymake issues found.")))
-   :description "List all current flymake diagnostics for current buffer with line-range:type:message."
-   :category "buffers"))
+   :name "get_buffer_issues"
+   :function (lambda (buffer)
+               (message "gptel :: get_file_issues(%s)" buffer)
+               (with-current-buffer (get-buffer buffer)
+                 (let ((issues (flymake-diagnostics)))
+                   (if issues
+                       (mapconcat
+                        (lambda (diag)
+                          (format "%d-%d:%s: %s"
+                                  (line-number-at-pos (flymake-diagnostic-beg diag))
+                                  (line-number-at-pos (flymake-diagnostic-end diag))
+                                  (flymake-diagnostic-type diag)
+                                  (flymake-diagnostic-text diag)))
+                        issues
+                        "\n")
+                     "No flymake issues found."))))
+   :args '((:name "buffer"
+            :type string
+            :description "Name of the buffer to get flymake diagnostics for."))
+   :description "List all current flymake diagnostics for given buffer with line-range:type:message."
+   :category "buffers")
+
+  )
 
 ;;;;;; project tools
 
