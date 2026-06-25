@@ -895,53 +895,26 @@ side window the only window'"
 
 (use-package evil-collection
   :after evil
+  :diminish (evil-collection-unimpaired-mode)
   :custom
   (evil-collection-want-unimpaired-p t)
-  (evil-collection-unimpaired-want-repeat-mode-integration t))
+  (evil-collection-unimpaired-want-repeat-mode-integration t)
+  :config
+  (evil-collection-init)
+  (add-hook 'evil-collection-unimpaired-mode-hook #'evil-normalize-keymaps)
+  ;; ^ Otherwise it does not properly work and I am unable to understand why.
+  (define-advice evil-collection-unimpaired-previous-error (:after (&rest _) recenter) (recenter))
+  (define-advice evil-collection-unimpaired-next-error (:after (&rest _) recenter) (recenter))
 
-(with-eval-after-load 'evil-collection-unimpaired
-  (diminish 'evil-collection-unimpaired-mode))
-
-(with-eval-after-load 'grep
-  (evil-collection-grep-setup))
-
-(with-eval-after-load 'info
-  (evil-collection-info-setup))
-
-(with-eval-after-load 'man
-  (evil-collection-man-setup))
-
-(with-eval-after-load 'replace
-  (evil-collection-replace-setup))
-
-(with-eval-after-load 'compile
-  (evil-collection-compile-setup))
-
-(with-eval-after-load 'xref
-  (evil-collection-xref-setup))
-
-(with-eval-after-load 'help
-  (evil-collection-help-setup))
-
-(with-eval-after-load 'imenu
-  (evil-collection-imenu-setup)
-  (evil-collection-imenu-list-setup))
-
-(with-eval-after-load 'woman
-  (evil-collection-woman-setup))
-
-(with-eval-after-load 'man
-  (when (eq system-type 'darwin)
-    (setq Man-sed-command "gsed"))
-  (evil-collection-man-setup))
-
-(with-eval-after-load 'custom
-  (evil-collection-custom-setup))
+  (evil-collection-define-key 'normal 'evil-collection-unimpaired-mode-map
+    "[d" #'im-delete-line-above
+    "]d" #'im-delete-line-below))
 
 ;;;;;; evil-unimpaired
 
 ;; Apparently [[evil-collection]] has a vim-unimpaired implementation
 ;; already. It contains bindings like:
+;;
 ;;   - ~[<SPC>~ ~]<SPC>~ Insert newline above/below.
 ;;   - ~[b~ ~]b~ Go to prev/next buffer.
 ;;   - ~[p~, ~]p~ Paste up/down.
@@ -956,35 +929,25 @@ side window the only window'"
 
 ;; Following are my extensions:
 
-(with-eval-after-load 'evil-collection
-  (evil-collection-init 'unimpaired)
+(defun im-delete-line-above ()
+  "Delete the line above."
+  (interactive)
+  (save-excursion
+    (forward-line -1)
+    (beginning-of-line)
+    (kill-line)
+    (when (s-blank? (s-trim (thing-at-point 'line t)))
+      (kill-line))))
 
-  (define-advice evil-collection-unimpaired-previous-error (:after (&rest _) recenter) (recenter))
-  (define-advice evil-collection-unimpaired-next-error (:after (&rest _) recenter) (recenter))
-
-  (evil-collection-define-key 'normal 'evil-collection-unimpaired-mode-map
-    "[d" #'im-delete-line-above
-    "]d" #'im-delete-line-below)
-
-  (defun im-delete-line-above ()
-    "Delete the line above."
-    (interactive)
-    (save-excursion
-      (forward-line -1)
-      (beginning-of-line)
-      (kill-line)
-      (when (s-blank? (s-trim (thing-at-point 'line t)))
-        (kill-line))))
-
-  (defun im-delete-line-below ()
-    "Delete the line below."
-    (interactive)
-    (save-excursion
-      (forward-line 1)
-      (beginning-of-line)
-      (kill-line)
-      (when (s-blank? (s-trim (thing-at-point 'line t)))
-        (kill-line)))))
+(defun im-delete-line-below ()
+  "Delete the line below."
+  (interactive)
+  (save-excursion
+    (forward-line 1)
+    (beginning-of-line)
+    (kill-line)
+    (when (s-blank? (s-trim (thing-at-point 'line t)))
+      (kill-line))))
 
 ;;;;; evim (multiple cursors)
 
@@ -3010,10 +2973,6 @@ Version: 2023-06-28
   :straight (:type built-in)
   :defer t
   :diminish outline-minor-mode
-  :general
-  (:states 'normal :keymaps 'outline-mode-map
-   "[[" #'outline-previous-heading
-   "]]" #'outline-next-heading)
   :bind
   (:repeat-map outline-mode-repeat-map
    ("[" . outline-previous-heading)
@@ -4641,11 +4600,12 @@ empty string."
   (diff-hl-disable-on-remote t)
   ;; Performance optiomization for diffs.
   (vc-git-diff-switches '("--histogram"))
-  (diff-hl-update-async nil)
+  ;; Does not work with flydiff mode in my setup for some reason
+  (diff-hl-update-async t)
   (diff-hl-show-staged-changes nil)
-  (diff-hl-draw-borders nil)
+  (setq diff-hl-draw-borders nil)
   :general
-  (:states 'normal
+  (:states 'normal :keymaps 'prog-mode-map
    (kbd "[g") #'diff-hl-previous-hunk
    (kbd "]g") #'diff-hl-next-hunk)
   :config
@@ -5347,14 +5307,7 @@ This helps persisting projects I switched to.")
   ;; Hitting C-h after any prefix command will open a completing-read
   ;; interface to select a command that prefix has. Complements
   ;; which-key.
-  (add-hook
-   'after-init-hook
-   (lambda ()
-     ;; HACK: transient disables which-key temporarily and this causes
-     ;; `prefix-help-command' to be set to this backup cmd. To prevent
-     ;; this, I'm setting it here manually.
-     (setq which-key--prefix-help-cmd-backup #'embark-prefix-help-command)
-     (setq prefix-help-command #'embark-prefix-help-command)) 99)
+  (setq prefix-help-command #'embark-prefix-help-command)
   (add-to-list 'vertico-multiform-categories '(embark-keybinding grid))
   :config
   ;; Replace describe-symbol with helpful-symbol
@@ -7361,6 +7314,7 @@ mails."
       ("ws" "Switch worktree" im-git-worktree-switch)
       ("wd" "Remove worktree" im-git-worktree-delete)]
      ["Diff"
+      ("d" "Diff hunk" diff-hl-show-hunk)
       ("[" "Prev hunk" diff-hl-previous-hunk)
       ("]" "Next hunk" diff-hl-next-hunk)
       ("{" "Show prev hunk" diff-hl-show-hunk-previous)
@@ -9663,6 +9617,10 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   :defer t
   :commands (bufler)
   :config
+  ;; HACK: Fix for alphapapa/bufler.el#104
+  (add-hook 'bufler-list-mode-hook
+            (lambda ()
+              (setq-local font-lock-unfontify-region-function #'ignore)))
   (evil-define-key 'normal bufler-list-mode-map
     (kbd "q") #'quit-window
     (kbd "x") #'bufler-list-buffer-kill

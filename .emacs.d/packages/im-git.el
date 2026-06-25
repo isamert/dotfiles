@@ -497,8 +497,6 @@ Also display `im-git-diff-switches' right-aligned."
            (if (eq (process-exit-status proc) 0)
                (progn
                  (message "im-git-commit :: Started...Done")
-                 (when notify?
-                   (im-notif :title "*git-commit*" :message (format "Commit finished for %s" proj) :duration 2))
                  (--each im-git-commit-finished-hook (funcall it msg))
                  (when tag
                    (set-process-sentinel
@@ -515,7 +513,9 @@ Also display `im-git-diff-switches' right-aligned."
                       (lambda (proc _)
                         (if (eq (process-exit-status proc) 0)
                             (message ">> im-git-fixup :: Commit %s fixed." fixup)
-                          (message "!! Failed to fixup. See *im-git-fixup* buffer for further details.")))))) )
+                          (message "!! Failed to fixup. See *im-git-fixup* buffer for further details."))))))
+                 (when notify?
+                   (im-notif :title "*git-commit*" :message (format "Commit finished for %s" proj) :duration 2)))
              (message "im-git-commit :: Failed. See buffer *im-git-commit*")
              (when notify?
                (im-notif :title "*git-commit*" :message (format "Commit FAILED for %s" proj) :duration 2)))))))
@@ -924,7 +924,9 @@ CALLBACK will be called with the selected commit ref."
      :args `("commit" "--amend" "-m" ,message)
      :switch nil
      :buffer-name buffer-name
-     :on-finish (lambda (&rest _) (message ">> Amended"))
+     :on-finish (lambda (&rest _)
+                  (--each im-git-commit-finished-hook (funcall it nil))
+                  (message ">> Amended"))
      :on-fail (lambda (&rest _)
                 (message ">> Amend failed!")
                 (switch-to-buffer buffer-name)))))
