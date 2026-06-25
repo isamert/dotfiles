@@ -205,8 +205,7 @@
  'dark
  'im-ef-solstice-dark-palette
  nil
- 'im-ef-solstice-dark-palette-overrides
- 'ef-themes-custom-faces)
+ 'im-ef-solstice-dark-palette-overrides)
 
 (provide 'im-ef-solstice-dark-theme)
 ;;; im-ef-solstice-dark-theme.el ends here

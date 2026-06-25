@@ -211,8 +211,7 @@ For overrides shared across all Ef themes, refer to
  'dark
  'im-ef-solstice-soft-dark-palette
  nil
- 'im-ef-solstice-soft-dark-palette-overrides
- 'ef-themes-custom-faces)
+ 'im-ef-solstice-soft-dark-palette-overrides)
 
 (provide 'im-ef-solstice-soft-dark-theme)
 ;;; im-ef-solstice-soft-dark-theme.el ends here

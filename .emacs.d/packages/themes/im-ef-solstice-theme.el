@@ -211,8 +211,7 @@ For overrides shared across all Ef themes, refer to
  'light
  'im-ef-solstice-palette
  nil
- 'im-ef-solstice-palette-overrides
- 'ef-themes-custom-faces)
+ 'im-ef-solstice-palette-overrides)
 
 (provide 'im-ef-solstice-theme)
 ;;; im-ef-solstice-theme.el ends here

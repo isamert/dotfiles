@@ -613,8 +613,9 @@ I have this in my Aerospace config so that the buffer becomes floating:
          (show-tab   (plist-get args :tab-bar))
          ;; base frame to center on
          (parent (selected-frame))
-         (px (frame-parameter parent 'left))
-         (py (frame-parameter parent 'top))
+         (pos (frame-position parent))
+         (px (car pos))
+         (py (cdr pos))
          (pw (frame-pixel-width parent))
          (ph (frame-pixel-height parent))
          ;; estimate char size from current frame

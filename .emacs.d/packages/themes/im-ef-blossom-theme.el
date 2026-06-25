@@ -221,8 +221,7 @@
  'light
  'im-ef-blossom-palette
  nil
- 'im-ef-blossom-palette-overrides
- 'ef-themes-custom-faces)
+ 'im-ef-blossom-palette-overrides)
 
 (provide 'im-ef-blossom-theme)
 ;;; im-ef-blossom-theme.el ends here

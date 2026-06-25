@@ -222,8 +222,7 @@
  'light
  'im-ef-acme-palette
  nil
- 'im-ef-acme-palette-overrides
- 'ef-themes-custom-faces)
+ 'im-ef-acme-palette-overrides)
 
 (provide 'im-ef-acme-theme)
 ;;; im-ef-acme-theme.el ends here

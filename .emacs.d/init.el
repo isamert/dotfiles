@@ -6131,8 +6131,12 @@ SORT should be nil to disable sorting."
     (add-hook mode #'im-slack--enable-completion-at-point)
     (add-hook mode #'visual-line-mode)))
 
+(use-package im-slack
+  :straight `(:local-repo ,im-packages-path :files ("im-slack.el"))
+  :after slack)
+
 (defun im-slack-initialize ()
-   (interactive)
+  (interactive)
   (ignore-errors (slack-ws-close))
   (ignore-errors (slack-team-delete))
   (setq im-slack--last-messages nil)

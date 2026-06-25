@@ -222,8 +222,7 @@
  'dark
  'im-ef-acme-dark-palette
  nil
- 'im-ef-acme-dark-palette-overrides
- 'ef-themes-custom-faces)
+ 'im-ef-acme-dark-palette-overrides)
 
 (provide 'im-ef-acme-dark-theme)
 
