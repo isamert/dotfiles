@@ -9908,13 +9908,13 @@ SELECT * FROM _ LIMIT 1;
   (tab-line-tabs-function #'im-tab-line-buffers)
   (tab-line-tab-name-truncated-max 32)
   (tab-line-tab-name-function #'im-tab-line-buffer-name)
-  (tab-line-separator " • ")
-  (tab-line-close-button nil)
   :config
+  (setq tab-line-separator " • ")
+  (setq tab-line-close-button nil)
   (defun im-fix-tab-line-faces (&rest _)
     "Most of the themes I use does not support tab-bar, this mostly fixes it."
-    (set-face-attribute 'tab-line-tab nil :background nil :box nil :bold t :underline t)
-    (set-face-attribute 'tab-line-tab-current nil :background nil :box nil :bold t :underline t)
+    (set-face-attribute 'tab-line-tab nil :background nil :box nil :bold t :underline t :italic nil)
+    (set-face-attribute 'tab-line-tab-current nil :background nil :box nil :bold t :underline t :italic nil)
     (set-face-attribute 'tab-line-highlight nil :background nil :box nil :bold t :underline t)
     (set-face-attribute 'tab-line-tab-inactive nil :background nil :box nil :bold nil :underline nil :italic t))
   (add-hook 'im-after-load-theme-hook #'im-fix-tab-line-faces))
