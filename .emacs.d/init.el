@@ -7949,6 +7949,12 @@ the commit buffer."
   :config
   (add-hook 'occur-mode-hook 'im-occur-mode))
 
+;;;;; im-chawan -- simple chawan browser wrapper
+
+(use-package im-chawan
+  :straight `(:local-repo ,im-packages-path :files ("im-chawan.el"))
+  :defer t)
+
 ;;;; Editing
 
 ;;;;; Breaking long texts/comments into multiple lines
