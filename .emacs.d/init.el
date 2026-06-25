@@ -6131,26 +6131,8 @@ SORT should be nil to disable sorting."
     (add-hook mode #'im-slack--enable-completion-at-point)
     (add-hook mode #'visual-line-mode)))
 
-(transient-define-prefix im-slack-transient ()
-  "Slack transient."
-  [["Overview"
-    ("t" "All threads" slack-all-threads)
-    ("a" "Activity feed" slack-activity-feed-show)]
-   ["Rooms"
-    ("s" "Select room" im-slack-select-room)
-    ("S" "Select unread rooms" slack-select-unread-rooms)
-    ("d" "DMs" im-slack-dms)]
-   ["Message"
-    ("m" "Send message" im-slack-send-message)
-    ("y" "Yank last message" im-slack-yank-last-message)
-    ("l" "Open last message" im-slack-open-last-message)
-    ("r" "Last messages (per room)" im-slack-last-messages)
-    ("R" "Last messages (all)" im-slack-last-messages-alternative)]
-   ["Utils"
-    ("uu" "User info" slack-user-select)]])
-
 (defun im-slack-initialize ()
-  (interactive)
+   (interactive)
   (ignore-errors (slack-ws-close))
   (ignore-errors (slack-team-delete))
   (setq im-slack--last-messages nil)
@@ -6182,18 +6164,25 @@ SORT should be nil to disable sorting."
               (kill-buffer-hook nil))
           (kill-buffer))))))
 
-(defun im-slack-toggle-timestamps ()
-  "Toggle visibility of timestamps in current buffer."
-  (interactive nil slack-message-buffer-mode slack-thread-message-buffer-mode-map)
-  (save-excursion
-    (let ((inhibit-read-only t))
-      (goto-char (point-min))
-      (while (not (eobp))
-        (when (get-text-property (point) 'lui-time-stamp)
-          (if (get-text-property (point) 'invisible)
-              (remove-text-properties (point) (1+ (point)) '(invisible nil))
-            (put-text-property (point) (1+ (point)) 'invisible t)))
-        (goto-char (next-property-change (point) nil (point-max)))))))
+;;;;;; Keymap defs
+
+(transient-define-prefix im-slack-transient ()
+  "Slack transient."
+  [["Overview"
+    ("t" "All threads" slack-all-threads)
+    ("a" "Activity feed" slack-activity-feed-show)]
+   ["Rooms"
+    ("s" "Select room" im-slack-select-room)
+    ("S" "Select unread rooms" slack-select-unread-rooms)
+    ("d" "DMs" im-slack-dms)]
+   ["Message"
+    ("m" "Send message" im-slack-send-message)
+    ("y" "Yank last message" im-slack-yank-last-message)
+    ("l" "Open last message" im-slack-open-last-message)
+    ("r" "Last messages (per room)" im-slack-last-messages)
+    ("R" "Last messages (all)" im-slack-last-messages-alternative)]
+   ["Utils"
+    ("uu" "User info" slack-user-select)]])
 
 (defun im-slack--add-reaction-to-message (reaction)
   (defalias (intern (concat "react-" reaction))
@@ -6203,348 +6192,6 @@ SORT should be nil to disable sorting."
         slack-current-buffer
         ,reaction
         (slack-get-ts)))))
-
-(defvar im-slack--last-messages '()
-  "Last slack messages.
-
-List of:
-
-  (:room room
-   :team team
-   :message message
-   :sender-name sender-name
-   :room-name room-name
-   :title title
-   :message-string msg-str)
-
-Example usage:
-
-  (s-join \"\n\n---\n\n\"
-          (--map
-           (let-plist it
-             (format \"Room: %s, Sender: %s, When: %s, Message: %s\"
-                     .room-name
-                     .sender-name
-                     (when .message
-                       (lab--time-ago (im-slack--message-ts it)))
-                     .message-string))
-           (-take 100 im-slack--last-messages))))")
-
-(async-defun im-slack-notify (message room team)
-  (unless (slack-room-muted-p room team)
-    (let* ((sender-name (slack-message-sender-name message team))
-           (room-name (slack-room-name room team))
-           (title (format "%s - %s" room-name sender-name))
-           (msg-str (im-slack--stringify-message
-                     (list :message message :team team)))
-           (msg-str-short (s-truncate 80 (s-replace "\n" "↩" msg-str)))
-           (message-data (list :room room
-                               :team team
-                               :message message
-                               :sender-name sender-name
-                               :room-name room-name
-                               :title title
-                               :message-string msg-str)))
-      (push message-data im-slack--last-messages)
-      (unless (or (slack-message-minep message team)
-                  (s-contains? "message deleted" msg-str)
-                  (s-contains? "has joined the" msg-str)
-                  (s-contains? "has left the" msg-str)
-                  ;; Don't show notifications for visible slack windows if emacs is not idle
-                  (and
-                   (< (time-to-seconds (or (current-idle-time) 0)) 15)
-                   (--some
-                    (s-contains? room-name it)
-                    (--map (buffer-name (window-buffer it)) (window-list)))))
-        ;; Only send desktop notifications for the things I'm interested
-        ;; mpim || group || in subscribed channels
-        (when (slack-message-notify-p message room team)
-          (ignore-errors
-            (im-notif
-             :message msg-str
-             :title title
-             :source (lambda ()
-                       (im-slack--open-message-or-thread message-data))
-             :labels '("slack")))
-          (unless im-notif-dnd
-            (message
-             ">> Slack: %s // %s"
-             title
-             (if (await (im-screen-sharing-now?))
-                 "[REDACTED due to screensharing]"
-               msg-str-short))))))))
-
-(defun im-slack-yank-last-message ()
-  "Yank the contents of the last received message as text."
-  (interactive)
-  (im-kill
-   (im-slack--stringify-message
-    (im-slack--last-message))))
-
-(defun im-slack-open-last-message ()
-  "Open last room that got new message."
-  (interactive)
-  (im-slack--open-message-or-thread (im-slack--last-message) :focus? nil))
-
-(cl-defun im-slack--open-message-or-thread (msg &key (focus? t))
-  (let-plist msg
-    (if (ignore-errors (slack-thread-message-p .message))
-        (slack-thread-show-messages .message .room .team)
-      (slack-room-display
-       .room
-       .team))
-    ;; Focus the message on buffer
-    (when focus?
-      (run-with-timer
-       1.3 nil
-       (lambda () (slack-buffer-goto (slack-ts .message)))))))
-
-(defalias 'im-slack-recent-messages #'im-slack-last-messages)
-
-(defun im-slack-last-messages-per-room ()
-  (->>
-   im-slack--last-messages
-   (--map (list :room-name (plist-get it :room-name)
-                :room (plist-get it :room)
-                :team (plist-get it :team)))
-   (-uniq)
-   (-map (lambda (room)
-           (--find (equal (plist-get room :room-name)
-                          (plist-get it :room-name))
-                   im-slack--last-messages)))))
-
-(defun im-slack--message-ts (message)
-  (->>
-   (plist-get message :message)
-   slack-ts
-   (s-split "\\.")
-   car
-   string-to-number))
-
-(defun im-slack-last-messages ()
-  "List and open rooms that had new messages in them recently."
-  (interactive)
-  (im-slack--open-message-or-thread
-   (im-completing-read
-    "Select message: "
-    im-slack--last-messages
-    :sort? nil
-    :formatter #'im-slack--format-message)
-   :focus? nil))
-
-(defun im-slack--format-message (it)
-  (let-plist it
-    (format "%30s ➔ %s (%s) ➤ %s"
-            (propertize .room-name 'face '(:weight bold :foreground "systemPinkColor"))
-            (propertize .sender-name 'face '(:weight bold :foreground "VioletRed1"))
-            (when .message
-              (propertize
-               (lab--time-ago
-                (im-slack--message-ts it))
-               'face '(:slant italic :foreground "systemGrayColor")))
-            (s-replace "\n" "|" (s-truncate 100 .message-string)))))
-
-(defun im-slack-last-messages-alternative ()
-  "Like `im-slack-last-messages' but only show the last message per room."
-  (interactive)
-  (let ((selected
-         (im-completing-read
-          "Select room: "
-          (im-slack-last-messages-per-room)
-          :formatter #'im-slack--format-message
-          :sort? nil)))
-    (let-plist selected
-      (slack-room-display
-       .room
-       .team))))
-
-(defun im-slack-send-message (msg)
-  "Send given MSG or region as message to interactively selected user."
-  (interactive
-   (list
-    (if (use-region-p)
-        (let ((text (buffer-substring-no-properties (region-beginning) (region-end))))
-          (if (y-or-n-p "Wrap with backticks? ")
-              (format "```\n%s\n```" text)
-            text))
-      (read-string "Enter message: "))))
-  (-let* (((room team) (im-slack--select-room)))
-    (slack-message-send-internal
-     msg room team)))
-
-(defun im-slack-clipboard-image-upload ()
-  "Uploads png image from clipboard.
-
-The default `slack-clipboard-image-upload' was not working
-properly in MacOS."
-  (interactive)
-  (unless (im-clipboard-contains-image-p)
-    (user-error "No image in clipboard"))
-  (let* ((file (make-temp-file "clip" nil ".png")))
-    (im-save-clipboard-image-to-file file)
-    (slack-file-upload file "png" "image.png")))
-
-;; TODO multiple message quote
-(defun im-slack-quote-message ()
-  (interactive)
-  (let ((quote-text (->>
-                     (im-slack-current-message-content)
-                     (substring-no-properties)
-                     (s-trim)
-                     (s-split "\n")
-                     (-drop 1)
-                     (--map (concat "> " it))
-                     (s-join "\n")
-                     (s-append "\n"))))
-    (slack-message-write-another-buffer)
-    (insert quote-text)))
-
-(defun im-slack-current-message-content ()
-  (slack-if-let* ((buf slack-current-buffer)
-                  (team (slack-buffer-team buf))
-                  (room (slack-buffer-room buf))
-                  (message (slack-room-find-message room (slack-get-ts))))
-      (slack-message-to-string message team)))
-
-(defun im-slack-open-link (link)
-  (interactive
-   (list
-    (read-string "Link: " (thing-at-point 'url))))
-  (let* ((m (s-match
-             "https://\\(\\w+\\)\\(.enterprise\\)?.slack.com/archives/\\(\\w+\\)/p\\(\\w+\\).*\\(\\?thread_ts=\\(\\w+\\)\\)?"
-             link))
-         (team (--find (string= (oref it domain) (nth 1 m))
-                       (hash-table-values slack-teams-by-token)))
-         (room (slack-room-find (nth 3 m) team))
-         (message-ts (number-to-string (/ (string-to-number (nth 4 m)) 1000000.0)))
-         (message (slack-room-find-message room message-ts))
-         (thread (nth 5 m)))
-    (im-slack--open-message-or-thread (list :message message :room room :team team))
-    thread))
-
-(defun im-slack-dms (&optional data)
-  "List and open dms.
-Get DMs and MPIMs from client.dms endpoint, sort them by time and
-present to user.  This kind of guarantees the order that you see
-in the DM section of the official Slack client.
-
-Fetches missing channels/users first."
-  (interactive)
-  (let ((team (or (slack-team-select))))
-    (if data
-        (let* ((selected
-                (im-completing-read
-                 "Select: "
-                 (--sort
-                  (>
-                   (string-to-number (plist-get (plist-get it :message) :ts))
-                   (string-to-number (plist-get (plist-get other :message) :ts)))
-                  (append
-                   (plist-get data :mpims)
-                   (plist-get data :ims)))
-                 :sort? nil
-                 :formatter
-                 (lambda (it)
-                   (let ((room-name (slack-room-name (slack-room-find (plist-get it :id) team) team))
-                         (text (plist-get (plist-get it :message) :text)))
-                     (format "%s (%s) - %s"
-                             (propertize room-name 'face '(:weight bold :foreground "systemPinkColor"))
-                             (propertize
-                              (lab--time-ago
-                               (->>
-                                (plist-get (plist-get it :message) :ts)
-                                (s-split "\\.")
-                                car
-                                string-to-number))
-                              'face '(:slant italic :foreground "systemGrayColor"))
-                             (s-truncate 50 text)))))))
-          (slack-room-display
-           (slack-room-find (plist-get selected :id) team)
-           team))
-      (slack-request
-       (slack-request-create
-        "https://slack.com/api/client.dms?count=250"
-        team
-        :success
-        (cl-function
-         (lambda (&key data &allow-other-keys)
-           (ignore-error (quit minibuffer-quit)
-             (let* ((user-ids
-                     (append
-                      (-non-nil (--map (plist-get (plist-get it :message) :user) (plist-get data :ims)))
-                      (-non-nil (--map (plist-get (plist-get it :message) :user) (plist-get data :mpims)))))
-                    (missing-user-ids (slack-team-missing-user-ids (slack-team-select) user-ids))
-                    (channels (append
-                               (-non-nil (--map (plist-get it :id) (plist-get data :ims)))
-                               (-non-nil (--map (plist-get it :id) (plist-get data :mpims)))))
-                    (missing-channel-ids (-non-nil (--map (if (slack-room-find it (slack-team-select)) nil it) channels)))
-                    (missing-users? (> (length missing-user-ids) 0))
-                    (missing-channels? (> (length missing-channel-ids) 0)))
-               (cond
-                (missing-users?
-                 (message ">> Some people are missing: %s, loading..." missing-user-ids)
-                 (slack-user-info-request
-                  missing-user-ids
-                  team :after-success
-                  (lambda ()
-                    (message ">> Some people are missing: %s, loading...Done" missing-user-ids)
-                    (im-slack-dms data))))
-                (missing-channels?
-                 (message ">> Some channels are missing: %s, loading..." missing-channel-ids)
-                 (let* ((finished-count 0)
-                        (cb (lambda ()
-                              (setq finished-count (1+ finished-count))
-                              (when (length= missing-channel-ids finished-count)
-                                (message ">> Some channels are missing: %s, loading...Done" missing-channel-ids)
-                                (im-slack-dms data)))))
-                   (--each missing-channel-ids
-                     (slack-conversations-info
-                      it
-                      team
-                      (lambda () (funcall cb))))))
-                (t (im-slack-dms data))))))))))))
-
-(defun im-slack-select-room ()
-  "Like `slack-select-rooms' but disable sorting."
-  (interactive)
-  (let* ((team (slack-team-select))
-         (alist (slack-room-names
-                 (cl-loop for team in (list team)
-                          append (append (slack-team-ims team)
-                                         (slack-team-groups team)
-                                         (slack-team-channels team)))
-                 team
-                 #'(lambda (rs)
-                     (cl-remove-if
-                      (lambda (it)
-                        (slack-room-hidden-p it))
-                      rs)))))
-    (slack-room-display
-     (cdr (im-completing-read "Select: " alist :formatter #'car :sort? nil))
-     team)))
-
-;;
-;; Utils/internals
-;;
-
-(defun im-slack--last-message ()
-  (--find (not (s-matches? ".*\\(alert\\|practice\\).*" (plist-get it :room-name))) im-slack--last-messages))
-
-(defun im-slack--stringify-message (msg)
-  (let ((message (plist-get msg :message))
-        (team (plist-get msg :team)))
-    (slack-message-to-alert message team)))
-
-(defun im-slack--select-room ()
-  "Select interactively and return (room team) pair."
-  (let* ((team (slack-team-select))
-         (room (slack-room-select
-                (cl-loop for team in (list team)
-                         append (append (slack-team-ims team)
-                                        (slack-team-groups team)
-                                        (slack-team-channels team)))
-                team)))
-    (list room team)))
 
 (general-def :keymaps '(slack-message-buffer-mode-map slack-thread-message-buffer-mode-map slack-all-threads-buffer-mode-map) :states '(normal motion)
   "q" #'im-quit
@@ -12880,49 +12527,11 @@ Asks for STATUS if called interactively."
                 target))))
     (shell-command-to-string cmd)))
 
-;;;;; Check if screen is shared by Zoom/Chrome etc.
-
-(defun im-screen-sharing-now? ()
-  "Check if screen is being shared by Zoom or Google Chrome.
-Return a `promise', meant to be used in a async- function.
-Only works for OSX right now."
-  (im-when-on
-   :linux
-   (progn
-     ;; (warn ">> im-screen-sharing-now? is not implemented for gnu/linux system-type")
-     nil)
-   :darwin
-   (let ((script "
-tell application \"System Events\"
-    set listOfProcesses to every process whose visible is true
-    set output to \"\"
-    repeat with aProcess in listOfProcesses
-        tell aProcess
-            set windowList to every window where its name is not \"\"
-            repeat with aWindow in windowList
-                set windowName to name of aWindow
-                if windowName contains \"zoom share\" or windowName contains \"is sharing your screen\" then
-                    return true
-                end if
-            end repeat
-        end tell
-    end repeat
-    return false
-end tell"))
-     (promise-new
-      (lambda (resolve _reject)
-        (make-process :name "check-screen-sharing"
-                      :command `("osascript" "-e" ,script)
-                      :noquery t
-                      :filter
-                      (lambda (_proc string)
-                        (funcall resolve (equal "true" (s-trim string))))))))))
-
 ;;;; Postamble
 
 ;; Load the remaining external files that I want to be loaded
 (--each
-    (directory-files im-load-path t (rx ".el" eos))
+       (directory-files im-load-path t (rx ".el" eos))
   (load it))
 
 (setq custom-file (concat user-emacs-directory "custom.el"))

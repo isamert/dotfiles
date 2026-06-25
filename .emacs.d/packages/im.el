@@ -162,6 +162,42 @@ it's a list, the first element will be used as the binary name."
           (error (format "Binary '%s' not found. Do `%s'" binary install-cmd)))
       command)))
 
+(defun im-screen-sharing-now? ()
+  "Check if screen is being shared by Zoom or Google Chrome.
+Return a `promise', meant to be used in a async- function.
+Only works for OSX right now."
+  (im-when-on
+   :linux
+   (progn
+     ;; (warn ">> im-screen-sharing-now? is not implemented for gnu/linux system-type")
+     nil)
+   :darwin
+   (let ((script "
+tell application \"System Events\"
+    set listOfProcesses to every process whose visible is true
+    set output to \"\"
+    repeat with aProcess in listOfProcesses
+        tell aProcess
+            set windowList to every window where its name is not \"\"
+            repeat with aWindow in windowList
+                set windowName to name of aWindow
+                if windowName contains \"zoom share\" or windowName contains \"is sharing your screen\" then
+                    return true
+                end if
+            end repeat
+        end tell
+    end repeat
+    return false
+end tell"))
+     (promise-new
+      (lambda (resolve _reject)
+        (make-process :name "check-screen-sharing"
+                      :command `("osascript" "-e" ,script)
+                      :noquery t
+                      :filter
+                      (lambda (_proc string)
+                        (funcall resolve (equal "true" (s-trim string))))))))))
+
 ;;;; General utilities
 
 (defun im-mkdir-if-not (dir)
@@ -493,7 +529,10 @@ When called interactively, CONTENT selected region or given string."
               (commandp x)
               (string-match "-mode$" (symbol-name x))))
 
-       t nil nil (im-major-mode-at-point))))
+       t nil nil (let ((mm (im-major-mode-at-point)))
+                   (cond
+                    ((provided-mode-derived-p (intern mm) 'special-mode) "prog-mode")
+                    (t mm))))))
   (switch-to-buffer (generate-new-buffer "*temp-region*"))
   (insert content)
   (switch-to-buffer (current-buffer))
