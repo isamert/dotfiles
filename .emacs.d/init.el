@@ -900,6 +900,7 @@ side window the only window'"
   (evil-collection-want-unimpaired-p t)
   (evil-collection-unimpaired-want-repeat-mode-integration t)
   :config
+  (delq 'outline evil-collection-mode-list)
   (evil-collection-init)
   (add-hook 'evil-collection-unimpaired-mode-hook #'evil-normalize-keymaps)
   ;; ^ Otherwise it does not properly work and I am unable to understand why.
@@ -6059,6 +6060,7 @@ SORT should be nil to disable sorting."
   (setq slack-visible-thread-sign "╚═> ")
 
   (add-hook 'slack-message-buffer-mode-hook #'tab-line-mode)
+  (add-hook 'slack-all-threads-buffer-mode-hook #'tab-line-mode)
   (add-hook 'slack-thread-message-buffer-mode-hook #'tab-line-mode)
 
   (evil-set-initial-state 'slack-mode-map 'normal)
@@ -9508,6 +9510,10 @@ SELECT * FROM _ LIMIT 1;
 (use-package tab-line
   :straight (:type built-in)
   ;; :hook (after-init . global-tab-line-mode)
+  :general
+  (:keymaps 'tab-line-mode-map :states 'normal
+   "M-[" #'tab-line-hscroll-left
+   "M-]" #'tab-line-hscroll-right)
   :custom
   (tab-line-close-button-show 'selected)
   (tab-line-tabs-function #'im-tab-line-buffers)
