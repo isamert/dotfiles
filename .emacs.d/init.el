@@ -9536,7 +9536,7 @@ SELECT * FROM _ LIMIT 1;
     ;; together. I mostly prefix my buffers like "*XXX: ..." and here
     ;; I delete that prefix to gain a little bit more space while
     ;; displaying.
-    (if-let* ((str (s-match " ?\\*[a-zA-Z0-9_$-]+: \\(.*\\)" name)))
+    (if-let* ((str (s-match " ?\\*[a-zA-Z0-9_$-]+: \\([^\\*]*\\)" name)))
         (cadr str)
       name)))
 
