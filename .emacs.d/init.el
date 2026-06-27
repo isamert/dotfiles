@@ -2974,6 +2974,15 @@ Version: 2023-06-28
   :straight (:type built-in)
   :defer t
   :diminish outline-minor-mode
+  :general
+  (:keymaps 'outline-minor-mode-map :states 'normal
+   "gh" #'outline-up-heading
+   "gk" #'outline-backward-same-level
+   "gj" #'outline-forward-same-level
+   "gl" #'outline-next-visible-heading
+   ;; Moving
+   "gJ" #'outline-move-subtree-down
+   "gK" #'outline-move-subtree-up)
   :bind
   (:repeat-map outline-mode-repeat-map
    ("[" . outline-previous-heading)

@@ -1111,8 +1111,9 @@ SEARCH-IN is 'name' or 'docs' for docstrings."
 CODE is the Elisp code to evaluate."
   (message "gptel :: run_elisp(%s)" code)
   (condition-case err
-      (let* ((output (with-output-to-string
-                       (setq result (eval (read code)))))
+      (let* ((result nil)
+             (output (with-output-to-string
+                       (setq result (eval (read code) t))))
              (result-str (format "%S" result)))
         (if (string-empty-p output)
             result-str
