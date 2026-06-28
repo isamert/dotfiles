@@ -1,4 +1,4 @@
-;;; index.el --- isamert's configuration -*- lexical-binding: t; -*-
+;;; init.el --- isamert's configuration -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
@@ -92,52 +92,79 @@
 
 ;;;; Preparation
 
-;;;;; straight.el and use-package
+;;;;; elpaca and use-package
 
-;; Useful to see which packages take long time to load
-;; (require 'use-package)
-(setq use-package-compute-statistics t)
-(setq use-package-enable-imenu-support t) ;; With that, IMenu will show packages section
+;;;;;; elpaca bootstrap
 
-(defvar bootstrap-version)
-(defvar straight-base-dir)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" (or (ignore-errors straight-base-dir) user-emacs-directory)))
-      (bootstrap-version 5))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
+(defvar elpaca-installer-version 0.12)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-sources-directory (expand-file-name "sources/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                              :ref nil :depth 1 :inherit ignore
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                              :build (:not elpaca-activate)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-sources-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (<= emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                  ,@(when-let* ((depth (plist-get order :depth)))
+                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                  ,(plist-get order :repo) ,repo))))
+                  ((zerop (call-process "git" nil buffer t "checkout"
+                                        (or (plist-get order :ref) "--"))))
+                  (emacs (concat invocation-directory invocation-name))
+                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                  ((require 'elpaca))
+                  ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
 
-(straight-use-package 'use-package)
+;;;;;; elpaca-use-package
 
-(use-package straight
-  :custom (straight-use-package-by-default t))
+;; Elpaca integrates itself with use-package via `elpaca-use-package'
+;; package.  Setting always ensure t makes sure elpaca is used for
+;; package management automatically.
+
+;; Some important stuff about elpaca:
+;;
+;; - Always use :ensure (...) for elpaca related configurations.
+;;
+;; - Add :wait t to :ensure if the package is immediately used within
+;;   init.el and can't wait elpaca's async package installations.
+;;
+;; - For my own package files from my dotfiles repo, use:
+;;   :ensure `(:repo ,im-packages-path :files ("im-archive.el"))
+
+(elpaca elpaca-use-package
+        (elpaca-use-package-mode))
+(setq use-package-always-ensure t)
 
 ;; ~diminish.el~ provides a way to hide mode indicators from mode
 ;; line. Either pass ~:diminish t~ to use-package while installing or
 ;; just call ~(diminish 'x-mode)~.
 
-(use-package diminish)
+(use-package diminish
+  :ensure (:wait t))
 
 (use-package gcmh
   :init (gcmh-mode 1)
   :diminish)
-
-;; I tend to not use the =use-package= goodies while configuring my
-;; packages, meaning that I don't use =:hook=, =:bind= etc. as they
-;; have relatively simpler alternatives in Emacs and using
-;; =use-package= alternatives of these makes copy/pasting harder. Here
-;; are the keywords that I use the most:
-
-;; - =:init= :: This gets called before the package gets initialized.
-;; - =:config= :: This gets called after the package is initialized.
-;; - =:after= :: This makes the current definition to wait the loading of listed packages, like =:after (evil org)= makes it wait for the =evil= and =org= packages to be loaded.
-;; - =:if= :: Loads the package conditionally, like =:if (eq system-type 'darwin)=.
 
 ;;;;; Load path
 
@@ -164,14 +191,10 @@ in my dotfiles repository.")
 
 (require 'im-secrets)
 
-;; Plain (require 'im) is not enough, because straight needs to load
-;; dependencies of im.el file. But I experienced some problems with
-;; Emacs daemon using older byte-compiled version of this file time to
-;; time. Removing ~/.emacs.d/straight/build/im was sufficent to
-;; mitigate the issue.
-(straight-use-package `(im :local-repo ,im-packages-path :files ("im.el")))
-
-(require 'im)
+(use-package im
+  :ensure `(:repo ,im-packages-path :files ("im.el") :wait t)
+  :config
+  (require 'im))
 
 ;;;;; Essential packages
 
@@ -198,7 +221,7 @@ in my dotfiles repository.")
 ;; async-await.
 
 (use-package im-async-await
-  :straight `(:local-repo ,im-packages-path :files ("im-async-await.el")))
+  :ensure `(:repo ,im-packages-path :files ("im-async-await.el")))
 
 (use-package plz :defer t)
 
@@ -210,13 +233,13 @@ in my dotfiles repository.")
 
 (use-package llama
   :defer t
-  :straight (:host github :repo "tarsius/llama"))
+  :ensure (:host github :repo "tarsius/llama"))
 
 (use-package posframe
   :defer t)
 
 (use-package hide-mode-line
-  :straight (:host github :repo "hlissner/emacs-hide-mode-line")
+  :ensure (:host github :repo "hlissner/emacs-hide-mode-line")
   :defer t)
 
 ;;;;;; emacs-async
@@ -238,7 +261,7 @@ in my dotfiles repository.")
 ;; to ~midnight-hook~.
 
 (use-package midnight
-  :straight (:type built-in)
+  :ensure nil
   :defer 60
   :config
   ;; From: https://old.reddit.com/r/emacs/comments/y4nc0e/help_needed_with_midnightmode/
@@ -280,7 +303,7 @@ complicates things or not sufficient."
           (message "Patch applied successfully:\n%s" patch-command-result)
         (error "Error applying patch:\n%s" patch-command-result)))))
 
-(cl-defun im-tangle-file (&key doc path contents)
+(cl-defun im-tangle-file (&key _doc path contents)
   "Tangle CONTENTS into PATH.
 DOC is simply for documentation, have no specific use.  If CONTENTS has
 a shebang at the beginning, then the executable bit is set to file."
@@ -335,8 +358,8 @@ With argument, do this that many times."
 ;; installing a package or after an update from recent list.
 
 (use-package recentf
-  :straight (:type built-in)
-  :hook (after-init . recentf-mode)
+  :ensure nil
+  :hook (elpaca-after-init . recentf-mode)
   :custom
   (recentf-max-saved-items 500)
   (recentf-exclude (list ".*\\.elc"
@@ -355,8 +378,8 @@ With argument, do this that many times."
 ;;;;; Save minibuffer, kill-ring, search-ring history
 
 (use-package savehist
-  :straight (:type built-in)
-  :hook (after-init . savehist-mode)
+  :ensure nil
+  :hook (elpaca-after-init . savehist-mode)
   :config
   ;; Clipboard selections are copied into the kill-ring
   (setq save-interprogram-paste-before-kill t)
@@ -443,7 +466,7 @@ With argument, do this that many times."
   (when-let* ((fname (buffer-file-name))
               (match (im-assoc-regexp fname im-run-after-save-alist #'expand-file-name)))
     (mapcar
-     (-lambda ((_ . command))
+     (pcase-lambda (`(,_ . ,command))
        (cond
         ((stringp command)
          (shell-command (s-replace "%" fname command)))
@@ -458,8 +481,8 @@ With argument, do this that many times."
 ;; Enables you to have repeatable keybindings.
 
 (use-package repeat
-  :straight (:type built-in)
-  :hook (after-init . repeat-mode))
+  :ensure nil
+  :hook (elpaca-after-init . repeat-mode))
 
 (defmacro im-make-repeatable (name &rest pairs)
   "Put given PAIRS in a keymap named NAME and mark them as repeatable."
@@ -495,8 +518,9 @@ With argument, do this that many times."
 
 ;; Highlight current line
 (use-package hl-line
+  :ensure nil
   :if (not (eq system-type 'android))
-  :hook (after-init . global-hl-line-mode))
+  :hook (elpaca-after-init . global-hl-line-mode))
 
 (defun im-disable-hl-line-mode-for-buffer ()
   "Disable `global-hl-line-mode' for current buffer only.
@@ -522,7 +546,7 @@ cut it. I need to run those statements on every theme change.")
 ;;;;;; Install some themes
 
 (use-package acme-theme
-  :straight (:host github :repo "isamert/acme-emacs-theme"))
+  :ensure (:host github :repo "isamert/acme-emacs-theme"))
 
 (use-package modus-themes
   :defer t)
@@ -530,8 +554,8 @@ cut it. I need to run those statements on every theme change.")
 (use-package ef-themes
   :defer t)
 
-(use-package kaolin-themes
-  :defer t)
+;; (use-package kaolin-themes
+;;   :defer t)
 
 (use-package doom-themes
   :defer t
@@ -542,9 +566,9 @@ cut it. I need to run those statements on every theme change.")
      ((t (:background ,(or (doom-color 'bg-alt) 'unspecified) :foreground ,(or (doom-color 'fg-alt) 'unspecified)))))))
 
 (use-package im-adaptive-theme
-  :straight `(:local-repo ,im-packages-path :files ("im-adaptive-theme.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-adaptive-theme.el"))
   :if (not (eq system-type 'android))
-  :hook (after-init . im-adaptive-theme-mode)
+  :hook (elpaca-after-init . im-adaptive-theme-mode)
   :custom
   (im-adaptive-theme-detect-geolocation-automatically t)
   (im-adaptive-theme-day-themes
@@ -647,7 +671,7 @@ Just a simple wrapper around `prettify-symbols-mode`"
 ;; Just enable parenthesis matching.
 
 (use-package show-paren
-  :straight (:type built-in)
+  :ensure nil
   :hook (prog-mode . show-paren-local-mode)
   :config
   (setq show-paren-style 'parenthesis))
@@ -665,8 +689,9 @@ Just a simple wrapper around `prettify-symbols-mode`"
 ;; space before save]]
 
 (use-package whitespace
+  :ensure nil
   :diminish
-  :hook (after-init . global-whitespace-mode)
+  :hook (elpaca-after-init . global-whitespace-mode)
   :config
   (setq whitespace-style '(face empty tabs trailing))
   (setq whitespace-global-modes '(not org-mode md-ts-mode markdown-mode vterm-mode magit-log-mode nov-mode eshell-mode dired-mode dirvish-mode w3m-mode eat-mode agent-shell-mode)))
@@ -770,6 +795,7 @@ side window the only window'"
 
 (use-package evil
   :demand t
+  :ensure (:wait t)
   :init
   ;; Following two is required by evil-collection. It's probably wiser
   ;; to set evil-want-keybinding to t if you will not use
@@ -858,9 +884,8 @@ side window the only window'"
 ;;;;; general.el
 
 (use-package general
-  ;; Not required to be installed after evil but loading it before
-  ;; causes some problems like keys not getting bound sometimes etc.
   :demand t
+  :ensure (:wait t)
   :config
   (general-override-mode))
 
@@ -968,7 +993,7 @@ side window the only window'"
 ;; - press Tab to switch between cursor and extend mode
 
 (use-package evim
-  :straight (:host github :repo "Prgebish/evim")
+  :ensure (:host github :repo "Prgebish/evim")
   :after evil
   :config
   (evim-setup-global-keys))
@@ -1119,7 +1144,7 @@ side window the only window'"
 ;; this package, it's a default functionality but I wanted to mention.
 
 (use-package goto-chg
-  :after evil
+  :ensure nil
   :commands (evil-goto-last-change)
   :config
   (define-advice evil-goto-last-change (:after (&rest _) recenter)
@@ -1353,7 +1378,7 @@ side window the only window'"
 ;; http://www.foldl.me/2012/disabling-electric-indent-mode/
 (defun im-disable-electric-indent ()
   (set (make-local-variable 'electric-indent-functions)
-       (list (lambda (arg) 'no-indent))))
+       (list (lambda (_arg) 'no-indent))))
 
 (add-hook 'org-mode-hook #'im-disable-electric-indent)
 
@@ -1444,13 +1469,6 @@ of indirect buffers.."
       (switch-to-buffer-other-window existing-buffer)
     (let ((current-prefix-arg '(4)))
       (call-interactively #'org-tree-to-indirect-buffer))))
-
-(defun im-bullet-focus-inbox-indirect ()
-  "Like `im-bullet-focus-inbox' but in an indirect buffer."
-  (interactive)
-  (im-org-focused-tree-to-indirect-buffer
-   (im-bullet-org-ensure)
-   (im-bullet-focus-inbox)))
 
 (defmacro im-org-focused-tree-to-indirect-buffer (focus-buffer &rest forms)
   "Open a tree in an indirect buffer.
@@ -1567,7 +1585,7 @@ original buffer is not affected and you can work on them simultaneously."
 ;;      ,@(mapcar (lambda (lang)
 ;;                  `(use-package ,(intern (concat "ob-" (symbol-name lang)))
 ;;                     :defer t
-;;                     :straight (:type built-in)
+;;                     :ensure nil
 ;;                     ;; TODO add view
 ;;                     :commands (,(intern (concat "org-babel-execute:" (symbol-name lang))))))
 ;;                langs)))
@@ -1616,8 +1634,8 @@ does not disrupt the current window configuration."
   (org-babel-remove-result))
 
 (defun im-org-redisplay-images-if-enabled ()
-  (when org-inline-image-overlays
-    (org-redisplay-inline-images)))
+  (when org-link-preview-overlays
+    (org-link-preview-refresh)))
 
 ;;;;;; ob-http & verb-mode
 
@@ -1625,12 +1643,12 @@ does not disrupt the current window configuration."
 ;; command after executing the code block, from *curl command history*
 ;; buffer or using `:print-curl' parameter to the block.
 (use-package ob-http
-  :straight (:host github :repo "ag91/ob-http")
+  :ensure (:host github :repo "ag91/ob-http")
   :after org)
 
 ;; An alternative to ob-http, might be better
 (use-package verb
-  :straight (:host github :repo "federicotdn/verb")
+  :ensure (:host github :repo "federicotdn/verb")
   :after org
   ;; :hook (org-mode . verb-mode)
   :config
@@ -1725,7 +1743,7 @@ that is provided by ob-http."
 ;; Some general settings.
 
 (use-package org-agenda
-  :straight nil
+  :ensure nil
   :after org
   :general
   (:states 'normal :keymaps 'org-agenda-mode-map
@@ -1972,7 +1990,7 @@ This way you can insert new entry right after other non-TODO
            (or (org-element-property prop x) "")))
 
 (use-package im-org-grabbability
-  :straight `(:local-repo ,im-packages-path :files ("im-org-grabbability.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-org-grabbability.el"))
   :after (org-ql))
 
 ;; You have to use ~:sort (lambda ...)~ syntax in org-ql dynamic
@@ -2070,7 +2088,7 @@ Based on: https://xenodium.com/emacs-dwim-do-what-i-mean/"
       (call-interactively 'im-org-attach-image-from-clipboard))
      ((and region-content clipboard-url (not point-in-link))
       (delete-region (region-beginning) (region-end))
-      (insert (org-make-link-string clipboard-url region-content)))
+      (insert (org-link-make-string clipboard-url region-content)))
      ((and clipboard-url (not point-in-link))
       (insert (im-org-make-link-string clipboard-url)))
      (t
@@ -2318,7 +2336,8 @@ searches for TODO/FIXME items in given folder."
   (let* ((root (expand-file-name (or (plist-get params :root) default-directory)))
          (regexp (or (plist-get params :regexp) "(//|#|--|;)+ ?(TODO|FIXME)"))
          (default-directory root))
-    (--map (insert (format "%s | " it)) '("" "ID" "File" "Content"))
+    (--each '("" "ID" "File" "Content")
+      (insert (format "%s | " it)))
     (insert "\n")
     (insert "|-|\n")
     (--each-indexed
@@ -2343,7 +2362,7 @@ searches for TODO/FIXME items in given folder."
 ;;;;; Archiving URLS
 
 (use-package im-archive
-  :straight `(:local-repo ,im-packages-path :files ("im-archive.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-archive.el"))
   :defer t)
 
 (defvar im-org-archive-url-path "~/Documents/notes/data/archvive/")
@@ -2391,7 +2410,7 @@ searches for TODO/FIXME items in given folder."
                (f-relative archive-path)
                (format-time-string "%Y-%m-%dT%H:%M")))
       (unless update?
-        (insert (org-make-link-string url url-title)))
+        (insert (org-link-make-string url url-title)))
 
       (org-set-property "URL" url)
       (unless (org-entry-get nil "CREATED")
@@ -2450,8 +2469,8 @@ This function unfills the paragraph at point, removing line
 breaks and joining the lines together.  This function relies on
   `org-fill-paragraph' to perform the actual unfilling."
   (interactive (progn
-       (barf-if-buffer-read-only)
-       (list (when current-prefix-arg 'full) t)))
+                 (barf-if-buffer-read-only)
+                 (list (when current-prefix-arg 'full) t)))
   (let ((fill-column 9999))
     (org-fill-paragraph justify region)))
 
@@ -2734,7 +2753,7 @@ I generally bind this to a key while using by
 ;; etc.
 
 (use-package corg
-  :straight (:host github :repo "isamert/corg.el")
+  :ensure (:host github :repo "isamert/corg.el")
   :hook (org-mode . corg-setup))
 
 ;;;;; im-svgcal & org-timeblock
@@ -2751,10 +2770,10 @@ I generally bind this to a key while using by
 
 (use-package im-svgcal
   :commands (im-svgcal-enable im-svgcal-run)
-  :straight nil)
+  :ensure nil)
 
 (use-package org-timeblock
-  :straight (:host github :repo "ichernyshovvv/org-timeblock")
+  :ensure (:host github :repo "ichernyshovvv/org-timeblock")
   :general
   (:keymaps 'org-timeblock-mode-map :states 'normal
    "h" #'org-timeblock-backward-column
@@ -2900,7 +2919,7 @@ Version: 2023-06-28
 
 ;;;;; transient
 
-(use-package transient :demand t)
+(use-package transient :demand t :ensure (:wait t))
 
 ;; Bind esc to quit
 (with-eval-after-load 'transient
@@ -2940,7 +2959,7 @@ Version: 2023-06-28
 ;;;;; eldoc
 
 (use-package eldoc
-  :straight (:type built-in)
+  :ensure nil
   :diminish eldoc-mode
   :defer t
   :custom
@@ -2958,8 +2977,8 @@ Version: 2023-06-28
 ;; `im-update-global-mode-line' function.
 
 ;; (use-package display-time
-;;   :straight (:type built-in)
-;;   :hook (after-init . display-time-mode)
+;;   :ensure nil
+;;   :hook (elpaca-after-init . display-time-mode)
 ;;   :init
 ;;   (setq display-time-format "%b %d, %H:%M %a")
 ;;   (setq display-time-default-load-average nil))
@@ -2971,7 +2990,7 @@ Version: 2023-06-28
 ;; bit more like what I use in org-mode:
 
 (use-package outline-mode
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :diminish outline-minor-mode
   :general
@@ -3027,7 +3046,7 @@ Version: 2023-06-28
 
 (use-package hideshow
   :diminish hs-minor-mode
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :general
   (:states 'normal :keymaps 'hs-minor-mode-map
@@ -3043,7 +3062,7 @@ Version: 2023-06-28
 ;;;;; eat & eshell & ghostel
 
 (use-package eshell
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :hook
   (eshell-mode . im-disable-hl-line-mode-for-buffer)
@@ -3092,14 +3111,14 @@ Version: 2023-06-28
 
 ;; You may need to call `eat-compile-terminfo' after installing eat.
 (use-package eat
-  :straight (:type git
-             :host codeberg
-             :repo "akib/emacs-eat"
-             :files ("*.el" ("term" "term/*.el") "*.texi"
-                     "*.ti" ("terminfo/e" "terminfo/e/*")
-                     ("terminfo/65" "terminfo/65/*")
-                     ("integration" "integration/*")
-                     (:exclude ".dir-locals.el" "*-tests.el")))
+  :ensure (:type git
+           :host codeberg
+           :repo "akib/emacs-eat"
+           :files ("*.el" ("term" "term/*.el") "*.texi"
+                   "*.ti" ("terminfo/e" "terminfo/e/*")
+                   ("terminfo/65" "terminfo/65/*")
+                   ("integration" "integration/*")
+                   (:exclude ".dir-locals.el" "*-tests.el")))
   :autoload (eat-make)
   :defer t
   :general
@@ -3122,21 +3141,21 @@ Version: 2023-06-28
     (eat-eshell-mode)))
 
 (use-package ghostel
-  :straight (:host github :repo "dakra/ghostel"
-             :files (:defaults
-                     "etc"
-                     "src"
-                     "vendor"
-                     "build.zig"
-                     "build.zig.zon"
-                     "symbols.map"
-                     "ghostel-pkg.el"
-                     "lisp/*.el"
-                     "extensions/*/*.el"
-                     "extensions/*.el")))
+  :ensure (:host github :repo "dakra/ghostel"
+           :files (:defaults
+                   "etc"
+                   "src"
+                   "vendor"
+                   "build.zig"
+                   "build.zig.zon"
+                   "symbols.map"
+                   "ghostel-pkg.el"
+                   "lisp/*.el"
+                   "extensions/*/*.el"
+                   "extensions/*.el")))
 
 (use-package evil-ghostel
-  :straight nil
+  :ensure nil
   :after (ghostel evil)
   :hook (ghostel-mode . evil-ghostel-mode))
 
@@ -3182,7 +3201,7 @@ Version: 2023-06-28
 (defvar im-term-run-history '())
 (defvar im-jump-to-term-last-window nil)
 (with-eval-after-load 'savehist
-    (add-to-list 'savehist-additional-variables 'im-term-run-history))
+  (add-to-list 'savehist-additional-variables 'im-term-run-history))
 
 (defun im-jump-to-visible-term ()
   "Jump to the visible term window.
@@ -3213,13 +3232,13 @@ this command is invoked from."
 ;; I already have this feature in zsh, provided by starship
 ;; prompt. This is just an enhanced eshell implementation.
 
+
+(defvar-local im-eshell-notify-enabled t)
+(defvar im-eshell-notify-duration 1
+  "Minimum time in seconds that a command takes for a notification to fire.")
+(defvar-local im-eshell-notify--last-execution-time nil)
+
 (with-eval-after-load 'eshell
-  (defvar-local im-eshell-notify-enabled t)
-  (defvar im-eshell-notify-duration 1
-    "Minimum time in seconds that a command takes for a notification to fire.")
-
-  (defvar-local im-eshell-notify--last-execution-time nil)
-
   (defun im-eshell-notify-toggle-for-buffer ()
     (interactive nil eshell-mode)
     (setq im-eshell-notify-enabled (not im-eshell-notify-enabled))
@@ -3323,7 +3342,7 @@ that is read verbatim (meaning that no '$*' is appended):
   (eshell/mkdir args)
   (eshell/cd args))
 
-(defun eshell/project-root (&rest args)
+(defun eshell/project-root (&rest _args)
   (eshell/cd (im-current-project-root)))
 
 ;;;;;; Automatically print notes for given directory
@@ -3464,7 +3483,7 @@ that is read verbatim (meaning that no '$*' is appended):
 ;; view/delete/edit given bookmark might be easier.
 
 (use-package bookmark
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :general
   (im-leader
@@ -3570,7 +3589,7 @@ that is read verbatim (meaning that no '$*' is appended):
     (add-to-list 'im-notif-dnd-whitelist-labels "org")))
 
 (use-package im-notif
-  :straight `(:local-repo ,im-packages-path :files ("im-notif.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-notif.el"))
   :defer t
   :general
   (im-leader
@@ -3670,7 +3689,7 @@ that is read verbatim (meaning that no '$*' is appended):
 ;; There is also ~wdired-mode~ which you can use to do bulk rename intuitively.
 
 (use-package dired
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :custom
   (dired-dwim-target t)
@@ -3688,7 +3707,7 @@ that is read verbatim (meaning that no '$*' is appended):
     (put 'dired-find-alternate-file 'disabled nil)))
 
 (use-package dirvish
-  :straight (:host github :repo "hlissner/dirvish")
+  :ensure (:host github :repo "hlissner/dirvish")
   :after dired
   :general
   (im-leader
@@ -3839,10 +3858,14 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 
 
 (use-package im-holidays
-  :straight `(:local-repo ,im-packages-path :files ("im-holidays.el")))
+  :after calendar
+  :ensure `(:repo ,im-packages-path :files ("im-holidays.el"))
+  :config
+  ;; Discard other holiday definitions and use these only
+  (setq calendar-holidays (append im-holidays-dutch-holidays im-holidays-turkish-holidays)))
 
 (use-package diary-lib
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :config
   (setq diary-comment-start "{ ")
@@ -3850,7 +3873,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (add-hook 'diary-mode-hook #'outli-mode))
 
 (use-package calendar
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   ;; Enable including other diary entries using the #include "..." syntax
   ;; I use this to separate my work and normal diary
@@ -3873,9 +3896,6 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
            "  \\[calendar-cursor-holidays] Holidays at point (or \\[calendar-list-holidays] to list holidays in buffer) │ \\[calendar-goto-today] Go to today │ \\[im-calendar-jump-org-agenda] Agenda at point │ \\[calendar-backward-month] Backward month │ \\[calendar-forward-month] Forward month ")))
   (add-hook 'calendar-mode-hook #'im-setup-calendar-mode)
   (calendar-set-date-style 'european)
-
-  ;; Discard other holiday definitions and use these only
-  (setq calendar-holidays (append im-holidays-dutch-holidays im-holidays-turkish-holidays))
 
   ;; Mark holidays by default
   ;; u → unmark them
@@ -3971,7 +3991,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (message ">> Updating the calender...")
   (url-retrieve
    im-calendar-remote-ics-file
-   (lambda (status)
+   (lambda (_status)
      (delete-region (point-min) url-http-end-of-headers)
      ;; Following is required because some diary entries may contain
      ;; Turkish characters and url-retrieve does not set
@@ -4009,10 +4029,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
 
 (use-package appt
   :defer 30
-  :straight (:type built-in)
-  ;; Automatically update `appt-time-msg-list' after editing an
-  ;; org-agenda file
-  :hook (org-mode . im-org-agenda-to-appt-on-save)
+  :ensure nil
   :config
   ;; Use my notification function for appt notifications
   (setq appt-disp-window-function #'im-appt-notify)
@@ -4020,6 +4037,10 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
   (setq appt-display-interval 4)
   (with-eval-after-load 'im-notif
     (add-to-list 'im-notif-dnd-whitelist-labels "appt"))
+
+  ;; Automatically update `appt-time-msg-list' after editing an
+  ;; org-agenda file
+  (add-hook 'org-mode-hook #'im-org-agenda-to-appt-on-save)
 
   (save-window-excursion
     (appt-activate 1)))
@@ -4042,7 +4063,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
            ;; down the result
            (mapcar
             (lambda (it) (list (nth 0 it) (substring-no-properties (nth 1 it))
-                          (nth 2 it)))
+                               (nth 2 it)))
             appt-time-msg-list))
         (lambda (result)
           (require 'appt)
@@ -4155,6 +4176,7 @@ properly."
 
 (use-package eww
   :commands eww
+  :ensure nil
   :defer t
   :hook (eww-mode . tab-line-mode)
   :general
@@ -4279,11 +4301,12 @@ empty string."
            :type "list"
            :q action
            :-on-success on-result
-           :-on-error (lambda (x) (list action)))))
+           :-on-error (lambda (_x) (list action)))))
      #'-flatten)
     :prompt "Search for: "
     :category 'url
     :lookup (lambda (selected _candidates _cand &rest _) selected)
+    :initial initial
     :sort nil
     :history (or history 'im-web-autosuggest-history)
     :async-wrap #'empv--consult-async-wrapper
@@ -4365,85 +4388,54 @@ empty string."
 (use-package language-detection
   :defer t)
 
-(defun eww-tag-pre (dom)
-  (let ((shr-folding-mode 'none)
-        (shr-current-font 'default))
-    (shr-ensure-newline)
-    (insert (eww-fontify-pre dom))
-    (shr-ensure-newline)))
+(with-eval-after-load 'shr
+  (setq shr-external-rendering-functions
+        '((pre . eww-tag-pre)))
 
-(defun eww-fontify-pre (dom)
-  (with-temp-buffer
-    (shr-generic dom)
-    (let ((mode (eww-buffer-auto-detect-mode)))
-      (when mode
-        (eww-fontify-buffer mode)))
-    (buffer-string)))
+  (defun eww-tag-pre (dom)
+    (let ((shr-folding-mode 'none)
+          (shr-current-font 'default))
+      (shr-ensure-newline)
+      (insert (eww-fontify-pre dom))
+      (shr-ensure-newline)))
 
-(defun eww-fontify-buffer (mode)
-  (delay-mode-hooks (funcall mode))
-  (font-lock-default-function mode)
-  (font-lock-default-fontify-region (point-min)
-                                    (point-max)
-                                    nil))
+  (defun eww-fontify-pre (dom)
+    (with-temp-buffer
+      (shr-generic dom)
+      (let ((mode (eww-buffer-auto-detect-mode)))
+        (when mode
+          (eww-fontify-buffer mode)))
+      (buffer-string)))
 
-(defun eww-buffer-auto-detect-mode ()
-  (let* ((map '((ada ada-mode)
-                (awk awk-mode)
-                (c c-mode)
-                (cpp c++-mode)
-                (clojure clojure-mode lisp-mode)
-                (csharp csharp-mode java-mode)
-                (css css-mode)
-                (dart dart-mode)
-                (delphi delphi-mode)
-                (emacslisp emacs-lisp-mode)
-                (erlang erlang-mode)
-                (fortran fortran-mode)
-                (fsharp fsharp-mode)
-                (go go-mode)
-                (groovy groovy-mode)
-                (haskell haskell-mode)
-                (html html-mode)
-                (java java-mode)
-                (javascript javascript-mode)
-                (json json-mode javascript-mode)
-                (latex latex-mode)
-                (lisp lisp-mode)
-                (lua lua-mode)
-                (matlab matlab-mode octave-mode)
-                (objc objc-mode c-mode)
-                (perl perl-mode)
-                (php php-mode)
-                (prolog prolog-mode)
-                (python python-mode)
-                (r r-mode)
-                (ruby ruby-mode)
-                (rust rust-mode)
-                (scala scala-mode)
-                (shell shell-script-mode)
-                (smalltalk smalltalk-mode)
-                (sql sql-mode)
-                (swift swift-mode)
-                (visualbasic visual-basic-mode)
-                (xml sgml-mode)))
-         (language (language-detection-string
-                    (buffer-substring-no-properties (point-min) (point-max))))
-         (modes (cdr (assoc language map)))
-         (mode (cl-loop for mode in modes
-                        when (fboundp mode)
-                        return mode)))
-    (message (format "%s" language))
-    (when (fboundp mode)
+  (defun eww-fontify-buffer (mode)
+    (delay-mode-hooks (funcall mode))
+    (font-lock-default-function mode)
+    (font-lock-default-fontify-region (point-min)
+                                      (point-max)
+                                      nil))
+
+  (defun eww-buffer-auto-detect-mode ()
+    (let* ((language (symbol-name
+                      (language-detection-string
+                       (buffer-substring-no-properties (point-min) (point-max)))))
+           (modes (list (concat language "-ts-mode")
+                        (concat language "-mode")
+                        ()))
+           (alts '(("cpp" "c++-mode")
+                   ("emacslisp" "emacs-lisp-mode")
+                   ("fsharp" "fsharp-mode")
+                   ("shell" "shell-script-mode")))
+           (mode (cl-loop for name in `(,@modes ,@(cdr (assoc language alts)))
+                          when name
+                          for mode = (intern name)
+                          when (fboundp mode)
+                          return mode)))
       mode)))
-
-(setq shr-external-rendering-functions
-      '((pre . eww-tag-pre)))
 
 ;;;;; shell-mode
 
 (use-package shell
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :init
   (evil-define-key 'insert 'shell-mode-map (kbd "C-l") #'comint-clear-buffer))
@@ -4459,7 +4451,7 @@ empty string."
 ;; `im-git-status' and `im-git-commit'.
 
 (use-package vc
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :general
   (:keymaps 'vc-dir-mode-map :states 'normal
@@ -4505,7 +4497,7 @@ empty string."
 
 (use-package diff
   :defer t
-  :straight (:type built-in)
+  :ensure nil
   :config
   ;; Normally diff-mode uses reliable syntax highlighting by detecting
   ;; the full file with the support of vc backend but if there is no
@@ -4573,7 +4565,7 @@ empty string."
     (outline-show-entry)))
 
 (use-package ediff
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :custom
   (ediff-keep-variants nil)
@@ -4603,7 +4595,7 @@ empty string."
 ;; gets slower as the get in/out to insert state quickly.
 
 (use-package diff-hl
-  :straight (:host github :repo "dgutov/diff-hl")
+  :ensure (:host github :repo "dgutov/diff-hl")
   :hook
   ((prog-mode . diff-hl-mode))
   :custom
@@ -4635,7 +4627,7 @@ empty string."
 ;;;;; blamer -- git blame
 
 (use-package blame-reveal
-  :straight (:host github :repo "LuciusChen/blame-reveal")
+  :ensure (:host github :repo "LuciusChen/blame-reveal")
   :defer t)
 
 ;;;;; avy
@@ -4686,7 +4678,7 @@ empty string."
 
 (use-package vertico
   :demand t
-  :hook ((after-init . vertico-mode))
+  :hook ((elpaca-after-init-hook . vertico-mode))
   :config
   ;; Grow and shrink the Vertico minibuffer
   ;; (setq vertico-resize t)
@@ -4740,9 +4732,9 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
   (keyboard-escape-quit))
 
 ;;;;;; vertico extensions
-
+;; TODO: Fix loading of these extensions
 ;; Load vertico extensions
-(add-to-list 'load-path (expand-file-name (format "%sstraight/build/vertico/extensions" straight-base-dir)))
+;; (add-to-list 'load-path (expand-file-name (format "%sstraight/build/vertico/extensions" straight-base-dir)))
 
 (defun im-vertico-preview-and-suspend ()
   "Preview the candidate at point if possible and then suspend the session."
@@ -4752,7 +4744,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
   (vertico-suspend))
 
 (use-package vertico-suspend
-  :straight nil
+  :ensure nil
   :after vertico
   :general
   (:states '(insert normal)
@@ -4765,7 +4757,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 
 ;; Enable avy style candidate selection
 (use-package vertico-quick
-  :straight nil
+  :ensure nil
   :after vertico
   :config
   (setq vertico-quick1 "asdfgqwe")
@@ -4773,7 +4765,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
   (define-key vertico-map "\M-q" #'vertico-quick-exit))
 
 (use-package vertico-repeat
-  :straight nil
+  :ensure nil
   :after vertico
   :config
   (add-hook 'minibuffer-setup-hook #'vertico-repeat-save)
@@ -4781,12 +4773,12 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 
 ;; Enable showing vertico in a buffer instead of minibuffer
 (use-package vertico-buffer
-  :straight nil
+  :ensure nil
   :after vertico)
 
 ;; Switch between different vertico display forms for different commands
 (use-package vertico-multiform
-  :straight nil
+  :ensure nil
   :after vertico
   :config
   ;; Toggle grid mode by hitting M-g while in vertico
@@ -4804,7 +4796,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 
 ;; Enable displaying candidates in a grid.
 (use-package vertico-grid
-  :straight nil
+  :ensure nil
   :after vertico)
 
 ;; Other complementary packages:
@@ -4848,7 +4840,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 ;; function that returns all of my projects' paths.
 
 (use-package project
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :autoload (project--find-in-directory))
 
@@ -4866,7 +4858,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
        (project-remember-project it t))
      (message "Loading projects...Done."))))
 
-(add-hook 'after-init-hook #'im-load-projects-list)
+(add-hook 'elpaca-after-init-hook #'im-load-projects-list)
 
 (im-leader
   "p" #'im-project-menu
@@ -4905,9 +4897,9 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
   (transient-define-prefix im-project-transient ()
     "Project Commands"
     [:description (lambda () (format
-                         "%s: %s"
-                         (propertize "Project" 'face '(:weight bold))
-                         (propertize (f-abbrev im-project-menu--current) 'face '(:foreground "green"))))
+                              "%s: %s"
+                              (propertize "Project" 'face '(:weight bold))
+                              (propertize (f-abbrev im-project-menu--current) 'face '(:foreground "green"))))
      ("s" "Switch" project-switch-project)]
     [["Core"
       :setup-children im-project-transient--wrapper
@@ -4994,7 +4986,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 ;;;;; xref
 
 (use-package xref
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :config
   (define-advice xref-find-definitions (:after (&rest _) reveal) (reveal-post-command)))
@@ -5152,7 +5144,7 @@ approach."
       (forward-line (1- (string-to-number line-no)))
       (delay-mode-hooks
         (funcall (assoc-default fname auto-mode-alist 'string-match)))
-      (font-lock-fontify-buffer)
+      (font-lock-ensure)
       (switch-to-buffer (current-buffer))
       (recenter))))
 
@@ -5408,12 +5400,12 @@ KEY should not contain the leader key."
 ;;;;; flymake
 
 (use-package flymake
-  :straight (:type built-in)
+  :ensure nil
   :custom (flymake-mode-line-lighter "")
   :hook ((prog-mode . flymake-mode)))
 
 (use-package flymake-popon
-  :straight (:host codeberg  :repo "akib/emacs-flymake-popon")
+  :ensure (:host codeberg  :repo "akib/emacs-flymake-popon")
   :diminish flymake-popon-mode
   :hook
   (flymake-mode . flymake-popon-mode)
@@ -5457,7 +5449,7 @@ When ARG is non-nil, query the whole workspace/project."
 ;; - ~M-m~ to move completion items to mini-buffer (completing-read).
 
 (use-package corfu
-  :straight (:files (:defaults "extensions/*.el"))
+  :ensure (:files (:defaults "extensions/*.el"))
   :custom
   (corfu-cycle t)
   (corfu-auto t)
@@ -5471,23 +5463,23 @@ When ARG is non-nil, query the whole workspace/project."
   (define-key corfu-map (kbd "RET") #'corfu-complete)
   (define-key corfu-map (kbd "<tab>") nil)
 
-  (set-face-background 'corfu-current "dim gray")
+  ;; This is useful because sometimes I just want to collect list of
+  ;; completions. With this I can use embark's collect functionality.
+  (defun corfu-move-to-minibuffer ()
+    (interactive)
+    (pcase completion-in-region--data
+      (`(,beg ,end ,table ,pred ,extras)
+       (let ((completion-extra-properties extras)
+             completion-cycle-threshold completion-cycling)
+         (consult-completion-in-region beg end table pred)))))
+  (keymap-set corfu-map "M-m" #'corfu-move-to-minibuffer)
+  (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
+
   (global-corfu-mode))
 
-;; This is useful because sometimes I just want to collect list of
-;; completions. With this I can use embark's collect functionality.
-(defun corfu-move-to-minibuffer ()
-  (interactive)
-  (pcase completion-in-region--data
-    (`(,beg ,end ,table ,pred ,extras)
-     (let ((completion-extra-properties extras)
-           completion-cycle-threshold completion-cycling)
-       (consult-completion-in-region beg end table pred)))))
-(keymap-set corfu-map "M-m" #'corfu-move-to-minibuffer)
-(add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 (use-package corfu-quick
-  :straight nil
+  :ensure nil
   :after corfu
   :config
   (setq corfu-quick1 "asdfgqwe")
@@ -5495,7 +5487,7 @@ When ARG is non-nil, query the whole workspace/project."
   (define-key corfu-map "\M-q" #'corfu-quick-insert))
 
 (use-package corfu-history
-  :straight nil
+  :ensure nil
   :after corfu
   :config
   (corfu-history-mode)
@@ -5509,7 +5501,7 @@ When ARG is non-nil, query the whole workspace/project."
   (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
 (use-package corfu-popupinfo
-  :straight nil
+  :ensure nil
   :after corfu
   :config
   (setq corfu-popupinfo-delay '(1.0 . 0.3))
@@ -5623,7 +5615,7 @@ SORT should be nil to disable sorting."
 ;;;;; eglot
 
 (use-package eglot
-  :defer t
+  :ensure nil
   :general
   (:states '(normal) :keymaps '(eglot-mode-map)
    "ga" #'eglot-code-actions
@@ -5649,7 +5641,7 @@ SORT should be nil to disable sorting."
 ;; This is needed so that go-to definition works for library files.
 (use-package eglot-java
   :after eglot
-  :straight (:host github :repo "yveszoundi/eglot-java")
+  :ensure (:host github :repo "yveszoundi/eglot-java")
   :hook (java-ts-mode . eglot-java-mode))
 
 ;;;;; lsp-mode
@@ -5690,7 +5682,7 @@ SORT should be nil to disable sorting."
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\.devbox\\'"))
 
 (use-package lsp-ui
-  :straight (:host github :repo "emacs-lsp/lsp-ui")
+  :ensure (:host github :repo "emacs-lsp/lsp-ui")
   :after lsp
   :custom
   (lsp-ui-doc-include-signature t)
@@ -5698,7 +5690,7 @@ SORT should be nil to disable sorting."
   (lsp-ui-sideline-show-diagnostics nil))
 
 (use-package consult-lsp
-  :straight (:host github :repo "gagbo/consult-lsp")
+  :ensure (:host github :repo "gagbo/consult-lsp")
   :after (lsp consult)
   :general
   (:keymaps '(lsp-mode-map) :states '(normal)
@@ -5706,7 +5698,7 @@ SORT should be nil to disable sorting."
    "M-I" #'consult-lsp-symbols))
 
 (use-package consult-eglot
-  :straight (:host github :repo "mohkale/consult-eglot")
+  :ensure (:host github :repo "mohkale/consult-eglot")
   :after (eglot consult)
   :general
   (:keymaps '(eglot-mode-map) :states '(normal)
@@ -5745,7 +5737,7 @@ SORT should be nil to disable sorting."
 ;;     coursier bootstrap org.scalameta:metals_2.13:1.5.1 -o metals -f
 
 (use-package lsp-metals
-  :straight (:host github :repo "emacs-lsp/lsp-metals")
+  :ensure (:host github :repo "emacs-lsp/lsp-metals")
   :after lsp
   :custom
   (lsp-metals-enable-semantic-highlighting t)
@@ -5758,8 +5750,8 @@ SORT should be nil to disable sorting."
 ;; Lightweight and nice modeline.
 
 (use-package simple-modeline
-  :straight (:host github :repo "gexplorer/simple-modeline")
-  :hook (after-init . simple-modeline-mode)
+  :ensure (:host github :repo "gexplorer/simple-modeline")
+  :hook (elpaca-after-init-hook . simple-modeline-mode)
   :custom (simple-modeline-segments
            '((simple-modeline-segment-modified
               simple-modeline-segment-buffer-name
@@ -5839,10 +5831,10 @@ SORT should be nil to disable sorting."
   :hook
   ((minibuffer-setup . yas-minor-mode)
    ;; ^ Enable expanding in mini-buffer.
-   (after-init . yas-global-mode)))
+   (elpaca-after-init . yas-global-mode)))
 
 (use-package yankpad
-  :straight (:host github :repo "Kungsgeten/yankpad")
+  :ensure (:host github :repo "Kungsgeten/yankpad")
   :after (org yasnippet)
   :autoload (yankpad--categories yankpad--snippets)
   :general
@@ -5971,7 +5963,7 @@ SORT should be nil to disable sorting."
 
 (use-package tab-jump-out
   :diminish
-  :straight (:host github :repo "zhangkaiyulw/tab-jump-out")
+  :ensure (:host github :repo "zhangkaiyulw/tab-jump-out")
   :config
   ;; This is not defined as a global minor mode, so define one and enable it
   (define-globalized-minor-mode global-tab-jump-out-mode tab-jump-out-mode
@@ -6017,7 +6009,7 @@ SORT should be nil to disable sorting."
 ;; expand-region.
 
 (use-package expand-region
-  :straight (:host github :repo "karthink/expand-region.el")
+  :ensure (:host github :repo "karthink/expand-region.el")
   :general
   (:states '(insert normal)
    "M-w" #'er/expand-region))
@@ -6037,7 +6029,7 @@ SORT should be nil to disable sorting."
 ;;;;; slack
 
 (use-package slack
-  :straight (:host github :repo "emacs-slack/emacs-slack")
+  :ensure (:host github :repo "emacs-slack/emacs-slack")
   :defer t
   :general
   (im-leader-v
@@ -6096,7 +6088,7 @@ SORT should be nil to disable sorting."
     (add-hook mode #'visual-line-mode)))
 
 (use-package im-slack
-  :straight `(:local-repo ,im-packages-path :files ("im-slack.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-slack.el"))
   :after slack)
 
 (defun im-slack-initialize ()
@@ -6210,8 +6202,8 @@ SORT should be nil to disable sorting."
 ;;;;; prodigy
 
 (use-package prodigy
-  :straight (:host github :repo "rejeep/prodigy.el")
-  :hook (after-init . im-prodigy-autostart)
+  :ensure (:host github :repo "rejeep/prodigy.el")
+  :hook (elpaca-after-init . im-prodigy-autostart)
   :demand t
   :general
   (im-leader
@@ -6311,7 +6303,7 @@ SORT should be nil to disable sorting."
 
 (use-package reddigg
   :defer t
-  :straight (:host github :repo "isamert/emacs-reddigg")
+  :ensure (:host github :repo "isamert/emacs-reddigg")
   :config
   (setq reddigg-convert-md-to-org t))
 
@@ -6321,7 +6313,7 @@ SORT should be nil to disable sorting."
 ;;;;; im-ai & org-ai & gptel -- interactions with LLMs
 
 (use-package im-ai
-  :straight `(:local-repo ,im-packages-path :files ("im-ai.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-ai.el"))
   :custom
   (im-ai-file "~/Documents/notes/extra/gpt.org")
   :general
@@ -6336,7 +6328,7 @@ SORT should be nil to disable sorting."
   (add-hook 'gptel-mode-hook #'tab-line-mode))
 
 (use-package im-ai-at-point
-  :straight `(:local-repo ,im-packages-path :files ("im-ai-at-point.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-ai-at-point.el"))
   :general
   (im-leader-v "sa" #'im-ai-at-point))
 
@@ -6393,7 +6385,7 @@ SORT should be nil to disable sorting."
                    :source (get-buffer bname)
                    :labels '("ai"))))))
 
-  (define-advice gptel--display-tool-calls (:before (&rest args) advice-name)
+  (define-advice gptel--display-tool-calls (:before (&rest _args) advice-name)
     "Show notification"
     (unless (get-buffer-window (current-buffer) (selected-frame))
       (let ((bname (buffer-name)))
@@ -6427,7 +6419,7 @@ SORT should be nil to disable sorting."
 ;; agent-shell-set-session-model → The model; opus-4-5, sonnet-4-5, gpt-5.2 etc.
 
 (use-package agent-shell
-  :straight (:host github :repo "xenodium/agent-shell")
+  :ensure (:host github :repo "xenodium/agent-shell")
   :defer t
   :custom
   (agent-shell-show-welcome-message nil)
@@ -6545,7 +6537,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;;;;; im-cursor
 
 (use-package im-cursor
-  :straight `(:local-repo ,im-packages-path :files ("im-cursor.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-cursor.el"))
   :defer t
   :config
   (with-eval-after-load 'im-notif
@@ -6554,7 +6546,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;;;;; im-kagi-assistant
 
 (use-package im-kagi-assistant
-  :straight `(:local-repo ,im-packages-path :files ("im-kagi-assistant.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-kagi-assistant.el"))
   :defer t
   :custom
   (im-kagi-assistant-cookie im-kagi-cookie))
@@ -6613,7 +6605,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;;;;; lab.el -- gitlab integration
 
 (use-package lab
-  :straight (:host github :repo "isamert/lab.el")
+  :ensure (:host github :repo "isamert/lab.el")
   :autoload (lab--git lab--time-ago lab-git-clone lab-current-branch lab-git-origin-switch-to-ssh)
   :init
   ;; Add advices for automatically starting to watch pipelines
@@ -6662,7 +6654,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;; open-source work needs instead of regular stuff.
 
 (use-package im-github
-  :straight `(:local-repo ,im-packages-path :files ("im-github.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-github.el"))
   :defer t
   :custom
   (lab-github-user "isamert")
@@ -6674,7 +6666,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;;;;; swagg.el -- Swagger UI
 
 (use-package swagg
-  :straight (:host github :repo "isamert/swagg.el")
+  :ensure (:host github :repo "isamert/swagg.el")
   :general
   (im-leader
     "us" #'swagg-request-with-rest-block
@@ -6686,7 +6678,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;;;;; whisper -- Recording and transcribing audio locally
 
 (use-package whisper
-  :straight (:host github :repo "natrys/whisper.el")
+  :ensure (:host github :repo "natrys/whisper.el")
   :general
   (im-leader
     "er" #'whisper-run)
@@ -6802,7 +6794,7 @@ If SHELL-BUFFER is nil, use the current buffer."
   :custom
   (undo-fu-session-compression 'zst)
   :config
-  (global-undo-fu-session-mode 1))
+  (undo-fu-session-global-mode 1))
 
 ;;;;; deadgrep
 
@@ -6839,14 +6831,14 @@ If SHELL-BUFFER is nil, use the current buffer."
 
 (defun im-deadgrep-directory (dir term)
   (interactive (list
-      (read-directory-name "Dir: ")
-      (read-string "Search term")))
+                (read-directory-name "Dir: ")
+                (read-string "Search term")))
   (deadgrep term dir))
 
 ;;;;; consult-gh (GitHub interface for consult)
 
 (use-package consult-gh
-  :straight (:host github :repo "armindarvish/consult-gh")
+  :ensure (:host github :repo "armindarvish/consult-gh")
   :after consult
   :defer t
   :custom
@@ -6897,7 +6889,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;;;;; biome -- weather information
 
 (use-package biome
-  :straight (:host github :repo "SqrtMinusOne/biome")
+  :ensure (:host github :repo "SqrtMinusOne/biome")
   :defer t
   ;; These commands are generated in the :config section.
   :commands (im-biome-weather-daily-ankara
@@ -6961,7 +6953,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 ;; the org features in my configuration.
 
 (use-package outli
-  :straight (:host github :repo "jdtsmith/outli")
+  :ensure (:host github :repo "jdtsmith/outli")
   :hook (prog-mode . outli-mode)
   :diminish outli-mode
   :defer t
@@ -6988,22 +6980,12 @@ If SHELL-BUFFER is nil, use the current buffer."
   (with-eval-after-load 'consult-imenu
     (push '(?h "Headings") (plist-get (cdr (assoc 'emacs-lisp-mode consult-imenu-config)) :types))))
 
-;;;;; epkg
-
-;; Browse elisp packages inside Emacs. This is useful as I am not
-;; using package.el and don't want to load it. Use
-;; `epkg-list-packages'.
-
-(use-package epkg
-  :defer t
-  :commands (epkg-list-packages))
-
 ;;;;; upver -- update dependencies interactively
 
 (use-package upver
   :commands (upver)
   :defer t
-  :straight (:host github :repo "isamert/upver.el"))
+  :ensure (:host github :repo "isamert/upver.el"))
 
 ;;;;; notmuch & message & sendmail -- email stuff
 
@@ -7102,7 +7084,7 @@ If SHELL-BUFFER is nil, use the current buffer."
     "S" nil))
 
 (use-package message
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :hook
   (message-setup . message-sort-headers)
@@ -7117,7 +7099,7 @@ If SHELL-BUFFER is nil, use the current buffer."
   (message-kill-buffer-on-exit t))
 
 (use-package sendmail
-  :straight (:type built-in)
+  :ensure nil
   :after message
   :config
   (setq send-mail-function 'sendmail-send-it)
@@ -7167,10 +7149,10 @@ mails."
           (setq
            mails
            (->> (im-shell-command :command "notmuch search tag:inbox and tag:unread and not tag:spam" :async t)
-              (await)
-              (s-trim)
-              (s-split "\n")
-              (--map (nth 1 (s-split-up-to " " it 1)))))
+                (await)
+                (s-trim)
+                (s-split "\n")
+                (--map (nth 1 (s-split-up-to " " it 1)))))
           (setq count (length mails))
           (when (or interactive?
                     (and (> count 0) (not (eq im-unread-mail-count count))))
@@ -7277,8 +7259,8 @@ mails."
 ;; buffers are persisted and restored.
 
 (use-package easysession
-  :straight (:host github :repo "jamescherti/easysession.el")
-  :hook (after-init . easysession-save-mode)
+  :ensure (:host github :repo "jamescherti/easysession.el")
+  :hook (elpaca-after-init . easysession-save-mode)
   :diminish easysession-save-mode
   :custom
   (easysession-mode-line-misc-info t)
@@ -7288,7 +7270,7 @@ mails."
 ;;;;; im-git -- my git workflow, magit alternative
 
 (use-package im-git
-  :straight `(:local-repo ,im-packages-path :files ("im-git.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-git.el"))
   :defer t
   :init
   (add-hook 'im-git-commit-finished-hook #'im-update-git-state)
@@ -7404,7 +7386,7 @@ the commit buffer."
 ;;;;; im-readeck -- Readeck bookmark manager integration
 
 (use-package im-readeck
-  :straight `(:local-repo ,im-packages-path :files ("im-readeck.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-readeck.el"))
   :custom
   (im-readeck-url im-homeserver-readeck-url)
   (im-readeck-token im-homeserver-readeck-token)
@@ -7418,7 +7400,7 @@ the commit buffer."
 ;;;;; im-tab --- my tab related extensions
 
 (use-package tabku
-  :straight (:host github :repo "isamert/tabku.el")
+  :ensure (:host github :repo "isamert/tabku.el")
   :defer t
   :general
   (im-leader
@@ -7441,7 +7423,7 @@ the commit buffer."
 ;;;;; im-filebrowser -- Filebrowser integration
 
 (use-package im-filebrowser
-  :straight `(:local-repo ,im-packages-path :files ("im-filebrowser.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-filebrowser.el"))
   :defer t
   :custom
   (im-filebrowser-url im-homeserver-filebrowser-url)
@@ -7452,13 +7434,13 @@ the commit buffer."
 ;;;;; im-kube --- my kubernetes interface
 
 (use-package im-kube
-  :straight `(:local-repo ,im-packages-path :files ("im-kube.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-kube.el"))
   :defer t)
 
 ;;;;; im-nextcloud --- my nextcloud integration
 
 (use-package im-nextcloud
-  :straight `(:local-repo ,im-packages-path :files ("im-nextcloud.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-nextcloud.el"))
   ;; For automatic Maps & Contacts integration
   :after (org)
   :custom
@@ -7469,7 +7451,7 @@ the commit buffer."
 ;;;;; im-char-picker --- insert utf8 chars easily
 
 (use-package im-char-picker
-  :straight `(:local-repo ,im-packages-path :files ("im-char-picker.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-char-picker.el"))
   :general
   (im-leader "ic" #'im-char-picker)
   (:states '(insert)
@@ -7480,7 +7462,7 @@ the commit buffer."
 ;; Also see: orgmdb.el
 
 (use-package im-arr
-  :straight `(:local-repo ,im-packages-path :files ("im-arr.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-arr.el"))
   :defer t
   :custom
   (im-radarr-url im-homeserver-radarr-url)
@@ -7491,7 +7473,7 @@ the commit buffer."
 ;;;;; im-ntfy --- ntfy client
 
 (use-package im-ntfy
-  :straight `(:local-repo ,im-packages-path :files ("im-ntfy.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-ntfy.el"))
   :defer 60
   :custom
   (im-ntfy-server im-homeserver-ntfy-server)
@@ -7504,13 +7486,13 @@ the commit buffer."
 ;;;;; im-wpm --- display WPM on insert mode
 
 (use-package im-wpm
-  :straight nil
-  :hook (after-init . im-wpm-mode))
+  :ensure nil
+  :hook (elpaca-after-init . im-wpm-mode))
 
 ;;;;; ereader --- ebook reader with org integration
 
 (use-package ereader
-  :straight (:host github :repo "bddean/emacs-ereader")
+  :ensure (:host github :repo "bddean/emacs-ereader")
   :after (org)
   :config
   ;; For org links integration
@@ -7547,20 +7529,20 @@ the commit buffer."
 ;;;;; im-macos -- my macos extensions
 
 (use-package im-macos
-  :straight `(:local-repo ,im-packages-path :files ("im-macos.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-macos.el"))
   :if (eq system-type 'darwin)
   :demand t)
 
 ;;;;; file-info
 
 (use-package file-info
-  :straight (:host github :repo "artawower/file-info.el")
+  :ensure (:host github :repo "artawower/file-info.el")
   :defer t)
 
 ;;;;; im-occur
 
 (use-package im-occur
-  :straight `(:local-repo ,im-packages-path :files ("im-occur.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-occur.el"))
   :hook (occur-mode-hook . im-occur-mode)
   :config
   (add-hook 'occur-mode-hook 'im-occur-mode))
@@ -7568,7 +7550,7 @@ the commit buffer."
 ;;;;; im-chawan -- simple chawan browser wrapper
 
 (use-package im-chawan
-  :straight `(:local-repo ,im-packages-path :files ("im-chawan.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-chawan.el"))
   :defer t)
 
 ;;;; Editing
@@ -7601,7 +7583,7 @@ the commit buffer."
 ;;;;; sozluk.el -- Turkish dictionary
 
 (use-package sozluk
-  :straight (:host github :repo "isamert/sozluk.el")
+  :ensure (:host github :repo "isamert/sozluk.el")
   :defer t
   :custom
   ;; (sozluk-include-etymology-on-sozluk t)
@@ -7666,7 +7648,7 @@ the commit buffer."
 ;; use a very small subset of it's feature set.
 
 (use-package puni
-  :straight (:host github :repo "AmaiKinono/puni")
+  :ensure (:host github :repo "AmaiKinono/puni")
   :general
   (:keymaps '(prog-mode-map inferior-emacs-lisp-mode-map) :states '(insert)
    "M-[" #'puni-barf-forward
@@ -7694,30 +7676,6 @@ the commit buffer."
 ;; - M-w :: combobulate-mark-node-dwim
 ;; - M-t :: combobulate-transpose-sexps
 
-(use-package combobulate
-  :straight (combobulate :type git :host github :repo "mickeynp/combobulate")
-  :hook ((python-ts-mode . combobulate-mode)
-         (js-ts-mode . combobulate-mode)
-         (css-ts-mode . combobulate-mode)
-         (yaml-ts-mode . combobulate-mode)
-         (json-ts-mode . combobulate-mode)
-         (typescript-ts-mode . combobulate-mode)
-         (tsx-ts-mode . combobulate-mode))
-  :general
-  (:keymaps 'combobulate-key-map :states '(normal insert)
-   "M-w" #'combobulate-mark-node-dwim
-   "M-k" #'combobulate-drag-up
-   "M-j" #'combobulate-drag-down)
-  (:keymaps 'combobulate-key-map :states '(insert)
-   "M-t" #'combobulate-transpose-sexps)
-  :custom
-  ;; Numeric selection is confusing
-  (combobulate-proffer-allow-numeric-selection nil)
-  :config
-  (define-advice combobulate-mark-node-dwim (:before (&rest _) visual-mode)
-    "Activate visual mode before marking."
-    (evil-visual-char)))
-
 ;; The reason I use a very little subset of these packages is that I
 ;; already use evil-mode and it's editing capabilities cover most of
 ;; the feature set provided by puni and combobulate.
@@ -7735,7 +7693,6 @@ the commit buffer."
   (setq writeroom-global-effects nil)
   (setq writeroom-mode-line-toggle-position 'header-line-format)
   (setq writeroom-width 81))
-
 
 ;;;; Dummy IDE mode
 
@@ -7928,7 +7885,7 @@ the commit buffer."
 ;; Manage media and streams through =completing-read=.
 
 (use-package empv
-  :straight (:host github :repo "isamert/empv.el")
+  :ensure (:host github :repo "isamert/empv.el")
   :defer t
   :autoload (empv--select-action)
   :general
@@ -7997,7 +7954,7 @@ the commit buffer."
 
 (use-package orgmdb
   :defer t
-  :straight (:host github :repo "isamert/orgmdb.el")
+  :ensure (:host github :repo "isamert/orgmdb.el")
   :bind (:map evil-normal-state-map ("go" . orgmdb-act))
   :config
   (setq orgmdb-omdb-apikey im-orgmdb-omdb-apikey)
@@ -8007,7 +7964,7 @@ the commit buffer."
 ;;;;; rcirc -- simple, built-in irc client
 
 (use-package rcirc
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :custom
   (rcirc-server-alist `(("irc.libera.chat"
@@ -8114,7 +8071,7 @@ the commit buffer."
 ;; need ~format-all-buffer~ and it works with more formatters.
 
 (use-package apheleia
-  :hook (after-init . apheleia-global-mode)
+  :hook (elpaca-after-init . apheleia-global-mode)
   :diminish 'apheleia-mode
   :init
   (defalias 'im-toggle-auto-code-formatter #'apheleia-mode)
@@ -8126,8 +8083,8 @@ the commit buffer."
 ;;;;;; Display/get currently focused function name in modeline
 
 (use-package which-function
-  :straight (:type built-in)
-  :hook (after-init . which-function-mode))
+  :ensure nil
+  :hook (elpaca-after-init . which-function-mode))
 
 (defun im-disable-which-func ()
   (which-function-mode -1))
@@ -8146,7 +8103,7 @@ the commit buffer."
 ;; folding. origami was a bit confusing (as the /thing/ itself).
 
 (use-package outline-indent
-  :straight (:host github :repo "jamescherti/outline-indent.el")
+  :ensure (:host github :repo "jamescherti/outline-indent.el")
   :hook
   (python . outline-indent-minor-mode)
   (python-ts . outline-indent-minor-mode)
@@ -8160,7 +8117,7 @@ the commit buffer."
 ;;;;;; REPLs
 
 (use-package im-repl
-  :straight `(:local-repo ,im-packages-path :files ("im-repl.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-repl.el"))
   :defer t
   :general
   (im-leader-v
@@ -8199,7 +8156,7 @@ works for Lispy languages."
 ;;;;; markdown (md-ts-mode)
 
 (use-package md-ts-mode
-  :straight (:host github :repo "dnouri/md-ts-mode")
+  :ensure (:host github :repo "dnouri/md-ts-mode")
   :general
   (:states 'normal :keymaps 'md-ts-mode-map
    "TAB" #'outline-cycle
@@ -8250,7 +8207,7 @@ works for Lispy languages."
 ;; This is a package I wrote for inserting JSDoc comments easily. Check out the [[https://github.com/im-jsdoc.el][README]].
 
 (use-package jsdoc
-  :straight (:host github :repo "isamert/jsdoc.el")
+  :ensure (:host github :repo "isamert/jsdoc.el")
   :defer t)
 
 ;;;;;; Add node_modules/.bin to PATH automatically
@@ -8366,7 +8323,7 @@ This is used in my snippets."
 (add-hook 'tsx-ts-mode-hook #'hs-minor-mode)
 
 (use-package im-deno
-  :straight `(:local-repo ,im-packages-path :files ("im-deno.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-deno.el"))
   :demand t)
 
 ;;;;;; REPL interaction
@@ -8408,7 +8365,7 @@ This is used in my snippets."
 
 (use-package ob-deno
   :after org
-  :straight (:host github :repo "isamert/ob-deno"))
+  :ensure (:host github :repo "isamert/ob-deno"))
 
 (with-eval-after-load 'org
   (add-to-list 'org-src-lang-modes '("deno" . typescript-ts)))
@@ -8664,7 +8621,7 @@ work.  You need to enter full path while importing by yourself."
 ;;;;; yaml
 
 (use-package yaml-ts-mode
-  :straight (:type built-in)
+  :ensure nil
   :mode ("\\.yaml\\'" "\\.yml\\'")
   :config
   (add-hook 'yaml-ts-mode-hook #'outline-indent-minor-mode)
@@ -8685,7 +8642,7 @@ work.  You need to enter full path while importing by yourself."
   (data-debug-show-stuff (eval-last-sexp nil) "last sexp"))
 
 (use-package data-debug-mode
-  :straight (:type built-in)
+  :ensure nil
   :general
   (:states 'normal :keymaps 'data-debug-mode-map
    "RET" #'data-debug-expand-or-contract
@@ -8711,8 +8668,8 @@ work.  You need to enter full path while importing by yourself."
   "Face for highlighting evaluated regions.")
 
 (use-package eros
-  :straight (:host github :repo "isamert/eros")
-  :hook (after-init . eros-mode)
+  :ensure (:host github :repo "isamert/eros")
+  :hook (elpaca-after-init . eros-mode)
   :config
   (add-hook 'eros-inspect-hooks (lambda () (flycheck-mode -1)))
 
@@ -8864,7 +8821,7 @@ Lisp function does not specify a special indentation."
 ;; parallels cross]]
 
 (use-package doctest
-  :straight (:host github :repo "ag91/doctest")
+  :ensure (:host github :repo "ag91/doctest")
   :commands (doctest doctest-here doctest-defun))
 
 ;;;;;; suggest.el -- Function suggestions
@@ -8881,7 +8838,7 @@ Lisp function does not specify a special indentation."
 
 (use-package redshank
   ;; All interactive redshank commands
-  :straight (:host github :repo "isamert/redshank")
+  :ensure (:host github :repo "isamert/redshank")
   :commands (redshank-maybe-splice-progn
              redshank-point-at-enclosing-let-form
              redshank-ignore-event
@@ -8904,9 +8861,9 @@ Lisp function does not specify a special indentation."
              redshank-define-condition-skeleton)
   :defer t)
 
-(use-package emr
-  :straight (:host github :repo "isamert/emacs-refactor")
-  :defer t)
+;; (use-package emr
+;;   :ensure (:host github :repo "isamert/emacs-refactor")
+;;   :defer t)
 
 ;;;;; Racket
 
@@ -8924,7 +8881,7 @@ Lisp function does not specify a special indentation."
 ;;;;; scheme
 
 (use-package scheme
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :config
   (with-eval-after-load 'outli
@@ -8989,7 +8946,7 @@ Lisp function does not specify a special indentation."
 ;;;;; Couchbase
 
 (use-package im-couchbase
-  :straight `(:local-repo ,im-packages-path :files ("im-couchbase.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-couchbase.el"))
   :defer t)
 
 ;;;;; BigQuery
@@ -9318,7 +9275,7 @@ SELECT * FROM _ LIMIT 1;
 ;;;;; Conf
 
 (use-package conf-mode
-  :straight (:type built-in)
+  :ensure nil
   :defer t
   :config
   (add-hook 'conf-mode-hook #'outli-mode))
@@ -9374,7 +9331,7 @@ SELECT * FROM _ LIMIT 1;
   :defer t)
 
 (use-package jupyter
-  :straight (:host github :repo "isamert/jupyter")
+  :ensure (:host github :repo "isamert/jupyter")
   :defer t
   :custom
   (jupyter-org-want-keybinding . nil)
@@ -9436,7 +9393,7 @@ SELECT * FROM _ LIMIT 1;
 ;; them.
 
 (use-package tab-bar
-  :straight (:type built-in)
+  :ensure nil
   :custom
   (tab-bar-new-tab-to 'rightmost)
   (tab-bar-new-tab-choice im-init-file)
@@ -9467,7 +9424,7 @@ SELECT * FROM _ LIMIT 1;
   ;; Don't show global-mode-string in mode-line because we already show
   ;; it on right side of the tab-bar
   (mode-line-misc-info (assq-delete-all 'global-mode-string mode-line-misc-info))
-  :hook (after-init . tab-bar-mode)
+  :hook (elpaca-after-init . tab-bar-mode)
   :config
   ;; Enable history so that I can use `tab-bar-history-back'
   ;; `tab-bar-history-forward'.  `winner-mode' also have the same
@@ -9517,8 +9474,8 @@ SELECT * FROM _ LIMIT 1;
   "Regexp to filter out buffer names on tab line.")
 
 (use-package tab-line
-  :straight (:type built-in)
-  ;; :hook (after-init . global-tab-line-mode)
+  :ensure nil
+  ;; :hook (elpaca-after-init . global-tab-line-mode)
   :general
   (:keymaps 'tab-line-mode-map :states 'normal
    "M-[" #'tab-line-hscroll-left
@@ -9594,7 +9551,7 @@ where these special buffers may be duplicated."
 ;;;;; tabgo.el
 
 (use-package tabgo
-  :straight (:host github :repo "isamert/tabgo.el")
+  :ensure (:host github :repo "isamert/tabgo.el")
   :demand t
   :general
   (im-leader
@@ -9766,7 +9723,7 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   (jiralib2-token ty-jira-secret))
 
 (use-package im-jira
-  :straight `(:local-repo ,im-packages-path :files ("im-jira.el"))
+  :ensure `(:repo ,im-packages-path :files ("im-jira.el"))
   :custom
   (im-git-main-branch "master")
   (im-jira-projects '("PRA" "STA"))
@@ -10268,7 +10225,7 @@ If it does not exists, create it."
      items
      (--find (s-equals? "Routines" (plist-get it :name)))
      (funcall (-flip #'plist-get) :clock)
-     (org-minutes-to-clocksum-string)
+     (org-duration-from-minutes)
      (format "|Routines|%s||\n")
      (insert))
 
@@ -10277,7 +10234,7 @@ If it does not exists, create it."
      (--filter (-contains? '("Breakfast" "Dinner") (plist-get it :name)))
      (--map (plist-get it :clock))
      (-sum)
-     (org-minutes-to-clocksum-string)
+     (org-duration-from-minutes)
      (format "|\\-- Eating||%s|\n")
      (insert))
 
@@ -10286,7 +10243,7 @@ If it does not exists, create it."
      (--filter (not (-contains? '("Breakfast" "Dinner") (plist-get it :name))))
      (--map (plist-get it :clock))
      (-sum)
-     (org-minutes-to-clocksum-string)
+     (org-duration-from-minutes)
      (format "|\\-- Other||%s|\n")
      (insert))
 
@@ -10296,7 +10253,7 @@ If it does not exists, create it."
      work
      (--map (plist-get it :clock))
      (-sum)
-     (org-minutes-to-clocksum-string)
+     (org-duration-from-minutes)
      (format "|Work|%s||\n")
      (insert))
 
@@ -10305,7 +10262,7 @@ If it does not exists, create it."
      (--filter (-contains? (plist-get it :tags) "meeting"))
      (--map (plist-get it :clock))
      (-sum)
-     (org-minutes-to-clocksum-string)
+     (org-duration-from-minutes)
      (format "|\\-- Meetings||%s|\n")
      (insert))
 
@@ -10314,7 +10271,7 @@ If it does not exists, create it."
      (--filter (not (-contains? (plist-get it :tags) "meeting")))
      (--map (plist-get it :clock))
      (-sum)
-     (org-minutes-to-clocksum-string)
+     (org-duration-from-minutes)
      (format "|\\-- Other||%s|\n")
      (insert))
 
@@ -10324,7 +10281,7 @@ If it does not exists, create it."
      others
      (--map (plist-get it :clock))
      (-sum)
-     (org-minutes-to-clocksum-string)
+     (org-duration-from-minutes)
      (format "|Other|%s||\n")
      (insert))
 
@@ -10333,7 +10290,7 @@ If it does not exists, create it."
      (--filter (-contains? (plist-get it :tags) "side"))
      (--map (plist-get it :clock))
      (-sum)
-     (org-minutes-to-clocksum-string)
+     (org-duration-from-minutes)
      (format "|\\-- Side projects||%s|\n")
      (insert))
 
@@ -10342,7 +10299,7 @@ If it does not exists, create it."
      (--filter (not (-contains? (plist-get it :tags) "side")))
      (--map (plist-get it :clock))
      (-sum)
-     (org-minutes-to-clocksum-string)
+     (org-duration-from-minutes)
      (format "|\\-- Other||%s|\n")
      (insert))
 
@@ -11116,7 +11073,7 @@ Returns process buffer."
     (let ((fn (lambda (resolve reject)
                 (set-process-sentinel
                  proc
-                 (lambda (p e)
+                 (lambda (p _e)
                    (with-current-buffer (get-buffer-create buffer-name)
                      (read-only-mode -1)
                      (when legend
@@ -11226,113 +11183,6 @@ PROC is the process object."
               (mod (/ (floor seconds) 60) 60)
               (mod (floor seconds) 60)))))
 
-
-;;;;; Password manager
-
-(defun im-password-all ()
-  "Get list of all passwords and their properties from `passwords.org'."
-  (with-current-buffer "passwords.org"
-    (->>
-     (lambda ()
-       (let ((link "")
-             (match (org-entry-get nil "MATCH"))
-             (header-link (save-excursion (forward-char 5) (org-element-context)))
-             (title (org-entry-get nil "ITEM"))
-             (props (im-alist-to-plist (org-entry-properties))))
-         (when (plist-get props :username)
-           ;; ^ A password entry should contain at least the :username: prop
-           (when (eq (org-element-type header-link) 'link)
-             (setq link (org-element-property :raw-link header-link))
-             (save-excursion
-               (setq title
-                     (buffer-substring-no-properties
-                      (org-element-property :contents-begin header-link)
-                      (org-element-property :contents-end header-link)))))
-           `(:title ,title :link ,link ,@props))))
-     (org-map-entries)
-     (-filter #'identity))))
-
-;; TODO Better matching algorithm Check if full string matches any,
-;; then check if host matches. Return full string match only if it
-;; exists. Also check if toplevel domain matches, if it does not match
-;; fully
-(defun im-password-find-for (url)
-  "Return matching accounts for given URL.
-If there are multiple accounts registered for one entry, then
-list them as seperate entries."
-  (let ((urlobj (url-generic-parse-url url)))
-    (setq url (url-host urlobj))
-    (when-let* ((port (url-port-if-non-default urlobj)))
-      (setq url (format "%s:%s" url port))))
-  (let* ((candidates (--filter
-                      (when (or (ignore-errors (s-match (plist-get it :match) url))
-                                (s-contains? url (plist-get it :link)))
-                        it)
-                      (im-password-all))))
-    (-flatten-n
-     1
-     (-map (lambda (info)
-             (let ((unames (s-split " " (plist-get info :username)))
-                   (pwds (s-split " " (plist-get info :password))))
-               (-zip-pair  (--map (format "%s - %s" (plist-get info :title) it) unames)
-                           (--map (list :info info :acc it)
-                                  (-zip-pair unames pwds)))))
-           candidates))))
-
-(defun im-password-qutebrowser (url fifo)
-  "Find credentials for currently open link in Qutebrowser and fill."
-  (let* ((candidates (im-password-find-for url))
-         (result (plist-get
-                  (alist-get (completing-read "Select account: " candidates) candidates nil nil #'equal) :acc))
-         (username (car result))
-         (password (-some->> (cdr result)
-                     (s-replace "\"" "\\\"")
-                     (s-replace "'" "\\'"))))
-    (when (and username password)
-      (pcase (completing-read "Method: " '("Fill all with TAB" "Fill username" "Fill password"))
-        ("Fill all with TAB"
-         (write-region "mode-enter insert\n" nil fifo 'append)
-         (write-region (format "fake-key %s\n" username) nil fifo 'append)
-         (write-region "fake-key <Tab>\n" nil fifo 'append)
-         (write-region (format "fake-key %s\n" password) nil fifo 'append))
-        ("Fill username"
-         (write-region "mode-enter insert\n" nil fifo 'append)
-         (write-region (format "fake-key %s\n" username) nil fifo 'append))
-        ("Fill password"
-         (write-region "mode-enter insert\n" nil fifo 'append)
-         (write-region (format "fake-key %s\n" password) nil fifo 'append))))))
-
-;; TODO Add other actions:
-;; - Fill with tab
-;; - Copy username/password etc.
-(defun im-password-act ()
-  (interactive)
-  (and-let* ((passwords (im-password-all))
-             (candidates (--map (cons (plist-get it :title) it) passwords))
-             (selected (im-alist-completing-read "Select: " candidates)))
-    (let-plist selected
-      (pcase (completing-read
-              "Action: "
-              (list "Copy as username:password"
-                    "Copy as PostgreSQL connection string"
-                    "Copy as SQL src block header args"
-                    "Copy as Couchbase (CBC, N1QL) src block header args"))
-        ("Copy as username:password"
-         (kill-new
-          (format "%s:%s" .username .password)))
-        ("Copy as PostgreSQL connection string"
-         (kill-new
-          (format "postgresql://%s:%s@%s:%s/%s"
-                  .username .password .host .port .db)))
-        ("Copy as SQL src block header args"
-         (kill-new
-          (format ":engine postgresql :dbhost %s :dbuser %s :dbpassword %s :database %s :dbport %s"
-                  .host .username .password .db .port)))
-        ("Copy as Couchbase (CBC, N1QL) src block header args"
-         (kill-new
-          (format ":host %s :username %s :password %s"
-                  .host .username .password)))))))
-
 ;;;;; Run functions globally
 
 ;; Simply use ~im-dmenu~ function instead of the default
@@ -11348,6 +11198,7 @@ list them as seperate entries."
 
 (use-package narrow-indirect
   :defer t
+  :ensure (:host github :repo "emacsmirror/narrow-indirect")
   :general
   (im-leader-v
     "n" #'im-narrow-dwim
@@ -11690,7 +11541,7 @@ attribute for current buffers file or selected file."
 ;; the "peek window".
 
 (use-package quick-peek
-  :straight (:host github :repo "isamert/quick-peek")
+  :ensure (:host github :repo "isamert/quick-peek")
   :defer t)
 
 ;;;;;; Bindings
@@ -12090,7 +11941,7 @@ Adapted from: https://babbagefiles.xyz/emacs_etymologies/"
 (defun im-json-to-yaml (json &optional replace?)
   "Convert JSON to YAML."
   (interactive (list (im-region-or 'string)))
-  (let ((yaml (im-kill (yaml-encode (json-parse-string yaml)))))
+  (let ((yaml (im-kill (yaml-encode (json-parse-string json)))))
     (when (and replace? (use-region-p))
       (replace-region-contents
        (region-beginning)
@@ -12186,8 +12037,7 @@ Throw error otherwise."
            (list current-test-name))))))))
 
 (defun im-test-run-current-file--mvn (run-only-focused-test)
-  (let* ((test-file buffer-file-name)
-         (default-directory (im-current-project-root))
+  (let* ((default-directory (im-current-project-root))
          (current-test-class
           (save-excursion
             (goto-char (point-min))
@@ -12240,7 +12090,9 @@ Throw error otherwise."
 ;; want periodically.
 
 (when tab-bar-show
-  (run-at-time 10 45 #'im-update-global-mode-line))
+  (add-hook
+   #'elpaca-after-init-hook
+   (apply-partially #'run-at-time 10 45 #'im-update-global-mode-line)))
 
 (defun im-update-global-mode-line (&rest _)
   (interactive)
@@ -12397,7 +12249,7 @@ Asks for STATUS if called interactively."
    (set-process-filter
     (start-process "*SwitchAudioSourceMic*" "*SwitchAudioSourceMic*"
                    "SwitchAudioSource" "-t" "input" "-m" status)
-    (lambda (proc out)
+    (lambda (_proc out)
       (let* ((status (car (s-match "\\(\\(un\\)?muted\\)" (s-trim out))))
              (muted? (equal status "muted"))
              (icon (if muted? "🔇" "🔊")))
@@ -12469,7 +12321,7 @@ Asks for STATUS if called interactively."
            (car))))
     (set-process-filter
      (start-process "im-connect-bluetooth" nil "bluetoothctl" "connect" device)
-     (lambda (proc out)
+     (lambda (_proc out)
        (cond
         ((s-matches? "Failed to connect" out) (message "%s" out))
         ((s-matches? "Connection successful" out) (message "%s" out)))))))
@@ -12486,7 +12338,7 @@ Asks for STATUS if called interactively."
 ;;;;; Switch next monitor input
 
 (defun im-ddcutil-toggle/switch-monitor-input (monitor)
-  "Switch to other monitor, USBC, DisplayPort or HDMI."
+  "Switch to other MONITOR, USBC, DisplayPort or HDMI."
   (interactive (list (intern (completing-read "Monitor: " '(usbc hdmi dp)))))
   (let* ((target (alist-get monitor '((hdmi . "17")
                                       (dp . "15")
@@ -12506,14 +12358,18 @@ Asks for STATUS if called interactively."
 
 ;;;; Postamble
 
-;; Load the remaining external files that I want to be loaded
-(--each
-       (directory-files im-load-path t (rx ".el" eos))
-  (load it))
+;;;;; Load the remaining external files that I want to be loaded
+
+(dolist (file (directory-files im-load-path t (rx ".el" eos)))
+  (load file nil 'no-message))
+
+;;;;; Use a different custom file so init.el is not littered
 
 (setq custom-file (concat user-emacs-directory "custom.el"))
 (when (file-exists-p custom-file)
-  (load custom-file))
+  (load custom-file nil 'no-message))
+
+;;;;; Enable server
 
 (require 'server)
 (when (and (not (daemonp)) (not (server-running-p)))
@@ -12523,28 +12379,16 @@ Asks for STATUS if called interactively."
   (setq server-window #'pop-to-buffer)
   (server-start))
 
-(message ">>> Started in %s" (emacs-init-time))
+(let ((ct (float-time)))
+  (message ">>> Started in %s" (emacs-init-time))
+  (add-hook
+   'elpaca-after-init-hook
+   (lambda ()
+     (message ">> Took to init: %s seconds" (- (float-time) ct)))))
 
 (provide 'init)
-
-;; Here are some variables for this file specifically. Some of them
-;; are self-explanatory but I'll go over some of them for clarity:
-;;
-;; - separedit-default-mode :: All the comments in this file are
-;;   formatted with Org mode markup. When I do \\[separedit] on a
-;;   comment, an indirect buffer will pop up and normally edit that
-;;   section in markdown mode but through this variable I set it to
-;;   org.
-;; - I don't care about some byte compiler warnings for this file,
-;;   which are disabled through =byte-compile-warnings= variable.
-;; - In the same vein of the one above, I don't care about some
-;;   checkdoc warnings which are disabled through checkdoc-* variables
-;;   below.
-
 ;; Local Variables:
-;; byte-compile-warnings: (not unresolved free-vars)
-;; checkdoc-force-docstrings-flag: nil
-;; checkdoc--argument-missing-flag: nil
+;; byte-compile-warnings: (not unresolved free-vars docstrings)
 ;; separedit-default-mode: org-mode
 ;; eval: (setq elisp-flymake-byte-compile-load-path load-path)
 ;; End:
