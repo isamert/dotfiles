@@ -9435,8 +9435,8 @@ SELECT * FROM _ LIMIT 1;
 
   (defun im-fix-tab-bar-faces (&rest _)
     "Most of the themes I use does not support tab-bar, this mostly fixes it."
-    (set-face-attribute 'tab-bar-tab nil :background nil :box nil :bold t :underline t)
-    (set-face-attribute 'tab-bar-tab-inactive nil :background nil :box nil :bold nil :underline nil :italic t))
+    (set-face-attribute 'tab-bar-tab nil :background 'unspecified :box nil :bold t :underline nil :foreground (face-foreground 'font-lock-type-face nil t))
+    (set-face-attribute 'tab-bar-tab-inactive nil :background 'unspecified :box nil :bold nil :underline nil :italic t))
   (add-hook 'im-after-load-theme-hook #'im-fix-tab-bar-faces))
 
 ;; I want to show ~consult-buffer~ when I open a new tab to be able to
@@ -9490,10 +9490,20 @@ SELECT * FROM _ LIMIT 1;
   (setq tab-line-close-button nil)
   (defun im-fix-tab-line-faces (&rest _)
     "Most of the themes I use does not support tab-bar, this mostly fixes it."
-    (set-face-attribute 'tab-line-tab nil :background nil :box nil :bold t :underline t :italic nil)
-    (set-face-attribute 'tab-line-tab-current nil :background nil :box nil :bold t :underline t :italic nil)
-    (set-face-attribute 'tab-line-highlight nil :background nil :box nil :bold t :underline t)
-    (set-face-attribute 'tab-line-tab-inactive nil :background nil :box nil :bold nil :underline nil :italic t))
+    (set-face-attribute 'tab-line-tab-current nil
+                        :background 'unspecified :box 'unspecified
+                        :foreground (face-foreground 'font-lock-keyword-face nil t)
+                        :bold t :underline nil :italic 'unspecified)
+    (set-face-attribute 'tab-line-tab nil
+                        :background 'unspecified :box 'unspecified
+                        :foreground (face-foreground 'shadow nil t)
+                        :bold t :underline nil :italic 'unspecified)
+    (set-face-attribute 'tab-line-highlight nil
+                        :background 'unspecified :box 'unspecified
+                        :bold t :underline nil)
+    (set-face-attribute 'tab-line-tab-inactive nil
+                        :background 'unspecified :box 'unspecified
+                        :bold nil :underline nil :italic t))
   (add-hook 'im-after-load-theme-hook #'im-fix-tab-line-faces))
 
 (defun im-tab-line-buffer-name (buffer &optional _buffers)
@@ -12379,12 +12389,12 @@ Asks for STATUS if called interactively."
   (setq server-window #'pop-to-buffer)
   (server-start))
 
-(let ((ct (float-time)))
-  (message ">>> Started in %s" (emacs-init-time))
-  (add-hook
-   'elpaca-after-init-hook
-   (lambda ()
-     (message ">> Took to init: %s seconds" (- (float-time) ct)))))
+(add-hook
+ 'elpaca-after-init-hook
+ (lambda ()
+   (format
+    ">> Started in %.2f seconds"
+    (float-time (time-subtract (current-time) before-init-time)))))
 
 (provide 'init)
 ;; Local Variables:
