@@ -99,7 +99,8 @@ am on because of this."
 (define-advice org-clock-update-mode-line (:after (&rest _) report-to-hammerspoon)
   (im-hammerspoon-handle-clock-in))
 
-(run-with-timer 30 30 #'im-hammerspoon-handle-clock-in)
+(with-eval-after-load 'org
+  (run-with-timer 30 30 #'im-hammerspoon-handle-clock-in))
 
 ;;;; Footer
 

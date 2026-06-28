@@ -12392,7 +12392,7 @@ Asks for STATUS if called interactively."
 (add-hook
  'elpaca-after-init-hook
  (lambda ()
-   (format
+   (message
     ">> Started in %.2f seconds"
     (float-time (time-subtract (current-time) before-init-time)))))
 
