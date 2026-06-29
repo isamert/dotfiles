@@ -3634,7 +3634,7 @@ that is read verbatim (meaning that no '$*' is appended):
   :after hydra
   :defer t
   :general
-  (im-leader "a" (lambda () (interactive) (im-appearance/body)))
+  (im-leader "a" (lambda () (interactive) (require 'pretty-hydra) (im-appearance/body)))
   :config
   (pretty-hydra-define im-appearance
     (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
