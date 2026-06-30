@@ -1511,12 +1511,19 @@ If worktree is dirty, asks user if they want to force delete it."
   (interactive)
   (when-let* ((proj (im-current-project-root))
               (y/n (y-or-n-p (format "Want to delete: %s?" proj))))
-    (let ((default-directory proj)
-          (args (if (im-git-dirty?)
-                    (if (y-or-n-p "Worktree is dirty, force remove?")
-                        "--force"
-                      (user-error "Aborted by user"))
-                  "")))
+    (let* ((main-worktree
+            (let ((default-directory proj))
+              (or (im-git--main-worktree)
+                  (expand-file-name im-git-worktrees-root))))
+           (_ (when (file-equal-p proj main-worktree)
+                (user-error "Cannot delete the main worktree: %s" proj)))
+           (args (let ((default-directory proj))
+                   (if (im-git-dirty?)
+                       (if (y-or-n-p "Worktree is dirty, force remove?")
+                           "--force"
+                         (user-error "Aborted by user"))
+                     "")))
+           (default-directory main-worktree))
       (project-kill-buffers)
       (if (= 0 (shell-command
                 (apply #'im-git--shell-cmd
@@ -1530,6 +1537,17 @@ If worktree is dirty, asks user if they want to force delete it."
         (user-error "Can't remove worktree, see  *im-git-worktree: git worktree remove stderr*")))))
 
 ;;;; git utils
+
+(defun im-git--main-worktree ()
+  "Return the path of the main worktree for the current repository.
+The main worktree is always the first entry reported by
+\"git worktree list --porcelain\"."
+  (with-temp-buffer
+    (when (= 0 (apply #'call-process im-git-path nil t nil
+                      (list "worktree" "list" "--porcelain")))
+      (goto-char (point-min))
+      (when (re-search-forward "^worktree \\(.*\\)$" nil t)
+        (expand-file-name (match-string 1))))))
 
 (defun im-git-dirty? ()
   "Return t if there are uncommitted changes in the working tree."
