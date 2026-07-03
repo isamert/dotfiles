@@ -152,19 +152,22 @@ Returns `working', `waiting', `ready', or nil if unparseable."
     (general-def :keymaps 'im-cursor-agent-mode-map :states '(insert normal)
       "C-i" #'im-cursor-agent-insert-prompt
       "RET" (lambda () (interactive) (eat-self-input 1 (aref (kbd "RET") 0)))
-      ;; "C-<escape>" (lambda () (interactive)
-      ;;                ;; send a literal ESC to the terminal (eat)
-      ;;                (eat-self-input 1 (aref (kbd "ESC") 0)))
-      )))
+      "S-<escape>" (lambda () (interactive)
+                     ;; send a literal ESC to the terminal (eat)
+                     (eat-self-input 1 (aref (kbd "ESC") 0))))))
 
 ;;;###autoload
-(defun im-cursor-agent ()
-  "Open cursor-agent for current project."
-  (interactive)
+(defun im-cursor-agent (&optional sandbox?)
+  "Open cursor-agent for current project.
+If SANDBOX? is non nil, then open the agent in a sandbox."
+  (interactive "P")
   (require 'eat)
-  (let* ((buff (format "*cursor-agent: %s*" (im-current-project-name)))
-         (eat-buffer-name buff))
-    (eat "cursor-agent")
+  (let* ((buff (format "*cursor-agent%s: %s*" (if sandbox? " (sandbox)" "") (im-current-project-name)))
+         (eat-buffer-name buff)
+         (default-directory (im-current-project-root)))
+    (if sandbox?
+        (eat "sandbox" "agent")
+      (eat "cursor-agent"))
     (with-current-buffer buff
       (im-cursor-agent-mode 1)
       (im-cursor-gen-watch-mode 1)

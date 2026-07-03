@@ -1473,7 +1473,6 @@ If worktree already exists, simply switches to it."
                     " *im-git-worktree: git worktree add stderr*"))
         (user-error "Can't create worktree, see buffer `*im-git-worktrees: git worktree add stderr*'"))
       (message ">> Created the worktree...")
-
       ;; Copy node_modules with COW, if user wants it
       ;; If I need anything else, I'll simply edit here.
 
@@ -1481,17 +1480,12 @@ If worktree already exists, simply switches to it."
             (dst (f-join worktree "node_modules")))
         (when (and (file-directory-p src)
                    (y-or-n-p "Copy node_modules from old-proj to current folder with COW? "))
-          (unless (= 0 (shell-command
-                        (concat (im-when-on
-                                 :linux "cp -R --reflink=always"
-                                 :darwin "/bin/cp -Rc")
-                                " "
-                                (expand-file-name src)
-                                " "
-                                (expand-file-name dst))
-                        " *im-git-worktree: cp stdout*"
-                        " *im-git-worktree: cp stderr*"))
-            (user-error "Can't copy files, see buffer `*im-git-worktrees: cp stderr*'")))))
+          (im-shell-command
+           :command (im-when-on :linux "cp" :darwin "/bin/cp")
+           :args `(,@(im-when-on :linux '("-R" "--reflink=always") :darwin '("-Rc")) (expand-file-name src) (expand-file-name dst))
+           :on-start (lambda (&rest _) (message ">> (COW) Copying started..."))
+           :on-finish (lambda (&rest _) (message ">> (COW) Copying started...Done."))
+           :on-fail (lambda (&rest _) (message ">> (COW) Copying started...ERROR"))))))
     (dired worktree)
     (vc-refresh-state)))
 
@@ -1524,7 +1518,7 @@ If worktree is dirty, asks user if they want to force delete it."
                          (user-error "Aborted by user"))
                      "")))
            (default-directory main-worktree))
-      (project-kill-buffers)
+      (ignore-errors (im-kill-project-buffers proj))
       (if (= 0 (shell-command
                 (apply #'im-git--shell-cmd
                        (-flatten

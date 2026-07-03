@@ -64,6 +64,27 @@ Like shortening it in some form etc.")
   (when-let* ((path (locate-dominating-file default-directory ".git")))
     (expand-file-name path)))
 
+(defun im-kill-project-buffers (&optional project-dir)
+  "Kill all buffers belongs to PROJECT-DIR."
+  (interactive)
+  (let ((dir (expand-file-name (or project-dir (im-current-project-root))))
+        (buffers-to-kill '())
+        (failed-kills '()))
+    (dolist (buffer (buffer-list))
+      (let ((buffer-dir (expand-file-name (buffer-local-value 'default-directory buffer))))
+        (when (and buffer-dir (string-prefix-p dir (expand-file-name buffer-dir)))
+          (push buffer buffers-to-kill))))
+    (when (and buffers-to-kill (y-or-n-p (format "Kill %d buffer(s) under %s? " (length buffers-to-kill) dir)))
+      (dolist (buffer buffers-to-kill)
+        (condition-case err
+            (kill-buffer buffer)
+          (error (push (cons (buffer-name buffer) (error-message-string err)) failed-kills))))
+      (when failed-kills
+        (message "im-kill-project-buffers: failed to kill %d buffer(s): %s"
+                 (length failed-kills)
+                 (mapconcat (lambda (f) (format "%s (%s)" (car f) (cdr f))) failed-kills ", ")))
+      t)))
+
 (defsubst im-is-git-dir (dir)
   (file-directory-p (concat dir "/.git")))
 
