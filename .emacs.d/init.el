@@ -10986,7 +10986,6 @@ Version 2017-01-11"
   (interactive)
   (apply #'im-shell-command im-shell-command-mode-command))
 
-
 ;; In normal mode, hitting ! will display im-shell-command but in
 ;; visual mode hitting ! will open evil's default evil-shell-command
 ;; on selected region.

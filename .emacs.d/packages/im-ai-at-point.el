@@ -626,29 +626,30 @@ If TYPE is nil, return any im-ai overlay."
                (insert "\n\n---------------------------------------------\n\n")))
            (with-current-buffer response-buffer
              (setq im-ai-at-point--agentic? agentic?)
-             (cl-progv
-                 (--map (intern (substring (symbol-name (car it)) 1)) gptel-vars)
-                 (mapcar #'cdr gptel-vars)
-               (if im-ai-at-point-inspect
-                   (im-inspect
-                    (list
-                     :info info
-                     :directive-names directive-names
-                     :agentic? agentic?
-                     :edit-region? edit-region?
-                     :gptel-vars gptel-vars
-                     :gptel-backend gptel-backend
-                     :gptel-model gptel-model
-                     :gptel-use-tools gptel-use-tools
-                     :gptel-tools gptel-tools
-                     :gptel-include-tool-results gptel-include-tool-results
-                     :sys-prompt sys-prompt
-                     :formatted formatted))
-                 (gptel-request history
-                   :stream t
-                   :system sys-prompt
-                   :fsm (gptel-make-fsm :handlers gptel-send--handlers)
-                   :buffer response-buffer))))))))))
+             (let ((gptel-use-tools nil))
+               (cl-progv
+                   (--map (intern (substring (symbol-name (car it)) 1)) gptel-vars)
+                   (mapcar #'cdr gptel-vars)
+                 (if im-ai-at-point-inspect
+                     (im-inspect
+                      (list
+                       :info info
+                       :directive-names directive-names
+                       :agentic? agentic?
+                       :edit-region? edit-region?
+                       :gptel-vars gptel-vars
+                       :gptel-backend gptel-backend
+                       :gptel-model gptel-model
+                       :gptel-use-tools gptel-use-tools
+                       :gptel-tools gptel-tools
+                       :gptel-include-tool-results gptel-include-tool-results
+                       :sys-prompt sys-prompt
+                       :formatted formatted))
+                   (gptel-request history
+                     :stream t
+                     :system sys-prompt
+                     :fsm (gptel-make-fsm :handlers gptel-send--handlers)
+                     :buffer response-buffer)))))))))))
 
 ;;;; Footer
 
