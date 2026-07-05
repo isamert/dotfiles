@@ -192,8 +192,9 @@ in my dotfiles repository.")
 (require 'im-secrets)
 
 (use-package im
-  :ensure `(:repo ,im-packages-path :files ("im.el") :wait t)
-  :config
+  :ensure `(:repo ,im-packages-path :files ("im.el") :wait t))
+
+(eval-when-compile
   (require 'im))
 
 ;;;;; Essential packages
@@ -9171,7 +9172,7 @@ total {rows,bytes} etc. and first 10 rows of the table."
  (lambda (xs)
    (--map (s-replace ":" "." it) xs))
  :bound filename
- :kind (lambda (xs x) "" 'module)
+ :kind (lambda (_xs _x) "" 'module)
  :category symbol
  :key "M-o B")
 
@@ -10139,7 +10140,7 @@ If it does not exists, create it."
     (widen)
     (goto-char 0)
     (re-search-forward "^\\*+ \\[[0-9]+-" nil t)
-    (narrow-to-region (point-min) (point-at-bol))
+    (narrow-to-region (point-min) (pos-bol))
     (consult-org-heading)
     (org-narrow-to-subtree)))
 
@@ -11668,7 +11669,7 @@ attribute for current buffers file or selected file."
 
 ;; TODO support fn returning a string instead of a buffer. Create a
 ;; temp buffer when jump is called
-(defun im-peek (fn &optional popup)
+(defun im-peek (fn)
   "Display a nice little small window below current line.
 FN should take no args and return a buffer with the intended
 contents."
@@ -12253,6 +12254,7 @@ Asks for STATUS if called interactively."
      "d" (cadr (read-multiple-choice "Your mic should be " '((?m "muted") (?u "unmuted") (?t "toggled")))))))
   (im-when-on
    :linux
+   (ignore status)
    (user-error "Not implemented for gnu/linux")
    :darwin
    (set-process-filter
