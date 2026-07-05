@@ -2138,6 +2138,7 @@ end
 
 * Tmux
 I use tmux for it's vi mode. Other than that I generally use my window manager for multiple terminals (which is rarely needed because I'm mostly in Emacs.) I also use it on Android (via Termux) as a WM.
+
 ** TPM -- Termux Plugin Manager
 Install this first, configuration is embedded in the next section.
 #+begin_src sh
@@ -2145,6 +2146,7 @@ git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 #+end_src
 
 To install newly added plugins, do ~prefix I~.
+
 ** Configuration
 #+begin_src conf :tangle ~/.tmux.conf
 # * General
@@ -2219,7 +2221,7 @@ set -g status-style "bg=terminal,fg=terminal"
 
 # Left side: session name
 set -g status-left-length 30
-set -g status-left "#[fg=colour0,bg=colour5,bold] #S #[fg=colour5,bg=terminal,nobold]"
+set -g status-left "#{?client_prefix,#[fg=colour2] ◉ ,}#[fg=colour0,bg=colour5,bold] #S #[fg=colour5,bg=terminal,nobold]"
 
 # Right side: date and time
 set -g status-right-length 80
