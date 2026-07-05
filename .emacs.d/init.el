@@ -7375,14 +7375,14 @@ the commit buffer."
   "Update all diff-hl overlays and vc state for current project."
   (interactive)
   (when-let* ((project (project-current nil))
-              ;; project-buffers may fail if there are buffers with default-directory = nil
-              (buffers (project-buffers project)))
-    (--each buffers
-      (when (im-buffer-visible-p it)
-        (with-current-buffer it
-          (when (and buffer-file-name (derived-mode-p 'prog-mode))
-            (diff-hl-update)
-            (vc-refresh-state)))))))
+              (buffers (ignore-errors (project-buffers project))))
+    (dolist (buffer buffers)
+      (with-current-buffer buffer
+        (when (and buffer-file-name
+                   (not (string-prefix-p " " (buffer-name)))
+                   (derived-mode-p 'prog-mode))
+          (diff-hl-update)
+          (vc-refresh-state))))))
 
 ;;;;; im-readeck -- Readeck bookmark manager integration
 
@@ -10439,8 +10439,8 @@ schedules them to today's date."
 ;; - im-display-side-temp-org-buffer :: This one opens (or closes if it's open) the ~temp.org~ file in a in a side window, on the right. This is nice for taking some quick notes, writing some temporary todos etc.
 
 (defun im-buffer-visible-p (buffer)
-  "Check if given BUFFER is visible or not.  BUFFER is a string representing the buffer name."
-  (or (eq buffer (window-buffer (selected-window))) (get-buffer-window buffer)))
+  "Check if given BUFFER is visible or not."
+  (get-buffer-window buffer 'visible))
 
 (defun im-display-buffer-in-side-window (buffer &optional width)
   "Just like `display-buffer-in-side-window` but only takes a BUFFER and rest of the parameters are for my taste."
