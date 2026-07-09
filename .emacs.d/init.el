@@ -270,8 +270,6 @@ in my dotfiles repository.")
   ;;
   ;; Set it to 10:30am because some jobs require VPN to be open.
   (midnight-delay-set 'midnight-delay (truncate (* 10.5 60 60)))
-  ;; By default it contains `clean-buffer-list' but I don't use it.
-  (setopt midnight-hook '())
   (midnight-mode +1))
 
 ;;;;; Variables and functions
@@ -7265,6 +7263,7 @@ mails."
   :diminish easysession-save-mode
   :custom
   (easysession-mode-line-misc-info t)
+  (easysession-buffer-list-function #'im-tab-bar-visible-buffers)
   :config
   (setq easysession-mode-line-misc-info-prefix " S:["))
 
@@ -9456,6 +9455,26 @@ SELECT * FROM _ LIMIT 1;
   (interactive)
   (let ((tab-bar-new-tab-choice t))
     (tab-bar-new-tab)))
+
+(defun im-tab-bar-visible-buffers ()
+  "Return live buffers visible in all tab-bar tabs."
+  (let (buffers)
+    (cl-labels
+        ((walk (tree)
+               (cond
+                ((and (consp tree) (eq (car tree) 'buffer))
+                 (when-let ((buffer (get-buffer (cadr tree))))
+                   (push buffer buffers)))
+                ((proper-list-p tree)
+                 (mapc #'walk tree)))))
+      ;; Current tab.
+      (dolist (window (window-list nil 'no-minibuf))
+        (push (window-buffer window) buffers))
+      ;; non-current tab
+      (dolist (tab (tab-bar-tabs))
+        (unless (eq (car tab) 'current-tab)
+          (walk (alist-get 'ws tab)))))
+    (delete-dups (nreverse buffers))))
 
 ;;;;; tab-line-mode
 
