@@ -6645,9 +6645,7 @@ If SHELL-BUFFER is nil, use the current buffer."
 
 (defun im-update-all-projects ()
   (lab-pull-bulk (lab-all-project-roots im-projects-root))
-  ;; Can't get all group projects async right now
-  ;; (lab-get-all-group-projects-async :on-success ))
-  )
+  (lab-clone-bulk lab-group (f-join im-projects-root im-company-name)))
 
 ;; I also have an experimental GitHub version, tailored for more
 ;; open-source work needs instead of regular stuff.
