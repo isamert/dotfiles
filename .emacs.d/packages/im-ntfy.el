@@ -495,7 +495,7 @@ Returns a list of message alists."
           "\n--\n[%s - %s, %s](%s)"
           .attachment.name
           .attachment.type
-          (format "%.2f" (/ .attachment.size 1048576.0)) .attachment.url))))))
+          (format "%.2f" (/ (or .attachment.size 0) 1048576.0)) .attachment.url))))))
 
 (defun im-ntfy--insert-messages (messages)
   "Insert MESSAGES into current buffer."
