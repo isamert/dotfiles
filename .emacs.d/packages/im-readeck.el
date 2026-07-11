@@ -35,6 +35,7 @@
 
 (require 'dash)
 (require 's)
+(require 'im)
 (require 'async-await)
 (require 'im-async-await)
 
@@ -78,7 +79,7 @@
            :-raw t
            :-headers `(:Content-Type "application/json"
                        :Authorization ,(format "Bearer %s" im-readeck-token))
-           :-data `(:labels ,labels
+           :-data `(:labels ,(vconcat labels)
                     :title ,title
                     :url ,url)))
   (message ">> readeck :: Added %s" url))
