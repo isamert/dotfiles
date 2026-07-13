@@ -11852,10 +11852,11 @@ Use C-n C-p to switch between translation directions."
             (current-buffer))))
     (message "Not a valid org link at point.")))
 
-;;;;;; im-peek-ielm
+;;;;;; im-peek-{ielm,ghostel-project}
 
 (general-def :states 'normal
-  "M-e" #'im-popup-ielm)
+  "M-e" #'im-popup-ielm
+  "M-r" #'im-popup-ghostel-project)
 
 (defun im-popup-ielm ()
   "Open IELM in another frame with the current buffer as the working buffer.
@@ -11868,6 +11869,12 @@ while viewing results in a separate frame."
     (with-current-buffer "*ielm*"
       (setq ielm-working-buffer buf))
     (im-display-buffer-other-frame "*ielm*")))
+
+(defun im-popup-ghostel-project ()
+  (interactive)
+  (im-display-buffer-other-frame
+   (save-window-excursion
+     (ghostel-project))))
 
 ;;;;; im-extract
 
