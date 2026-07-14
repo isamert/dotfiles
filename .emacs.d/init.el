@@ -10672,6 +10672,9 @@ more than one header of a single org buffer."
 
 (general-def :states 'normal "M-f" #'dirvish-side)
 
+(general-def :keymaps 'embark-file-map
+  "O" #'im-display-buffer-other-frame)
+
 (transient-define-prefix im-file-transient ()
   [["File Operations"
     ("s" "Save buffer" save-buffer)
