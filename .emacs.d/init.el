@@ -11872,8 +11872,8 @@ Use C-n C-p to switch between translation directions."
 ;;;;;; im-peek-{ielm,ghostel-project}
 
 (general-def :states 'normal
-  "M-e" #'im-popup-ielm
-  "M-r" #'im-popup-ghostel-project)
+  "<f3>" #'im-popup-ghostel-project
+  "<f4>" #'im-popup-ielm)
 
 (defun im-popup-ielm ()
   "Open IELM in another frame with the current buffer as the working buffer.
@@ -11891,7 +11891,11 @@ while viewing results in a separate frame."
   (interactive)
   (im-display-buffer-other-frame
    (save-window-excursion
-     (ghostel-project))))
+     (if (project-current)
+         (ghostel-project)
+       (let ((dir default-directory))
+         (or (--find (with-current-buffer it (and (eq major-mode 'ghostel-mode) (f-same? default-directory dir))) (buffer-list))
+             (ghostel 'new)))))))
 
 ;;;;; im-extract
 
