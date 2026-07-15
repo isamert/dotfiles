@@ -8014,8 +8014,14 @@ the commit buffer."
   "1" (λ-interactive
        (call-interactively (local-key-binding (kbd "C-c C-c")))))
 
+(defun im-execute-extended-command-alt ()
+  (interactive)
+  (let ((current-prefix-arg '(4)))
+    (call-interactively #'execute-extended-command)))
+
 (im-leader-v
   "x" #'execute-extended-command
+  "X" #'im-execute-extended-command-alt
   "/k" #'helpful-key
   "/f" #'helpful-callable
   "/v" #'helpful-variable
