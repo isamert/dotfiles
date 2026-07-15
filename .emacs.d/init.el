@@ -10697,6 +10697,7 @@ more than one header of a single org buffer."
    ["Search/Index"
     ("l" "Search lines in file" consult-line)
     ("L" "Search lines in project" consult-line-multi)
+    (";" "Search lines in all open buffers" (lambda () (interactive) (consult-line-multi t)))
     ("m" "Jump to symbol in file" consult-imenu)
     ("M" "Jump to symbol in project" consult-imenu-multi)]])
 
