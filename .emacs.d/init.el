@@ -9679,6 +9679,7 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   "wn" #'tab-bar-rename-tab ;; name
   "wm" #'tab-move ;; move
   "wl" #'tab-bar-switch-to-recent-tab ;; last
+  "we" #'tab-switch
   "wx" #'tab-close ;; kill
   ;; buffer
   "wb" #'bufler
