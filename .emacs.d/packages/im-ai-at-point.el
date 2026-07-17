@@ -110,6 +110,30 @@ ONLY output your answer to the query, with no explanations."
   "Face for highlighting regions with pending rewrites."
   :group 'im-ai-at-point)
 
+;;;; Utils
+
+(defun im-ai--format-model-name (&optional backend model)
+  (format "%s:%s" (gptel-backend-name (or backend gptel-backend)) (or model gptel-model)))
+
+(defun im-ai--gptel-all-models ()
+  "Return all models as string in Backend:Model-Name format."
+  (cl-loop
+   for (name . backend) in gptel--known-backends
+   nconc (cl-loop for model in (gptel-backend-models backend)
+                  collect (list (concat name ":" (gptel--model-name model))
+                                backend model))
+   into models-alist finally return models-alist))
+
+(defun im-ai--get-current-language ()
+  "Get the current programming language of the buffer.
+This is context aware in `org-mode' buffers, takes src blocks into
+consideration."
+  (->>
+   (im-major-mode-at-point)
+   (s-chop-suffix "-mode")
+   (s-chop-suffix "-ts")
+   (s-replace-all '(("interaction" . "")))))
+
 ;;;; Local vars
 
 (defvar-local im-ai-at-point--last-processed-point nil)
