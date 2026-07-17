@@ -1518,7 +1518,9 @@ If worktree is dirty, asks user if they want to force delete it."
                          (user-error "Aborted by user"))
                      "")))
            (default-directory main-worktree))
-      (ignore-errors (im-kill-project-buffers proj))
+      (ignore-errors
+        (when (im-kill-project-buffers proj)
+          (dired main-worktree)))
       (if (= 0 (shell-command
                 (apply #'im-git--shell-cmd
                        (-flatten
