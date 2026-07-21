@@ -6658,7 +6658,6 @@ If SHELL-BUFFER is nil, use the current buffer."
 
 (use-package im-github
   :ensure `(:repo ,im-packages-path :files ("im-github.el"))
-  :defer t
   :custom
   (lab-github-user "isamert")
   (lab-github-token im-github-token)

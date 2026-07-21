@@ -176,7 +176,7 @@ buffer."
 
 ;;;;;; web tools
 
-(with-eval-after-load 'ellm
+(with-eval-after-load 'ellm-tools
   (ellm-deftool web/get-page (:async t)
     ((url :string "URL of the webpage to fetch contents from."))
     "Return the contents of a webpage."
@@ -293,7 +293,7 @@ CODE is the Elisp code to evaluate."
           (format "Output:\n%s\nResult: %s" output result-str)))
     (error (format "Error: %S" err))))
 
-(with-eval-after-load 'ellm
+(with-eval-after-load 'ellm-tools
   (ellm-deftool get-elisp-symbol-info ()
     ((symbol-name :string "Name of the Elisp symbol.")
      (symbol-type :string "Type of symbol: 'function', 'variable', or 'any'."))
