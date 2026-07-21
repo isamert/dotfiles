@@ -2936,14 +2936,13 @@ Version: 2023-06-28
 ;;;;; which-key
 
 (use-package which-key
-  :defer t
+  :hook (elpaca-after-init . which-key-mode)
   :diminish
   :config
   ;; Disabling this because I use `embark-prefix-help-command' as the `prefix-help-command'
   (setq which-key-use-C-h-commands nil)
   (setq which-key-max-display-columns 4)
-  (which-key-setup-minibuffer)
-  (which-key-mode))
+  (which-key-setup-minibuffer))
 
 ;;;;; doc-view-mode
 
