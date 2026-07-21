@@ -4464,6 +4464,8 @@ empty string."
   (:keymaps 'vc-git-log-view-mode-map :states 'normal
    "<backtab>" #'im-vc-toggle-all-log-view-entries)
   :config
+  (im-when-on :darwin
+    (setq vc-git-program "/opt/homebrew/bin/git"))
   (setq vc-log-short-style '(directory file)))
 
 (with-eval-after-load 'vc-git (evil-collection-vc-git-setup))
