@@ -7481,6 +7481,7 @@ the commit buffer."
   (im-radarr-url im-homeserver-radarr-url)
   (im-radarr-api-key im-homeserver-radarr-api-key)
   (im-sonarr-url im-homeserver-sonarr-url)
+  (im-sonarr-tmdb-bearer-token im-tmdb-token)
   (im-sonarr-api-key im-homeserver-sonarr-api-key))
 
 ;;;;; im-ntfy --- ntfy client
