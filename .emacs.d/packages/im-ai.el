@@ -294,19 +294,19 @@ CODE is the Elisp code to evaluate."
     (error (format "Error: %S" err))))
 
 (with-eval-after-load 'ellm-tools
-  (ellm-deftool get-elisp-symbol-info ()
+  (ellm-deftool elisp/get-elisp-symbol-info ()
     ((symbol-name :string "Name of the Elisp symbol.")
      (symbol-type :string "Type of symbol: 'function', 'variable', or 'any'."))
     "Get detailed information (docs, implementation, current value etc.) about given elisp symbol/function etc. If you are unsure about specifics of function/variable, use this tool. This makes your edits less error prone."
     (im-ai-tool--get-elisp-symbol-info symbol-name symbol-type))
 
-  (ellm-deftool search-elisp-functions ()
+  (ellm-deftool elisp/search-elisp-functions ()
     ((pattern :string "Regex pattern to search for.")
      (search-in :string "Where to search: 'name' (default) or 'docs' for docstrings."))
     "Search for Emacs functions by name or docstring. Returns function names with first line of their documentation. Returns max 50 results. We have a lot of ready to use libraries/functions available in this environment."
     (im-ai-tool--search-elisp-functions pattern search-in))
 
-  (ellm-deftool run-elisp ()
+  (ellm-deftool elisp/run-elisp ()
     ((code :string "Elisp code to evaluate. It'll be evaluated in the current Emacs environment."))
     "Evaluate Elisp code and return the result. Also captures any printed output. Provide only one form, no comments. You can always wrap multiple forms with let/progn/prog1 etc."
     (im-ai-tool--run-elisp code)))
