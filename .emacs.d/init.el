@@ -2826,7 +2826,14 @@ open.")
        (funcall (cdr it) result))
      im-open-thing-at-point-alist)))
 
+(defun im-button-action-at-point ()
+  "Return button action at point.
+Useful for checking if `push-button' can be used."
+  (when-let* ((btn (button-at (point))))
+    (button-get btn 'action)))
+
 (add-to-list 'im-open-thing-at-point-alist `(,(apply-partially #'thing-at-point 'url) . browse-url))
+(add-to-list 'im-open-thing-at-point-alist `(im-button-action-at-point . push-button))
 
 ;;;;; im-org-convert-item-to-todo-and-refile
 
@@ -7073,12 +7080,16 @@ If SHELL-BUFFER is nil, use the current buffer."
     "o" #'notmuch-search-show-thread
     "d" #'im-notmuch-toggle-delete)
   (general-def :keymaps 'notmuch-show-mode-map :states 'normal
+    "RET" #'im-open-thing-at-point
     "o" #'notmuch-show-view-part
     "O" #'notmuch-show-save-part)
   ;; I use the s key for another thing
   (evil-collection-define-key 'normal 'notmuch-common-keymap
     "s" nil
-    "S" nil))
+    "S" nil)
+  ;; Fix RET on notmuch-show-mode
+  (evil-collection-bind 'notmuch-show-mode-map
+                        'action 'im-open-thing-at-point))
 
 (use-package message
   :ensure nil
