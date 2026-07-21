@@ -6308,9 +6308,7 @@ SORT should be nil to disable sorting."
 
 (use-package reddigg
   :defer t
-  :ensure (:host github :repo "isamert/emacs-reddigg")
-  :config
-  (setq reddigg-convert-md-to-org t))
+  :ensure (:host github :repo "thanhvg/emacs-reddigg"))
 
 (use-package hnreader
   :defer t)
