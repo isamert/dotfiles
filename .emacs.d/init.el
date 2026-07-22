@@ -5982,15 +5982,7 @@ SORT should be nil to disable sorting."
 
 (use-package tab-jump-out
   :diminish
-  :ensure (:host github :repo "zhangkaiyulw/tab-jump-out")
-  :config
-  ;; This is not defined as a global minor mode, so define one and enable it
-  (define-globalized-minor-mode global-tab-jump-out-mode tab-jump-out-mode
-    (lambda ()
-      (tab-jump-out-mode)
-      (push "/" tab-jump-out-delimiters)
-      (push "=" tab-jump-out-delimiters)))
-  (global-tab-jump-out-mode 1))
+  :ensure (:host github :repo "isamert/tab-jump-out"))
 
 ;;;;; helpful and elisp-demos
 
