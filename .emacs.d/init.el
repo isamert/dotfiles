@@ -5446,7 +5446,21 @@ When ARG is non-nil, query the whole workspace/project."
   ;; only.
   "ge" #'im-show-diagnostic-list)
 
-;;;;; corfu & corfu-doc & kind-icon
+;;;;; corfu & corfu-doc & kind-icon & completion-preview
+
+(use-package completion-preview
+  :ensure nil
+  :custom
+  (completion-preview-minimum-symbol-length 3)
+  (completion-preview-idle-delay 0.2)
+  :config
+  (define-key completion-preview-active-mode-map (kbd "RET") #'completion-preview-insert)
+  (define-key completion-preview-active-mode-map (kbd "TAB") #'completion-preview-insert)
+  (define-key completion-preview-active-mode-map (kbd "<down>") #'completion-preview-next-candidate)
+  (define-key completion-preview-active-mode-map (kbd "<up>") #'completion-preview-prev-candidate)
+  (define-key completion-preview-active-mode-map (kbd "M-j") #'completion-preview-next-candidate)
+  (define-key completion-preview-active-mode-map (kbd "M-k") #'completion-preview-prev-candidate)
+  (global-completion-preview-mode +1))
 
 ;; - When corfu popup is open
 ;; - ~M-SPC~ to insert a space to be able to filter with orderless.
@@ -5457,7 +5471,7 @@ When ARG is non-nil, query the whole workspace/project."
   :ensure (:files (:defaults "extensions/*.el"))
   :custom
   (corfu-cycle t)
-  (corfu-auto t)
+  (corfu-auto nil)
   (corfu-auto-delay 0.2)
   (corfu-auto-prefix 3)
   ;; Enabled differently in eshell
