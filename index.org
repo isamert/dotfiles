@@ -1046,12 +1046,13 @@ set $up k
 set $right l
 
 set $term footclient
-set $menu walker
+set $menu vicinae open
 set $calc qalculate-gtk
+set $clip vicinae vicinae://extensions/vicinae/clipboard/history
 
 # * Monitors
 
-output * bg /usr/share/backgrounds/default.png fill
+output * bg ~/.config/default.png fill
 output * render_bit_depth 10
 
 # * Visuals
@@ -1071,16 +1072,15 @@ bindsym $hypr+w exec $calc
 bindsym $hypr+s exec grimshot copy area
 bindsym $mod+Return exec $term
 bindsym $hypr+Return exec $term
-bindsym $hypr+c exec copyq toggle
-bindsym $hypr+t exec crow
+bindsym $hypr+c exec $clip
 
 bindsym $hypr+i exec emacsclient --eval "(im-globally (im-select-any-snippet))"
 bindsym $hypr+o exec emacsclient --eval "(im-globally (im-people))"
-bindsym Ctrl+Mod1+l exec loginctl lock-session
+bindsym $hypr+l exec loginctl lock-session
 
 # * Keybindings - Notifications
 
-bindsym $hypr+y exec dunstctl close-all
+bindsym $hypr+y exec makoctl dismiss --all
 
 # * Keybindings - Window management
 
@@ -1133,9 +1133,7 @@ bindsym $mod+backslash splith
 bindsym $mod+minus splitv
 
 # Switch the current container between different layout styles
-bindsym $mod+y layout stacking
-bindsym $mod+u layout tabbed
-bindsym $mod+i layout toggle split
+bindsym $mod+e layout toggle stacking tabbed split
 
 # Make the current focus fullscreen
 bindsym $mod+f fullscreen
@@ -1176,40 +1174,28 @@ bindsym $mod+r mode "resize"
 # * Window configurations
 
 for_window [app_id="qalculate-gtk"] floating enable
-for_window [app_id="com.github.hluk.copyq"] floating enable
-for_window [app_id="org.kde.CrowTranslate"] floating enable
 for_window [app_id="com.nextcloud.desktopclient.nextcloud"] floating enable
+for_window [app_id="emacs$" title="^emacs-popup$"] floating enable
+
+# * Swaybar
+
+bar {
+    position top
+    status_command ~/.bin/usages
+    colors {
+        statusline #ffffffff
+        background #323232ff
+        inactive_workspace #323232 #323232 #5c5c5c
+    }
+}
 
 # * Launch
 
-exec --no-startup-id xremap --watch ~/.config/xremap.yml
-exec --no-startup-id walker --gapplication-service
-exec --no-startup-id wacom.sh --monitor-and-remap
-
-# * Include other stuff
-
-# Include configs from 3 locations:
-#  - /usr/share/sway/config.d
-#  - /etc/sway/config.d
-#  - $XDG_CONFIG_HOME/sway/config.d ($HOME/.config/sway/config.d)
-#
-# If multiple directories contain the files with the same name, the later
-# directory takes precedence; `$XDG_CONFIG_HOME/sway/config.d/20-swayidle.conf`
-# will always be loaded instead of `/usr/share/sway/config.d/20-swayidle.conf`
-# or `/etc/sway/config.d/20-swayidle.conf`
-#
-# This mechanism permits overriding our default configuration per-system
-# (/etc) or per-user ($XDG_CONFIG_HOME) basis. Just create the file you
-# want to modify/override in the higher-level directory.
-#
-# For example, to disable the default bar from Fedora configs, you'll need to
-#     $ echo -n > "$HOME/.config/sway/config.d/90-bar.conf"
-#
-# Note the quoting, the $() and the arguments quoting. All the parts are equally
-# important to make the magic work. And if you want to learn the secret behind
-# the trick, it's all in the `wordexp(3)`.
-#
-include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "/etc/sway/config.d/*.conf" "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/*.conf")'
+# exec --no-startup-id xremap --watch ~/.config/xremap.yml
+# exec --no-startup-id wacom.sh --monitor-and-remap
+exec --no-startup-id mako
+exec --no-startup-id foot --server
+exec --no-startup-id vicinae server
 #+end_src
 ** Niri
 #+begin_src kdl-ts :tangle ~/.config/niri/config.kdl
@@ -1409,32 +1395,21 @@ binds {
     Mod+O repeat=false { toggle-overview; }
     Mod+Tab repeat=false { toggle-overview; }
     Mod+Shift+Slash { show-hotkey-overlay; }
-    Mod+Ctrl+Alt+Shift+Y {
-        spawn "emacsclient" "--eval" "(im-notif-clear-all)";
-    }
+    Mod+Ctrl+Alt+Shift+Y { spawn "coo" "clear-notifications"; }
 
     // === Application Launchers ===
+    Mod+A  { spawn "dms" "ipc" "call" "spotlight" "toggle"; }
     Mod+Ctrl+Alt+Shift+A { spawn "vicinae" "open"; }
-    Mod+Ctrl+Alt+Shift+Return { spawn "footclient"; }
-    Mod+A hotkey-overlay-title="Application Launcher" {
-        spawn "dms" "ipc" "call" "spotlight" "toggle";
-    }
-    Mod+Ctrl+Alt+Shift+C hotkey-overlay-title="Clipboard Manager" {
-        // spawn "dms" "ipc" "call" "clipboard" "toggle";
-        spawn "vicinae" "vicinae://extensions/vicinae/clipboard/history"
-    }
-    Mod+Ctrl+Alt+Shift+T hotkey-overlay-title="Task Manager" {
+    Mod+Ctrl+Alt+Shift+Return { spawn "coo" "term"; }
+    Mod+Ctrl+Alt+Shift+C { spawn "vicinae" "vicinae://extensions/vicinae/clipboard/history"; }
+    Mod+Ctrl+Alt+Shift+T {
         spawn "dms" "ipc" "call" "processlist" "focusOrToggle";
     }
-
-    Super+X hotkey-overlay-title="Power Menu: Toggle" { spawn "dms" "ipc" "call" "powermenu" "toggle"; }
-    Mod+S hotkey-overlay-title="Settings" {
-        spawn "dms" "ipc" "call" "settings" "focusOrToggle";
-    }
-    Mod+Y hotkey-overlay-title="Browse Wallpapers" {
+    Mod+Ctrl+Alt+Shift+Q hotkey-overlay-title="Power Menu: Toggle" { spawn "dms" "ipc" "call" "powermenu" "toggle"; }
+    Mod+Y {
         spawn "dms" "ipc" "call" "dankdash" "wallpaper";
     }
-    Mod+N hotkey-overlay-title="Notification Center" { spawn "dms" "ipc" "call" "notifications" "toggle"; }
+    Mod+Ctrl+Alt+Shift+N hotkey-overlay-title="Notification Center" { spawn "dms" "ipc" "call" "notifications" "toggle"; }
 
     // === Stuff ===
     Mod+Ctrl+Alt+Shift+I hotkey-overlay-title="Emacs Snippet" {
@@ -1532,23 +1507,11 @@ binds {
 
     // === Monitor Navigation ===
     Mod+Comma      { focus-monitor-left; }
-    //Mod+Ctrl+Down  { focus-monitor-down; }
-    //Mod+Ctrl+Up    { focus-monitor-up; }
     Mod+Period     { focus-monitor-right; }
-    Mod+Ctrl+H     { focus-monitor-left; }
-    Mod+Ctrl+J     { focus-monitor-down; }
-    Mod+Ctrl+K     { focus-monitor-up; }
-    Mod+Ctrl+L     { focus-monitor-right; }
 
     // === Move to Monitor ===
-    Mod+Shift+Ctrl+Left  { move-column-to-monitor-left; }
-    Mod+Shift+Ctrl+Down  { move-column-to-monitor-down; }
-    Mod+Shift+Ctrl+Up    { move-column-to-monitor-up; }
-    Mod+Shift+Ctrl+Right { move-column-to-monitor-right; }
-    Mod+Shift+Ctrl+H     { move-column-to-monitor-left; }
-    Mod+Shift+Ctrl+J     { move-column-to-monitor-down; }
-    Mod+Shift+Ctrl+K     { move-column-to-monitor-up; }
-    Mod+Shift+Ctrl+L     { move-column-to-monitor-right; }
+    Mod+Shift+Comma  { move-column-to-monitor-left; }
+    Mod+Shift+Period { move-column-to-monitor-right; }
 
     // === Workspace Navigation ===
     Mod+Page_Down      { focus-workspace-down; }
