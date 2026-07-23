@@ -6334,7 +6334,7 @@ SORT should be nil to disable sorting."
     "sl" #'im-ai-lookup
     "sg" #'im-ai-gptel-dwim
     "sG" (λ-interactive (im-ai-gptel-dwim 'new))
-    "ta" #'im-ai-gptel-toggle-side-buffer
+    "ta" #'im-ai-ellm-toggle-side-buffer
     "tA" (λ-interactive (im-ai-gptel-toggle-side-buffer 'new)))
   :config
   (add-hook 'gptel-mode-hook #'tab-line-mode))

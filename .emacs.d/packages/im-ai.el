@@ -128,7 +128,7 @@ buffer."
 
 (defun im-ai-ellm-dwim (&optional new?)
   (interactive "P")
-  (let* ((root (im-current-project-root))
+  (let* ((root (or (im-current-project-root) default-directory))
          (default-directory root)
          (same-ellm-buffer? (lambda () (and (eq major-mode 'ellm-mode) (f-same? root default-directory))))
          (existing (--filter (with-current-buffer it (funcall same-ellm-buffer?)) (buffer-list)))
