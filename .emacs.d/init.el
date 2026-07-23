@@ -5984,7 +5984,8 @@ SORT should be nil to disable sorting."
 
 (use-package tab-jump-out
   :diminish
-  :ensure (:host github :repo "isamert/tab-jump-out"))
+  :ensure (:host github :repo "isamert/tab-jump-out")
+  :hook (elpaca-after-init . tab-jump-out-global-mode))
 
 ;;;;; helpful and elisp-demos
 
