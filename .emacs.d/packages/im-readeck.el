@@ -35,6 +35,7 @@
 
 (require 'dash)
 (require 's)
+(require 'thingatpt)
 (require 'im)
 (require 'async-await)
 (require 'im-async-await)
@@ -68,10 +69,15 @@
     (url &key
          (title "")
          (labels '()))
-  (interactive (list
-      (read-string "URL: ")
+  (interactive
+   (let ((url-at-point (thing-at-point-url-at-point)))
+     (list
+      (read-string "URL: " (when url-at-point
+                             (substring-no-properties url-at-point)))
       :title (read-string "Title (leave empty to fill auto): ")
-      :labels (-filter (-compose #'not #'s-blank?) (mapcar #'s-trim (s-split "," (read-string "Tags (comma separated): "))))))
+      :labels (-filter (-compose #'not #'s-blank?)
+                       (mapcar #'s-trim
+                               (s-split "," (read-string "Tags (comma separated): ")))))))
   (let ((data `(:url ,url)))
     (when (> (length labels) 0)
       (setq data (plist-put data :labels (vconcat labels))))
@@ -117,6 +123,12 @@
     ;; :-raw t
     :-headers `(:Content-Type "application/json"
                 :Authorization ,(format "Bearer %s" im-readeck-token))))
+
+;;;; Embark integration
+
+(defvar embark-url-map)
+(with-eval-after-load 'embark
+  (define-key embark-url-map (kbd "R") #'im-readeck-add-bookmark))
 
 ;;;; Footer
 
