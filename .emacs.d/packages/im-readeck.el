@@ -72,16 +72,19 @@
       (read-string "URL: ")
       :title (read-string "Title (leave empty to fill auto): ")
       :labels (-filter (-compose #'not #'s-blank?) (mapcar #'s-trim (s-split "," (read-string "Tags (comma separated): "))))))
-  (await (im-request
-           (format "%s/api/bookmarks" im-readeck-url)
-           :-type "POST"
-           :-async? t
-           :-raw t
-           :-headers `(:Content-Type "application/json"
-                       :Authorization ,(format "Bearer %s" im-readeck-token))
-           :-data `(:labels ,(vconcat labels)
-                    :title ,title
-                    :url ,url)))
+  (let ((data `(:url ,url)))
+    (when (> (length labels) 0)
+      (setq data (plist-put data :labels (vconcat labels))))
+    (when (and title (not (s-blank? title)))
+      (setq data (plist-put data :title title)))
+    (await (im-request
+             (format "%s/api/bookmarks" im-readeck-url)
+             :-type "POST"
+             :-async? t
+             :-raw t
+             :-headers `(:Content-Type "application/json"
+                         :Authorization ,(format "Bearer %s" im-readeck-token))
+             :-data data)))
   (message ">> readeck :: Added %s" url))
 
 ;;;###autoload
