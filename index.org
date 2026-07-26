@@ -1030,6 +1030,7 @@ Nice=-20
 #+end_src
 
 ** swaywm
+*** Config
 #+begin_src sh :tangle ~/.config/sway/environment
 «env-variables»
 #+end_src
@@ -1191,11 +1192,101 @@ bar {
 
 # * Launch
 
-# exec --no-startup-id xremap --watch ~/.config/xremap.yml
 # exec --no-startup-id wacom.sh --monitor-and-remap
-exec --no-startup-id mako
-exec --no-startup-id foot --server
-exec --no-startup-id vicinae server
+
+# This comes with sway-contrib. Starts graphical-session.
+# Through this the startup programs are handled.
+exec systemctl --user start sway-session.target
+#+end_src
+*** status command for the bar
+#+begin_src bash :tangle ~/.bin/usages
+#!/bin/bash
+
+c_icon="#7c7c7c"
+c_text="#b8b8b8"
+c_sep="#4a4a4a"
+c_time="#d0d0d0"
+
+sep="<span color=\"$c_sep\">  ·  </span>"
+
+field() { # $1=icon $2=value
+    printf '<span color="%s">%s</span> <span color="%s">%s</span>' \
+        "$c_icon" "$1" "$c_text" "$2"
+}
+
+# --- CPU: read /proc/stat deltas (builtin math) ---
+read_cpu() {
+    local a b c d rest
+    read -r _ a b c d rest < /proc/stat
+    idle=$d
+    total=$((a + b + c + d))
+    for x in $rest; do total=$((total + x)); done
+}
+
+read_cpu
+prev_idle=$idle
+prev_total=$total
+
+while :; do
+    # CPU %
+    read_cpu
+    di=$((idle - prev_idle))
+    dt=$((total - prev_total))
+    cpu=0
+    (( dt > 0 )) && cpu=$(( (100 * (dt - di)) / dt ))
+    prev_idle=$idle
+    prev_total=$total
+
+    # MEM % from /proc/meminfo
+    memtotal=0 memavail=0
+    while read -r key val _; do
+        case $key in
+            MemTotal:)     memtotal=$val ;;
+            MemAvailable:) memavail=$val ;;
+        esac
+        [[ $memtotal && $memavail ]] && [[ $key == MemAvailable: ]] && break
+    done < /proc/meminfo
+    mem=$(( (100 * (memtotal - memavail)) / memtotal ))
+
+    # DISK still needs df (no builtin for statvfs)
+    disk=$(df -P / | awk 'NR==2 {sub(/%/,"",$5); print $5}')
+
+    # BATTERY via builtin read
+    bat=""
+    for bat_path in /sys/class/power_supply/BAT[0-1]; do
+        [[ -f $bat_path/capacity ]] && { read -r bat < "$bat_path/capacity"; break; }
+    done
+
+    # CLOCK via printf builtin (no date spawn)
+    printf -v clock '%(%a %d %b   %H:%M)T' -1
+
+    out="$(field $'\uf4bc' "${cpu}%")$sep"
+    out+="$(field $'\uefc5' "${mem}%")$sep"
+    out+="$(field $'\uf0a0' "${disk}%")$sep"
+
+    if [[ -n $bat ]]; then
+        if   (( bat >= 80 )); then bicon=$'\uf240'
+        elif (( bat >= 60 )); then bicon=$'\uf241'
+        elif (( bat >= 40 )); then bicon=$'\uf242'
+        elif (( bat >= 20 )); then bicon=$'\uf243'
+        else bicon=$'\uf244'
+        fi
+        out+="$(field "$bicon" "${bat}%")$sep"
+    fi
+
+    clock_icon=$'\uf017'
+    out+="<span color=\"$c_time\">$clock</span>"
+
+    printf '%s\n' "$out"
+    sleep 5
+done
+#+end_src
+*** Startup programs
+#+begin_src sh
+systemctl --user add-wants sway-session.target xremap.service
+systemctl --user add-wants sway-session.target vicinae.service
+systemctl --user add-wants sway-session.target mako.service
+systemctl --user add-wants sway-session.target foot-server.service
 #+end_src
 ** Niri
 #+begin_src kdl-ts :tangle ~/.config/niri/config.kdl
