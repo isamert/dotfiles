@@ -7139,57 +7139,161 @@ If adding deleted, also add read."
 ;;;;;; Sync mail
 
 (defvar im-unread-mail-count 0)
-(async-defun im-sync-mail (&optional interactive?)
-  "Run mbsync, update notmuch index and check new message count.
+(defvar im-mbsync-config-file
+  (expand-file-name "~/.mbsyncrc")
+  "Path to the mbsync configuration file.")
 
-This could be a cron job but keeping it in Emacs gives me the
-opportunity to notify the new email count right after fetching all
-mails."
+(defun im-mbsync-accounts ()
+  "Return channel names declared in `im-mbsync-config-file'.
+
+mbsync synchronizes Channels, while Groups are named collections of
+Channels.  This configuration uses one Channel per account, with names
+such as \"gmail\" and \"proton\", so Channel names can be treated as
+account names and synchronized independently in parallel.
+
+If the configuration later has multiple Channels for one account,
+create one Group per account and parse the Group declarations instead.
+Running each Channel independently could otherwise create concurrent
+connections to the same account and local mail store."
+  (unless (file-readable-p im-mbsync-config-file)
+    (error "Cannot read mbsync config: %s" im-mbsync-config-file))
+  (with-temp-buffer
+    (insert-file-contents im-mbsync-config-file)
+    (let (accounts)
+      (goto-char (point-min))
+      (while (re-search-forward
+              "^[ \t]*Channel[ \t]+\\([^# \t\n]+\\)"
+              nil t)
+        (push (match-string-no-properties 1) accounts))
+      (unless accounts
+        (error "No mbsync channels found in %s"
+               im-mbsync-config-file))
+      (nreverse (delete-dups accounts)))))
+
+(defun im-mail-notmuch-batch-rules (accounts)
+  "Return notmuch batch-tagging rules for ACCOUNTS.
+
+Each account is tagged according to its local maildir path.  Additional
+folder-specific rules are added for known Proton and Gmail folders."
+  (append
+   (mapcar
+    (lambda (account)
+      (format "+%s -- not tag:%s and path:%s/**"
+              account account account))
+    accounts)
+
+   (when (member "proton" accounts)
+     '("+sent -inbox -- not tag:sent and folder:proton/Sent"
+       "+spam -- not tag:spam and folder:proton/Spam"))
+
+   (when (member "gmail" accounts)
+     '("+spam -- not tag:spam and folder:gmail/[Gmail]/Spam"))))
+
+(async-defun im-sync-mail (&optional interactive?)
+  "Sync mail, update the notmuch index, and notify about unread mail.
+
+Account names are discovered from the Channel declarations in
+`im-mbsync-config-file'.  All discovered Channels are synchronized
+in parallel.
+
+When called interactively, use --pull-new and restrict synchronization
+to INBOX, so that only newly arrived inbox messages are downloaded.
+Non-interactive calls perform the normal synchronization configured
+for each Channel."
   (interactive (list t))
   (when (im-check-internet-connection)
-    (condition-case reason
-        (let (count
-              mails)
-          (when interactive?
-            (message ">> Checking mail..."))
-          (await (im-shell-command :command "mbsync --all --verbose" :async t))
-          (await (im-shell-command :command "notmuch new" :async t))
-          (await (im-shell-command :command "notmuch tag +proton -- 'not tag:proton and path:proton/**'" :async t))
-          (await (im-shell-command :command "notmuch tag +gmail -- 'not tag:gmail and path:gmail/**'" :async t))
-          (await (im-shell-command :command "notmuch tag +sent -inbox -- 'not tag:sent and folder:proton/Sent'" :async t))
-          (await (im-shell-command :command "notmuch tag +spam -- 'not tag:spam and folder:gmail/[Gmail]/Spam'" :async t))
-          (await (im-shell-command :command "notmuch tag +spam -- 'not tag:spam and folder:proton/Spam'" :async t))
-          (setq
-           mails
-           (->> (im-shell-command :command "notmuch search tag:inbox and tag:unread and not tag:spam" :async t)
-                (await)
-                (s-trim)
-                (s-split "\n")
-                (--map (nth 1 (s-split-up-to " " it 1)))))
-          (setq count (length mails))
-          (when (or interactive?
-                    (and (> count 0) (not (eq im-unread-mail-count count))))
+    (let ((accounts (im-mbsync-accounts)))
+      (condition-case reason
+          (let (count mails)
             (when interactive?
-              (message ">> Checking mail...Done"))
-            (setq im-unread-mail-count count)
-            (im-notif
-             :title (format "New mail (%s)!" count)
-             :message (s-join "\n" mails)
-             :source #'im-notmuch-inbox
-             :labels '("mail"))))
-      (error
-       ;; When mac sleeps, sometimes it wakes up to run background
-       ;; tasks and this sync function gets to run at that time (This
-       ;; was called powernap on intel macs and you were able to
-       ;; disable it but now it's on all the time on Apple silicon
-       ;; thing). In some cases, DavMail is not ready to take
-       ;; connections and mbsync fails with a timeout. I don't want to
-       ;; bombard myself with these alerts, so I only report the
-       ;; alerts if we are not idle right now.
-       (when (or (not (current-idle-time))
-                 (<= (time-to-seconds (current-idle-time)) 60))
-         (alert (format "Exit code: %s. See buffers *notmuch* and *mbsync*." reason)
-                :title "Checking for mail failed!"))))))
+              (message ">> Checking mail..."))
+
+            ;; Construct all promises before awaiting them so that the
+            ;; account synchronizations run concurrently.
+            (await
+             (promise-all
+              (mapcar
+               (lambda (account)
+                 (im-shell-command
+                  :command "mbsync"
+                  :args
+                  (if interactive?
+                      ;; Only download newly arrived INBOX messages.
+                      (list "--pull-new"
+                            (format "%s:INBOX" account))
+                    ;; Perform the channel's normal full synchronization.
+                    (list account))
+                  :buffer-name (format "*mbsync-%s*" account)
+                  :async t))
+               accounts)))
+
+            ;; Index mail, discarding all output from `notmuch new'.
+            (ignore
+             (await
+              (im-shell-command
+               :command "notmuch"
+               :args '("new")
+               :buffer-name "*notmuch*"
+               :async t)))
+
+            ;; Apply account and folder tags, discarding all tagging output.
+            (ignore
+             (await
+              (im-shell-command
+               :command
+               (concat
+                "printf '%s\\n' "
+                (mapconcat
+                 #'shell-quote-argument
+                 (im-mail-notmuch-batch-rules accounts)
+                 " ")
+                " | notmuch tag --batch")
+               :buffer-name "*notmuch-tag*"
+               :async t)))
+
+            ;; Only search results are used to construct the notification.
+            (setq mails
+                  (->> (im-shell-command
+                      :command "notmuch"
+                      :args
+                      '("search"
+                        "tag:inbox and tag:unread and not tag:spam")
+                      :buffer-name "*notmuch-search*"
+                      :async t)
+                     (await)
+                     (s-trim)
+                     (funcall
+                      (lambda (output)
+                        (s-split "\n" output t)))
+                     (--map
+                      (nth 1 (s-split-up-to " " it 1)))))
+            (setq count (length mails))
+            (when (or interactive?
+                      (and (> count 0)
+                           (not (equal im-unread-mail-count count))))
+              (when interactive?
+                (message ">> Checking mail...Done"))
+              (setq im-unread-mail-count count)
+              (im-notif
+               :title (format "New mail (%s)!" count)
+               :message (s-join "\n" mails)
+               :source #'im-notmuch-inbox
+               :labels '("mail"))))
+        (error
+         ;; Avoid notifications caused by transient failures while the
+         ;; computer is asleep or has only just awakened.
+         (when (or (not (current-idle-time))
+                   (<= (time-to-seconds (current-idle-time)) 60))
+           (alert
+            (format
+             "Exit code: %s. See buffers *notmuch*, *notmuch-tag*, %s."
+             reason
+             (mapconcat
+              (lambda (account)
+                (format "*mbsync-%s*" account))
+              accounts
+              ", "))
+            :title "Checking for mail failed!")))))))
 
 (run-with-timer
  60
