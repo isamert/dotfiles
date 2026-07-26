@@ -177,32 +177,6 @@ buffer."
 ;;;;;; web tools
 
 (with-eval-after-load 'ellm-tools
-  (ellm-deftool web/get-page (:async t)
-    ((url :string "URL of the webpage to fetch contents from."))
-    "Return the contents of a webpage."
-    (message "ellm :: web/get-page(%s)" url)
-    (request url
-      :headers `(("User-Agent" . "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.10 Safari/605.1.1"))
-      :parser (lambda ()
-                (let ((shr-use-fonts nil)
-                      (shr-fill-text nil)
-                      (shr-use-colors nil)
-                      (shr-inhibit-images t))
-                  (shr-render-region (point-min) (point-max))
-                  (goto-char (point-min))
-                  (while-let ((match (text-property-search-forward 'shr-url nil nil t))
-                              (begin (prop-match-beginning match))
-                              (end (prop-match-end match))
-                              (str (format "[%s](%s)"
-                                           (buffer-substring-no-properties begin end)
-                                           (get-text-property begin 'shr-url))))
-                    (replace-region-contents begin end (lambda () str))))
-                (buffer-substring-no-properties (point-min) (point-max)))
-      :success
-      (cl-function
-       (lambda (&key data &allow-other-keys)
-         (funcall callback data)))))
-
   (ellm-deftool web/search (:async t)
     ((query :string "The search query."))
     "Perform a web search and receive concise results and links to sources."
@@ -280,7 +254,7 @@ SEARCH-IN is 'name' or 'docs' for docstrings."
       (format "No functions found matching \"%s\"" pattern))))
 
 (defun im-ai-tool--run-elisp (code)
-   "Evaluate Elisp code and return the result.
+  "Evaluate Elisp code and return the result.
 CODE is the Elisp code to evaluate."
   (message "ellm :: run_elisp(%s)" code)
   (condition-case err
@@ -292,24 +266,6 @@ CODE is the Elisp code to evaluate."
             result-str
           (format "Output:\n%s\nResult: %s" output result-str)))
     (error (format "Error: %S" err))))
-
-(with-eval-after-load 'ellm-tools
-  (ellm-deftool elisp/get-elisp-symbol-info ()
-    ((symbol-name :string "Name of the Elisp symbol.")
-     (symbol-type :string "Type of symbol: 'function', 'variable', or 'any'."))
-    "Get detailed information (docs, implementation, current value etc.) about given elisp symbol/function etc. If you are unsure about specifics of function/variable, use this tool. This makes your edits less error prone."
-    (im-ai-tool--get-elisp-symbol-info symbol-name symbol-type))
-
-  (ellm-deftool elisp/search-elisp-functions ()
-    ((pattern :string "Regex pattern to search for.")
-     (search-in :string "Where to search: 'name' (default) or 'docs' for docstrings."))
-    "Search for Emacs functions by name or docstring. Returns function names with first line of their documentation. Returns max 50 results. We have a lot of ready to use libraries/functions available in this environment."
-    (im-ai-tool--search-elisp-functions pattern search-in))
-
-  (ellm-deftool elisp/run-elisp ()
-    ((code :string "Elisp code to evaluate. It'll be evaluated in the current Emacs environment."))
-    "Evaluate Elisp code and return the result. Also captures any printed output. Provide only one form, no comments. You can always wrap multiple forms with let/progn/prog1 etc."
-    (im-ai-tool--run-elisp code)))
 
 ;;;;;; jira tools
 
