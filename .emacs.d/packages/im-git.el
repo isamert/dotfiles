@@ -625,7 +625,7 @@ Also display `im-git-diff-switches' right-aligned."
             (overlay-put overlay 'keymap im-git-commit-log-map)
             (overlay-put overlay 'help-echo
                          (lambda (_window _obj _pos)
-                           (substitute-command-keys "\\[im-git-commit-log-diff-at-point] → Show diff for this commit, \\[im-git-commit-log-amend-at-point] → Amend"))))))
+                           (substitute-command-keys "\\[im-git-commit-log-diff-at-point] → Show diff for this commit, \\[im-git-commit-log-amend-at-point] → Amend, \\[im-git-commit-log-reword-at-point] → Reword"))))))
       (im-git-commit--change-header-contents "Settings"
         (insert im-git-commit-config-prefix " No Verify: ")
         (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
@@ -705,7 +705,8 @@ Also display `im-git-diff-switches' right-aligned."
 (defvar-keymap im-git-commit-log-map
   :doc "Keymap for commit log entries."
   "RET" #'im-git-commit-log-diff-at-point
-  "f" #'im-git-commit-log-amend-at-point)
+  "f" #'im-git-commit-log-amend-at-point
+  "r" #'im-git-commit-log-reword-at-point)
 
 ;; TODO: Predictable sort order
 (async-defun im-git-commit--update-unstaged (&optional output)
@@ -843,6 +844,14 @@ Ask for confirmation first, then stage changes and create a fixup commit."
         (when (y-or-n-p (format "Fixup commit %s? " hash))
           (im-git--perform-amend hash))))))
 
+(defun im-git-commit-log-reword-at-point ()
+  "Change the message of the commit at point."
+  (interactive nil im-git-commit-mode)
+  (save-excursion
+    (beginning-of-line)
+    (when (re-search-forward "\\b\\([0-9a-fA-F]+\\)\\." (line-end-position) t)
+      (im-git--reword-commit (match-string 1)))))
+
 (defvar-keymap im-git-staged-diff-mode-map
   ;; "x" #'im-git-reverse-hunk
   "u" #'im-git-unstage-hunk-or-file
@@ -940,6 +949,20 @@ Stage your changes, interactively select a function and your changes
 will be added to selected commit."
   (interactive)
   (im-git-select-commit #'im-git--perform-amend))
+
+;;;###autoload
+(defun im-git-reword-commit ()
+  "Interactively select an older commit and change its message."
+  (interactive)
+  (im-git-select-commit #'im-git--reword-commit))
+
+(defun im-git--reword-commit (hash)
+  "Prompt for a new message for commit HASH and rewrite it."
+  (let ((message (read-string
+                  "Message: "
+                  (s-trim (im-git--cmd-to-string
+                           "log" "-1" "--pretty=%B" hash)))))
+    (im-git--perform-amend hash message)))
 
 (defun im-git--perform-amend (hash &optional new-message)
   "Amend an arbitrary commit identified by HASH.
