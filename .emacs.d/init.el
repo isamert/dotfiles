@@ -5457,7 +5457,6 @@ When ARG is non-nil, query the whole workspace/project."
   (completion-preview-idle-delay 0.2)
   :config
   (define-key completion-preview-active-mode-map (kbd "RET") #'completion-preview-insert)
-  (define-key completion-preview-active-mode-map (kbd "TAB") #'completion-preview-insert)
   (define-key completion-preview-active-mode-map (kbd "<down>") #'completion-preview-next-candidate)
   (define-key completion-preview-active-mode-map (kbd "<up>") #'completion-preview-prev-candidate)
   (define-key completion-preview-active-mode-map (kbd "M-j") #'completion-preview-next-candidate)
