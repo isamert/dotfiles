@@ -1221,6 +1221,13 @@ side window the only window'"
   "[" evil-backward-section-begin
   "]" evil-forward-section-begin)
 
+;;;; text-mode
+
+(use-package text-mode
+  :ensure nil
+  :config
+  (setopt text-mode-ispell-word-completion nil))
+
 ;;;; org-mode
 
 ;;;;; Tips etc.
@@ -5450,12 +5457,19 @@ When ARG is non-nil, query the whole workspace/project."
 
 ;;;;; corfu & corfu-doc & kind-icon & completion-preview
 
+(use-package prescient
+  :custom
+  (prescient-history-length 1000)
+  :config
+  (prescient-persist-mode 1))
+
 (use-package completion-preview
   :ensure nil
   :custom
   (completion-preview-minimum-symbol-length 3)
   (completion-preview-idle-delay 0.2)
   :config
+  (setq completion-preview-sort-function #'prescient-completion-sort)
   (define-key completion-preview-active-mode-map (kbd "RET") #'completion-preview-insert)
   (define-key completion-preview-active-mode-map (kbd "<down>") #'completion-preview-next-candidate)
   (define-key completion-preview-active-mode-map (kbd "<up>") #'completion-preview-prev-candidate)
@@ -5497,6 +5511,10 @@ When ARG is non-nil, query the whole workspace/project."
 
   (global-corfu-mode))
 
+(use-package corfu-prescient
+  :after (corfu prescient)
+  :config
+  (corfu-prescient-mode 1))
 
 (use-package corfu-quick
   :ensure nil
@@ -5506,13 +5524,14 @@ When ARG is non-nil, query the whole workspace/project."
   (setq corfu-quick2 "hjklui")
   (define-key corfu-map "\M-q" #'corfu-quick-insert))
 
-(use-package corfu-history
-  :ensure nil
-  :after corfu
-  :config
-  (corfu-history-mode)
-  (with-eval-after-load 'savehist
-    (add-to-list 'savehist-additional-variables 'corfu-history)))
+;; prescient is enough I guess?
+;; (use-package corfu-history
+;;   :ensure nil
+;;   :after corfu
+;;   :config
+;;   (corfu-history-mode)
+;;   (with-eval-after-load 'savehist
+;;     (add-to-list 'savehist-additional-variables 'corfu-history)))
 
 (use-package kind-icon
   :after corfu
@@ -5556,8 +5575,6 @@ When ARG is non-nil, query the whole workspace/project."
          ("M-o r" . cape-rfc1345))
   :init
   ;; Add `completion-at-point-functions', used by `completion-at-point'.
-  ;;(add-to-list 'completion-at-point-functions #'cape-dabbrev)
-  ;;(add-to-list 'completion-at-point-functions #'cape-file)
   ;;(add-to-list 'completion-at-point-functions #'cape-history)
   ;;(add-to-list 'completion-at-point-functions #'cape-keyword)
   ;;(add-to-list 'completion-at-point-functions #'cape-tex)
@@ -5567,8 +5584,10 @@ When ARG is non-nil, query the whole workspace/project."
   ;;(add-to-list 'completion-at-point-functions #'cape-ispell)
   ;;(add-to-list 'completion-at-point-functions #'cape-dict)
   ;;(add-to-list 'completion-at-point-functions #'cape-symbol)
-  ;;(add-to-list 'completion-at-point-functions #'cape-line)
-  )
+  (setq-default completion-at-point-functions nil)
+  (add-hook 'completion-at-point-functions #'cape-dabbrev t)
+  (add-hook 'completion-at-point-functions #'cape-line t)
+  (add-hook 'completion-at-point-functions #'cape-file t))
 
 (cl-defmacro im-cape
     (&key name completion extractor category
