@@ -8835,21 +8835,6 @@ work.  You need to enter full path while importing by yourself."
 
 ;;;;;; Pretty stuff
 
-(defvar
-  im-elisp-pretty-symbols
-  '((">="     . ?≥)
-    ("<="     . ?≤)
-    ("defun"  . ?ƒ)
-    ("interactive" . ?⎇)
-    ("lambda" . ?λ)
-    ("thread-last" . ?↠)
-    ("thread-first" . ?→)
-    ("->>" . ?↠)
-    ("->" . ?→)))
-
-(im-prettify-mode emacs-lisp-mode-hook im-elisp-pretty-symbols)
-(im-prettify-mode lisp-interaction-mode-hook im-elisp-pretty-symbols)
-
 ;; Highlights quotes. Surprisingly useful
 (use-package highlight-quoted
   :hook (emacs-lisp-mode . highlight-quoted-mode))
