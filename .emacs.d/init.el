@@ -6062,7 +6062,8 @@ SORT should be nil to disable sorting."
 
 (use-package slack
   :ensure (:host github :repo "emacs-slack/emacs-slack")
-  :defer t
+  :hook (elpaca-after-init . im-slack-initialize)
+  :if (workpc?)
   :general
   (im-leader-v
     "es" #'im-slack-transient)
@@ -6137,7 +6138,7 @@ SORT should be nil to disable sorting."
    :visible-threads nil
    :mark-as-read-immediately t)
   (slack-start)
-  (slack-change-current-team)
+  (setq slack-current-team (car (hash-table-values slack-teams-by-token)))
   (setq slack-extra-subscribed-channels ty-slack-channels))
 
 (defun im-slack--enable-completion-at-point ()
