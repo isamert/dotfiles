@@ -124,16 +124,6 @@ ONLY output your answer to the query, with no explanations."
                                 backend model))
    into models-alist finally return models-alist))
 
-(defun im-ai--get-current-language ()
-  "Get the current programming language of the buffer.
-This is context aware in `org-mode' buffers, takes src blocks into
-consideration."
-  (->>
-   (im-major-mode-at-point)
-   (s-chop-suffix "-mode")
-   (s-chop-suffix "-ts")
-   (s-replace-all '(("interaction" . "")))))
-
 ;;;; Local vars
 
 (defvar-local im-ai-at-point--last-processed-point nil)
