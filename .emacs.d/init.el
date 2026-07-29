@@ -7419,8 +7419,9 @@ for each Channel."
       ("R" "Refresh state" im-update-git-state)]
      ["Commit/Branch"
       ("c" "Commit changes" im-git-commit)
-      ("a" "Amend last commit" im-git-amend-last-commit)
-      ("A" "Amend to any commit" im-git-amend-commit)
+      ("al" "Amend last commit" im-git-amend-last-commit)
+      ("aa" "Amend to any commit" im-git-amend-commit)
+      ("ar" "Reword any commit" im-git-reword-commit)
       ("bc" "New branch" vc-create-branch)
       ("bs" "Switch branch" vc-switch-branch)
       ("P" "Push" vc-push)
