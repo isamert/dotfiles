@@ -5049,7 +5049,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
 
   (advice-add #'register-preview :override #'consult-register-window)
 
-  (setq consult-preview-key "M-,")
+  (setq consult-preview-key "M-;")
   ;; ^ When you do M-, on a candidate, it previews it
 
   ;; Also follow symlinks while grepping
