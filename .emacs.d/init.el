@@ -6348,12 +6348,8 @@ SORT should be nil to disable sorting."
   (im-ai-file "~/Documents/notes/extra/gpt.org")
   :general
   (im-leader-v
-    "eg" #'im-ai
-    "sl" #'im-ai-lookup
-    "sg" #'im-ai-gptel-dwim
-    "sG" (λ-interactive (im-ai-gptel-dwim 'new))
-    "ta" #'im-ai-ellm-toggle-side-buffer
-    "tA" (λ-interactive (im-ai-ellm-toggle-side-buffer 'new)))
+    "ta" #'ellm-toggle-side-window
+    "tA" (λ-interactive (ellm-toggle-side-window 'new)))
   :config
   (add-hook 'gptel-mode-hook #'tab-line-mode))
 

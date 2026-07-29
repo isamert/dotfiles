@@ -124,54 +124,6 @@ buffer."
 
 ;;;; ellm extensions
 
-;;;;; DWIM
-
-(defun im-ai-ellm-dwim (&optional new?)
-  (interactive "P")
-  (let* ((root (or (im-current-project-root) default-directory))
-         (default-directory root)
-         (same-ellm-buffer? (lambda () (and (eq major-mode 'ellm-mode) (f-same? root default-directory))))
-         (existing (--filter (with-current-buffer it (funcall same-ellm-buffer?)) (buffer-list)))
-         (result (if (and (length> existing 1) (not new?))
-                     (read-buffer "Switch to: " nil nil
-                                  (lambda (b)
-                                    (and-let* ((buf (get-buffer (or (car-safe b) b))))
-                                      (with-current-buffer buf (funcall same-ellm-buffer?)))))
-                   (if (and (length= existing 1) (not new?))
-                       (car existing)
-                     (save-window-excursion (ellm-new-buffer))))))
-    (when-let* ((region (im-region-or nil)))
-      (let ((lang (im-ai--get-current-language))
-            (lang-alt (and-let* ((fname (buffer-file-name))
-                                 ((y-or-n-p "Include file path? ")))
-                        (format
-                         "%s:%s:%s"
-                         (line-number-at-pos (region-beginning) 'absolute)
-                         (line-number-at-pos (region-end) 'absolute)
-                         (f-relative fname root)))))
-        (with-current-buffer result
-          (goto-char (point-max))
-          (insert "\n```" (or lang-alt lang) "\n" (string-trim region "\n" "\n") "\n```"))))
-    (if (im-buffer-visible-p result)
-        (select-window (get-buffer-window result))
-      (switch-to-buffer result))
-    (goto-char (point-max))
-    (recenter)))
-
-(defun im-ai-ellm-toggle-side-buffer (&optional new?)
-  "Same as `im-ai-ellm-dwim' but toggle buffer in side buffer."
-  (interactive)
-  (let ((buffer (save-window-excursion
-                  (im-ai-ellm-dwim new?)
-                  (current-buffer))))
-    (if (and (im-buffer-visible-p buffer)
-             (use-region-p))
-        (progn
-          (im-display-buffer-in-side-window buffer)
-          (goto-char (point-max))
-          (recenter))
-      (im-toggle-side-buffer-with-name (buffer-name buffer)))))
-
 ;;;;; Tools
 
 ;;;;;; web tools
@@ -199,73 +151,6 @@ buffer."
               (funcall
                callback
                (format "Error while searching: %s" it))))))
-
-;;;;;; elisp tools
-
-(defun im-ai-tool--get-elisp-symbol-info (symbol-name symbol-type)
-   "Get detailed information about an Elisp symbol.
-SYMBOL-NAME is the name of the symbol.
-SYMBOL-TYPE is 'function', 'variable', or 'any'."
-  (message "ellm :: get_elisp_symbol_info(%s, %s)" symbol-name symbol-type)
-  (save-window-excursion
-    (let ((help-xref-following t))
-      (cond
-       ((string= symbol-type "function")
-        (helpful-function (intern symbol-name)))
-       ((string= symbol-type "variable")
-        (helpful-variable (intern symbol-name)))
-       (t
-        (helpful-symbol (intern symbol-name))))
-      (buffer-substring-no-properties (point-min) (point-max)))))
-
-(defun im-ai-tool--search-elisp-functions (pattern search-in)
-   "Search for Emacs functions by name or docstring.
-PATTERN is a regex pattern to search for.
-SEARCH-IN is 'name' or 'docs' for docstrings."
-  (message "ellm :: search_elisp_functions(%s, %s)" pattern search-in)
-  (let ((matches '())
-        (search-docs (equal search-in "docs"))
-        (max-results 50))
-    (mapatoms
-     (lambda (sym)
-       (when (and (fboundp sym)
-                  (< (length matches) max-results)
-                  (if search-docs
-                      (let ((doc (documentation sym t)))
-                        (and doc (string-match-p pattern doc)))
-                    (string-match-p pattern (symbol-name sym))))
-         (push (cons (symbol-name sym)
-                     (let ((doc (documentation sym t)))
-                       (when doc
-                         (car (split-string doc "\n")))))
-               matches))))
-    (if matches
-        (format "Found %d functions matching \"%s\" (in %s):\n%s"
-                (length matches)
-                pattern
-                (if search-docs "docstrings" "names")
-                (mapconcat
-                 (lambda (m)
-                   (if (cdr m)
-                       (format "• %s: %s" (car m) (cdr m))
-                     (format "• %s" (car m))))
-                 (sort matches (lambda (a b) (string< (car a) (car b))))
-                 "\n"))
-      (format "No functions found matching \"%s\"" pattern))))
-
-(defun im-ai-tool--run-elisp (code)
-  "Evaluate Elisp code and return the result.
-CODE is the Elisp code to evaluate."
-  (message "ellm :: run_elisp(%s)" code)
-  (condition-case err
-      (let* ((result nil)
-             (output (with-output-to-string
-                       (setq result (eval (read code) t))))
-             (result-str (format "%S" result)))
-        (if (string-empty-p output)
-            result-str
-          (format "Output:\n%s\nResult: %s" output result-str)))
-    (error (format "Error: %S" err))))
 
 ;;;;;; jira tools
 
