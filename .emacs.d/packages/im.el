@@ -661,7 +661,9 @@ I have this in my Aerospace config so that the buffer becomes floating:
          (frame (make-frame
                  `((name . ,im-popup-frame-name)
                    (undecorated . t)
-                   (internal-border-width . 10)
+                   (internal-border-width . 5)
+                   (left-fringe . 0)
+                   (right-fringe . 0)
                    (width . ,width)
                    (height . ,height)
                    (left . ,left)
