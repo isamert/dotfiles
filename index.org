@@ -1003,6 +1003,11 @@ mode "resize" {
 
 bindsym $mod+r mode "resize"
 
+# * Keybindings - Volume
+
+bindsym --locked $hypr+0 exec swayosd-client --output-volume raise
+bindsym --locked $hypr+9 exec swayosd-client --output-volume lower
+
 # * Window configurations
 
 for_window [app_id="qalculate-gtk"] floating enable
@@ -1118,6 +1123,7 @@ systemctl --user add-wants sway-session.target xremap.service
 systemctl --user add-wants sway-session.target vicinae.service
 systemctl --user add-wants sway-session.target mako.service
 systemctl --user add-wants sway-session.target foot-server.service
+systemctl --user add-wants sway-session.target swayosd.service
 #+end_src
 ** Niri
 #+begin_src kdl-ts :tangle ~/.config/niri/config.kdl
