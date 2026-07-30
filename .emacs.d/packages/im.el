@@ -611,6 +611,13 @@ If it exists, it's killed first and return a new buffer."
 (defvar im-popup-frame-name "emacs-popup"
   "Name used for popup frames.")
 
+(defvar im-temp-frame-name "emacs-temp"
+  "Name used for temp Emacs frames.
+I have only one frame open most of the time.  Sometimes I open an Emacs
+frame to do something quickly via a global binding, which sets the frame
+name to this along with some other parameters (like disabling tab-bar
+etc.)")
+
 (defun im-popup-frame (text &rest args)
   "Show TEXT in a small centered floating-like frame, editable and copyable.
 
@@ -652,8 +659,7 @@ I have this in my Aerospace config so that the buffer becomes floating:
          (buf-arg (plist-get args :buffer))
          (buf (or buf-arg (get-buffer-create buf-name)))
          (frame (make-frame
-                 `((name . "emacs-popup")
-                   (minibuffer . nil)
+                 `((name . ,im-popup-frame-name)
                    (undecorated . t)
                    (internal-border-width . 10)
                    (width . ,width)
@@ -683,23 +689,26 @@ Otherwise:
   non-side window on this frame;
 - else switch to the previous buffer, or error when at the last one."
   (interactive)
-  (if (and (equal (frame-parameter nil 'name) im-popup-frame-name)
-           (= (length (window-list)) 1))
-      (progn
-        (delete-frame)
-        (im-force-focus-emacs 'force))
-    (if (or
-         (window-parameter (selected-window) 'window-side)
-         (> (seq-length
-             (seq-filter
-              (lambda (it)
-                (not (window-parameter it 'window-side)))
-              (window-list (selected-frame))))
-            1))
-        (delete-window)
-      (if (window-prev-buffers)
-          (previous-buffer)
-        (user-error "Already at the last buffer")))))
+  (let ((temp? (equal (frame-parameter nil 'name) im-temp-frame-name))
+        (popup? (equal (frame-parameter nil 'name) im-popup-frame-name)))
+    (if (and (or temp? popup?)
+             (= (length (window-list)) 1))
+        (progn
+          (delete-frame)
+          (when popup?
+            (im-force-focus-emacs 'force)))
+      (if (or
+           (window-parameter (selected-window) 'window-side)
+           (> (seq-length
+               (seq-filter
+                (lambda (it)
+                  (not (window-parameter it 'window-side)))
+                (window-list (selected-frame))))
+              1))
+          (delete-window)
+        (if (window-prev-buffers)
+            (previous-buffer)
+          (user-error "Already at the last buffer"))))))
 
 (defun im-display-buffer-other-frame (&optional buffer)
   "Like `display-buffer-other-frame' but with some sensible defaults."

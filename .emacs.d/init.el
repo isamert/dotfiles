@@ -6347,10 +6347,6 @@ SORT should be nil to disable sorting."
   :ensure `(:repo ,im-packages-path :files ("im-ai.el"))
   :custom
   (im-ai-file "~/Documents/notes/extra/gpt.org")
-  :general
-  (im-leader-v
-    "ta" #'ellm-toggle-side-window
-    "tA" (λ-interactive (ellm-toggle-side-window 'new)))
   :config
   (add-hook 'gptel-mode-hook #'tab-line-mode))
 
@@ -8698,6 +8694,8 @@ work.  You need to enter full path while importing by yourself."
   (general-def :keymaps 'cider-inspector-mode-map :states 'normal
     "RET" #'cider-inspector-operate-on-point
     "DEL" #'cider-inspector-pop)
+  (general-def :keymaps 'cider-mode-map :states 'normal
+    "K" #'im-peek-doc)
   :config
   (setq cider-inspector-page-size 50)
   (setq cider-show-error-buffer nil)
