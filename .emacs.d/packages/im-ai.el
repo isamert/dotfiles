@@ -242,7 +242,7 @@ Comments (%d):
                      "\n")))))
     (error (format "Failed to get issue: %s" (error-message-string err)))))
 
-(with-eval-after-load 'ellm
+(with-eval-after-load 'ellm-tools
   (ellm-deftool jira/get-issue ()
     ((issue-key :string "The Jira issue key (e.g., 'PRA-333', 'PROJ-123')."))
     "Get a Jira issue by its key and return a formatted summary with key fields."
