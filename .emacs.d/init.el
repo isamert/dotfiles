@@ -871,12 +871,15 @@ side window the only window'"
   (define-key evil-normal-state-map [remap yank-pop] 'yank-pop)
 
   ;; Change cursor colors based on current mode.
-  (setq evil-normal-state-cursor '("green" box)
-        evil-visual-state-cursor '("orange" box)
-        evil-emacs-state-cursor '("purple" box)
-        evil-insert-state-cursor '("pink" bar)
-        evil-replace-state-cursor '("red" bar)
-        evil-operator-state-cursor '("red" hollow))
+  (defun im-set-evil-cursor-colors ()
+    (setq evil-normal-state-cursor '("green" box)
+          evil-visual-state-cursor '("orange" box)
+          evil-emacs-state-cursor '("purple" box)
+          evil-insert-state-cursor '("pink" bar)
+          evil-replace-state-cursor '("red" bar)
+          evil-operator-state-cursor '("red" hollow)))
+  (im-set-evil-cursor-colors)
+  (add-hook #'im-after-load-theme-hook #'im-set-evil-cursor-colors)
 
   (evil-mode 1))
 
