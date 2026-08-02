@@ -877,7 +877,7 @@ set $down j
 set $up k
 set $right l
 
-set $term footclient
+set $term emacsclient -c -F '((tab-bar-lines . 0) (name . "emacs-temp"))' --eval '(ghostel "new")' || footclient
 set $menu vicinae open
 set $calc qalculate-gtk
 set $clip vicinae vicinae://extensions/vicinae/clipboard/history
