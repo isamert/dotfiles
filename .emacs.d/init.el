@@ -871,7 +871,7 @@ side window the only window'"
   (define-key evil-normal-state-map [remap yank-pop] 'yank-pop)
 
   ;; Change cursor colors based on current mode.
-  (defun im-set-evil-cursor-colors ()
+  (defun im-set-evil-cursor-colors (&rest _)
     (setq evil-normal-state-cursor '("green" box)
           evil-visual-state-cursor '("orange" box)
           evil-emacs-state-cursor '("purple" box)
@@ -3647,7 +3647,6 @@ that is read verbatim (meaning that no '$*' is appended):
 
 (use-package pretty-hydra
   :after hydra
-  :defer t
   :general
   (im-leader "a" (lambda () (interactive) (require 'pretty-hydra) (im-appearance/body)))
   :config

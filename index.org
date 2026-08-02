@@ -905,6 +905,7 @@ bindsym $hypr+s exec grimshot copy area
 bindsym $mod+Return exec $term
 bindsym $hypr+Return exec $term
 bindsym $hypr+c exec $clip
+bindsym $mod+b bar mode toggle
 
 bindsym $hypr+i exec emacsclient --eval "(im-globally (im-select-any-snippet))"
 bindsym $hypr+o exec emacsclient --eval "(im-globally (im-people))"
@@ -1030,8 +1031,10 @@ bar {
 
 # exec --no-startup-id wacom.sh --monitor-and-remap
 
-# This comes with sway-contrib. Starts graphical-session.
-# Through this the startup programs are handled.
+# This comes with sway-contrib.  Imports the required variables to
+# systemd and then starts graphical-session.  Through this the
+# startup programs are handled.
+include /etc/sway/config.d/*
 exec systemctl --user start sway-session.target
 #+end_src
 *** status command for the bar
