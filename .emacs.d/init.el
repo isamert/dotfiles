@@ -6292,7 +6292,7 @@ SORT should be nil to disable sorting."
 (use-package separedit
   ;; C-u separedit → Let's you select the editing mode first.
   :general
-  (:states 'normal
+  (:states '(normal visual)
    "gm" #'separedit)
   (:keymaps 'minibuffer-mode-map
    "C-i" #'separedit
