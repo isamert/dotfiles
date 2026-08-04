@@ -7972,15 +7972,6 @@ the commit buffer."
                               ("python"   (programming python))
                               ("haskell"  (programming haskell)))))
 
-;; TODO: experiment with custom faces
-;; (defface elfeed-comic
-;;   '((t :foreground "#BFF"))
-;;   "Marks comics in Elfeed."
-;;   :group 'elfeed)
-;;
-;; (push '(comic elfeed-comic)
-;;       elfeed-search-face-alist)
-
 (defun im-elfeed-search-browse-url-in-default-browser ()
   "Open URL in the default browser."
   (interactive)
