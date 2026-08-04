@@ -3167,7 +3167,24 @@ Version: 2023-06-28
                    "ghostel-pkg.el"
                    "lisp/*.el"
                    "extensions/*/*.el"
-                   "extensions/*.el")))
+                   "extensions/*.el"))
+  :config
+  (defun im-ghostel-close-temp-frame ()
+    "Close the current frame when its name is `emacs-temp'."
+    (let ((frame (selected-frame)))
+      (when (equal (frame-parameter frame 'name) im-temp-frame-name)
+        (run-at-time
+         0 nil
+         (lambda (f)
+           (when (frame-live-p f)
+             (delete-frame f)))
+         frame))))
+
+  (defun im-ghostel-kill-hook-setup ()
+    (add-hook 'kill-buffer-hook
+              #'im-ghostel-close-temp-frame nil :local))
+
+  (add-hook 'ghostel-mode-hook #'im-ghostel-kill-hook-setup))
 
 (use-package evil-ghostel
   :ensure nil
