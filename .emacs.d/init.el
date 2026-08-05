@@ -2839,8 +2839,9 @@ open.")
 (defun im-button-action-at-point ()
   "Return button action at point.
 Useful for checking if `push-button' can be used."
-  (when-let* ((btn (button-at (point))))
-    (button-get btn 'action)))
+  (and-let* ((btn (button-at (point)))
+             ((button-get btn 'action)))
+    btn))
 
 (add-to-list 'im-open-thing-at-point-alist `(,(apply-partially #'thing-at-point 'url) . browse-url))
 (add-to-list 'im-open-thing-at-point-alist `(im-button-action-at-point . push-button))
@@ -4936,7 +4937,7 @@ Also see: https://isamert.net/2021/03/27/killing-copying-currently-selected-cand
      ("s" "Switch" project-switch-project)]
     [["Core"
       :setup-children im-project-transient--wrapper
-      ("RET" "Dired" im-dired-dwim)
+      ("<return>" "Dired" im-dired-dwim)
       ("e" "Eshell" im-eshell-project)
       ("E" "Ghostel" ghostel-project)
       ("!" "Run shell command" im-shell-command)
