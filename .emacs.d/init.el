@@ -7530,8 +7530,10 @@ the commit buffer."
         (when (and buffer-file-name
                    (not (string-prefix-p " " (buffer-name)))
                    (derived-mode-p 'prog-mode))
-          (diff-hl-update)
-          (vc-refresh-state))))))
+          (ignore-errors
+            (when diff-hl-mode
+              (diff-hl-update))
+            (vc-refresh-state)))))))
 
 ;;;;; im-readeck -- Readeck bookmark manager integration
 
