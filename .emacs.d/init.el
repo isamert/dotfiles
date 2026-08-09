@@ -7263,35 +7263,35 @@ for each Channel."
                 " | notmuch tag --batch")
                :buffer-name "*notmuch-tag*"
                :async t)))
-
-            ;; Only search results are used to construct the notification.
             (setq mails
                   (->> (im-shell-command
-                      :command "notmuch"
-                      :args
-                      '("search"
-                        "tag:inbox and tag:unread and not tag:spam")
-                      :buffer-name "*notmuch-search*"
-                      :async t)
-                     (await)
-                     (s-trim)
-                     (funcall
-                      (lambda (output)
-                        (s-split "\n" output t)))
-                     (--map
-                      (nth 1 (s-split-up-to " " it 1)))))
+                        :command "notmuch"
+                        :args
+                        '("search"
+                          "tag:inbox and tag:unread and not tag:spam")
+                        :buffer-name "*notmuch-search*"
+                        :async t)
+                       (await)
+                       (s-trim)
+                       (funcall
+                        (lambda (output)
+                          (s-split "\n" output t)))
+                       (--map
+                        (nth 1 (s-split-up-to " " it 1)))))
             (setq count (length mails))
             (when (or interactive?
                       (and (> count 0)
                            (not (equal im-unread-mail-count count))))
               (when interactive?
+                (im-notmuch-inbox)
                 (message ">> Checking mail...Done"))
               (setq im-unread-mail-count count)
-              (im-notif
-               :title (format "New mail (%s)!" count)
-               :message (s-join "\n" mails)
-               :source #'im-notmuch-inbox
-               :labels '("mail"))))
+              (unless interactive?
+                (im-notif
+                 :title (format "New mail (%s)!" count)
+                 :message (s-join "\n" mails)
+                 :source #'im-notmuch-inbox
+                 :labels '("mail")))))
         (error
          ;; Avoid notifications caused by transient failures while the
          ;; computer is asleep or has only just awakened.
