@@ -130,6 +130,11 @@
        (lab-git-clone
         (alist-get 'ssh_url it)
         (read-directory-name "Directory to clone in: " lab-projects-directory)))
+   (?c "Shallow clone"
+       (lab-git-clone
+        (alist-get 'ssh_url it)
+        (read-directory-name "Directory to clone in: " lab-projects-directory)
+        'shallow))
    (?p "Pull requests and issues"
        (lab-github-list-project-pull-requests .full_name))
    (?i "Inspect"
@@ -436,6 +441,15 @@ This assumes that this function is called on the button itself."
                  (lab-git-clone
                   (format "https://github.com/%s.git" repo)
                   (read-directory-name "Directory to clone in: " lab-projects-directory)))
+       'follow-link t)
+      (insert " | ")
+      (insert-text-button
+       "Shallow Clone"
+       'action (lambda (_button)
+                 (lab-git-clone
+                  (format "https://github.com/%s.git" repo)
+                  (read-directory-name "Directory to clone in: " lab-projects-directory)
+                  'shallow))
        'follow-link t)
       (insert " | ")
       (insert-text-button
