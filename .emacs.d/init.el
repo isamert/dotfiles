@@ -1618,17 +1618,15 @@ All blocks that tangles to same file are tangled.
 This function also works inside `org-edit-special' buffers and
 does not disrupt the current window configuration."
   (interactive nil org-mode)
-  (let ((src-edit? (org-src-edit-buffer-p))
-        buffer pos
-        (current-prefix-arg '(16)))
-    ;;     ^ '(4) only tangles current file, '(16) tangles all code
-    ;;     blocks related to current tangle file target
+  (let ((src-edit-p (org-src-edit-buffer-p))
+        buffer pos)
     (save-window-excursion
-      (when src-edit? (org-edit-src-exit))
-      (setq buffer (current-buffer))
-      (setq pos (point))
-      (call-interactively 'org-babel-tangle))
-    (when src-edit?
+      (when src-edit-p
+        (org-edit-src-exit))
+      (setq buffer (current-buffer)
+            pos (point))
+      (org-babel-tangle '(16)))
+    (when src-edit-p
       (let ((org-src-window-setup 'current-window))
         (with-current-buffer buffer
           (save-excursion
