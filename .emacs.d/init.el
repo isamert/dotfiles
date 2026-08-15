@@ -7521,19 +7521,29 @@ the commit buffer."
         (insert "\n# Checks" todos)))))
 
 (defun im-update-git-state (&rest _)
-  "Update all diff-hl overlays and vc state for current project."
+  "Refresh VC and diff-hl state for live programming buffers in this Git worktree."
   (interactive)
-  (when-let* ((project (project-current nil))
-              (buffers (ignore-errors (project-buffers project))))
-    (dolist (buffer buffers)
+  (when-let* ((root (ignore-errors
+                      (file-name-as-directory
+                       (file-truename (or (vc-git-root default-directory) default-directory))))))
+    ;; Do not use `project-buffers': its default implementation matches
+    ;; `default-directory' lexically and consequently misses symlinked paths.
+    (dolist (buffer (buffer-list))
       (with-current-buffer buffer
         (when (and buffer-file-name
-                   (not (string-prefix-p " " (buffer-name)))
                    (derived-mode-p 'prog-mode))
-          (ignore-errors
-            (when diff-hl-mode
-              (diff-hl-update))
-            (vc-refresh-state)))))))
+          (let* ((file buffer-file-name)
+                 (buffer-root (ignore-errors
+                                (when-let* ((git-root
+                                             (or (vc-git-root file)
+                                                 (vc-git-root (file-truename file)))))
+                                  (file-name-as-directory
+                                   (file-truename git-root))))))
+            (when (equal root buffer-root)
+              (ignore-errors
+                (vc-refresh-state) ;; Refresh VC first, since diff-hl obtains its state from VC
+                (when diff-hl-mode
+                  (diff-hl-update))))))))))
 
 ;;;;; im-readeck -- Readeck bookmark manager integration
 

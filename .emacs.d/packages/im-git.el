@@ -370,6 +370,11 @@ is called after the hunk is applied with no arguments."
   "Functions to run after successfully committing.
 Each function is called with COMMIT-MSG, inside project root.")
 
+(defun im-git--run-commit-finished-hook (root message)
+  "Run `im-git-commit-finished-hook' in Git ROOT with MESSAGE."
+  (let ((default-directory root))
+    (run-hook-with-args 'im-git-commit-finished-hook message)))
+
 (defvar im-git-commit-pre-hook '()
   "Functions to run after opening the commit window.
 Each function is called with DIFF, inside project root.")
@@ -488,6 +493,8 @@ Also display `im-git-diff-switches' right-aligned."
      ;; `default-directory' is assumed to be the project root.
      (list :project default-directory :msg msg))
     (let ((start-time (float-time))
+          ;; Process sentinels run later, potentially with another buffer current.
+          (root default-directory)
           (proj (im-current-project-name)))
       (message "im-git-commit :: Started...")
       (set-process-sentinel
@@ -497,7 +504,7 @@ Also display `im-git-diff-switches' right-aligned."
            (if (eq (process-exit-status proc) 0)
                (progn
                  (message "im-git-commit :: Started...Done")
-                 (--each im-git-commit-finished-hook (funcall it msg))
+                 (im-git--run-commit-finished-hook root msg)
                  (when tag
                    (set-process-sentinel
                     (im-git--start-process "*im-git-tag*" (im-get-reset-buffer " *im-git-tag*") "tag" "-a" tag "-m" "")
@@ -925,6 +932,7 @@ CALLBACK will be called with the selected commit ref."
   "Asks you a message and does `git commit --amend -m ...'."
   (interactive)
   (let ((buffer-name "*im-git-amend*")
+        (root (im-current-project-root))
         (message (read-string
                   "Message: "
                   (s-trim (im-git--cmd-to-string "log" "-1" "--pretty=%B")))))
@@ -934,7 +942,7 @@ CALLBACK will be called with the selected commit ref."
      :switch nil
      :buffer-name buffer-name
      :on-finish (lambda (&rest _)
-                  (--each im-git-commit-finished-hook (funcall it nil))
+                  (im-git--run-commit-finished-hook root nil)
                   (message ">> Amended"))
      :on-fail (lambda (&rest _)
                 (message ">> Amend failed!")
@@ -981,7 +989,8 @@ The operation is determined automatically:
 Internally, this creates an appropriate amend/fixup commit and
 then performs an autosquash interactive rebase to fold it into
 HASH.  The rebase is fully automated (no editor interaction)."
-  (let* ((fixup? (im-git--has-staged-changes-p))
+  (let* ((root (im-current-project-root))
+         (fixup? (im-git--has-staged-changes-p))
          (commit-args
           (cond
            (new-message `(,@(unless fixup? '("--allow-empty"))
@@ -1001,7 +1010,7 @@ HASH.  The rebase is fully automated (no editor interaction)."
               (if (eq (process-exit-status proc) 0)
                   (progn
                     (message ">> im-git-amend :: Commit %s updated." hash)
-                    (--each im-git-commit-finished-hook (funcall it nil)))
+                    (im-git--run-commit-finished-hook root nil))
                 (error "!! Failed.  See *im-git-amend* buffer for details."))))
          (error "im-git-commit :: Failed.  See buffer *im-git-commit*"))))))
 
