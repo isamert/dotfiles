@@ -9103,11 +9103,100 @@ Lisp function does not specify a special indentation."
 (define-derived-mode bqsql-mode sql-mode "bqsql-mode")
 (add-to-list 'auto-mode-alist (cons (rx ".bqsql" string-end) #'bqsql-mode))
 
+;;;;;; Runner
+
+(defun im-bqsql--command (query params output-buffer job-id)
+  "Return a `start-process' command for QUERY."
+  (let ((dry-run? (alist-get :dry-run params))
+        (format (or (alist-get :format params) "org-table"))
+        (api (alist-get :api params))
+        (project-id (alist-get :project-id params)))
+    `("query" ,output-buffer "bq" "query"
+      ,@(when api `("--api" ,api))
+      ,@(when dry-run? '("--dry_run"))
+      ,@(when project-id `("--project_id" ,project-id))
+      "--quiet" "--max_rows" "100000" "--nouse_legacy_sql"
+      "--format" ,(pcase format
+                    ((or "org-table" "table") "pretty")
+                    (x x))
+      "--job_id" ,job-id
+      ,query)))
+
+(defun im-bqsql--command-string (command)
+  "Render COMMAND, as returned by `im-bqsql--command', for display."
+  (s-join
+   " "
+   (--map (if (not (s-prefix? "--" it))
+              (format "\"%s\"" (s-replace "\"" "\\\"" it))
+            it)
+          (-drop 2 command))))
+
+(defun im-bqsql-run-query (query params callback)
+  "Run BQ QUERY with PARAMS.
+
+CALLBACK is called asynchronously as:
+
+  (CALLBACK RESULT META)
+
+RESULT is the command output as a string.  META is a plist containing
+`:job-id', `:elapsed', and `:exit-status'.
+
+Return the BigQuery job id immediately."
+  (let* ((job-id (im-uuid))
+         (output-buffer (generate-new-buffer
+                         (format " *im-big-querysql:%s*" job-id)))
+         (start-time (float-time))
+         (command (im-bqsql--command query params output-buffer job-id)))
+    (im-ensure-binary "bq"
+                      :package "google-cloud-sdk"
+                      :installer "nix-env -iA")
+    (let ((process (apply #'start-process command)))
+      (set-process-sentinel
+       process
+       (lambda (process _event)
+         (when (memq (process-status process) '(exit signal))
+           (let* ((end-time (float-time))
+                  (result (when (buffer-live-p output-buffer)
+                            (with-current-buffer output-buffer
+                              (buffer-substring-no-properties
+                               (point-min) (point-max)))))
+                  (meta (list :job-id job-id
+                              :elapsed (- end-time start-time)
+                              :exit-status (process-exit-status process))))
+             (unwind-protect
+                 (funcall callback result meta)
+               (when (buffer-live-p output-buffer)
+                 (kill-buffer output-buffer)))))))
+      job-id)))
+
+;;;;;; Babel integration
+
+(defun im-bqsql--pretty-table-to-org (result)
+   "Convert BQ's pretty table RESULT into an Org table."
+  (with-temp-buffer
+    (insert result)
+    (goto-char (point-min))
+    (skip-chars-forward "\n\t ")
+    (when (looking-at "^\\+")
+      (kill-line 1)
+      (forward-line 1)
+      (delete-char 1)
+      (insert "|")
+      (end-of-line)
+      (delete-char -1)
+      (insert "|")
+      (goto-char (point-max))
+      (skip-chars-backward "\n\t ")
+      (beginning-of-line)
+      (when (looking-at "^\\+")
+        (kill-line 1)))
+    (buffer-string)))
+
 (defun org-babel-expand-body:bqsql (body params)
-  (s-format
-   body
-   (lambda (key alist) (assoc-default (intern key) alist))
-   (mapcar (lambda (x) (when (eq (car x) :var) (cdr x))) params)))
+   (s-format
+    body
+    (lambda (key alist) (assoc-default (intern key) alist))
+    (mapcar (lambda (x) (when (eq (car x) :var) (cdr x))) params)))
 
 (defun org-babel-execute:bqsql (query params)
   "Execute QUERY with given PARAMS.
@@ -9124,101 +9213,70 @@ of the results drawer.
 
 If `:cmd' is non-nil, then instead of executing query, print out
 the resulting bq command."
-  (let* ((job-id (im-uuid))
-         (dry-run? (alist-get :dry-run params))
-         (format (or (alist-get :format params) "org-table"))
-         (api (alist-get :api params))
-         (project-id (alist-get :project-id params))
+  (let* ((format (or (alist-get :format params) "org-table"))
          (buffer? (alist-get :buffer params))
          (cmd? (alist-get :cmd params))
-         (json-out? (s-matches? "json" format))
-         (buf (get-buffer-create "*im-big-querysql*"))
-         (org-buffer (current-buffer))
-         (start-time (float-time))
-         cmd cmd-str
-         process
-         (vars (org-babel--get-vars params)))
+         (json-out? (string= format "json"))
+         (org-buffer (current-buffer)))
     (setq query (org-babel-expand-body:bqsql query params))
-    (setq cmd `("query" ,buf "bq" "query"
-                ,@(when api `("--api" ,api))
-                ,@(when dry-run? `("--dry_run"))
-                ,@(when project-id `("--project_id" ,project-id))
-                "--quiet" "--max_rows" "100000" "--nouse_legacy_sql"
-                "--format" ,(pcase format
-                              ((or "org-table" "table") "pretty")
-                              (x x))
-                "--job_id" ,job-id ,query))
-    (setq cmd-str (s-join
-                   " "
-                   (--map (if (not (s-prefix? "--" it))
-                              (format "\"%s\"" (s-replace "\"" "\\\"" it))
-                            it)
-                          (-drop 2 cmd))))
+
     (when cmd?
-      (org-babel-insert-result cmd-str)
-      (user-error "Done"))
-    (with-current-buffer buf
-      (buffer-disable-undo)
-      (erase-buffer))
-    (im-ensure-binary "bq" :package "google-cloud-sdk" :installer "nix-env -iA")
-    (setq process (apply #'start-process cmd))
-    (set-process-sentinel
-     process
-     (lambda (p m)
-       (let* ((end-time (float-time))
-              (result (with-current-buffer buf
-                        ;; Convert pretty table into an org mode table
-                        (when (equal "org-table" format)
-                          (goto-char (point-min))
-                          (skip-chars-forward "\n\t ")
-                          (when (looking-at "^\\+")
-                            (kill-line 1)
-                            (forward-line 1)
-                            (delete-char 1)
-                            (insert "|")
-                            (end-of-line)
-                            (delete-char -1)
-                            (insert "|")
-                            (goto-char (point-max))
-                            (skip-chars-backward "\n\t ")
-                            (beginning-of-line)
-                            (when (looking-at "^\\+")
-                              (kill-line 1))))
-                        (buffer-substring-no-properties (point-min) (point-max))))
+      (let* ((job-id (im-uuid))
+             (command (im-bqsql--command query params nil job-id)))
+        (org-babel-insert-result (im-bqsql--command-string command))
+        (user-error "Done")))
+
+    (im-bqsql-run-query
+     query params
+     (lambda (result meta)
+       (let* ((job-id (plist-get meta :job-id))
+              (elapsed (plist-get meta :elapsed))
+              (result (if (string= format "org-table")
+                          (im-bqsql--pretty-table-to-org result)
+                        result))
               (msg (format "=> Query finished, time elapsed: %s"
-                           (format-seconds "%Y %D %H %M %z%S" (- end-time start-time))))
-              (bname (format "*bqsql:%s" (if (eq buffer? t) job-id buffer?)))
-              found?)
-         (with-current-buffer org-buffer
-           (save-excursion
-             (goto-char (point-max))
-             (setq found? (re-search-backward job-id nil t))
-             (when (or buffer? (not found?))
-               (with-current-buffer (get-buffer-create bname)
-                 (erase-buffer)
-                 (insert result)
-                 (if json-out?
-                     (json-ts-mode)
-                   (progn
-                     (org-mode)
-                     (im-disable-line-wrapping)))
-                 (setq header-line-format msg))
-               (unless found?
-                 (user-error "Org-block is gone.  Result inserted to the buffer %s" bname)))
-             (forward-line -4)
-             (org-babel-insert-result
-              (if buffer? msg result)
-              (list "replace" (cond
-                               ((s-prefix? "Error" result) "drawer")
-                               (buffer? "drawer")
-                               (json-out? "lang")
-                               (t "raw")))
-              nil
-              nil
-              (when json-out? "json"))
-             (when buffer?
-               (switch-to-buffer-other-window bname)))))))
-    job-id))
+                           (format-seconds "%Y %D %H %M %z%S" elapsed)))
+              (bname (format "*bqsql:%s"
+                             (if (eq buffer? t) job-id buffer?))))
+         (if (not (buffer-live-p org-buffer))
+             (with-current-buffer (get-buffer-create bname)
+               (erase-buffer)
+               (insert result)
+               (message "Org buffer is gone; result inserted into %s" bname))
+
+           (with-current-buffer org-buffer
+             (save-excursion
+               (goto-char (point-max))
+               (let ((found? (re-search-backward job-id nil t)))
+                 (when (or buffer? (not found?))
+                   (with-current-buffer (get-buffer-create bname)
+                     (erase-buffer)
+                     (insert result)
+                     (if json-out?
+                         (json-ts-mode)
+                       (org-mode)
+                       (im-disable-line-wrapping))
+                     (setq header-line-format msg))
+                   (unless found?
+                     (message "Org block is gone; result inserted into %s"
+                              bname)))
+
+                 (when found?
+                   (forward-line -4)
+                   (org-babel-insert-result
+                    (if buffer? msg result)
+                    (list "replace"
+                          (cond
+                           ((s-prefix? "Error" result) "drawer")
+                           (buffer? "drawer")
+                           (json-out? "lang")
+                           (t "raw")))
+                    nil nil
+                    (when json-out? "json")))
+
+                 (when buffer?
+                   (switch-to-buffer-other-window bname))))))))
+     )))
 
 (defun im-big-query--fix-table-name (table-name)
   "Fix table name by replacing first `.' with `:'.
