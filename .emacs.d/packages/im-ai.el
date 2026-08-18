@@ -246,7 +246,7 @@ Comments (%d):
   (ellm-deftool jira/get-issue ()
     ((issue-key :string "The Jira issue key (e.g., 'PRA-333', 'PROJ-123')."))
     "Get a Jira issue by its key and return a formatted summary with key fields."
-    (im-ai-tool--jira-get-issue issue-key callback))
+    (im-ai-tool--jira-get-issue issue-key))
 
   (ellm-deftool jira/create-issue ()
     ((project    :string "Project key (e.g., 'MYPROJ').")
@@ -256,7 +256,19 @@ Comments (%d):
      (sprint     :string "Sprint identifier: 'active', 'future', or full sprint name.")
      (labels     :array "Optional list of labels to add to the issue." &optional))
     "Create a Jira issue in the specified project with summary, description, sprint, and optional labels."
-    (im-ai-tool--jira-create-issue project issue-type summary description sprint labels callback)))
+    (im-ai-tool--jira-create-issue project issue-type summary description sprint labels)))
+
+;;;;;; big query (bq) tools
+
+(with-eval-after-load 'ellm-tools
+  (ellm-deftool bq/query (:async t)
+    ((query :string "BigQuery query to run.  Only use read-only queries. The returned result may be too big, ensure query has safe limits."))
+    "Run given QUERY with BigQuery."
+    (message "Started BQ job: %s"
+             (im-bqsql-run-query
+              query nil
+              (lambda (result _meta)
+                (funcall callback result))))))
 
 ;;;; Footer
 
