@@ -1224,6 +1224,10 @@ side window the only window'"
   "[" evil-backward-section-begin
   "]" evil-forward-section-begin)
 
+(im-make-repeatable evil
+  "l" evil-scroll-column-right
+  "h" evil-scroll-column-left)
+
 ;;;; text-mode
 
 (use-package text-mode
