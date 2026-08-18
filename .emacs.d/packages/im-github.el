@@ -130,7 +130,7 @@
        (lab-git-clone
         (alist-get 'ssh_url it)
         (read-directory-name "Directory to clone in: " lab-projects-directory)))
-   (?c "Shallow clone"
+   (?C "Shallow clone"
        (lab-git-clone
         (alist-get 'ssh_url it)
         (read-directory-name "Directory to clone in: " lab-projects-directory)
