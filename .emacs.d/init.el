@@ -9092,17 +9092,27 @@ Lisp function does not specify a special indentation."
   (setq plantuml-jar-path "/nix/store/q0v5nv70zc23fx4hjgghnqf7lvydr6fq-plantuml-1.2021.3/lib/plantuml.jar")
   (setq org-plantuml-jar-path plantuml-jar-path))
 
-;;;;; BigQuery
-
-(use-package im-bq
-  :ensure `(:repo ,im-packages-path :files ("im-bq.el"))
-  :defer 60)
-
 ;;;;; Couchbase
 
 (use-package im-couchbase
   :ensure `(:repo ,im-packages-path :files ("im-couchbase.el"))
   :defer t)
+
+;;;;; BigQuery
+
+(use-package im-bq
+  :ensure `(:repo ,im-packages-path :files ("im-bq.el"))
+  :mode "\\.bqsql\\'"
+  :commands (sql-bigquery
+             org-babel-execute:bqsql
+             im-bq-run-query-at-point
+             im-bq-switch-project
+             im-bq-job-status
+             im-bq-cancel-job
+             im-bq-table-info)
+  :init
+  (with-eval-after-load 'org-src
+    (add-to-list 'org-src-lang-modes '("bqsql" . bqsql))))
 
 ;;;;; jsonnet-mode
 
