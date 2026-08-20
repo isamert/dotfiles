@@ -1024,6 +1024,7 @@ HASH.  The rebase is fully automated (no editor interaction)."
 
 ;;;###autoload
 (defun im-git-list-stash ()
+  "List stashes with their reference, commit, date, and message."
   (interactive)
   (when-let* ((buffer (get-buffer im-git--stash-list-buffer-name)))
     (kill-buffer buffer))
@@ -1031,18 +1032,60 @@ HASH.  The rebase is fully automated (no editor interaction)."
         (buffer-name im-git--stash-list-buffer-name))
     (im-shell-command
      :command im-git-path
-     :args `("--no-pager" "stash" "list")
+     :args `("--no-pager" "stash" "list"
+             "--format=%gd  %h  %cs (%cr)  %s")
      :switch t
      :buffer-name buffer-name
      :on-finish
      (lambda (_output &rest _)
-       (read-only-mode)
-       (text-mode)
-       (im-git-stash-list-mode))
+       (with-current-buffer buffer-name
+         (text-mode)
+         (im-git-stash-list-mode)
+         (im-git--setup-stash-list)
+         (read-only-mode 1)))
      :on-fail
      (lambda (&rest _)
-       (message ">> `git stash show -p' failed!")
+       (message ">> `git stash list' failed!")
        (switch-to-buffer buffer-name)))))
+
+(defun im-git--setup-stash-list ()
+  "Add presentation and navigation hints to a stash-list buffer."
+  (let ((inhibit-read-only t)
+        (count (count-lines (point-min) (point-max))))
+    ;; Keep this in sync with the format passed to `git stash list' above.
+    (goto-char (point-min))
+    (while (re-search-forward
+            "^\\(stash@{[0-9]+}\\)  \\([[:xdigit:]]+\\)  \\([0-9-]+ ([^)]*)\\)  \\(.*\\)$"
+            nil t)
+      (add-face-text-property (match-beginning 1) (match-end 1)
+                              'font-lock-keyword-face)
+      (add-face-text-property (match-beginning 2) (match-end 2)
+                              'font-lock-constant-face)
+      (add-face-text-property (match-beginning 3) (match-end 3)
+                              'font-lock-comment-face)
+      (add-face-text-property (match-beginning 4) (match-end 4)
+                              'font-lock-string-face)
+      ;; Pad after the closing parenthesis, rather than inside it.
+      (let* ((date (match-string-no-properties 3))
+             ;; `%cs' and the surrounding " (" and ")" take 13 columns.
+             (relative-width (- (length date) 13))
+             (padding (max 0 (- 18 relative-width))))
+        (goto-char (match-end 3))
+        (insert (make-string padding ?\s))))
+    (goto-char (point-min))
+    (setq-local
+     header-line-format
+     (list
+      (propertize (format " Stashes (%d)  " count)
+                  'face 'font-lock-keyword-face)
+      (propertize "RET" 'face 'font-lock-constant-face)
+      " show  "
+      (propertize "p" 'face 'font-lock-constant-face)
+      " pop  "
+      (propertize "x" 'face 'font-lock-constant-face)
+      " drop  "
+      (propertize "gr" 'face 'font-lock-constant-face)
+      " refresh"))))
 
 ;;;###autoload
 (defun im-git-show-stash-diff (&optional stash-entry)
