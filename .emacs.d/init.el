@@ -9125,6 +9125,13 @@ Lisp function does not specify a special indentation."
 
 ;;;;; sql
 
+(use-package sql-mode
+  :ensure nil
+  :general
+  (:keymaps 'sql-interactive-mode-map
+   :states 'insert
+   "C-r" #'consult-history))
+
 ;; I generally do not edit ~.sql~ files but instead I do SQL through
 ;; code blocks in org-mode. /lsp-mode/ offers ~lsp-org~ command to
 ;; help using LSP features inside org-mode code blocks. It synergzes
