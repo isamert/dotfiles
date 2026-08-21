@@ -369,51 +369,52 @@ the command without running it.  `:dry-run yes' asks bq for a dry run."
                   (display-buffer buffer)
                   message)
               result))
-        (im-bq-run-query
-         expanded-query params
-         (lambda (raw-result meta)
-           (let* ((result (im-bq--format-result raw-result format))
-                  (message (im-bq--elapsed-message meta))
-                  (job-id (plist-get meta :job-id))
-                  (buffer-name (format "*bqsql:%s*"
-                                       (if (eq buffer-option t)
-                                           job-id
-                                         (or buffer-option job-id))))
-                  result-buffer)
-             (when (or buffer-option
-                       (not (and (buffer-live-p org-buffer)
-                                 (marker-position source-marker))))
-               (setq result-buffer
-                     (im-bq--prepare-result-buffer
-                      buffer-name result format message)))
-             (if (and (buffer-live-p org-buffer)
-                      (marker-position source-marker))
-                 (with-current-buffer org-buffer
-                   (save-excursion
-                     (goto-char source-marker)
-                     (if (ignore-errors (org-in-src-block-p))
-                         (org-babel-insert-result
-                          (if buffer-option message result)
-                          (list "replace"
-                                (cond
-                                 ((not (zerop (plist-get meta :exit-status)))
-                                  "drawer")
-                                 (buffer-option "drawer")
-                                 ((string= format "json") "code")
-                                 (t "raw")))
-                          nil nil
-                          (when (string= format "json") "json"))
-                       (unless result-buffer
-                         (setq result-buffer
-                               (im-bq--prepare-result-buffer
-                                buffer-name result format message)))
-                       (message "Source block is gone; result is in %s"
-                                buffer-name))))
-               (message "Org buffer is gone; result is in %s" buffer-name))
-             (when buffer-option
-               (display-buffer (or result-buffer
-                                   (get-buffer buffer-name))))
-             (set-marker source-marker nil))))))))
+        (prog1 nil
+          (im-bq-run-query
+           expanded-query params
+           (lambda (raw-result meta)
+             (let* ((result (im-bq--format-result raw-result format))
+                    (message (im-bq--elapsed-message meta))
+                    (job-id (plist-get meta :job-id))
+                    (buffer-name (format "*bqsql:%s*"
+                                         (if (eq buffer-option t)
+                                             job-id
+                                           (or buffer-option job-id))))
+                    result-buffer)
+               (when (or buffer-option
+                         (not (and (buffer-live-p org-buffer)
+                                   (marker-position source-marker))))
+                 (setq result-buffer
+                       (im-bq--prepare-result-buffer
+                        buffer-name result format message)))
+               (if (and (buffer-live-p org-buffer)
+                        (marker-position source-marker))
+                   (with-current-buffer org-buffer
+                     (save-excursion
+                       (goto-char source-marker)
+                       (if (ignore-errors (org-in-src-block-p))
+                           (org-babel-insert-result
+                            (if buffer-option message result)
+                            (list "replace"
+                                  (cond
+                                   ((not (zerop (plist-get meta :exit-status)))
+                                    "drawer")
+                                   (buffer-option "drawer")
+                                   ((string= format "json") "code")
+                                   (t "raw")))
+                            nil nil
+                            (when (string= format "json") "json"))
+                         (unless result-buffer
+                           (setq result-buffer
+                                 (im-bq--prepare-result-buffer
+                                  buffer-name result format message)))
+                         (message "Source block is gone; result is in %s"
+                                  buffer-name))))
+                 (message "Org buffer is gone; result is in %s" buffer-name))
+               (when buffer-option
+                 (display-buffer (or result-buffer
+                                     (get-buffer buffer-name))))
+               (set-marker source-marker nil)))))))))
 
 (defun im-bq--pretty-table-to-org (result)
   "Convert BQ's pretty table RESULT into an Org table."
