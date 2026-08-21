@@ -31,10 +31,10 @@
 ;;
 ;; * SQL integration
 ;;
-;; `sql-bigquery' registers the BigQuery shell as an `sql.el' product.
-;; It opens an SQLi/comint buffer and uses `im-bq-project' as its
-;; project.  This is useful for an exploratory, persistent SQL
-;; session.
+;; `sql-bigquery' registers BigQuery as an `sql.el' product.  It opens
+;; an SQLi/comint buffer and runs each submission as a separate `bq
+;; query' command, using `im-bq-project' as its project.  The SQL is
+;; passed without shell parsing, so multiline queries are preserved.
 ;;
 ;; * Org Babel integration
 ;;
@@ -102,17 +102,17 @@ When nil, let the bq executable use its configured default project."
 
 ;;;;; SQL integration customs
 
-(defcustom im-bq-shell-options '("--format=pretty" "shell")
-  "List of options for running bq in shell mode."
-  :type '(repeat string)
+(defcustom im-bq-sqli-prompt-read-only t
+  "Whether prompts in BigQuery SQLi buffers are read-only."
+  :type 'boolean
   :group 'im-bq)
 
 ;;;;; Query customs
 
 (defcustom im-bq-query-max-rows 1000
   "Maximum number of rows returned by queries.
-Set this to nil to use bq's own default.  This does not affect the bq
-shell used by the interactive SQL buffer."
+Set this to nil to use bq's own default.  This does not affect queries
+submitted from the interactive SQL buffer."
   :type '(choice (const :tag "bq default" nil) integer)
   :group 'im-bq)
 
@@ -124,13 +124,97 @@ A block can override this with `:sync yes' or `:async no'."
 
 ;;;; SQL integration
 
-(defun im-bq-comint (product options &optional buffer-name)
-  "Connect PRODUCT to BigQuery with OPTIONS in BUFFER-NAME."
-  (let ((params (append (when (and im-bq-project
-                                   (not (string-empty-p im-bq-project)))
-                          (list "--project_id" im-bq-project))
-                        options)))
-    (sql-comint product params buffer-name)))
+(defconst im-bq--sqli-prompt "bq> ")
+
+(defvar-local im-bq--sqli-current-job-id nil
+  "Job ID of the query most recently started from this SQLi buffer.")
+
+(defun im-bq--sqli-insert-output (process output &optional prompt)
+  "Deliver OUTPUT and, when PROMPT is non-nil, a prompt through PROCESS."
+  (when (process-live-p process)
+    (let ((text output))
+      (when (and prompt
+                 (not (or (string-empty-p text)
+                          (string-suffix-p "\n" text))))
+        (setq text (concat text "\n")))
+      (when prompt
+        (setq text (concat text im-bq--sqli-prompt)))
+      (funcall (process-filter process) process text))))
+
+(defun im-bq--sqli-input-sender (process query)
+  "Run QUERY asynchronously and insert its output before PROCESS' mark."
+  (if (string-blank-p query)
+      (im-bq--sqli-insert-output process "" t)
+    (let ((buffer (process-buffer process)))
+      (with-current-buffer buffer
+        (when im-bq--sqli-current-job-id
+          (user-error "A BigQuery query is already running"))
+        (setq im-bq--sqli-current-job-id
+              (im-bq-run-query
+               query '((:format . "table"))
+               (lambda (result meta)
+                 (when (buffer-live-p buffer)
+                   (with-current-buffer buffer
+                     (when (equal im-bq--sqli-current-job-id
+                                  (plist-get meta :job-id))
+                       (setq im-bq--sqli-current-job-id nil))))
+                 (im-bq--sqli-insert-output process result t))))
+        (message "im-bq :: running query: %s" im-bq--sqli-current-job-id)))))
+
+(defvar im-bq-sqli-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'im-bq-cancel-job)
+    (define-key map (kbd "C-c C-s") #'im-bq-job-status)
+    map)
+  "Keymap active in BigQuery SQLi buffers.")
+
+(define-minor-mode im-bq-sqli-minor-mode
+  "Enable BigQuery-specific commands in an SQLi buffer."
+  :lighter nil
+  :keymap im-bq-sqli-minor-mode-map)
+
+(defun im-bq--sqli-input-filter (query)
+  "Execute QUERY sent by an `sql-send-*' command and consume its input."
+  (im-bq--sqli-input-sender (get-buffer-process (current-buffer)) query)
+  "")
+
+(defun im-bq--sqli-indirect-setup ()
+  "Set up BigQuery SQL fontification for comint input."
+  (bqsql-mode))
+
+(defun im-bq--setup-sqli-buffer ()
+  "Finish setting up a BigQuery SQLi buffer."
+  (when (eq sql-product 'bigquery)
+    (im-bq-sqli-minor-mode 1)
+    (let ((process (get-buffer-process (current-buffer))))
+      (set-process-filter process #'comint-output-filter)
+      (setq-local comint-process-echoes nil)
+      (setq-local comint-prompt-read-only im-bq-sqli-prompt-read-only)
+      ;; Preserve SQL faces after submission rather than replacing them
+      ;; with the generic `comint-highlight-input' face.
+      (setq-local comint-highlight-input nil)
+      (setq-local comint-indirect-setup-function
+                  #'im-bq--sqli-indirect-setup)
+      (comint-fontify-input-mode 1)
+      (im-bq--sqli-insert-output process "" t))))
+
+(put 'im-bq--setup-sqli-buffer 'permanent-local-hook t)
+
+(defun im-bq-comint (_product _options &optional buffer-name)
+  "Create a BigQuery SQLi buffer in BUFFER-NAME.
+Use an Emacs pipe process as the comint process anchor; no external
+long-lived process is started.  The \"bq shell\" command does not
+persist any state anyway, so it's better we handle all this query
+execution within Emacs."
+  (let* ((name (or buffer-name "*SQL-BigQuery*"))
+         (buffer (get-buffer-create name)))
+    (set-buffer buffer)
+    (unless (process-live-p (get-buffer-process buffer))
+      (make-pipe-process :name (format "BigQuery:%s" name)
+                         :buffer buffer
+                         :noquery t))
+    (add-hook 'sql-interactive-mode-hook #'im-bq--setup-sqli-buffer nil t)
+    buffer))
 
 ;;;###autoload
 (defun sql-bigquery (&optional buffer)
@@ -138,16 +222,16 @@ A block can override this with `:sync yes' or `:async no'."
   (interactive "P")
   (sql-product-interactive 'bigquery buffer))
 
+(ignore-errors (sql-del-product 'bigquery))
 (sql-add-product
  'bigquery "BigQuery"
- :prompt-regexp "^[^>]+> "
- :prompt-cont-regexp "^[ ]+-> "
+ :prompt-regexp (concat "^" im-bq--sqli-prompt)
  :sqli-comint-func #'im-bq-comint
  :font-lock 'sql-mode-ansi-font-lock-keywords
  :sqli-login nil
- :sqli-program 'im-bq-program
- :sqli-options 'im-bq-shell-options
- :input-filter '(sql-escape-newlines-filter))
+ :sqli-program nil
+ :sqli-options nil
+ :input-filter #'im-bq--sqli-input-filter)
 
 ;;;; Query runner
 
@@ -258,7 +342,7 @@ cell (RESULT . META), where META contains `:job-id', `:elapsed', and
 (declare-function org-in-src-block-p "org" (&optional inside element))
 
 (defvar org-babel-default-header-args:bqsql
-  '((:results . "replace raw"))
+  '((:results . "raw"))
   "Default header arguments for bqsql Babel blocks.")
 
 ;;;###autoload
@@ -296,9 +380,39 @@ cell (RESULT . META), where META contains `:job-id', `:elapsed', and
 
 (defun im-bq--format-result (result format)
   "Convert RESULT according to FORMAT."
-  (if (equal format "org-table")
-      (im-bq--pretty-table-to-org result)
-    result))
+  (pcase format
+    ("json"
+     (if (executable-find "jq")
+         (with-temp-buffer
+           (insert result)
+           (call-process-region (point-min) (point-max) "jq" t t)
+           (buffer-string))
+       result))
+    ("org-table"
+     ;; TODO: This does not properly handle multiple query outputs
+     (with-temp-buffer
+       (insert result)
+       (goto-char (point-min))
+       (re-search-forward "^\\+") ; find the beginning of the pretty table
+       (delete-region (point-min) (point))
+       (kill-line 1)
+       (forward-line 1)
+       (delete-char 1)
+       (insert "|")
+       (end-of-line)
+       (delete-char -1)
+       (insert "|")
+       (goto-char (point-max))
+       (skip-chars-backward "\n\t ")
+       (beginning-of-line)
+       (when (looking-at "^\\+")
+         (kill-line 1))
+       (buffer-string)))
+    (_
+     ;; TODO: By default, bq outputs a table.el compatible table but
+     ;; again multiple query outputs are not properly handled.  They
+     ;; are appended to the buffer as bq outputs them
+     result)))
 
 (defun im-bq--prepare-result-buffer (name result format header)
   "Put RESULT in buffer NAME using FORMAT and HEADER, then return it."
@@ -334,27 +448,40 @@ cell (RESULT . META), where META contains `:job-id', `:elapsed', and
   "Execute BigQuery QUERY according to Babel PARAMS.
 
 Variables use `${var_name}' syntax and are replaced as-is from `:var'
-headers.  `:format' may be `org-table' (the default), `table', `json',
-or another bq output format.  `:project-id' overrides `im-bq-project'.
+headers.  `:format' may be `org-table' (the default), `table' (table.el
+compatible table), `json', or another bq output format.  `:project-id'
+overrides `im-bq-project'.
 
-Execution is asynchronous by default.  Use `:sync yes' or `:async no'
-to block and return the result normally to Babel; this is suitable for
-export.  `:buffer yes' writes output to a job-named buffer, while any
+Execution is asynchronous by default.  Use `:sync yes' or `:async no' to
+block and return the result normally to Babel; this is suitable for
+export.
+
+Async mode is a bit more smart about how the result is inserted, it
+automatically selects the result type based on `:format' (for
+`org-table' and `table' it simply inserts the table as a result, for
+`json' it wraps the result in a `json' src block).  Sync mode is similar
+but \":format json\" is inserted as raw json to the buffer.  You can add
+\":wrap src json\" to get the same behavior.  Also in sync mode, errors
+are reported using `user-error' whereas in async mode errors are
+appended as a result in a result drawer.
+
+`:buffer yes' writes output to a job-named buffer, while any
 other non-false `:buffer' value names that buffer.  `:cmd yes' returns
 the command without running it.  `:dry-run yes' asks bq for a dry run."
-  (let* ((format (format "%s" (or (alist-get :format params) "org-table")))
+  (let* ((out-format (format "%s" (or (alist-get :format params) "org-table")))
+         (json-p (equal out-format "json"))
          (buffer-option (im-bq--babel-buffer-option params))
          (command-only (im-bq--true-p (alist-get :cmd params)))
          (async (im-bq--babel-async-p params))
          (org-buffer (current-buffer))
-         (source-marker (copy-marker (point)))
          (expanded-query (org-babel-expand-body:bqsql query params)))
+    (setf (alist-get :result-params params) '("raw"))
     (if command-only
         (im-bq--command-string
          (im-bq--command expanded-query params nil (org-id-uuid)))
       (if (not async)
           (let* ((response (im-bq-run-query-sync expanded-query params))
-                 (result (im-bq--format-result (car response) format))
+                 (result (im-bq--format-result (car response) out-format))
                  (meta (cdr response))
                  (message (im-bq--elapsed-message meta)))
             (unless (zerop (plist-get meta :exit-status))
@@ -365,77 +492,54 @@ the command without running it.  `:dry-run yes' asks bq for a dry run."
                                          (plist-get meta :job-id)
                                        buffer-option)))
                        (buffer (im-bq--prepare-result-buffer
-                                name result format message)))
+                                name result out-format message)))
                   (display-buffer buffer)
                   message)
               result))
-        (prog1 nil
-          (im-bq-run-query
-           expanded-query params
-           (lambda (raw-result meta)
-             (let* ((result (im-bq--format-result raw-result format))
-                    (message (im-bq--elapsed-message meta))
-                    (job-id (plist-get meta :job-id))
-                    (buffer-name (format "*bqsql:%s*"
-                                         (if (eq buffer-option t)
-                                             job-id
-                                           (or buffer-option job-id))))
-                    result-buffer)
-               (when (or buffer-option
-                         (not (and (buffer-live-p org-buffer)
-                                   (marker-position source-marker))))
-                 (setq result-buffer
-                       (im-bq--prepare-result-buffer
-                        buffer-name result format message)))
-               (if (and (buffer-live-p org-buffer)
-                        (marker-position source-marker))
-                   (with-current-buffer org-buffer
-                     (save-excursion
-                       (goto-char source-marker)
-                       (if (ignore-errors (org-in-src-block-p))
-                           (org-babel-insert-result
-                            (if buffer-option message result)
-                            (list "replace"
-                                  (cond
-                                   ((not (zerop (plist-get meta :exit-status)))
-                                    "drawer")
-                                   (buffer-option "drawer")
-                                   ((string= format "json") "code")
-                                   (t "raw")))
-                            nil nil
-                            (when (string= format "json") "json"))
-                         (unless result-buffer
-                           (setq result-buffer
-                                 (im-bq--prepare-result-buffer
-                                  buffer-name result format message)))
-                         (message "Source block is gone; result is in %s"
-                                  buffer-name))))
-                 (message "Org buffer is gone; result is in %s" buffer-name))
-               (when buffer-option
-                 (display-buffer (or result-buffer
-                                     (get-buffer buffer-name))))
-               (set-marker source-marker nil)))))))))
-
-(defun im-bq--pretty-table-to-org (result)
-  "Convert BQ's pretty table RESULT into an Org table."
-  (with-temp-buffer
-    (insert result)
-    (goto-char (point-min))
-    (skip-chars-forward "\n\t ")
-    (when (looking-at "^\\+")
-      (kill-line 1)
-      (forward-line 1)
-      (delete-char 1)
-      (insert "|")
-      (end-of-line)
-      (delete-char -1)
-      (insert "|")
-      (goto-char (point-max))
-      (skip-chars-backward "\n\t ")
-      (beginning-of-line)
-      (when (looking-at "^\\+")
-        (kill-line 1)))
-    (buffer-string)))
+        (let (job-id)
+          (setq job-id
+                (im-bq-run-query
+                 expanded-query params
+                 (lambda (raw-result meta)
+                   (let* ((result (im-bq--format-result raw-result out-format))
+                          (message (im-bq--elapsed-message meta))
+                          (buffer-name
+                           (format "*bqsql:%s*"
+                                   (if buffer-option
+                                       job-id
+                                     (or buffer-option job-id))))
+                          result-buffer)
+                     (when buffer-option
+                       (setq result-buffer
+                             (im-bq--prepare-result-buffer
+                              buffer-name result out-format message))
+                       (display-buffer result-buffer))
+                     (when (buffer-live-p org-buffer)
+                       (with-current-buffer org-buffer
+                         (org-with-wide-buffer
+                          ;; The query we are running is probably near
+                          ;; the end, searching from the beginning
+                          ;; might a problem for really long org
+                          ;; buffers
+                          (goto-char (point-max))
+                          (when (re-search-backward (concat "\\(^: \\)?" job-id) nil t)
+                            (forward-line -4) ; Move back to the src block (hopefully)
+                            (cond
+                             (buffer-option
+                              (org-babel-remove-result))
+                             (t
+                              (org-babel-insert-result
+                               result
+                               (list
+                                "replace"
+                                (cond
+                                 ((string-prefix-p "Error" result) "drawer")
+                                 (json-p "code")
+                                 (t "raw")))
+                               nil
+                               nil
+                               (when json-p "json"))))))))))))
+          (concat ": " job-id))))))
 
 ;;;; Interactive commands
 
@@ -472,9 +576,11 @@ query execution and SQLi integration."
     (with-current-buffer buffer
       (let ((inhibit-read-only t))
         (erase-buffer)
-        (fundamental-mode)))
+        (comint-mode)
+        (setq-local comint-inhibit-carriage-motion nil)))
     (let ((process (apply #'start-process process-name buffer
                           im-bq-program args)))
+      (set-process-filter process #'comint-output-filter)
       (set-process-query-on-exit-flag process nil)
       (set-process-sentinel
        process
@@ -494,20 +600,27 @@ query execution and SQLi integration."
 (defun im-bq-job-status (job-id)
   "Display status information for BigQuery JOB-ID.
 With a prefix argument, request pretty JSON output."
-  (interactive (list (im-bq--read-value "Job id: ")))
+  (interactive (list (or im-bq--sqli-current-job-id
+                         (im-bq--read-value "Job id: "))))
   (im-bq--display-process
    (format "*bq job status: %s*" job-id) "im-bq-job-status"
-   (append (list "show")
-           (when current-prefix-arg (list "--format=prettyjson"))
-           (list "-j" job-id))))
+   (append
+    (when (and im-bq-project (not (string-empty-p im-bq-project)))
+      (list "--project_id" im-bq-project))
+    (list "show")
+    (when current-prefix-arg (list "--format=prettyjson"))
+    (list "-j" job-id))))
 
 ;;;###autoload
 (defun im-bq-cancel-job (job-id)
   "Cancel the BigQuery job JOB-ID and display bq's response."
-  (interactive (list (im-bq--read-value "Job id: ")))
+  (interactive (list (or im-bq--sqli-current-job-id
+                         (im-bq--read-value "Job id: "))))
   (im-bq--display-process
    (format "*bq cancel job: %s*" job-id) "im-bq-cancel-job"
-   (list "cancel" job-id)))
+   (append (when (and im-bq-project (not (string-empty-p im-bq-project)))
+             (list "--project_id" im-bq-project))
+           (list "cancel" job-id))))
 
 (defun im-bq--cli-table-name (table-name)
   "Convert SQL TABLE-NAME to the project:dataset.table CLI notation."
