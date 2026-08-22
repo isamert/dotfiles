@@ -913,7 +913,7 @@ bindsym $hypr+l exec loginctl lock-session
 
 # * Keybindings - Notifications
 
-bindsym $hypr+y exec makoctl dismiss --all
+bindsym $hypr+y exec makoctl dismiss --all && emacsclient --eval '(im-notif-clear-all)'
 
 # * Keybindings - Window management
 
