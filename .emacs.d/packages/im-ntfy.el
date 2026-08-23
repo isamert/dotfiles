@@ -423,6 +423,25 @@ Optional ON-SUCCESS and ON-ERROR callbacks for async notification."
              (when on-error (funcall on-error error-msg))))
          (kill-buffer buf))))))
 
+(defun im-ntfy-send-file (file)
+  "Send FILE as an ntfy attachment."
+  (interactive "fFile: ")
+  (let* ((topic (completing-read
+                 "Topic: "
+                 (mapcar (lambda (item)
+                           (if (stringp item)
+                               item
+                             (plist-get item :name)))
+                         im-ntfy-topics)))
+         (title (read-string "Title (optional): "))
+         (message (read-string "Message: ")))
+    (im-ntfy-send topic message
+                  (unless (string-empty-p title) title)
+                  file)))
+
+(with-eval-after-load 'embark
+  (define-key embark-file-map (kbd "P") #'im-ntfy-send-file))
+
 ;;; Fetch cached messages
 
 (defun im-ntfy-fetch-messages (topic &optional since server username password token)
