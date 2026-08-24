@@ -5609,7 +5609,21 @@ When ARG is non-nil, query the whole workspace/project."
   (setq-default completion-at-point-functions nil)
   (add-hook 'completion-at-point-functions #'cape-dabbrev t)
   (add-hook 'completion-at-point-functions #'cape-line t)
-  (add-hook 'completion-at-point-functions #'cape-file t))
+  (add-hook 'completion-at-point-functions #'cape-file t)
+
+  (defun im-cape-same-project-buffers ()
+    "Return buffers with same major mode and same project as current buffer."
+    (let ((project (or (im-current-project-root) default-directory)))
+      (cape--buffer-list
+       (lambda (buf)
+         (let ((bname (buffer-name)))
+           (and (eq major-mode (buffer-local-value 'major-mode buf))
+                (not (string-prefix-p " " bname))
+                (not (string-prefix-p "*" bname))
+                (f-same? project (or (im-current-project-root) default-directory))))))))
+
+  (setq cape-line-buffer-function #'im-cape-same-project-buffers)
+  (setq cape-dabbrev-buffer-function #'im-cape-same-project-buffers))
 
 (cl-defmacro im-cape
     (&key name completion extractor category

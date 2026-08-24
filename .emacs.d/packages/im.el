@@ -52,6 +52,7 @@
   "List of functions to do transformations on the function name.
 Like shortening it in some form etc.")
 
+(defvar-local im-current-project-root nil)
 (defsubst im-current-project-root ()
   "Return the root path of current project."
   (interactive)
@@ -61,8 +62,9 @@ Like shortening it in some form etc.")
 
   ;; This simply finds the .git folder and 99% of the time it's the
   ;; right directory.
-  (when-let* ((path (locate-dominating-file default-directory ".git")))
-    (expand-file-name path)))
+  (or im-current-project-root
+      (when-let* ((path (locate-dominating-file default-directory ".git")))
+        (setq im-current-project-root (expand-file-name path)))))
 
 (defun im-kill-project-buffers (&optional project-dir)
   "Kill all buffers belongs to PROJECT-DIR."
