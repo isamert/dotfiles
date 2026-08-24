@@ -3668,8 +3668,12 @@ that is read verbatim (meaning that no '$*' is appended):
 (use-package pretty-hydra
   :after hydra
   :general
-  (im-leader "a" (lambda () (interactive) (require 'pretty-hydra) (im-appearance/body)))
+  (im-leader "a" #'im-appearance-hydra)
   :config
+  (defun im-appearance-hydra ()
+    (interactive)
+    (require 'pretty-hydra)
+    (im-appearance/body))
   (pretty-hydra-define im-appearance
     (:foreign-keys warn :title "Appearance" :quit-key "q" :color amaranth)
     ("Writeroom"
