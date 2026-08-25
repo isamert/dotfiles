@@ -9500,10 +9500,6 @@ SELECT * FROM _ LIMIT 1;
         (cadr str)
       name)))
 
-(defvar-local im-buffer-project-root nil
-  "Cached value for project root of a buffer.
-Looping all buffers and re-calculating their roots are quite expensive,
-hence the cache.")
 (defun im-tab-line-buffers ()
   "Return buffers grouped for tab-line display.
 
@@ -9530,12 +9526,8 @@ where these special buffers may be duplicated."
            (cl-loop for buf in (buffer-list)
                     as buf-name = (buffer-name buf)
                     unless (string-match-p im-tab-line-hidden-buffer-name-regexp buf-name)
-                    when (when-let* ((proj-root
-                                      (or (buffer-local-value 'im-buffer-project-root buf)
-                                          (with-current-buffer buf
-                                            (setq-local im-buffer-project-root
-                                                        (or (im-current-project-root)
-                                                            default-directory))))))
+                    when (when-let* ((proj-root (or (im-current-project-root)
+                                                    default-directory)))
                            (and (equal proj-root cur-root)
                                 (string-prefix-p prefix buf-name)))
                     collect buf)))
