@@ -2839,11 +2839,12 @@ open.")
      im-open-thing-at-point-alist)))
 
 (defun im-button-action-at-point ()
-  "Return button action at point.
+  "Return point if there is a button.
 Useful for checking if `push-button' can be used."
-  (and-let* ((btn (button-at (point)))
+  (and-let* ((pt (point))
+             (btn (button-at (point)))
              ((button-get btn 'action)))
-    btn))
+    pt))
 
 (add-to-list 'im-open-thing-at-point-alist `(,(apply-partially #'thing-at-point 'url) . browse-url))
 (add-to-list 'im-open-thing-at-point-alist `(im-button-action-at-point . push-button))
@@ -3138,6 +3139,7 @@ Version: 2023-06-28
                    ("integration" "integration/*")
                    (:exclude ".dir-locals.el" "*-tests.el")))
   :autoload (eat-make)
+  :diminish eat-eshell-mode
   :defer t
   :general
   (im-leader-v
@@ -6637,6 +6639,8 @@ If SHELL-BUFFER is nil, use the current buffer."
   :init
   (im-leader "T" #'tmr-with-details)
   :config
+  (setopt tmr-tabulated-columns '(end remaining acknowledge description))
+
   ;; Replace the notification function so that it works on my Mac
   (remove-hook 'tmr-timer-finished-functions #'tmr-notification-notify)
   (add-hook 'tmr-timer-finished-functions #'im-tmr-notify)
@@ -6648,11 +6652,17 @@ If SHELL-BUFFER is nil, use the current buffer."
     (setq tmr-sound-file "/System/Library/Sounds/Glass.aiff"))
 
   ;; evilify
+  (general-def :keymaps 'tmr-tabulated-mode-map :states 'normal
+    "x" #'tmr-remove
+    "d" #'tmr-remove
+    "r" #'tmr-reschedule
+    "c" #'tmr-remove-finished
+    "e" #'tmr-edit-description)
   (define-key tmr-tabulated-mode-map "j" #'next-line)
   (define-key tmr-tabulated-mode-map "k" #'previous-line)
   (define-key tmr-tabulated-mode-map "x" #'tmr-remove)
   (define-key tmr-tabulated-mode-map "d" #'tmr-remove)
-  (evil-set-initial-state 'tmr-tabulated-mode 'emacs)
+  (evil-set-initial-state 'tmr-tabulated-mode 'normal)
 
   ;; See `im-update-global-mode-line'
   (add-hook 'tmr-timer-finished-functions #'im-update-global-mode-line)
@@ -7777,7 +7787,9 @@ the commit buffer."
 (use-package turkish
   :defer t
   :general
-  (im-leader-v "tc" #'turkish-correct-region))
+  (im-leader-v
+    "tc" #'turkish-correct-region
+    "tC" #'turkish-asciify-region))
 
 ;;;;; jinx -- spellchecker, flyspell alternative
 
@@ -8253,7 +8265,7 @@ the commit buffer."
 
 (use-package apheleia
   :hook (elpaca-after-init . apheleia-global-mode)
-  :diminish 'apheleia-mode
+  :diminish (apheleia-mode apheleia-global-mode)
   :init
   (defalias 'im-toggle-auto-code-formatter #'apheleia-mode)
 
