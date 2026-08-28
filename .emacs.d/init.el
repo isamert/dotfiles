@@ -714,6 +714,16 @@ function helps me go between these modes easily."
 ;; (setq-default tab-width 2)
 (setq-default indent-tabs-mode nil)
 
+;;;;; Better display buffer defaults
+
+(setq display-buffer-fallback-action
+      '((display-buffer-same-window
+         display-buffer-reuse-window
+         display-buffer--maybe-pop-up-frame-or-window
+         display-buffer-in-previous-window
+         display-buffer-use-some-window
+         display-buffer-pop-up-frame)))
+
 ;;;;; Shackle windows
 
 ;; Make some temproary windows appear at bottom. This makes buffer
@@ -3747,7 +3757,7 @@ that is read verbatim (meaning that no '$*' is appended):
     (put 'dired-find-alternate-file 'disabled nil)))
 
 (use-package dirvish
-  :ensure (:host github :repo "hlissner/dirvish")
+  :ensure (:host github :repo "alexluigit/dirvish")
   :after dired
   :general
   (im-leader
