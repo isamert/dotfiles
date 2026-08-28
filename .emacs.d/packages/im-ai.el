@@ -265,7 +265,7 @@ Comments (%d):
     ((query :string "BigQuery query to run.  Only use read-only queries. The returned result may be too big, ensure query has safe limits."))
     "Run given QUERY with BigQuery."
     (message "Started BQ job: %s"
-             (im-bqsql-run-query
+             (im-bq-run-query
               query nil
               (lambda (result _meta)
                 (funcall callback result))))))
