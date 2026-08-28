@@ -337,8 +337,8 @@ cell (RESULT . META), where META contains `:job-id', `:elapsed', and
 ;;;; Babel integration
 
 (declare-function org-babel--get-vars "ob-core" (params))
-(declare-function org-babel-insert-result "ob-core"
-                  (result &optional result-params info hash lang exec-time))
+(declare-function org-babel-remove-result "ob-core" (&optional info keep-keyword))
+(declare-function org-babel-insert-result "ob-core" (result &optional result-params info hash lang exec-time))
 (declare-function org-in-src-block-p "org" (&optional inside element))
 
 (defvar org-babel-default-header-args:bqsql
