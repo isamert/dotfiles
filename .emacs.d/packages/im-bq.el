@@ -378,41 +378,43 @@ cell (RESULT . META), where META contains `:job-id', `:elapsed', and
    ((assq :async params) (im-bq--true-p (alist-get :async params)))
    (t im-bq-babel-async)))
 
-(defun im-bq--format-result (result format)
+(defun im-bq--format-result (success? result format)
   "Convert RESULT according to FORMAT."
-  (pcase format
-    ("json"
-     (if (executable-find "jq")
+  (if success?
+      (pcase format
+        ("json"
+         (if (executable-find "jq")
+             (with-temp-buffer
+               (insert result)
+               (call-process-region (point-min) (point-max) "jq" t t)
+               (buffer-string))
+           result))
+        ("org-table"
+         ;; TODO: This does not properly handle multiple query outputs
          (with-temp-buffer
            (insert result)
-           (call-process-region (point-min) (point-max) "jq" t t)
-           (buffer-string))
-       result))
-    ("org-table"
-     ;; TODO: This does not properly handle multiple query outputs
-     (with-temp-buffer
-       (insert result)
-       (goto-char (point-min))
-       (re-search-forward "^\\+") ; find the beginning of the pretty table
-       (delete-region (point-min) (point))
-       (kill-line 1)
-       (forward-line 1)
-       (delete-char 1)
-       (insert "|")
-       (end-of-line)
-       (delete-char -1)
-       (insert "|")
-       (goto-char (point-max))
-       (skip-chars-backward "\n\t ")
-       (beginning-of-line)
-       (when (looking-at "^\\+")
-         (kill-line 1))
-       (buffer-string)))
-    (_
-     ;; TODO: By default, bq outputs a table.el compatible table but
-     ;; again multiple query outputs are not properly handled.  They
-     ;; are appended to the buffer as bq outputs them
-     result)))
+           (goto-char (point-min))
+           (re-search-forward "^\\+") ; find the beginning of the pretty table
+           (delete-region (point-min) (point))
+           (kill-line 1)
+           (forward-line 1)
+           (delete-char 1)
+           (insert "|")
+           (end-of-line)
+           (delete-char -1)
+           (insert "|")
+           (goto-char (point-max))
+           (skip-chars-backward "\n\t ")
+           (beginning-of-line)
+           (when (looking-at "^\\+")
+             (kill-line 1))
+           (buffer-string)))
+        (_
+         ;; TODO: By default, bq outputs a table.el compatible table but
+         ;; again multiple query outputs are not properly handled.  They
+         ;; are appended to the buffer as bq outputs them
+         result))
+    result))
 
 (defun im-bq--prepare-result-buffer (name result format header)
   "Put RESULT in buffer NAME using FORMAT and HEADER, then return it."
@@ -480,11 +482,11 @@ the command without running it.  `:dry-run yes' asks bq for a dry run."
         (im-bq--command-string
          (im-bq--command expanded-query params nil (org-id-uuid)))
       (if (not async)
-          (let* ((response (im-bq-run-query-sync expanded-query params))
-                 (result (im-bq--format-result (car response) out-format))
-                 (meta (cdr response))
-                 (message (im-bq--elapsed-message meta)))
-            (unless (zerop (plist-get meta :exit-status))
+          (pcase-let* ((`(,result . ,meta) (im-bq-run-query-sync expanded-query params))
+                       (success? (zerop (plist-get meta :exit-status)))
+                       (result (im-bq--format-result success? result out-format))
+                       (message (im-bq--elapsed-message meta)))
+            (unless success?
               (user-error "BigQuery failed: %s" (string-trim result)))
             (if buffer-option
                 (let* ((name (format "*bqsql:%s*"
@@ -501,7 +503,8 @@ the command without running it.  `:dry-run yes' asks bq for a dry run."
                 (im-bq-run-query
                  expanded-query params
                  (lambda (raw-result meta)
-                   (let* ((result (im-bq--format-result raw-result out-format))
+                   (let* ((success? (zerop (plist-get meta :exit-status)))
+                          (result (im-bq--format-result success? raw-result out-format))
                           (message (im-bq--elapsed-message meta))
                           (buffer-name
                            (format "*bqsql:%s*"
@@ -533,7 +536,7 @@ the command without running it.  `:dry-run yes' asks bq for a dry run."
                                (list
                                 "replace"
                                 (cond
-                                 ((string-prefix-p "Error" result) "drawer")
+                                 ((not success?) "drawer")
                                  (json-p "code")
                                  (t "raw")))
                                nil
