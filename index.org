@@ -884,7 +884,7 @@ set $clip vicinae vicinae://extensions/vicinae/clipboard/history
 
 # * Monitors
 
-output * bg ~/.config/default.png fill
+output * bg ~/.config/wallpaper.jpg fill
 output * render_bit_depth 10
 
 # * Visuals
@@ -909,7 +909,7 @@ bindsym $mod+b bar mode toggle
 
 bindsym $hypr+i exec emacsclient --eval "(im-globally (im-select-any-snippet))"
 bindsym $hypr+o exec emacsclient --eval "(im-globally (im-people))"
-bindsym $hypr+l exec loginctl lock-session
+bindsym $hypr+l exec swaylock -i ~/.config/wallpaper.jpg --scaling fill
 
 # * Keybindings - Notifications
 
@@ -1018,12 +1018,24 @@ for_window [app_id="emacs$" title="^emacs-popup$"] floating enable
 # * Swaybar
 
 bar {
+    mode hide
     position top
     status_command ~/.bin/usages
+    pango_markup enabled
+
+    font "JetBrainsMono Nerd Font"
+    height 26
+    separator_symbol ""
+
     colors {
-        statusline #ffffffff
-        background #323232ff
-        inactive_workspace #323232 #323232 #5c5c5c
+        statusline #b8b8b8
+        background #1e1e1eff
+        separator  #1e1e1eff
+
+        focused_workspace  #2a2a2a #2a2a2a #d0d0d0
+        active_workspace   #232323 #232323 #b8b8b8
+        inactive_workspace #1e1e1e #1e1e1e #5c5c5c
+        urgent_workspace   #2a2a2a #2a2a2a #cc6666
     }
 }
 
@@ -1036,6 +1048,11 @@ bar {
 # startup programs are handled.
 include /etc/sway/config.d/*
 exec systemctl --user start sway-session.target
+
+# exec vicinae server
+# exec foot --server
+# exec foot --server
+# exec xremap ~/.config/xremap.yml
 #+end_src
 *** status command for the bar
 #+begin_src bash :tangle ~/.bin/usages
