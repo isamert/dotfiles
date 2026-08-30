@@ -164,6 +164,7 @@ filtering.
 MARGIN -- (optional) margin for notification popup.
 
 SEVERITY -- (optional, default: \\='normal) notification severity.
+Can be one of: \\='urgent \\='high \\='moderate \\='normal \\='low \\='trivial
 
 SOURCE -- (optional) origin or source of the notification.  This can
 be a function or a buffer object."
@@ -527,11 +528,17 @@ otherwise, it is taken as a plain string regexp."
   (customize-save-variable 'im-notif-blacklist-regexp im-notif-blacklist-regexp))
 
 (defun im-notif-go-to-source (notification)
-  (let ((source (plist-get notification :source)))
+  (let ((source (plist-get notification :source))
+        (source-buffer (plist-get notification :source-buffer)))
     (cond
-     ((functionp source) (funcall source))
-     ((bufferp source) (im-switch-to-buffer-in-tab source))
-     (t (message "Can't open: %s" source)))))
+     ((functionp source)
+      (funcall source))
+     ((bufferp source)
+      (im-switch-to-buffer-in-tab source))
+     ((and (not source) source-buffer)
+      (im-switch-to-buffer-in-tab source-buffer))
+     (t
+      (error "im-notif: Can't go to source.  source=%s, buffer=%s" source source-buffer)))))
 
 (defun im-notif-view (notif)
   (let* ((title (plist-get notif :title))
@@ -582,7 +589,7 @@ otherwise, it is taken as a plain string regexp."
   (when-let* ((last-with-source
                (seq-find
                 (lambda (p)
-                  (plist-member p :source))
+                  (or (plist-member p :source) (plist-member p :buffer)))
                 (im-notif-notifications-list))))
     (im-notif-go-to-source last-with-source)))
 
