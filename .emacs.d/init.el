@@ -3945,6 +3945,7 @@ NOTE: Use \"rsync --version\" > 3 or something like that."
           (substitute-command-keys
            "  \\[calendar-cursor-holidays] Holidays at point (or \\[calendar-list-holidays] to list holidays in buffer) │ \\[calendar-goto-today] Go to today │ \\[im-calendar-jump-org-agenda] Agenda at point │ \\[calendar-backward-month] Backward month │ \\[calendar-forward-month] Forward month ")))
   (add-hook 'calendar-mode-hook #'im-setup-calendar-mode)
+  (add-hook 'calendar-mode-hook #'diary-mark-entries)
   (calendar-set-date-style 'european)
 
   ;; Mark holidays by default
