@@ -736,11 +736,11 @@ ddcutil setvcp 10 50 # Set the current brightness value
 Also see this gnome extension and it's README for further information: https://github.com/daitj/gnome-display-brightness-ddcutil
 
 ** Switch monitor on keyboard change
-I have a usb splitter that switches between machines when clicked on a physical button. But this does not change my monitors input automatically. The following script is designed to run-according to the given UDEV rule-when a keyboard (my UHK keyboard) is attached or removed and switches to the right monitor input.
+I have a usb splitter that switches between machines when clicked on a physical button. But this does not change my monitors input automatically. The following script is designed to run-according to the given UDEV rule-when a +keyboard (my UHK keyboard)+ my mouse is attached or removed and switches to the right monitor input.
 
 #+begin_src conf :tangle /sudo::/etc/udev/rules.d/70-keyboard-connection.rules
-ACTION=="add", ATTRS{idVendor}=="37a8", ATTRS{idProduct}=="0003", RUN+="/opt/bin/switch-monitor-on-keyboard-change add"
-ACTION=="remove", ENV{PRODUCT}=="37a8/3/2", RUN+="/opt/bin/switch-monitor-on-keyboard-change remove"
+ACTION=="add", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c548", RUN+="/opt/bin/switch-monitor-on-keyboard-change add"
+ACTION=="remove", ENV{PRODUCT}=="46d/c548/503", RUN+="/opt/bin/switch-monitor-on-keyboard-change remove"
 #+end_src
 
 Reload the udev rules.
