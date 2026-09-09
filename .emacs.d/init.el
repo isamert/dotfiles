@@ -7437,26 +7437,11 @@ for each Channel."
     :doc (lambda (xs x) (plist-get (map-elt xs x) :doc))
     :annotate (lambda (xs x) (concat " → " (plist-get (map-elt xs x) :ann))))))
 
-;;;;; easysession.el -- session manager
+;;;;; im-session.el -- session manager
 
-;; Simple package to save/retrieve Emacs sessions. It works well with
-;; tab-bar. Currently my workflow is:
-
-;; `easysession-save-as' :: Save a named session.
-;; `easysession-switch-to' :: Load a session. Usually called after starting Emacs.
-
-;; By default, all file visiting buffers, dired buffers, and indirect
-;; buffers are persisted and restored.
-
-(use-package easysession
-  :ensure (:host github :repo "jamescherti/easysession.el")
-  :hook (elpaca-after-init . easysession-save-mode)
-  :diminish easysession-save-mode
-  :custom
-  (easysession-mode-line-misc-info t)
-  (easysession-buffer-list-function #'im-tab-bar-visible-buffers)
-  :config
-  (setq easysession-mode-line-misc-info-prefix " S:["))
+(use-package im-session
+  :ensure `(:repo ,im-packages-path :files ("im-session.el"))
+  :hook (elpaca-after-init . im-session-auto-save-mode))
 
 ;;;;; im-git -- my git workflow, magit alternative
 
