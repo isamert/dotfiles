@@ -7441,7 +7441,11 @@ for each Channel."
 
 (use-package im-session
   :ensure `(:repo ,im-packages-path :files ("im-session.el"))
-  :hook (elpaca-after-init . im-session-auto-save-mode))
+  :hook (elpaca-after-init . #'im-enable-session)
+  :init
+  (defun im-enable-session ()
+    (im-session-restore)
+    (im-session-auto-save-mode)))
 
 ;;;;; im-git -- my git workflow, magit alternative
 
