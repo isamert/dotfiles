@@ -47,16 +47,16 @@
 ;;;; Customization
 
 (defgroup im-session nil
-  "Save and restore tab-bar sessions."
+   "Save and restore tab-bar sessions."
   :group 'convenience)
 
 (defcustom im-session-auto-save-interval 60
-  "Seconds between automatic saves of the `last' session."
+   "Seconds between automatic saves of the `last' session."
   :type 'number
   :group 'im-session)
 
 (defcustom im-session-file
-  (locate-user-emacs-file "session.el")
+   (locate-user-emacs-file "session.el")
   "File used by `im-session-save' and `im-session-restore'."
   :type 'path
   :group 'im-session)
@@ -64,10 +64,10 @@
 ;;;; Core
 
 (defvar im-session--auto-save-timer nil
-  "Timer used by `im-session-auto-save-mode'.")
+   "Timer used by `im-session-auto-save-mode'.")
 
 (defun im-session--read-sessions ()
-  "Return the saved session alist."
+   "Return the saved session alist."
   (if (not (file-exists-p im-session-file))
       nil
     (with-temp-buffer
@@ -191,6 +191,7 @@ selecting them, so saving does not redraw tabs or run tab-selection hooks."
               saved-tabs)))
     (list :selected selected :tabs (nreverse saved-tabs))))
 
+;;;###autoload
 (defun im-session-save (prefix)
   "Save this frame's tab-bar layout and its visible buffers.
 Without PREFIX, save the session as `last`.  With PREFIX, prompt for a
@@ -236,6 +237,7 @@ idle timer keeps automatic saves out of the way while you are working."
              (if im-session-auto-save-mode "enabled" "disabled"))))
 
 (defalias 'im-session-load #'im-session-restore)
+;;;###autoload
 (defun im-session-restore (name)
   "Restore the saved tab-bar session NAME.
 
