@@ -38,7 +38,7 @@ These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs con
 
 - Here is the code that puts them together, this block is executed during the startup of this file. See [[Postamble]] (at the end of this file) where this code-block is called for execution.
   #+name: startup
-  #+begin_src elisp
+  #+begin_src elisp :exports both
   «executable_hook»
   «conditions»
   #+end_src
