@@ -928,6 +928,44 @@ side window the only window'"
   :keymaps 'override
   :states '(normal visual))
 
+(defun im-general-active-mode-bindings ()
+  "Message General bindings for active mode maps in the current buffer.
+Almost the same thing as `general-describe-keybindings' but shows it in
+minibuffer and excludes some modes.  This helps me to discover what I
+purposefully bound a key to."
+  (interactive)
+  (let* ((excluded '(evil-normal-state-map general-override-mode-map outline-minor-mode-map outli-mode-map))
+         (active-maps (current-active-maps))
+         (entries
+          (cl-loop
+           for (map . state-alist) in general-keybindings
+           unless (memq map excluded)
+           when (and (boundp map)
+                     (memq (symbol-value map) active-maps))
+           append
+           (cl-loop for (state . bindings) in state-alist
+                    append
+                    (cl-loop for (key command _previous) in bindings
+                             collect
+                             (format "%-15s → %s"
+                                     (format "%s%s"
+                                             (if state
+                                                 (format "[%s] " state)
+                                               "")
+                                             (key-description key))
+                                     (s-truncate 30 (format "%S" command))))))))
+    (if entries
+        (message
+         "%s"
+         (string-join
+          (cl-loop for (left right) on entries by #'cddr
+                   collect (format "%-48s | %s" left (or right "")))
+          "\n"))
+      (message "No General bindings in active mode maps."))))
+
+(im-leader
+  "?" #'im-general-active-mode-bindings)
+
 ;;;;; evil-collection
 
 (use-package evil-collection
@@ -3099,7 +3137,7 @@ Version: 2023-06-28
                    (setq-local corfu-auto nil)
                    (corfu-mode)))
   :general
-  (:states 'insert :keymaps '(eshell-prompt-mode-map override)
+  (:states 'insert :keymaps 'eshell-prompt-mode-map
    "C-l" (λ-interactive (eshell/clear t)))
   :config
   (evil-collection-eshell-setup)
@@ -7145,7 +7183,7 @@ If SHELL-BUFFER is nil, use the current buffer."
   :general
   (im-leader
     "eN" #'im-notmuch-inbox
-    "en" #'notmuch-hello)
+    "en" #'notmuch-jump-search)
   :config
   (setq-default notmuch-search-oldest-first nil)
   (evil-collection-notmuch-setup)
