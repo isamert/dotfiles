@@ -44,6 +44,10 @@
 (require 'dired)
 (require 'subr-x)
 
+(declare-function eshell "eshell" (&optional arg))
+(declare-function ghostel-create "ghostel" (&optional name display identity))
+(defvar eshell-buffer-name)
+
 ;;;; Customization
 
 (defgroup im-session nil
@@ -103,14 +107,75 @@
   (with-current-buffer buffer
     (let ((file buffer-file-name)
           (dired-directory (when (derived-mode-p 'dired-mode)
-                             default-directory)))
+                             default-directory))
+          (terminal (cond
+                     ((derived-mode-p 'eshell-mode)
+                      (list :type 'eshell :directory default-directory))
+                     ((derived-mode-p 'ghostel-mode)
+                      (list :type 'ghostel :directory default-directory)))))
       (list (buffer-name buffer)
             file
             dired-directory
-            (unless (or file dired-directory)
+            ;; Terminal contents are a scrollback snapshot, not a usable
+            ;; terminal.  Recreate their sessions below instead.
+            (unless (or file dired-directory terminal)
               (save-restriction
                 (widen)
-                (buffer-substring-no-properties (point-min) (point-max))))))))
+                (buffer-substring-no-properties (point-min) (point-max))))
+            terminal))))
+
+(defun im-session--restore-eshell (name directory)
+  "Create Eshell buffer NAME with DIRECTORY as its working directory."
+  (unless (get-buffer name)
+    (condition-case nil
+        (let ((default-directory directory)
+              (eshell-buffer-name name))
+          (require 'eshell)
+          (eshell))
+      (error (get-buffer-create name)))))
+
+(defun im-session--restore-ghostel (name directory)
+  "Create Ghostel buffer NAME with DIRECTORY as its working directory."
+  (unless (get-buffer name)
+    (condition-case nil
+        (let ((default-directory directory))
+          (require 'ghostel)
+          ;; `ghostel-create' always creates a new terminal and accepts the
+          ;; desired name directly, unlike the slot-reusing `ghostel'.
+          (ghostel-create name))
+      (error (get-buffer-create name)))))
+
+(defun im-session--restore-terminal (name terminal)
+  "Restore terminal NAME from TERMINAL's saved metadata."
+  (pcase (plist-get terminal :type)
+    ('eshell (im-session--restore-eshell
+              name (plist-get terminal :directory)))
+    ('ghostel (im-session--restore-ghostel
+               name (plist-get terminal :directory)))))
+
+(defun im-session--restore-buffer-record (record)
+  "Ensure the buffer described by RECORD exists."
+  (pcase-let ((`(,name ,file ,dired-directory ,contents ,terminal) record))
+    (cond
+     (terminal
+      (im-session--restore-terminal name terminal))
+     (dired-directory
+      (unless (get-buffer name)
+        (condition-case nil
+            (dired-noselect dired-directory)
+          (error (get-buffer-create name)))))
+     (file
+      (unless (get-buffer name)
+        ;; Usually recreates the buffer with NAME as well.
+        (if (file-readable-p file)
+            (condition-case nil
+                (find-file-noselect file)
+              (error (get-buffer-create name)))
+          (get-buffer-create name))))
+     ;; Restore the contents even when a standard buffer such as
+     ;; *scratch* already exists in the new Emacs session.
+     (t
+      (im-session--restore-buffer-contents name contents)))))
 
 (defun im-session--visible-buffer-records ()
   "Return descriptions of buffers visible in the selected tab."
@@ -143,25 +208,7 @@
 (defun im-session--restore-buffer-records (records)
   "Ensure the buffers in RECORDS exist before restoring a window state."
   (dolist (record records)
-    (pcase-let ((`(,name ,file ,dired-directory ,contents) record))
-      (cond
-       (dired-directory
-        (unless (get-buffer name)
-          (condition-case nil
-              (dired-noselect dired-directory)
-            (error (get-buffer-create name)))))
-       (file
-        (unless (get-buffer name)
-          ;; Usually recreates the buffer with NAME as well.
-          (if (file-readable-p file)
-              (condition-case nil
-                  (find-file-noselect file)
-                (error (get-buffer-create name)))
-            (get-buffer-create name))))
-       ;; Restore the contents even when a standard buffer such as
-       ;; *scratch* already exists in the new Emacs session.
-       (t
-        (im-session--restore-buffer-contents name contents))))))
+    (im-session--restore-buffer-record record)))
 
 (defun im-session--tab-state ()
   "Return this frame's tab-bar state and its visible buffers.
