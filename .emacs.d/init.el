@@ -3126,7 +3126,7 @@ Version: 2023-06-28
   ;; good.
   (hs-hide-comments-when-hiding-all nil))
 
-;;;;; eat & eshell & ghostel
+;;;;; terminals: eat & eshell & ghostel
 
 (use-package eshell
   :ensure nil
@@ -3243,6 +3243,60 @@ Version: 2023-06-28
   :ensure nil
   :after (ghostel evil)
   :hook (ghostel-mode . evil-ghostel-mode))
+
+;; Taken from:
+;; https://www.jamescherti.com/emacs-terminal-performance-vterm-eat-ansi-term-ghostel/
+(defun im-speed-up-terminal-buffer ()
+  "Reduce unnecessary Emacs features in terminal buffers."
+  (let ((ghostel-buffer (derived-mode-p 'ghostel-mode)))
+    (setq-local font-lock-defaults '(nil t))
+    (setq-local scroll-conservatively most-positive-fixnum)
+    (setq-local hscroll-margin 0)
+    (setq-local scroll-margin 0)
+    (setq-local auto-hscroll-mode nil)
+    (setq-local vertical-scroll-bar nil)
+    (setq-local horizontal-scroll-bar nil)
+    (setq-local truncate-lines t)
+    (setq-local nobreak-char-display nil)
+    (setq-local bidi-paragraph-direction 'left-to-right)
+    (setq-local bidi-inhibit-bpa t)
+    ;; Ghostel coordinates row height calculations via ghostel-line-spacing
+    (unless ghostel-buffer
+      (setq-local line-spacing 0)
+      (setq-local mode-line-format nil))
+    (setq-local process-adaptive-read-buffering nil)
+    (let ((output-max (* 1024 1024)))
+      (when (< read-process-output-max output-max)
+        (setq-local read-process-output-max output-max)))
+    (buffer-disable-undo)
+    ;; Evil users
+    (remove-hook 'pre-command-hook 'evil--jump-hook t)
+    (remove-hook 'post-command-hook 'evil--jump-handle-buffer-crossing t)
+    ;; Disable modes
+    (let ((inhibit-redisplay t)
+          (inhibit-message t)
+          (modes (list 'electric-indent-local-mode
+                       'display-line-numbers-mode
+                       'display-fill-column-indicator-mode
+                       'hl-line-mode
+                       'show-paren-local-mode
+                       'flymake-mode
+                       'flycheck-mode
+                       'evil-surround-mode
+                       'evil-snipe-local-mode
+                       'yas-minor-mode)))
+      (unless ghostel-buffer
+        (push 'eldoc-mode modes)
+        (push 'auto-composition-mode modes))
+
+      (dolist (mode modes)
+        (when (fboundp mode)
+          ;; Disable the mode
+          (ignore-errors
+            (funcall mode -1)))))))
+
+(add-hook 'eat-mode-hook 'im-speed-up-terminal-buffer t)
+(add-hook 'ghostel-mode-hook 'im-speed-up-terminal-buffer t)
 
 ;;;;;; Utility functions
 
