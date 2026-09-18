@@ -594,7 +594,10 @@ the windows buffer history."
   (interactive)
   (let ((buff (current-buffer)))
     (when (null (window-prev-buffers))
-      (im-quit))
+      (condition-case err
+          (im-quit)
+        (user-error
+         (kill-buffer buff))))
     (kill-buffer buff)))
 
 (defun im-add-to-path (path)
