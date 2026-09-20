@@ -4317,21 +4317,20 @@ properly."
 
 (setq browse-url-secondary-browser-function #'browse-url-firefox)
 (setq browse-url-handlers
-      `((".*jtracker.trendyol.*/browse/.*" . ,(im-purified-url-handler #'im-jira-view-ticket))
-        (".*slack.com/archives/.*" . ,(im-purified-url-handler #'im-slack-open-link))
-        (,im-reddit-comment-url-regexp . ,(im-purified-url-handler #'(lambda (url)
-                                                                       (let* ((post (replace-regexp-in-string "^https?://\\(www\\.\\)?reddit\\.com/" "" url)))
-                                                                         (reddigg-view-comments post)))))
+      `((".*slack.com/archives/.*" . ,(im-purified-url-handler #'im-slack-open-link))
+        ;; (".*jtracker.trendyol.*/browse/.*" . ,(im-purified-url-handler #'im-jira-view-ticket))
+        ;; (,im-reddit-comment-url-regexp . ,(im-purified-url-handler #'(lambda (url)
+        ;;                                                                (let* ((post (replace-regexp-in-string "^https?://\\(www\\.\\)?reddit\\.com/" "" url)))
+        ;;                                                                  (reddigg-view-comments post)))))
         (".*news.ycombinator.com/item\\?id=.*" . ,(im-purified-url-handler #'hnreader-comment))
-        (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . ,(im-purified-url-handler #'im-open-stackexchange-link))
+        ;; (".*\\(stackoverflow.com\\|stackexchange.com\\).*" . ,(im-purified-url-handler #'im-open-stackexchange-link))
         (".*\\(youtube.com/watch.*\\|youtu.be/.*\\)" . ,(im-purified-url-handler #'empv-play-or-enqueue))
         (".*\\.mp3" . ,(im-purified-url-handler #'empv--play-or-enqueue))
         (".*github.com/.*issues/.*" . ,(im-purified-url-handler #'lab-github-issue-view))
         ("https://github.com/\\([^/]+\\)/\\([^/]+\\)/blob/\\([^/]+\\)/\\(.+\\)" . ,(im-purified-url-handler #'lab-github-view-repo-file))
         (".*github.com/[A-Za-z0-9\\. _-]+/[A-Za-z0-9\\. _-]+\\(\\?tab=readme-ov-file.*\\)?$" . ,(im-purified-url-handler #'lab-github-view-repo-readme))
         (".*zoom.us/j/.*" . ,(im-purified-url-handler #'im-open-zoom-meeting-dwim))
-        (".*trendyol.*/merge_requests/.*" . ,(im-purified-url-handler #'lab-open-merge-request-diff))
-        (".*\\(trendyol\\|gitlab\\|slack\\|docs.google\\).*" . browse-url-firefox)
+        (".*\\(gitlab\\|slack\\|docs.google\\).*" . browse-url-firefox)
         ("." . (lambda (link &rest _) (im-eww link)))))
 
 (use-package eww
