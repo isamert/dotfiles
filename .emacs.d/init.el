@@ -6703,6 +6703,151 @@ If SHELL-BUFFER is nil, use the current buffer."
 
 (add-hook 'agent-shell-mode-hook #'im-agent-shell-notif-mode-enable)
 
+;;;;; ellm.el
+
+;; This is my own "agent" implementation. See it's README for more
+;; information.
+
+(use-package ellm
+  :ensure (:host github :repo "isamert/ellm.el" :files ("*.el"))
+  :general
+  (im-leader-v
+    "ta" #'ellm-toggle-side-window
+    "t>" #'ellm-comment
+    "tn" #'ellm-list
+    "tA" (λ-interactive (ellm-toggle-side-window 'new)))
+  :config
+  ;; (add-hook 'ellm-mode-hook #'tab-line-mode)
+  ;; (require 'ellm-mcp)
+  ;; (ellm-register-mcp-tools)
+  ;; (mcp-hub-get-all-tool :asyncp t :categoryp t)
+  ;; (ellm-register-mcp-tools)
+  (require 'ellm-tools)
+  (require 'ellm-llm)
+  (require 'ellm-acp)
+  (require 'ellm-kagi)
+  (require 'ellm-codex)
+  (require 'llm-openai)
+  (require 'llm-claude)
+  (require 'llm-deepseek)
+  (setq llm-warn-on-nonfree nil)
+  ;; (setq ellm-acp-log-messages t)
+  ;; (setq ellm-kagi-cookie im-kagi-assistant-cookie)
+  (setq ellm-persistence-enabled t)
+  (setq ellm-header-line-template "%p %t%>%r")
+  (setq
+   ellm-notification-function
+   (lambda (notification)
+     (im-notif
+      :message (plist-get notification :body)
+      :title (plist-get notification :title)
+      :severity (pcase (plist-get notification :urgency)
+                  ('critical 'urgent)
+                  ('low 'low)
+                  (_ 'normal))
+      :buffer
+      :duration 10
+      :labels '("ellm"))))
+  (setq
+   ellm-new-buffer-default-configuration-function
+   #'(lambda ()
+       (let ((work-project? (f-ancestor-of? "~/Workspace/projects/trendyol" default-directory))
+             (elisp-project? (f-ancestor-of? "~/.emacs.d/elpaca/" default-directory))
+             (provider (if (workpc?)
+                           (intern (completing-read
+                                    "Which? "
+                                    '("mlplatform" "cursor")))
+                         (car (nth 1 ellm-provider-alist))))
+             (snippets (yankpad--snippets "ellm-mode")))
+         (list
+          :provider provider
+          :model (ellm-provider-default-model provider)
+          :tool-permissions '(("@emacs" . "allow"))
+          :yolo elisp-project?
+          :profile
+          (cond
+           ((eq 'cursor provider) nil)
+           ((or work-project? elisp-project?) "agent")
+           (t "explore"))
+          :tools+
+          (cond
+           (elisp-project? '("@emacs")))))))
+  (setq
+   ellm-provider-alist
+   `((mlplatform
+      .
+      (:provider ,(make-llm-openai-compatible
+                   :key (getenv "ML_PLATFORM_PROJECT_API_KEY")
+                   :url "https://mlplatform.gcp.trendyol.com/piper/genai/"
+                   :chat-model "openai/gpt-5.6-terra")
+       :small-model "openai/gpt-5.4-mini"
+       :models ("openai/gpt-5.6-sol"
+                "openai/gpt-5.6-terra"
+                "openai/gpt-5.6-luna"
+                "openai/gpt-5.5"
+                "deepseek-v4-flash-0731"
+                "anthropic/claude-sonnet-4-5"
+                "anthropic/claude-opus-4-5"
+                "anthropic/claude-sonnet-4-6"
+                "anthropic/claude-opus-4-6"
+                "anthropic/claude-opus-4-8"
+                "zai-org/glm-5.2"
+                "moonshotai/kimi-k2.6")))
+     (codex
+      .
+      (:provider ,(ellm-make-codex-provider)
+       :small-model "gpt-5-nano"
+       :models ("gpt-5.6-terra"
+                "gpt-5.6-sol"
+                "gpt-5.6-luna"
+                "gpt-5.5"
+                "gpt-5.3-codex"
+                "gpt-5-nano")))
+     (personal-claude
+      .
+      (:provider ,(make-llm-claude
+                   :key (plist-get (car (auth-source-search :host "api.anthropic.com")) :secret)
+                   :chat-model "claude-opus-4-8")
+       :small-model "claude-haiku-4-5"
+       :models ("claude-fable-5"
+                "claude-opus-4-8"
+                "claude-opus-4-6"
+                "claude-sonnet-4-6"
+                "claude-haiku-4-5")))
+     (personal-deepseek
+      .
+      (:provider ,(make-llm-deepseek
+                   :key (plist-get (car (auth-source-search :host "api.deepseek.com")) :secret)
+                   :chat-model "deepseek-v4-flash")
+       :small-model "deepseek-v4-flash"
+       :models ("deepseek-v4-flash" "deepseek-v4-pro")))
+     (kagi . ,(ellm-make-kagi-provider
+               :session-token im-kagi-cookie
+               :model "kimi-k2-6-thinking"))
+     (cursor
+      . ,(ellm-make-acp-provider
+          :command "agent"
+          :args '("acp")))
+     (opencode
+      . ,(ellm-make-acp-provider
+          :command "opencode"
+          :args '("acp")))))
+
+  (define-advice scroll-up (:filter-args (args)  ellm-turn-rule)
+    (let ((window (selected-window)))
+      (when (and (= (car args) 1)
+                 (with-current-buffer (window-buffer window)
+                   (and (derived-mode-p 'ellm-mode)
+                        ellm-turn-rules
+                        (save-excursion
+                          (goto-char (window-start window))
+                          (overlays-at (line-beginning-position))
+                          (seq-some (lambda (overlay)
+                                      (overlay-get overlay 'ellm-rule))
+                                    (overlays-at (line-beginning-position)))))))
+        (setcar args 2)))
+    args))
+
 ;;;;; im-cursor
 
 (use-package im-cursor
