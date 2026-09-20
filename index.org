@@ -706,6 +706,268 @@ Following snippet enables some configurations for pacman:
 defaultyes=True
 #+end_src
 
+** Controlling monitor brightness
+
+I use the following for controlling brightness: [[https://gitlab.com/dpeukert/light][dpeukert/light]].
+
+You have to add yourself to ~video~ group so that you can call ~light~ without ~sudo~:
+
+#+begin_src bash
+sudo usermod -aG video "$USER"
+#+end_src
+
+Also here is a really small vibed Vicinae extension for controlling backlight, using "light":
+
+#+begin_src js :tangle  ~/.local/share/vicinae/extensions/local.light-backlight/package.json
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "light-backlight",
+  "title": "Backlight",
+  "description": "Keyboard-friendly screen brightness controls using light.",
+  "categories": ["System"],
+  "license": "MIT",
+  "author": "isamert",
+  "icon": "assets/icon.svg",
+  "commands": [
+    {
+      "name": "backlight",
+      "title": "Control Backlight",
+      "subtitle": "Adjust screen brightness with light",
+      "description": "Adjust screen brightness using the light command.",
+      "mode": "view",
+      "keywords": ["brightness", "backlight", "light", "monitor", "display", "screen"]
+    }
+  ],
+  "preferences": []
+}
+#+end_src
+
+#+begin_src js :tangle ~/.local/share/vicinae/extensions/local.light-backlight/backlight.js
+"use strict";
+
+const React = require("react");
+const { execFile } = require("node:child_process");
+const { promisify } = require("node:util");
+const {
+  Action,
+  ActionPanel,
+  Icon,
+  List,
+  showToast,
+  Toast,
+} = require("@vicinae/api");
+
+const runLight = promisify(execFile);
+const PRESETS = [10, 25, 40, 60, 80, 100];
+
+function clamp(value) {
+  return Math.max(1, Math.min(100, Math.round(value)));
+}
+
+async function getBrightness() {
+  const { stdout } = await runLight("light", ["-G"], { timeout: 2_000 });
+  const value = Number.parseFloat(stdout);
+  if (!Number.isFinite(value)) {
+    throw new Error(`Unexpected output from light: ${stdout.trim() || "(empty)"}`);
+  }
+  return clamp(value);
+}
+
+async function writeBrightness(value) {
+  const target = clamp(value);
+  await runLight("light", ["-S", String(target)], { timeout: 2_000 });
+  return target;
+}
+
+function brightnessIcon(value) {
+  if (value <= 25) return Icon.Sun;
+  if (value <= 60) return Icon.Sun;
+  return Icon.Sun;
+}
+
+function parseBrightnessInput(input) {
+  const match = input.trim().match(/^(\d+(?:\.\d+)?)\s*%?$/);
+  if (!match) return undefined;
+
+  const value = Number.parseFloat(match[1]);
+  return value >= 1 && value <= 100 ? Math.round(value) : undefined;
+}
+
+function ActionItem({ title, subtitle, icon, onAction, keywords }) {
+  return React.createElement(List.Item, {
+    title,
+    subtitle,
+    icon,
+    keywords,
+    actions: React.createElement(
+      ActionPanel,
+      null,
+      React.createElement(Action, { title, icon, onAction }),
+    ),
+  });
+}
+
+function Backlight() {
+  const [brightness, setBrightness] = React.useState(undefined);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState(undefined);
+  const [searchText, setSearchText] = React.useState("");
+  const typedBrightness = parseBrightnessInput(searchText);
+
+  const refresh = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(undefined);
+    try {
+      setBrightness(await getBrightness());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const change = React.useCallback(async (target) => {
+    try {
+      // light -S does not print a value. Keep the requested target for immediate
+      // feedback, then refresh from light so the display reflects the real value.
+      const applied = await writeBrightness(target);
+      setBrightness(applied);
+      await showToast({
+        style: Toast.Style.Success,
+        title: "Brightness updated",
+        message: `${applied}%`,
+      });
+      await refresh();
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : String(cause);
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Could not change brightness",
+        message,
+      });
+      await refresh();
+    }
+  }, [refresh]);
+
+  const changeBy = React.useCallback(async (amount) => {
+    try {
+      const current = await getBrightness();
+      await change(current + amount);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : String(cause);
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Could not read brightness",
+        message,
+      });
+      await refresh();
+    }
+  }, [change, refresh]);
+
+  const actions = React.createElement(
+    ActionPanel,
+    null,
+    React.createElement(Action, {
+      title: "Refresh",
+      icon: Icon.ArrowClockwise,
+      shortcut: { modifiers: ["cmd"], key: "r" },
+      onAction: refresh,
+    }),
+  );
+
+  if (error) {
+    return React.createElement(
+      List,
+      { actions, navigationTitle: "Backlight" },
+      React.createElement(List.EmptyView, {
+        icon: Icon.Warning,
+        title: "Couldn't talk to light",
+        description: `${error}\n\nEnsure light is installed and your user can change the backlight without sudo.`,
+      }),
+    );
+  }
+
+  return React.createElement(
+    List,
+    {
+      isLoading,
+      actions,
+      navigationTitle: "Backlight",
+      searchBarPlaceholder: "Type 1–100 to set it, or use ↑ ↓ and Enter…",
+      onSearchTextChange: setSearchText,
+    },
+    typedBrightness !== undefined && React.createElement(
+      List.Section,
+      { title: "Typed brightness" },
+      React.createElement(ActionItem, {
+        title: `Set brightness to ${typedBrightness}%`,
+        subtitle: "Press Enter to apply",
+        icon: brightnessIcon(typedBrightness),
+        keywords: [String(typedBrightness), `${typedBrightness}%`],
+        onAction: () => change(typedBrightness),
+      }),
+    ),
+    React.createElement(
+      List.Section,
+      { title: "Current brightness", subtitle: "↑ ↓ to select · Enter to apply" },
+      React.createElement(List.Item, {
+        title: brightness === undefined ? "Reading brightness…" : `${brightness}%`,
+        subtitle: "Screen backlight",
+        icon: brightnessIcon(brightness || 50),
+        accessories: brightness === undefined ? [] : [{ text: `${brightness}%` }],
+        actions,
+      }),
+    ),
+    React.createElement(
+      List.Section,
+      { title: "Fine adjustment" },
+      React.createElement(ActionItem, {
+        title: "Increase by 10%",
+        subtitle: "Brighter",
+        icon: Icon.ArrowUp,
+        keywords: ["up", "brighter", "increase", "+10"],
+        onAction: () => changeBy(10),
+      }),
+      React.createElement(ActionItem, {
+        title: "Decrease by 10%",
+        subtitle: "Dimmer",
+        icon: Icon.ArrowDown,
+        keywords: ["down", "dimmer", "decrease", "-10"],
+        onAction: () => changeBy(-10),
+      }),
+    ),
+    React.createElement(
+      List.Section,
+      { title: "Presets" },
+      ...PRESETS.map((preset) => React.createElement(ActionItem, {
+        key: preset,
+        title: `Set brightness to ${preset}%`,
+        subtitle: preset <= 25 ? "Night-friendly" : preset >= 80 ? "Full brightness" : "Comfortable",
+        icon: brightnessIcon(preset),
+        keywords: [String(preset), `${preset}%`],
+        onAction: () => change(preset),
+      })),
+    ),
+  );
+}
+
+module.exports = { default: Backlight };
+#+end_src
+
+#+begin_src svg :tangle ~/.local/share/vicinae/extensions/local.light-backlight/assets/icon.svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#f59e0b"/>
+  <circle cx="32" cy="32" r="12" fill="#fff7d6"/>
+  <g stroke="#fff7d6" stroke-width="4" stroke-linecap="round">
+    <path d="M32 8v7M32 49v7M8 32h7M49 32h7M15 15l5 5M44 44l5 5M49 15l-5 5M20 44l-5 5"/>
+  </g>
+</svg>
+#+end_src
+
 ** External monitor brightness
 - Install ~ddcutil~
 - Enable automatic loading of ~i2c-dev~ module with systemd.
