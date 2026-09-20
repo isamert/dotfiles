@@ -3229,6 +3229,12 @@ Version: 2023-06-28
                    "extensions/*/*.el"
                    "extensions/*.el"))
   :config
+  (general-def :keymaps 'ghostel-semi-char-mode-map :states 'insert
+    "M-l" (λ-interactive (ghostel-send-key "right"))
+    "M-h" (λ-interactive (ghostel-send-key "left"))
+    "M-j" (λ-interactive (ghostel-send-key "down"))
+    "M-k" (λ-interactive (ghostel-send-key "up")))
+
   (defun im-ghostel-close-temp-frame ()
     "Close the current frame when its name is `emacs-temp'."
     (let ((frame (selected-frame)))
