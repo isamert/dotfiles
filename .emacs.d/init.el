@@ -317,6 +317,7 @@ a shebang at the beginning, then the executable bit is set to file."
 ;;;;; Overriding some defaults
 
 (setq save-silently t)
+(setq find-file-visit-truename t)
 (setenv "EDITOR" "emacsclient")
 (setenv "VISUAL" "emacsclient")
 (setenv "BROWSER" "emacs-browser")
@@ -331,6 +332,9 @@ emacsclient --eval \"(browse-url \\\"$1\\\")\"")))
 
 ;; Echo area max 5 lines
 (setq max-mini-window-height 5)
+
+;; Avoid performance issues in files with very long lines.
+(global-so-long-mode 1)
 
 ;;;;;; M-Backspace should delete, instead of killing
 
