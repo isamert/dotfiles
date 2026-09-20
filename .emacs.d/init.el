@@ -8611,6 +8611,11 @@ works for Lispy languages."
 (use-package edit-indirect
   :after md-ts-mode)
 
+;; Useful for generating "Table of Contents"
+
+(use-package markdown-toc
+  :commands (markdown-toc-generate-or-refresh-toc))
+
 ;;;;; haskell
 
 (use-package haskell-mode
