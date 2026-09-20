@@ -2851,6 +2851,13 @@ I generally bind this to a key while using by
   (org-timeblock-span 5)
   (org-timeblock-scale-options nil))
 
+;;;;; Syncthing UI
+
+(use-package syncthing
+  :commands (syncthing)
+  :config
+  (setq syncthing-default-server-token (cdr (assoc-string (system-name) im-syncthing-token))))
+
 ;;;; Extra functionality
 
 ;;;;; im-open-thing-at-point
