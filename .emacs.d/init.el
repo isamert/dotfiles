@@ -7420,7 +7420,24 @@ If SHELL-BUFFER is nil, use the current buffer."
     "S" nil)
   ;; Fix RET on notmuch-show-mode
   (evil-collection-bind 'notmuch-show-mode-map
-                        'action 'im-open-thing-at-point))
+                        'action 'im-open-thing-at-point)
+
+  (defun im-notmuch-rename-show-buffer ()
+    "Name a notmuch show buffer as *mail: Sender - Subject*."
+    (save-excursion
+      ;; `notmuch-show-hook' runs before Notmuch positions point on its
+      ;; selected message, so explicitly use the first message.
+      (goto-char (point-min))
+      (let ((from (or (notmuch-show-get-from) "Unknown sender"))
+            (subject (or (notmuch-show-get-subject) "[No subject]")))
+        (rename-buffer
+         (format "*Mail: %s - %s*"
+                 subject
+                 (notmuch-show-clean-address from))
+         t))))
+
+  ;; Rename buffer titles so they are easier to find
+  (add-hook 'notmuch-show-hook #'im-notmuch-rename-show-buffer))
 
 (use-package message
   :ensure nil
