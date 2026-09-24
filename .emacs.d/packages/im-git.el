@@ -401,8 +401,6 @@ configuration, pass it as WINDOW-CONF."
   (let* ((default-directory (im-current-project-root))
          (diff (apply #'im-git--cmd-to-string "diff" "--staged" im-git-diff-switches))
          (commit-buffer (im-get-reset-buffer im-git-commit-message-buffer)))
-    (when (and (s-blank? diff) (not (y-or-n-p "> Nothing staged.  Still want to commit?")))
-      (user-error ">> Commit aborted"))
     (setq im-git-commit--old-window-conf (or window-conf (current-window-configuration)))
     (setq im-git-commit--diff diff)
     (switch-to-buffer commit-buffer)
@@ -618,10 +616,12 @@ Also display `im-git-diff-switches' right-aligned."
                                   "--graph" "--decorate" "--date=short"
                                   "--pretty=tformat:'%C(cyan)%d%C(reset)%C(yellow)%h%C(reset)..: %C(green)%an %C(blue)%ad%C(reset) %s'"
                                   "--abbrev-commit"))
+         (statusp (im-git--async "-c" "color.status=always" "status" "--branch" "--short"))
          (name (await namep))
          (email (await emailp))
          (hookspath (await hookspathp))
          (commits (ansi-color-apply (await commitsp)))
+         (status (await statusp))
          (inhibit-read-only t))
     (with-current-buffer buffer
       (goto-char (point-min))
@@ -673,9 +673,10 @@ Also display `im-git-diff-switches' right-aligned."
         (replace-match name t t))
       (when (re-search-forward "AUTHOR_MAIL" nil t)
         (replace-match email t t))
-      (im-git-commit--update-unstaged)
-      (dolist (hook im-git-commit-pre-hook)
-        (await (funcall hook im-git-commit--diff)))
+      (im-git-commit--update-unstaged status))
+    (dolist (hook im-git-commit-pre-hook)
+      (await (with-current-buffer buffer (funcall hook im-git-commit--diff))))
+    (with-current-buffer buffer
       (goto-char (point-min))
       ;; Insert prepared commit message by the git hooks
       (when-let* ((prepare-commit-msg-hook (f-expand
@@ -707,7 +708,9 @@ Also display `im-git-diff-switches' right-aligned."
   "s" #'im-git-commit-stage-at-point
   "x" #'im-git-commit-delete-at-point
   "TAB" #'im-git-commit-diff-at-point
-  "RET" #'im-git-commit-diff-at-point-popup)
+  "<tab>" #'im-git-commit-diff-at-point
+  "RET" #'im-git-commit-diff-at-point-popup
+  "<return>" #'im-git-commit-diff-at-point-popup)
 
 (defvar-keymap im-git-commit-log-map
   :doc "Keymap for commit log entries."
@@ -717,21 +720,26 @@ Also display `im-git-diff-switches' right-aligned."
 
 ;; TODO: Predictable sort order
 (async-defun im-git-commit--update-unstaged (&optional output)
-  (im-git-commit--change-header-contents "Status"
-    (--each-indexed (s-lines (ansi-color-apply
-                              (s-trim (or output (await (im-git--async
-                                                         "-c" "color.status=always"
-                                                         "status" "--branch" "--short"))))))
-      (if (= it-index 0)
-          (insert (s-chop-prefix "## " it) "\n")
-        (let* ((start (point))
-               (overlay (progn
-                          (insert (s-prepend (concat im-git--status-filename-prefix " ") it) "\n")
-                          (make-overlay start (1- (point))))))
-          (overlay-put overlay 'keymap im-git-commit-status-map)
-          (overlay-put overlay 'help-echo
-                       (lambda (_window _obj _pos)
-                         (substitute-command-keys "\\[im-git-commit-stage-at-point] → Stage file, \\[im-git-commit-unstage-at-point] → Unstage file, \\[im-git-commit-delete-at-point] → Delete file, \\[im-git-commit-diff-at-point] → Diff | You can select multiple files by selecting region."))))))))
+  (let* ((buffer (current-buffer))
+         (status (or output (await (im-git--async
+                                   "-c" "color.status=always"
+                                   "status" "--branch" "--short")))))
+    ;; Do not suspend while editing the section: other commands may change
+    ;; point or the current buffer before the status process finishes.
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (im-git-commit--change-header-contents "Status"
+          (--each-indexed (s-lines (ansi-color-apply (s-trim status)))
+            (if (= it-index 0)
+                (insert (s-chop-prefix "## " it) "\n")
+              (let* ((start (point))
+                     (overlay (progn
+                                (insert (s-prepend (concat im-git--status-filename-prefix " ") it) "\n")
+                                (make-overlay start (1- (point)) nil nil t))))
+                (overlay-put overlay 'keymap im-git-commit-status-map)
+                (overlay-put overlay 'help-echo
+                             (lambda (_window _obj _pos)
+                               (substitute-command-keys "\\[im-git-commit-stage-at-point] → Stage file, \\[im-git-commit-unstage-at-point] → Unstage file, \\[im-git-commit-delete-at-point] → Delete file, \\[im-git-commit-diff-at-point] → Diff | You can select multiple files by selecting region.")))))))))))
 
 (defun im-git-commit--file-at-point (&optional line)
   (let ((line (or line (thing-at-point 'line t))))
@@ -743,7 +751,8 @@ Also display `im-git-diff-switches' right-aligned."
      (nth 1 %))))
 
 (async-defun im-git-commit--run-command-on-file-at-point (&rest git-args)
-  (let ((line (line-number-at-pos))
+  (let ((buffer (current-buffer))
+        (line (line-number-at-pos))
         (files (if (use-region-p)
                    (->>
                     (buffer-substring-no-properties (region-beginning) (region-end))
@@ -753,12 +762,17 @@ Also display `im-git-diff-switches' right-aligned."
                  (list (im-git-commit--file-at-point)))))
     (when git-args
       (await (apply #'im-git--async (append git-args files))))
-    (await (im-git-commit--update-unstaged))
-    (deactivate-mark)
-    (goto-line line)
-    (let ((diff (await (apply #'im-git--async "diff" "--no-color" "--staged" im-git-diff-switches))))
-      (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
-      (other-window 1))))
+    (await (with-current-buffer buffer (im-git-commit--update-unstaged)))
+    (with-current-buffer buffer
+      (deactivate-mark)
+      (goto-char (point-min))
+      (forward-line (1- line)))
+    (let ((diff (await (with-current-buffer buffer
+                         (apply #'im-git--async "diff" "--no-color" "--staged" im-git-diff-switches)))))
+      (with-current-buffer buffer
+        (switch-to-buffer-other-window (im-git-commit--reload-diff-buffer diff))
+        (im-git-commit--update-header-line)
+        (other-window 1)))))
 
 (async-defun im-git-commit-diff-at-point (&optional popup?)
   (interactive nil im-git-commit-mode)
@@ -766,7 +780,7 @@ Also display `im-git-diff-switches' right-aligned."
       (im-peek-remove)
     (let* ((default-directory (im-current-project-root))
            (file (im-git-commit--file-at-point))
-           (diff (concat (await (apply #'im-git--async "diff" `(,im-git-diff-switches ,file))) "\n"))
+           (diff (await (apply #'im-git--async "diff" (append im-git-diff-switches (list "--" file)))))
            (result (if (s-blank? diff)
                        ;; TODO highlight file
                        (with-temp-buffer
@@ -795,19 +809,17 @@ Also display `im-git-diff-switches' right-aligned."
     (when (and (file-exists-p file)
                (y-or-n-p (format "Do you really want to delete this file: %s?" file)))
       (delete-file file)))
-  (im-git-commit--run-command-on-file-at-point))
+  (await (im-git-commit--run-command-on-file-at-point)))
 
 (async-defun im-git-commit-stage-at-point ()
   (interactive)
   (im-peek-remove)
-  (im-git-commit--update-header-line)
-  (im-git-commit--run-command-on-file-at-point "add"))
+  (await (im-git-commit--run-command-on-file-at-point "add")))
 
 (async-defun im-git-commit-unstage-at-point ()
   (interactive)
   (im-peek-remove)
-  (im-git-commit--update-header-line)
-  (im-git-commit--run-command-on-file-at-point "restore" "--staged"))
+  (await (im-git-commit--run-command-on-file-at-point "restore" "--staged")))
 
 (defun im-git-commit--reset-message (str)
   "Clear the current message in the buffer and set it to STR.
