@@ -5498,19 +5498,21 @@ This helps persisting projects I switched to.")
 
 ;; Nice little embark action that let's you open files with sudo.
 
-;; Source: https://karthinks.com/software/fifteen-ways-to-use-embark/
-
 (defun im-sudo-find-file (file)
   "Open FILE as root."
   (interactive "FOpen file as root: ")
+  (require 'tramp-cmds)
   (when (file-writable-p file)
     (user-error "File is user writeable, aborting sudo"))
-  (find-file (if (file-remote-p file)
-                 (concat "/" (file-remote-p file 'method) ":"
-                         (file-remote-p file 'user) "@" (file-remote-p file 'host)
-                         "|sudo:root@"
-                         (file-remote-p file 'host) ":" (file-remote-p file 'localname))
-               (concat "/sudo:root@localhost:" file))))
+  (find-file (tramp-file-name-with-sudo file)))
+
+(defun im-sudo-current-file ()
+  "Visit the current file again with superuser, or root, permissions."
+  (interactive)
+  (require 'tramp-cmds)
+  (when (file-writable-p (buffer-file-name))
+    (user-error "File is user writeable, aborting sudo"))
+  (tramp-revert-buffer-with-sudo))
 
 (with-eval-after-load 'embark
   (define-key embark-file-map (kbd "#") 'im-sudo-find-file))
