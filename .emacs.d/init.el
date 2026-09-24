@@ -6775,7 +6775,7 @@ If SHELL-BUFFER is nil, use the current buffer."
                            (intern (completing-read
                                     "Which? "
                                     '("mlplatform" "cursor")))
-                         (car (nth 1 ellm-provider-alist))))
+                         (caar ellm-provider-alist)))
              (snippets (yankpad--snippets "ellm-mode")))
          (list
           :provider provider
@@ -6792,30 +6792,13 @@ If SHELL-BUFFER is nil, use the current buffer."
            (elisp-project? '("@emacs")))))))
   (setq
    ellm-provider-alist
-   `((mlplatform
-      .
-      (:provider ,(make-llm-openai-compatible
-                   :key (getenv "ML_PLATFORM_PROJECT_API_KEY")
-                   :url "https://mlplatform.gcp.trendyol.com/piper/genai/"
-                   :chat-model "openai/gpt-5.6-terra")
-       :small-model "openai/gpt-5.4-mini"
-       :models ("openai/gpt-5.6-sol"
-                "openai/gpt-5.6-terra"
-                "openai/gpt-5.6-luna"
-                "openai/gpt-5.5"
-                "deepseek-v4-flash-0731"
-                "anthropic/claude-sonnet-4-5"
-                "anthropic/claude-opus-4-5"
-                "anthropic/claude-sonnet-4-6"
-                "anthropic/claude-opus-4-6"
-                "anthropic/claude-opus-4-8"
-                "zai-org/glm-5.2"
-                "moonshotai/kimi-k2.6")))
-     (codex
+   `((codex
       .
       (:provider ,(ellm-make-codex-provider)
        :small-model "gpt-5-nano"
-       :models ("gpt-5.6-terra"
+       :models ("gpt-6-sol"
+                "gpt-6-luna"
+                "gpt-5.6-terra"
                 "gpt-5.6-sol"
                 "gpt-5.6-luna"
                 "gpt-5.5"
@@ -6850,6 +6833,21 @@ If SHELL-BUFFER is nil, use the current buffer."
       . ,(ellm-make-acp-provider
           :command "opencode"
           :args '("acp")))))
+
+  (defun im-ellm-kagi-search ()
+    (interactive)
+    (ellm-new-buffer-with-configuration
+     :provider 'kagi
+     :model "gemini-3-1-flash-lite"
+     :ephemeral t))
+
+  (defun im-ellm-kagi-research ()
+    (interactive)
+    (ellm-new-buffer-with-configuration
+     :provider 'kagi
+     :model "glm-5-3-flash"
+     :reasoning "maximum"
+     :ephemeral t))
 
   (define-advice scroll-up (:filter-args (args)  ellm-turn-rule)
     (let ((window (selected-window)))
