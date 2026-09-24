@@ -122,19 +122,27 @@
                    (mapconcat #'shell-quote-argument
                               (append (list im-git-path "--no-pager") args)
                               " ")))
-            (output ""))
+            (chunks nil))
        (set-process-filter
         proc
         (lambda (_process out)
-          (setq output (concat output out))))
+          (push out chunks)))
        (set-process-sentinel
         proc
         (lambda (p _e)
-          (if (= 0 (process-exit-status p))
-              (funcall resolve (string-trim output))
-            (funcall reject (string-trim output)))))))))
+          (let ((output (string-trim (mapconcat #'identity (nreverse chunks) ""))))
+            (if (= 0 (process-exit-status p))
+                (funcall resolve output)
+              (funcall reject output)))))))))
 
 ;;;; diff-mode improvements
+
+(defun im-git--insert-diff (diff)
+  "Insert DIFF, preserving the final newline required by unified patches."
+  (insert diff)
+  (unless (or (string-empty-p diff)
+              (string-suffix-p "\n" diff))
+    (insert "\n")))
 
 (with-eval-after-load 'diff-mode
   (add-hook 'diff-mode-hook #'outline-minor-mode)
@@ -213,7 +221,7 @@
       (cl-return-from im-git-status))
     (with-current-buffer dbuff
       (erase-buffer)
-      (insert diff)
+      (im-git--insert-diff diff)
       (im-git-diff-mode)
       (im-git-status--update-header-line)
       (switch-to-buffer dbuff)
@@ -390,6 +398,7 @@ Each function is called with DIFF, inside project root.")
 (defvar-local im-git-commit--current-message-ref nil)
 (defvar-local im-git-commit--template nil)
 (defvar-local im-git-commit--diff nil)
+(defvar-local im-git-commit--in-progress nil)
 
 ;;;###autoload
 (cl-defun im-git-commit (&key window-conf initial-message)
@@ -433,7 +442,7 @@ Also display `im-git-diff-switches' right-aligned."
 
 (defun im-git-commit--reload-diff-buffer (diff)
   (with-current-buffer (im-get-reset-buffer im-git-commit-diff-buffer)
-    (insert diff)
+    (im-git--insert-diff diff)
     (setq buffer-read-only t)
     (im-git-staged-diff-mode)
     (goto-char (point-min))
@@ -464,6 +473,9 @@ Also display `im-git-diff-switches' right-aligned."
 (defun im-git-commit-finalize ()
   "Finalize the commit in progress."
   (interactive)
+  (when (with-current-buffer im-git-commit-message-buffer
+          im-git-commit--in-progress)
+    (user-error "Commit already in progress"))
   (let* ((lines (s-split
                  "\n"
                  (with-current-buffer im-git-commit-message-buffer
@@ -485,12 +497,8 @@ Also display `im-git-diff-switches' right-aligned."
          (tag (cadr (--find (equal (car it) "--tag") props))))
     (unless fixup
       (setq args (append (list "--message" msg) args)))
-    (ring-insert
-     im-git-commit-message-history
-     ;; This command is supposed to run at project root, so the
-     ;; `default-directory' is assumed to be the project root.
-     (list :project default-directory :msg msg))
     (let ((start-time (float-time))
+          (commit-buffer (get-buffer im-git-commit-message-buffer))
           ;; Process sentinels run later, potentially with another buffer current.
           (root default-directory)
           (proj (im-current-project-name)))
@@ -502,6 +510,11 @@ Also display `im-git-diff-switches' right-aligned."
            (if (eq (process-exit-status proc) 0)
                (progn
                  (message "im-git-commit :: Started...Done")
+                 (ring-insert im-git-commit-message-history (list :project root :msg msg))
+                 (when (buffer-live-p commit-buffer)
+                   (with-current-buffer commit-buffer
+                     (setq im-git-commit--in-progress nil))
+                   (im-git-commit-cancel))
                  (im-git--run-commit-finished-hook root msg)
                  (when tag
                    (set-process-sentinel
@@ -521,16 +534,26 @@ Also display `im-git-diff-switches' right-aligned."
                           (message "!! Failed to fixup. See *im-git-fixup* buffer for further details."))))))
                  (when notify?
                    (im-notif :title "*git-commit*" :message (format "Commit finished for %s" proj) :duration 2)))
-             (message "im-git-commit :: Failed. See buffer *im-git-commit*")
+             (when (buffer-live-p commit-buffer)
+               (with-current-buffer commit-buffer
+                 (setq im-git-commit--in-progress nil)))
+             (message "im-git-commit :: Failed. Message preserved; see buffer *im-git-commit*")
              (when notify?
-               (im-notif :title "*git-commit*" :message (format "Commit FAILED for %s" proj) :duration 2)))))))
-    (im-git-commit-cancel)))
+               (im-notif :title "*git-commit*" :message (format "Commit FAILED for %s" proj) :duration 2))))))
+      (with-current-buffer commit-buffer
+        (setq im-git-commit--in-progress t)))))
 
 (defun im-git-commit-cancel ()
   "Cancel the commit in progress."
   (interactive)
-  (kill-buffer im-git-commit-message-buffer)
-  (kill-buffer im-git-commit-diff-buffer)
+  (when (and (get-buffer im-git-commit-message-buffer)
+             (buffer-local-value 'im-git-commit--in-progress
+                                 (get-buffer im-git-commit-message-buffer)))
+    (user-error "Wait for the commit to finish before cancelling"))
+  (when (get-buffer im-git-commit-message-buffer)
+    (kill-buffer im-git-commit-message-buffer))
+  (when (get-buffer im-git-commit-diff-buffer)
+    (kill-buffer im-git-commit-diff-buffer))
   (set-window-configuration im-git-commit--old-window-conf))
 
 (defun im-git-commit-prev-message ()
@@ -616,11 +639,12 @@ Also display `im-git-diff-switches' right-aligned."
                                   "--graph" "--decorate" "--date=short"
                                   "--pretty=tformat:'%C(cyan)%d%C(reset)%C(yellow)%h%C(reset)..: %C(green)%an %C(blue)%ad%C(reset) %s'"
                                   "--abbrev-commit"))
-         (statusp (im-git--async "-c" "color.status=always" "status" "--branch" "--short"))
+         (statusp (im-git--async "status" "--porcelain=v1" "--branch" "-z"))
          (name (await namep))
          (email (await emailp))
          (hookspath (await hookspathp))
-         (commits (ansi-color-apply (await commitsp)))
+         ;; A new repository has no log yet; the rest of setup must still run.
+         (commits (ansi-color-apply (await (promise-catch commitsp (lambda (_error) "")))))
          (status (await statusp))
          (inhibit-read-only t))
     (with-current-buffer buffer
@@ -683,20 +707,20 @@ Also display `im-git-diff-switches' right-aligned."
                                             (f-join
                                              (or hookspath ".git/hooks")
                                              "prepare-commit-msg")))
-                  (tmp-commit-msg-file "/tmp/im-git-commit-msg")
                   (_ (f-exists? prepare-commit-msg-hook))
                   (_ (not initial-message)))
-        (when (f-exists? tmp-commit-msg-file)
-          (delete-file tmp-commit-msg-file))
-        (call-process
-         prepare-commit-msg-hook nil nil nil tmp-commit-msg-file)
-        (when (f-exists? tmp-commit-msg-file)
-          (insert (with-temp-buffer
-                    (insert-file-contents tmp-commit-msg-file)
-                    (goto-char (point-min))
-                    (while (re-search-forward "^#\\(.*\\)$" nil t)
-                      (replace-match "<!--\\1 -->" t))
-                    (buffer-substring-no-properties (point-min) (point-max))))))
+        (let ((tmp-commit-msg-file (make-temp-file "im-git-commit-msg-")))
+          (unwind-protect
+              (progn
+                (unless (zerop (call-process prepare-commit-msg-hook nil nil nil tmp-commit-msg-file))
+                  (user-error "prepare-commit-msg hook failed"))
+                (insert (with-temp-buffer
+                          (insert-file-contents tmp-commit-msg-file)
+                          (goto-char (point-min))
+                          (while (re-search-forward "^#\\(.*\\)$" nil t)
+                            (replace-match "<!--\\1 -->" t))
+                          (buffer-substring-no-properties (point-min) (point-max)))))
+            (delete-file tmp-commit-msg-file))))
       (when initial-message
         (insert initial-message))
       (goto-char (point-min)))
@@ -719,49 +743,74 @@ Also display `im-git-diff-switches' right-aligned."
   "r" #'im-git-commit-log-reword-at-point)
 
 ;; TODO: Predictable sort order
+(defun im-git-commit--display-file (file)
+  "Escape control characters in FILE so each status entry occupies one line."
+  (if (string-match-p "[[:cntrl:]]" file)
+      (let ((print-escape-newlines t)
+            (print-escape-control-characters t))
+        (prin1-to-string file))
+    file))
+
 (async-defun im-git-commit--update-unstaged (&optional output)
   (let* ((buffer (current-buffer))
          (status (or output (await (im-git--async
-                                   "-c" "color.status=always"
-                                   "status" "--branch" "--short")))))
+                                   "status" "--porcelain=v1" "--branch" "-z")))))
     ;; Do not suspend while editing the section: other commands may change
     ;; point or the current buffer before the status process finishes.
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (im-git-commit--change-header-contents "Status"
-          (--each-indexed (s-lines (ansi-color-apply (s-trim status)))
-            (if (= it-index 0)
-                (insert (s-chop-prefix "## " it) "\n")
-              (let* ((start (point))
-                     (overlay (progn
-                                (insert (s-prepend (concat im-git--status-filename-prefix " ") it) "\n")
-                                (make-overlay start (1- (point)) nil nil t))))
-                (overlay-put overlay 'keymap im-git-commit-status-map)
-                (overlay-put overlay 'help-echo
-                             (lambda (_window _obj _pos)
-                               (substitute-command-keys "\\[im-git-commit-stage-at-point] → Stage file, \\[im-git-commit-unstage-at-point] → Unstage file, \\[im-git-commit-delete-at-point] → Delete file, \\[im-git-commit-diff-at-point] → Diff | You can select multiple files by selecting region.")))))))))))
+          (let ((records (split-string status "\0" t)))
+            (when (string-prefix-p "## " (car records))
+              (insert (substring (pop records) 3) "\n"))
+            (while records
+              (let* ((record (pop records))
+                     (code (substring record 0 2))
+                     (file (substring record 3))
+                     ;; With -z, a rename is followed by its old name.
+                     (old (when (string-match-p "[RC]" code) (pop records)))
+                     (display-file (im-git-commit--display-file file))
+                     (start (point)))
+                (insert im-git--status-filename-prefix " "
+                        (propertize (substring code 0 1) 'face
+                                    (if (eq (aref code 0) ??) 'error 'success))
+                        (propertize (substring code 1 2) 'face 'error)
+                        " " (if old (format "%s -> %s"
+                                            (im-git-commit--display-file old)
+                                            display-file)
+                              display-file) "\n")
+                (let ((overlay (make-overlay start (1- (point)) nil nil t)))
+                  (overlay-put overlay 'im-git-file file)
+                  (overlay-put overlay 'keymap im-git-commit-status-map)
+                  (overlay-put overlay 'help-echo
+                               (lambda (_window _obj _pos)
+                                 (substitute-command-keys "\\[im-git-commit-stage-at-point] → Stage file, \\[im-git-commit-unstage-at-point] → Unstage file, \\[im-git-commit-delete-at-point] → Delete file, \\[im-git-commit-diff-at-point] → Diff | You can select multiple files by selecting region."))))))))))))
 
-(defun im-git-commit--file-at-point (&optional line)
-  (let ((line (or line (thing-at-point 'line t))))
-    (-as->
-     line %
-     (s-chop-prefix im-git--status-filename-prefix %)
-     (s-trim %)
-     (s-split " " % t)
-     (nth 1 %))))
+(defun im-git-commit--file-at-point ()
+  "Return the unquoted Git path attached to the status entry at point."
+  (or (get-char-property (line-beginning-position) 'im-git-file)
+      (user-error "Not on a file status entry")))
 
 (async-defun im-git-commit--run-command-on-file-at-point (&rest git-args)
   (let ((buffer (current-buffer))
         (line (line-number-at-pos))
         (files (if (use-region-p)
-                   (->>
-                    (buffer-substring-no-properties (region-beginning) (region-end))
-                    (s-trim)
-                    (s-lines)
-                    (-map #'im-git-commit--file-at-point))
+                   (let ((begin (region-beginning))
+                         (end (region-end)))
+                     (save-excursion
+                       (goto-char begin)
+                       (beginning-of-line)
+                       (let (selected)
+                         (while (< (point) end)
+                           (when-let* ((file (get-char-property (point) 'im-git-file)))
+                             (push file selected))
+                           (forward-line 1))
+                         (nreverse selected))))
                  (list (im-git-commit--file-at-point)))))
+    (unless files
+      (user-error "No files selected"))
     (when git-args
-      (await (apply #'im-git--async (append git-args files))))
+      (await (apply #'im-git--async (append git-args (list "--") files))))
     (await (with-current-buffer buffer (im-git-commit--update-unstaged)))
     (with-current-buffer buffer
       (deactivate-mark)
@@ -789,7 +838,7 @@ Also display `im-git-diff-switches' right-aligned."
                      (ansi-color-apply diff)))
            (diff-buffer (with-current-buffer (im-get-reset-buffer " *im-commit-diff-at-point*")
                           (erase-buffer)
-                          (insert result)
+                          (im-git--insert-diff result)
                           (im-git-diff-mode)
                           (setq im-git-dif--context 'im-git-commit)
                           (font-lock-ensure)
