@@ -10049,8 +10049,13 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
        ,@(im-contacts--build-contact-item "TEL;TYPE=$1:%s" "PHONE_$1")
        ,@(im-contacts--build-contact-item "EMAIL;TYPE=$1:%s" "EMAIL_$1")
        ,@(im-contacts--build-contact-item "ADR;TYPE=$1:;;%s;;;;" "ADDRESS_$1")
-       ,(im-contacts--build-contact-item "ORG:%s" "GROUP")
-       ,(im-contacts--build-contact-item "CATEGORIES:%s" "GROUP")
+       ,@(and-let* ((categories (thread-last
+                                  (org-get-tags)
+                                  (mapcar #'s-capitalize)
+                                  (s-join ",")))
+                    ((not (s-blank? categories))))
+           (list (format "ORG:%s\n" categories)
+                 (format "CATEGORIES:%s\n" categories)))
        ,(thread-last
           (im-contacts--build-contact-item "BDAY:%s" "SCHEDULED")
           (s-replace-regexp "BDAY:<[0-9]\\{4\\}\\(.*\\) \\(\\w+\\)>" "BDAY:1900\\1")
