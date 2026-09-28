@@ -11966,9 +11966,12 @@ contents."
                   (< (im-line-count-below-cursor) (length (s-lines str)))
                   (< (im-line-count-below-cursor) (- (window-height) 10)))
              (recenter 10))
-           (quick-peek-show str nil nil im-peek--line-count)
-           (im-unfold-if-folded (save-excursion (end-of-line) (1+ (point))))
-           (im-peek-mode +1)))))))
+           (im-unfold-if-folded
+            (save-excursion
+              (end-of-line)
+              (min (point-max) (1+ (point)))))
+           (im-peek-mode +1)
+           (quick-peek-show str nil nil im-peek--line-count)))))))
 
 (defun im-peek-open? ()
   "Return t if >=1 peek window is open."
