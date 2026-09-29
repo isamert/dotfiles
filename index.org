@@ -1149,6 +1149,11 @@ set $clip vicinae vicinae://extensions/vicinae/clipboard/history
 output * bg ~/.config/wallpaper.jpg fill
 output * render_bit_depth 10
 
+bindswitch --locked {
+  lid:on output LVDS-1 disable
+  lid:off output LVDS-1 enable
+}
+
 # * Visuals
 
 smart_borders on
@@ -1276,6 +1281,7 @@ bindsym --locked $hypr+9 exec swayosd-client --output-volume lower
 for_window [app_id="qalculate-gtk"] floating enable
 for_window [app_id="com.nextcloud.desktopclient.nextcloud"] floating enable
 for_window [app_id="emacs$" title="^emacs-popup$"] floating enable
+for_window [app_id="emacs$" title="^org-capture$"] floating enable
 
 # * Swaybar
 
