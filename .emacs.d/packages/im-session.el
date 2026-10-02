@@ -294,25 +294,25 @@ Interactively, prompt for NAME with completion over saved session names."
          (saved (cdr (assoc-string name sessions)))
          (tabs (plist-get saved :tabs))
          (selected (plist-get saved :selected)))
-    (unless saved
-      (user-error "No saved session named %S" name))
-    (unless tabs
-      (user-error "The saved tab configuration contains no tabs"))
-    (tab-bar-mode 1)
-    (tab-bar-close-other-tabs)
-    (cl-loop for tab in tabs
-             for index from 1
-             do
-             (if (= index 1)
-                 (tab-bar-rename-tab (plist-get tab :name))
-               (tab-bar-new-tab)
-               (tab-bar-rename-tab (plist-get tab :name)))
-             (im-session--restore-buffer-records (plist-get tab :buffers))
-             (window-state-put (plist-get tab :state)
-                               (frame-root-window)))
+    (if (not saved)
+        (warn "No saved session named %S" name)
+      (unless tabs
+        (user-error "The saved tab configuration contains no tabs"))
+      (tab-bar-mode 1)
+      (tab-bar-close-other-tabs)
+      (cl-loop for tab in tabs
+               for index from 1
+               do
+               (if (= index 1)
+                   (tab-bar-rename-tab (plist-get tab :name))
+                 (tab-bar-new-tab)
+                 (tab-bar-rename-tab (plist-get tab :name)))
+               (im-session--restore-buffer-records (plist-get tab :buffers))
+               (window-state-put (plist-get tab :state)
+                                 (frame-root-window)))
 
-    (tab-bar-select-tab selected)
-    (message "Restored %d tab(s)" (length tabs))))
+      (tab-bar-select-tab selected)
+      (message "Restored %d tab(s)" (length tabs)))))
 
 ;;;; Footer
 

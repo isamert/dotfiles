@@ -152,7 +152,7 @@
 ;;   :ensure `(:repo ,im-packages-path :files ("im-archive.el"))
 
 (elpaca elpaca-use-package
-        (elpaca-use-package-mode))
+  (elpaca-use-package-mode))
 (setq use-package-always-ensure t)
 
 ;; ~diminish.el~ provides a way to hide mode indicators from mode
@@ -7018,18 +7018,8 @@ If SHELL-BUFFER is nil, use the current buffer."
   (im-leader
     "er" #'whisper-run)
   :config
-  ;; Override `whisper-command' as instructed, to be able to use my
-  ;; whisper server installation on my home lab.
-  (setq whisper-install-whispercpp nil) ; Opt-out from local whisper installation
-  (defun whisper-command (input-file)
-    ;; No support for `whisper-translate',
-    ;; `whisper-show-progress-in-mode-line' and `whisper-language'.
-    `("curl"
-      ,(concat im-server "/whisper/inference")
-      "-H" ,(concat "isamert-token: " im-token)
-      "-H" "Content-Type: multipart/form-data"
-      "-F" ,(concat "file=@" (expand-file-name input-file))
-      "-F" "response_format=text")))
+  (setq whisper-use-threads 8)
+  (setq whisper-model "small"))
 
 (define-advice whisper-run (:before (&rest _) set-microphone)
   (unless whisper--ffmpeg-input-device
@@ -9362,10 +9352,6 @@ Lisp function does not specify a special indentation."
 
 (use-package dockerfile-mode
   :mode "Dockerfile\\'")
-(use-package docker-compose-mode
-  :mode "docker-compose\\'"
-  :hook
-  (docker-compose-mode . highlight-indent-guides-mode))
 
 ;; A package for  managing docker.
 
@@ -11585,32 +11571,32 @@ an indirect buffer."
           (let* ((now (current-time))
                  (meetings
                   (->> (org-map-entries
-                      (lambda ()
-                        (when-let* ((sched (org-entry-get nil "SCHEDULED"))
-                                    (_ (string-match "<\\([0-9-]+\\) [A-Za-z]+ \\([0-9:]+\\)-\\([0-9:]+\\)>" sched))
-                                    (date (match-string 1 sched))
-                                    (start (date-to-time (format "%s %s" date (match-string 2 sched))))
-                                    (end (date-to-time (format "%s %s" date (match-string 3 sched))))
-                                    (until-start (float-time (time-subtract start now))))
-                          (list :marker (point-marker)
-                                :heading (org-get-heading t t t t)
-                                :zoom (org-entry-get nil "ZOOM")
-                                :until-start until-start
-                                :in-progress (and (time-less-p start now) (time-less-p now end))
-                                :starting-soon (and (> until-start 0) (<= until-start 300))
-                                :well-past (> (float-time (time-subtract now start)) 600))))
-                      "meeting" 'agenda)
-                     (-non-nil)))
+                        (lambda ()
+                          (when-let* ((sched (org-entry-get nil "SCHEDULED"))
+                                      (_ (string-match "<\\([0-9-]+\\) [A-Za-z]+ \\([0-9:]+\\)-\\([0-9:]+\\)>" sched))
+                                      (date (match-string 1 sched))
+                                      (start (date-to-time (format "%s %s" date (match-string 2 sched))))
+                                      (end (date-to-time (format "%s %s" date (match-string 3 sched))))
+                                      (until-start (float-time (time-subtract start now))))
+                            (list :marker (point-marker)
+                                  :heading (org-get-heading t t t t)
+                                  :zoom (org-entry-get nil "ZOOM")
+                                  :until-start until-start
+                                  :in-progress (and (time-less-p start now) (time-less-p now end))
+                                  :starting-soon (and (> until-start 0) (<= until-start 300))
+                                  :well-past (> (float-time (time-subtract now start)) 600))))
+                        "meeting" 'agenda)
+                       (-non-nil)))
                  (best (->> meetings
-                          (--filter (or (plist-get it :in-progress) (plist-get it :starting-soon)))
-                          (--sort (cond
-                                   ((and (plist-get it :starting-soon)
-                                         (plist-get other :in-progress)
-                                         (plist-get other :well-past)) t)
-                                   ((and (plist-get other :starting-soon)
-                                         (plist-get it :in-progress)
-                                         (plist-get it :well-past)) nil)
-                                   (t (< (plist-get it :until-start) (plist-get other :until-start)))))))
+                            (--filter (or (plist-get it :in-progress) (plist-get it :starting-soon)))
+                            (--sort (cond
+                                     ((and (plist-get it :starting-soon)
+                                           (plist-get other :in-progress)
+                                           (plist-get other :well-past)) t)
+                                     ((and (plist-get other :starting-soon)
+                                           (plist-get it :in-progress)
+                                           (plist-get it :well-past)) nil)
+                                     (t (< (plist-get it :until-start) (plist-get other :until-start)))))))
                  (best (if (length= best 1)
                            (car best)
                          (im-completing-read

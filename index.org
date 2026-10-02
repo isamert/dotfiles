@@ -15,25 +15,25 @@ These are my dotfiles. Please see [[file:./.emacs.d/index.org]] for my Emacs con
 - You'll want to make sure some of the files should tangle with executable permission. For that:
   #+name: exacutable_hook
   #+begin_src elisp
-    (add-hook 'org-babel-post-tangle-hook 'executable-make-buffer-file-executable-if-script-p)
+  (add-hook 'org-babel-post-tangle-hook 'executable-make-buffer-file-executable-if-script-p)
   #+end_src
 
 - Also some configuration files are tangled based on a condition. Here are the convenience condition functions:
   #+name: conditions
   #+begin_src elisp
-    (defun when-darwin (file-path)
-      (if (eq system-type 'darwin)
+  (defun when-darwin (file-path)
+    (if (eq system-type 'darwin)
+      file-path "no"))
+
+  (defun when-linux (file-path)
+    (if (eq system-type 'gnu/linux)
         file-path "no"))
 
-    (defun when-linux (file-path)
-      (if (eq system-type 'gnu/linux)
-          file-path "no"))
-
-    (cl-defun when-on (&key linux darwin)
-      (pcase system-type
-        ('darwin darwin)
-        ('gnu/linux linux)
-        (_ "no")))
+  (cl-defun when-on (&key linux darwin)
+    (pcase system-type
+      ('darwin darwin)
+      ('gnu/linux linux)
+      (_ "no")))
   #+end_src
 
 - Here is the code that puts them together, this block is executed during the startup of this file. See [[Postamble]] (at the end of this file) where this code-block is called for execution.
@@ -89,24 +89,15 @@ And this is for getting values of elisp variables:
 Just activate readline.
 
 #+begin_src scheme :tangle ~/.guile
-  (use-modules (ice-9 readline))
-  (activate-readline)
+(use-modules (ice-9 readline))
+(activate-readline)
 #+end_src
 
 ** Javascript
 Install global packages to user-local.
 
 #+begin_src bash :tangle ~/.npmrc
-  prefix=${HOME}/.npm-packages
-#+end_src
-
-** Nix
-Well, nix is mainly a package manager but it also is a programming language.
-
-The following enables ~nix search~ command.
-
-#+begin_src conf :tangle ~/.config/nix/nix.conf
-  experimental-features = nix-command flakes
+prefix=${HOME}/.npm-packages
 #+end_src
 * macOS
 ** General configuration
@@ -673,7 +664,7 @@ EDITOR="jaro --method=edit"
 PATH="«path-variable»"
 #+end_src
 
-KDE fucks-up the PATH variable (and only the PATH variable) while booting up. This fixes that:
+KDE fucks-up the PATH variable (and only the PATH variable) while booting up. This fixes that. I'm not using KDE right now but keeping it here as a reference.
 
 #+begin_src sh :tangle (when-linux "~/.config/plasma-workspace/env/path.sh")
 export PATH=«path-variable»
@@ -697,275 +688,13 @@ Following snippet enables some configurations for pacman:
 - TotalDownload :: Adds ETA information for total progress etc.
 
 #+begin_src conf :tangle (when-linux "/sudo::/etc/pacman.conf")
-  «sh("cat /etc/pacman.conf | sed -E 's/^#(Parallel|Color|VerbosePkgLists|TotalDownload)/\\1/'")»
+«sh("cat /etc/pacman.conf | sed -E 's/^#(Parallel|Color|VerbosePkgLists|TotalDownload)/\\1/'")»
 #+end_src
 
 ** Fedora (dnf) configuration
 #+begin_src conf :tangle (when-linux "/sudo::/etc/dnf/dnf.conf")
 [main]
 defaultyes=True
-#+end_src
-
-** Controlling monitor brightness
-
-I use the following for controlling brightness: [[https://gitlab.com/dpeukert/light][dpeukert/light]].
-
-You have to add yourself to ~video~ group so that you can call ~light~ without ~sudo~:
-
-#+begin_src bash
-sudo usermod -aG video "$USER"
-#+end_src
-
-Also here is a really small vibed Vicinae extension for controlling backlight, using "light":
-
-#+begin_src js :tangle  ~/.local/share/vicinae/extensions/local.light-backlight/package.json
-{
-  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
-  "name": "light-backlight",
-  "title": "Backlight",
-  "description": "Keyboard-friendly screen brightness controls using light.",
-  "categories": ["System"],
-  "license": "MIT",
-  "author": "isamert",
-  "icon": "assets/icon.svg",
-  "commands": [
-    {
-      "name": "backlight",
-      "title": "Control Backlight",
-      "subtitle": "Adjust screen brightness with light",
-      "description": "Adjust screen brightness using the light command.",
-      "mode": "view",
-      "keywords": ["brightness", "backlight", "light", "monitor", "display", "screen"]
-    }
-  ],
-  "preferences": []
-}
-#+end_src
-
-#+begin_src js :tangle ~/.local/share/vicinae/extensions/local.light-backlight/backlight.js
-"use strict";
-
-const React = require("react");
-const { execFile } = require("node:child_process");
-const { promisify } = require("node:util");
-const {
-  Action,
-  ActionPanel,
-  Icon,
-  List,
-  showToast,
-  Toast,
-} = require("@vicinae/api");
-
-const runLight = promisify(execFile);
-const PRESETS = [10, 25, 40, 60, 80, 100];
-
-function clamp(value) {
-  return Math.max(1, Math.min(100, Math.round(value)));
-}
-
-async function getBrightness() {
-  const { stdout } = await runLight("light", ["-G"], { timeout: 2_000 });
-  const value = Number.parseFloat(stdout);
-  if (!Number.isFinite(value)) {
-    throw new Error(`Unexpected output from light: ${stdout.trim() || "(empty)"}`);
-  }
-  return clamp(value);
-}
-
-async function writeBrightness(value) {
-  const target = clamp(value);
-  await runLight("light", ["-S", String(target)], { timeout: 2_000 });
-  return target;
-}
-
-function brightnessIcon(value) {
-  if (value <= 25) return Icon.Sun;
-  if (value <= 60) return Icon.Sun;
-  return Icon.Sun;
-}
-
-function parseBrightnessInput(input) {
-  const match = input.trim().match(/^(\d+(?:\.\d+)?)\s*%?$/);
-  if (!match) return undefined;
-
-  const value = Number.parseFloat(match[1]);
-  return value >= 1 && value <= 100 ? Math.round(value) : undefined;
-}
-
-function ActionItem({ title, subtitle, icon, onAction, keywords }) {
-  return React.createElement(List.Item, {
-    title,
-    subtitle,
-    icon,
-    keywords,
-    actions: React.createElement(
-      ActionPanel,
-      null,
-      React.createElement(Action, { title, icon, onAction }),
-    ),
-  });
-}
-
-function Backlight() {
-  const [brightness, setBrightness] = React.useState(undefined);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState(undefined);
-  const [searchText, setSearchText] = React.useState("");
-  const typedBrightness = parseBrightnessInput(searchText);
-
-  const refresh = React.useCallback(async () => {
-    setIsLoading(true);
-    setError(undefined);
-    try {
-      setBrightness(await getBrightness());
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  const change = React.useCallback(async (target) => {
-    try {
-      // light -S does not print a value. Keep the requested target for immediate
-      // feedback, then refresh from light so the display reflects the real value.
-      const applied = await writeBrightness(target);
-      setBrightness(applied);
-      await showToast({
-        style: Toast.Style.Success,
-        title: "Brightness updated",
-        message: `${applied}%`,
-      });
-      await refresh();
-    } catch (cause) {
-      const message = cause instanceof Error ? cause.message : String(cause);
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Could not change brightness",
-        message,
-      });
-      await refresh();
-    }
-  }, [refresh]);
-
-  const changeBy = React.useCallback(async (amount) => {
-    try {
-      const current = await getBrightness();
-      await change(current + amount);
-    } catch (cause) {
-      const message = cause instanceof Error ? cause.message : String(cause);
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Could not read brightness",
-        message,
-      });
-      await refresh();
-    }
-  }, [change, refresh]);
-
-  const actions = React.createElement(
-    ActionPanel,
-    null,
-    React.createElement(Action, {
-      title: "Refresh",
-      icon: Icon.ArrowClockwise,
-      shortcut: { modifiers: ["cmd"], key: "r" },
-      onAction: refresh,
-    }),
-  );
-
-  if (error) {
-    return React.createElement(
-      List,
-      { actions, navigationTitle: "Backlight" },
-      React.createElement(List.EmptyView, {
-        icon: Icon.Warning,
-        title: "Couldn't talk to light",
-        description: `${error}\n\nEnsure light is installed and your user can change the backlight without sudo.`,
-      }),
-    );
-  }
-
-  return React.createElement(
-    List,
-    {
-      isLoading,
-      actions,
-      navigationTitle: "Backlight",
-      searchBarPlaceholder: "Type 1–100 to set it, or use ↑ ↓ and Enter…",
-      onSearchTextChange: setSearchText,
-    },
-    typedBrightness !== undefined && React.createElement(
-      List.Section,
-      { title: "Typed brightness" },
-      React.createElement(ActionItem, {
-        title: `Set brightness to ${typedBrightness}%`,
-        subtitle: "Press Enter to apply",
-        icon: brightnessIcon(typedBrightness),
-        keywords: [String(typedBrightness), `${typedBrightness}%`],
-        onAction: () => change(typedBrightness),
-      }),
-    ),
-    React.createElement(
-      List.Section,
-      { title: "Current brightness", subtitle: "↑ ↓ to select · Enter to apply" },
-      React.createElement(List.Item, {
-        title: brightness === undefined ? "Reading brightness…" : `${brightness}%`,
-        subtitle: "Screen backlight",
-        icon: brightnessIcon(brightness || 50),
-        accessories: brightness === undefined ? [] : [{ text: `${brightness}%` }],
-        actions,
-      }),
-    ),
-    React.createElement(
-      List.Section,
-      { title: "Fine adjustment" },
-      React.createElement(ActionItem, {
-        title: "Increase by 10%",
-        subtitle: "Brighter",
-        icon: Icon.ArrowUp,
-        keywords: ["up", "brighter", "increase", "+10"],
-        onAction: () => changeBy(10),
-      }),
-      React.createElement(ActionItem, {
-        title: "Decrease by 10%",
-        subtitle: "Dimmer",
-        icon: Icon.ArrowDown,
-        keywords: ["down", "dimmer", "decrease", "-10"],
-        onAction: () => changeBy(-10),
-      }),
-    ),
-    React.createElement(
-      List.Section,
-      { title: "Presets" },
-      ...PRESETS.map((preset) => React.createElement(ActionItem, {
-        key: preset,
-        title: `Set brightness to ${preset}%`,
-        subtitle: preset <= 25 ? "Night-friendly" : preset >= 80 ? "Full brightness" : "Comfortable",
-        icon: brightnessIcon(preset),
-        keywords: [String(preset), `${preset}%`],
-        onAction: () => change(preset),
-      })),
-    ),
-  );
-}
-
-module.exports = { default: Backlight };
-#+end_src
-
-#+begin_src svg :tangle ~/.local/share/vicinae/extensions/local.light-backlight/assets/icon.svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#f59e0b"/>
-  <circle cx="32" cy="32" r="12" fill="#fff7d6"/>
-  <g stroke="#fff7d6" stroke-width="4" stroke-linecap="round">
-    <path d="M32 8v7M32 49v7M8 32h7M49 32h7M15 15l5 5M44 44l5 5M49 15l-5 5M20 44l-5 5"/>
-  </g>
-</svg>
 #+end_src
 
 ** External monitor brightness
@@ -1053,7 +782,7 @@ fi
 ** foot terminal emulator
 #+begin_src conf :tangle ~/.config/foot/foot.ini
 shell = tmux
-font = CaskaydiaCove Nerd Font:pixelsize=18
+font = CaskaydiaCove Mono Nerd Font:pixelsize=18
 resize-by-cells = no
 
 [csd]
@@ -1140,15 +869,14 @@ set $up k
 set $right l
 
 set $term emacsclient -c -F '((tab-bar-lines . 0) (name . "emacs-temp"))' --eval '(ghostel "new")' || footclient
-set $menu vicinae open
 set $calc qalculate-gtk
-set $clip vicinae vicinae://extensions/vicinae/clipboard/history
+set $noctalia noctalia msg
 
 # * Monitors
 
-output * bg ~/.config/wallpaper.jpg fill
 output * render_bit_depth 10
 
+# FIXME: Use correct output names
 bindswitch --locked {
   lid:on output LVDS-1 disable
   lid:off output LVDS-1 enable
@@ -1166,21 +894,28 @@ floating_modifier $mod normal
 
 # * Keybindings - Apps
 
-bindsym $hypr+a exec $menu
 bindsym $hypr+w exec $calc
-bindsym $hypr+s exec grimshot copy area
 bindsym $mod+Return exec $term
 bindsym $hypr+Return exec $term
-bindsym $hypr+c exec $clip
-bindsym $mod+b bar mode toggle
 
 bindsym $hypr+i exec emacsclient --eval "(im-globally (im-select-any-snippet))"
 bindsym $hypr+o exec emacsclient --eval "(im-globally (im-people))"
 bindsym $hypr+l exec swaylock -i ~/.config/wallpaper.jpg --scaling fill
 
+# * Keybindings - Noctalia
+
+bindsym $hypr+s exec $noctalia screenshot-region
+bindsym $hypr+c exec $noctalia panel-toggle clipboard
+bindsym $hypr+a exec $noctalia panel-toggle launcher
+bindsym $hypr+p exec $noctalia media toggle
+bindsym $hypr+bracketright exec $noctalia media next
+bindsym $hypr+bracketleft exec $noctalia media previous
+bindsym $mod+s exec $noctalia panel-toggle control-center
+bindsym $mod+comma exec $noctalia settings-toggle
+
 # * Keybindings - Notifications
 
-bindsym $hypr+y exec makoctl dismiss --all && emacsclient --eval '(im-notif-clear-all)'
+bindsym $hypr+y exec $noctalia notification-clear-active
 
 # * Keybindings - Window management
 
@@ -1271,41 +1006,27 @@ mode "resize" {
 
 bindsym $mod+r mode "resize"
 
-# * Keybindings - Volume
+# * Keybindings - Volume/Brightness etc.
 
-bindsym --locked $hypr+0 exec swayosd-client --output-volume raise
-bindsym --locked $hypr+9 exec swayosd-client --output-volume lower
+# My media keys
+bindsym --locked $hypr+0 exec exec $noctalia volume-up
+bindsym --locked $hypr+9 exec $noctalia volume-down
+
+# Media keys
+bindsym --locked XF86AudioRaiseVolume exec $noctalia volume-up
+bindsym --locked XF86AudioLowerVolume exec $noctalia volume-down
+bindsym --locked XF86AudioMute exec $noctalia volume-mute
+bindsym --locked XF86MonBrightnessUp exec $noctalia brightness-up
+bindsym --locked XF86MonBrightnessDown exec $noctalia brightness-down
+bindsym --locked XF86AudioMicMute exec $noctalia mic-mute
 
 # * Window configurations
 
 for_window [app_id="qalculate-gtk"] floating enable
+for_window [app_id="swayimg"] floating disable
 for_window [app_id="com.nextcloud.desktopclient.nextcloud"] floating enable
 for_window [app_id="emacs$" title="^emacs-popup$"] floating enable
 for_window [app_id="emacs$" title="^org-capture$"] floating enable
-
-# * Swaybar
-
-bar {
-    mode hide
-    position top
-    status_command ~/.bin/usages
-    pango_markup enabled
-
-    font "JetBrainsMono Nerd Font"
-    height 26
-    separator_symbol ""
-
-    colors {
-        statusline #b8b8b8
-        background #1e1e1eff
-        separator  #1e1e1eff
-
-        focused_workspace  #2a2a2a #2a2a2a #d0d0d0
-        active_workspace   #232323 #232323 #b8b8b8
-        inactive_workspace #1e1e1e #1e1e1e #5c5c5c
-        urgent_workspace   #2a2a2a #2a2a2a #cc6666
-    }
-}
 
 # * Launch
 
@@ -1316,148 +1037,11 @@ bar {
 # startup programs are handled.
 include /etc/sway/config.d/*
 exec systemctl --user start sway-session.target
-
-# exec vicinae server
-# exec foot --server
-# exec foot --server
-# exec xremap ~/.config/xremap.yml
-#+end_src
-*** status command for the bar
-#+begin_src bash :tangle ~/.bin/usages
-#!/bin/bash
-
-c_icon="#7c7c7c"
-c_text="#b8b8b8"
-c_sep="#4a4a4a"
-c_time="#d0d0d0"
-
-sep="<span color=\"$c_sep\">  ·  </span>"
-
-field() { # $1=icon $2=value
-    printf '<span color="%s">%s</span> <span color="%s">%s</span>' \
-        "$c_icon" " $1" "$c_text" "$2"
-}
-
-# CPU usage requires two /proc/stat samples.
-read_cpu() {
-    local a b c d rest x
-    read -r _ a b c d rest < /proc/stat
-    idle=$d
-    total=$((a + b + c + d))
-
-    for x in $rest; do
-        total=$((total + x))
-    done
-}
-
-read_cpu
-prev_idle=$idle
-prev_total=$total
-
-while :; do
-    # --- CPU % ---
-    read_cpu
-    di=$((idle - prev_idle))
-    dt=$((total - prev_total))
-    cpu=0
-    (( dt > 0 )) && cpu=$((100 * (dt - di) / dt))
-    prev_idle=$idle
-    prev_total=$total
-
-    # --- Memory % ---
-    memtotal=0
-    memavail=0
-
-    while read -r key val _; do
-        case $key in
-            MemTotal:)     memtotal=$val ;;
-            MemAvailable:) memavail=$val ;;
-        esac
-
-        [[ $memtotal && $memavail && $key == MemAvailable: ]] && break
-    done < /proc/meminfo
-
-    mem=0
-    (( memtotal > 0 )) && mem=$((100 * (memtotal - memavail) / memtotal))
-
-    # --- Wi-Fi signal ---
-    # Omitted when no Wi-Fi AP is connected.
-    wifi=""
-    wifi_icon=""
-
-    while IFS=: read -r in_use signal _ssid; do
-        [[ $in_use == "*" ]] || continue
-
-        # nmcli reports signal as a percentage from 0 to 100.
-        if (( signal >= 75 )); then
-            wifi_icon=$'\uf1eb'  # Wi-Fi
-        elif (( signal >= 50 )); then
-            wifi_icon=$'\uf1eb'
-        elif (( signal >= 25 )); then
-            wifi_icon=$'\uf1eb'
-        else
-            wifi_icon=$'\uf1eb'
-        fi
-
-        wifi="${signal}%"
-        break
-    done < <(
-        LC_ALL=C nmcli -t --escape no \
-                 -f IN-USE,SIGNAL device wifi 2>/dev/null
-    )
-
-    # --- Disk % ---
-    # statvfs is not available as a Bash builtin.
-    disk=$(df -P / | awk 'NR == 2 { sub(/%/, "", $5); print $5 }')
-
-    # --- Battery % ---
-    bat=""
-    for bat_path in /sys/class/power_supply/BAT[0-1]; do
-        if [[ -f $bat_path/capacity ]]; then
-            read -r bat < "$bat_path/capacity"
-            break
-        fi
-    done
-
-    # --- Clock ---
-    # Bash printf time formatting avoids spawning date.
-    printf -v clock '%(%a %d %b   %H:%M)T' -1
-
-    # --- Build status line ---
-    out="$(field $'\uf4bc' "${cpu}%")$sep"
-    out+="$(field $'\uefc5' "${mem}%")$sep"
-    out+="$(field $'\uf0a0' "${disk}%")$sep"
-    [[ -n $wifi ]] && out+="$(field "$wifi_icon" "$wifi")$sep"
-
-    if [[ -n $bat ]]; then
-        if (( bat >= 80 )); then
-            bicon=$'\uf240'
-        elif (( bat >= 60 )); then
-            bicon=$'\uf241'
-        elif (( bat >= 40 )); then
-            bicon=$'\uf242'
-        elif (( bat >= 20 )); then
-            bicon=$'\uf243'
-        else
-            bicon=$'\uf244'
-        fi
-
-        out+="$(field "$bicon" "${bat}%")$sep"
-    fi
-
-    out+="<span color=\"$c_time\">$clock</span>"
-
-    printf '%s\n' "$out"
-    sleep 5
-done
 #+end_src
 *** Startup programs
 #+begin_src sh
 systemctl --user add-wants sway-session.target xremap.service
-systemctl --user add-wants sway-session.target vicinae.service
-systemctl --user add-wants sway-session.target mako.service
 systemctl --user add-wants sway-session.target foot-server.service
-systemctl --user add-wants sway-session.target swayosd.service
 #+end_src
 ** Niri
 #+begin_src kdl-ts :tangle ~/.config/niri/config.kdl
@@ -1876,11 +1460,6 @@ systemctl --user add-wants niri.service xremap.service
 systemctl --user add-wants niri.service vicinae.service
 #+end_src
 
-** dunst
-#+begin_src conf :tangle (when-linux "~/.config/dunst/dunstrc")
-[global]
-follow = "keyboard"
-#+end_src
 ** wacom
 #+begin_src bash :tangle ~/.bin/wacom.sh
 #!/bin/bash
@@ -1940,97 +1519,90 @@ shift
 $SUBCMD "$@"
 #+end_src
 ** swayimg
-#+begin_src conf :tangle ~/.config/swayimg/config
-[list]
-# Default order (none/alpha/numeric/mtime/size/random)
-order = mtime
-reverse = yes
-recursive = no
-# Add files from the same directory as the first file (yes/no)
-all = yes
+#+begin_src conf :tangle ~/.config/swayimg/init.lua
+-- * General settings
+swayimg.imagelist.order = "mtime"
+swayimg.imagelist.reverse = true
+swayimg.imagelist.recursive = false
+swayimg.imagelist.adjacent = true
+swayimg.overlay = false
+swayimg.text.visible = false
 
-[info]
-# Don't show on startup, toggle with i
-show = no
+-- Helper functions
+local function copy_path()
+    local img = swayimg.viewer.get_image() or swayimg.gallery.get_image()
+    if img then
+        os.execute('wl-copy "' .. img.path .. '"')
+        print("Path copied: " .. img.path)
+    end
+end
 
-[keys.viewer]
-F1 = help
-g = first_file
-Shift+g = last_file
-Shift+h = prev_file
-Shift+l = next_file
-Space = next_file
-s = mode slideshow
-n = animation
-f = fullscreen
-Return = mode gallery
-h = step_left 10
-l = step_right 10
-k = step_up 10
-j = step_down 10
-Equal = zoom +10
-Plus = zoom +10
-Minus = zoom -10
-w = zoom width
-Shift+w = zoom height
-z = zoom fit
-Shift+z = zoom fill
-0 = zoom real
-9 = zoom optimal
+local function remove_file()
+    local img = swayimg.viewer.get_image() or swayimg.gallery.get_image()
+    if img then
+        os.remove(img.path)
+        print("File removed: " .. img.path)
+        swayimg.viewer.open("next")
+    end
+end
 
-bracketleft = rotate_left
-bracketright = rotate_right
-backslash = flip_vertical
-BackSpace = flip_horizontal
+-- * Viewer Keybindings
 
-a = antialiasing
-r = reload
-i = info
-Shift+Delete = exec rm -f '%' && echo "File removed: %"; skip_file
-Escape = exit
-q = exit
-c = exec wl-copy "%" && echo "Path copied: %"
-y = exec wl-copy "%" && echo "Path copied: %"
+swayimg.viewer.bind_reset()
+swayimg.viewer.on_key("g", function() swayimg.viewer.open("first") end)
+swayimg.viewer.on_key("Shift+G", function() swayimg.viewer.open("last") end)
+swayimg.viewer.on_key("Shift+H", function() swayimg.viewer.open("prev") end)
+swayimg.viewer.on_key("Shift+L", function() swayimg.viewer.open("next") end)
+swayimg.viewer.on_key("Space", function() swayimg.viewer.open("next") end)
+swayimg.viewer.on_key("s", function() swayimg.mode = "slideshow" end)
+swayimg.viewer.on_key("n", function() swayimg.viewer.animation = not swayimg.viewer.animation end)
+swayimg.viewer.on_key("f", function() swayimg.fullscreen = not swayimg.fullscreen end)
+swayimg.viewer.on_key("Return", function() swayimg.mode = "gallery" end)
+-- Adjusted movement logic to be more intuitive
+swayimg.viewer.on_key("h", function() swayimg.viewer.set_abs_position(swayimg.viewer.get_position().x + 30, swayimg.viewer.get_position().y) end)
+swayimg.viewer.on_key("l", function() swayimg.viewer.set_abs_position(swayimg.viewer.get_position().x - 30, swayimg.viewer.get_position().y) end)
+swayimg.viewer.on_key("k", function() swayimg.viewer.set_abs_position(swayimg.viewer.get_position().x, swayimg.viewer.get_position().y + 30) end)
+swayimg.viewer.on_key("j", function() swayimg.viewer.set_abs_position(swayimg.viewer.get_position().x, swayimg.viewer.get_position().y - 30) end)
+swayimg.viewer.on_key({"Equal", "Plus"}, function() swayimg.viewer.set_abs_scale(swayimg.viewer.scale + 0.1) end)
+swayimg.viewer.on_key("Minus", function() swayimg.viewer.set_abs_scale(swayimg.viewer.scale - 0.1) end)
+swayimg.viewer.on_key("w", function() swayimg.viewer.set_fix_scale("width") end)
+swayimg.viewer.on_key("Shift+W", function() swayimg.viewer.set_fix_scale("height") end)
+swayimg.viewer.on_key("z", function() swayimg.viewer.set_fix_scale("fit") end)
+swayimg.viewer.on_key("Shift+Z", function() swayimg.viewer.set_fix_scale("fill") end)
+swayimg.viewer.on_key("0", function() swayimg.viewer.set_fix_scale("real") end)
+swayimg.viewer.on_key("9", function() swayimg.viewer.set_fix_scale("optimal") end)
+swayimg.viewer.on_key("bracketleft", function() swayimg.viewer.rotate(270) end)
+swayimg.viewer.on_key("bracketright", function() swayimg.viewer.rotate(90) end)
+swayimg.viewer.on_key("backslash", function() swayimg.viewer.flip_vertical() end)
+swayimg.viewer.on_key("BackSpace", function() swayimg.viewer.flip_horizontal() end)
+swayimg.viewer.on_key("a", function() swayimg.antialiasing = not swayimg.antialiasing end)
+swayimg.viewer.on_key("r", function() swayimg.viewer.reload() end)
+swayimg.viewer.on_key("i", function() swayimg.text.visible = not swayimg.text.visible end)
+swayimg.viewer.on_key("Shift+Delete", remove_file)
+swayimg.viewer.on_key({"Escape", "q"}, function() swayimg.exit() end)
+swayimg.viewer.on_key({"c", "y"}, copy_path)
 
-[keys.slideshow]
-F1 = help
-g = first_file
-Shift+g = last_file
-Shift+h = prev_file
-Shift+l = next_file
-Space = pause
-i = info
-f = fullscreen
-Return = mode
-Escape = exit
-q = exit
+-- * Gallery Keybindings
 
-[keys.gallery]
-F1 = help
-g = first_file
-Shift+g = last_file
-h = step_left
-l = step_right
-k = step_up
-j = step_down
-# Prior = page_up
-# Next = page_down
-s = mode slideshow
-f = fullscreen
-Return = mode viewer
-a = antialiasing
-r = reload
-i = info
-Equal = thumb +20
-Plus = thumb +20
-Minus = thumb -20
-Shift+Delete = exec rm -f '%' && echo "File removed: %"; skip_file
-Escape = exit
-q = exit
-c = exec wl-copy "%" && echo "Path copied: %"
-y = exec wl-copy "%" && echo "Path copied: %"
+swayimg.gallery.bind_reset()
+swayimg.gallery.on_key("h", function() swayimg.gallery.select("left") end)
+swayimg.gallery.on_key("l", function() swayimg.gallery.select("right") end)
+swayimg.gallery.on_key("k", function() swayimg.gallery.select("up") end)
+swayimg.gallery.on_key("j", function() swayimg.gallery.select("down") end)
+swayimg.gallery.on_key("g", function() swayimg.gallery.select("first") end)
+swayimg.gallery.on_key("Shift+G", function() swayimg.gallery.select("last") end)
+swayimg.gallery.on_key("s", function() swayimg.mode = "slideshow" end)
+swayimg.gallery.on_key("f", function() swayimg.fullscreen = not swayimg.fullscreen end)
+swayimg.gallery.on_key("Return", function() swayimg.mode = "viewer" end)
+swayimg.gallery.on_key("i", function() swayimg.text.visible = not swayimg.text.visible end)
+swayimg.gallery.on_key({"Equal", "Plus"}, function() swayimg.gallery.thumb_size = swayimg.gallery.thumb_size + 20 end)
+swayimg.gallery.on_key("Minus", function() swayimg.gallery.thumb_size = swayimg.gallery.thumb_size - 20 end)
+swayimg.gallery.on_key("Shift+Delete", remove_file)
+swayimg.gallery.on_key({"Escape", "q"}, function() swayimg.exit() end)
+swayimg.gallery.on_key({"c", "y"}, copy_path)
 #+end_src
 * Mail
+I use Emacs for my mail stuff, see my init.el's notmuch configuration.
 ** Proton/Hydroixde bridge
 - Install hydroxide.
 - hydroxide auth <username>
@@ -2065,7 +1637,11 @@ if status is-interactive
         commandline --replace $(history --null | fzf --read0 --reverse --height 30 --preview "echo {} | fish_indent --ansi")
     end
 
+    # C-r → fuzzy history search
     bind \cr fzf_fish_history
+    # Emacs-like history bindings (Alt+{n,p})
+    bind \ep history-token-search-backward
+    bind \en history-token-search-forward
 end
 #+end_src
 
@@ -2192,12 +1768,6 @@ function fgp --description 'Pick a background job and bring to foreground'
     set -l jid (echo $job | cut -f2)
     fg %$jid
 end
-#+end_src
-
-emacs-eat integration:
-
-#+begin_src fish :tangle ~/.config/fish/conf.d/eat.fish
-test -n "$EAT_SHELL_INTEGRATION_DIR" && source "$EAT_SHELL_INTEGRATION_DIR/fish"
 #+end_src
 
 ** Starship
@@ -2739,10 +2309,6 @@ y run "/bin/sh" "-c" "printf ${filename} | xcopy"; show-text "Filename copied: $
 ! add chapter -1 # skip to previous chapter
 @ add chapter 1 # next
 
-# Download subtitle
-T run     "mediastuff" "mpv-subdl" "${path}" "eng" # english subtitle
-Alt+t run "mediastuff" "mpv-subdl" "${path}" "tur" # turkish subtitle
-
 l seek 5
 h seek -5
 j seek -60
@@ -2998,9 +2564,8 @@ vnoremap Ç >
 *** userChrome.css
 - I use [[https://github.com/mbnuqw/sidebery][Sidebery]] so I hide the tab bar and siderbar heading.
 - I also decrease the width of "flexible space" so that it becomes something useful.
-- about:config → ~sidebar.revamp => false~ to make the following work.
 
-#+begin_src css :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default-release*"))) "/chrome/userChrome.css")
+#+begin_src css :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.config/mozilla/firefox/*.default-release*"))) "/chrome/userChrome.css")
 #TabsToolbar {
     visibility: collapse;
 }
@@ -3017,132 +2582,135 @@ vnoremap Ç >
 
 Also need to enable following config to make userChrome.css work:
 
-#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default-release*"))) "/user.js")
+#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.config/mozilla/firefox/*.default-release*"))) "/user.js")
+// Enable stylesheet support:
 user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+// For CSS to properly work:
+user_pref("sidebar.revamp", false);
 #+end_src
 
 *** Other configs
 
-#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.mozilla/firefox/*.default-release*"))) "/user.js")
-  // Disable menu popping up when holding alt.
-  // This kind of breaks my global xremap remappings on Firefox.
-  user_pref("ui.key.menuAccessKeyFocuses", false);
+#+begin_src js :tangle (concat (car (file-expand-wildcards (when-on :darwin "~/Library/Application Support/Firefox/Profiles/*.default*" :linux "~/.config/mozilla/firefox/*.default-release*"))) "/user.js")
+// Disable menu popping up when holding alt.
+// This kind of breaks my global xremap remappings on Firefox.
+user_pref("ui.key.menuAccessKeyFocuses", false);
 
-  user_pref("browser.toolbars.bookmarks.visibility", "never");
-  user_pref("browser.fullscreen.exit_on_escape", false)
+user_pref("browser.toolbars.bookmarks.visibility", "never");
+user_pref("browser.fullscreen.exit_on_escape", false)
 
-  // Don't show password suggestions from other subdomains
-  user_pref("signon.includeOtherSubdomainsInLookup", false);
+// Don't show password suggestions from other subdomains
+user_pref("signon.includeOtherSubdomainsInLookup", false);
 
-  // Enable syncing of UI customizations
-  user_pref("services.sync.prefs.sync.browser.uiCustomization.state", true);
+// Enable syncing of UI customizations
+user_pref("services.sync.prefs.sync.browser.uiCustomization.state", true);
 
-  // Rest is generated by https://ffprofile.com
-  user_pref("app.normandy.api_url", "");
-  user_pref("app.normandy.enabled", false);
-  user_pref("app.shield.optoutstudies.enabled", false);
-  user_pref("app.update.auto", false);
-  user_pref("beacon.enabled", false);
-  user_pref("breakpad.reportURL", "");
-  user_pref("browser.aboutConfig.showWarning", false);
-  user_pref("browser.crashReports.unsubmittedCheck.autoSubmit", false);
-  user_pref("browser.crashReports.unsubmittedCheck.autoSubmit2", false);
-  user_pref("browser.crashReports.unsubmittedCheck.enabled", false);
-  user_pref("browser.disableResetPrompt", true);
-  user_pref("browser.newtab.preload", false);
-  user_pref("browser.newtabpage.activity-stream.section.highlights.includePocket", false);
-  user_pref("browser.newtabpage.enhanced", false);
-  user_pref("browser.newtabpage.introShown", true);
-  user_pref("browser.safebrowsing.appRepURL", "");
-  user_pref("browser.safebrowsing.blockedURIs.enabled", false);
-  user_pref("browser.safebrowsing.downloads.enabled", false);
-  user_pref("browser.safebrowsing.downloads.remote.enabled", false);
-  user_pref("browser.safebrowsing.downloads.remote.url", "");
-  user_pref("browser.safebrowsing.enabled", false);
-  user_pref("browser.safebrowsing.malware.enabled", false);
-  user_pref("browser.safebrowsing.phishing.enabled", false);
-  user_pref("browser.search.suggest.enabled", false);
-  user_pref("browser.selfsupport.url", "");
-  user_pref("browser.send_pings", false);
-  user_pref("browser.sessionstore.privacy_level", 0);
-  user_pref("browser.shell.checkDefaultBrowser", false);
-  user_pref("browser.startup.homepage_override.mstone", "ignore");
-  user_pref("browser.tabs.crashReporting.sendReport", false);
-  user_pref("browser.urlbar.groupLabels.enabled", false);
-  user_pref("browser.urlbar.quicksuggest.enabled", false);
-  user_pref("browser.urlbar.speculativeConnect.enabled", false);
-  user_pref("browser.urlbar.trimURLs", false);
-  user_pref("datareporting.healthreport.service.enabled", false);
-  user_pref("datareporting.healthreport.uploadEnabled", false);
-  user_pref("datareporting.policy.dataSubmissionEnabled", false);
-  user_pref("device.sensors.ambientLight.enabled", false);
-  user_pref("device.sensors.enabled", false);
-  user_pref("device.sensors.motion.enabled", false);
-  user_pref("device.sensors.orientation.enabled", false);
-  user_pref("device.sensors.proximity.enabled", false);
-  user_pref("dom.battery.enabled", false);
-  // This breaks pasting images
-  // user_pref("dom.event.clipboardevents.enabled", false);
-  user_pref("experiments.activeExperiment", false);
-  user_pref("experiments.enabled", false);
-  user_pref("experiments.manifest.uri", "");
-  user_pref("experiments.supported", false);
-  user_pref("extensions.CanvasBlocker@kkapsner.de.whiteList", "");
-  user_pref("extensions.ClearURLs@kevinr.whiteList", "");
-  user_pref("extensions.TemporaryContainers@stoically.whiteList", "");
-  user_pref("extensions.getAddons.cache.enabled", false);
-  user_pref("extensions.getAddons.showPane", false);
-  user_pref("extensions.greasemonkey.stats.optedin", false);
-  user_pref("extensions.greasemonkey.stats.url", "");
-  user_pref("extensions.pocket.enabled", false);
-  user_pref("extensions.shield-recipe-client.api_url", "");
-  user_pref("extensions.shield-recipe-client.enabled", false);
-  user_pref("extensions.webservice.discoverURL", "");
-  user_pref("media.autoplay.default", 0);
-  user_pref("media.autoplay.enabled", true);
-  user_pref("media.eme.enabled", false);
-  user_pref("media.gmp-widevinecdm.enabled", false);
-  user_pref("media.navigator.enabled", false);
-  user_pref("media.video_stats.enabled", false);
-  user_pref("network.allow-experiments", false);
-  user_pref("network.captive-portal-service.enabled", false);
-  user_pref("network.cookie.cookieBehavior", 1);
-  user_pref("network.dns.disablePrefetch", true);
-  user_pref("network.dns.disablePrefetchFromHTTPS", true);
-  user_pref("network.http.referer.spoofSource", true);
-  user_pref("network.http.speculative-parallel-limit", 0);
-  user_pref("network.predictor.enable-prefetch", false);
-  user_pref("network.predictor.enabled", false);
-  user_pref("network.prefetch-next", false);
-  user_pref("network.trr.mode", 5);
-  user_pref("privacy.donottrackheader.enabled", true);
-  user_pref("privacy.donottrackheader.value", 1);
-  user_pref("privacy.query_stripping", true);
-  user_pref("privacy.trackingprotection.cryptomining.enabled", true);
-  user_pref("privacy.trackingprotection.enabled", true);
-  user_pref("privacy.trackingprotection.fingerprinting.enabled", true);
-  user_pref("privacy.trackingprotection.pbmode.enabled", true);
-  user_pref("privacy.usercontext.about_newtab_segregation.enabled", true);
-  user_pref("security.ssl.disable_session_identifiers", true);
-  user_pref("services.sync.prefs.sync.browser.newtabpage.activity-stream.showSponsoredTopSite", false);
-  user_pref("signon.autofillForms", false);
-  user_pref("toolkit.telemetry.archive.enabled", false);
-  user_pref("toolkit.telemetry.bhrPing.enabled", false);
-  user_pref("toolkit.telemetry.cachedClientID", "");
-  user_pref("toolkit.telemetry.enabled", false);
-  user_pref("toolkit.telemetry.firstShutdownPing.enabled", false);
-  user_pref("toolkit.telemetry.hybridContent.enabled", false);
-  user_pref("toolkit.telemetry.newProfilePing.enabled", false);
-  user_pref("toolkit.telemetry.prompted", 2);
-  user_pref("toolkit.telemetry.rejected", true);
-  user_pref("toolkit.telemetry.reportingpolicy.firstRun", false);
-  user_pref("toolkit.telemetry.server", "");
-  user_pref("toolkit.telemetry.shutdownPingSender.enabled", false);
-  user_pref("toolkit.telemetry.unified", false);
-  user_pref("toolkit.telemetry.unifiedIsOptIn", false);
-  user_pref("toolkit.telemetry.updatePing.enabled", false);
-  user_pref("webgl.renderer-string-override", " ");
-  user_pref("webgl.vendor-string-override", " ");
+// Rest is generated by https://ffprofile.com
+user_pref("app.normandy.api_url", "");
+user_pref("app.normandy.enabled", false);
+user_pref("app.shield.optoutstudies.enabled", false);
+user_pref("app.update.auto", false);
+user_pref("beacon.enabled", false);
+user_pref("breakpad.reportURL", "");
+user_pref("browser.aboutConfig.showWarning", false);
+user_pref("browser.crashReports.unsubmittedCheck.autoSubmit", false);
+user_pref("browser.crashReports.unsubmittedCheck.autoSubmit2", false);
+user_pref("browser.crashReports.unsubmittedCheck.enabled", false);
+user_pref("browser.disableResetPrompt", true);
+user_pref("browser.newtab.preload", false);
+user_pref("browser.newtabpage.activity-stream.section.highlights.includePocket", false);
+user_pref("browser.newtabpage.enhanced", false);
+user_pref("browser.newtabpage.introShown", true);
+user_pref("browser.safebrowsing.appRepURL", "");
+user_pref("browser.safebrowsing.blockedURIs.enabled", false);
+user_pref("browser.safebrowsing.downloads.enabled", false);
+user_pref("browser.safebrowsing.downloads.remote.enabled", false);
+user_pref("browser.safebrowsing.downloads.remote.url", "");
+user_pref("browser.safebrowsing.enabled", false);
+user_pref("browser.safebrowsing.malware.enabled", false);
+user_pref("browser.safebrowsing.phishing.enabled", false);
+user_pref("browser.search.suggest.enabled", false);
+user_pref("browser.selfsupport.url", "");
+user_pref("browser.send_pings", false);
+user_pref("browser.sessionstore.privacy_level", 0);
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("browser.startup.homepage_override.mstone", "ignore");
+user_pref("browser.tabs.crashReporting.sendReport", false);
+user_pref("browser.urlbar.groupLabels.enabled", false);
+user_pref("browser.urlbar.quicksuggest.enabled", false);
+user_pref("browser.urlbar.speculativeConnect.enabled", false);
+user_pref("browser.urlbar.trimURLs", false);
+user_pref("datareporting.healthreport.service.enabled", false);
+user_pref("datareporting.healthreport.uploadEnabled", false);
+user_pref("datareporting.policy.dataSubmissionEnabled", false);
+user_pref("device.sensors.ambientLight.enabled", false);
+user_pref("device.sensors.enabled", false);
+user_pref("device.sensors.motion.enabled", false);
+user_pref("device.sensors.orientation.enabled", false);
+user_pref("device.sensors.proximity.enabled", false);
+user_pref("dom.battery.enabled", false);
+// This breaks pasting images
+// user_pref("dom.event.clipboardevents.enabled", false);
+user_pref("experiments.activeExperiment", false);
+user_pref("experiments.enabled", false);
+user_pref("experiments.manifest.uri", "");
+user_pref("experiments.supported", false);
+user_pref("extensions.CanvasBlocker@kkapsner.de.whiteList", "");
+user_pref("extensions.ClearURLs@kevinr.whiteList", "");
+user_pref("extensions.TemporaryContainers@stoically.whiteList", "");
+user_pref("extensions.getAddons.cache.enabled", false);
+user_pref("extensions.getAddons.showPane", false);
+user_pref("extensions.greasemonkey.stats.optedin", false);
+user_pref("extensions.greasemonkey.stats.url", "");
+user_pref("extensions.pocket.enabled", false);
+user_pref("extensions.shield-recipe-client.api_url", "");
+user_pref("extensions.shield-recipe-client.enabled", false);
+user_pref("extensions.webservice.discoverURL", "");
+user_pref("media.autoplay.default", 0);
+user_pref("media.autoplay.enabled", true);
+user_pref("media.eme.enabled", false);
+user_pref("media.gmp-widevinecdm.enabled", false);
+user_pref("media.navigator.enabled", false);
+user_pref("media.video_stats.enabled", false);
+user_pref("network.allow-experiments", false);
+user_pref("network.captive-portal-service.enabled", false);
+user_pref("network.cookie.cookieBehavior", 1);
+user_pref("network.dns.disablePrefetch", true);
+user_pref("network.dns.disablePrefetchFromHTTPS", true);
+user_pref("network.http.referer.spoofSource", true);
+user_pref("network.http.speculative-parallel-limit", 0);
+user_pref("network.predictor.enable-prefetch", false);
+user_pref("network.predictor.enabled", false);
+user_pref("network.prefetch-next", false);
+user_pref("network.trr.mode", 5);
+user_pref("privacy.donottrackheader.enabled", true);
+user_pref("privacy.donottrackheader.value", 1);
+user_pref("privacy.query_stripping", true);
+user_pref("privacy.trackingprotection.cryptomining.enabled", true);
+user_pref("privacy.trackingprotection.enabled", true);
+user_pref("privacy.trackingprotection.fingerprinting.enabled", true);
+user_pref("privacy.trackingprotection.pbmode.enabled", true);
+user_pref("privacy.usercontext.about_newtab_segregation.enabled", true);
+user_pref("security.ssl.disable_session_identifiers", true);
+user_pref("services.sync.prefs.sync.browser.newtabpage.activity-stream.showSponsoredTopSite", false);
+user_pref("signon.autofillForms", false);
+user_pref("toolkit.telemetry.archive.enabled", false);
+user_pref("toolkit.telemetry.bhrPing.enabled", false);
+user_pref("toolkit.telemetry.cachedClientID", "");
+user_pref("toolkit.telemetry.enabled", false);
+user_pref("toolkit.telemetry.firstShutdownPing.enabled", false);
+user_pref("toolkit.telemetry.hybridContent.enabled", false);
+user_pref("toolkit.telemetry.newProfilePing.enabled", false);
+user_pref("toolkit.telemetry.prompted", 2);
+user_pref("toolkit.telemetry.rejected", true);
+user_pref("toolkit.telemetry.reportingpolicy.firstRun", false);
+user_pref("toolkit.telemetry.server", "");
+user_pref("toolkit.telemetry.shutdownPingSender.enabled", false);
+user_pref("toolkit.telemetry.unified", false);
+user_pref("toolkit.telemetry.unifiedIsOptIn", false);
+user_pref("toolkit.telemetry.updatePing.enabled", false);
+user_pref("webgl.renderer-string-override", " ");
+user_pref("webgl.vendor-string-override", " ");
 #+end_src
 *** Sideberry
 #+begin_src js :tangle ~/Downloads/sideberry.json
@@ -3802,58 +3370,6 @@ Run ~PARAM=VALUE~ for every parameter passed as ~--param=value~. Dashes are conv
   done
 #+end_src
 
-** shortenurl
-Shorten given url. To make this work:
-- I simply created a firebase application.
-- Added my domain to it (from "Build → Hosting" menu). I used a subdomain, like "urlshortener.mydomain.com". You'll see the why in a minute.
-- Installed firebase cli application
-  - ~yarn global add "firebase-tools"~
-- Configured my project with firebase-tools.
-  - ~firebase login~
-  - ~firebase projects:list~ → Just to check if it works or not
-  - ~firebase init~ → Select "Hosting: Configure files for Firebase Hosting and (optionally) set up GitHub Action deploy".
-  - Here is the firebase.json that I use which rewrites all requests to your domain with the ones provided by "Dynamic Links" application. So it's wise use a subdomain for this application as I outlined above.
-    #+begin_src js
-      {
-        "hosting": {
-          // Following two lines are the important ones
-          "appAssociation": "AUTO",
-          "rewrites": [ { "source": "/**", "dynamicLinks": true } ],
-
-          "ignore": [
-            "firebase.json",
-            "**/.*",
-            "**/node_modules/**"
-          ]
-        }
-      }
-
-    #+end_src
-- Then you *may* need to open "Engage → Dynamic Links" page and click to "Get Started". Select your domain from the list and finish it.
-
-#+begin_src sh :tangle ~/.bin/shortenurl
-  #!/bin/bash
-
-  set -eo pipefail
-
-  case "$1" in
-      -h|--help)
-          echo "Usage:"
-          echo "  $(basename "$0") URL"
-          echo "  some-command-that-outputs-a-long-url | $(basename "$0")"
-          exit
-          ;;
-  esac
-
-  URL=$(echo "${1:-$(</dev/stdin)}" | xargs)
-
-  curl \
-      --silent \
-      -H 'Content-Type: application/json' \
-      -d '{"dynamicLinkInfo":{"domainUriPrefix":"'$FIREBASE_URL_SHORTENER_PREFIX'","link":"'$URL'",},"suffix":{"option":"SHORT"}}' \
-      "https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=$FIREBASE_WEB_API_KEY" \
-      | jq -r '.shortLink' | tee >(xcopy)
-#+end_src
 ** uploadfile
 Uploads given file to a predetermined folder in your ~box.com~ account and returns you a public download link for the file.
 
@@ -3874,236 +3390,6 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
   FILE=$1
   FILE_ID=$(box files:upload --id-only "$FILE" --parent-id "$BOX_UPLOAD_DIR")
   box shared-links:create --json "$FILE_ID" file | jq -j '.url' | tee >(xcopy)
-#+end_src
-** mediastuff
-#+begin_src bash :tangle ~/.bin/mediastuff
-  #!/bin/bash
-
-  # This whole script is based on the fact that I'm not that retard to
-  # listen/watch more than one audio/video streams at the same time.
-  # If I do, I'll get punished for that sin.
-
-  MPV_SOCKET=/tmp/mpvsocket
-
-  mpv_pause() {
-      echo '{ "command": ["set_property", "pause", true] }' | socat - "$MPV_SOCKET"
-  }
-
-  mpv_toggle() {
-      echo '{"command": ["cycle", "pause"]}' | socat - "$MPV_SOCKET"
-  }
-
-  mpv_seek() {
-      if [[ $1 == *% ]]; then # seek $1 percent
-          echo 'percent'
-          echo '{"command": ["seek", "'"${1%\%}"'",  "relative-percent"]}' | socat - "$MPV_SOCKET"
-      else # seek $1 seconds
-          echo '{"command": ["seek", "'"$1"'"]}' | socat - "$MPV_SOCKET"
-      fi
-  }
-
-  # TODO: somehow pause videos/audios playing in firefox/qutebrowser
-  all_pause() {
-      mpv_pause
-      mpc pause
-  }
-
-  all_toggle() {
-      # Give priority to mpv
-      if pgrep mpv; then
-          mpv_toggle
-      else
-          mpc toggle
-      fi
-  }
-
-  all_seek() {
-      if pgrep mpv; then
-          mpv_seek "$@"
-      else
-          mpc seek "$@"
-      fi
-  }
-
-  get_sink_name_from_sink_id() {
-      local ids="${1:-$(</dev/stdin)}"
-      echo "$ids" | while read -r id; do
-          echo "($id) $(pactl list sinks | grep -E "(Sink #$id)|(device.description)" | grep -A1 "Sink #$id" | sed -n "2p" | cut -d'"' -f2)"
-      done
-  }
-
-  switch_audio_channel() {
-      if [[ $1 = "--help" ]]; then
-          echo "Changes default sink to next one and moves all inputs to new default sink."
-          echo "Try to use it when something is already playing."
-      fi
-
-      readarray -t sinks <<< "$(pactl list sinks short | cut -f1)"
-      readarray -t inputs <<< "$(pactl list sink-inputs short | cut -f1)"
-      current_sink=$(pactl list sinks short | grep "RUNNING" | head -c 1)
-
-      if [[ -z $current_sink ]]; then
-          notify-send "Error while switching audio channels" "Could not detect default sink. Playing something may help."
-          exit 1
-      fi
-
-      if [[ $1 = --interactive ]]; then
-          new_sink=$(printf "%s\n" "${sinks[@]}" | get_sink_name_from_sink_id | rofi -dmenu | grep -Po "\(\K[0-9]*")
-      else
-          new_sink=${sinks[0]}
-          for sink in "${sinks[@]}"; do
-              if (( sink > current_sink )); then
-                  new_sink="$sink"
-                  break
-              fi
-          done
-      fi
-
-      [[ -z $new_sink ]] && exit;
-
-      notify-send "Switching audio channel" "New default channel is $(get_sink_name_from_sink_id $new_sink), moving all inputs to that."
-
-      # Move every input to new sink
-      for input in "${inputs[@]}"; do
-          pacmd move-sink-input "$input" "$new_sink"
-      done
-
-      # Make new sink the default
-      pactl set-default-sink "$new_sink"
-  }
-
-  # Get the movie name from file/folder name and find the imdb-id
-  find_imdb_id_from_filename() {
-      MOVIE_NAME=$(echo "$@" | sed -r 's/((\w{1,}[-. ]?)*?)(\(?[0-9]{4}\)?[. -]).*/\1\3/; s/[.()-]/ /g; s/  / /g')
-      curl 'https://searx.prvcy.eu/search' \
-           --data-urlencode "q=$MOVIE_NAME" \
-           --data-urlencode 'language=en-US' \
-           --data-urlencode 'format=csv' \
-           --silent \
-          | grep -oP 'imdb.com/title/\K\w+' -m 1
-  }
-
-  mpv_subdl() {
-      MPV_SOCKET=/tmp/mpvsocket
-      file_path=$1
-      language=$2
-      sub_file_path="${file_path%.*}.srt"
-
-      # First try if there is a zip/rar file that has been downloaded in last 5 mins
-      # if so try to extract it
-      SUB_FILE=$(find ~/Downloads -cmin -5 | grep -E '(rar|zip)')
-      if [[ -n $SUB_FILE ]]; then
-          if sub-extract --no-confirm --auto "$SUB_FILE"; then
-              echo 'show-text "Subtitle EXTRACTED from ~/Downloads."' | socat - $MPV_SOCKET
-              echo "sub-add \"$sub_file_path\"" | socat - $MPV_SOCKET
-              exit
-          else
-              echo 'show-text "Failed to extract, trying to download."' | socat - $MPV_SOCKET
-              sleep 2
-          fi
-      fi
-
-      # Now try `subdl`
-      echo 'show-text "Downloading subtitle with subdl..."' | socat - $MPV_SOCKET
-      if subdl --lang="$language" "$file_path"; then
-          echo 'show-text "Subtitle downloaded."' | socat - $MPV_SOCKET
-          echo "sub-add \"$sub_file_path\"" | socat - $MPV_SOCKET
-      else
-          IMDB_ID=$(find_imdb_id_from_filename "$file_path")
-          echo "show-text \"Failed! Trying for $IMDB_ID.\"" | socat - $MPV_SOCKET
-          if subdl --lang="$language" --imdb-id="$IMDB_ID" --force-imdb --download=best-rating "$file_path"; then
-              echo 'show-text "Alternative method worked!"' | socat - $MPV_SOCKET
-              echo "sub-add \"$sub_file_path\"" | socat - $MPV_SOCKET
-              exit
-          fi
-      fi
-
-      # Try `subliminal`
-      echo 'show-text "Downloading subtitle with subliminal..."' | socat - $MPV_SOCKET
-      SUBLIMINAL_OUTPUT=$(subliminal download -l "$language")
-      if [[ -n $(echo $SUBLIMINAL_OUTPUT | sed -nr '/Downloaded [1-9] subtitle/p') ]]; then
-          # Load all srt files into mpv, subliminal does not output the srt name
-          for srt in ./*.srt; do
-              echo "sub-add \"$srt\"" | socat - $MPV_SOCKET
-          done
-
-          echo 'show-text "Subtitle downloaded with subliminal."' | socat - $MPV_SOCKET
-          exit
-      fi
-
-  }
-
-
-  opt=$1; shift
-  case "$opt" in
-      ,*help) echo "mediastuff [mpv-(subdl|toggle|pause|seek)|all-(toggle|pause|seek)|switch-audio-channel|connect-bt-headphones|find-imdb]" ;;
-      mpv*toggle)              mpv_toggle                 "$@" ;;
-      mpv*pause)               mpv_pause                  "$@" ;;
-      mpv*seek)                mpv_seek                   "$@" ;;
-      all*toggle)              all_toggle                 "$@" ;;
-      all*pause)               all_pause                  "$@" ;;
-      all*seek)                all_seek                   "$@" ;;
-      switch*audio*channel)    switch_audio_channel       "$@" ;;
-      connect*bt*headphones)   connect_bt_headphones      "$@" ;;
-      mpv*subdl)               mpv_subdl                  "$@" ;;
-      find*imdb)               find_imdb_id_from_filename "$@" ;;
-  esac
-#+end_src
-** menu
-#+begin_src bash :tangle ~/.bin/menu
-  #!/bin/bash
-
-  function trim {
-      local var="${*:-$(</dev/stdin)}"
-      var="${var#"${var%%[![:space:]]*}"}"
-      var="${var%"${var##*[![:space:]]}"}"
-      echo -n "$var"
-  }
-
-  function dmenu {
-      rofi -dmenu -fuzzy -i "$@"
-  }
-
-  function files {
-      f=$( ( git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files; fd . --no-ignore-vcs --color=never --max-depth=5 ) | dmenu)
-
-      if [[ "$1" == "--open" ]] && [[ -n "$f" ]]; then
-          jaro "$f"
-      else
-          echo "$f"
-      fi
-  }
-
-  function folders {
-      f=$(fd . "$HOME" --no-ignore-vcs --color=never --type=d --max-depth=5 | dmenu)
-
-      if [[ "$1" == "--open" ]] && [[ -n "$f" ]]; then
-          jaro "$f"
-      else
-          echo "$f"
-      fi
-  }
-
-  function file_contents {
-      term --float -e /bin/sh -c "fuzzy file-contents Documents \$(git --git-dir="$HOME"/.dotfiles/ --work-tree="$HOME" ls-files --full-name)"
-  }
-
-  function bookmarks {
-      grep -E '^*' ~/Documents/notes/bookmarks.org | grep '\[\[' | sed -E 's/\[\[(.*)\]\[(.*)\]\]/\2  <span foreground="grey" size="small">\1<\/span>/; s/\**//' | dmenu -i -markup-rows | grep -Eo 'https?://[^ ]+' | sed 's/<\/span>//' | jaro
-  }
-
-
-  cmd="$1"
-  shift
-  case $cmd in
-      ,*help) echo "menu [files|folders|file-contents|passwords]";;
-      files) files "$@";;
-      folders) folders "$@";;
-      file*contents) file_contents "$@";;
-      bookmarks) bookmarks "$@";;
-      calc*) rofi -show calc -modi calc -no-show-match -no-sort ;;
-      ,*) rofi -show combi "$@" ;;
-  esac
 #+end_src
 ** sub-extract
 #+begin_src python :tangle ~/.bin/sub-extract
@@ -4239,87 +3525,6 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
       print("File not found: " + SUB_ARCHIVE)
       print("Archive path should be the last argument.")
 #+end_src
-** term
-#+begin_src bash :tangle ~/.bin/term
-  #!/bin/bash
-
-  # When using st, it expects window class properties while urxvt expects
-  # window name properties for enabling floating windows. So
-  # Rule for urxvt:
-  # bspc rule --add '*:float'   state=floating
-  # Rule for st:
-  # bspc rule --add 'float'     state=floating
-
-  # st, urxvt, urxvtc, alacritty
-  RUNNER='alacritty'
-  FLOAT=''
-  OPAQUE=''
-  GEOMETRY=''
-  TITLE=''
-  OPTS=()
-
-  for arg; do
-      case "$arg" in
-          "--term="*) RUNNER=${arg#*=}; shift ;;
-          "--title="*) TITLE=${arg#*=}; shift ;;
-          "--geometry="*) GEOMETRY=${arg#*=}; shift ;;
-          "--float") FLOAT='1'; shift ;;
-          "--opaque") OPAQUE='1'; shift ;;
-          "--tophalf") TOPHALF='1'; shift ;;
-      esac
-  done
-
-  if [[ $RUNNER == 'urxvtc' ]]; then
-      if ! pgrep urxvtd; then
-          urxvtd & disown
-          sleep 0.5
-      fi
-  fi
-
-  if [[ -n "$FLOAT" ]]; then
-      case "$RUNNER" in
-          "st")        OPTS+=(-c float) ;;
-          "urxvt"*)    OPTS+=(-name float) ;;
-          "alacritty") OPTS+=(--class float) ;;
-      esac
-  fi
-
-  if [[ -n "$TOPHALF" ]]; then
-      case "$RUNNER" in
-          "st")        OPTS+=(-c tophalf) ;;
-          "urxvt"*)    OPTS+=(-name tophalf) ;;
-          "alacritty") OPTS+=(--class tophalf) ;;
-      esac
-  fi
-
-  if [[ -n "$TITLE" ]]; then
-      case "$RUNNER" in
-          "st")        OPTS+=(-t "$TITLE") ;;
-          "urxvt"*)    OPTS+=(-name "$TITLE") ;;
-          "alacritty") OPTS+=(--title "$TITLE") ;;
-      esac
-  fi
-
-  if [[ -n "$OPAQUE" ]]; then
-      case "$RUNNER" in
-          "st")        OPTS+=(-A 1) ;;
-          "urxvt"*)    OPTS+=(-bg "$(xrdb-get-value '*background')") ;;
-          "alacritty") OPTS+=(--option background_opacity=1) ;;
-      esac
-  fi
-
-  if [[ -n "$GEOMETRY" ]]; then
-      case "$RUNNER" in
-          "st"|"urxvt"*) OPTS+=(-g "$GEOMETRY") ;;
-          "alacritty")
-              echo "Not supported"
-              # TODO: Use bspwm rules for geometry
-              ;;
-      esac
-  fi
-  echo "${OPTS[@]}"
-  $RUNNER "${OPTS[@]}" "$@"
-#+end_src
 ** togif
 #+begin_src bash :tangle ~/.bin/togif
   #!/bin/bash
@@ -4383,93 +3588,42 @@ The variable ~BOX_UPLOAD_DIR~ is defined in =~/.extrarc= (I don't upload this fi
 
   fi
 #+end_src
-** ts_onfinish
-#+begin_src bash :tangle ~/.bin/ts_onfinish
-  #!/bin/bash
-
-  # When a job that is called with tsp finishes, this script is called.
-  # Need to set $TS_ONFINISH variable to path of this script. (See ~/.profile)
-
-  job_id="$1"
-  err="$2"
-  out_file="$3"
-  cmd="$4"
-
-  remaining_job_count=$(($(tsp | tail -n +2 | grep -cvE '^[0-9]+ +finished') - 1))
-
-  if [[ "$err" = 0 ]]; then
-      icon=terminal
-      title="finished"
-      duration=5
-  else
-      icon=error
-      title="failed"
-      duration=10
-
-      # Put cmd into clipboard
-      echo "$cmd" | xclip -selection clipboard
-  fi
-
-  notify-send \
-      -i "$icon" \
-      -t $((duration*1000))\
-      "[TSP] job $title (remaining: $remaining_job_count)" \
-      "$cmd"
-
-#+end_src
 ** xcopy
 #+begin_src bash :tangle ~/.bin/xcopy
-  #!/bin/sh
+#!/bin/bash
 
-  file="$1"
-  input="$*"
+file="$1"
+input="$*"
 
-  if which xclip &>/dev/null; then
-      CLIP_CMD="xclip -selection clipboard"
-  elif which pbcopy &>/dev/null; then
-      CLIP_CMD="pbcopy"
-  else
-      echo "Install xclip."
-      exit 1
-  fi
+if command -v wl-copy &>/dev/null; then
+    CLIP_CMD="wl-copy"
+elif command -v xclip &>/dev/null; then
+    CLIP_CMD="xclip -selection clipboard"
+elif command -v pbcopy &>/dev/null; then
+    CLIP_CMD="pbcopy"
+else
+    echo "Install wl-copy or xclip." >&2
+    exit 1
+fi
 
-  if [[ -f "$file" ]]; then
-      if [[ CLIP_CMD = "pbcopy" ]]; then
-          echo "Not supported by pbcopy."
-          exit 1
-      fi
+if [[ -f "$file" ]]; then
+    if [[ "$CLIP_CMD" == "pbcopy" ]]; then
+        echo "Not supported by pbcopy." >&2
+        exit 1
+    fi
 
-      xclip -selection clipboard -t "$(file -b --mime-type "$file")" -i "$file"
-  elif [[ -z "$input" ]]; then
-      $CLIP_CMD <&0
-  else
-      printf "$input" | "$CLIP_CMD"
-  fi
+    mime="$(file -b --mime-type "$file")"
+    if [[ "$CLIP_CMD" == "wl-copy" ]]; then
+        wl-copy --type "$mime" < "$file"
+    else
+        xclip -selection clipboard -t "$mime" -i "$file"
+    fi
+elif [[ -z "$input" ]]; then
+    $CLIP_CMD <&0
+else
+    printf '%s' "$input" | $CLIP_CMD
+fi
 #+end_src
-** media-downloader
-Downloads given file in given folder with given name. Useful for adding keybindings in browsers etc.
-
-#+begin_src bash :tangle ~/.bin/media-downloader
-  #!/bin/bash
-
-  «bash-initialize-variables»
-
-  URL=${URL-$(zenity --entry --text="Enter url to download:")}
-  FILE_NAME=${FILE_NAME-$(zenity --entry --text="Enter file name (without extension).")}
-  SAVE_PATH=${SAVE_PATH-$(zenity --entry --text="Where to save?" --entry-text="${HOME}/")}
-
-  cd "${SAVE_PATH}" || exit
-
-  if [[ -n "$FILE_NAME" ]]; then
-      youtube-dl --no-mtime --output "$FILE_NAME.%(ext)s" "$URL"
-  else
-      youtube-dl --no-mtime "$URL"
-  fi
-
-  echo -n "$(pwd)/$(/bin/ls -tr | tail -n 1)" | xcopy
-  notify-send "Download finished!" "File path copied to your clipboard."
-#+end_src
-
 ** find-duplicate-images
 #+begin_src sh :tangle ~/.bin/find-duplicate-images
   #!/bin/bash
@@ -4510,76 +3664,6 @@ Downloads given file in given folder with given name. Useful for adding keybindi
   ' | sort | uniq --check-chars=32 --all-repeated
 #+end_src
 
-** mgm
-#+begin_src ruby :tangle ~/.bin/mgm
-#!/usr/bin/env ruby
-
-require 'net/http'
-require 'uri'
-require 'json'
-
-CONDITIONS = {
-  "A"     => "Açık",
-  "AB"    => "Az Bulutlu",
-  "PB"    => "Parçalı Bulutlu",
-  "CB"    => "Çok Bulutlu",
-  "HY"    => "Hafif Yağmurlu",
-  "Y"     => "Yağmurlu",
-  "KY"    => "Kuvvetli Yağmurlu",
-  "KKY"   => "Karla Karışık Yağmurlu",
-  "HKY"   => "Hafif Kar Yağışlı",
-  "K"     => "Kar Yağışlı",
-  "YKY"   => "Yoğun Kar Yağışlı",
-  "HSY"   => "Hafif Sağanak Yağışlı",
-  "SY"    => "Sağanak Yağışlı",
-  "KSY"   => "Kuvvetli Sağanak Yağışlı",
-  "MSY"   => "Mevzi Sağanak Yağışlı",
-  "DY"    => "Dolu",
-  "GSY"   => "Gökgürültülü Sağanak Yağışlı",
-  "KGY"   => "Kuvvetli Gökgürültülü Sağanak Yağışlı",
-  "SIS"   => "Sisli",
-  "PUS"   => "Puslu",
-  "DMN"   => "Dumanlı",
-  "KF"    => "Kum veya Toz Taşınımı",
-  "R"     => "Rüzgarlı",
-  "GKR"   => "Güneyli Kuvvetli Rüzgar",
-  "KKR"   => "Kuzeyli Kuvvetli Rüzgar",
-  "SCK"   => "Sıcak",
-  "SGK"   => "Soğuk",
-  "HHY"   => "Yağışlı"
-}
-
-def fetch_data(url, params)
-  uri = URI(url)
-  uri.query = URI.encode_www_form(params)
-
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-
-  request = Net::HTTP::Get.new(uri.request_uri)
-  request['Origin'] = 'https://mgm.gov.tr'
-  request['Host'] = 'mgm.gov.tr'
-  request['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36'
-
-  http.request(request)
-  response = http.request(request)
-  return JSON.parse(response.body)
-end
-
-if ARGV.empty?
-  puts "Usage: mgm SEHIR"
-  exit 1
-end
-
-merkez = fetch_data('https://servis.mgm.gov.tr/web/merkezler', { il: ARGV.first })[0]
-durum = fetch_data("https://servis.mgm.gov.tr/web/sondurumlar", { merkezid: merkez["merkezId"] })[0]
-puts <<-HERE
-Hadise           :: #{CONDITIONS[durum["hadiseKodu"]]}
-Sicaklik         :: #{durum["sicaklik"]} °C
-Nem              :: #{durum["nem"]}%
-Yagmur olasiligi :: #{durum["yagis00Now"]}%
-HERE
-#+end_src
 ** git-file-history-grep
 #+begin_src bash :tangle ~/.bin/git-file-history-grep
 #!/bin/bash
@@ -4604,20 +3688,6 @@ case "$1" in
         ;;
 esac
 #+end_src
-** fissh
-
-Source: [[https://unix.stackexchange.com/questions/476107/how-to-use-fish-on-remote-servers-that-have-it-installed-without-changing-login][ssh - How to use fish on remote servers that have it installed without changing login shell? - Unix & Linux Stack Exchange]]
-
-
-#+begin_src sh :tangle ~/.bin/fissh
-#!/bin/sh
-ssh "$@" -t "sh -c 'if which fish >/dev/null ; then exec fish -li; else exec \$SHELL -li; fi'"
-#+end_src
-
-#+begin_src fish :tangle ~/.config/fish/completions/fissh.fish
-complete -c fissh -w ssh
-#+end_src
-
 ** set-timezone
 #+begin_src bash :tangle ~/.bin/set-timezone
 #!/usr/bin/env bash
@@ -4646,35 +3716,6 @@ echo "Timezone set to: $TIMEZONE"
   - fswatch -o src/main | xargs -n1 ./mvnw compile
     - =-o= one per batch
 
-* Work stuff
-** Barrier
-To be able to access my personal computer while I'm on my work computer (or vice-versa) without needing to physically switch keyboards, I use barrier.
-See [[https://github.com/symless/synergy-core/wiki/Text-Config][here]] for detailed configuration documentation.
-
-#+begin_src conf :tangle ~/.local/share/barrier/.barrier.conf
-  section: screens
-    trendyol:
-    x220:
-  end
-
-  section: aliases
-  end
-
-  section: links
-    trendyol:
-      right = x220
-    x220:
-      left = trendyol
-  end
-
-  section: options
-    screenSaverSync = true
-    clipboardSharing = true
-    keystroke(alt+BracketL) = switchToScreen(trendyol)
-    keystroke(alt+BracketR) = switchToScreen(x220)
-  end
-#+end_src
-
 * Postamble
 - The following thing automatically loads the code necessary when this file is opened.
 - This basically makes use of [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html#Specifying-File-Variables][file local variables]].
@@ -4683,5 +3724,5 @@ See [[https://github.com/symless/synergy-core/wiki/Text-Config][here]] for detai
 # Local Variables:
 # org-babel-noweb-wrap-start: "«"
 # org-babel-noweb-wrap-end: "»"
-# eval: (progn (save-excursion (org-babel-goto-named-src-block "startup") (let ((code (org-babel-expand-noweb-references))) (with-temp-buffer (insert code) (eval-buffer)))))
+# eval: (progn (save-excursion (org-babel-goto-named-src-block "startup") (let ((code (org-babel-expand-noweb-references))) (with-temp-buffer (elisp-enable-lexical-binding) (insert code) (eval-buffer)))))
 # End:
