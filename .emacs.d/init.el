@@ -7535,7 +7535,8 @@ Non-interactive calls perform the normal synchronization configured
 for each Channel."
   (interactive (list t))
   (when (im-check-internet-connection)
-    (let ((accounts (im-mbsync-accounts)))
+    (let ((accounts (im-mbsync-accounts))
+          (failed-accounts '()))
       (condition-case reason
           (let (count mails)
             (when interactive?
@@ -7547,19 +7548,20 @@ for each Channel."
              (promise-all
               (mapcar
                (lambda (account)
-                 (im-shell-command
-                  :command "mbsync"
-                  :args
-                  (if interactive?
-                      ;; Only download newly arrived INBOX messages.
-                      (list "--pull-new"
-                            (format "%s:INBOX" account))
-                    ;; Perform the channel's normal full synchronization.
-                    (list account))
-                  :buffer-name (format "*mbsync-%s*" account)
-                  :async t))
+                 (promise-chain
+                     (im-shell-command
+                      :command "mbsync"
+                      :args
+                      (if interactive?
+                          ;; Only download newly arrived INBOX messages.
+                          (list "--pull-new"
+                                (format "%s:INBOX" account))
+                        ;; Perform the channel's normal full synchronization.
+                        (list account))
+                      :buffer-name (format "*mbsync-%s*" account)
+                      :async t)
+                   (catcha (push account failed-accounts))))
                accounts)))
-
             ;; Index mail, discarding all output from `notmuch new'.
             (ignore
              (await
@@ -7604,7 +7606,9 @@ for each Channel."
                            (not (equal im-unread-mail-count count))))
               (when interactive?
                 (im-notmuch-inbox)
-                (message ">> Checking mail...Done"))
+                (if failed-accounts
+                    (message ">> Checking mail...Done, but some accounts FAILED: %s" failed-accounts)
+                  (message ">> Checking mail...Done")))
               (setq im-unread-mail-count count)
               (unless interactive?
                 (im-notif
