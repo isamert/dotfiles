@@ -882,11 +882,7 @@ set $noctalia noctalia msg
 
 output * render_bit_depth 10
 
-# FIXME: Use correct output names
-bindswitch --locked {
-  lid:on output LVDS-1 disable
-  lid:off output LVDS-1 enable
-}
+# Noctalia automatically handles disabling outputs on lid changes etc.
 
 # * Visuals
 
@@ -906,6 +902,7 @@ bindsym $hypr+Return exec $term
 
 bindsym $hypr+i exec emacsclient --eval "(im-globally (im-select-any-snippet))"
 bindsym $hypr+o exec emacsclient --eval "(im-globally (im-people))"
+bindsym $hypr+u exec emacsclient --eval "(im-org-capture)"
 
 # * Keybindings - Noctalia
 
