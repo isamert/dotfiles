@@ -809,7 +809,7 @@ modmap:
     remap:
       # See: https://github.com/xremap/xremap/pull/339
       CapsLock:
-        held: [ctrl_l,super_l,shift_l,alt_l] # "hyper" key
+        held: [ctrl_l,super_l,alt_l] # "hyper" key
         alone: Esc
       alt_r: f24
 
@@ -867,7 +867,7 @@ Nice=-20
 # * Variables
 
 set $mod Mod4
-set $hypr Ctrl+Mod1+Mod4+Shift
+set $hypr Ctrl+Mod1+Mod4
 
 set $left h
 set $down j
@@ -907,6 +907,7 @@ bindsym $hypr+u exec emacsclient --eval "(im-org-capture)"
 # * Keybindings - Noctalia
 
 bindsym $hypr+l exec $noctalia session lock
+bindsym $hypr+shift+l exec $noctalia session lock-and-suspend
 bindsym $hypr+s exec $noctalia screenshot-region
 bindsym $hypr+c exec $noctalia panel-toggle clipboard
 bindsym $hypr+a exec $noctalia panel-toggle launcher
@@ -1040,6 +1041,7 @@ for_window [app_id="emacs$" title="^org-capture$"] floating enable
 # startup programs are handled.
 include /etc/sway/config.d/*
 exec systemctl --user start sway-session.target
+
 exec noctalia
 #+end_src
 *** Startup programs
