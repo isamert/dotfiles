@@ -797,8 +797,6 @@ precedence ::ffff:0:0/96  100
 #+end_src
 * X/Wayland related
 ** xremap
-I'm probably going to fully replace KMonad with xremap on Linux (and maybe replace KMonad with Karabiner on Mac). KMonad is a bit brittle and having to define full keyboard map is just not scalable.
-
 #+begin_src yaml :tangle (when-linux "~/.config/xremap.yml")
 # Run with `RUST_LOG=debug xremap ~/.config/xremap.yml` to see the
 # debug logs.
@@ -816,6 +814,14 @@ modmap:
       alt_r: f24
 
 keymap:
+  - name: Alt navigation outside Emacs
+    application:
+      not: emacs
+    remap:
+      Alt-l: Right
+      Alt-j: Down
+      Alt-k: Up
+      Alt-h: Left
   - name: Global
     remap:
       f24-q: { launch: ["wtype", "↔"] }
@@ -900,10 +906,10 @@ bindsym $hypr+Return exec $term
 
 bindsym $hypr+i exec emacsclient --eval "(im-globally (im-select-any-snippet))"
 bindsym $hypr+o exec emacsclient --eval "(im-globally (im-people))"
-bindsym $hypr+l exec swaylock -i ~/.config/wallpaper.jpg --scaling fill
 
 # * Keybindings - Noctalia
 
+bindsym $hypr+l exec $noctalia session lock
 bindsym $hypr+s exec $noctalia screenshot-region
 bindsym $hypr+c exec $noctalia panel-toggle clipboard
 bindsym $hypr+a exec $noctalia panel-toggle launcher
@@ -1037,6 +1043,7 @@ for_window [app_id="emacs$" title="^org-capture$"] floating enable
 # startup programs are handled.
 include /etc/sway/config.d/*
 exec systemctl --user start sway-session.target
+exec noctalia
 #+end_src
 *** Startup programs
 #+begin_src sh
