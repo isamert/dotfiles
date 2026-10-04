@@ -1890,6 +1890,39 @@ that is provided by ob-http."
 
 ;;;;; org-capture
 
+(defun im-org-capture ()
+  "Select a template and capture in a new, unsplit frame."
+  (interactive)
+  (let ((frame (make-frame '((name . "org-capture")
+                             (undecorated . t)
+                             (internal-border-width . 5)
+                             (left-fringe . 0)
+                             (right-fringe . 0)
+                             (menu-bar-lines . 0)
+                             (tool-bar-lines . 0)
+                             (vertical-scroll-bars . nil)
+                             (horizontal-scroll-bars . nil)
+                             (tab-bar-lines . 0)
+                             (width . 80)
+                             (height . 20)))))
+    (select-frame-set-input-focus frame)
+    (condition-case err
+        (let ((display-buffer-overriding-action
+               '(display-buffer-same-window
+                 (inhibit-same-window . nil))))
+          (org-capture))
+      ((quit user-error)
+       (when (frame-live-p frame)
+         (delete-frame frame))
+       (signal (car err) (cdr err))))))
+
+(defun im-delete-frame-after-capture ()
+  "Delete the current frame after org-capture is finished."
+  (when (equal (frame-parameter nil 'name) "org-capture")
+    (delete-frame)))
+
+(add-hook 'org-capture-after-finalize-hook #'im-delete-frame-after-capture)
+
 ;; See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this page]] for more detail on template elements.
 
 ;; Some functions that I utilize for capture templates:
