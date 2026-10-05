@@ -882,6 +882,9 @@ set $noctalia noctalia msg
 
 output * render_bit_depth 10
 
+# nwg-displays saves configurations here
+include ~/.config/sway/outputs
+
 # Noctalia automatically handles disabling outputs on lid changes etc.
 
 # * Visuals
