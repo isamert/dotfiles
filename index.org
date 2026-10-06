@@ -2019,6 +2019,15 @@ bind-key Space display-menu -T "Command Palette" \
     "" \
     "Reload Config"       R "source-file ~/.tmux.conf; display 'Reloaded'"
 
+# * Only show status bar if there is more then one window
+
+# Source: https://schauderbasis.de/posts/hide_tmux_status_bar_if_its_not_needed/
+set -g status off
+set-hook -g after-new-window      'if "[ #{session_windows} -gt 1 ]" "set status on"'
+set-hook -g after-kill-pane       'if "[ #{session_windows} -lt 2 ]" "set status off"'
+set-hook -g pane-exited           'if "[ #{session_windows} -lt 2 ]" "set status off"'
+set-hook -g window-layout-changed 'if "[ #{session_windows} -lt 2 ]" "set status off"'
+
 # * Theming (uses terminal colors)
 
 set -g status-style "bg=terminal,fg=terminal"
