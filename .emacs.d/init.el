@@ -6071,7 +6071,7 @@ SORT should be nil to disable sorting."
    (elpaca-after-init . yas-global-mode)))
 
 (use-package yankpad
-  :ensure (:host github :repo "Kungsgeten/yankpad")
+  :ensure (:host github :repo "isamert/yankpad" :branch "clanker-fixes")
   :after (org yasnippet)
   :autoload (yankpad--categories yankpad--snippets)
   :general
