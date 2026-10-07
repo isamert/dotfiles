@@ -657,7 +657,7 @@ Also display `im-git-diff-switches' right-aligned."
             (overlay-put overlay 'keymap im-git-commit-log-map)
             (overlay-put overlay 'help-echo
                          (lambda (_window _obj _pos)
-                           (substitute-command-keys "\\[im-git-commit-log-diff-at-point] → Show diff for this commit, \\[im-git-commit-log-amend-at-point] → Amend, \\[im-git-commit-log-reword-at-point] → Reword"))))))
+                           (substitute-command-keys "\\[im-git-commit-log-diff-at-point] → Show diff for this commit, \\[im-git-fixup-at-point] → Fixup, \\[im-git-reword-at-point] → Reword"))))))
       (im-git-commit--change-header-contents "Settings"
         (insert im-git-commit-config-prefix " No Verify: ")
         (im-insert-toggle-button "no" "yes" :help "RET: Toggle no-verify")
@@ -741,8 +741,8 @@ Also display `im-git-diff-switches' right-aligned."
   :doc "Keymap for commit log entries."
   "RET" #'im-git-commit-log-diff-at-point
   "<return>" #'im-git-commit-log-diff-at-point
-  "f" #'im-git-commit-log-amend-at-point
-  "r" #'im-git-commit-log-reword-at-point)
+  "f" #'im-git-fixup-at-point
+  "r" #'im-git-reword-at-point)
 
 ;; TODO: Predictable sort order
 (defun im-git-commit--display-file (file)
@@ -905,24 +905,32 @@ Return old message."
             (font-lock-ensure))
           (pop-to-buffer buf))))))
 
-(defun im-git-commit-log-amend-at-point ()
-  "Fixup the commit at point.
-Ask for confirmation first, then stage changes and create a fixup commit."
-  (interactive nil im-git-commit-mode)
-  (save-excursion
-    (beginning-of-line)
-    (when (re-search-forward "\\b\\([0-9a-fA-F]+\\)\\." (line-end-position) t)
-      (let ((hash (match-string 1)))
-        (when (y-or-n-p (format "Fixup commit %s? " hash))
-          (im-git--perform-amend hash))))))
+(defun im-git--commit-at-point ()
+  "Return the commit at point in a VC log or the commit editor."
+  (cond
+   ((derived-mode-p 'vc-git-log-view-mode)
+    (or (log-view-current-tag) (user-error "No commit at point")))
+   ((derived-mode-p 'im-git-commit-mode)
+    (or (save-excursion
+          (beginning-of-line)
+          (when (re-search-forward "\\b\\([0-9a-fA-F]+\\)\\." (line-end-position) t)
+            (match-string-no-properties 1)))
+        (user-error "No commit at point")))
+   (t (user-error "Not in a Git log or commit editor"))))
 
-(defun im-git-commit-log-reword-at-point ()
+;;;###autoload
+(defun im-git-fixup-at-point ()
+  "Fixup the commit at point using staged changes, after confirmation."
+  (interactive)
+  (let ((hash (im-git--commit-at-point)))
+    (when (y-or-n-p (format "Fixup commit %s? " hash))
+      (im-git--perform-amend hash))))
+
+;;;###autoload
+(defun im-git-reword-at-point ()
   "Change the message of the commit at point."
-  (interactive nil im-git-commit-mode)
-  (save-excursion
-    (beginning-of-line)
-    (when (re-search-forward "\\b\\([0-9a-fA-F]+\\)\\." (line-end-position) t)
-      (im-git--reword-commit (match-string 1)))))
+  (interactive)
+  (im-git--reword-commit (im-git--commit-at-point)))
 
 (defvar-keymap im-git-staged-diff-mode-map
   ;; "x" #'im-git-reverse-hunk
@@ -1013,24 +1021,10 @@ CALLBACK will be called with the selected commit ref."
                 (message ">> Amend failed!")
                 (switch-to-buffer buffer-name)))))
 
-;;;; im-git-amend-commit
-
-;;;###autoload
-(defun im-git-amend-commit ()
-  "Interactively select a commit and fixup.
-Stage your changes, interactively select a function and your changes
-will be added to selected commit."
-  (interactive)
-  (im-git-select-commit #'im-git--perform-amend))
-
-;;;###autoload
-(defun im-git-reword-commit ()
-  "Interactively select an older commit and change its message."
-  (interactive)
-  (im-git-select-commit #'im-git--reword-commit))
-
 (defun im-git--reword-commit (hash)
   "Prompt for a new message for commit HASH and rewrite it."
+  (when (im-git--has-staged-changes-p)
+    (user-error "Unstage changes before rewording a commit"))
   (let ((message (read-string
                   "Message: "
                   (s-trim (im-git--cmd-to-string
@@ -1040,16 +1034,9 @@ will be added to selected commit."
 (defun im-git--perform-amend (hash &optional new-message)
   "Amend an arbitrary commit identified by HASH.
 
-This function can:
-- Absorb staged changes into the commit (fixup).
-- Change the commit message (rename).
-- Do both at once.
-
-The operation is determined automatically:
-- If there are staged changes and NEW-MESSAGE is nil, only fixup.
-- If there are no staged changes and NEW-MESSAGE is non-nil, only rename.
-- If there are staged changes and NEW-MESSAGE is non-nil, fixup and rename.
-- If there are no staged changes and NEW-MESSAGE is nil, do nothing.
+With NEW-MESSAGE, reword the commit without including staged changes.
+Otherwise, fold staged changes into it as a fixup.  Rewording with
+staged changes is refused so they cannot be included accidentally.
 
 Internally, this creates an appropriate amend/fixup commit and
 then performs an autosquash interactive rebase to fold it into
@@ -1058,9 +1045,11 @@ HASH.  The rebase is fully automated (no editor interaction)."
          (fixup? (im-git--has-staged-changes-p))
          (commit-args
           (cond
-           (new-message `(,@(unless fixup? '("--allow-empty"))
-                          "-m" ,(format "amend! %s" hash)
-                          "-m" ,new-message))
+           (new-message (if fixup?
+                            (user-error "Unstage changes before rewording a commit")
+                          `("--allow-empty"
+                            "-m" ,(format "amend! %s" hash)
+                            "-m" ,new-message)))
            (fixup? `("--fixup" ,hash))
            (t (user-error "im-git-amend :: Nothing to do (no staged changes and no new message)")))))
     (set-process-sentinel

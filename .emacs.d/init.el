@@ -4649,7 +4649,9 @@ empty string."
   (:keymaps 'vc-dir-mode-map :states 'normal
    "r" #'vc-dir-refresh)
   (:keymaps 'vc-git-log-view-mode-map :states 'normal
-   "<backtab>" #'im-vc-toggle-all-log-view-entries)
+   "<backtab>" #'im-vc-toggle-all-log-view-entries
+   "f" #'im-git-fixup-at-point
+   "r" #'im-git-reword-at-point)
   :config
   (im-when-on :darwin
     (setq vc-git-program "/opt/homebrew/bin/git"))
@@ -7764,8 +7766,6 @@ for each Channel."
      ["Commit/Branch"
       ("c" "Commit changes" im-git-commit)
       ("al" "Amend last commit" im-git-amend-last-commit)
-      ("aa" "Amend to any commit" im-git-amend-commit)
-      ("ar" "Reword any commit" im-git-reword-commit)
       ("bc" "New branch" vc-create-branch)
       ("bs" "Switch branch" vc-switch-branch)
       ("P" "Push" vc-push)
