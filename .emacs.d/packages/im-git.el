@@ -64,6 +64,7 @@
 (require 'f)
 (require 'diff)
 (require 'diff-mode)
+(require 'ansi-color)
 (require 'outline)
 (require 'dash)
 (require 'ring)
@@ -639,13 +640,13 @@ Also display `im-git-diff-switches' right-aligned."
                                   "--graph" "--decorate" "--date=short"
                                   "--pretty=tformat:'%C(cyan)%d%C(reset)%C(yellow)%h%C(reset)..: %C(green)%an %C(blue)%ad%C(reset) %s'"
                                   "--abbrev-commit"))
-         (statusp (im-git--async "status" "--porcelain=v1" "--branch" "-z"))
+         (statusp (im-git--async "-c" "color.status=always"
+                                 "status" "--short" "--branch" "-z"))
          (name (await namep))
          (email (await emailp))
          (hookspath (await hookspathp))
-         ;; A new repository has no log yet; the rest of setup must still run.
          (commits (ansi-color-apply (await (promise-catch commitsp (lambda (_error) "")))))
-         (status (await statusp))
+         (status (ansi-color-apply (await statusp)))
          (inhibit-read-only t))
     (with-current-buffer buffer
       (goto-char (point-min))
@@ -739,6 +740,7 @@ Also display `im-git-diff-switches' right-aligned."
 (defvar-keymap im-git-commit-log-map
   :doc "Keymap for commit log entries."
   "RET" #'im-git-commit-log-diff-at-point
+  "<return>" #'im-git-commit-log-diff-at-point
   "f" #'im-git-commit-log-amend-at-point
   "r" #'im-git-commit-log-reword-at-point)
 
@@ -753,8 +755,10 @@ Also display `im-git-diff-switches' right-aligned."
 
 (async-defun im-git-commit--update-unstaged (&optional output)
   (let* ((buffer (current-buffer))
-         (status (or output (await (im-git--async
-                                   "status" "--porcelain=v1" "--branch" "-z")))))
+         (status (or output
+                    (ansi-color-apply
+                     (await (im-git--async "-c" "color.status=always"
+                                           "status" "--short" "--branch" "-z"))))))
     ;; Do not suspend while editing the section: other commands may change
     ;; point or the current buffer before the status process finishes.
     (when (buffer-live-p buffer)
