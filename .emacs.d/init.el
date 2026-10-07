@@ -6786,6 +6786,7 @@ If SHELL-BUFFER is nil, use the current buffer."
   ;; (setq ellm-acp-log-messages t)
   ;; (setq ellm-kagi-cookie im-kagi-assistant-cookie)
   (setq ellm-persistence-enabled t)
+  (setq ellm-persistence-directory "~/Sync/ellm/")
   (setq ellm-header-line-template "%p %t%>%r")
   (setq
    ellm-notification-function
@@ -6867,6 +6868,14 @@ If SHELL-BUFFER is nil, use the current buffer."
       . ,(ellm-make-acp-provider
           :command "opencode"
           :args '("acp")))))
+
+  (defun im-ellm-question ()
+    (interactive)
+    (ellm-new-buffer-with-configuration
+     :provider 'codex
+     :model "gpt-6.1-sol"
+     :ephemeral t
+     :system "You are an helpful agent. Be concise and clear. Answer users questions."))
 
   (defun im-ellm-kagi-search ()
     (interactive)
