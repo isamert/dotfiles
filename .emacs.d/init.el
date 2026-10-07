@@ -2412,7 +2412,7 @@ Headers are gathered from all the org files found in `org-directory'."
 ;; Here I create a dynamic block for org-mode, named
 ;; ~project-grep~. You can create a block like the following:
 
-;; #+begin: project-grep :root "~/Workspace/projects/dotfiles" :regexp "TODO"
+;; #+begin: project-grep :root "~/Projects/dotfiles" :regexp "TODO"
 ;; #+end
 
 ;; When you invoke =C-c C-c= on that block, it will automatically run
@@ -5441,9 +5441,8 @@ This helps persisting projects I switched to.")
        "~/Videos/Movies/"
        "~/Documents/notes/"
        "~/Documents/notes/img/"
-       "~/Workspace/projects/"
-       "~/Workspace/temp/"
-       "~/Workspace/temp/git/"
+       ,im-projects-root
+       ,im-temp-dir
        "~/.emacs.d/"
        "~/.local/share/"
        "~/.local/bin/"
@@ -6802,7 +6801,7 @@ If SHELL-BUFFER is nil, use the current buffer."
   (setq
    ellm-new-buffer-default-configuration-function
    #'(lambda ()
-       (let ((work-project? (f-ancestor-of? "~/Workspace/projects/trendyol" default-directory))
+       (let ((work-project? (f-ancestor-of? "~/Projects/Work" default-directory))
              (elisp-project? (f-ancestor-of? "~/.emacs.d/elpaca/" default-directory))
              (provider (if (workpc?)
                            (intern (completing-read
@@ -7208,7 +7207,7 @@ If SHELL-BUFFER is nil, use the current buffer."
   (consult-gh-pr-maxnum 150)
   (consult-gh-code-maxnum 50)
   (consult-gh-default-orgs-list '("isamert"))
-  (consult-gh-default-clone-directory "~/Workspace/temp")
+  (consult-gh-default-clone-directory "~/Projects/Temp")
   (consult-gh-file-action #'consult-gh--files-view-action)
   (consult-gh-issue-action
    (lambda (it)
@@ -10849,7 +10848,7 @@ more than one header of a single org buffer."
 
 ;;;;; Scratch project management
 
-(defvar im-scratch-project-path "~/workspace/projects/personal/scratch")
+(defvar im-scratch-project-path (concat im-projects-root "/Personal/scratch"))
 
 (defun im-new-scratch-file ()
   "Create a new scratch file in `im-scratch-project-path' with selected major mode."

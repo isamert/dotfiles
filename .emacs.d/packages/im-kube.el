@@ -303,7 +303,7 @@
   (let ((container (or container (im-kube-pod--select-container pod)))
         (fname (expand-file-name (read-file-name
                                   "File: "
-                                  "~/Workspace/temp/"
+                                  im-temp-dir
                                   nil
                                   nil
                                   (format "%s-%s.logs" (format-time-string "%Y-%m-%d") (plist-get pod :name))))))

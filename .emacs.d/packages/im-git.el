@@ -1544,7 +1544,7 @@ but sometimes projects gets dirty and this fixes that."
 ;; worktree, pruning before switching, copying necessary untracked
 ;; files while creating worktrees etc.
 
-(defvar im-git-worktrees-root "~/Workspace/worktrees"
+(defvar im-git-worktrees-root "~/Projects/Worktrees"
   "Directory to create worktrees in.")
 
 (defun im-git-worktree-switch ()

@@ -46,7 +46,8 @@
 
 ;;;; Project utils
 
-(defconst im-projects-root "~/Workspace/projects")
+(defconst im-projects-root "~/Projects")
+(defconst im-temp-dir "~/Workspace/Temp/")
 
 (defvar im-project-name-transformers '()
   "List of functions to do transformations on the function name.
