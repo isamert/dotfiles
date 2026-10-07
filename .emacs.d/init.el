@@ -4651,8 +4651,13 @@ empty string."
   (:keymaps 'vc-git-log-view-mode-map :states 'normal
    "<backtab>" #'im-vc-toggle-all-log-view-entries
    "f" #'im-git-fixup-at-point
-   "r" #'im-git-reword-at-point)
+   "r" #'im-git-reword-at-point
+   "x" #'log-view-uncommit-revisions-from-end
+   "X" #'log-view-delete-revisions-from-end
+   "C" #'log-view-cherry-pick
+   "w" #'log-view-copy-revision-as-kill)
   :config
+  (add-hook 'vc-git-log-view-mode-hook #'im-vc-git-log-show-help)
   (im-when-on :darwin
     (setq vc-git-program "/opt/homebrew/bin/git"))
   (setq vc-log-short-style '(directory file)))
@@ -4661,6 +4666,12 @@ empty string."
 (with-eval-after-load 'log-view (evil-collection-log-view-setup))
 (with-eval-after-load 'vc-dir (evil-collection-vc-dir-setup))
 (with-eval-after-load 'vc-annotate (evil-collection-vc-annotate-setup))
+
+(defun im-vc-git-log-show-help ()
+  "Show Git log actions in the header line."
+  (setq-local header-line-format
+              '(:eval (substitute-command-keys
+                       " Git log: \\[log-view-diff] diff · \\[im-git-fixup-at-point] fixup · \\[log-view-modify-change-comment] reword · \\[log-view-uncommit-revisions-from-end] mixed reset · \\[log-view-delete-revisions-from-end] hard reset · \\[log-view-cherry-pick] cherry-pick · \\[log-view-copy-revision-as-kill] copy hash · \\[describe-mode] more"))))
 
 (defun im-vc-toggle-all-log-view-entries ()
   "Toggle the visibility of all log view entries in the current buffer."
