@@ -6918,23 +6918,6 @@ If SHELL-BUFFER is nil, use the current buffer."
         (setcar args 2)))
     args))
 
-;;;;; im-cursor
-
-(use-package im-cursor
-  :ensure `(:repo ,im-packages-path :files ("im-cursor.el"))
-  :defer t
-  :config
-  (with-eval-after-load 'im-notif
-    (add-to-list 'im-notif-dnd-whitelist-labels "agent")))
-
-;;;;; im-kagi-assistant
-
-(use-package im-kagi-assistant
-  :ensure `(:repo ,im-packages-path :files ("im-kagi-assistant.el"))
-  :defer t
-  :custom
-  (im-kagi-assistant-cookie im-kagi-cookie))
-
 ;;;;; tmr.el -- timers, reminders etc.
 
 ;; Pretty timers. I forget everything, so it's quite important for me
