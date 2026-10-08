@@ -9942,7 +9942,8 @@ Like \\[find-file] (which see), but uses the selected window by `ace-select-wind
   "wt" #'im-tab-bar-new-tab ;; tab
   "wT" #'im-tab-bar-new-tab-with-current-buffer ;; tab
   "wn" #'tab-bar-rename-tab ;; name
-  "wm" #'tab-move ;; move
+  "wm" #'tab-move ;; move +1
+  "wM" #'tab-move-to ;; move -1
   "wl" #'tab-bar-switch-to-recent-tab ;; last
   "we" #'tab-switch
   "wx" #'tab-close ;; kill
