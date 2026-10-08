@@ -923,6 +923,7 @@ Return old message."
   "Fixup the commit at point using staged changes, after confirmation."
   (interactive)
   (let ((hash (im-git--commit-at-point)))
+    (im-git--check-amend-target hash)
     (when (y-or-n-p (format "Fixup commit %s? " hash))
       (im-git--perform-amend hash))))
 
@@ -1021,8 +1022,22 @@ CALLBACK will be called with the selected commit ref."
                 (message ">> Amend failed!")
                 (switch-to-buffer buffer-name)))))
 
+(defun im-git--check-amend-target (hash)
+  "Reject HASH if it is not a current ancestor of HEAD."
+  (unless (zerop (im-git--process-file "merge-base" "--is-ancestor" hash "HEAD"))
+    (user-error "Commit %s is no longer on this branch; refresh the log" hash))
+  (unless (zerop (im-git--process-file "rev-parse" "--verify" "--quiet" (concat hash "^")))
+    (user-error "Cannot rebase the root commit %s" hash)))
+
+(defun im-git--amend-failed (stage buffer)
+  "Show BUFFER and report a failed STAGE of fixup or reword."
+  (display-buffer buffer)
+  (message "im-git :: %s failed; see %s and check git status before retrying"
+           stage (buffer-name buffer)))
+
 (defun im-git--reword-commit (hash)
   "Prompt for a new message for commit HASH and rewrite it."
+  (im-git--check-amend-target hash)
   (when (im-git--has-staged-changes-p)
     (user-error "Unstage changes before rewording a commit"))
   (let ((message (read-string
@@ -1042,6 +1057,8 @@ Internally, this creates an appropriate amend/fixup commit and
 then performs an autosquash interactive rebase to fold it into
 HASH.  The rebase is fully automated (no editor interaction)."
   (let* ((root (im-current-project-root))
+         (default-directory root)
+         (_ (im-git--check-amend-target hash))
          (fixup? (im-git--has-staged-changes-p))
          (commit-args
           (cond
@@ -1052,21 +1069,32 @@ HASH.  The rebase is fully automated (no editor interaction)."
                             "-m" ,new-message)))
            (fixup? `("--fixup" ,hash))
            (t (user-error "im-git-amend :: Nothing to do (no staged changes and no new message)")))))
-    (set-process-sentinel
-     (apply #'im-git--start-process "*im-git-commit*" (im-get-reset-buffer "*im-git-commit*")
-            "commit" commit-args)
-     (lambda (proc _)
-       (if (eq (process-exit-status proc) 0)
-           (set-process-sentinel
-            (im-git--start-process "*im-git-rebase*" (im-get-reset-buffer " *im-git-rebase*")
-                                   "rebase" "--autosquash" (concat hash "^"))
-            (lambda (proc _)
-              (if (eq (process-exit-status proc) 0)
-                  (progn
-                    (message ">> im-git-amend :: Commit %s updated." hash)
-                    (im-git--run-commit-finished-hook root nil))
-                (error "!! Failed.  See *im-git-amend* buffer for details."))))
-         (error "im-git-commit :: Failed.  See buffer *im-git-commit*"))))))
+    (let ((commit-buffer (im-get-reset-buffer "*im-git-commit*"))
+          (rebase-buffer (im-get-reset-buffer "*im-git-rebase*")))
+      (set-process-sentinel
+       (apply #'im-git--start-process "*im-git-commit*" commit-buffer
+              "commit" commit-args)
+       (lambda (proc _event)
+         (when (memq (process-status proc) '(exit signal))
+           (if (zerop (process-exit-status proc))
+               (let* ((default-directory root)
+                      (marker (string-trim (im-git--cmd-to-string "rev-parse" "HEAD")))
+                      (process-environment (cons "GIT_SEQUENCE_EDITOR=true" process-environment)))
+                 (set-process-sentinel
+                  (im-git--start-process "*im-git-rebase*" rebase-buffer
+                                         "rebase" "--interactive" "--autosquash" (concat hash "^"))
+                  (lambda (proc _event)
+                    (when (memq (process-status proc) '(exit signal))
+                      (let ((default-directory root))
+                        (cond
+                         ((not (zerop (process-exit-status proc)))
+                          (im-git--amend-failed "Rebase" rebase-buffer))
+                         ((zerop (im-git--process-file "merge-base" "--is-ancestor" marker "HEAD"))
+                          (im-git--amend-failed (format "Autosquash did not fold %s" marker) rebase-buffer))
+                         (t
+                          (message ">> im-git-amend :: Commit %s updated." hash)
+                          (im-git--run-commit-finished-hook root nil))))))))
+             (im-git--amend-failed "Commit" commit-buffer))))))))
 
 (defun im-git--has-staged-changes-p ()
   "Return non-nil if there are staged changes."
