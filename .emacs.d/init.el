@@ -2667,6 +2667,43 @@ breaks and joining the lines together.  This function relies on
                           slots))
              :length)))))))
 
+;;;;; im-copy-as-org
+
+(defun im-copy-as-org (start end)
+  "Export the region from START to END to markdown and save on the `kill-ring'."
+  (interactive "r")
+  (let* ((str (buffer-substring-no-properties start end))
+         (mode-name (s-chop-suffix "-mode" (symbol-name major-mode))))
+    (im-kill
+     (cond
+      ((-contains?
+        '(markdown-mode md-ts-mode ellm-mode)
+        major-mode)
+       (with-temp-buffer
+         (insert str)
+         (call-process-region
+          (point-min) (point-max)
+          "pandoc" t t nil "-f" "markdown-auto_identifiers" "-t" "org")
+         (buffer-string)))
+      ;; Shot in the dark but worth trying
+      ((derived-mode-p 'text-mode)
+       (with-temp-buffer
+         (insert str)
+         (call-process-region
+          (point-min) (point-max)
+          "pandoc" t t nil "-f"
+          mode-name
+          "-t" "org")
+         (buffer-string)))
+      ((derived-mode-p 'prog-mode)
+       (concat "#+begin_src " mode-name "\n"
+               (s-trim str) "\n"
+               "#+end_src")))))
+  (deactivate-mark))
+
+(with-eval-after-load 'embark
+  (keymap-set embark-region-map "O" #'im-copy-as-org))
+
 ;;;;; Capture changed headings on save
 
 ;; Sometimes, I want to capture which headings are changed on save and
