@@ -5987,22 +5987,28 @@ SORT should be nil to disable sorting."
                             "-J-Dmetals.icons=unicode"))
   :hook (scala-mode . lsp))
 
-;;;;; simple-modeline
+;;;;; simple-modeline/doom-modeline
 
 ;; Lightweight and nice modeline.
 
-(use-package simple-modeline
-  :ensure (:host github :repo "gexplorer/simple-modeline")
-  :hook (elpaca-after-init-hook . simple-modeline-mode)
-  :custom (simple-modeline-segments
-           '((simple-modeline-segment-modified
-              simple-modeline-segment-buffer-name
-              simple-modeline-segment-position)
-             (simple-modeline-segment-vc
-              simple-modeline-segment-misc-info
-              simple-modeline-segment-process
-              simple-modeline-segment-minor-modes
-              simple-modeline-segment-major-mode))))
+;; (use-package simple-modeline
+;;   :ensure (:host github :repo "gexplorer/simple-modeline")
+;;   :hook (elpaca-after-init-hook . simple-modeline-mode)
+;;   :custom (simple-modeline-segments
+;;            '((simple-modeline-segment-modified
+;;               simple-modeline-segment-buffer-name
+;;               simple-modeline-segment-position)
+;;              (simple-modeline-segment-vc
+;;               simple-modeline-segment-misc-info
+;;               simple-modeline-segment-process
+;;               simple-modeline-segment-minor-modes
+;;               simple-modeline-segment-major-mode))))
+
+(use-package doom-modeline
+  :init (doom-modeline-mode 1)
+  :hook (elpaca-after-init-hook . doom-modeline-mode)
+  :custom
+  (doom-modeline-buffer-file-name-style 'buffer-name))
 
 ;;;;; howdoyou
 
