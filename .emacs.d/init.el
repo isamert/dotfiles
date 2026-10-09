@@ -1436,7 +1436,17 @@ purposefully bound a key to."
   (defun im--maybe-disable-dnd ()
     (im-notif-disable-dnd))
 
-  (add-hook 'org-clock-out-hook #'im--maybe-disable-dnd 90))
+  (add-hook 'org-clock-out-hook #'im--maybe-disable-dnd 90)
+
+  ;; org-clock sends notification if the current tasks estimated effort is met.
+  (setq
+   org-show-notification-handler
+   (lambda (notification)
+     (im-notif :message notification
+               :title "*org-mode*"
+               :labels '("org"))))
+  (with-eval-after-load 'im-notif
+    (add-to-list 'im-notif-dnd-whitelist-labels "org")))
 
 (use-package org-contrib :after org)
 
@@ -3766,16 +3776,7 @@ that is read verbatim (meaning that no '$*' is appended):
       (do-applescript (format "display notification %S with title %S"
                               (substring-no-properties (plist-get info :message))
                               (substring-no-properties (plist-get info :title))))
-      (alert-message-notify info)))
-  ;; org-clock sends notification if the current tasks estimated effort is met.
-  (setq
-   org-show-notification-handler
-   (lambda (notification)
-     (im-notif :message notification
-               :title "*org-mode*"
-               :labels '("org"))))
-  (with-eval-after-load 'im-notif
-    (add-to-list 'im-notif-dnd-whitelist-labels "org")))
+      (alert-message-notify info))))
 
 (use-package im-notif
   :ensure `(:repo ,im-packages-path :files ("im-notif.el"))
@@ -6627,6 +6628,9 @@ SORT should be nil to disable sorting."
                    :source (get-buffer bname)
                    :labels '("ai"))))))
 
+  (with-eval-after-load 'im-notif
+    (add-to-list 'im-notif-dnd-whitelist-labels "ai"))
+
   (add-to-list 'gptel-post-response-functions #'im-gptel-on-response-finished))
 
 (im-leader
@@ -6765,6 +6769,8 @@ If SHELL-BUFFER is nil, use the current buffer."
   (im-agent-shell-notif-mode 1))
 
 (add-hook 'agent-shell-mode-hook #'im-agent-shell-notif-mode-enable)
+(with-eval-after-load 'im-notif
+  (add-to-list 'im-notif-dnd-whitelist-labels "agent"))
 
 ;;;;; ellm.el
 
@@ -6812,6 +6818,8 @@ If SHELL-BUFFER is nil, use the current buffer."
       :buffer
       :duration 10
       :labels '("ellm"))))
+  (with-eval-after-load 'im-notif
+    (add-to-list 'im-notif-dnd-whitelist-labels "ellm"))
   (setq
    ellm-new-buffer-default-configuration-function
    #'(lambda ()
