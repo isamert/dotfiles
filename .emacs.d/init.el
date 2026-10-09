@@ -2898,13 +2898,6 @@ I generally bind this to a key while using by
   (org-timeblock-span 5)
   (org-timeblock-scale-options nil))
 
-;;;;; Syncthing UI
-
-(use-package syncthing
-  :commands (syncthing)
-  :config
-  (setq syncthing-default-server-token (cdr (assoc-string (system-name) im-syncthing-token))))
-
 ;;;; Extra functionality
 
 ;;;;; im-open-thing-at-point
@@ -7745,6 +7738,13 @@ for each Channel."
     :key "M-o b"
     :doc (lambda (xs x) (plist-get (map-elt xs x) :doc))
     :annotate (lambda (xs x) (concat " → " (plist-get (map-elt xs x) :ann))))))
+
+;;;;; Syncthing UI
+
+(use-package syncthing
+  :commands (syncthing)
+  :config
+  (setq syncthing-default-server-token (cdr (assoc-string (system-name) im-syncthing-token))))
 
 ;;;;; im-session.el -- session manager
 
