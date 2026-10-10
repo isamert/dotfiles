@@ -6137,6 +6137,9 @@ SORT should be nil to disable sorting."
   (:keymaps 'minibuffer-local-map
    (kbd "M-s") #'yankpad-insert
    (kbd "M-e") #'hippie-expand)
+  (:keymaps 'evil-command-line-map
+   (kbd "M-s") #'yankpad-insert
+   (kbd "M-e") #'hippie-expand)
   :custom
   (yankpad-file snippets-org)
   ;; Categories returned by the following functions will be used to
