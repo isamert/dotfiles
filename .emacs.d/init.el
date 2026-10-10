@@ -6889,7 +6889,8 @@ If SHELL-BUFFER is nil, use the current buffer."
       .
       (:provider ,(ellm-make-codex-provider)
        :small-model "gpt-5-nano"
-       :models ("gpt-6-sol"
+       :models ("gpt-6.1-sol"
+                "gpt-6-sol"
                 "gpt-6-luna"
                 "gpt-5.6-terra"
                 "gpt-5.6-sol"
