@@ -1641,7 +1641,7 @@ original buffer is not affected and you can work on them simultaneously."
      (shell . t)
      (scheme . t)
      (python . t)
-     (jupyter . t)
+     ;; (jupyter . t)
      (julia . t)
      (verb . t)
      (http . t)
@@ -9659,25 +9659,25 @@ SELECT * FROM _ LIMIT 1;
 ;; After activating the venv, you may need to do
 ;; ~jupyter-repl-restart-kernel~.
 
-(use-package pyvenv
-  :defer t)
+;; (use-package pyvenv
+;;   :defer t)
 
-(use-package jupyter
-  :ensure (:host github :repo "isamert/jupyter")
-  :defer t
-  :custom
-  (jupyter-org-want-keybinding . nil)
-  (jupyter-org-want-integration . nil))
+;; (use-package jupyter
+;;   :ensure (:host github :repo "isamert/jupyter")
+;;   :defer t
+;;   :custom
+;;   (jupyter-org-want-keybinding . nil)
+;;   (jupyter-org-want-integration . nil))
 
-(with-eval-after-load 'jupyter-org-client
-  (setq org-babel-default-header-args:jupyter-python
-        '((:async . "yes")      ;; Make outputs async
-          (:session . "py")     ;; A named session
-          (:kernel . "python3") ;; Don't know but works
-          (:pandoc . t)         ;; Convert rich outputs to org-mode format
-          ;; Prefer plain-text outputs from jupyter instead of
-          ;; direct html outputs
-          (:display "text/plain text/html"))))
+;; (with-eval-after-load 'jupyter-org-client
+;;   (setq org-babel-default-header-args:jupyter-python
+;;         '((:async . "yes")      ;; Make outputs async
+;;           (:session . "py")     ;; A named session
+;;           (:kernel . "python3") ;; Don't know but works
+;;           (:pandoc . t)         ;; Convert rich outputs to org-mode format
+;;           ;; Prefer plain-text outputs from jupyter instead of
+;;           ;; direct html outputs
+;;           (:display "text/plain text/html"))))
 
 (defun im-convert-ipynb-to-org-buffer ()
   "Convert the current IPython Notebook file to Org format and open it in a new buffer."
