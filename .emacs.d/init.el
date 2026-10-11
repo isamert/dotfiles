@@ -7480,7 +7480,10 @@ If SHELL-BUFFER is nil, use the current buffer."
   (general-def :keymaps 'notmuch-search-mode-map :states 'normal
     ;; gr → Refresh view
     ;; C → compose mail
+    ;; t → notmuch-search-filter-by-tag
+    ;; M-RET → notmuch-tree-from-search-thread
     "u" #'evil-collection-notmuch-search-toggle-unread
+    "gt" #'notmuch-tree-from-search-current-query
     "gs" #'notmuch-search
     "gS" #'notmuch-tree
     "o" #'notmuch-search-show-thread
@@ -7496,6 +7499,23 @@ If SHELL-BUFFER is nil, use the current buffer."
   ;; Fix RET on notmuch-show-mode
   (evil-collection-bind 'notmuch-show-mode-map
                         'action 'im-open-thing-at-point)
+
+  (defun im-notmuch-search-header ()
+    (setq-local
+     header-line-format
+     '(:eval
+       (substitute-command-keys
+        (concat
+         " \\[notmuch-tree-from-search-thread] open (tree-view) |"
+         " \\[notmuch-search-filter-by-tag] filter tags |"
+         " \\[notmuch-search-filter-by-tag] filter tags |"
+         " \\[notmuch-search-show-thread] open (full thread, buffer) |"
+         " \\[notmuch-search-show-thread] open (full thread, buffer) |"
+         " \\[notmuch-search-reply-to-thread-sender] reply (sender) |"
+         " \\[notmuch-search-reply-to-thread] reply (thread) |"
+         " \\[notmuch-search] new search")))))
+
+  (add-hook 'notmuch-search-hook #'im-notmuch-search-header)
 
   (defun im-notmuch-rename-show-buffer ()
     "Name a notmuch show buffer as *mail: Sender - Subject*."
