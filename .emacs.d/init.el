@@ -8699,6 +8699,12 @@ the commit buffer."
           (eq major-mode 'kotlin-mode) (im-eval-dwim #'kotlin-send-line #'kotlin-send-region #'kotlin-send-line)
           ;; I only use lua for hammerspoon
           (eq major-mode 'lua-mode) (im-eval-dwim #'im-eval-hammerspoon #'im-eval-hammerspoon #'im-eval-hammerspoon))
+    ":" (general-predicate-dispatch (im-eval-dwim
+                                     #'im-elisp-eval-last-sexp-and-replace
+                                     #'im-elisp-eval-region-and-replace
+                                     #'im-elisp-eval-defun-and-replace)
+          (eq major-mode 'clojure-mode)
+          #'cider-eval-last-sexp-and-replace)
     "'" (general-predicate-dispatch #'eros-inspect-last-result
           (eq major-mode 'java-ts-mode) #'im-repl-inspect-last-result
           (eq major-mode 'js-ts-mode) #'im-repl-inspect-last-result
@@ -8719,6 +8725,42 @@ works for Lispy languages."
       (call-interactively lastf))
      (t
       (call-interactively defunf)))))
+
+(defun im-elisp-eval-and-replace (beg end)
+  "Evaluate the forms between BEG and END and replace them with the last value.
+Leave the source unchanged if reading, evaluation, or printing fails."
+  (let* ((source (buffer-substring-no-properties beg end))
+         ;; Read every form before evaluating anything.
+         (forms (read (concat "(" source "\n)")))
+         (value (eval (cons 'progn forms) lexical-binding))
+         (print-length nil)
+         (print-level nil)
+         (replacement (prin1-to-string value)))
+    (pcase (cadr (read-multiple-choice "Do " '((?c "copy") (?r "replace"))))
+      ("copy" (im-kill replacement))
+      ("replace" (atomic-change-group
+                   (delete-region beg end)
+                   (goto-char beg)
+                   (insert replacement))))))
+
+(defun im-elisp-eval-last-sexp-and-replace ()
+  (interactive)
+  (let ((end (point))
+        (beg (save-excursion
+               (backward-sexp)
+               (point))))
+    (im-elisp-eval-and-replace beg end)))
+
+(defun im-elisp-eval-region-and-replace (beg end)
+  (interactive "r")
+  (im-elisp-eval-and-replace beg end))
+
+(defun im-elisp-eval-defun-and-replace ()
+  (interactive)
+  (let ((bounds (bounds-of-thing-at-point 'defun)))
+    (unless bounds
+      (user-error "No defun at point"))
+    (im-elisp-eval-and-replace (car bounds) (cdr bounds))))
 
 ;;;;; markdown (md-ts-mode)
 
