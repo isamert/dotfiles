@@ -93,37 +93,6 @@
              :-data data)))
   (message ">> readeck :: Added %s" url))
 
-;;;###autoload
-(defun im-readeck-enable-elfeed-support ()
-  "When one of `im-readeck-elfeed-tags' added to an elfeed entry, add it to Readeck."
-  (add-hook 'elfeed-tag-hooks #'im-readeck--on-elfeed-entries))
-
-(declare-function elfeed-entry-title "elfeed-db")
-(declare-function elfeed-entry-link "elfeed-db")
-(declare-function elfeed-entry-tags "elfeed-db")
-(async-defun im-readeck--on-elfeed-entries (entries tags)
-  ;; Doing in reverse to append in date order
-  (dolist (entry (seq-reverse entries))
-    (when (--any? (-contains? tags it) im-readeck-elfeed-tags)
-      (message ">> Adding %s to Readeck..." (elfeed-entry-title entry))
-      (await (im-readeck-add-bookmark
-              (elfeed-entry-link entry)
-              :title (elfeed-entry-title entry)
-              :labels (-uniq (mapcar
-                              #'symbol-name
-                              (append (elfeed-entry-tags entry)
-                                      tags
-                                      '(unread elfeed)))))))))
-
-(defun im-readeck-bookmark-highlights (id)
-  (im-request
-    (format "%s/api/bookmarks/%s/annotations" im-readeck-url id)
-    :-type "GET"
-    ;; :-async? t
-    ;; :-raw t
-    :-headers `(:Content-Type "application/json"
-                :Authorization ,(format "Bearer %s" im-readeck-token))))
-
 ;;;; Embark integration
 
 (defvar embark-url-map)

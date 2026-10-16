@@ -7957,12 +7957,7 @@ the commit buffer."
   :custom
   (im-readeck-url im-homeserver-readeck-url)
   (im-readeck-token im-homeserver-readeck-token)
-  (im-readeck-elfeed-tags '(later bookmark readeck))
-  :defer t
-  :init
-  (with-eval-after-load 'elfeed
-    (require 'im-readeck)
-    (im-readeck-enable-elfeed-support)))
+  (im-readeck-elfeed-tags '(later bookmark readeck)))
 
 ;;;;; im-tab --- my tab related extensions
 
