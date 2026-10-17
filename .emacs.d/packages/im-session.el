@@ -257,11 +257,13 @@ selecting one replaces that saved session."
              (length (plist-get state :tabs)) name)))
 
 (defun im-session--auto-save ()
-  "Save the `last' session, reporting errors without stopping the timer."
+  "Save the `last' session only when running as an Emacs daemon.
+Report errors without stopping the timer."
   (condition-case err
-      ;; Do not replace the user's echo-area message for a routine save.
-      (let ((inhibit-message t))
-        (im-session-save nil))
+      (when (daemonp)
+        ;; Do not replace the user's echo-area message for a routine save.
+        (let ((inhibit-message t))
+          (im-session-save nil)))
     (error
      (message "Could not automatically save session: %s"
               (error-message-string err)))))
@@ -270,7 +272,8 @@ selecting one replaces that saved session."
   "Globally save the `last' session after regular idle intervals.
 
 The interval is controlled by `im-session-auto-save-interval'.  Using an
-idle timer keeps automatic saves out of the way while you are working."
+idle timer keeps automatic saves out of the way while you are working.
+Automatic saves only run in an Emacs daemon."
   :global t
   :group 'im-session
   (when (timerp im-session--auto-save-timer)

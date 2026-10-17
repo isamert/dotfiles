@@ -7872,8 +7872,9 @@ for each Channel."
   :hook (elpaca-after-init . im-enable-session)
   :init
   (defun im-enable-session ()
-    (im-session-restore "last")
-    (im-session-auto-save-mode)))
+    (when (daemonp)
+      (im-session-restore "last")
+      (im-session-auto-save-mode 1))))
 
 ;;;;; im-git -- my git workflow, magit alternative
 
