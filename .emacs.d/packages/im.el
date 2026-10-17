@@ -512,6 +512,22 @@ major-mode of that block.  Useful for language-aware functionality."
     (lambda ()
       ,@body)))
 
+(defmacro im-defhook (hook spec &rest body)
+  "Define a named function with BODY and add it to HOOK.
+SPEC is (NAME &rest ARGLIST), where NAME is a keyword or symbol.
+
+Kind of like `define-advice' function but for hooks."
+  (declare (indent 2))
+  (let* ((name (car spec))
+         (suffix (if (keywordp name)
+                     (substring (symbol-name name) 1)
+                   (symbol-name name)))
+         (function-name (intern (format "%s--%s" hook suffix))))
+    `(progn
+       (defun ,function-name ,(cdr spec)
+         ,@body)
+       (add-hook ',hook #',function-name))))
+
 ;;;; Windows & buffers
 
 (declare-function aw-select "ace-window")
