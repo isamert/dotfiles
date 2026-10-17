@@ -2536,36 +2536,55 @@ searches for TODO/FIXME items in given folder."
 ;;;;; Sort entries intelligently
 
 (defun im-org-sort-entries-best ()
-  "Best sorting mechanism for your backlog.
-Entries are sorted by priority, with most effort entries being
-on top in their priority range.  Also entries are sorted by their
-TODO state, prioritizing in-progress items."
+  "Sort entries by heading type, TODO state, priority, effort and creation.
+Put non-TODO headings first, then order tasks by TODO state,
+priority, least effort, and newest CREATED_AT."
   (interactive)
-  ;; Sort by creation time
-  (org-sort-entries nil ?R nil nil "CREATED_AT")
-  ;; Sort by Effort, the one with least effort is at top
-  (org-sort-entries nil ?f (lambda ()
-                             (let* ((effort-str (org-entry-get nil "Effort"))
-                                    (effort-min (and effort-str (org-duration-to-minutes effort-str))))
-                               (or effort-min most-positive-fixnum))))
-  ;; Sort by priority
-  (org-sort-entries nil ?p)
-  ;; Sort by TODO state, prioritizing in progress items.
-  (org-sort-entries nil ?f (lambda ()
-                             (let ((todo-state (org-get-todo-state)))
-                               (cond
-                                ((string= todo-state "PROG") 1)
-                                ((string= todo-state "WAIT") 2)
-                                ((string= todo-state "NEXT") 3)
-                                ((string= todo-state "TODO") 4)
-                                ((string= todo-state "DONE") 5)
-                                ((string= todo-state "DEAD") 6)
-                                (t 0)))))
-  ;; Move non-TODO headers to top
-  (org-sort-entries nil ?F (lambda ()
-                             (if (or (org-entry-is-done-p) (org-entry-is-todo-p))
-                                 -1
-                               (- 1000 (length (org-entry-get nil "ITEM")))))))
+  (cl-flet ((sort-pass (&rest args)
+                       (save-excursion
+                         (apply #'org-sort-entries args))))
+    ;; Least significant criterion first.
+    (sort-pass nil ?R nil nil "CREATED_AT")
+
+    ;; Least effort first; missing effort last.
+    (sort-pass
+     nil ?f
+     (lambda ()
+       (let ((effort (org-entry-get nil "Effort")))
+         (if effort
+             (org-duration-to-minutes effort)
+           most-positive-fixnum))))
+
+    ;; Highest priority first.
+    (sort-pass nil ?p)
+
+    ;; TODO state takes precedence over priority.
+    (sort-pass
+     nil ?f
+     (lambda ()
+       (let ((state (org-get-todo-state)))
+         (cond
+          ((equal state "PROG") 1)
+          ((equal state "WAIT") 2)
+          ((equal state "NEXT") 3)
+          ((equal state "TODO") 4)
+          ((equal state "DONE") 5)
+          ((equal state "DEAD") 6)
+          (t 7)))))
+
+    ;; Sort non-TODO headings by title length; leave task ordering unchanged.
+    (sort-pass
+     nil ?f
+     (lambda ()
+       (if (org-get-todo-state)
+           0
+         (length (org-entry-get nil "ITEM")))))
+
+    ;; Put all non-TODO headings first, regardless of title length.
+    (sort-pass
+     nil ?f
+     (lambda ()
+       (if (org-get-todo-state) 1 0)))))
 
 ;;;;; im-org-unfill-paragraph
 
