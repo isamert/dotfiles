@@ -2934,25 +2934,49 @@ I generally bind this to a key while using by
   :commands (im-svgcal-enable im-svgcal-run)
   :ensure nil)
 
-(use-package org-timeblock
-  :ensure (:host github :repo "ichernyshovvv/org-timeblock")
-  :general
-  (:keymaps 'org-timeblock-mode-map :states 'normal
-   "h" #'org-timeblock-backward-column
-   "j" #'org-timeblock-forward-block
-   "k" #'org-timeblock-backward-block
-   "l" #'org-timeblock-forward-column
-   "t" #'org-timeblock-todo
-   "c" #'org-timeblock-clock-in
-   "n" #'org-timeblock-new-task
-   "r" #'org-timeblock-redraw-buffers
-   "T" #'org-timeblock-list
-   "q" #'org-timeblock-quit
-   "RET" #'org-timeblock-goto)
+;;;;; org-timegrid
+
+;; Probably going to replace my im-svgcal usage with this completely.
+
+(use-package org-timegrid
+  :ensure (:host github :repo "Gleek/org-timegrid")
+  :commands (org-timegrid-week)
   :custom
-  (org-timeblock-inbox-file inbox-org)
-  (org-timeblock-span 5)
-  (org-timeblock-scale-options nil))
+  (org-timegrid-org-files (list bullet-org))
+  :general
+  (:states 'normal :keymaps 'org-timegrid-mode-map
+   "gg" #'org-timegrid-cursor-day-start
+   "t" #'org-timegrid-org-todo
+   "e" #'org-timegrid-org-set-effort
+   "a" #'org-timegrid-org-add-note
+   "G" #'org-timegrid-cursor-day-end
+   "gr" #'org-timegrid-refresh
+   "v" #'org-timegrid-set-mark-command
+   "n" #'org-timegrid-next-block
+   "p" #'org-timegrid-previous-block
+   "J" #'org-timegrid-grow-end
+   "K" #'org-timegrid-shrink-end
+   "M-k" #'org-timegrid-move-earlier
+   "M-j" #'org-timegrid-move-later
+   "M-h" #'org-timegrid-move-previous-day
+   "M-l" #'org-timegrid-move-next-day
+   "zz" #'org-timegrid-recenter
+   "RET" #'org-timegrid-open-at-cursor
+   "H" #'org-timegrid-previous-week
+   "L" #'org-timegrid-next-week
+   "h" #'org-timegrid-cursor-backward-day
+   "l" #'org-timegrid-cursor-forward-day
+   "j" #'org-timegrid-cursor-forward
+   "k" #'org-timegrid-cursor-backward)
+  :config
+  (im-defhook org-timegrid-org-after-create-hook (:set-created-at)
+    (org-set-property
+     "CREATED_AT" (format-time-string "[%F %a %R]")))
+
+  (im-defhook org-timegrid-mode-hook (:disable-cursor)
+    (setq-local cursor-type nil)
+    (when (boundp 'evil-normal-state-cursor)
+      (setq-local evil-normal-state-cursor '(nil)))))
 
 ;;;; Extra functionality
 
