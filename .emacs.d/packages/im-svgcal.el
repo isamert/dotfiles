@@ -4,7 +4,7 @@
 
 ;;; Code:
 
-(require 'svg)
+(require 'org-timegrid)
 (require 'dash)
 (require 'org)
 (require 's)
@@ -19,21 +19,6 @@
 
 (defconst im-svgcal--buffer-name "*svgcal*"
   "Buffer name to display svgcal inside.")
-
-(defconst im-svgcal--title-size 14
-  "Title font size in pixels, used for displaying task titles.")
-
-(defconst im-svgcal--subtitle-size 11
-  "Subtitle font size in pixels, used for displaying time range of a task.")
-
-(defconst im-svgcal--hours
-  '("07:00" "08:00" "09:00" "10:00"
-    "11:00" "12:00" "13:00"
-    "14:00" "15:00" "16:00"
-    "17:00" "18:00" "19:00"
-    "20:00" "21:00" "22:00"
-    "23:00" "00:00" "01:00"
-    "02:00"))
 
 (defvar im-svgcal--last-entries nil)
 
@@ -108,85 +93,48 @@
         (append im-svgcal--last-entries (im-svgcal-diary-todays-entries))))
 
 (defun im-svgcal-render-buffer ()
-  (when im-svgcal--last-entries
-    (with-current-buffer (get-buffer-create im-svgcal--buffer-name)
+  "Refresh the read-only calendar using the last collected entries."
+  (with-current-buffer (get-buffer-create im-svgcal--buffer-name)
+    (let ((image (im-svgcal-render im-svgcal--last-entries))
+          (inhibit-read-only t))
       (erase-buffer)
-      (let ((svg (im-svgcal-render im-svgcal--last-entries)))
-        (setq-local cursor-type nil)
-        (when (boundp 'evil-normal-state-cursor)
-          (setq-local evil-normal-state-cursor '(nil)))
-        (svg-insert-image svg)
-        (goto-char (point-max))
-        (hide-mode-line-mode)
-        svg))))
+      (setq-local cursor-type nil)
+      (when (boundp 'evil-normal-state-cursor)
+        (setq-local evil-normal-state-cursor '(nil)))
+      (insert-image image)
+      (goto-char (point-max))
+      (hide-mode-line-mode 1)
+      image)))
+
+(defun im-svgcal--time-minute (time)
+  "Convert HH:MM string TIME to minutes on the calendar's overnight axis.
+Times before 07:00 belong to the following morning."
+  (let* ((parts (mapcar #'string-to-number (split-string time ":")))
+         (minute (+ (* 60 (car parts)) (cadr parts))))
+    (if (< minute (* 7 60)) (+ minute 1440) minute)))
+
+(defun im-svgcal--task-block (task id)
+  "Convert TASK to a read-only org-timegrid block with unique ID."
+  (let* ((start (im-svgcal--time-minute (plist-get task :start)))
+         (end (im-svgcal--time-minute (plist-get task :end))))
+    (org-timegrid-block-create
+     :id id :day 0 :time-kind 'timed
+     :start start :end (if (< end start) (+ end 1440) end)
+     :title (im-org-header-line-to-title (plist-get task :title))
+     :done (plist-get task :done?))))
 
 (defun im-svgcal-render (tasks)
-  "Return SVG for given TASKS."
-  (let* ((left-gap 5)
-         (top-gap 20)
-         (hour-text-width 40)
-         ;; Hours
-         (hour-height 60)
-         (hour-width 300)
-         (minute-height (/ hour-height 60.0))
-         ;; Canvas
-         (canvas-height (* hour-height (length im-svgcal--hours)))
-         (canvas-width (+ (* 2 left-gap) hour-width))
-         (svg (svg-create canvas-width canvas-height))
-         ;; Other
-         (current-time (format-time-string "%H:%M")))
-    (--each-indexed im-svgcal--hours
-      (svg-text svg it :x left-gap :y (+ (* it-index hour-height) top-gap) :font-size 14)
-      (svg-rectangle svg left-gap (* (1+ it-index) hour-height) hour-width 1 :fill "white")
-      (svg-rectangle svg left-gap (* (1+ it-index) hour-height) hour-width 1 :fill "white"))
-    (--each-indexed tasks
-      (let* ((start (plist-get it :start))
-             (end (plist-get it :end))
-             (y-start (* minute-height (im-svgcal--time-diff (car im-svgcal--hours) start)))
-             (box-height (* minute-height (im-svgcal--time-diff start end)))
-             (box-width (- hour-width (+ left-gap 55)))
-             (large-enough? (>= box-height (+ im-svgcal--title-size im-svgcal--subtitle-size))))
-        ;; Draw item box
-        (svg-rectangle
-         svg
-         (+ left-gap left-gap hour-text-width)
-         y-start
-         box-width
-         box-height
-         :fill "SlateBlue"
-         :stroke-width 1
-         :stroke "white"
-         :rx 5)
-        ;; Draw item text
-        (svg-text
-         svg (if large-enough?
-                 (s-truncate 27 (im-org-header-line-to-title (plist-get it :title)) "…")
-               (s-truncate 20 (im-org-header-line-to-title (plist-get it :title)) "…"))
-         :x (+ (* 3 left-gap) hour-text-width)
-         :y (+ y-start im-svgcal--title-size)
-         :font-size im-svgcal--title-size
-         :text-decoration (if (plist-get it :done?) "line-through" ""))
-        (svg-text
-         svg (format "%s" (plist-get it :range))
-         :x (+ (* 3 left-gap) hour-text-width (if large-enough? 0 (- box-width 73)))
-         :y (+ y-start im-svgcal--title-size (if large-enough? im-svgcal--title-size 0))
-         :font-size im-svgcal--subtitle-size
-         :text-decoration (if (plist-get it :done?) "line-through" ""))))
-    ;; Draw a red circle + line for current time
-    (svg-circle
-     svg
-     5
-     (+ 2 (* minute-height (im-svgcal--time-diff (car im-svgcal--hours) current-time)))
-     5
-     :fill "red")
-    (svg-rectangle
-     svg
-     0
-     (* minute-height (im-svgcal--time-diff (car im-svgcal--hours) current-time))
-     (+ hour-width (* 2 left-gap))
-     4
-     :fill "red")
-    svg))
+  "Return an org-timegrid day image for TASKS.
+Keep the original 07:00 through 03:00 overnight range.  org-timegrid
+owns the grid, theme colours, overlap layout, titles and clock line."
+  (let* ((window (get-buffer-window im-svgcal--buffer-name t))
+         (width (if window (window-body-width window t) 310))
+         (blocks (cl-loop for task in tasks
+                          for id from 0
+                          collect (im-svgcal--task-block task id))))
+    (org-timegrid-day-image
+     blocks (* 7 60) (* 27 60) width
+     (im-svgcal--time-minute (format-time-string "%H:%M")))))
 
 (defun im-svgcal-diary-todays-entries ()
   "Return diary entries for today in svgcal format.
@@ -239,33 +187,6 @@ from svgcal)."
    (--take-while (not (s-matches? "^\\*" it))) ;; take until next header (unnecessary)
    (s-join "\n")
    (s-match-strings-all "\\([0-9][0-9]:[0-9][0-9]\\)-\\([0-9][0-9]:[0-9][0-9]\\)")))
-
-;; FIXME: This does not work if header does not have timestamp at all
-;; OR no body at all
-(defun im-svgcal--time-diff (time1 time2)
-  "Return diff between TIME2 and TIME1 in minutes.
-It is treated as TIME2 > TIME1.
-
->> (im-svgcal--time-diff \"00:00\" \"00:40\")
-=> 40
->> (im-svgcal--time-diff \"00:00\" \"01:40\")
-=> 100
->> (im-svgcal--time-diff \"23:00\" \"01:40\")
-=> 160
->> (im-svgcal--time-diff \"05:00\" \"07:40\")
-=> 160
->> (im-svgcal--time-diff \"23:35\" \"00:40\")
-=> 65"
-  (unless (and (s-prefix? "00:" time1)
-               (s-prefix? "00:" time2))
-    (setq time2 (string-replace "00:" "24:" time2)))
-  (let* ((time1-hh-mm (mapcar #'string-to-number (split-string time1 ":")))
-         (time2-hh-mm (mapcar #'string-to-number (split-string time2 ":"))))
-    (if (> (car time1-hh-mm) (car time2-hh-mm))
-        (+ (im-svgcal--time-diff time1 "00:00")
-           (im-svgcal--time-diff "00:00" time2))
-      (abs (- (+ (* (car time1-hh-mm) 60) (cadr time1-hh-mm))
-              (+ (* (car time2-hh-mm) 60) (cadr time2-hh-mm)))))))
 
 (provide 'im-svgcal)
 ;;; im-svgcal.el ends here

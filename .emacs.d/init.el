@@ -2922,11 +2922,9 @@ I generally bind this to a key while using by
 
 ;; Experimental SVG visual calendar for the current day.
 
-;; At the time of writing this, I wasn't aware of (or maybe it didn't
-;; even exist?) org-timeblock[1].  im-svgcal is quite similar to that
-;; but only works for given day and it's independent from the agenda,
-;; it simply draws a calendar for current org file (or current
-;; restricted section of the org file).
+;; I had a bespoke SVG calendar implementation but I changed it with
+;; the org-timegrid's API. This package works with my bullet
+;; journaling based system.
 
 ;; [1]: https://github.com/ichernyshovvv/org-timeblock
 
@@ -2935,8 +2933,6 @@ I generally bind this to a key while using by
   :ensure nil)
 
 ;;;;; org-timegrid
-
-;; Probably going to replace my im-svgcal usage with this completely.
 
 (use-package org-timegrid
   :ensure (:host github :repo "Gleek/org-timegrid")
@@ -2977,6 +2973,19 @@ I generally bind this to a key while using by
     (setq-local cursor-type nil)
     (when (boundp 'evil-normal-state-cursor)
       (setq-local evil-normal-state-cursor '(nil)))))
+
+(use-package org-timegrid-agenda
+  :ensure nil
+  :after org-agenda
+  :demand t
+  :init
+  (setq org-timegrid-agenda-insert-after nil
+        org-timegrid-agenda-separator t
+        org-timegrid-agenda-minutes-before 180
+        org-timegrid-agenda-minutes-after 360)
+  (setq org-agenda-span 'day)
+  :config
+  (org-timegrid-agenda-mode 1))
 
 ;;;; Extra functionality
 
