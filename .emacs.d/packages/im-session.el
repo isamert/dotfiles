@@ -42,6 +42,7 @@
 
 (require 'cl-lib)
 (require 'dired)
+(require 'server)
 (require 'subr-x)
 
 (declare-function eshell "eshell" (&optional arg))
@@ -162,14 +163,15 @@
      (dired-directory
       (unless (get-buffer name)
         (condition-case nil
-            (dired-noselect dired-directory)
+            (with-current-buffer (dired-noselect dired-directory)
+              (rename-buffer name))
           (error (get-buffer-create name)))))
      (file
       (unless (get-buffer name)
-        ;; Usually recreates the buffer with NAME as well.
         (if (file-readable-p file)
             (condition-case nil
-                (find-file-noselect file)
+                (with-current-buffer (find-file-noselect file)
+                  (rename-buffer name))
               (error (get-buffer-create name)))
           (get-buffer-create name))))
      ;; Restore the contents even when a standard buffer such as
@@ -256,14 +258,36 @@ selecting one replaces that saved session."
     (message "Saved %d tab(s) as session %S"
              (length (plist-get state :tabs)) name)))
 
+(defvar im-session--main-frame nil
+  "Frame used for automatic session restore and saving.
+Once assigned, do not replace it even if that frame is deleted.")
+
+(defun im-session--server-p ()
+  "Return non-nil when this Emacs has a live server process."
+  (and (bound-and-true-p server-process)
+       (process-live-p server-process)))
+
+;;;###autoload
+(defun im-session-auto-restore ()
+  "Restore `last' once in the server's main frame and enable auto-saving.
+The selected frame becomes the main frame on the first call in a server.
+For a daemon, call this from `server-after-make-frame-hook' so that the
+first client frame becomes the main frame, not the daemon's initial frame."
+  (when (and (im-session--server-p) (not im-session--main-frame))
+    (setq im-session--main-frame (selected-frame))
+    (im-session-restore "last")
+    (im-session-auto-save-mode 1)))
+
 (defun im-session--auto-save ()
-  "Save the `last' session only when running as an Emacs daemon.
+  "Save the `last' session from the server's main frame only.
 Report errors without stopping the timer."
   (condition-case err
-      (when (daemonp)
-        ;; Do not replace the user's echo-area message for a routine save.
-        (let ((inhibit-message t))
-          (im-session-save nil)))
+      (when (and (im-session--server-p)
+                 (frame-live-p im-session--main-frame))
+        (with-selected-frame im-session--main-frame
+          ;; Do not replace the user's echo-area message for a routine save.
+          (let ((inhibit-message t))
+            (im-session-save nil))))
     (error
      (message "Could not automatically save session: %s"
               (error-message-string err)))))
@@ -273,7 +297,9 @@ Report errors without stopping the timer."
 
 The interval is controlled by `im-session-auto-save-interval'.  Using an
 idle timer keeps automatic saves out of the way while you are working.
-Automatic saves only run in an Emacs daemon."
+Automatic saves only run in an Emacs server and use the main frame
+registered by `im-session-auto-restore', regardless of the selected frame.
+If the main frame is deleted, automatic saving stops."
   :global t
   :group 'im-session
   (when (timerp im-session--auto-save-timer)
