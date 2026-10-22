@@ -12587,7 +12587,7 @@ Throw error otherwise."
   (interactive)
   (let ((all-the-icons-default-adjust 0))
     (setq
-     global-mode-string
+     im-global-mode-string
      `(""
        ,@(when (and (bound-and-true-p empv-media-title)
                     (not (eq empv-player-state 'stopped)))
@@ -12653,6 +12653,8 @@ Throw error otherwise."
             " "
             (format-time-string "%H:%M "))))))
   (force-mode-line-update :force))
+
+(setq-default global-mode-string '(im-global-mode-string))
 
 (with-eval-after-load 'org
   (add-hook 'org-clock-in-hook #'im-update-global-mode-line)
