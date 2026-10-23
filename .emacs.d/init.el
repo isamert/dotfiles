@@ -1358,8 +1358,8 @@ purposefully bound a key to."
   ;; ^ I keep new notes at the beginning. This helps with that.
   (org-confirm-babel-evaluate nil)
   ;; ^ Don't ask permissions for evaluating code blocks
-  (org-clock-clocked-in-display 'mode-line)
-  ;; ^ Shows in the tab-bar, if tab-bar is enabled.
+  (org-clock-clocked-in-display nil)
+  ;; ^ I manually show it in global-mode-line using `im-update-global-mode-line'
   (org-habit-show-habits nil)
   ;; ^ Speeds up agenda a bit
   (org-edit-src-content-indentation 0)
@@ -1423,20 +1423,6 @@ purposefully bound a key to."
 
   ;; With the following, I can call functions defined inside this file in other org files
   (org-babel-lob-ingest (concat org-directory "/utils.org"))
-
-  (defun im--maybe-enable-dnd ()
-    (if-let* ((duration (im-org-heading-current-time-length)))
-        (im-notif-enable-dnd (* duration 60))
-      (when (and (not (bound-and-true-p im-notif-dnd))
-                 (y-or-n-p "Enable Do Not Disturb? "))
-        (call-interactively #'im-notif-enable-dnd))))
-
-  (add-hook 'org-clock-in-hook #'im--maybe-enable-dnd 90)
-
-  (defun im--maybe-disable-dnd ()
-    (im-notif-disable-dnd))
-
-  (add-hook 'org-clock-out-hook #'im--maybe-disable-dnd 90)
 
   ;; org-clock sends notification if the current tasks estimated effort is met.
   (setq
@@ -1531,6 +1517,8 @@ headers."
   (evil-org-agenda-set-keys)
   (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading))
   (add-hook 'org-src-mode-hook #'evil-normalize-keymaps))
+
+(general-def :states 'normal (kbd "<f5>") #'org-timer-set-timer)
 
 (defun im-org-tree-to-indirect-buffer ()
   "Like `org-tree-to-indirect-buffer' but let's you open multiple indirect buffers.
@@ -12656,12 +12644,11 @@ Throw error otherwise."
 
 (setq-default global-mode-string '(im-global-mode-string))
 
-(with-eval-after-load 'org
-  (add-hook 'org-clock-in-hook #'im-update-global-mode-line)
-  (add-hook 'org-clock-out-hook #'im-update-global-mode-line)
-  (add-hook 'im-after-load-theme-hook
-            #'(lambda (&rest _)
-                (set-face-attribute 'org-mode-line-clock nil :inherit nil :italic t))))
+;; From the docs:
+;; Unless symbol is marked as risky (i.e., it has a non-`nil`
+;; `risky-local-variable` property), all text properties specified in
+;; symbol’s value are ignored.
+(put 'im-global-mode-string 'risky-local-variable t)
 
 ;;;; Operating system related
 
