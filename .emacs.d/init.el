@@ -2546,18 +2546,31 @@ priority, least effort, and newest CREATED_AT."
     ;; Highest priority first.
     (sort-pass nil ?p)
 
-    ;; TODO state takes precedence over priority.
+    ;; Completed tasks: latest CLOSED timestamp first.
+    ;; Active tasks all get the same key, preserving their ordering.
+    ;; Completed tasks without CLOSED go last within the completed group.
+    (sort-pass
+     nil ?f
+     (lambda ()
+       (if (org-entry-is-done-p)
+           (let ((closed (org-entry-get nil "CLOSED")))
+             (if closed
+                 (- (org-time-string-to-seconds closed))
+               most-positive-fixnum))
+         0)))
+
+    ;; Active states keep their order; all completed states share one rank,
+    ;; preserving their CLOSED ordering from the previous pass.
     (sort-pass
      nil ?f
      (lambda ()
        (let ((state (org-get-todo-state)))
          (cond
+          ((org-entry-is-done-p) 5)
           ((equal state "PROG") 1)
           ((equal state "WAIT") 2)
           ((equal state "NEXT") 3)
           ((equal state "TODO") 4)
-          ((equal state "DONE") 5)
-          ((equal state "DEAD") 6)
           (t 7)))))
 
     ;; Sort non-TODO headings by title length; leave task ordering unchanged.
