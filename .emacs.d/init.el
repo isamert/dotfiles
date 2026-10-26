@@ -12554,7 +12554,7 @@ Throw error otherwise."
 ;; I have a simple shopping list that I sync with my phone. This is a
 ;; simple mode for easier editing on that file.
 
-(define-derived-mode alisveris-mode md-ts-mode "AlisverisMode"
+(define-derived-mode alisveris-mode org-mode "AlisverisMode"
   "Mode for my shopping list."
   (setq-local header-line-format (substitute-command-keys "Bindings :: \\[im-alisveris-add-to-market] → Market")))
 
@@ -12562,14 +12562,27 @@ Throw error otherwise."
   "\\a" #'im-alisveris-add-to-market)
 
 (defun im-alisveris-add-to-market ()
-  "Add current item to market alisverisi."
+  "Add current item to market alisverisi unless already present."
   (interactive nil im-alisveris-mode)
-  (let ((thing (s-trim (thing-at-point 'line t))))
+  (let ((thing (s-trim (thing-at-point 'line t)))
+        (case-fold-search nil))
     (save-excursion
       (goto-char (point-min))
-      (search-forward-regexp "^## Market")
-      (insert (format "\n%s" thing))
-      (message "Done."))))
+      (re-search-forward "^\\*\\* Market")
+      (end-of-line)
+      (let* ((insertion-point (point))
+             (section-end
+              (save-excursion
+                (if (re-search-forward "^\\* " nil t)
+                    (match-beginning 0)
+                  (point-max)))))
+        (if (re-search-forward
+             (concat "^[ \t]*" (regexp-quote thing) "[ \t]*$")
+             section-end t)
+            (message "Already in Market.")
+          (goto-char insertion-point)
+          (insert (format "\n%s" thing))
+          (message "Done."))))))
 
 ;;;;; Global Mode Line formatting
 
