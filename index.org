@@ -375,39 +375,6 @@ hyper - return : emacsclient -c -F '((tab-bar-lines . 0) (name . "emacs-temp"))'
   ]
 #+end_src
 
-** Rootless sshd
-#+begin_src conf :tangle ~/.config/sshd/cfg
-  Port 2222
-  HostKey «sh("echo $HOME")»/.config/sshd/hostkey
-  PidFile «sh("echo $HOME")»/.config/sshd/pid
-#+end_src
-
-Create the host key and enable starting it at boot:
-
-#+begin_src sh
-  ssh-keygen -t rsa -f ~/.config/sshd/hostkey -N ''
-  launchctl load -w ~/Library/LaunchAgents/net.isamert.sshd.plist
-#+end_src
-
-#+begin_src text :tangle ~/Library/LaunchAgents/net.isamert.sshd.plist
-  «mk-launchagent(name="sshd", args='("/usr/sbin/sshd" "-f" "${HOME}/.config/sshd/cfg"))»
-#+end_src
-
-To enable it, run this:
-
-#+begin_src sh
-  launchctl load -w ~/Library/LaunchAgents/net.isamert.sshd.plist
-#+end_src
-
-** Start some applications at login
-#+begin_src text :tangle ~/Library/LaunchAgents/net.isamert.kdeconnect.plist
-  «mk-launchagent(name="kdeconnect", args='("/Applications/kdeconnect-indicator.app/Contents/MacOS/kdeconnect-indicator"))»
-#+end_src
-
-#+begin_src sh
-  launchctl load -w ~/Library/LaunchAgents/net.isamert.kdeconnect.plist
-#+end_src
-
 ** Clear all notifications with a keypress
 Save the script by running the next code block:
 #+begin_src sh
