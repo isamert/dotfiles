@@ -714,8 +714,7 @@ function helps me go between these modes easily."
 
 ;;;;; Spaces instead of tabs
 
-;; TODO: This breaks org-mode.
-;; (setq-default tab-width 2)
+(setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)
 
 ;;;;; Better display buffer defaults
@@ -5950,6 +5949,7 @@ SORT should be nil to disable sorting."
   :ensure nil
   :general
   (:states '(normal) :keymaps '(eglot-mode-map)
+   "K"  #'im-peek-doc
    "ga" #'eglot-code-actions
    "gi" #'eglot-find-implementation
    "gt" #'eglot-find-typeDefinition
@@ -12238,12 +12238,12 @@ Use C-n C-p to switch between translation directions."
   (interactive)
   (im-peek
    (cond
-    ((ignore-errors (symbol-value 'lsp-mode)) #'im-peek-doc--lsp)
+    ((bound-and-true-p lsp-mode) #'im-peek-doc--lsp)
     ((-contains? '(emacs-lisp-mode lisp-interaction-mode) major-mode) #'im-peek-doc--elisp)
     ((equal major-mode 'clojure-mode) #'im-peek-doc--clojure)
     ((equal major-mode 'org-mode)
      (cond
-      (jupyter-org-interaction-mode
+      ((bound-and-true-p jupyter-org-interaction-mode)
        #'im-peek-doc--jupyter)
       ((string= "id" (org-element-property :type (org-element-context)))
        #'im-peek-doc--org-id-at-point)
