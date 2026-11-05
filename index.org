@@ -1746,6 +1746,12 @@ function fgp --description 'Pick a background job and bring to foreground'
 end
 #+end_src
 
+#+begin_src fish :tangle (when-on :darwin "~/.config/fish/conf.d/darwin.fish")
+# Use GNU coreutils (Emacs also needs these)
+# Install them via: brew install coreutils
+set -gx PATH /opt/homebrew/opt/coreutils/libexec/gnubin $PATH
+#+end_src
+
 ** Starship
 #+begin_src toml :tangle ~/.config/starship.toml
 [cmd_duration]

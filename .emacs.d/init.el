@@ -389,8 +389,8 @@ With argument, do this that many times."
   (add-to-list 'savehist-additional-variables 'kill-ring)
   (add-to-list 'savehist-additional-variables 'search-ring)
   (add-to-list 'savehist-additional-variables 'regexp-search-ring)
+  (setq savehist-autosave-interval 60)
   (setq savehist-file "~/.emacs.d/savehist"))
-
 
 ;;;;; Better scrolling
 
@@ -3358,6 +3358,8 @@ Version: 2023-06-28
                    "extensions/*/*.el"
                    "extensions/*.el"))
   :config
+  (setq ghostel-shell (executable-find "fish"))
+
   (general-def :keymaps 'ghostel-semi-char-mode-map :states 'insert
     "M-l" (λ-interactive (ghostel-send-key "right"))
     "M-h" (λ-interactive (ghostel-send-key "left"))
