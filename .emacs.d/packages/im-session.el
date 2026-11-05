@@ -334,7 +334,8 @@ Interactively, prompt for NAME with completion over saved session names."
                do
                (if (= index 1)
                    (tab-bar-rename-tab (plist-get tab :name))
-                 (tab-bar-new-tab)
+                 (let ((tab-bar-new-tab-choice nil))
+                   (tab-bar-new-tab-to -1))
                  (tab-bar-rename-tab (plist-get tab :name)))
                (im-session--restore-buffer-records (plist-get tab :buffers))
                (window-state-put (plist-get tab :state)

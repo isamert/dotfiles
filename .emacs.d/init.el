@@ -6915,27 +6915,35 @@ If SHELL-BUFFER is nil, use the current buffer."
   (setq
    ellm-new-buffer-default-configuration-function
    #'(lambda ()
-       (let ((work-project? (f-ancestor-of? "~/Projects/Work" default-directory))
-             (elisp-project? (f-ancestor-of? "~/.emacs.d/elpaca/" default-directory))
-             (provider (if (workpc?)
-                           (intern (completing-read
-                                    "Which? "
-                                    '("mlplatform" "cursor")))
-                         (caar ellm-provider-alist)))
-             (snippets (yankpad--snippets "ellm-mode")))
+       (let* ((work-project? (f-ancestor-of? "~/Projects/Work" default-directory))
+              (personal-project? (f-ancestor-of? "~/Projects/Personal" default-directory))
+              (elisp-project? (f-ancestor-of? "~/.emacs.d/elpaca" default-directory))
+              (project? (or work-project? personal-project? elisp-project?))
+              (not-a-project? (not project?))
+              (provider (if (workpc?)
+                            (intern (completing-read
+                                     "Which? "
+                                     '("mlplatform" "cursor")))
+                          (caar ellm-provider-alist)))
+              (snippets (yankpad--snippets "ellm-mode")))
          (list
           :provider provider
           :model (ellm-provider-default-model provider)
           :tool-permissions '(("@emacs" . "allow"))
-          :yolo elisp-project?
+          :yolo project?
+          :system+
+          (cond
+           (not-a-project?
+            "- Use buffer related tools only if user explicitly requests reading/editing a buffer."))
           :profile
           (cond
            ((eq 'cursor provider) nil)
-           ((or work-project? elisp-project?) "agent")
+           (project? "agent")
            (t "explore"))
           :tools+
           (cond
-           (elisp-project? '("@emacs")))))))
+           (elisp-project? '("@emacs"))
+           (not-a-project? '("@buffers")))))))
   (setq
    ellm-provider-alist
    `((codex
@@ -8517,7 +8525,7 @@ the commit buffer."
   (setq empv-invidious-request-headers `(("isamert-token" . ,im-token)))
   ;; ^ see https://api.invidious.io/
   (setq empv-youtube-use-tabulated-results t)
-  (add-to-list 'empv-mpv-args "--ytdl-format=bestvideo+bestaudio/best[ext=mp4]/best")
+  (add-to-list 'empv-mpv-args "--ytdl-format=bv[protocol^=m3u8]+ba[protocol^=m3u8]/b[protocol^=m3u8]")
   ;; (add-to-list 'empv-mpv-args "--ytdl-raw-options=cookies-from-browser=firefox")
   (add-to-list 'empv-mpv-args "--save-position-on-quit")
   (setq empv-reset-playback-speed-on-quit t)
