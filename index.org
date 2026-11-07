@@ -168,22 +168,31 @@ Here is a [[https://gist.github.com/miclf/bf4b0cb6de9ead726197db7ed3d937b5][grea
 #+end_src
 
 #+begin_src json :tangle ~/.config/mac-application-shortcuts.json
-  {
-      "org.mozilla.firefox": {
-          "Close Tab": "^W",
-          "Close Window": "⌘W",
-          "Find Again": "^G",
-          "Find in Page...": "^F",
-          "History": "^H",
-          "Bookmarks": "^B",
-          "New Tab": "^T"
-      },
-      "com.google.Chrome": {
-          "Find...": "^F",
-          "New Tab": "^T",
-          "Open Location...": "^L"
-      }
-  }
+{
+    "org.mozilla.firefox": {
+        "Close Tab": "^W",
+        "Close Window": "⌘W",
+        "Find Again": "^G",
+        "Find in Page...": "^F",
+        "History": "^H",
+        "Bookmarks": "^B",
+        "New Tab": "^T"
+    },
+    "com.google.Chrome": {
+        "Find...": "^F",
+        "New Tab": "^T",
+        "Close Tab": "^W",
+        "Close Window": "⌘W",
+        "Open Location...": "^L"
+    },
+    "io.ungoogled-software.ungoogled-chromium": {
+        "Find...": "^F",
+        "New Tab": "^T",
+        "Close Tab": "^W",
+        "Close Window": "⌘W",
+        "Open Location...": "^L"
+   }
+}
 #+end_src
 
 ** aerospace
