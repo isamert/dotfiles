@@ -1891,6 +1891,9 @@ that is provided by ob-http."
 
 ;;;;; org-capture
 
+;;;;;; im-org-capture
+
+;; See: https://isamert.net/2026/10/04/opening-org-capture-in-a-new-frame.html
 (defun im-org-capture ()
   "Select a template and capture in a new, unsplit frame."
   (interactive)
@@ -1924,9 +1927,7 @@ that is provided by ob-http."
 
 (add-hook 'org-capture-after-finalize-hook #'im-delete-frame-after-capture)
 
-;; See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this page]] for more detail on template elements.
-
-;; Some functions that I utilize for capture templates:
+;;;;;; Some functions that I utilize for capture templates
 
 (defun im-org-capture--find-first-top-level-todo-entry ()
   "Find first top-level TODO entry in current buffer.
@@ -1936,29 +1937,9 @@ entries."
   (re-search-forward "^\\* TODO" nil t)
   (beginning-of-line))
 
-(defun im-org-capture--find-first-N-level-todo-entry (n)
-  "Find first N-level TODO entry in current buffer.
-This way you can insert new entry right after other non-TODO
-  entries."
-  (goto-char (point-min))
-  (re-search-forward (format "^\\*\\{%s\\} TODO" n) nil t)
-  (beginning-of-line))
-
-(defun im-org-capture--find-first-top-level-todo-entry-within-header (header)
-  "Find first top-level TODO entry in under HEADER in current buffer."
-  (lambda ()
-    (goto-char (point-min))
-    (let (n)
-      (if (re-search-forward (format "^\\(\\*+\\) %s" header) nil t)
-          (setq n (1+ (length (match-string 1))))
-        (user-error "Cannot find header %s" header))
-      (save-restriction
-        (org-narrow-to-subtree)
-        (im-org-capture--find-first-N-level-todo-entry n)))))
-
 (defun im-org-capture--find-snippet ()
   (let* ((mode-name (with-current-buffer (org-capture-get :original-buffer)
-                      (symbol-name major-mode)))
+                      (concat (im-ai--get-current-language) "-mode")))
          (result (org-find-exact-headline-in-buffer mode-name)))
     (if result
         (goto-char result)
@@ -1973,12 +1954,26 @@ This way you can insert new entry right after other non-TODO
     (end-of-line)
     (insert "\n** One-liners")))
 
+(defun im-org-capture--find-todays-chores ()
+  (im-bullet-focus-today)
+  (re-search-forward "\n** Chores")
+  (beginning-of-line))
+
+;;;;;; Capture templates
+
+;; See [[https://orgmode.org/manual/Template-elements.html#Template-elements][this page]] for more detail on template elements.
+
 (with-eval-after-load 'org
   (setq
    org-capture-templates
    `(("i" "Inbox" item
       (file+headline bullet-org "Inbox")
-      "- %U %?"
+      "- [ ] %U %?"
+      :prepend t)
+
+     ("t" "Today's chores" plain
+      (file+function bullet-org im-org-capture--find-todays-chores)
+      "- [ ] %U %?"
       :prepend t)
 
      ("I" "Info" item
