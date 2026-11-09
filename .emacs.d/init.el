@@ -845,6 +845,9 @@ side window the only window'"
   (define-advice evil-jump-backward (:after (&rest _) reveal) (reveal-post-command))
   (define-advice evil-jump-forward (:after (&rest _) reveal) (reveal-post-command))
 
+  ;; Like zz but horizontally
+  (evil-define-key 'normal 'global (kbd "z x") (kbd "z s z H"))
+
   ;; When I paste something in visual mode, I don't want it to take
   ;; over the kill ring I also use evil-exchange, which eliminates the
   ;; need for this totally
@@ -979,6 +982,8 @@ purposefully bound a key to."
   (evil-collection-unimpaired-want-repeat-mode-integration t)
   :config
   (delq 'outline evil-collection-mode-list)
+  (delq 'diff-mode evil-collection-mode-list)
+  (delq 'notmuch-mode evil-collection-mode-list)
   (evil-collection-init)
   (add-hook 'evil-collection-unimpaired-mode-hook #'evil-normalize-keymaps)
   ;; ^ Otherwise it does not properly work and I am unable to understand why.
