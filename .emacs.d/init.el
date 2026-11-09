@@ -714,7 +714,6 @@ function helps me go between these modes easily."
 
 ;;;;; Spaces instead of tabs
 
-(setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)
 
 ;;;;; Better display buffer defaults
