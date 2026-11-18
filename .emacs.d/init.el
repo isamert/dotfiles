@@ -3134,6 +3134,7 @@ Version: 2023-06-28
 
 (use-package which-key
   :hook (elpaca-after-init . which-key-mode)
+  :ensure nil
   :diminish
   :config
   ;; Disabling this because I use `embark-prefix-help-command' as the `prefix-help-command'
