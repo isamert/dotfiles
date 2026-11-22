@@ -1619,7 +1619,21 @@ if status is-interactive
     # when it encounters a very long command. fzf handles it much
     # better, with preview.
     function fzf_fish_history
-        commandline --replace $(history --null | fzf --read0 --reverse --height 30 --preview "echo {} | fish_indent --ansi")
+        set -l selected (
+            history --null |
+                fzf --read0 --print0 \
+                    --query "$(commandline)" \
+                    --reverse --height 30 \
+                    --no-sort \
+                    --preview 'printf "%s\n" {} | fish -ic "fish_indent --ansi"' |
+                string split0
+        )
+
+        if test (count $selected) -gt 0
+            commandline --replace -- "$selected"
+        end
+
+        commandline -f repaint
     end
 
     # C-r → fuzzy history search
