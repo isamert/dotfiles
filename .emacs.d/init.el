@@ -3969,7 +3969,6 @@ that is read verbatim (meaning that no '$*' is appended):
   :ensure nil
   :defer t
   :custom
-  (dired-dwim-target t)
   (dired-listing-switches "-l -A -h -v --group-directories-first")
   (ls-lisp-dirs-first t)
   (ls-lisp-use-insert-directory-program nil)
@@ -3983,6 +3982,13 @@ that is read verbatim (meaning that no '$*' is appended):
     (evil-collection-dired-setup)
     (put 'dired-find-alternate-file 'disabled nil)))
 
+(use-package dired-x
+  :ensure nil
+  :after dired
+  :config
+  (setq dired-omit-files
+        (concat dired-omit-files "\\|\\`\\.")))
+
 (use-package dirvish
   :ensure (:host github :repo "alexluigit/dirvish")
   :after dired
@@ -3994,6 +4000,7 @@ that is read verbatim (meaning that no '$*' is appended):
   (:keymaps 'embark-file-map "J" #'im-dired)
   (:keymaps 'dirvish-mode-map :states 'normal
    "\\"    #'im-dired-find-file-ace-window
+   "."     #'dired-omit-mode
    "h"     #'dired-up-directory
    "l"     #'dired-find-alternate-file
    "T"     #'dirvish-layout-toggle
