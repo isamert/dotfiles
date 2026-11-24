@@ -3359,6 +3359,7 @@ Version: 2023-06-28
                    "extensions/*.el"))
   :config
   (setq ghostel-shell (executable-find "fish"))
+  (setq ghostel-tramp-shell-integration t)
 
   (general-def :keymaps 'ghostel-semi-char-mode-map :states 'insert
     "M-l" (λ-interactive (ghostel-send-key "right"))
